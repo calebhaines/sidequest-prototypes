@@ -1,14 +1,22 @@
 # Sidequest
 
-Six original browser RPG prototypes with classic top-down pixel art, real-time combat, exploration, dialogue, quests, loot, and character progression.
+Six original browser RPG prototypes with classic top-down pixel art, real-time combat, exploration, dialogue, quests, loot, and character progression. **Velvet Static** and **Hidden Ember** are the selected finalists.
 
 ## Download and play
 
 [Play all six prototypes in your browser](https://calebhaines.github.io/sidequest-prototypes/).
 
-For offline play, download [**sidequest-prototypes.zip**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.2.0/docs/sidequest-prototypes.zip), extract it, and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled; no installation, account, or server is needed.
+For offline play, download [**sidequest-prototypes.zip**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.3.0/docs/sidequest-prototypes.zip), extract it, and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled; no installation, account, or server is needed.
 
-For a single-file download, save [**sidequest-play.html**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.2.0/docs/sidequest-play.html) to your device and open the saved HTML file directly. These links point to the fixed **v0.2.0** files.
+For a single-file download, save [**sidequest-play.html**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.3.0/docs/sidequest-play.html) to your device and open the saved HTML file directly. These links point to the fixed **v0.3.0** files.
+
+## Featured finalists
+
+[**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/#play-lynch) explores a mysterious mill town through conversations, clues, and crossings between waking and dreaming.
+
+[**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/#play-shinobi) has a brighter Naruto-inspired visual identity: orange rooftops, lush greenery, carved mountain faces, a round leadership tower, and a ramen shop. A blond genin in orange, village headbands, and a masked mentor in a flak vest give its original cast a clearer shinobi style. Blue chakra, white smoke, and fiery jutsu trails bring the techniques to life.
+
+The gallery marks both worlds **FINALIST**. All six prototypes are available to play.
 
 ## Choose a world
 
@@ -17,11 +25,11 @@ For a single-file download, save [**sidequest-play.html**](https://raw.githubuse
 - [**The Dustlands**](https://calebhaines.github.io/sidequest-prototypes/#play-dust) — desert salvage, lost technology, and a settlement's water crisis.
 - [**Borrowed Sky**](https://calebhaines.github.io/sidequest-prototypes/#play-odd) — surreal suburbs, everyday magic, and a town frozen in time.
 - [**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/#play-lynch) — a mysterious mill town, contradictory witnesses, and crossings between waking and dreaming.
-- [**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/#play-shinobi) — a hidden shinobi village, chakra techniques, a stolen scroll, and competing loyalties.
+- [**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/#play-shinobi) — a bright hidden shinobi village, chakra techniques, a stolen scroll, and competing loyalties.
 
-Velvet Static and Hidden Ember add longer conversations, investigation clues, peaceful routes, and three endings each. Decisions change what people say and whether enemies remain hostile.
+Velvet Static and Hidden Ember feature longer conversations, investigation clues, peaceful routes, and three endings each. Decisions change what people say and whether enemies remain hostile.
 
-These are small playable concept slices for selecting a setting to expand into a larger RPG, rather than finished huge open worlds.
+These are small playable concept slices for choosing and developing a larger RPG.
 
 ## Controls
 

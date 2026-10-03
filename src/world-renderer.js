@@ -7,7 +7,7 @@ const PALETTES = {
   dust: { ground:'#d5aa6c', dark:'#c49860', light:'#e6bb78', ink:'#72503f', path:'#dcb981', edge:'#b88858', roof:'#a05f4c', roofLight:'#c9815b', roofDark:'#774939', wall:'#dfbd87', shade:'#bb9869', tree:['#446c4e','#58865a','#77a266','#a1b678'], water:'#55a3a0', waterDark:'#397c86', accent:'#f4dc9b' },
   odd: { ground:'#8d9e99', dark:'#7c8f8d', light:'#a2b0a3', ink:'#55556d', path:'#9293a5', edge:'#c1b7cc', roof:'#7e759a', roofLight:'#a092bc', roofDark:'#615d81', wall:'#dfbecf', shade:'#b49fb9', tree:['#866487','#ad7d9f','#d69eb6','#edbbc6'], water:'#a1a6cf', waterDark:'#7c82b7', accent:'#fff0ae' },
   lynch: { ground:'#293b3e', dark:'#223236', light:'#334b49', ink:'#111d28', path:'#333745', edge:'#54515b', roof:'#833c3e', roofLight:'#b76555', roofDark:'#432835', wall:'#d6bca1', shade:'#998b80', tree:['#12272c','#1c3839','#2b514b','#42695a'], water:'#477481', waterDark:'#283f55', accent:'#ffc99a' },
-  shinobi: { ground:'#91ad79', dark:'#7e9867', light:'#a5bb85', ink:'#384846', path:'#dbca99', edge:'#b29c74', roof:'#ae5d4d', roofLight:'#da8a65', roofDark:'#713f40', wall:'#ece0b6', shade:'#c4b98b', tree:['#285d50','#387859','#579465','#7bb176'], water:'#72c5bb', waterDark:'#428e99', accent:'#f5cc78' },
+  shinobi: { ground:'#8abd68', dark:'#73a656', light:'#abd67c', ink:'#29464c', path:'#eed6a3', edge:'#bea276', roof:'#d7773e', roofLight:'#ffa15b', roofDark:'#995437', wall:'#fff0c5', shade:'#dbc78f', tree:['#23754c','#35934e','#59b453','#97d575'], water:'#72d8cf', waterDark:'#419da8', accent:'#ffd563' },
 };
 
 const DREAM_PALETTE = { ...PALETTES.lynch, ground:'#2f263b', dark:'#241c30', light:'#473246', path:'#342634', edge:'#72505b', roof:'#922e49', roofLight:'#cc5a64', tree:['#161a2b','#28213c','#423144','#664552'], water:'#91658c', waterDark:'#4e355b', accent:'#ffe4b0' };
@@ -528,10 +528,108 @@ function pagodaRoof(c,x,y,w,p,tier=0) {
   rect(c,x-5,y+height-10,w+10,2,p.roofLight);rect(c,x+25,y-2,w-50,4,p.roofDark);rect(c,x+28,y-3,w-56,2,p.roofLight);
 }
 
+// The Reed village crest joins a curling river to a three-leaf reed.
+// It repeats on architecture and metal forehead protectors.
+function reedEmblem(c,x,y,color,size=1) {
+  const marks=[[0,3,2,6],[2,1,7,2],[2,9,7,2],[9,3,2,6],[4,4,5,2],[4,5,2,3],[6,7,3,2],[8,0,2,3],[10,-2,2,4],[12,-4,2,4],[13,-5,4,2],[11,11,6,2],[15,9,2,3]];
+  for(const [xx,yy,w,h] of marks)rect(c,x+xx*size,y+yy*size,w*size,h*size,color);
+}
+
+function carvedLeader(c,x,y,p,index) {
+  const stone='#cda570',shade='#a87d53',lit='#eed0a0',ink='#865f46';
+  // Distinct original portraits: swept hair, a topknot, a hood, and a broad beard.
+  pixelOval(c,x-44,y+51,90,34,shade);rect(c,x-22,y+39,45,35,stone);rect(c,x-15,y+45,31,28,lit);
+  stepped(c,x-34,y-14,69,76,shade);stepped(c,x-30,y-15,61,73,stone);rect(c,x-26,y-11,45,4,lit);
+  rect(c,x-25,y+5,19,5,ink);rect(c,x+8,y+5,18,5,ink);rect(c,x-22,y+12,14,4,shade);rect(c,x+10,y+12,14,4,shade);
+  rect(c,x-3,y+10,9,27,shade);rect(c,x-5,y+11,4,24,lit);rect(c,x-11,y+36,23,4,ink);rect(c,x-15,y+50,32,4,shade);
+  if(index===0){for(let i=0;i<5;i++)rect(c,x-33+i*13,y-26+i*3,17,17,stone);rect(c,x-31,y-20,60,5,lit);rect(c,x-30,y-4,18,7,shade);}
+  else if(index===1){stepped(c,x-28,y-28,57,19,shade);rect(c,x-11,y-45,22,22,shade);rect(c,x-8,y-43,16,5,lit);rect(c,x-31,y-10,64,10,lit);reedEmblem(c,x-9,y-10,ink,1);}
+  else if(index===2){rect(c,x-38,y-21,77,14,shade);rect(c,x-42,y-8,16,68,shade);rect(c,x+28,y-8,16,68,shade);rect(c,x-33,y-20,65,4,lit);rect(c,x-12,y+44,27,4,shade);}
+  else {rect(c,x-31,y-21,64,17,shade);rect(c,x-28,y-18,58,4,lit);stepped(c,x-31,y+36,64,38,shade);for(let i=0;i<4;i++)rect(c,x-21+i*13,y+43,4,22,stone);rect(c,x-12,y+40,26,4,ink);}
+  for(const [xx,yy] of [[-30,23],[26,40],[-13,59],[36,71]])rect(c,x+xx,y+yy,4,3,shade);
+}
+
+function leaderRidge(c,p) {
+  // A sunny sandstone monument rises behind the training grounds.
+  for(let i=0;i<6;i++){
+    const inset=i<3?(3-i)*32:(i-3)*10;
+    rect(c,477+inset,54+i*23,788-inset*2,34,i%2?'#caa477':'#d8b484');
+    rect(c,488+inset,56+i*23,761-inset*2,4,'#eed2a0');
+    for(let xx=508+inset;xx<1240-inset;xx+=53)rect(c,xx,73+i*23,23,2,'#b68e63');
+  }
+  for(const [i,x] of [617,787,958,1120].entries())carvedLeader(c,x,121+(i%2)*5,p,i);
+  for(let i=0;i<10;i++){const x=481+i*77;rect(c,x,184,54,18,'#be9768');rect(c,x+3,184,48,3,'#e8cb95');rect(c,x+5,199,42,3,'#a88a62');}
+  rect(c,489,204,761,7,'#62864e');rect(c,492,203,755,3,'#a0c476');
+}
+
+function leadershipTower(c,h,p) {
+  const {x,y,w,h:height}=h,bottom=y+height;
+  shadow(c,x+3,bottom-13,w+5,25,p);
+  // Cylindrical plaster tiers keep the old mentor hall's walkable footprint.
+  stepped(c,x+12,y+13,w-24,height-18,'#8c583e');stepped(c,x+15,y+13,w-30,height-22,'#ffe4aa');
+  rect(c,x+w-31,y+27,14,height-38,'#d6b579');rect(c,x+20,y+28,7,height-39,'#fff3cb');
+  for(let yy=y+32;yy<bottom-16;yy+=28){rect(c,x+18,yy,w-36,3,'#dbb17b');rect(c,x+20,yy+3,w-40,1,'#f9d497');}
+  for(const dx of [31,62,111,142]){
+    box(c,x+dx,y+32,19,25,'#5589ab','#8b674e');rect(c,x+dx+2,y+34,15,4,'#b7e0d6');rect(c,x+dx+9,y+34,1,20,'#ebd8ab');
+  }
+  pixelOval(c,x+3,y+7,w-6,29,'#854a37');pixelOval(c,x+3,y+2,w-6,24,'#ee8d44');pixelOval(c,x+12,y+5,w-24,15,'#ffc168');
+  for(let xx=x+14;xx<x+w-15;xx+=11)rect(c,xx,y+14,4,4,'#b85d35');
+  // Upper drum and its broad orange roof terrace.
+  rect(c,x+40,y-36,w-80,49,'#be6b40');rect(c,x+42,y-34,w-84,44,'#f6c783');rect(c,x+w-55,y-34,10,44,'#daa86c');
+  for(let i=0;i<4;i++){box(c,x+50+i*25,y-23,17,19,'#4e86a3','#9b7049');rect(c,x+52+i*25,y-21,13,3,'#acd9d0');}
+  pixelOval(c,x+31,y-47,w-62,26,'#965036');pixelOval(c,x+32,y-51,w-64,22,'#ec8340');pixelOval(c,x+39,y-49,w-78,14,'#ffb15a');
+  rect(c,x+50,y-53,w-100,4,'#f8c069');rect(c,x+49,y-58,w-98,3,'#e29351');
+  // Tanks, pipework, antenna, and a rooftop railing give the village its bustle.
+  rect(c,x+63,y-79,22,27,'#647a79');pixelOval(c,x+62,y-83,24,9,'#b3c1a7');rect(c,x+66,y-79,4,22,'#9bb3a5');rect(c,x+63,y-61,22,3,'#415b66');
+  rect(c,x+112,y-76,17,25,'#ba9366');pixelOval(c,x+111,y-80,19,8,'#efce90');rect(c,x+113,y-58,15,3,'#8b714f');
+  rect(c,x+137,y-68,4,37,'#577579');rect(c,x+128,y-69,13,4,'#9fb3a4');rect(c,x+123,y-69,5,9,'#6c8583');
+  rect(c,x+89,y-103,2,48,'#57727a');rect(c,x+80,y-96,20,2,'#b0baa6');rect(c,x+86,y-106,8,2,'#b0baa6');
+  for(let xx=x+41;xx<x+w-35;xx+=13){rect(c,xx,y-38,2,10,'#c49156');rect(c,xx,y-38,14,2,'#e6ba75');}
+  // The entrance and crest align with Ren below the tower.
+  box(c,x+w/2-20,bottom-49,41,42,'#96764e','#725640');rect(c,x+w/2-16,bottom-45,33,33,'#d7b57a');
+  rect(c,x+w/2-1,bottom-45,2,33,'#836746');rect(c,x+w/2-14,bottom-31,28,2,'#8a7050');
+  box(c,x+w/2-24,y+55,49,25,'#d66e39','#9b5237');reedEmblem(c,x+w/2-11,y+61,'#fff0ba',1.25);
+  for(const dx of [9,w-23]){rect(c,x+dx,y+45,14,40,'#315f86');rect(c,x+dx+2,y+48,10,3,'#b7d9c2');rect(c,x+dx+4,y+55,6,19,'#f6e9b9');}
+  rect(c,x+6,bottom-6,w-12,7,'#a57d50');rect(c,x+10,bottom-5,w-20,2,'#f1d199');
+  rect(c,x+w/2-27,bottom+1,55,4,p.shade);rect(c,x+w/2-31,bottom+5,63,3,p.edge);
+}
+
+function villageRamen(c,h,p,index=2) {
+  const {x,y,w,h:height}=h,bottom=y+height;
+  shadow(c,x-5,bottom-8,w+12,18,p);
+  stepped(c,x+2,y+24,w-4,height-27,'#915c42');stepped(c,x+5,y+25,w-10,height-31,'#fff0c0');
+  rect(c,x+w-17,y+27,10,height-35,'#d4b787');
+  // Low round red roof instead of another pagoda.
+  for(let i=0;i<6;i++){const inset=(5-i)*6;rect(c,x+inset,y+i*5,w-inset*2,7,i%2?'#da7042':'#b85d3b');rect(c,x+inset+2,y+i*5,w-inset*2-4,1,'#ffa564');}
+  rect(c,x-4,y+30,w+8,6,'#924d35');rect(c,x-2,y+31,w+4,2,'#ffc077');
+  box(c,x+11,y+42,w-22,14,'#2c5571','#795840');lettering(c,'RAMEN',x+w/2-wordWidth('RAMEN',2)/2,y+46,'#fff0b6',2);
+  // Open counter with orange noren, stools, bowls, and a little steaming kitchen.
+  rect(c,x+12,y+61,w-24,height-67,'#6d634f');rect(c,x+15,y+64,w-30,height-74,'#ddbd81');
+  rect(c,x+15,bottom-30,w-30,9,'#a87348');rect(c,x+13,bottom-23,w-26,6,'#ebc18a');
+  for(let i=0;i<4;i++){
+    const xx=x+16+i*(w-30)/4;
+    rect(c,xx,y+58,(w-30)/4-2,24,'#ee8c37');rect(c,xx+2,y+60,(w-30)/4-6,3,'#ffb954');
+    if(i===1)reedEmblem(c,xx+6,y+65,'#fff3c5',.55);
+    else {rect(c,xx+8,y+65,3,10,'#fff2bd');rect(c,xx+5,y+69,9,2,'#fff2bd');}
+  }
+  for(let i=0;i<3;i++){
+    const xx=x+27+i*(w-46)/3;
+    pixelOval(c,xx,bottom-32,17,6,'#e9573b');pixelOval(c,xx+2,bottom-34,13,5,'#fff1c4');rect(c,xx+4,bottom-34,8,2,'#e3b77c');
+    rect(c,xx+9,bottom-37,2,7,'#a88457');rect(c,xx+13,bottom-38,2,7,'#a88457');
+    rect(c,xx+2,bottom-13,16,4,'#335e7a');rect(c,xx+4,bottom-9,3,12,'#765a42');rect(c,xx+13,bottom-9,3,12,'#765a42');
+    rect(c,xx+4,bottom-43,3,4,'#fff8d4a0');rect(c,xx+6,bottom-48,3,4,'#fff8d480');
+  }
+  for(const xx of [x+4,x+w-14]){rect(c,xx,y+62,2,25,'#685842');box(c,xx-3,y+82,10,19,'#ef7735','#a15336');rect(c,xx-1,y+84,6,2,'#ffd28a');rect(c,xx-1,y+96,6,2,'#a75234');}
+  rect(c,x-3,bottom-4,w+6,5,'#b88f5b');rect(c,x-3,bottom-3,w+6,2,'#ecd0a2');
+  // Kitchen flue and roof-mounted blue tank.
+  rect(c,x+w-34,y-23,7,35,'#7d9290');rect(c,x+w-36,y-25,12,4,'#c0cdb0');rect(c,x+w-31,y-22,2,24,'#b0bcaa');
+  rect(c,x+22,y-20,25,24,'#4988a4');pixelOval(c,x+21,y-24,27,8,'#88c5c6');rect(c,x+24,y-16,20,2,'#b6dac8');
+}
+
 function clanBanner(c,x,y,p,color='#bc6253',mark='REED') {
   rect(c,x-2,y-52,3,55,'#6d5945');rect(c,x-3,y-52,24,3,'#a58965');
   rect(c,x+3,y-48,18,38,color);rect(c,x+5,y-47,2,35,'#f0d5a0');rect(c,x+18,y-47,2,35,'#6b4643');
-  rect(c,x+9,y-39,7,9,'#f1dfb3');rect(c,x+7,y-36,11,3,'#f1dfb3');rect(c,x+11,y-42,3,15,'#f1dfb3');
+  reedEmblem(c,x+5,y-37,'#fff1bc',.7);
   rect(c,x+3,y-10,8,3,color);rect(c,x+15,y-10,6,3,color);rect(c,x+11,y-13,4,3,color);
   if(mark==='MOON'){rect(c,x+12,y-40,5,8,color);rect(c,x+13,y-41,5,8,color);}
 }
@@ -541,7 +639,13 @@ function shinobiHouse(c,h,p,index=0) {
   shadow(c,x-5,bottom-10,w+14,22,p);rect(c,x+4,wall,w-8,height-44,p.ink);rect(c,x+7,wall+1,w-14,height-50,p.wall);
   rect(c,x+w-23,wall+3,16,height-52,p.shade);rect(c,x+8,bottom-23,w-16,17,'#9d7c58');
   for(let xx=x+12;xx<x+w-9;xx+=32)rect(c,xx,wall+3,4,height-50,'#7a6250');
-  pagodaRoof(c,x-4,y,w+8,p,index%2);
+  if([1,3,5].includes(index)) {
+    // Low curved plaster and tile roofs make the residential district feel lived in.
+    for(let i=0;i<8;i++){const inset=Math.max(0,31-i*5);rect(c,x+inset-4,y+i*5,w+8-inset*2,7,i%2?'#d4894c':'#c7793f');rect(c,x+inset-1,y+i*5,w+2-inset*2,1,'#ffc078');}
+    rect(c,x-7,y+39,w+14,5,'#965a39');rect(c,x-5,y+40,w+10,2,'#ffce83');
+    rect(c,x+w-31,y-23,20,29,'#6b95a1');pixelOval(c,x+w-32,y-28,22,9,'#bdd6bd');rect(c,x+w-28,y-17,14,2,'#b4d4c2');
+    rect(c,x+w-8,y-19,4,47,'#92a59a');rect(c,x+w-10,y-20,10,3,'#c5d2b4');
+  } else pagodaRoof(c,x-4,y,w+8,p,index%2);
   for(const xx of [x+19,x+w-46]) {
     box(c,xx,wall+12,27,28,'#665f58','#5a4d43');rect(c,xx+2,wall+14,23,23,'#a8c2af');
     for(let i=1;i<4;i++)rect(c,xx+2+i*6,wall+14,1,23,'#e4d5ad');rect(c,xx+2,wall+23,23,2,'#e4d5ad');
@@ -552,16 +656,18 @@ function shinobiHouse(c,h,p,index=0) {
   rect(c,x-4,bottom-6,w+8,7,'#6d5945');rect(c,x-4,bottom-5,w+8,2,'#d1b98a');
   rect(c,x+w/2-24,bottom+1,48,4,p.shade);rect(c,x+w/2-28,bottom+5,56,3,p.edge);
   if(index===0){box(c,x+w/2-28,wall+2,56,12,'#2d695d','#664f40');lettering(c,'REED',x+w/2-13,wall+5,'#f0d8a4');}
+  if(index===1){box(c,x+w/2-25,wall+1,50,12,'#285b86','#6b583f');lettering(c,'SHINOBI',x+w/2-14,wall+4,'#ffe9ac');reedEmblem(c,x+12,bottom-26,'#f6d37c',.65);rect(c,x+9,bottom-27,30,2,'#297286');}
   if(index===2){for(let i=0;i<7;i++){rect(c,x+9+i*20,wall+40,20,9,i%2?'#dbb76c':'#aa5e4c');rect(c,x+9+i*20,wall+48,20,3,i%2?'#aa8b55':'#773f3c');}}
-  clanBanner(c,x+w+10,bottom-4,p,index%2?'#3f827c':'#ae5a4f',index%2?'MOON':'REED');
+  clanBanner(c,x+w+10,bottom-4,p,index%2?'#347ba2':'#e57e38',index%2?'MOON':'REED');
 }
 
 function torii(c,x,y,p,w=92) {
   for(const dx of [-w*.36,w*.36]){rect(c,x+dx-4,y-76,9,80,'#743f3c');rect(c,x+dx-2,y-74,5,71,'#c56550');rect(c,x+dx-6,y-6,13,10,'#685345');}
   rect(c,x-w/2-5,y-81,w+10,8,'#613d3b');rect(c,x-w/2-9,y-86,w+18,7,'#bd674f');rect(c,x-w/2-12,y-90,12,7,'#773e3d');rect(c,x+w/2,y-90,12,7,'#773e3d');
   rect(c,x-w/2+3,y-65,w-6,7,'#ad5948');rect(c,x-w/2+4,y-66,w-8,2,'#e09165');
-  box(c,x-9,y-80,19,26,'#876748','#563f35');rect(c,x-5,y-75,11,13,'#e5c58b');
-  lettering(c,'R',x-2,y-72,'#775346',2);
+  box(c,x-17,y-81,35,29,'#315d84','#854c36');rect(c,x-14,y-78,29,23,'#f0b15c');
+  reedEmblem(c,x-10,y-71,'#294e70',1.15);
+  if(w>110){rect(c,x-43,y-58,86,18,'#ee9141');for(let xx=x-42;xx<x+43;xx+=17){rect(c,xx,y-57,15,17,'#ffad53');rect(c,xx+2,y-54,11,2,'#ffe4a0');}lettering(c,'HIDDEN REED',x-24,y-49,'#654b39');}
 }
 
 function trainingLog(c,x,y,p) {
@@ -647,17 +753,20 @@ function buildShinobiWorld(c,p) {
   pixelOval(c,639,221,361,186,'#bba06f');pixelOval(c,648,228,343,174,'#d7bd86');
   for(let i=0;i<180;i++){const rr=rng(4400+i),xx=654+rr()*325,yy=240+rr()*151;if(Math.hypot((xx-820)*.7,yy-315)<92)rect(c,xx,yy,5,2,i%2?'#c7aa78':'#ecd6a4');}
   for(const [x,y,w,h] of [[521,183,145,55],[884,154,233,63],[1182,173,220,46],[449,422,177,63],[1100,896,331,65]])terracedCliff(c,x,y,w,h,p);
+  leaderRidge(c,p);
   // Rice terraces across the water and a little west-bank shrine.
   for(let i=0;i<3;i++){box(c,93,342+i*39,192,34,'#6ca394','#557e65');for(let x=104;x<275;x+=14){rect(c,x,349+i*39,3,19,'#b7c989');rect(c,x-4,355+i*39,4,3,'#93b373');}}
   const objects=[],r=rng(92734),features=NEW_FEATURES.shinobi;
   const houses=[{x:670,y:416,w:193,h:139},{x:453,y:620,w:139,h:112},{x:985,y:570,w:161,h:129},{x:886,y:793,w:157,h:121},{x:1159,y:188,w:136,h:159},{x:121,y:711,w:119,h:109},{x:1087,y:472,w:112,h:100}];
-  const safe=(x,y)=>!(x>290&&x<437)&&!(Math.abs(y-614)<62&&x>430)&&!(x>718&&x<820&&y>215)&&!(y>681&&y<775&&x>425&&x<1180)&&!(y>805&&y<902&&x>295&&x<820)&&!(y>345&&y<443&&x>746&&x<1317)&&!(x>1151&&x<1300&&y>321&&y<660)&&!(x>605&&x<973&&y>541&&y<760)&&!(x>619&&x<1016&&y>204&&y<425)&&!(x>480&&x<540&&y>512&&y<779)&&!houses.some(h=>x>h.x-34&&x<h.x+h.w+42&&y>h.y-30&&y<h.y+h.h+37)&&features.every(f=>Math.hypot(x-f.x,y-f.y)>54);
+  const safe=(x,y)=>!(x>447&&x<1293&&y<233)&&!(x>290&&x<437)&&!(Math.abs(y-614)<62&&x>430)&&!(x>718&&x<820&&y>215)&&!(y>681&&y<775&&x>425&&x<1180)&&!(y>805&&y<902&&x>295&&x<820)&&!(y>345&&y<443&&x>746&&x<1317)&&!(x>1151&&x<1300&&y>321&&y<660)&&!(x>605&&x<973&&y>541&&y<760)&&!(x>619&&x<1016&&y>204&&y<425)&&!(x>480&&x<540&&y>512&&y<779)&&!houses.some(h=>x>h.x-34&&x<h.x+h.w+42&&y>h.y-30&&y<h.y+h.h+37)&&features.every(f=>Math.hypot(x-f.x,y-f.y)>54);
   for(let i=0;i<415;i++) {
     const x=24+Math.floor(r()*1550),y=60+Math.floor(r()*1055);if(!safe(x,y))continue;
     const size=.8+r()*.5;objects.push({y,draw:()=>i%3===0?bamboo(c,x,y,p,size):tree(c,x,y,p,'shinobi',size)});
   }
   houses.forEach((h,i)=>objects.push({y:h.y+h.h,draw:()=>{
-    shinobiHouse(c,h,p,i);
+    if(i===0)leadershipTower(c,h,p);
+    else if(i===2)villageRamen(c,h,p,i);
+    else shinobiHouse(c,h,p,i);
     if(i===4){pagodaRoof(c,h.x+9,h.y-38,h.w-18,p,1);rect(c,h.x+19,h.y-7,h.w-38,20,'#e1d1a4');pagodaRoof(c,h.x+24,h.y-72,h.w-48,p,1);rect(c,h.x+h.w/2-2,h.y-89,4,18,'#897452');rect(c,h.x+h.w/2-7,h.y-89,14,3,'#b8a278');}
   }}));
   objects.push({y:482,draw:()=>torii(c,1223,478,p,97)});
@@ -686,6 +795,21 @@ function buildShinobiWorld(c,p) {
     rect(c,x-1,y-41,3,41,'#745d46');rect(c,x-8,y-43,16,3,'#6b5742');box(c,x-7,y-40,14,16,'#dfae69','#855b44');rect(c,x-5,y-37,10,2,'#f9d897');rect(c,x-5,y-30,10,2,'#aa7250');rect(c,x-3,y-23,6,2,'#cc8e5b');
   }});
   objects.push({y:738,draw:()=>{smallProp(c,958,731,p,'shinobi','barrel');smallProp(c,976,733,p,'shinobi','crate');rect(c,951,712,8,14,'#efe1bb');rect(c,950,711,10,3,'#b86350');rect(c,950,726,10,3,'#b86350');}});
+  // Modern village utility poles and dangling shop lanterns cross the older roofs.
+  objects.push({y:702,draw:()=>{
+    for(const [px,py] of [[617,699],[951,705]]){
+      rect(c,px-2,py-117,5,117,'#705a45');rect(c,px-18,py-117,36,4,'#956d45');
+      for(const dx of [-14,0,14]){rect(c,px+dx-2,py-126,5,10,'#a9c2b1');rect(c,px+dx-3,py-121,7,2,'#587e8a');}
+      rect(c,px-3,py-4,7,5,'#617356');
+    }
+    for(let i=0;i<48;i++){
+      const xx=619+i*7,yy=579+Math.round(Math.sin(i/47*Math.PI)*35);
+      rect(c,xx,yy,7,1,'#35505a');rect(c,xx,yy+5,7,1,'#72816a');
+      if(i%8===4){rect(c,xx+2,yy+1,1,9,'#59644f');box(c,xx-1,yy+9,9,13,'#f19d48','#a76d3f');rect(c,xx+1,yy+10,5,2,'#ffe8a6');rect(c,xx+1,yy+19,5,1,'#b86639');}
+    }
+    // A small hanging village crest on the quartermaster's frontage.
+    box(c,558,674,23,26,'#376d92','#946b46');reedEmblem(c,562,683,'#ffe8a6',.9);
+  }});
   objects.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
   // Reeds shimmer along the riverbanks. Their marks are hand-built, like the roofs.
   for(let i=0;i<112;i++) {const yy=48+i*10;if(yy>485&&yy<591||yy>795&&yy<906)continue;const x=302+(i%3)*4+(i%2?119:0);rect(c,x,yy,2,12,'#6f8758');rect(c,x-4,yy+3,4,2,'#bed393');rect(c,x+2,yy+5,4,2,'#bed393');rect(c,x,yy-4,2,5,'#dec58a');}
@@ -810,7 +934,92 @@ export function getObstacles(theme='moss') {
   return obstacles;
 }
 
+function drawEmberCharacter(c,x,y,opts) {
+  const npc=opts.npc||opts.type==='npc',key=opts.kind||'',facing=opts.facing||'down',time=opts.time||0;
+  const moving=!!(opts.walking||opts.moving),running=moving||!!opts.sprinting;
+  const step=moving?Math.floor(time*(opts.sprinting?13:9))%2:0;
+  x=Math.round(x);y=Math.round(y);
+  const ink='#243d54',skin=key==='elder'?'#d7b494':'#f0c59e',metal='#d1ddd6';
+  let coat=npc?'#628967':'#f39337',trim='#2f557d',hair=npc?'#393b4b':'#ffd657';
+  if(npc){
+    coat={guide:'#648e5c',merchant:'#ece1b5',ranger:'#a87faa',quartermaster:'#758b64',elder:'#ead6a6',rival:'#426298'}[key]||'#6d9871';
+    trim={guide:'#374f6b',merchant:'#ca7c42',ranger:'#45627a',quartermaster:'#956f49',elder:'#d88943',rival:'#294d7c'}[key]||'#365678';
+    hair={guide:'#dbe2d2',merchant:'#a36549',ranger:'#40364c',quartermaster:'#797559',elder:'#e3d5b2',rival:'#283743'}[key]||'#43514c';
+  }
+  rect(c,x-8,y-3,17,4,'#29464c50');
+  // Open-toe sandals, pale leg wraps, and orange trousers remain legible at 1×.
+  const legA=step?2:0,legB=step?-2:0;
+  rect(c,x-6,y-14+legA,5,13-legA,ink);rect(c,x+2,y-14+legB,5,13-legB,ink);
+  rect(c,x-5,y-13+legA,3,6,coat);rect(c,x+3,y-13+legB,3,6,coat);
+  rect(c,x-5,y-7+legA,4,4,'#e9ddba');rect(c,x+3,y-7+legB,4,4,'#e9ddba');
+  rect(c,x-5,y-6+legA,4,1,'#b6bbab');rect(c,x+3,y-6+legB,4,1,'#b6bbab');
+  rect(c,x-7,y-3+legA,7,3,trim);rect(c,x+2,y-3+legB,7,3,trim);
+  rect(c,x-6,y-1+legA,4,1,skin);rect(c,x+4,y-1+legB,4,1,skin);
+  // Sleeves move behind the body in the characteristic arms-back sprint.
+  if(running&&facing==='right'){
+    rect(c,x-14,y-26,9,4,trim);rect(c,x-18,y-23,7,4,coat);rect(c,x-20,y-21,4,3,skin);
+    rect(c,x-11,y-20,6,3,trim);rect(c,x-16,y-18,7,3,coat);rect(c,x-19,y-17,4,3,skin);
+  }else if(running&&facing==='left'){
+    rect(c,x+6,y-26,9,4,trim);rect(c,x+12,y-23,7,4,coat);rect(c,x+17,y-21,4,3,skin);
+    rect(c,x+6,y-20,6,3,trim);rect(c,x+10,y-18,7,3,coat);rect(c,x+16,y-17,4,3,skin);
+  }else if(running){
+    const yy=facing==='up'?-19:-29;
+    rect(c,x-12,yy,7,4,trim);rect(c,x-16,yy-3,6,4,coat);rect(c,x-18,yy-5,4,3,skin);
+    rect(c,x+7,yy,7,4,trim);rect(c,x+12,yy-3,6,4,coat);rect(c,x+16,yy-5,4,3,skin);
+  }else{
+    rect(c,x-10,y-24+step,4,12,ink);rect(c,x-9,y-23+step,3,6,trim);rect(c,x-9,y-17+step,3,5,coat);rect(c,x-9,y-12+step,3,3,skin);
+    rect(c,x+8,y-24-step,4,12,ink);rect(c,x+8,y-23-step,3,6,trim);rect(c,x+8,y-17-step,3,5,coat);rect(c,x+8,y-12-step,3,3,skin);
+  }
+  rect(c,x-7,y-26,15,14,ink);rect(c,x-6,y-25,13,12,coat);
+  rect(c,x-6,y-26,13,4,trim);rect(c,x-6,y-25,3,7,trim);rect(c,x+4,y-25,3,7,trim);
+  if(!npc){
+    rect(c,x-4,y-21,3,7,'#ffbb58');rect(c,x-1,y-22,2,10,'#d1dbc8');rect(c,x+1,y-20,4,8,'#f6a442');
+    rect(c,x-6,y-14,13,2,'#315981');rect(c,x+4,y-14,3,2,'#ccd6c2');
+    if(facing==='up'){rect(c,x-5,y-21,11,8,'#e98734');pixelOval(c,x-3,y-20,7,6,'#fff0bd');rect(c,x-1,y-19,3,3,'#c65d31');}
+  }else if(key==='guide'||key==='quartermaster'){
+    rect(c,x-5,y-24,5,10,coat);rect(c,x+2,y-24,5,10,coat);rect(c,x,y-25,2,11,'#b1b78d');
+    for(const xx of [-4,3]){rect(c,x+xx,y-21,3,3,'#9cb47c');rect(c,x+xx,y-16,3,2,'#4b7152');}
+    rect(c,x-6,y-13,13,2,trim);
+  }else if(key==='rival'){
+    rect(c,x-6,y-28,13,7,'#355581');rect(c,x-5,y-27,11,2,'#7595b5');
+    if(facing==='up'){pixelOval(c,x-3,y-20,7,6,'#d5e1dc');rect(c,x-3,y-21,7,3,'#ba6d68');}
+  }else if(key==='elder'){
+    rect(c,x-7,y-15,16,9,'#ead6a6');rect(c,x-1,y-24,3,16,'#d98945');rect(c,x-5,y-15,3,8,'#f6e6b7');
+  }else if(key==='merchant'){rect(c,x-4,y-21,10,10,'#e3b166');rect(c,x-4,y-15,10,2,'#c27b43');}
+  rect(c,x-6,y-36,13,12,ink);rect(c,x-5,y-35,11,10,skin);rect(c,x-7,y-32,3,6,skin);rect(c,x+6,y-32,3,6,skin);
+  rect(c,x-6,y-38,13,7,hair);rect(c,x-7,y-35,3,6,hair);rect(c,x+6,y-35,3,6,hair);
+  // A sharp blond silhouette replaces the earlier generic cap and scarf.
+  if(!npc){
+    for(const [xx,yy,w,h] of [[-7,-39,4,4],[-5,-43,4,6],[-1,-45,3,7],[2,-43,4,6],[5,-41,4,5],[8,-37,3,4]])rect(c,x+xx,y+yy,w,h,hair);
+    rect(c,x-4,y-41,2,5,'#fff29a');rect(c,x+1,y-42,2,5,'#ffe98a');rect(c,x+5,y-38,3,3,'#eab13c');
+  }else if(key==='guide'){
+    for(const [xx,yy] of [[-7,-39],[-3,-43],[1,-42],[5,-40]])rect(c,x+xx,y+yy,4,7,hair);
+    rect(c,x-4,y-40,3,3,'#f5f2d9');
+  }else if(key==='rival'){
+    for(const [xx,yy] of [[-7,-39],[-4,-42],[0,-44],[4,-41],[7,-38]])rect(c,x+xx,y+yy,4,6,hair);
+    rect(c,x-4,y-39,2,3,'#485c65');
+  }else if(key==='ranger'){rect(c,x-9,y-34,3,12,hair);rect(c,x+8,y-34,3,12,hair);rect(c,x-10,y-24,4,3,'#a87faa');}
+  rect(c,x-7,y-33,15,4,trim);rect(c,x-4,y-33,9,3,metal);rect(c,x-3,y-33,7,1,'#f4f0d6');
+  reedEmblem(c,x-2,y-32,'#526f78',.32);
+  // Two cloth ties flutter behind the forehead protector.
+  const flutter=Math.floor(Math.sin(time*9)*2);
+  if(facing==='left'){rect(c,x+8,y-32,7,2,trim);rect(c,x+14,y-32+flutter,6,2,trim);rect(c,x+10,y-29,7,2,trim);}
+  else if(facing==='right'){rect(c,x-14,y-32,7,2,trim);rect(c,x-19,y-32+flutter,6,2,trim);rect(c,x-17,y-29,7,2,trim);}
+  else{rect(c,x+7,y-32,7,2,trim);rect(c,x+12,y-30+flutter,5,2,trim);rect(c,x+9,y-28,6,2,trim);}
+  if(facing==='up'){rect(c,x-5,y-31,11,7,hair);rect(c,x-3,y-34,7,2,npc?hair:'#fff08f');}
+  else if(facing==='left'){rect(c,x-6,y-30,2,2,ink);rect(c,x-7,y-28,2,2,skin);}
+  else if(facing==='right'){rect(c,x+5,y-30,2,2,ink);rect(c,x+7,y-28,2,2,skin);}
+  else {rect(c,x-3,y-30,2,2,ink);rect(c,x+3,y-30,2,2,ink);rect(c,x,y-26,2,1,'#bc8a6b');}
+  if(!npc&&facing!=='up'){rect(c,x-5,y-27,2,1,'#b98463');rect(c,x+4,y-27,2,1,'#b98463');}
+  if(npc&&key==='guide'&&facing!=='up'){
+    rect(c,x-5,y-27,11,5,'#3c586d');rect(c,x-5,y-27,11,1,'#718c98');rect(c,x-4,y-31,3,4,'#809a9e');
+  }
+  if(npc&&key==='elder'){rect(c,x-10,y-36,21,3,'#d8aa64');rect(c,x-7,y-39,15,4,'#eec785');rect(c,x-2,y-29,5,2,'#f2e4c3');rect(c,x-3,y-24,7,3,'#d9c9a9');}
+  if(opts.attacking){const side=facing==='left'?-1:1;rect(c,x+side*16,y-28,2,13,'#cee5de');rect(c,x+side*16-2,y-18,6,2,'#83a8b6');rect(c,x+side*16,y-31,2,3,'#f5efc9');}
+}
+
 function drawThematicCharacter(c,x,y,theme,opts) {
+  if(theme==='shinobi'){drawEmberCharacter(c,x,y,opts);return;}
   const p=opts.phase==='dream'?DREAM_PALETTE:PALETTES[theme],npc=opts.npc||opts.type==='npc';
   const t=opts.time||0,step=opts.walking||opts.moving?Math.floor(t*9)%2:0,facing=opts.facing||'down';
   const key=opts.kind||'',name=opts.name||'',dream=opts.phase==='dream';
@@ -984,6 +1193,18 @@ export function drawWorld(c,theme='moss',opts={}) {
     // Reed pollen, leaves, and the ribbons of the clan flags move in the breeze.
     for(let i=0;i<22;i++){const xx=x+(i*157+time*8)%Math.floor(w/scale),yy=y+(i*67+Math.sin(time+i)*4)%Math.floor(h/scale);rect(c,xx,yy,2,i%3===0?2:1,i%3===0?'#ead2a876':'#ecedba85');}
     for(const [bx,by] of [[873,551],[1148,695],[771,252]]){rect(c,bx+5,by-10+Math.floor(Math.sin(time*3+bx)*2),8,2,'#eac594');}
+    // Steam curls out of the ramen kitchen in discrete translucent pixels.
+    for(let i=0;i<5;i++){
+      const rise=(time*12+i*11)%54,xx=1118+Math.round(Math.sin(time*1.6+i)*4);
+      pixelOval(c,xx-3,544-rise,7+(i%2)*4,5,'#fff6d853');rect(c,xx+1,540-rise,2,3,'#fffde63c');
+    }
+    for(let i=0;i<3;i++){
+      const xx=1017+i*38+Math.round(Math.sin(time*2+i)*2),rise=(time*10+i*7)%18;
+      rect(c,xx,655-rise,2,4,'#fff9dd8a');rect(c,xx+2,651-rise,2,3,'#fff9dd5f');
+    }
+    // A blue rooftop pennant and tiny circling birds make the sunny ridge feel alive.
+    rect(c,760,318,20,7,'#3d799d');rect(c,762,318,15,2,'#a2d6c8');rect(c,773,323+Math.floor(Math.sin(time*3)),10,3,'#3d799d');
+    for(let i=0;i<4;i++){const xx=667+i*109+Math.sin(time*.45+i)*9,yy=82+(i%2)*16;rect(c,xx-4,yy,3,1,'#657866');rect(c,xx-1,yy+1,3,1,'#657866');rect(c,xx+2,yy,3,1,'#657866');}
   }
   c.restore();
 }
@@ -991,8 +1212,8 @@ export function drawWorld(c,theme='moss',opts={}) {
 export function drawPreview(canvas,theme='moss') {
   const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
   if(theme==='lynch'||theme==='shinobi') {
-    const scale=w/865,worldHeight=h/scale;
-    const scene=theme==='lynch'?{x:291,y:708-worldHeight,player:{x:739,y:700,facing:'down'}}:{x:425,y:741-worldHeight,player:{x:758,y:696,facing:'down'}};
+    const scale=w/(theme==='shinobi'?1500:865),worldHeight=h/scale;
+    const scene=theme==='lynch'?{x:291,y:708-worldHeight,player:{x:739,y:700,facing:'down'}}:{x:50,y:10,player:{x:758,y:696,facing:'down'}};
     const entities=getWorldFeatures(theme);
     if(theme==='lynch')entities.push({x:805,y:631,type:'npc',kind:'double',name:'The double',facing:'left'},{x:647,y:773,type:'enemy'});
     else entities.push({x:687,y:690,type:'npc',kind:'rival',facing:'right'},{x:890,y:698,type:'npc',kind:'ranger',facing:'left'});

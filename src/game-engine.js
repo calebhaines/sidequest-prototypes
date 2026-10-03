@@ -1,4 +1,4 @@
-import { WORLD_SIZE, drawWorld, getSpawn, getWorldFeatures, getObstacles } from './world-renderer.js';
+import { WORLD_SIZE, drawWorld, drawCharacter, getSpawn, getWorldFeatures, getObstacles } from './world-renderer.js';
 import { NEW_STORIES } from './new-stories.js';
 
 // Each prototype shares controls, while its story, objectives and weapon differ.
@@ -137,6 +137,7 @@ export function createGame(canvas, theme, callbacks = {}) {
   let location = 'Village crossroads';
   let introTimer = 1.5;
   let interactionPulse = 0;
+  let afterimageTime = 0;
 
   function toast(message) { callbacks.onToast?.(message); }
   function clearMovement() { Object.keys(held).forEach(key => { held[key] = false; }); }
@@ -581,13 +582,21 @@ export function createGame(canvas, theme, callbacks = {}) {
       if (!canStand(position.x, position.y)) { position.x = player.x; position.y = player.y; }
       clones.push({ ...position, id: `clone-${elapsed}`, health: 40, t: 8, facing: player.facing });
       effects.push({ kind: 'smoke', x: position.x, y: position.y, t: 0.65, maxT: 0.65 });
+      effects.push({ kind: 'chakra', x: player.x, y: player.y, t: 0.7, maxT: 0.7 });
+      effects.push({ kind: 'chakra', x: position.x, y: position.y, t: 0.65, maxT: 0.65 });
       toast('Shadow Clone · enemies follow your double');
     } else if (ability.id === 'substitution') {
       const oldPosition = { x: player.x, y: player.y };
-      for (let step = 0; step < 27; step++) move(player, facing.x * 5, facing.y * 5);
+      for (let step = 0; step < 27; step++) {
+        move(player, facing.x * 5, facing.y * 5);
+        if (step % 6 === 0 && distance(player, oldPosition) > 12) effects.push({ kind: 'afterimage', x: player.x, y: player.y, facing: player.facing, t: 0.3 + step * 0.014, maxT: 0.3 + step * 0.014 });
+      }
       invulnerable = Math.max(invulnerable, 1.6);
       effects.push({ kind: 'substitution', ...oldPosition, t: 1.1, maxT: 1.1 });
+      effects.push({ kind: 'smoke', ...oldPosition, t: 0.6, maxT: 0.6 });
       effects.push({ kind: 'smoke', x: player.x, y: player.y, t: 0.5, maxT: 0.5 });
+      effects.push({ kind: 'chakra', x: player.x, y: player.y, t: 0.6, maxT: 0.6 });
+      effects.push({ kind: 'dash', ...oldPosition, endX: player.x, endY: player.y, facing: player.facing, t: 0.45, maxT: 0.45 });
       toast('Substitution · escape with 1.6 seconds of protection');
     }
     emitState();
@@ -650,6 +659,13 @@ export function createGame(canvas, theme, callbacks = {}) {
       dx /= d; dy /= d;
       const speed = held.sprint ? 175 : 112;
       move(player, dx * speed * dt, dy * speed * dt);
+      if (theme === 'shinobi' && invulnerable > 0) {
+        afterimageTime += dt;
+        if (afterimageTime >= 0.07) {
+          afterimageTime = 0;
+          effects.push({ kind: 'afterimage', x: player.x - dx * 8, y: player.y - dy * 8, facing: player.facing, t: 0.24, maxT: 0.24 });
+        }
+      }
     }
     if (held.attack) attack();
 
@@ -749,6 +765,42 @@ export function createGame(canvas, theme, callbacks = {}) {
     });
     const sx = value => (value - camera.x) * scale;
     const sy = value => (value - camera.y) * scale;
+    // Jutsu art uses whole world pixels, the same grid as the character sprites.
+    const pixelWorld = (wx, wy, pw, ph, color) => {
+      context.fillStyle = color;
+      context.fillRect(Math.round((Math.round(wx) - Math.round(camera.x)) * scale), Math.round((Math.round(wy) - Math.round(camera.y)) * scale), Math.max(1, Math.round(pw * scale)), Math.max(1, Math.round(ph * scale)));
+    };
+    function drawChakraAura(wx, wy, strength = 1) {
+      context.save(); context.globalAlpha *= strength;
+      const beat = Math.floor(elapsed * 12) % 3;
+      for (const side of [-1, 1]) {
+        pixelWorld(wx + side * 12 - 1, wy - 28, 3, 19, '#2997ed');
+        pixelWorld(wx + side * 15 - 1, wy - 20 - beat, 2, 13, '#68d7ff');
+        pixelWorld(wx + side * 12, wy - 32 - beat, 2, 13, '#b6f1ff');
+        pixelWorld(wx + side * 9, wy - 37 - beat, 2, 7, '#68d7ff');
+        pixelWorld(wx + side * 5, wy - 43 - beat, 2, 7, '#d8faff');
+        pixelWorld(wx + side * 18, wy - 13 - beat * 3, 2, 3, '#b6f1ff');
+      }
+      pixelWorld(wx - 10, wy, 21, 2, '#68d7ff');
+      pixelWorld(wx - 7, wy + 2, 15, 1, '#b6f1ff');
+      context.restore();
+    }
+    function drawShinobiEcho(actor, alpha) {
+      context.save(); context.globalAlpha *= alpha;
+      context.translate(-Math.round(camera.x) * scale, -Math.round(camera.y) * scale);
+      context.scale(scale, scale);
+      drawCharacter(context, Math.round(actor.x), Math.round(actor.y), 'shinobi', { ...actor, type: 'player', time: elapsed, moving: actor.moving || false, sprinting: actor.sprinting || false });
+      context.restore();
+    }
+    function smokePuff(wx, wy, size) {
+      const radius = Math.max(5, Math.round(size));
+      pixelWorld(wx - radius + 3, wy - radius, radius * 2 - 6, radius * 2, '#9cb3c2');
+      pixelWorld(wx - radius, wy - radius + 3, radius * 2, radius * 2 - 6, '#9cb3c2');
+      pixelWorld(wx - radius + 2, wy - radius + 4, radius * 2 - 4, radius * 2 - 8, '#e4eef0');
+      pixelWorld(wx - radius + 4, wy - radius + 2, radius * 2 - 8, radius * 2 - 4, '#fffef5');
+      pixelWorld(wx - radius + 3, wy - radius + 4, radius + 1, 3, '#ffffff');
+      pixelWorld(wx + 1, wy + radius - 4, Math.max(2, radius - 3), 2, '#cbdde4');
+    }
     const destination = nextDestination();
     if (destination) {
       const x = sx(destination.x);
@@ -784,11 +836,24 @@ export function createGame(canvas, theme, callbacks = {}) {
       const x = sx(projectile.x);
       const y = sy(projectile.y);
       if (projectile.kind === 'ember') {
-        context.fillStyle = '#f56636'; context.fillRect(x - 7 * scale, y - 7 * scale, 14 * scale, 14 * scale);
-        context.fillStyle = '#ffd875'; context.fillRect(x - 4 * scale, y - 4 * scale, 8 * scale, 8 * scale);
-        context.fillStyle = '#ffeeb2'; context.fillRect(x - 2 * scale, y - 2 * scale, 4 * scale, 4 * scale);
-        context.strokeStyle = '#ed7836'; context.lineWidth = 5 * scale;
-        context.beginPath(); context.moveTo(x, y); context.lineTo(x - projectile.dx * 20 * scale, y - projectile.dy * 20 * scale); context.stroke();
+        const beat = Math.floor(elapsed * 18) % 3;
+        for (let index = 5; index >= 1; index--) {
+          const tx = projectile.x - projectile.dx * index * 7;
+          const ty = projectile.y - projectile.dy * index * 7;
+          const spread = 2 + (index + beat) % 3;
+          pixelWorld(tx - spread, ty - spread, spread * 2, spread * 2, index % 2 ? '#ef5427' : '#f99732');
+          pixelWorld(tx - 1, ty - 1, 3, 3, '#ffd86a');
+          if (index % 2) pixelWorld(tx + projectile.dy * 7, ty - projectile.dx * 7 - beat, 2, 3, '#ffbe4a');
+        }
+        pixelWorld(projectile.x - 8, projectile.y - 11, 16, 22, '#d94b20');
+        pixelWorld(projectile.x - 11, projectile.y - 7, 22, 14, '#f77524');
+        pixelWorld(projectile.x - 7, projectile.y - 8, 14, 16, '#ffad38');
+        pixelWorld(projectile.x - 9, projectile.y - 4, 18, 8, '#ffbd42');
+        pixelWorld(projectile.x - 4, projectile.y - 6, 8, 12, '#ffe979');
+        pixelWorld(projectile.x - 6, projectile.y - 3, 12, 6, '#ffe979');
+        pixelWorld(projectile.x - 2, projectile.y - 3, 4, 6, '#fff9c9');
+        pixelWorld(projectile.x - 6 + beat * 4, projectile.y - 13, 3, 5, '#ffad38');
+        pixelWorld(projectile.x + 6 - beat * 3, projectile.y + 9, 3, 5, '#fa7a27');
         continue;
       }
       if (projectile.kind === 'kunai') {
@@ -802,14 +867,13 @@ export function createGame(canvas, theme, callbacks = {}) {
       context.beginPath(); context.moveTo(x, y); context.lineTo(x - projectile.dx * 12, y - projectile.dy * 12); context.stroke();
     }
     for (const clone of clones) {
-      const x = sx(clone.x), y = sy(clone.y);
-      context.save(); context.globalAlpha = Math.min(0.85, clone.t * 0.7);
-      context.fillStyle = '#51d3da'; context.fillRect(x - 7 * scale, y - 19 * scale, 14 * scale, 13 * scale);
-      context.fillStyle = '#f7d5a7'; context.fillRect(x - 5 * scale, y - 28 * scale, 10 * scale, 10 * scale);
-      context.fillStyle = '#334555'; context.fillRect(x - 6 * scale, y - 29 * scale, 12 * scale, 4 * scale);
-      context.fillStyle = '#bfebf6'; context.fillRect(x - 6 * scale, y - 25 * scale, 12 * scale, 3 * scale);
-      context.fillStyle = '#263c5d'; context.fillRect(x - 6 * scale, y - 6 * scale, 5 * scale, 6 * scale); context.fillRect(x + 1 * scale, y - 6 * scale, 5 * scale, 6 * scale);
-      context.strokeStyle = '#91f3ed'; context.lineWidth = 1; context.beginPath(); context.arc(x, y - 10 * scale, 17 * scale, 0, Math.PI * 2); context.stroke();
+      context.save(); context.globalAlpha = Math.min(0.95, clone.t * 0.8);
+      drawChakraAura(clone.x, clone.y, 0.75);
+      pixelWorld(clone.x - 9, clone.y - 41, 19, 18, '#68d7ff');
+      pixelWorld(clone.x - 13, clone.y - 24, 27, 15, '#68d7ff');
+      pixelWorld(clone.x - 8, clone.y - 12, 8, 13, '#68d7ff');
+      pixelWorld(clone.x + 1, clone.y - 12, 8, 13, '#68d7ff');
+      drawShinobiEcho(clone, 1);
       context.restore();
     }
     for (const effect of effects) {
@@ -827,11 +891,33 @@ export function createGame(canvas, theme, callbacks = {}) {
         context.lineWidth = 5 * scale;
         context.beginPath(); context.arc(x, y, (18 + progress * 128) * scale, 0, Math.PI * 2); context.stroke();
       } else if (effect.kind === 'smoke') {
-        context.fillStyle = '#dae9e7';
-        for (let index = 0; index < 7; index++) {
-          const angle = index * 0.9;
-          const size = (5 + progress * 5) * scale;
-          context.fillRect(x + Math.cos(angle) * progress * 25 * scale - size / 2, y - 12 * scale + Math.sin(angle) * progress * 19 * scale - size / 2, size, size);
+        for (let index = 0; index < 6; index++) {
+          const angle = index * Math.PI / 3;
+          const spread = 5 + progress * 16;
+          smokePuff(effect.x + Math.cos(angle) * spread, effect.y - 17 + Math.sin(angle) * spread * 0.7 - progress * 9, 6 + (index % 2) * 2 + progress * 3);
+        }
+        if (progress < 0.55) smokePuff(effect.x, effect.y - 18 - progress * 9, 10 - progress * 5);
+      } else if (effect.kind === 'chakra') {
+        drawChakraAura(effect.x, effect.y, 1 - progress * 0.5);
+        for (let index = 0; index < 10; index++) {
+          const side = index % 2 ? -1 : 1;
+          const px = effect.x + side * (8 + progress * (9 + index % 3 * 4));
+          const py = effect.y - 5 - index * 3 - progress * 22;
+          pixelWorld(px, py, index % 3 ? 2 : 3, index % 3 ? 4 : 2, index % 2 ? '#68d7ff' : '#e4fcff');
+        }
+      } else if (effect.kind === 'afterimage') {
+        drawShinobiEcho({ ...effect, moving: true, sprinting: true }, (1 - progress) * 0.42);
+        drawChakraAura(effect.x, effect.y, (1 - progress) * 0.24);
+      } else if (effect.kind === 'dash') {
+        const facing = DIR[effect.facing];
+        const travel = Math.hypot(effect.endX - effect.x, effect.endY - effect.y);
+        const length = Math.max(5, Math.min(24, Math.round(travel / 5)));
+        for (let index = 0; index < 6; index++) {
+          const along = travel * (0.15 + index * 0.12);
+          const across = (index % 3 - 1) * 9;
+          const px = effect.x + facing.x * along - facing.y * across;
+          const py = effect.y - 18 + facing.y * along + facing.x * across;
+          pixelWorld(px, py, facing.x ? length : 1, facing.y ? length : 1, index % 2 ? '#b6f1ff' : '#fffef5');
         }
       } else if (effect.kind === 'substitution') {
         context.fillStyle = '#4e362a'; context.fillRect(x - 8 * scale, y - 20 * scale, 16 * scale, 20 * scale);
@@ -839,13 +925,25 @@ export function createGame(canvas, theme, callbacks = {}) {
         context.fillStyle = '#e6c896'; context.fillRect(x - 8 * scale, y - 21 * scale, 16 * scale, 5 * scale);
         context.fillStyle = '#705439'; context.fillRect(x - 3 * scale, y - 18 * scale, 2 * scale, 16 * scale);
       } else if (effect.kind === 'emberblast' || effect.kind === 'embercast') {
-        const reach = effect.kind === 'emberblast' ? 75 : 27;
-        context.strokeStyle = '#ffbf58'; context.lineWidth = (8 - progress * 6) * scale;
-        context.beginPath(); context.arc(x, y, (10 + progress * reach) * scale, 0, Math.PI * 2); context.stroke();
-        context.fillStyle = '#ff713c';
-        for (let index = 0; index < 10; index++) {
-          const angle = index * 0.628;
-          context.fillRect(x + Math.cos(angle) * progress * reach * scale, y + Math.sin(angle) * progress * reach * scale - 9 * scale, 5 * scale, 9 * scale);
+        const impact = effect.kind === 'emberblast';
+        const reach = impact ? 65 : 22;
+        const core = Math.round(5 + Math.sin(progress * Math.PI) * (impact ? 10 : 4));
+        pixelWorld(effect.x - core, effect.y - core + 3, core * 2, core * 2 - 6, '#ef6528');
+        pixelWorld(effect.x - core + 3, effect.y - core, core * 2 - 6, core * 2, '#ffa738');
+        pixelWorld(effect.x - core / 2, effect.y - core / 2, core, core, '#ffe677');
+        if (progress < 0.4) pixelWorld(effect.x - 3, effect.y - 3, 6, 6, '#fff9d3');
+        for (let index = 0; index < 12; index++) {
+          const angle = index * Math.PI / 6;
+          const spread = (8 + progress * reach) * (index % 2 ? 0.65 : 1);
+          const px = effect.x + Math.cos(angle) * spread;
+          const py = effect.y + Math.sin(angle) * spread * 0.7 - progress * 8;
+          const flame = Math.max(2, Math.round((1 - progress) * 6));
+          pixelWorld(px - 2, py - flame, 4, flame * 2, index % 2 ? '#ffab38' : '#e95e25');
+          pixelWorld(px - 1, py - flame - 2, 2, Math.max(3, flame), '#ffe677');
+          if (impact) {
+            pixelWorld(px + Math.cos(angle) * 6, py + 8 + progress * 9, 3, 2, '#786347');
+            pixelWorld(px + Math.cos(angle) * 6 - 1, py + 7 + progress * 9, 2, 1, '#d8ab6b');
+          }
         }
       } else if (effect.kind === 'static') {
         context.fillStyle = '#e8d6dc';

@@ -1,5 +1,5 @@
 import './style.css';
-import { drawPreview, drawWorld, WORLD_SIZE } from './world-renderer.js';
+import { drawPreview, drawWorld, drawCharacter, WORLD_SIZE } from './world-renderer.js';
 import { createGame } from './game-engine.js';
 
 const icons = {
@@ -30,8 +30,8 @@ const worlds = [
   { id: 'neon', number: '02', name: 'Neon Afterglow', category: 'Sci-fi', genre: 'THE CITY NEVER SLEEPS', color: '#8062a6', chip: '#eee6f4', line: 'Find your place in the electric city.', description: 'Run the backstreets of a rain-soaked megacity. Take shady jobs, meet unlikely allies, and decide who gets your loyalty.', tags: ['Street stories', 'Cyberware', 'Faction choices'], location: 'Lower Grid', role: 'The runner', hook: 'Someone is erasing people from the city records. Tonight, your name appeared on the list.', gradient: '#675688' },
   { id: 'dust', number: '03', name: 'The Dustlands', category: 'Wasteland', genre: 'BEYOND THE LAST OUTPOST', color: '#aa653a', chip: '#f3e7d6', line: 'Nothing out here is truly empty.', description: 'Make a life at the edge of a broken world. Scavenge the old roads, trade favors, and uncover what the desert buried.', tags: ['Lost technology', 'Salvage & trade', 'Frontier survival'], location: 'Lastwater', role: 'The drifter', hook: 'The settlement has three days of clean water left. An old machine in the dunes might change that.', gradient: '#c99455' },
   { id: 'odd', number: '04', name: 'Borrowed Sky', category: 'Surreal', genre: 'WELCOME TO THE NEIGHBORHOOD', color: '#657ca4', chip: '#e4eaf5', line: 'A familiar town. An unfamiliar feeling.', description: 'Ride into a sleepy suburb where the ordinary gets wonderfully strange. Make friends, chase rumors, and look a little closer.', tags: ['Small-town secrets', 'Strange encounters', 'Everyday magic'], location: 'Bellweather', role: 'The new kid', hook: 'It is always 6:17 in Bellweather. Everyone seems fine with that. Everyone except you.', gradient: '#8292bc' },
-  { id: 'lynch', number: '05', name: 'Velvet Static', category: 'Mystery', genre: 'SOME ROOMS REMEMBER YOU', color: '#995461', chip: '#f1e2e7', line: 'A quiet town. A room that knows your name.', description: 'Follow a ringing telephone into Mercy Falls. Question its peculiar residents, cross into their dreams, and decide which version of the truth to carry home.', tags: ['Dream logic', 'Contradictory witnesses', 'Two realities'], location: 'Mercy Falls', role: 'The late arrival', hook: 'The motel has kept a room for you for thirteen years. You have never been here before. The night clerk disagrees.', gradient: '#4c293e', isNew: true, time: '03:17' },
-  { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#72854a', chip: '#edf0dc', line: 'Small village. Unwritten legend.', description: 'Become a genin in the Village Hidden in the Reeds. Master chakra and elemental jutsus, spar with rivals, and choose where your loyalties lie.', tags: ['Chakra & jutsus', 'Hidden village', 'Shinobi missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#5e996d', isNew: true, time: '07:12' },
+  { id: 'lynch', number: '05', name: 'Velvet Static', category: 'Mystery', genre: 'SOME ROOMS REMEMBER YOU', color: '#995461', chip: '#f1e2e7', line: 'A quiet town. A room that knows your name.', description: 'Follow a ringing telephone into Mercy Falls. Question its peculiar residents, cross into their dreams, and decide which version of the truth to carry home.', tags: ['Dream logic', 'Contradictory witnesses', 'Two realities'], location: 'Mercy Falls', role: 'The late arrival', hook: 'The motel has kept a room for you for thirteen years. You have never been here before. The night clerk disagrees.', gradient: '#4c293e', isNew: true, isFinalist: true, time: '03:17' },
+  { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#d77529', chip: '#fff0d9', line: 'Small village. Unwritten legend.', description: 'Run beneath carved mountain faces and orange rooftops in the Village Hidden in the Reeds. Master chakra, clash with rival shinobi, and decide where your loyalties lie.', tags: ['Chakra & jutsus', 'Hidden village', 'Shinobi missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#69a65c', isNew: true, isFinalist: true, time: '07:12' },
 ];
 
 let selectedWorld = null;
@@ -68,7 +68,7 @@ function renderApp() {
         </div>
         <div class="hero-aside">
           <p>The charm of a classic pixel RPG.<br>The freedom to make your own story.</p>
-          <p class="hero-small">Six different worlds. Six playable beginnings.<br>Two new roads to wander. See where you belong.</p>
+          <p class="hero-small">Two favorites. Two very different adventures.<br>Velvet Static and Hidden Ember lead the way.</p>
           <div class="hero-perks"><span>${icon('globe')} Open exploration</span><span>${icon('sword')} Real-time combat</span><span>${icon('chat')} Your choices</span></div>
         </div>
       </section>
@@ -77,7 +77,7 @@ function renderApp() {
         <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','Mystery','Shinobi','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? `<span class="filter-count">${worlds.length}</span>` : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>
         <div class="selection-banner" ${selectedWorld ? '' : 'hidden'}></div>
         <div class="world-grid" id="world-grid"></div>
-        <div class="gallery-note">${icon('spark')} A starting point, not a finished game. Your favorite world is the one we’ll build on.</div>
+        <div class="gallery-note">${icon('spark')} Velvet Static and Hidden Ember are the finalists. Two worlds to keep exploring.</div>
       </section>
       <section class="idea-section" id="idea">
         <div class="idea-intro"><div class="eyebrow">THE LITTLE BIG IDEA</div><h2>Old-school soul.<br>Open-world spirit.</h2><p>Familiar pixels. Unfamiliar paths.<br>A world that makes room for your story.</p></div>
@@ -110,7 +110,7 @@ function renderCards() {
     <article class="world-card ${selectedWorld === w.id ? 'is-selected' : ''}" style="--world-color:${w.color};--world-chip:${w.chip}" data-world="${w.id}">
       <div class="world-art" style="background:${w.gradient}">
         <canvas id="preview-${w.id}" width="720" height="360" aria-label="Pixel-art view of ${w.name}"></canvas>
-        <div class="art-topline"><div class="art-badges"><span class="world-genre"><span></span>${w.category}</span>${w.isNew ? '<span class="new-world-badge">NEW WORLD</span>' : ''}</div><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
+        <div class="art-topline"><div class="art-badges"><span class="world-genre"><span></span>${w.category}</span>${w.isFinalist ? '<span class="new-world-badge finalist-badge">FINALIST</span>' : w.isNew ? '<span class="new-world-badge">NEW WORLD</span>' : ''}</div><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
         <button class="scene-play" data-play="${w.id}" aria-label="Play ${w.name}"><span class="scene-play-icon">${icon('play')}</span><span>Step into this world</span></button>
         <div class="art-bottomline"><span class="pixel-coordinates">${w.location.toUpperCase()}<span> · </span> ${w.time || (w.number === '02' ? '23:48' : w.number === '04' ? '18:17' : '09:41')}</span><span class="art-number">WORLD ${w.number}</span></div>
       </div>
@@ -217,6 +217,12 @@ function drawAvatar(theme) {
   const canvas = document.querySelector('#avatar-canvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
+  if(theme==='shinobi'){
+    ctx.fillStyle='#ffead0';ctx.fillRect(0,0,64,64);
+    ctx.save();ctx.translate(32,61);ctx.scale(1.25,1.25);
+    drawCharacter(ctx,0,0,'shinobi',{facing:'down'});
+    ctx.restore();return;
+  }
   const colors={moss:['#cfb980','#536d47','#ef6046'],neon:['#c9a5bd','#645286','#56dcda'],dust:['#d6b480','#986640','#d25d3c'],odd:['#d8bca9','#6874a9','#e57788'],lynch:['#edccad','#312535','#73344c'],shinobi:['#e9bd85','#263b48','#ed8b42']};
   const [skin,hair,shirt]=colors[theme];
   ctx.fillStyle=hair; ctx.fillRect(20,10,24,12);ctx.fillRect(16,18,32,12);
@@ -225,7 +231,6 @@ function drawAvatar(theme) {
   ctx.fillStyle=shirt;ctx.fillRect(16,42,32,14);ctx.fillRect(12,46,8,10);ctx.fillRect(44,46,8,10);
   ctx.fillStyle=skin;ctx.fillRect(12,56,8,5);ctx.fillRect(44,56,8,5);
   if(theme==='lynch'){ctx.fillStyle='#352737';ctx.fillRect(28,42,8,14);ctx.fillStyle='#c7a78c';ctx.fillRect(30,44,4,7);ctx.fillStyle='#ead7ac';ctx.fillRect(42,50,9,8);ctx.fillStyle='#493849';ctx.fillRect(44,52,5,4);}
-  if(theme==='shinobi'){ctx.fillStyle='#33586b';ctx.fillRect(15,20,34,5);ctx.fillStyle='#b5c1bd';ctx.fillRect(23,20,18,5);ctx.fillStyle='#465358';ctx.fillRect(30,21,4,3);ctx.fillStyle='#744642';ctx.fillRect(32,45,13,5);}
 }
 
 function updateGameState(state) {

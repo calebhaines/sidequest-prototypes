@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 const output = path.join(root, 'downloads');
 const browserOutput = path.join(root, 'public', 'downloads');
 fs.mkdirSync(output, { recursive: true });
@@ -35,6 +36,7 @@ const standalone = `<!doctype html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f7f6f1">
+<meta name="sidequest-version" content="${version}">
 <title>Sidequest — Six playable pixel RPG prototypes</title>
 <link rel="icon" href="data:image/svg+xml;base64,${favicon}">
 <style>${css}</style>
@@ -49,7 +51,7 @@ fs.mkdirSync(websiteDownloads, { recursive: true });
 fs.copyFileSync(standalonePath, path.join(websiteDownloads, 'sidequest-play.html'));
 fs.writeFileSync(path.join(dist, 'assets', jsName), script.replaceAll('/downloads/sidequest-prototypes.zip', '/downloads/sidequest-play.html'));
 
-const instructions = `SIDEQUEST — SIX PLAYABLE PIXEL RPG PROTOTYPES
+const instructions = `SIDEQUEST — SIX PLAYABLE PIXEL RPG PROTOTYPES (${version})
 
 QUICKEST WAY TO PLAY
 1. Extract this ZIP.
@@ -67,7 +69,10 @@ THE WORLDS
 03 The Dustlands — desert salvage and a town running out of water.
 04 Borrowed Sky — a surreal suburb and the missing Thursday.
 05 Velvet Static — an uncanny town, dream crossings, and contradictory witnesses.
-06 Hidden Ember — shinobi training, chakra, jutsus, and hidden-village loyalties.
+06 Hidden Ember — bright shinobi village, chakra, jutsus, and clan loyalties.
+
+Velvet Static and Hidden Ember are the two finalists. Hidden Ember now features
+an orange-clad genin, carved mountain faces, ramen stalls, and blue chakra effects.
 
 CONTROLS
 WASD / arrows: Move    Shift: Sprint    E / Enter: Talk or interact
