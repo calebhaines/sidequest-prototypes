@@ -4,28 +4,32 @@ Six original browser RPG prototypes with classic top-down pixel art, real-time c
 
 ## Download and play
 
-[Play all six prototypes in your browser](https://calebhaines.github.io/sidequest-prototypes/).
+[Play all six prototypes in your browser](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0).
 
-For offline play, download [**sidequest-prototypes.zip**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.3.0/docs/sidequest-prototypes.zip), extract it, and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled; no installation, account, or server is needed.
+For offline play, download [**sidequest-prototypes.zip**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.4.0/docs/sidequest-prototypes.zip), extract it, and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled; no installation, account, or server is needed.
 
-For a single-file download, save [**sidequest-play.html**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.3.0/docs/sidequest-play.html) to your device and open the saved HTML file directly. These links point to the fixed **v0.3.0** files.
+For a single-file download, save [**sidequest-play.html**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.4.0/docs/sidequest-play.html) to your device and open the saved HTML file directly. These links point to the fixed **v0.4.0** files.
 
 ## Featured finalists
 
-[**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/#play-lynch) explores a mysterious mill town through conversations, clues, and crossings between waking and dreaming.
+[**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-lynch) explores a mysterious mill town through conversations, clues, and crossings between waking and dreaming.
 
-[**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/#play-shinobi) has a brighter Naruto-inspired visual identity: orange rooftops, lush greenery, carved mountain faces, a round leadership tower, and a ramen shop. A blond genin in orange, village headbands, and a masked mentor in a flak vest give its original cast a clearer shinobi style. Blue chakra, white smoke, and fiery jutsu trails bring the techniques to life.
+[**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-shinobi) expands its shinobi adventure through cedar forests, waterfall training, lantern markets, an Ash-clan archive, and border outposts. The Naruto-inspired art uses orange, navy, and green pixel color clusters without outlines.
+
+Each finalist now has a **4800 × 3456 map**, nine times its original area, **14 characters to talk to**, **six main objectives**, **three side stories**, and **six travel stops**. Player replies are remembered during the adventure and unlock follow-up topics; new clues can open further conversations. Discover travel stops along the roads, then use **T** or the map's travel button to return to one. Accepted side stories can be tracked from the sidebar.
+
+Velvet Static's expanded county includes a paper mill, lakeside observatory, broadcast hills, chapel, drowned orchard, ferry marsh, and rail terminal. Its waking and dream art uses palette shading without perimeter outlines.
 
 The gallery marks both worlds **FINALIST**. All six prototypes are available to play.
 
 ## Choose a world
 
-- [**Moss & Myth**](https://calebhaines.github.io/sidequest-prototypes/#play-moss) — woodland fantasy, forest folk, and forgotten magic.
-- [**Neon Afterglow**](https://calebhaines.github.io/sidequest-prototypes/#play-neon) — cyberpunk streets, shady jobs, and faction choices.
-- [**The Dustlands**](https://calebhaines.github.io/sidequest-prototypes/#play-dust) — desert salvage, lost technology, and a settlement's water crisis.
-- [**Borrowed Sky**](https://calebhaines.github.io/sidequest-prototypes/#play-odd) — surreal suburbs, everyday magic, and a town frozen in time.
-- [**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/#play-lynch) — a mysterious mill town, contradictory witnesses, and crossings between waking and dreaming.
-- [**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/#play-shinobi) — a bright hidden shinobi village, chakra techniques, a stolen scroll, and competing loyalties.
+- [**Moss & Myth**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-moss) — woodland fantasy, forest folk, and forgotten magic.
+- [**Neon Afterglow**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-neon) — cyberpunk streets, shady jobs, and faction choices.
+- [**The Dustlands**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-dust) — desert salvage, lost technology, and a settlement's water crisis.
+- [**Borrowed Sky**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-odd) — surreal suburbs, everyday magic, and a town frozen in time.
+- [**Velvet Static**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-lynch) — a mysterious mill town, contradictory witnesses, and crossings between waking and dreaming.
+- [**Hidden Ember**](https://calebhaines.github.io/sidequest-prototypes/?v=0.4.0#play-shinobi) — a bright hidden shinobi village, chakra techniques, a stolen scroll, and competing loyalties.
 
 Velvet Static and Hidden Ember feature longer conversations, investigation clues, peaceful routes, and three endings each. Decisions change what people say and whether enemies remain hostile.
 
@@ -39,7 +43,7 @@ In **Velvet Static**, Q crosses between waking and dreaming. Investigate the tel
 
 In **Hidden Ember**, 1 casts Ember Release, 2 makes a Shadow Clone that draws attacks, and 3 uses Substitution to escape danger. All three techniques are available at the start and consume chakra, which replenishes over time. Ask Sora about the watchtower passphrase to complete the mission without defeating rogues.
 
-Touch controls and clickable ability buttons are available. Ambient sound is optional.
+Touch controls and clickable ability buttons are available. T opens discovered travel stops in the two finalists; side stories can be tracked from their sidebar. Ambient sound is optional. Gameplay and dialogue choices start fresh when a world is reopened.
 
 ## Source and credits
 

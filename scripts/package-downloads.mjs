@@ -71,14 +71,18 @@ THE WORLDS
 05 Velvet Static — an uncanny town, dream crossings, and contradictory witnesses.
 06 Hidden Ember — bright shinobi village, chakra, jutsus, and clan loyalties.
 
-Velvet Static and Hidden Ember are the two finalists. Hidden Ember now features
-an orange-clad genin, carved mountain faces, ramen stalls, and blue chakra effects.
+Velvet Static and Hidden Ember are the two expanded finalists. Each map has
+nine times its original area, fourteen characters, six main objectives,
+three side stories, branching conversations, and pixel artwork without outlines.
+The four original prototypes keep their existing worlds and gameplay.
 
 CONTROLS
 WASD / arrows: Move    Shift: Sprint    E / Enter: Talk or interact
 Space: Attack    M: World map    Escape: Close dialogue/map or leave
 Velvet Static: Q crosses between waking and dream; Space uses a camera flash.
 Hidden Ember: 1 Ember Release, 2 Shadow Clone, 3 Substitution; Space throws kunai.
+Both finalists: T opens discovered travel stops; the map also has a travel button.
+Accept side stories through conversations and track them under Other stories.
 Small-screen browsers show touch controls. Ambient sound is optional.
 
 Your chosen world and shortlist are stored in your browser, when local

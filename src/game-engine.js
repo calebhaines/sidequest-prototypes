@@ -1,4 +1,4 @@
-import { WORLD_SIZE, drawWorld, drawCharacter, getSpawn, getWorldFeatures, getObstacles } from './world-renderer.js';
+import { WORLD_SIZE, drawWorld, drawCharacter, getSpawn, getWorldFeatures, getObstacles, getWorldSize, getWorldRegions } from './world-renderer.js';
 import { NEW_STORIES } from './new-stories.js';
 
 // Each prototype shares controls, while its story, objectives and weapon differ.
@@ -59,18 +59,21 @@ export function createGame(canvas, theme, callbacks = {}) {
   theme = STORIES[theme] ? theme : 'moss';
   const story = STORIES[theme];
   const isNew = theme === 'lynch' || theme === 'shinobi';
+  const worldSize = isNew ? getWorldSize(theme) : WORLD_SIZE;
+  const regions = isNew ? getWorldRegions(theme) || [] : [];
+  const regionsVisited = new Set();
   const context = canvas.getContext('2d');
   const spawn = getSpawn(theme);
   const features = getWorldFeatures(theme).map((feature, index) => {
     const data = (feature.type === 'npc' ? story.npcs : story.landmarks)?.find(item => item.name === feature.name);
-    return { ...feature, id: `${theme}-${index}`, discovered: false, opened: false, ...(data ? { storyData: data, role: data.role || feature.role, requiredPhase: data.phase || 'both' } : {}) };
+    return { ...feature, id: `${theme}-${index}`, discovered: false, opened: false, ...(isNew ? { requiredPhase: data?.phase || feature.phase || 'both' } : {}), ...(data ? { storyData: data, role: data.role || feature.role } : {}) };
   });
   const obstacles = getObstacles(theme) || [];
   const npcs = features.filter(f => f.type === 'npc');
   const giver = (isNew && npcs.find(npc => npc.role === 'guide')) || [...npcs].sort((a, b) => distance(a, spawn) - distance(b, spawn))[0];
   const landmarks = features.filter(f => f.type === 'landmark').sort((a, b) => distance(b, spawn) - distance(a, spawn));
   const chests = features.filter(f => f.type === 'chest');
-  const targets = isNew ? landmarks.slice(0, 3) : theme === 'dust' ? chests.slice(0, 2)
+  const targets = isNew ? landmarks.filter(feature => feature.main === true || feature.storyData?.main === true) : theme === 'dust' ? chests.slice(0, 2)
     : theme === 'odd' ? [...npcs.filter(f => f !== giver).slice(0, 2), ...landmarks.slice(0, 1)]
       : landmarks.slice(0, 2);
   const killsNeeded = theme === 'lynch' || theme === 'odd' ? 0 : theme === 'dust' ? 1 : 2;
@@ -89,6 +92,13 @@ export function createGame(canvas, theme, callbacks = {}) {
   const journal = [];
   const recordedClues = new Set();
   const clones = [];
+  const dialogueFlags = new Set();
+  const rememberedReplies = new Map();
+  const sideQuestRecords = (isNew ? story.sideQuests || [] : []).map(data => ({ data, status: 'available', completed: new Set() }));
+  const travelPoints = features.filter(feature => feature.type === 'waypoint' || feature.type === 'travel');
+  const initialStop = [...travelPoints].sort((a, b) => distance(a, spawn) - distance(b, spawn))[0];
+  if (initialStop) { initialStop.discovered = true; visited.add(initialStop.id); }
+  let trackedQuest = 'main';
   const abilityCooldowns = { dreamshift: 0, ember: 0, clone: 0, substitution: 0 };
   const abilityDefinitions = theme === 'shinobi' ? [
     { id: 'ember', key: '1', name: 'Ember Release', description: 'A fireball bursts into an area of flame.', cost: 20, duration: 2.4 },
@@ -104,8 +114,12 @@ export function createGame(canvas, theme, callbacks = {}) {
   let chosenEnding = null;
   const enemyPositions = theme === 'lynch' ? [
     { x: 1020, y: 468 }, { x: 1350, y: 350 }, { x: 1150, y: 880 }, { x: 355, y: 415 },
+    { x: 2450, y: 970 }, { x: 3190, y: 1430 }, { x: 4480, y: 1040 },
+    { x: 1440, y: 2870 }, { x: 2590, y: 2480 }, { x: 3870, y: 3050 },
   ] : theme === 'shinobi' ? [
     { x: 1140, y: 385 }, { x: 1195, y: 495 }, { x: 440, y: 845 }, { x: 440, y: 910 },
+    { x: 1880, y: 1230 }, { x: 2930, y: 1410 }, { x: 4370, y: 930 },
+    { x: 3960, y: 2030 }, { x: 2470, y: 3010 }, { x: 3790, y: 3190 },
   ] : [
     { x: 1160, y: 360 }, { x: 1260, y: 445 }, { x: 470, y: 865 },
     { x: 380, y: 955 }, { x: 1210, y: 870 }, { x: 1115, y: 935 },
@@ -145,7 +159,7 @@ export function createGame(canvas, theme, callbacks = {}) {
   function combatCredit() { return theme === 'shinobi' && narrativeRoute ? killsNeeded : Math.min(kills, killsNeeded); }
   function questReady() { return completed.size >= targets.length && combatCredit() >= killsNeeded; }
   function questProgress() { return completed.size + combatCredit(); }
-  function visibleFeature(feature) { return theme !== 'lynch' || !feature.phase || feature.phase === 'both' || feature.phase === worldPhase; }
+  function visibleFeature(feature) { return theme !== 'lynch' || feature.type === 'landmark' || feature.type === 'waypoint' || !feature.phase || feature.phase === 'both' || feature.phase === worldPhase; }
   function addJournal(title, text, key = title) {
     if (recordedClues.has(key)) return;
     recordedClues.add(key);
@@ -153,9 +167,95 @@ export function createGame(canvas, theme, callbacks = {}) {
     addXP(10);
     toast(`Notebook updated: ${title} · +10 XP`);
   }
+  function grantClue(clue, text) {
+    if (!clue) return;
+    addJournal(story.clueNames?.[clue] || clue, text || story.clueNames?.[clue] || clue, clue);
+    if (theme === 'shinobi' && clue === (story.peacefulRouteClue || 'watchtower-password') && !narrativeRoute) {
+      narrativeRoute = true;
+      if (!inventory.includes('Watchtower passphrase scroll')) inventory.push('Watchtower passphrase scroll');
+      for (const enemy of enemies) enemy.pacified = true;
+      toast('The oath opens a peaceful route. Rogue defeats are optional.');
+    }
+  }
+  function meetsRequirement(value, records) {
+    if (!value) return true;
+    return (Array.isArray(value) ? value : [value]).every(key => String(key).startsWith('!') ? !records.has(String(key).slice(1)) : records.has(key));
+  }
+  function topicAvailable(topic) {
+    return meetsRequirement(topic.requiresFlag, dialogueFlags) && meetsRequirement(topic.requiresClue, recordedClues);
+  }
+  function sideDestination(record) {
+    if (!record || record.status === 'complete') return null;
+    if (record.status === 'available' || record.status === 'ready') return npcs.find(npc => npc.name === record.data.giver) || null;
+    const step = record.data.steps.find((item, index) => !record.completed.has(index));
+    return features.find(feature => feature.name === step?.feature) || null;
+  }
+  function trackQuest(id = 'main') {
+    if (!isNew || (id !== 'main' && !sideQuestRecords.some(record => record.data.id === id && ['active', 'ready'].includes(record.status)))) return false;
+    trackedQuest = id;
+    emitState();
+    return true;
+  }
+  function acceptSideQuest(record) {
+    if (record.status !== 'available') return;
+    record.status = 'active';
+    trackedQuest = record.data.id;
+    addJournal(record.data.title, record.data.intro, `side-accepted-${record.data.id}`);
+    toast(`Quest accepted: ${record.data.title}`);
+    openDialogue(record.data.giver, record.data.intro, [{ label: 'I’ll follow that lead', action: () => {} }]);
+  }
+  function markSideStep(type, feature) {
+    const responses = [];
+    for (const record of sideQuestRecords) {
+      if (record.status !== 'active') continue;
+      record.data.steps.forEach((step, index) => {
+        const phase = step.phase || feature.requiredPhase || feature.phase || 'both';
+        if (step.type !== type || step.feature !== feature.name || record.completed.has(index) || (theme === 'lynch' && phase !== 'both' && phase !== worldPhase)) return;
+        record.completed.add(index);
+        if (step.text) responses.push(step.text);
+        addJournal(`${record.data.title}: ${feature.name}`, step.text, `side-step-${record.data.id}-${index}`);
+      });
+      if (record.completed.size >= record.data.steps.length) {
+        record.status = 'ready';
+        toast(`${record.data.title}: return to ${record.data.giver}.`);
+      }
+    }
+    return responses;
+  }
+  function finishSideQuest(record) {
+    if (record.status !== 'ready') return;
+    record.status = 'complete';
+    coins += record.data.reward || 0;
+    if (record.data.item && !inventory.includes(record.data.item)) inventory.push(record.data.item);
+    addXP(45);
+    addJournal(`${record.data.title} · complete`, record.data.completeText, `side-complete-${record.data.id}`);
+    if (trackedQuest === record.data.id) trackedQuest = 'main';
+    toast(`Quest complete · +${record.data.reward || 0} ${story.currency} · +45 XP`);
+    openDialogue(record.data.giver, record.data.completeText, [{ label: 'I’m glad I could help', action: () => {} }]);
+  }
+  function travelTo(id) {
+    if (!isNew || destroyed) return false;
+    const stop = travelPoints.find(point => point.id === id && point.discovered);
+    if (!stop || !canStand(stop.x, stop.y)) return false;
+    clearMovement(); dialogueOpen = false;
+    player.x = stop.x; player.y = stop.y;
+    invulnerable = Math.max(invulnerable, 3);
+    location = stop.name;
+    toast(`Arrived at ${stop.name}.`);
+    emitState();
+    return true;
+  }
+  function openTravel() {
+    if (!isNew || destroyed || externallyPaused || dialogueOpen) return false;
+    openDialogue(theme === 'lynch' ? 'County night service' : 'Shinobi travel routes', 'Return to a stop you have visited. Explore the roads to discover more routes.', [
+      ...travelPoints.filter(point => point.discovered).map(point => ({ label: `${point.name}${distance(point, player) < 100 ? ' · here' : ''}`, action: () => travelTo(point.id) })),
+      { label: 'Stay here', action: () => {} },
+    ]);
+    return true;
+  }
 
   function canStand(x, y, radius = 8) {
-    if (x < 22 || y < 25 || x > WORLD_SIZE.width - 22 || y > WORLD_SIZE.height - 22) return false;
+    if (x < 22 || y < 25 || x > worldSize.width - 22 || y > worldSize.height - 22) return false;
     return !obstacles.some(o => x + radius > o.x && x - radius < o.x + o.width && y + radius > o.y && y - radius < o.y + o.height);
   }
 
@@ -174,13 +274,13 @@ export function createGame(canvas, theme, callbacks = {}) {
   }
   const safeSpawn = { x: player.x, y: player.y };
   for (const enemy of enemies) {
-    if (!canStand(enemy.x, enemy.y)) {
+    if (!canStand(enemy.x, enemy.y) || (isNew && [...npcs, ...travelPoints].some(feature => distance(feature, enemy) < 130))) {
       let relocated = false;
       for (let radius = 24; radius <= 192 && !relocated; radius += 24) {
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
           const x = enemy.x + Math.cos(angle) * radius;
           const y = enemy.y + Math.sin(angle) * radius;
-          if (canStand(x, y)) { enemy.x = x; enemy.y = y; relocated = true; break; }
+          if (canStand(x, y) && (!isNew || [...npcs, ...travelPoints].every(feature => distance(feature, { x, y }) >= 135))) { enemy.x = x; enemy.y = y; relocated = true; break; }
         }
       }
       enemy.homeX = enemy.x;
@@ -197,7 +297,7 @@ export function createGame(canvas, theme, callbacks = {}) {
     return [vertical, horizontal].filter(Boolean).join('-');
   }
 
-  function nextDestination() {
+  function mainDestination() {
     if (questComplete) return null;
     if (questReady()) return giver;
     const pending = targets.filter(target => !completed.has(target.id));
@@ -212,10 +312,17 @@ export function createGame(canvas, theme, callbacks = {}) {
     if (theme === 'shinobi' && !narrativeRoute && kills < killsNeeded) return npcs.find(npc => npc.name === 'Sora') || giver;
     return enemies.filter(enemy => !enemy.defeated).sort((a, b) => distance(a, player) - distance(b, player))[0] || giver;
   }
+  function nextDestination() {
+    if (isNew && trackedQuest !== 'main') {
+      const destination = sideDestination(sideQuestRecords.find(record => record.data.id === trackedQuest));
+      if (destination) return destination;
+    }
+    return mainDestination();
+  }
 
   function nearestFeature() {
     return features.filter(feature => visibleFeature(feature) && distance(feature, player) < (feature.type === 'npc' ? 88 : 66))
-      .sort((a, b) => distance(a, player) - distance(b, player))[0];
+      .sort((a, b) => distance(a, player) + (isNew && travelPoints.includes(a) ? 60 : 0) - distance(b, player) - (isNew && travelPoints.includes(b) ? 60 : 0))[0];
   }
 
   function getState() {
@@ -236,7 +343,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       questComplete, questReady: ready, location, x: player.x, y: player.y,
       facing: player.facing, theme, inventory: [...inventory], inventoryCount: inventory.length,
       kills, explored: visited.size, totalPlaces: features.length,
-      interactHint: nearest ? `${nearest.type === 'npc' ? 'Talk to' : nearest.type === 'chest' ? (nearest.opened ? 'Inspect' : 'Open') : 'Investigate'} ${nearest.name}` : '',
+      interactHint: nearest ? `${nearest.type === 'npc' ? 'Talk to' : travelPoints.includes(nearest) ? 'Travel from' : nearest.type === 'chest' ? (nearest.opened ? 'Inspect' : 'Open') : 'Investigate'} ${nearest.name}` : '',
       destinationHint, destination: destination ? { x: destination.x, y: destination.y, name: destination.name } : null,
       objectives: targets.map(target => ({ name: target.name, completed: completed.has(target.id), x: target.x, y: target.y, phase: target.requiredPhase })),
       entities: [...features.filter(visibleFeature), ...enemies.filter(enemy => !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))].map(entity => ({ ...entity })),
@@ -247,6 +354,18 @@ export function createGame(canvas, theme, callbacks = {}) {
         phase: theme === 'lynch' ? worldPhase : null, journal: journal.map(entry => ({ ...entry })),
         rank: theme === 'shinobi' ? (chosenEnding?.rank || (player.level >= 3 ? 'Genin · field ready' : story.rank || 'Genin · apprentice')) : story.rank || 'Visitor',
         narrativeRoute, ending: chosenEnding?.id || null,
+        worldSize: { ...worldSize }, regionsVisited: [...regionsVisited],
+        currentRegionName: regions.find(region => player.x >= region.x && player.y >= region.y && player.x < region.x + region.width && player.y < region.y + region.height)?.name || 'The connecting roads',
+        dialogueFlags: [...dialogueFlags], rememberedReplies: Object.fromEntries(rememberedReplies),
+        trackedQuest,
+        trackedQuestTitle: trackedQuest === 'main' ? story.title : sideQuestRecords.find(record => record.data.id === trackedQuest)?.data.title || story.title,
+        sideQuests: sideQuestRecords.filter(record => record.status !== 'available').map(record => ({
+          id: record.data.id, title: record.data.title, giver: record.data.giver, status: record.status,
+          progress: record.completed.size, target: record.data.steps.length,
+          description: record.status === 'complete' ? record.data.completeText : record.status === 'ready' ? record.data.returnText : record.data.intro,
+          destination: sideDestination(record) ? { x: sideDestination(record).x, y: sideDestination(record).y, name: sideDestination(record).name, phase: sideDestination(record).requiredPhase || 'both' } : null,
+        })),
+        travelPoints: travelPoints.map(point => ({ id: point.id, name: point.name, x: point.x, y: point.y, discovered: point.discovered })),
       } : {}),
     };
   }
@@ -279,8 +398,10 @@ export function createGame(canvas, theme, callbacks = {}) {
   function openDialogue(speaker, text, choices) {
     clearMovement();
     dialogueOpen = true;
+    const portrait = isNew ? npcs.find(npc => npc.name === speaker) : null;
     callbacks.onDialogue?.({
       speaker, text,
+      ...(portrait ? { portrait: { kind: portrait.kind, name: portrait.name, phase: worldPhase } } : {}),
       choices: choices.map(choice => ({ label: choice.label, action: () => {
         if (destroyed) return;
         dialogueOpen = false;
@@ -322,45 +443,65 @@ export function createGame(canvas, theme, callbacks = {}) {
     openDialogue(giver?.name || 'The road ahead', `${ending.text}\n\n${ending.worldConsequence || ''}`, [{ label: 'Continue exploring', action: () => {} }]);
   }
 
-  function talkNew(feature) {
+  function showTopic(feature, topic) {
+    if (!topicAvailable(topic)) return;
+    if (topic.flag) dialogueFlags.add(topic.flag);
+    grantClue(topic.clue, topic.text);
+    const text = (questComplete && topic.completed) || (theme === 'lynch' && topic[worldPhase]) || topic.text;
+    const backChoices = () => [{ label: 'Ask something else', action: () => talkNew(feature, true) }, { label: 'Back to the road', action: () => {} }];
+    const choices = (topic.replies || []).filter(topicAvailable).map(reply => ({
+      label: reply.label,
+      action: () => {
+        for (const alternative of topic.replies || []) if (alternative.flag && alternative.flag !== reply.flag) dialogueFlags.delete(alternative.flag);
+        if (reply.flag) dialogueFlags.add(reply.flag);
+        for (const item of Array.isArray(reply.item) ? reply.item : reply.item ? [reply.item] : []) if (!inventory.includes(item)) inventory.push(item);
+        grantClue(reply.clue, reply.text);
+        const key = `${feature.name}:${topic.label}`;
+        rememberedReplies.set(key, reply.label);
+        const journalKey = `reply:${key}:${reply.label}`;
+        if (!recordedClues.has(journalKey)) {
+          recordedClues.add(journalKey);
+          journal.push({ title: `${feature.name} · ${reply.label}`, text: reply.text, phase: worldPhase });
+        }
+        const next = typeof reply.next === 'object' ? reply.next : typeof reply.next === 'number' ? feature.storyData?.topics?.[reply.next] : feature.storyData?.topics?.find(item => item.label === reply.next || item.id === reply.next);
+        openDialogue(feature.name, reply.text || text, next && topicAvailable(next) ? [{ label: 'Go on', action: () => showTopic(feature, next) }, ...backChoices()] : backChoices());
+      },
+    }));
+    openDialogue(feature.name, text, [...choices, ...backChoices()]);
+  }
+
+  function talkNew(feature, postponeEnding = false) {
+    const sideResponses = markSideStep('talk', feature);
     const data = feature.storyData || {};
     const phaseText = theme === 'lynch' ? data[worldPhase] : null;
     const firstTalk = !talked.has(feature.id);
-    const text = questComplete ? (data.endingText?.[chosenEnding?.id] || data.completed || phaseText || data.intro || story.lore) : firstTalk && phaseText && data.intro ? `${data.intro}\n\n${phaseText}` : phaseText || data.intro || story.lore;
+    const giverQuests = sideQuestRecords.filter(record => record.data.giver === feature.name);
+    const readySide = giverQuests.find(record => record.status === 'ready');
+    const finishedSide = giverQuests.find(record => record.status === 'complete');
+    const followUp = (Array.isArray(data.followUp) ? data.followUp : data.followUp ? [data.followUp] : []).find(item => meetsRequirement(item.flag, dialogueFlags));
+    const text = readySide?.data.returnText || finishedSide?.data.completeText || sideResponses[0] || (questComplete ? (data.endingText?.[chosenEnding?.id] || data.completed || followUp?.text || phaseText || data.intro || story.lore) : followUp?.text || (firstTalk ? data.intro || phaseText || story.lore : phaseText || data.intro || story.lore));
     talked.add(feature.id);
     if (!talked.has(`${feature.id}-${worldPhase}`)) {
       talked.add(`${feature.id}-${worldPhase}`);
       addJournal(`${feature.name} · ${theme === 'lynch' ? worldPhase : 'account'}`, text, `npc-${feature.id}-${theme === 'lynch' ? worldPhase : 'account'}`);
-      if (data.clue) addJournal(story.clueNames?.[data.clue] || data.clue, text, data.clue);
+      grantClue(data.clue, text);
     }
-    const choices = (data.topics || []).map(topic => ({
-      label: topic.label,
-      action: () => {
-        const topicText = (questComplete && topic.completed) || (theme === 'lynch' && topic[worldPhase]) || topic.text;
-        if (topic.clue) {
-          const clueText = story.clueNames?.[topic.clue] || topicText;
-          addJournal(topic.clue === 'watchtower-password' ? 'The peaceful passage' : story.clueNames?.[topic.clue] || topic.clue, clueText, topic.clue);
-          if (theme === 'shinobi' && topic.clue === 'watchtower-password' && !narrativeRoute) {
-            narrativeRoute = true;
-            inventory.push('Watchtower passphrase scroll');
-            for (const enemy of enemies) enemy.pacified = true;
-            toast('Safe passage secured. The rogue encounters can be resolved through dialogue.');
-          }
-        }
-        openDialogue(feature.name, topicText, [{ label: 'Ask something else', action: () => talkNew(feature) }, { label: 'Back to the road', action: () => {} }]);
-      },
-    }));
-    if (feature === giver && !questComplete && questReady()) {
-      openDialogue(feature.name, story.resolution, (story.endings || []).map(ending => ({ label: `${ending.label} · +${ending.reward ?? story.bounty} ${story.currency}`, action: () => finishNewStory(ending) })));
+    const sideChoices = giverQuests.flatMap(record => record.status === 'available' ? [{ label: record.data.offer || `Help with ${record.data.title}`, action: () => acceptSideQuest(record) }] : record.status === 'ready' ? [{ label: `Finish ${record.data.title} · +${record.data.reward || 0} ${story.currency}`, action: () => finishSideQuest(record) }] : record.status === 'active' ? [{ label: `Follow ${record.data.title}`, action: () => trackQuest(record.data.id) }] : []);
+    const choices = [...sideChoices, ...(data.topics || []).filter(topicAvailable).map(topic => ({ label: topic.label, action: () => showTopic(feature, topic) }))];
+    if (feature === giver && !questComplete && questReady() && !postponeEnding) {
+      openDialogue(feature.name, story.resolution, [...(story.endings || []).map(ending => ({ label: `${ending.label} · +${ending.reward ?? story.bounty} ${story.currency}`, action: () => finishNewStory(ending) })), ...sideChoices, { label: 'Ask something else first', action: () => talkNew(feature, true) }]);
       return;
     }
     if (feature === giver) {
+      if (!questComplete && questReady() && postponeEnding) choices.push({ label: 'Make the final choice', action: () => talkNew(feature) });
+      choices.push({ label: 'Track the main investigation', action: () => trackQuest('main') });
       choices.push({ label: 'Where should I go next?', action: () => {
         const destination = nextDestination();
         const required = destination?.requiredPhase;
         openDialogue(feature.name, `${destination?.name || 'The open road'} is ${destination ? directionTo(destination) : 'nearby'}.${theme === 'lynch' && required && required !== 'both' ? ` You will find its clue in the ${required} world. Press Q to cross.` : ''}\n\n${story.advice}`, [{ label: 'Ready', action: healAtGuide }]);
       } });
       choices.push({ label: theme === 'lynch' ? 'Coffee and a quiet moment · restore health' : 'Rest and replenish chakra', action: healAtGuide });
+      choices.push({ label: 'Travel to a familiar stop', action: openTravel });
     } else if (feature.role === 'merchant' || feature.name === 'Mako' || feature.name === 'Alma Vale') {
       choices.push({ label: `Buy ${theme === 'shinobi' ? 'a soldier ration' : 'a cup of coffee'} · 12 ${story.currency}`, action: () => {
         if (coins < 12) toast(`You need 12 ${story.currency}. Search a supply cache.`);
@@ -429,6 +570,7 @@ export function createGame(canvas, theme, callbacks = {}) {
     const feature = nearestFeature();
     if (!feature) { toast('Walk closer to a person, landmark, or supply crate.'); return; }
     if (feature.type === 'npc') talkTo(feature);
+    else if (isNew && travelPoints.includes(feature)) openTravel();
     else if (feature.type === 'chest') {
       if (!feature.opened) {
         feature.opened = true;
@@ -449,12 +591,14 @@ export function createGame(canvas, theme, callbacks = {}) {
           openDialogue(feature.name, data.wrongPhaseText || data[worldPhase] || `The clue is absent. This place has another life in the ${feature.requiredPhase} world. Press Q after closing this conversation to cross into it.`, [{ label: `Look in the ${feature.requiredPhase} world · Q`, action: () => {} }]);
           return;
         }
-        const firstVisit = !completed.has(feature.id);
+        const firstVisit = !feature.activated;
         markObjective(feature);
+        const sideResponses = markSideStep('investigate', feature);
         feature.activated = true;
-        const text = (questComplete && data.completed) || data.text || data[worldPhase] || story.examine;
+        const text = sideResponses[0] || (questComplete && data.completed) || data.text || data[worldPhase] || story.examine;
         if (firstVisit) {
-          addJournal(story.clueNames?.[data.clue] || data.clue || feature.name, text, `landmark-${feature.id}`);
+          if (data.clue) grantClue(data.clue, text);
+          else addJournal(feature.name, text, `landmark-${feature.id}`);
           inventory.push(data.item || (theme === 'lynch' ? `${feature.name} evidence` : `${feature.name} training seal`));
           if (theme === 'shinobi') { resource = maxResource; player.health = Math.min(player.maxHealth, player.health + 25); }
           effects.push({ kind: theme === 'shinobi' ? 'trial' : 'clue', x: feature.x, y: feature.y, t: 1.1, maxT: 1.1 });
@@ -570,8 +714,8 @@ export function createGame(canvas, theme, callbacks = {}) {
       clearMovement();
       invulnerable = 1.2;
       effects.push({ kind: 'dreamshift', x: player.x, y: player.y, t: 0.7, maxT: 0.7 });
-      if (!recordedClues.has('first-crossing')) addJournal('The town has another face', 'The same roads, the same people, different memories. Look for the telephone while awake, then the curtain and the black pines in the dream.', 'first-crossing');
-      toast(worldPhase === 'dream' ? 'Dream world · the curtain and the black pines remember.' : 'Waking world · the ringing telephone has a message.');
+      if (!recordedClues.has('first-crossing')) addJournal('The town has another face', 'The roads remain, but their accounts change. The telephone, mill and railway answer while awake; the stage, black pines and observatory answer in dreams.', 'first-crossing');
+      toast(worldPhase === 'dream' ? 'Dream world · listen for the stage, black pines and observatory.' : 'Waking world · the telephone, mill and railway remember.');
     } else if (ability.id === 'ember') {
       player.attacking = 0.3;
       projectiles.push({ x: player.x + facing.x * 15, y: player.y - 7 + facing.y * 15, dx: facing.x, dy: facing.y, speed: 270, damage: 52 + (player.level - 1) * 8, t: 0.9, kind: 'ember' });
@@ -647,7 +791,7 @@ export function createGame(canvas, theme, callbacks = {}) {
     if (sinceHit > 5 && player.health < player.maxHealth) player.health = Math.min(player.maxHealth, player.health + dt * 2);
     if (introTimer > 0) {
       introTimer -= dt;
-      if (introTimer <= 0) toast(theme === 'lynch' ? 'E conversations · Q dream shift · Space camera flash · M map' : theme === 'shinobi' ? 'E conversations · Space kunai · 1 fire / 2 clone / 3 substitution · M map' : `E to talk · Space to ${story.weapon === 'blade' ? 'swing your blade' : story.weapon === 'pulse' ? 'use your yo-yo' : 'fire'} · M for world map`);
+      if (introTimer <= 0) toast(theme === 'lynch' ? 'E conversations · Q dream shift · Space camera flash · M map / T travel' : theme === 'shinobi' ? 'E conversations · Space kunai · 1 fire / 2 clone / 3 substitution · M map / T travel' : `E to talk · Space to ${story.weapon === 'blade' ? 'swing your blade' : story.weapon === 'pulse' ? 'use your yo-yo' : 'fire'} · M for world map`);
     }
     let dx = (held.right ? 1 : 0) - (held.left ? 1 : 0);
     let dy = (held.down ? 1 : 0) - (held.up ? 1 : 0);
@@ -678,10 +822,21 @@ export function createGame(canvas, theme, callbacks = {}) {
           addXP(8);
           toast(`Discovered ${feature.name} · +8 XP`);
         }
+        if (isNew && travelPoints.includes(feature)) {
+          addXP(12);
+          toast(`Travel route unlocked: ${feature.name} · +12 XP`);
+        }
+      }
+    }
+    if (isNew) {
+      const region = regions.find(item => player.x >= item.x && player.y >= item.y && player.x < item.x + item.width && player.y < item.y + item.height);
+      if (region && !regionsVisited.has(region.id)) {
+        regionsVisited.add(region.id);
+        if (regionsVisited.size > 1) { addXP(15); toast(`Discovered ${region.name} · +15 XP`); }
       }
     }
     const near = features.filter(f => visibleFeature(f) && distance(f, player) < 150).sort((a, b) => distance(a, player) - distance(b, player))[0];
-    location = near?.name || (theme === 'lynch' ? worldPhase === 'dream' ? 'Mercy Falls · beneath the dream' : 'Mercy Falls · county roads' : theme === 'shinobi' ? 'Village Hidden in the Reeds' : theme === 'moss' ? 'The wandering woods' : theme === 'neon' ? 'The lower streets' : theme === 'dust' ? 'The open frontier' : 'Somewhere after school');
+    location = near?.name || (isNew ? regions.find(item => player.x >= item.x && player.y >= item.y && player.x < item.x + item.width && player.y < item.y + item.height)?.name || 'The connecting roads' : theme === 'moss' ? 'The wandering woods' : theme === 'neon' ? 'The lower streets' : theme === 'dust' ? 'The open frontier' : 'Somewhere after school');
 
     for (const enemy of enemies) {
       if (enemy.defeated || enemy.pacified || (theme === 'lynch' && worldPhase !== 'dream')) continue;
@@ -754,8 +909,8 @@ export function createGame(canvas, theme, callbacks = {}) {
   function draw() {
     const viewWidth = width / scale;
     const viewHeight = height / scale;
-    camera.x = clamp(player.x - viewWidth / 2, 0, Math.max(0, WORLD_SIZE.width - viewWidth));
-    camera.y = clamp(player.y - viewHeight / 2, 0, Math.max(0, WORLD_SIZE.height - viewHeight));
+    camera.x = clamp(player.x - viewWidth / 2, 0, Math.max(0, worldSize.width - viewWidth));
+    camera.y = clamp(player.y - viewHeight / 2, 0, Math.max(0, worldSize.height - viewHeight));
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
     drawWorld(context, theme, { x: camera.x, y: camera.y, width, height, scale, time: elapsed,
@@ -774,15 +929,15 @@ export function createGame(canvas, theme, callbacks = {}) {
       context.save(); context.globalAlpha *= strength;
       const beat = Math.floor(elapsed * 12) % 3;
       for (const side of [-1, 1]) {
-        pixelWorld(wx + side * 12 - 1, wy - 28, 3, 19, '#2997ed');
-        pixelWorld(wx + side * 15 - 1, wy - 20 - beat, 2, 13, '#68d7ff');
-        pixelWorld(wx + side * 12, wy - 32 - beat, 2, 13, '#b6f1ff');
-        pixelWorld(wx + side * 9, wy - 37 - beat, 2, 7, '#68d7ff');
-        pixelWorld(wx + side * 5, wy - 43 - beat, 2, 7, '#d8faff');
+        pixelWorld(wx + side * 12 - 1, wy - 24 - beat, 2, 4, '#2997ed');
+        pixelWorld(wx + side * 15 - 1, wy - 12 - beat, 2, 3, '#68d7ff');
+        pixelWorld(wx + side * 12, wy - 31 - beat, 2, 4, '#b6f1ff');
+        pixelWorld(wx + side * 9, wy - 37 - beat, 2, 2, '#68d7ff');
+        pixelWorld(wx + side * 5, wy - 44 - beat, 1, 3, '#d8faff');
         pixelWorld(wx + side * 18, wy - 13 - beat * 3, 2, 3, '#b6f1ff');
       }
-      pixelWorld(wx - 10, wy, 21, 2, '#68d7ff');
-      pixelWorld(wx - 7, wy + 2, 15, 1, '#b6f1ff');
+      pixelWorld(wx - 9, wy, 4, 1, '#68d7ff');
+      pixelWorld(wx + 4, wy + 2, 3, 1, '#b6f1ff');
       context.restore();
     }
     function drawShinobiEcho(actor, alpha) {
@@ -794,12 +949,11 @@ export function createGame(canvas, theme, callbacks = {}) {
     }
     function smokePuff(wx, wy, size) {
       const radius = Math.max(5, Math.round(size));
-      pixelWorld(wx - radius + 3, wy - radius, radius * 2 - 6, radius * 2, '#9cb3c2');
-      pixelWorld(wx - radius, wy - radius + 3, radius * 2, radius * 2 - 6, '#9cb3c2');
-      pixelWorld(wx - radius + 2, wy - radius + 4, radius * 2 - 4, radius * 2 - 8, '#e4eef0');
-      pixelWorld(wx - radius + 4, wy - radius + 2, radius * 2 - 8, radius * 2 - 4, '#fffef5');
+      pixelWorld(wx - radius + 3, wy - radius, radius * 2 - 6, radius * 2, '#fffef5');
+      pixelWorld(wx - radius, wy - radius + 3, radius * 2, radius * 2 - 6, '#fffef5');
+      pixelWorld(wx + 1, wy + radius - 5, Math.max(2, radius - 2), 3, '#e4eef0');
       pixelWorld(wx - radius + 3, wy - radius + 4, radius + 1, 3, '#ffffff');
-      pixelWorld(wx + 1, wy + radius - 4, Math.max(2, radius - 3), 2, '#cbdde4');
+      pixelWorld(wx + 2, wy + radius - 3, Math.max(2, radius - 4), 2, '#dce9eb');
     }
     const destination = nextDestination();
     if (destination) {
@@ -811,7 +965,11 @@ export function createGame(canvas, theme, callbacks = {}) {
       context.strokeStyle = '#332c36';
       context.lineWidth = 2;
       if (x > margin && x < width - margin && y > margin && y < height - margin) {
-        context.beginPath(); context.moveTo(x, y - 7); context.lineTo(x + 6, y); context.lineTo(x, y + 7); context.lineTo(x - 6, y); context.closePath(); context.fill(); context.stroke();
+        if (isNew) {
+          for (const [dx, dy, pw, ph] of [[-1, -6, 2, 12], [-3, -4, 6, 8], [-5, -2, 10, 4]]) context.fillRect(Math.round(x + dx), Math.round(y + dy), pw, ph);
+        } else {
+          context.beginPath(); context.moveTo(x, y - 7); context.lineTo(x + 6, y); context.lineTo(x, y + 7); context.lineTo(x - 6, y); context.closePath(); context.fill(); context.stroke();
+        }
       } else {
         const px = sx(player.x);
         const py = sy(player.y);
@@ -819,9 +977,17 @@ export function createGame(canvas, theme, callbacks = {}) {
         const reachX = Math.abs((width / 2 - margin) / (Math.cos(angle) || 0.001));
         const reachY = Math.abs((height / 2 - margin) / (Math.sin(angle) || 0.001));
         const reach = Math.min(reachX, reachY);
-        context.translate(clamp(px + Math.cos(angle) * reach, margin, width - margin), clamp(py + Math.sin(angle) * reach, margin, height - margin));
-        context.rotate(angle);
-        context.beginPath(); context.moveTo(9, 0); context.lineTo(-5, -6); context.lineTo(-5, 6); context.closePath(); context.fill(); context.stroke();
+        const arrowX = clamp(px + Math.cos(angle) * reach, margin, width - margin);
+        const arrowY = clamp(py + Math.sin(angle) * reach, margin, height - margin);
+        if (isNew) {
+          const ax = Math.cos(angle), ay = Math.sin(angle);
+          for (let along = -5; along <= 7; along += 2) context.fillRect(Math.round(arrowX + ax * along), Math.round(arrowY + ay * along), 2, 2);
+          for (let spread = 1; spread <= 5; spread++) for (const side of [-1, 1]) context.fillRect(Math.round(arrowX + ax * (7 - spread) - ay * spread * side), Math.round(arrowY + ay * (7 - spread) + ax * spread * side), 2, 2);
+        } else {
+          context.translate(arrowX, arrowY);
+          context.rotate(angle);
+          context.beginPath(); context.moveTo(9, 0); context.lineTo(-5, -6); context.lineTo(-5, 6); context.closePath(); context.fill(); context.stroke();
+        }
       }
       context.restore();
     }
@@ -829,6 +995,11 @@ export function createGame(canvas, theme, callbacks = {}) {
       if (enemy.defeated || enemy.health >= enemy.maxHealth || (theme === 'lynch' && worldPhase !== 'dream')) continue;
       const x = sx(enemy.x);
       const y = sy(enemy.y - 24);
+      if (isNew) {
+        context.fillStyle = '#b7897a'; context.fillRect(Math.round(x - 16), Math.round(y), 32, 3);
+        context.fillStyle = '#ef9f81'; context.fillRect(Math.round(x - 16), Math.round(y), Math.round(32 * enemy.health / enemy.maxHealth), 3);
+        continue;
+      }
       context.fillStyle = '#1c1928'; context.fillRect(x - 17, y, 34, 5);
       context.fillStyle = '#e97975'; context.fillRect(x - 16, y + 1, 32 * enemy.health / enemy.maxHealth, 3);
     }
@@ -857,9 +1028,13 @@ export function createGame(canvas, theme, callbacks = {}) {
         continue;
       }
       if (projectile.kind === 'kunai') {
-        context.save(); context.translate(x, y); context.rotate(Math.atan2(projectile.dy, projectile.dx));
-        context.fillStyle = '#e3eff5'; context.beginPath(); context.moveTo(10 * scale, 0); context.lineTo(-1 * scale, -3 * scale); context.lineTo(-4 * scale, 0); context.lineTo(-1 * scale, 3 * scale); context.closePath(); context.fill();
-        context.strokeStyle = '#51415b'; context.lineWidth = 2 * scale; context.beginPath(); context.moveTo(-3 * scale, 0); context.lineTo(-8 * scale, 0); context.stroke(); context.restore();
+        for (let along = -8; along <= 8; along += 2) {
+          const px = projectile.x + projectile.dx * along;
+          const py = projectile.y + projectile.dy * along;
+          pixelWorld(px - 1, py - 1, 2, 2, along < 0 ? '#596d7b' : '#e3eff5');
+          if (along >= 0 && along <= 4) for (const side of [-1, 1]) pixelWorld(px - projectile.dy * side * 2 - 1, py + projectile.dx * side * 2 - 1, 2, 2, side < 0 ? '#e3eff5' : '#b6ccd4');
+        }
+        pixelWorld(projectile.x - projectile.dx * 8, projectile.y - projectile.dy * 8, 1, 1, '#b6ccd4');
         continue;
       }
       context.strokeStyle = projectile.kind === 'bolt' ? '#81ffea' : '#ffe4a0';
@@ -869,10 +1044,6 @@ export function createGame(canvas, theme, callbacks = {}) {
     for (const clone of clones) {
       context.save(); context.globalAlpha = Math.min(0.95, clone.t * 0.8);
       drawChakraAura(clone.x, clone.y, 0.75);
-      pixelWorld(clone.x - 9, clone.y - 41, 19, 18, '#68d7ff');
-      pixelWorld(clone.x - 13, clone.y - 24, 27, 15, '#68d7ff');
-      pixelWorld(clone.x - 8, clone.y - 12, 8, 13, '#68d7ff');
-      pixelWorld(clone.x + 1, clone.y - 12, 8, 13, '#68d7ff');
       drawShinobiEcho(clone, 1);
       context.restore();
     }
@@ -887,9 +1058,11 @@ export function createGame(canvas, theme, callbacks = {}) {
         context.globalAlpha = (1 - progress) * (effect.kind === 'flash' ? 0.22 : 0.36);
         context.fillRect(0, 0, width, height);
         context.globalAlpha = Math.max(0, 1 - progress);
-        context.strokeStyle = effect.kind === 'flash' ? '#fffce4' : '#ebbbef';
-        context.lineWidth = 5 * scale;
-        context.beginPath(); context.arc(x, y, (18 + progress * 128) * scale, 0, Math.PI * 2); context.stroke();
+        for (let index = 0; index < 16; index++) {
+          const angle = index * Math.PI / 8;
+          const reach = 14 + progress * (effect.kind === 'flash' ? 115 : 65);
+          pixelWorld(effect.x + Math.cos(angle) * reach, effect.y + Math.sin(angle) * reach * 0.7, index % 2 ? 2 : 4, index % 2 ? 4 : 2, effect.kind === 'flash' ? '#fffce4' : '#e7c6db');
+        }
       } else if (effect.kind === 'smoke') {
         for (let index = 0; index < 6; index++) {
           const angle = index * Math.PI / 3;
@@ -920,10 +1093,10 @@ export function createGame(canvas, theme, callbacks = {}) {
           pixelWorld(px, py, facing.x ? length : 1, facing.y ? length : 1, index % 2 ? '#b6f1ff' : '#fffef5');
         }
       } else if (effect.kind === 'substitution') {
-        context.fillStyle = '#4e362a'; context.fillRect(x - 8 * scale, y - 20 * scale, 16 * scale, 20 * scale);
-        context.fillStyle = '#b68a59'; context.fillRect(x - 6 * scale, y - 19 * scale, 12 * scale, 18 * scale);
-        context.fillStyle = '#e6c896'; context.fillRect(x - 8 * scale, y - 21 * scale, 16 * scale, 5 * scale);
-        context.fillStyle = '#705439'; context.fillRect(x - 3 * scale, y - 18 * scale, 2 * scale, 16 * scale);
+        pixelWorld(effect.x - 8, effect.y - 20, 16, 20, '#b68a59');
+        pixelWorld(effect.x + 4, effect.y - 20, 4, 20, '#8f6d49');
+        pixelWorld(effect.x - 8, effect.y - 21, 16, 5, '#e6c896');
+        pixelWorld(effect.x - 3, effect.y - 18, 2, 16, '#8b6a45');
       } else if (effect.kind === 'emberblast' || effect.kind === 'embercast') {
         const impact = effect.kind === 'emberblast';
         const reach = impact ? 65 : 22;
@@ -946,25 +1119,33 @@ export function createGame(canvas, theme, callbacks = {}) {
           }
         }
       } else if (effect.kind === 'static') {
-        context.fillStyle = '#e8d6dc';
-        for (let index = 0; index < 8; index++) context.fillRect(x - 16 * scale + Math.sin(elapsed * 35 + index) * 4 * scale, y - index * 4 * scale, (8 + index % 3 * 6) * scale, scale);
+        for (let index = 0; index < 8; index++) pixelWorld(effect.x - 16 + Math.sin(elapsed * 35 + index) * 4, effect.y - index * 4, 8 + index % 3 * 6, 1, '#e8d6dc');
       } else if (effect.kind === 'trial' || effect.kind === 'clue') {
-        context.strokeStyle = effect.kind === 'trial' ? '#a9e4c7' : '#eac4d6'; context.lineWidth = 3;
-        context.beginPath(); context.arc(x, y, (10 + progress * 45) * scale, 0, Math.PI * 2); context.stroke();
+        for (let index = 0; index < 8; index++) {
+          const angle = index * Math.PI / 4;
+          pixelWorld(effect.x + Math.cos(angle) * (8 + progress * 30), effect.y - 12 + Math.sin(angle) * (5 + progress * 19) - progress * 18, 2, 3, effect.kind === 'trial' ? '#a9e4c7' : '#eac4d6');
+        }
       } else if (effect.kind === 'blade') {
         const facing = DIR[effect.facing];
         const angle = Math.atan2(facing.y, facing.x);
         context.strokeStyle = '#faffc7'; context.lineWidth = 4 * scale;
         context.beginPath(); context.arc(x, y, (22 + progress * 13) * scale, angle - 1.1 + progress * 0.5, angle + 0.7 + progress * 0.5); context.stroke();
       } else if (effect.kind === 'pulse' || effect.kind === 'level') {
-        context.strokeStyle = effect.kind === 'level' ? GOLD : '#ffbbe3';
-        context.lineWidth = 3;
-        context.beginPath(); context.arc(x, y, (12 + progress * (effect.kind === 'level' ? 45 : 58)) * scale, 0, Math.PI * 2); context.stroke();
+        if (isNew) {
+          for (let index = 0; index < 8; index++) {
+            const angle = index * Math.PI / 4;
+            pixelWorld(effect.x + Math.cos(angle) * (10 + progress * 34), effect.y - 10 + Math.sin(angle) * (8 + progress * 26), 3, 3, GOLD);
+          }
+        } else {
+          context.strokeStyle = effect.kind === 'level' ? GOLD : '#ffbbe3';
+          context.lineWidth = 3;
+          context.beginPath(); context.arc(x, y, (12 + progress * (effect.kind === 'level' ? 45 : 58)) * scale, 0, Math.PI * 2); context.stroke();
+        }
       } else if (effect.kind === 'damage' || effect.kind === 'hurt') {
         context.fillStyle = effect.kind === 'hurt' ? '#ffaba6' : '#fff3c5';
         context.strokeStyle = '#262432'; context.lineWidth = 3;
         context.font = 'bold 14px monospace'; context.textAlign = 'center';
-        context.strokeText(`${effect.kind === 'hurt' ? '−' : ''}${effect.value}`, x, y - progress * 25);
+        if (!isNew) context.strokeText(`${effect.kind === 'hurt' ? '−' : ''}${effect.value}`, x, y - progress * 25);
         context.fillText(`${effect.kind === 'hurt' ? '−' : ''}${effect.value}`, x, y - progress * 25);
       } else {
         context.fillStyle = GOLD;
@@ -977,7 +1158,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       const x = sx(nearby.x);
       const y = sy(nearby.y - 35);
       context.fillStyle = '#20202bea'; context.fillRect(x - 9, y - 8, 18, 18);
-      context.strokeStyle = '#ffffff80'; context.strokeRect(x - 9, y - 8, 18, 18);
+      if (!isNew) { context.strokeStyle = '#ffffff80'; context.strokeRect(x - 9, y - 8, 18, 18); }
       context.fillStyle = '#fff6df'; context.font = 'bold 11px monospace'; context.textAlign = 'center'; context.fillText('E', x, y + 5);
     }
   }
@@ -995,9 +1176,10 @@ export function createGame(canvas, theme, callbacks = {}) {
   function isTyping(event) { return ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName) || event.target?.isContentEditable; }
   function onKeyDown(event) {
     if (destroyed || isTyping(event)) return;
+    if (isNew && dialogueOpen && event.target?.closest?.('button') && ['Enter', ' ', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     if (paused() && event.target?.tagName === 'BUTTON' && ['Enter', ' '].includes(event.key)) return;
     const direction = keyDirection(event.key);
-    const relevant = direction || [' ', 'Shift', 'e', 'E', 'Enter', 'm', 'M', 'Escape'].includes(event.key) || (theme === 'lynch' && ['q', 'Q'].includes(event.key)) || (theme === 'shinobi' && ['1', '2', '3'].includes(event.key));
+    const relevant = direction || [' ', 'Shift', 'e', 'E', 'Enter', 'm', 'M', 'Escape'].includes(event.key) || (isNew && ['t', 'T'].includes(event.key)) || (theme === 'lynch' && ['q', 'Q'].includes(event.key)) || (theme === 'shinobi' && ['1', '2', '3'].includes(event.key));
     if (!relevant) return;
     event.preventDefault();
     if (event.key === 'Escape' && dialogueOpen) { dismissDialogue(); callbacks.onDismissDialogue?.(); return; }
@@ -1007,6 +1189,7 @@ export function createGame(canvas, theme, callbacks = {}) {
     else if (event.key === ' ') { held.attack = true; if (!event.repeat) attack(); }
     else if (!event.repeat && ['e', 'E', 'Enter'].includes(event.key)) interact();
     else if (!event.repeat && ['m', 'M'].includes(event.key)) { clearMovement(); callbacks.onMap?.(); }
+    else if (!event.repeat && isNew && ['t', 'T'].includes(event.key)) openTravel();
     else if (!event.repeat && theme === 'lynch' && ['q', 'Q'].includes(event.key)) useAbility('dreamshift');
     else if (!event.repeat && theme === 'shinobi' && ['1', '2', '3'].includes(event.key)) useAbility(event.key);
   }
@@ -1037,7 +1220,7 @@ export function createGame(canvas, theme, callbacks = {}) {
   frameId = requestAnimationFrame(tick);
 
   return {
-    interact, attack, useAbility, setMove, getState, dismissDialogue, togglePause,
+    interact, attack, useAbility, trackQuest, openTravel, travelTo, setMove, getState, dismissDialogue, togglePause,
     destroy() {
       destroyed = true;
       cancelAnimationFrame(frameId);

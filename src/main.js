@@ -1,5 +1,5 @@
 import './style.css';
-import { drawPreview, drawWorld, drawCharacter, WORLD_SIZE } from './world-renderer.js';
+import { drawPreview, drawWorld, drawCharacter, getWorldSize, getWorldRegions } from './world-renderer.js';
 import { createGame } from './game-engine.js';
 
 const icons = {
@@ -30,8 +30,8 @@ const worlds = [
   { id: 'neon', number: '02', name: 'Neon Afterglow', category: 'Sci-fi', genre: 'THE CITY NEVER SLEEPS', color: '#8062a6', chip: '#eee6f4', line: 'Find your place in the electric city.', description: 'Run the backstreets of a rain-soaked megacity. Take shady jobs, meet unlikely allies, and decide who gets your loyalty.', tags: ['Street stories', 'Cyberware', 'Faction choices'], location: 'Lower Grid', role: 'The runner', hook: 'Someone is erasing people from the city records. Tonight, your name appeared on the list.', gradient: '#675688' },
   { id: 'dust', number: '03', name: 'The Dustlands', category: 'Wasteland', genre: 'BEYOND THE LAST OUTPOST', color: '#aa653a', chip: '#f3e7d6', line: 'Nothing out here is truly empty.', description: 'Make a life at the edge of a broken world. Scavenge the old roads, trade favors, and uncover what the desert buried.', tags: ['Lost technology', 'Salvage & trade', 'Frontier survival'], location: 'Lastwater', role: 'The drifter', hook: 'The settlement has three days of clean water left. An old machine in the dunes might change that.', gradient: '#c99455' },
   { id: 'odd', number: '04', name: 'Borrowed Sky', category: 'Surreal', genre: 'WELCOME TO THE NEIGHBORHOOD', color: '#657ca4', chip: '#e4eaf5', line: 'A familiar town. An unfamiliar feeling.', description: 'Ride into a sleepy suburb where the ordinary gets wonderfully strange. Make friends, chase rumors, and look a little closer.', tags: ['Small-town secrets', 'Strange encounters', 'Everyday magic'], location: 'Bellweather', role: 'The new kid', hook: 'It is always 6:17 in Bellweather. Everyone seems fine with that. Everyone except you.', gradient: '#8292bc' },
-  { id: 'lynch', number: '05', name: 'Velvet Static', category: 'Mystery', genre: 'SOME ROOMS REMEMBER YOU', color: '#995461', chip: '#f1e2e7', line: 'A quiet town. A room that knows your name.', description: 'Follow a ringing telephone into Mercy Falls. Question its peculiar residents, cross into their dreams, and decide which version of the truth to carry home.', tags: ['Dream logic', 'Contradictory witnesses', 'Two realities'], location: 'Mercy Falls', role: 'The late arrival', hook: 'The motel has kept a room for you for thirteen years. You have never been here before. The night clerk disagrees.', gradient: '#4c293e', isNew: true, isFinalist: true, time: '03:17' },
-  { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#d77529', chip: '#fff0d9', line: 'Small village. Unwritten legend.', description: 'Run beneath carved mountain faces and orange rooftops in the Village Hidden in the Reeds. Master chakra, clash with rival shinobi, and decide where your loyalties lie.', tags: ['Chakra & jutsus', 'Hidden village', 'Shinobi missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#69a65c', isNew: true, isFinalist: true, time: '07:12' },
+  { id: 'lynch', number: '05', name: 'Velvet Static', category: 'Mystery', genre: 'SOME ROOMS REMEMBER YOU', color: '#995461', chip: '#f1e2e7', line: 'A quiet town. A county full of secrets.', description: 'Follow June’s trail through Mercy Falls, a shuttered mill, a lakeside observatory, and a station that never closed. Question witnesses, cross into their dreams, and decide what the county remembers.', tags: ['County roads', 'Branching dialogue', 'Two realities'], location: 'Mercy Falls', role: 'The late arrival', hook: 'The motel has kept a room for you for thirteen years. You have never been here before. The night clerk disagrees.', gradient: '#4c293e', isNew: true, isFinalist: true, time: '03:17' },
+  { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#d77529', chip: '#fff0d9', line: 'Beyond the village. Into your own legend.', description: 'Leave the Village Hidden in the Reeds for cedar forests, waterfall training, lantern markets, and distant clan outposts. Master chakra, hear every side of an old betrayal, and choose your ninja way.', tags: ['Chakra & jutsus', 'Distant districts', 'Clan missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#69a65c', isNew: true, isFinalist: true, time: '07:12' },
 ];
 
 let selectedWorld = null;
@@ -47,6 +47,8 @@ let soundContext = null;
 let ambientOscillators = [];
 let abilitiesSignature = '';
 let journalSignature = '';
+let explorationSignature = '';
+const isFinalist = id => id === 'lynch' || id === 'shinobi';
 
 function renderApp() {
   document.querySelector('#app').innerHTML = `
@@ -68,7 +70,7 @@ function renderApp() {
         </div>
         <div class="hero-aside">
           <p>The charm of a classic pixel RPG.<br>The freedom to make your own story.</p>
-          <p class="hero-small">Two favorites. Two very different adventures.<br>Velvet Static and Hidden Ember lead the way.</p>
+          <p class="hero-small">Two favorites. More roads and deeper stories.<br>Explore the expanded Velvet Static and Hidden Ember.</p>
           <div class="hero-perks"><span>${icon('globe')} Open exploration</span><span>${icon('sword')} Real-time combat</span><span>${icon('chat')} Your choices</span></div>
         </div>
       </section>
@@ -92,7 +94,7 @@ function renderApp() {
       <section class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">
         <button class="dialog-close icon-button" data-action="close-help" aria-label="Close instructions">${icon('close')}</button>
         <div class="eyebrow">A LITTLE FIELD GUIDE</div><h2 id="help-title">Just go exploring.</h2><p>Every world is a small, playable RPG. Talk to its people, follow a quest, and see what’s over the next hill.</p>
-        <div class="control-list"><div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> arrow keys</span><strong>Move</strong></div><div><span><kbd>Shift</kbd></span><strong>Sprint</strong></div><div><span><kbd>E</kbd> <span class="or">or</span> <kbd>Enter</kbd></span><strong>Talk / interact</strong></div><div><span><kbd>Space</kbd></span><strong>Attack / camera flash</strong></div><div><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><strong>Shinobi jutsus</strong></div><div><span><kbd>Q</kbd></span><strong>Cross into a dream</strong></div><div><span><kbd>M</kbd></span><strong>Open world map</strong></div><div><span><kbd>Esc</kbd></span><strong>Close / return</strong></div></div>
+        <div class="control-list"><div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> arrow keys</span><strong>Move</strong></div><div><span><kbd>Shift</kbd></span><strong>Sprint</strong></div><div><span><kbd>E</kbd> <span class="or">or</span> <kbd>Enter</kbd></span><strong>Talk / interact</strong></div><div><span><kbd>Space</kbd></span><strong>Attack / camera flash</strong></div><div><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><strong>Shinobi jutsus</strong></div><div><span><kbd>Q</kbd></span><strong>Cross into a dream</strong></div><div><span><kbd>M</kbd></span><strong>Open world map</strong></div><div><span><kbd>T</kbd></span><strong>Travel in the two finalists</strong></div><div><span><kbd>Esc</kbd></span><strong>Close / return</strong></div></div>
         <p class="help-tip">${icon('chat')} Start by talking to the person near you. They have a story—and a quest.</p><button class="primary-button" data-action="close-help">Let’s wander ${icon('arrow')}</button>
       </section>
     </div>
@@ -131,6 +133,8 @@ function handleClick(event) {
   if (ability) { activeGame?.useAbility?.(ability.dataset.ability); document.querySelector('#game-canvas')?.focus(); return; }
   const play = event.target.closest('[data-play]');
   if (play) return openGame(play.dataset.play);
+  const tracked = event.target.closest('[data-track-quest]');
+  if (tracked) { activeGame?.trackQuest?.(tracked.dataset.trackQuest); document.querySelector('#game-canvas')?.focus(); return; }
   const favorite = event.target.closest('[data-favorite]');
   if (favorite) {
     const id = favorite.dataset.favorite;
@@ -153,11 +157,12 @@ function handleClick(event) {
   if (action === 'surprise') openGame(worlds[Math.floor(Math.random()*worlds.length)].id);
   if (action === 'close-game') closeGame();
   if (action === 'map') toggleMap();
+  if (action === 'travel') { if(mapOpen)toggleMap(); activeGame?.openTravel?.(); }
   if (action === 'sound') toggleSound();
   if (action === 'interact') activeGame?.interact();
   if (action === 'attack') activeGame?.attack();
   if (action === 'select-world') chooseWorld();
-  if (action === 'dismiss-dialogue') { activeGame?.dismissDialogue?.(); document.querySelector('#dialogue-box').hidden = true; }
+  if (action === 'dismiss-dialogue') { activeGame?.dismissDialogue?.(); document.querySelector('#dialogue-box').hidden = true; if(isFinalist(activeWorld?.id))document.querySelector('#game-canvas')?.focus(); }
   if (action === 'clear-pick') { selectedWorld = null; try { localStorage.removeItem('sidequest-selected'); } catch {} renderCards(); updateSelectionBanner(); }
   if (event.target.id === 'help-overlay') closeHelp();
 }
@@ -170,12 +175,13 @@ function closeHelp() {
 
 function handleGlobalKey(event) {
   if (activeGame && mapOpen && ['m', 'M'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); toggleMap(); return; }
+  if(activeGame && mapOpen && isFinalist(activeWorld?.id) && ['t','T'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();toggleMap();activeGame.openTravel?.();return;}
   if (event.key === 'Escape') {
     if (!document.querySelector('#help-overlay').hidden) return closeHelp();
     if (mapOpen) return toggleMap();
     if (activeGame) {
       const dialogue = document.querySelector('#dialogue-box');
-      if (dialogue && !dialogue.hidden) { activeGame.dismissDialogue?.(); dialogue.hidden = true; return; }
+      if (dialogue && !dialogue.hidden) { activeGame.dismissDialogue?.(); dialogue.hidden = true; if(isFinalist(activeWorld?.id))document.querySelector('#game-canvas')?.focus(); return; }
       closeGame();
     }
   }
@@ -189,13 +195,13 @@ function openGame(id) {
   overlay.innerHTML = `<section class="game-shell" data-theme="${w.id}" role="dialog" aria-modal="true" aria-label="${w.name} playable prototype" style="--world-color:${w.color};--world-chip:${w.chip}">
     <header class="game-header"><button class="back-button" data-action="close-game">${icon('arrow')}<span>All worlds</span></button><div class="game-title"><span>WORLD ${w.number}</span><h2>${w.name}</h2><span class="prototype-badge">PROTOTYPE</span></div><div class="game-header-actions"><button class="icon-button" data-action="sound" aria-label="Turn ambient sound on" title="Ambient sound">${icon('volume')}<span class="sound-slash"></span></button><button class="icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button><button class="icon-button" data-action="close-game" aria-label="Close prototype">${icon('close')}</button></div></header>
     <div class="game-body"><div class="game-viewport"><canvas id="game-canvas" width="960" height="640" tabindex="0" aria-label="Explore ${w.name} using WASD, E to interact, and Space to attack"></canvas><div class="location-overlay"><span class="status-dot"></span><span id="game-location">${w.location}</span><span class="location-sub">FREE TO WANDER</span></div><button class="map-button" data-action="map">${icon('map')}<span>World map</span><kbd>M</kbd></button><div class="interact-hint" id="interact-hint" hidden></div><div class="game-toast" id="game-toast" role="status"></div>
-    <div class="dialogue-box" id="dialogue-box" hidden><div class="dialogue-heading"><span class="dialogue-avatar">${icon('chat')}</span><strong id="dialogue-speaker"></strong><button class="icon-button" data-action="dismiss-dialogue" aria-label="Close dialogue">${icon('close')}</button></div><p id="dialogue-text"></p><div class="dialogue-choices" id="dialogue-choices"></div></div>
-    <div class="map-overlay" id="map-overlay" hidden><div class="map-heading"><div><span class="eyebrow">YOUR LITTLE OPEN WORLD</span><h3>${w.name}</h3></div><button class="icon-button" data-action="map" aria-label="Close world map">${icon('close')}</button></div><canvas id="map-canvas" width="800" height="576" aria-label="World map showing your position"></canvas><div class="map-legend"><span><i></i> You are here</span><span>Explore the roads. Discover what’s between them.</span></div></div>
+    <div class="dialogue-box" id="dialogue-box" hidden><div class="dialogue-heading"><span class="dialogue-avatar">${isFinalist(w.id) ? '<canvas id="dialogue-portrait" width="56" height="56" aria-hidden="true"></canvas>' : icon('chat')}</span>${isFinalist(w.id) ? '<div class="dialogue-speaker-block"><strong id="dialogue-speaker"></strong><span id="dialogue-context"></span></div>' : '<strong id="dialogue-speaker"></strong>'}<button class="icon-button" data-action="dismiss-dialogue" aria-label="Close dialogue">${icon('close')}</button></div><p id="dialogue-text"></p><div class="dialogue-choices" id="dialogue-choices"></div></div>
+    <div class="map-overlay" id="map-overlay" hidden><div class="map-heading"><div><span class="eyebrow">${isFinalist(w.id) ? 'ROADS YOU HAVE YET TO WALK' : 'YOUR LITTLE OPEN WORLD'}</span><h3>${w.name}</h3></div><button class="icon-button" data-action="map" aria-label="Close world map">${icon('close')}</button></div><canvas id="map-canvas" width="800" height="576" aria-label="World map showing your position"></canvas><div class="map-legend"><span><i></i> You are here</span><span>${isFinalist(w.id) ? 'Gold: your next stop · Blue: a travel stop' : 'Explore the roads. Discover what’s between them.'}</span></div>${isFinalist(w.id) ? '<div class="map-travel-row"><span id="map-exploration"></span><button data-action="travel">Travel to a discovered stop <kbd>T</kbd></button></div>' : ''}</div>
     <div class="ability-hud" id="ability-hud" hidden></div>
     <div class="touch-controls"><div class="touch-dpad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><div><button data-action="interact">E</button><button data-action="attack" aria-label="${w.id === 'lynch' ? 'Camera flash' : 'Attack'}">${icon(w.id === 'lynch' ? 'spark' : 'sword')}</button></div></div></div>
     <aside class="game-sidebar"><div class="character-card"><div class="character-avatar"><canvas id="avatar-canvas" width="64" height="64"></canvas></div><div><span>${w.role}</span><strong>Level <span id="player-level">1</span><span class="character-level-note"> · <span id="player-rank">Just getting started</span></span></strong></div></div><div class="stat-label"><span>HEALTH</span><span id="health-value">100 / 100</span></div><div class="stat-bar health-bar"><span id="health-fill" style="width:100%"></span></div><div class="stat-label"><span>EXPERIENCE</span><span id="xp-value">0 / 100</span></div><div class="stat-bar xp-bar"><span id="xp-fill" style="width:0%"></span></div><div class="resource-panel" id="resource-panel" hidden><div class="stat-label"><span id="resource-label"></span><span id="resource-value"></span></div><div class="stat-bar resource-bar"><span id="resource-fill"></span></div></div>
-    <div class="sidebar-divider"></div><div class="sidebar-overline">${icon('flag')} YOUR FIRST CHAPTER</div><h3 id="quest-title">A story to follow</h3><p id="quest-description">${w.hook}</p><div class="quest-progress" id="quest-progress"></div><div class="destination-hint" id="destination-hint"></div><details class="journal-section" id="journal-section" hidden><summary>Field notes <span id="journal-count">0</span></summary><ul id="journal-entries"></ul></details><div class="sidebar-divider"></div><div class="pocket-row">${icon('bag')}<span>In your pockets</span><strong id="coin-value">0 coins</strong></div><p class="inventory-text" id="inventory-text">Room for a few discoveries.</p><div class="field-note"><span>FIELD NOTE 01</span><p>${w.hook}</p></div><div class="sidebar-choice"><p>Feeling at home here?</p><button class="primary-button" data-action="select-world">Choose this world ${icon('check')}</button><span>You can change your mind anytime.</span></div></aside></div>
-    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${w.id === 'lynch' ? 'Camera flash' : w.id === 'shinobi' ? 'Kunai' : 'Attack'}</span>${w.id === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : w.id === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
+    <div class="sidebar-divider"></div><div class="sidebar-overline">${icon('flag')} YOUR FIRST CHAPTER</div><h3 id="quest-title">A story to follow</h3><p id="quest-description">${w.hook}</p><div class="quest-progress" id="quest-progress"></div><div class="destination-hint" id="destination-hint"></div>${isFinalist(w.id) ? '<div class="exploration-summary" id="exploration-summary"></div><details class="side-stories" id="side-stories"><summary>Other stories <span id="side-story-count">0</span></summary><div id="side-story-list"></div></details>' : ''}<details class="journal-section" id="journal-section" hidden><summary>Field notes <span id="journal-count">0</span></summary><ul id="journal-entries"></ul></details><div class="sidebar-divider"></div><div class="pocket-row">${icon('bag')}<span>In your pockets</span><strong id="coin-value">0 coins</strong></div><p class="inventory-text" id="inventory-text">Room for a few discoveries.</p><div class="field-note"><span>FIELD NOTE 01</span><p>${w.hook}</p></div><div class="sidebar-choice"><p>Feeling at home here?</p><button class="primary-button" data-action="select-world">Choose this world ${icon('check')}</button><span>You can change your mind anytime.</span></div></aside></div>
+    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${w.id === 'lynch' ? 'Camera flash' : w.id === 'shinobi' ? 'Kunai' : 'Attack'}</span>${w.id === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : w.id === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}${isFinalist(w.id) ? '<span><kbd>T</kbd> Travel</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
   </section>`;
   overlay.hidden = false;
   document.body.classList.add('modal-open');
@@ -203,6 +209,7 @@ function openGame(id) {
   lastState = null;
   abilitiesSignature = '';
   journalSignature = '';
+  explorationSignature = '';
   activeGame = createGame(document.querySelector('#game-canvas'), id, { onState: updateGameState, onDialogue: showDialogue, onToast: showGameToast, onMap: toggleMap, onDismissDialogue: () => { const box = document.querySelector('#dialogue-box'); if (box) box.hidden = true; } });
   drawAvatar(w.id);
   document.querySelector('#game-canvas').focus();
@@ -217,10 +224,10 @@ function drawAvatar(theme) {
   const canvas = document.querySelector('#avatar-canvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
-  if(theme==='shinobi'){
-    ctx.fillStyle='#ffead0';ctx.fillRect(0,0,64,64);
+  if(isFinalist(theme)){
+    ctx.fillStyle=theme==='shinobi' ? '#ffead0' : '#eee0d8';ctx.fillRect(0,0,64,64);
     ctx.save();ctx.translate(32,61);ctx.scale(1.25,1.25);
-    drawCharacter(ctx,0,0,'shinobi',{facing:'down'});
+    drawCharacter(ctx,0,0,theme,{facing:'down'});
     ctx.restore();return;
   }
   const colors={moss:['#cfb980','#536d47','#ef6046'],neon:['#c9a5bd','#645286','#56dcda'],dust:['#d6b480','#986640','#d25d3c'],odd:['#d8bca9','#6874a9','#e57788'],lynch:['#edccad','#312535','#73344c'],shinobi:['#e9bd85','#263b48','#ed8b42']};
@@ -259,6 +266,7 @@ function updateGameState(state) {
   document.querySelector('.game-shell')?.setAttribute('data-phase',state.phase || '');
   updateAbilities(state);
   updateJournal(state.journal || []);
+  updateExploration(state);
   if (mapOpen) renderMap();
 }
 
@@ -298,6 +306,21 @@ function updateJournal(entries){
   journalSignature=signature;
   document.querySelector('#journal-entries').innerHTML=entries.map(entry=>typeof entry==='string' ? `<li>${escapeHtml(entry)}</li>` : `<li><strong>${escapeHtml(entry.title || 'A discovery')}</strong><p>${escapeHtml(entry.text || '')}</p>${entry.phase ? `<span>${escapeHtml(entry.phase)} side</span>` : ''}</li>`).join('');
 }
+function updateExploration(state){
+  if(!activeWorld || !isFinalist(activeWorld.id))return;
+  const regions=getWorldRegions(activeWorld.id);
+  const visited=Array.isArray(state.regionsVisited) ? state.regionsVisited.length : Number(state.regionsVisited || 0);
+  const stops=state.travelPoints || [];
+  const unlocked=stops.filter(stop=>stop.discovered).length;
+  setText('exploration-summary',`${visited} / ${regions.length} districts discovered · ${unlocked} travel stops`);
+  setText('map-exploration',`${visited} / ${regions.length} districts · ${unlocked} / ${stops.length} travel stops found`);
+  const quests=state.sideQuests || [];
+  setText('side-story-count',quests.filter(q=>q.status!=='complete').length);
+  const signature=JSON.stringify({tracked:state.trackedQuest,quests:quests.map(q=>[q.id,q.title,q.status,q.progress,q.target,q.description])});
+  if(signature===explorationSignature)return;
+  explorationSignature=signature;
+  document.querySelector('#side-story-list').innerHTML=(quests.length ? quests.map(quest=>`<article class="side-story-card ${state.trackedQuest===quest.id ? 'is-tracked' : ''}"><strong>${escapeHtml(quest.title)}</strong><small>${quest.status==='complete' ? 'Complete' : quest.status==='ready' ? 'Return to your contact' : `${quest.progress || 0} / ${quest.target || 1}`}</small><p>${escapeHtml(quest.description || 'Follow this story to its next stop.')}</p>${quest.status!=='complete' ? `<button data-track-quest="${escapeHtml(quest.id)}" aria-pressed="${state.trackedQuest===quest.id}">${state.trackedQuest===quest.id ? 'Following this story' : 'Follow this story'} ${icon('arrow')}</button>` : ''}</article>`).join('')+`<button class="track-main" data-track-quest="main" aria-pressed="${state.trackedQuest==='main'}">Follow the main story ${icon('flag')}</button>` : '<p class="side-story-empty">People beyond the village have stories of their own. Ask what they need.</p>');
+}
 function setText(id,value){ const el=document.getElementById(id); if(el&&value!==undefined)el.textContent=value; }
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -307,6 +330,15 @@ function showDialogue(dialogue) {
   box.hidden=false;
   setText('dialogue-speaker',dialogue.speaker);
   setText('dialogue-text',dialogue.text);
+  if(isFinalist(activeWorld.id)){
+    const portrait=document.querySelector('#dialogue-portrait');
+    const actor=dialogue.portrait || lastState?.entities?.find(entity=>entity.type==='npc' && entity.name===dialogue.speaker);
+    const ctx=portrait.getContext('2d');ctx.clearRect(0,0,56,56);ctx.imageSmoothingEnabled=false;
+    ctx.save();ctx.translate(28,54);ctx.scale(1.05,1.05);
+    drawCharacter(ctx,0,0,activeWorld.id,{...actor,npc:Boolean(actor),type:actor ? 'npc' : 'player',facing:'down',phase:lastState?.phase || 'waking'});
+    ctx.restore();
+    setText('dialogue-context',lastState?.currentRegionName || lastState?.location || activeWorld.location);
+  }
   const choices=document.querySelector('#dialogue-choices');
   choices.innerHTML='';
   (dialogue.choices || []).forEach(choice=>{
@@ -315,6 +347,7 @@ function showDialogue(dialogue) {
     button.addEventListener('click',()=>{box.hidden=true;choice.action?.();if (box.hidden) document.querySelector('#game-canvas')?.focus();});
     choices.appendChild(button);
   });
+  if(isFinalist(activeWorld.id))choices.querySelector('button')?.focus({preventScroll:true});
 }
 
 function closeGame() {
@@ -346,10 +379,17 @@ function renderMap(){
   const canvas=document.querySelector('#map-canvas');if(!canvas||!activeWorld)return;
   const ctx=canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
-  const scale=Math.min(canvas.width/WORLD_SIZE.width,canvas.height/WORLD_SIZE.height);
+  const size=lastState?.worldSize || getWorldSize(activeWorld.id);
+  const scale=Math.min(canvas.width/size.width,canvas.height/size.height);
   drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.entities || [],phase:lastState?.phase});
-  if(lastState){const x=lastState.x*scale,y=lastState.y*scale;ctx.fillStyle='#fff8dc';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f0643b';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();}
-  if(lastState?.destination){const x=lastState.destination.x*scale,y=lastState.destination.y*scale;ctx.fillStyle='#f3ce72';ctx.strokeStyle='#3e4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+5,y);ctx.lineTo(x,y+6);ctx.lineTo(x-5,y);ctx.closePath();ctx.fill();ctx.stroke();}
+  if(isFinalist(activeWorld.id)){
+    for(const stop of lastState?.travelPoints || []){if(!stop.discovered)continue;const x=Math.round(stop.x*scale),y=Math.round(stop.y*scale);ctx.fillStyle='#bce2f0';ctx.fillRect(x-3,y-3,6,6);ctx.fillStyle='#438aac';ctx.fillRect(x-1,y-1,2,2);}
+    if(lastState?.destination){const x=Math.round(lastState.destination.x*scale),y=Math.round(lastState.destination.y*scale);ctx.fillStyle='#f3ce72';ctx.fillRect(x-4,y-2,8,4);ctx.fillRect(x-2,y-4,4,8);}
+    if(lastState){const x=Math.round(lastState.x*scale),y=Math.round(lastState.y*scale);ctx.fillStyle='#fff8dc';ctx.fillRect(x-4,y-3,8,6);ctx.fillStyle='#f0643b';ctx.fillRect(x-2,y-2,4,4);}
+  }else{
+    if(lastState){const x=lastState.x*scale,y=lastState.y*scale;ctx.fillStyle='#fff8dc';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f0643b';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();}
+    if(lastState?.destination){const x=lastState.destination.x*scale,y=lastState.destination.y*scale;ctx.fillStyle='#f3ce72';ctx.strokeStyle='#3e4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+5,y);ctx.lineTo(x,y+6);ctx.lineTo(x-5,y);ctx.closePath();ctx.fill();ctx.stroke();}
+  }
 }
 let toastTimeout;
 function showToast(message){const toast=document.querySelector('#toast');toast.innerHTML=`${icon('check')}<span>${escapeHtml(message)}</span>`;toast.classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>toast.classList.remove('visible'),4000);}

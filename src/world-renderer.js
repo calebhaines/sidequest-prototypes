@@ -1,5 +1,12 @@
+import { EXPANDED_SIZE, EXPANDED_FEATURES, EXPANDED_REGIONS, EXPANDED_OBSTACLES } from './expanded-world-data.js';
+import { drawExpandedWorld, drawExpandedCharacter, drawExpandedPreview } from './expanded-world-renderer.js';
+export { getExpandedRenderStats, clearExpandedWorldCaches } from './expanded-world-renderer.js';
+
 // Original, hand-drawn canvas pixel art. All coordinates are world pixels.
 export const WORLD_SIZE = { width: 1600, height: 1152 };
+
+export function getWorldSize(theme='moss') {return {...(theme==='lynch'||theme==='shinobi'?EXPANDED_SIZE:WORLD_SIZE)};}
+export function getWorldRegions(theme='moss') {return (EXPANDED_REGIONS[theme]||[]).map(region=>({...region}));}
 
 const PALETTES = {
   moss: { ground:'#8bb96c', dark:'#76a657', light:'#9cc97a', ink:'#344b40', path:'#ddca9c', edge:'#b5ab80', roof:'#c8674b', roofLight:'#e18558', roofDark:'#954936', wall:'#e9dcab', shade:'#c4b682', tree:['#255f43','#367c4a','#4b9952','#73b55e'], water:'#4ab6bd', waterDark:'#268eaa', accent:'#f4ca66' },
@@ -887,6 +894,7 @@ export function getSpawn(theme='moss') {
 }
 
 export function getWorldFeatures(theme='moss') {
+  if(EXPANDED_FEATURES[theme])return EXPANDED_FEATURES[theme].map(feature=>({...feature}));
   if(NEW_FEATURES[theme])return NEW_FEATURES[theme].map(feature=>({...feature}));
   const names=FEATURE_NAMES[theme]||FEATURE_NAMES.moss;
   return [
@@ -902,6 +910,7 @@ export function getWorldFeatures(theme='moss') {
 }
 
 export function getObstacles(theme='moss') {
+  if(EXPANDED_OBSTACLES[theme])return EXPANDED_OBSTACLES[theme].map(obstacle=>({...obstacle}));
   if(theme==='lynch')return [
     {x:306,y:537,width:272,height:109},
     {x:415,y:231,width:105,height:72},
@@ -1078,6 +1087,7 @@ function drawThematicCharacter(c,x,y,theme,opts) {
 }
 
 export function drawCharacter(c,x,y,theme='moss',opts={}) {
+  if(theme==='lynch'||theme==='shinobi'){drawExpandedCharacter(c,x,y,theme,opts);return;}
   if(theme==='lynch'||theme==='shinobi'){drawThematicCharacter(c,x,y,theme,opts);return;}
   const p=PALETTES[theme]||PALETTES.moss, npc=opts.npc||opts.type==='npc';
   const t=opts.time||0,step=(opts.walking||opts.moving)?Math.floor(t*8)%2:0;
@@ -1151,6 +1161,7 @@ function drawEnemy(c,e,p,theme,time) {
 }
 
 export function drawWorld(c,theme='moss',opts={}) {
+  if(theme==='lynch'||theme==='shinobi'){drawExpandedWorld(c,theme,opts);return;}
   const phase=opts.phase||'waking';
   const p=theme==='lynch'&&phase==='dream'?DREAM_PALETTE:PALETTES[theme]||PALETTES.moss,scale=opts.scale||1,x=Math.round(opts.x||0),y=Math.round(opts.y||0);
   const w=opts.width||c.canvas.width,h=opts.height||c.canvas.height,time=opts.time||0;
@@ -1210,6 +1221,7 @@ export function drawWorld(c,theme='moss',opts={}) {
 }
 
 export function drawPreview(canvas,theme='moss') {
+  if(theme==='lynch'||theme==='shinobi'){drawExpandedPreview(canvas,theme);return;}
   const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
   if(theme==='lynch'||theme==='shinobi') {
     const scale=w/(theme==='shinobi'?1500:865),worldHeight=h/scale;

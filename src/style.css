@@ -60,3 +60,67 @@
 .game-shell[data-theme="shinobi"] .sidebar-choice .primary-button:hover{background:#ff9c42}
 .game-shell[data-theme="shinobi"] .quest-pips i.filled{background:#eaa043}
 .game-shell[data-theme="shinobi"] .journal-section li{color:#647684}
+
+/* Expanded finalists: conversations, district discoveries, and side stories. */
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .character-avatar{border:0;box-shadow:none}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-box{border:0;border-radius:5px;padding:20px 23px;box-shadow:0 7px 25px #15233035}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-heading{align-items:center;gap:13px}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-avatar{width:48px;height:48px;background:transparent;border-radius:0;flex-shrink:0}
+.dialogue-avatar canvas{width:48px;height:48px;image-rendering:pixelated}
+.dialogue-speaker-block{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+.dialogue-speaker-block strong{font-size:14px;font-weight:600}
+.dialogue-speaker-block>span{font-size:9px;font-weight:400;color:#9b938d;line-height:1.4}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-box>p{font-size:13px;line-height:1.85;white-space:pre-line;margin:12px 0 17px}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-choices>button{font-size:11px;line-height:1.5;padding:10px 13px;min-height:42px;border:0;background:#eee8dc}
+.game-shell[data-theme="lynch"] .dialogue-choices>button{background:#eee1e1;color:#7f5264}
+.game-shell[data-theme="lynch"] .dialogue-choices>button:hover{background:#e2cdd3}
+.game-shell[data-theme="shinobi"] .dialogue-choices>button{background:#f5e7ca;color:#29476a}
+.game-shell[data-theme="shinobi"] .dialogue-choices>button:hover{background:#f5d8ad}
+.exploration-summary{font-size:8px;line-height:1.7;color:#909387;margin:13px 0 8px}
+.side-stories{margin:6px 0 3px;border-radius:5px;background:#edece3;flex-shrink:0}
+.side-stories>summary{padding:10px 11px;cursor:pointer;color:#6d7564;font-size:9px}
+.side-stories>summary>span{float:right;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--world-chip);color:var(--world-color)}
+.side-stories>div{padding:0 11px 11px;max-height:240px;overflow-y:auto}
+.side-story-card{padding:12px 0 10px;border-top:1px solid #dcded2;display:flex;flex-direction:column;gap:5px}
+.side-story-card>strong{font-size:10px;color:var(--world-color);font-weight:600}
+.side-story-card>small{font-size:7px;color:#8b917c;text-transform:uppercase;letter-spacing:.4px}
+.side-story-card>p,.side-story-empty{font-size:9px;color:#939987;line-height:1.7;margin:4px 0 7px}
+.side-story-card>button,.track-main{padding:6px 0;border:0;background:transparent;text-align:left;font-size:9px;color:var(--world-color);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.side-story-card>button .icon,.track-main .icon{width:12px;height:12px}
+.side-story-card.is-tracked>button{font-weight:600}
+.side-story-card.is-tracked>button::before{content:'●';font-size:6px}
+.track-main{margin-top:5px;width:100%;padding:9px 0 0}
+.map-travel-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-shrink:0}
+.map-travel-row>span{font-size:9px;line-height:1.5;color:#929880}
+.map-travel-row>button{border:0;border-radius:4px;padding:9px 12px;background:#e7eadb;color:#596a4b;font-size:10px;display:flex;align-items:center;gap:12px}
+.map-travel-row>button:hover{background:#dbe2cb}
+.map-travel-row>button kbd{font-size:9px}
+.game-shell[data-theme="shinobi"] .side-stories{background:#f8edda}
+.game-shell[data-theme="shinobi"] .side-story-card>p{color:#687984}
+.game-shell[data-theme="lynch"] .side-stories{background:#efe5e5}
+.game-shell[data-theme="lynch"] .side-stories>summary{color:#8c6b78}
+@media(max-width:800px){
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-box{padding:14px 17px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-box>p{font-size:12px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-choices>button{font-size:10px;padding:9px 11px}
+}
+@media(max-width:560px){
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .game-sidebar{height:266px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .exploration-summary{grid-column:2;grid-row:7;font-size:7px;margin:7px 0 0}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .journal-section{grid-column:2;grid-row:8;margin:6px 0 0}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .side-stories{grid-column:2;grid-row:9;margin:6px 0 0}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .sidebar-choice{grid-column:1;grid-row:5/10}
+  .side-stories>summary{font-size:8px;padding:8px}
+  .side-stories>div{padding:0 8px 8px}
+  .side-story-card>strong{font-size:9px}
+  .side-story-card>p,.side-story-empty{font-size:8px}
+  .side-story-card>button,.track-main{font-size:8px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-box>p{font-size:11px;line-height:1.75;margin:10px 0 12px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-heading{gap:9px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .dialogue-avatar,.dialogue-avatar canvas{width:40px;height:40px}
+  .dialogue-speaker-block strong{font-size:12px}
+  .dialogue-speaker-block>span{font-size:8px}
+  .map-travel-row{align-items:flex-start;flex-direction:column;gap:8px;margin-top:9px}
+  .map-travel-row>span{font-size:8px}
+  .map-travel-row>button{width:100%;font-size:9px;justify-content:space-between;padding:8px 10px}
+}
