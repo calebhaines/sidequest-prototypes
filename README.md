@@ -4,9 +4,9 @@ Four original browser RPG prototypes with classic top-down pixel art, real-time 
 
 ## Download and play
 
-[Play in your browser](https://calebhaines.github.io/sidequest-prototypes/) · [Download all four prototypes](https://github.com/calebhaines/sidequest-prototypes/releases/latest/download/sidequest-prototypes.zip) · [Releases](https://github.com/calebhaines/sidequest-prototypes/releases)
+[Play in your browser](https://calebhaines.github.io/sidequest-prototypes/) · [Download all four prototypes](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.1.0/docs/sidequest-prototypes.zip) · [Releases](https://github.com/calebhaines/sidequest-prototypes/releases)
 
-Open this repository's **Releases** page and download **sidequest-prototypes.zip**. Extract it and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled, and all four prototypes work offline without an installation or server.
+Use the download link above or the links on this repository's **Releases** page to save **sidequest-prototypes.zip**. Extract it and double-click **sidequest/PLAY.html**, or open that file using your browser's Open File command. Everything needed to play is bundled, and all four prototypes work offline without an installation or server.
 
 You can also download **sidequest-play.html** from the release, save it to your device, and open the saved HTML file directly.
 
