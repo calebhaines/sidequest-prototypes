@@ -1,6 +1,6 @@
 {
   "name": "sidequest-worlds",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,5 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "package": "node scripts/package-downloads.mjs"
   },
-  "devDependencies": { "vite": "^7.1.0" }
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
 }

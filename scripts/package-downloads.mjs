@@ -35,7 +35,7 @@ const standalone = `<!doctype html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f7f6f1">
-<title>Sidequest — Four playable pixel RPG prototypes</title>
+<title>Sidequest — Six playable pixel RPG prototypes</title>
 <link rel="icon" href="data:image/svg+xml;base64,${favicon}">
 <style>${css}</style>
 </head><body><div id="app"></div><script type="module">${script}</script></body></html>\n`;
@@ -49,14 +49,14 @@ fs.mkdirSync(websiteDownloads, { recursive: true });
 fs.copyFileSync(standalonePath, path.join(websiteDownloads, 'sidequest-play.html'));
 fs.writeFileSync(path.join(dist, 'assets', jsName), script.replaceAll('/downloads/sidequest-prototypes.zip', '/downloads/sidequest-play.html'));
 
-const instructions = `SIDEQUEST — FOUR PLAYABLE PIXEL RPG PROTOTYPES
+const instructions = `SIDEQUEST — SIX PLAYABLE PIXEL RPG PROTOTYPES
 
 QUICKEST WAY TO PLAY
 1. Extract this ZIP.
 2. Double-click PLAY.html, or open it in Chrome, Edge, Firefox, or Safari.
 3. Pick a world and press Play prototype.
 
-All four games, fonts, and pixel art are inside PLAY.html.
+All six games, fonts, and pixel art are inside PLAY.html.
 No installation, account, internet connection, or server is needed.
 If your browser downloads HTML instead of opening it, save it first and
 then use your browser's Open File command.
@@ -66,17 +66,21 @@ THE WORLDS
 02 Neon Afterglow — cyberpunk city, street stories, and drones.
 03 The Dustlands — desert salvage and a town running out of water.
 04 Borrowed Sky — a surreal suburb and the missing Thursday.
+05 Velvet Static — an uncanny town, dream crossings, and contradictory witnesses.
+06 Hidden Ember — shinobi training, chakra, jutsus, and hidden-village loyalties.
 
 CONTROLS
 WASD / arrows: Move    Shift: Sprint    E / Enter: Talk or interact
 Space: Attack    M: World map    Escape: Close dialogue/map or leave
+Velvet Static: Q crosses between waking and dream; Space uses a camera flash.
+Hidden Ember: 1 Ember Release, 2 Shadow Clone, 3 Substitution; Space throws kunai.
 Small-screen browsers show touch controls. Ambient sound is optional.
 
 Your chosen world and shortlist are stored in your browser, when local
 file storage is available. Gameplay starts fresh when you re-enter a world.
 
 IN THIS ZIP
-PLAY.html — standalone, ready-to-play version containing all four worlds.
+PLAY.html — standalone, ready-to-play version containing all six worlds.
 website/ — production web build; serve this folder as a static website.
 source/ — complete editable Vite project, including original source art.
 
@@ -125,4 +129,4 @@ execFileSync('python3', ['-c', python, manifestPath], { stdio: 'inherit' });
 fs.unlinkSync(manifestPath);
 fs.copyFileSync(zipPath, path.join(browserOutput, 'sidequest-prototypes.zip'));
 console.log(`Standalone: ${standalonePath} (${fs.statSync(standalonePath).size.toLocaleString()} bytes)`);
-console.log(`All four + source: ${zipPath} (${fs.statSync(zipPath).size.toLocaleString()} bytes)`);
+console.log(`All six + source: ${zipPath} (${fs.statSync(zipPath).size.toLocaleString()} bytes)`);

@@ -30,6 +30,8 @@ const worlds = [
   { id: 'neon', number: '02', name: 'Neon Afterglow', category: 'Sci-fi', genre: 'THE CITY NEVER SLEEPS', color: '#8062a6', chip: '#eee6f4', line: 'Find your place in the electric city.', description: 'Run the backstreets of a rain-soaked megacity. Take shady jobs, meet unlikely allies, and decide who gets your loyalty.', tags: ['Street stories', 'Cyberware', 'Faction choices'], location: 'Lower Grid', role: 'The runner', hook: 'Someone is erasing people from the city records. Tonight, your name appeared on the list.', gradient: '#675688' },
   { id: 'dust', number: '03', name: 'The Dustlands', category: 'Wasteland', genre: 'BEYOND THE LAST OUTPOST', color: '#aa653a', chip: '#f3e7d6', line: 'Nothing out here is truly empty.', description: 'Make a life at the edge of a broken world. Scavenge the old roads, trade favors, and uncover what the desert buried.', tags: ['Lost technology', 'Salvage & trade', 'Frontier survival'], location: 'Lastwater', role: 'The drifter', hook: 'The settlement has three days of clean water left. An old machine in the dunes might change that.', gradient: '#c99455' },
   { id: 'odd', number: '04', name: 'Borrowed Sky', category: 'Surreal', genre: 'WELCOME TO THE NEIGHBORHOOD', color: '#657ca4', chip: '#e4eaf5', line: 'A familiar town. An unfamiliar feeling.', description: 'Ride into a sleepy suburb where the ordinary gets wonderfully strange. Make friends, chase rumors, and look a little closer.', tags: ['Small-town secrets', 'Strange encounters', 'Everyday magic'], location: 'Bellweather', role: 'The new kid', hook: 'It is always 6:17 in Bellweather. Everyone seems fine with that. Everyone except you.', gradient: '#8292bc' },
+  { id: 'lynch', number: '05', name: 'Velvet Static', category: 'Mystery', genre: 'SOME ROOMS REMEMBER YOU', color: '#995461', chip: '#f1e2e7', line: 'A quiet town. A room that knows your name.', description: 'Follow a ringing telephone into Mercy Falls. Question its peculiar residents, cross into their dreams, and decide which version of the truth to carry home.', tags: ['Dream logic', 'Contradictory witnesses', 'Two realities'], location: 'Mercy Falls', role: 'The late arrival', hook: 'The motel has kept a room for you for thirteen years. You have never been here before. The night clerk disagrees.', gradient: '#4c293e', isNew: true, time: '03:17' },
+  { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#72854a', chip: '#edf0dc', line: 'Small village. Unwritten legend.', description: 'Become a genin in the Village Hidden in the Reeds. Master chakra and elemental jutsus, spar with rivals, and choose where your loyalties lie.', tags: ['Chakra & jutsus', 'Hidden village', 'Shinobi missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#5e996d', isNew: true, time: '07:12' },
 ];
 
 let selectedWorld = null;
@@ -43,17 +45,19 @@ let mapOpen = false;
 let soundOn = false;
 let soundContext = null;
 let ambientOscillators = [];
+let abilitiesSignature = '';
+let journalSignature = '';
 
 function renderApp() {
   document.querySelector('#app').innerHTML = `
     <header class="site-header">
       <a class="brand" href="#" aria-label="Sidequest home">${brandMark}<span>sidequest<span class="brand-period">.</span></span></a>
       <nav class="main-nav" aria-label="Main navigation">
-        <a class="nav-active" href="#worlds">The worlds <span>04</span></a>
+        <a class="nav-active" href="#worlds">The worlds <span>${String(worlds.length).padStart(2, '0')}</span></a>
         <a href="#idea">The idea</a>
         <button class="nav-how" data-action="help">How to play ${icon('arrowUp')}</button>
       </nav>
-      ${location.protocol === 'file:' ? '<div class="header-status"><span class="status-dot"></span> Four worlds, wherever you go</div>' : `<a class="header-status download-link" href="/downloads/sidequest-prototypes.zip" download>${icon('download')} Download prototypes</a>`}
+      ${location.protocol === 'file:' ? '<div class="header-status"><span class="status-dot"></span> Six worlds, wherever you go</div>' : `<a class="header-status download-link" href="/downloads/sidequest-prototypes.zip" download>${icon('download')} Download prototypes</a>`}
       <button class="mobile-help icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button>
     </header>
     <main>
@@ -64,13 +68,13 @@ function renderApp() {
         </div>
         <div class="hero-aside">
           <p>The charm of a classic pixel RPG.<br>The freedom to make your own story.</p>
-          <p class="hero-small">Four different worlds. Four playable beginnings.<br>Take a look around. See where you belong.</p>
+          <p class="hero-small">Six different worlds. Six playable beginnings.<br>Two new roads to wander. See where you belong.</p>
           <div class="hero-perks"><span>${icon('globe')} Open exploration</span><span>${icon('sword')} Real-time combat</span><span>${icon('chat')} Your choices</span></div>
         </div>
       </section>
       <section id="worlds" class="worlds-section" aria-labelledby="worlds-heading">
         <div class="section-topline"><div><h2 id="worlds-heading">Pick a world. Get a little lost.</h2><span class="section-subtitle">No downloads. No commitments. Just press play.</span></div><button class="surprise-button" data-action="surprise">${icon('shuffle')} Surprise me ${icon('arrow')}</button></div>
-        <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? '<span class="filter-count">4</span>' : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>
+        <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','Mystery','Shinobi','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? `<span class="filter-count">${worlds.length}</span>` : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>
         <div class="selection-banner" ${selectedWorld ? '' : 'hidden'}></div>
         <div class="world-grid" id="world-grid"></div>
         <div class="gallery-note">${icon('spark')} A starting point, not a finished game. Your favorite world is the one we’ll build on.</div>
@@ -82,13 +86,13 @@ function renderApp() {
         <div class="idea-feature">${icon('sword')}<h3>Grow into your adventure</h3><p>Fight in real time, collect a little loot, and level up as you make your way.</p></div>
       </section>
     </main>
-    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span>Made for wandering.</span><div>Four worlds. Endless directions. <span class="footer-spark">✦</span></div></footer>
+    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span>Made for wandering.</span><div>Six worlds. Endless directions. <span class="footer-spark">✦</span></div></footer>
     <div class="toast" id="toast" role="status"></div>
     <div class="overlay" id="help-overlay" hidden>
       <section class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">
         <button class="dialog-close icon-button" data-action="close-help" aria-label="Close instructions">${icon('close')}</button>
         <div class="eyebrow">A LITTLE FIELD GUIDE</div><h2 id="help-title">Just go exploring.</h2><p>Every world is a small, playable RPG. Talk to its people, follow a quest, and see what’s over the next hill.</p>
-        <div class="control-list"><div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> arrow keys</span><strong>Move</strong></div><div><span><kbd>Shift</kbd></span><strong>Sprint</strong></div><div><span><kbd>E</kbd> <span class="or">or</span> <kbd>Enter</kbd></span><strong>Talk / interact</strong></div><div><span><kbd>Space</kbd></span><strong>Attack</strong></div><div><span><kbd>M</kbd></span><strong>Open world map</strong></div><div><span><kbd>Esc</kbd></span><strong>Close / return</strong></div></div>
+        <div class="control-list"><div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> arrow keys</span><strong>Move</strong></div><div><span><kbd>Shift</kbd></span><strong>Sprint</strong></div><div><span><kbd>E</kbd> <span class="or">or</span> <kbd>Enter</kbd></span><strong>Talk / interact</strong></div><div><span><kbd>Space</kbd></span><strong>Attack / camera flash</strong></div><div><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><strong>Shinobi jutsus</strong></div><div><span><kbd>Q</kbd></span><strong>Cross into a dream</strong></div><div><span><kbd>M</kbd></span><strong>Open world map</strong></div><div><span><kbd>Esc</kbd></span><strong>Close / return</strong></div></div>
         <p class="help-tip">${icon('chat')} Start by talking to the person near you. They have a story—and a quest.</p><button class="primary-button" data-action="close-help">Let’s wander ${icon('arrow')}</button>
       </section>
     </div>
@@ -101,14 +105,14 @@ function renderApp() {
 }
 
 function renderCards() {
-  const filtered = worlds.filter(w => currentFilter === 'All worlds' || w.category === currentFilter);
+  const filtered = worlds.filter(w => currentFilter === 'All worlds' || w.category === currentFilter).sort((a, b) => Number(Boolean(b.isNew)) - Number(Boolean(a.isNew)));
   document.querySelector('#world-grid').innerHTML = filtered.map(w => `
     <article class="world-card ${selectedWorld === w.id ? 'is-selected' : ''}" style="--world-color:${w.color};--world-chip:${w.chip}" data-world="${w.id}">
       <div class="world-art" style="background:${w.gradient}">
         <canvas id="preview-${w.id}" width="720" height="360" aria-label="Pixel-art view of ${w.name}"></canvas>
-        <div class="art-topline"><span class="world-genre"><span></span>${w.category}</span><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
+        <div class="art-topline"><div class="art-badges"><span class="world-genre"><span></span>${w.category}</span>${w.isNew ? '<span class="new-world-badge">NEW WORLD</span>' : ''}</div><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
         <button class="scene-play" data-play="${w.id}" aria-label="Play ${w.name}"><span class="scene-play-icon">${icon('play')}</span><span>Step into this world</span></button>
-        <div class="art-bottomline"><span class="pixel-coordinates">${w.location.toUpperCase()}<span> · </span> ${w.number === '02' ? '23:48' : w.number === '04' ? '18:17' : '09:41'}</span><span class="art-number">WORLD ${w.number}</span></div>
+        <div class="art-bottomline"><span class="pixel-coordinates">${w.location.toUpperCase()}<span> · </span> ${w.time || (w.number === '02' ? '23:48' : w.number === '04' ? '18:17' : '09:41')}</span><span class="art-number">WORLD ${w.number}</span></div>
       </div>
       <div class="card-content"><div class="card-eyebrow"><span>${w.genre}</span><span class="card-number">/ ${w.number}</span></div><div class="card-heading"><h3>${w.name}</h3><span class="selected-chip" ${selectedWorld === w.id ? '' : 'hidden'}>${icon('check')} Your pick</span></div><p>${w.description}</p><div class="card-bottom"><div class="world-tags">${w.tags.map(t => `<span>${t}</span>`).join('')}</div><button class="play-button" data-play="${w.id}">Play prototype ${icon('arrowUp')}</button></div></div>
     </article>`).join('');
@@ -123,6 +127,8 @@ function updateSelectionBanner() {
 }
 
 function handleClick(event) {
+  const ability = event.target.closest('[data-ability]');
+  if (ability) { activeGame?.useAbility?.(ability.dataset.ability); document.querySelector('#game-canvas')?.focus(); return; }
   const play = event.target.closest('[data-play]');
   if (play) return openGame(play.dataset.play);
   const favorite = event.target.closest('[data-favorite]');
@@ -180,20 +186,23 @@ function openGame(id) {
   activeWorld = worlds.find(w => w.id === id);
   const w = activeWorld;
   const overlay = document.querySelector('#game-overlay');
-  overlay.innerHTML = `<section class="game-shell" role="dialog" aria-modal="true" aria-label="${w.name} playable prototype" style="--world-color:${w.color};--world-chip:${w.chip}">
+  overlay.innerHTML = `<section class="game-shell" data-theme="${w.id}" role="dialog" aria-modal="true" aria-label="${w.name} playable prototype" style="--world-color:${w.color};--world-chip:${w.chip}">
     <header class="game-header"><button class="back-button" data-action="close-game">${icon('arrow')}<span>All worlds</span></button><div class="game-title"><span>WORLD ${w.number}</span><h2>${w.name}</h2><span class="prototype-badge">PROTOTYPE</span></div><div class="game-header-actions"><button class="icon-button" data-action="sound" aria-label="Turn ambient sound on" title="Ambient sound">${icon('volume')}<span class="sound-slash"></span></button><button class="icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button><button class="icon-button" data-action="close-game" aria-label="Close prototype">${icon('close')}</button></div></header>
     <div class="game-body"><div class="game-viewport"><canvas id="game-canvas" width="960" height="640" tabindex="0" aria-label="Explore ${w.name} using WASD, E to interact, and Space to attack"></canvas><div class="location-overlay"><span class="status-dot"></span><span id="game-location">${w.location}</span><span class="location-sub">FREE TO WANDER</span></div><button class="map-button" data-action="map">${icon('map')}<span>World map</span><kbd>M</kbd></button><div class="interact-hint" id="interact-hint" hidden></div><div class="game-toast" id="game-toast" role="status"></div>
     <div class="dialogue-box" id="dialogue-box" hidden><div class="dialogue-heading"><span class="dialogue-avatar">${icon('chat')}</span><strong id="dialogue-speaker"></strong><button class="icon-button" data-action="dismiss-dialogue" aria-label="Close dialogue">${icon('close')}</button></div><p id="dialogue-text"></p><div class="dialogue-choices" id="dialogue-choices"></div></div>
     <div class="map-overlay" id="map-overlay" hidden><div class="map-heading"><div><span class="eyebrow">YOUR LITTLE OPEN WORLD</span><h3>${w.name}</h3></div><button class="icon-button" data-action="map" aria-label="Close world map">${icon('close')}</button></div><canvas id="map-canvas" width="800" height="576" aria-label="World map showing your position"></canvas><div class="map-legend"><span><i></i> You are here</span><span>Explore the roads. Discover what’s between them.</span></div></div>
-    <div class="touch-controls"><div class="touch-dpad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><div><button data-action="interact">E</button><button data-action="attack">${icon('sword')}</button></div></div></div>
-    <aside class="game-sidebar"><div class="character-card"><div class="character-avatar"><canvas id="avatar-canvas" width="64" height="64"></canvas></div><div><span>${w.role}</span><strong>Level <span id="player-level">1</span><span class="character-level-note"> · Just getting started</span></strong></div></div><div class="stat-label"><span>HEALTH</span><span id="health-value">100 / 100</span></div><div class="stat-bar health-bar"><span id="health-fill" style="width:100%"></span></div><div class="stat-label"><span>EXPERIENCE</span><span id="xp-value">0 / 100</span></div><div class="stat-bar xp-bar"><span id="xp-fill" style="width:0%"></span></div>
-    <div class="sidebar-divider"></div><div class="sidebar-overline">${icon('flag')} YOUR FIRST CHAPTER</div><h3 id="quest-title">A story to follow</h3><p id="quest-description">${w.hook}</p><div class="quest-progress" id="quest-progress"></div><div class="destination-hint" id="destination-hint"></div><div class="sidebar-divider"></div><div class="pocket-row">${icon('bag')}<span>In your pockets</span><strong id="coin-value">0 coins</strong></div><p class="inventory-text" id="inventory-text">Room for a few discoveries.</p><div class="field-note"><span>FIELD NOTE 01</span><p>${w.hook}</p></div><div class="sidebar-choice"><p>Feeling at home here?</p><button class="primary-button" data-action="select-world">Choose this world ${icon('check')}</button><span>You can change your mind anytime.</span></div></aside></div>
-    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> Attack</span></div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
+    <div class="ability-hud" id="ability-hud" hidden></div>
+    <div class="touch-controls"><div class="touch-dpad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><div><button data-action="interact">E</button><button data-action="attack" aria-label="${w.id === 'lynch' ? 'Camera flash' : 'Attack'}">${icon(w.id === 'lynch' ? 'spark' : 'sword')}</button></div></div></div>
+    <aside class="game-sidebar"><div class="character-card"><div class="character-avatar"><canvas id="avatar-canvas" width="64" height="64"></canvas></div><div><span>${w.role}</span><strong>Level <span id="player-level">1</span><span class="character-level-note"> · <span id="player-rank">Just getting started</span></span></strong></div></div><div class="stat-label"><span>HEALTH</span><span id="health-value">100 / 100</span></div><div class="stat-bar health-bar"><span id="health-fill" style="width:100%"></span></div><div class="stat-label"><span>EXPERIENCE</span><span id="xp-value">0 / 100</span></div><div class="stat-bar xp-bar"><span id="xp-fill" style="width:0%"></span></div><div class="resource-panel" id="resource-panel" hidden><div class="stat-label"><span id="resource-label"></span><span id="resource-value"></span></div><div class="stat-bar resource-bar"><span id="resource-fill"></span></div></div>
+    <div class="sidebar-divider"></div><div class="sidebar-overline">${icon('flag')} YOUR FIRST CHAPTER</div><h3 id="quest-title">A story to follow</h3><p id="quest-description">${w.hook}</p><div class="quest-progress" id="quest-progress"></div><div class="destination-hint" id="destination-hint"></div><details class="journal-section" id="journal-section" hidden><summary>Field notes <span id="journal-count">0</span></summary><ul id="journal-entries"></ul></details><div class="sidebar-divider"></div><div class="pocket-row">${icon('bag')}<span>In your pockets</span><strong id="coin-value">0 coins</strong></div><p class="inventory-text" id="inventory-text">Room for a few discoveries.</p><div class="field-note"><span>FIELD NOTE 01</span><p>${w.hook}</p></div><div class="sidebar-choice"><p>Feeling at home here?</p><button class="primary-button" data-action="select-world">Choose this world ${icon('check')}</button><span>You can change your mind anytime.</span></div></aside></div>
+    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${w.id === 'lynch' ? 'Camera flash' : w.id === 'shinobi' ? 'Kunai' : 'Attack'}</span>${w.id === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : w.id === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
   </section>`;
   overlay.hidden = false;
   document.body.classList.add('modal-open');
   mapOpen = false;
   lastState = null;
+  abilitiesSignature = '';
+  journalSignature = '';
   activeGame = createGame(document.querySelector('#game-canvas'), id, { onState: updateGameState, onDialogue: showDialogue, onToast: showGameToast, onMap: toggleMap, onDismissDialogue: () => { const box = document.querySelector('#dialogue-box'); if (box) box.hidden = true; } });
   drawAvatar(w.id);
   document.querySelector('#game-canvas').focus();
@@ -208,13 +217,15 @@ function drawAvatar(theme) {
   const canvas = document.querySelector('#avatar-canvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
-  const colors={moss:['#cfb980','#536d47','#ef6046'],neon:['#c9a5bd','#645286','#56dcda'],dust:['#d6b480','#986640','#d25d3c'],odd:['#d8bca9','#6874a9','#e57788']};
+  const colors={moss:['#cfb980','#536d47','#ef6046'],neon:['#c9a5bd','#645286','#56dcda'],dust:['#d6b480','#986640','#d25d3c'],odd:['#d8bca9','#6874a9','#e57788'],lynch:['#edccad','#312535','#73344c'],shinobi:['#e9bd85','#263b48','#ed8b42']};
   const [skin,hair,shirt]=colors[theme];
   ctx.fillStyle=hair; ctx.fillRect(20,10,24,12);ctx.fillRect(16,18,32,12);
   ctx.fillStyle=skin;ctx.fillRect(20,22,24,18);ctx.fillStyle=hair;ctx.fillRect(20,22,8,5);
   ctx.fillStyle='#292738';ctx.fillRect(26,29,3,4);ctx.fillRect(37,29,3,4);
   ctx.fillStyle=shirt;ctx.fillRect(16,42,32,14);ctx.fillRect(12,46,8,10);ctx.fillRect(44,46,8,10);
   ctx.fillStyle=skin;ctx.fillRect(12,56,8,5);ctx.fillRect(44,56,8,5);
+  if(theme==='lynch'){ctx.fillStyle='#352737';ctx.fillRect(28,42,8,14);ctx.fillStyle='#c7a78c';ctx.fillRect(30,44,4,7);ctx.fillStyle='#ead7ac';ctx.fillRect(42,50,9,8);ctx.fillStyle='#493849';ctx.fillRect(44,52,5,4);}
+  if(theme==='shinobi'){ctx.fillStyle='#33586b';ctx.fillRect(15,20,34,5);ctx.fillStyle='#b5c1bd';ctx.fillRect(23,20,18,5);ctx.fillStyle='#465358';ctx.fillRect(30,21,4,3);ctx.fillStyle='#744642';ctx.fillRect(32,45,13,5);}
 }
 
 function updateGameState(state) {
@@ -225,6 +236,7 @@ function updateGameState(state) {
   setText('xp-value',`${state.xp} / ${state.xpNext}`);
   document.querySelector('#xp-fill').style.width=`${Math.min(100,state.xp/state.xpNext*100)}%`;
   setText('player-level',state.level);
+  if(state.rank) setText('player-rank',state.rank);
   setText('coin-value',`${state.coins} ${state.currency || 'coins'}`);
   setText('quest-title',state.questTitle);
   setText('quest-description',state.questDescription);
@@ -237,7 +249,49 @@ function updateGameState(state) {
   hint.innerHTML=state.interactHint ? `<kbd>E</kbd> ${escapeHtml(state.interactHint)}` : '';
   setText('destination-hint',state.destinationHint || state.destination || 'Follow the paths. Talk to the locals.');
   if (state.inventory) setText('inventory-text',Array.isArray(state.inventory) ? state.inventory.join(' · ') || 'Room for a few discoveries.' : state.inventory);
+  const phaseLabel=document.querySelector('.location-sub');
+  if(phaseLabel) phaseLabel.textContent=state.phase ? (state.phase==='dream' ? 'DREAM SIDE' : 'WAKING SIDE') : 'FREE TO WANDER';
+  document.querySelector('.game-shell')?.setAttribute('data-phase',state.phase || '');
+  updateAbilities(state);
+  updateJournal(state.journal || []);
   if (mapOpen) renderMap();
+}
+
+function updateAbilities(state){
+  const resource=document.querySelector('#resource-panel');
+  if(!resource)return;
+  resource.hidden=!state.resource;
+  if(state.resource){
+    setText('resource-label',state.resource.label.toUpperCase());
+    setText('resource-value',`${Math.floor(state.resource.value)} / ${state.resource.max}`);
+    document.querySelector('#resource-fill').style.width=`${Math.max(0,Math.min(100,state.resource.value/state.resource.max*100))}%`;
+  }
+  const hud=document.querySelector('#ability-hud');
+  const abilities=state.abilities || [];
+  hud.hidden=abilities.length===0 || !document.querySelector('#dialogue-box').hidden || mapOpen;
+  const signature=abilities.map(a=>`${a.id}:${a.key}:${a.name}`).join('|');
+  if(signature!==abilitiesSignature){
+    abilitiesSignature=signature;
+    hud.innerHTML=abilities.map(a=>`<button class="ability-button" data-ability="${escapeHtml(a.id)}" title="${escapeHtml(a.description)}" aria-label="${escapeHtml(a.name)} (${escapeHtml(a.key)}): ${escapeHtml(a.description)}"><kbd>${escapeHtml(a.key)}</kbd><span><strong>${escapeHtml(a.name)}</strong><small class="ability-status"></small></span><i class="ability-ready-dot"></i></button>`).join('');
+  }
+  abilities.forEach(a=>{
+    const button=[...hud.querySelectorAll('[data-ability]')].find(b=>b.dataset.ability===a.id);
+    if(!button)return;
+    button.disabled=!a.ready;
+    button.classList.toggle('is-ready',a.ready);
+    button.querySelector('.ability-status').textContent=a.cooldown>0 ? `${a.cooldown.toFixed(1)}s cooldown` : a.cost>0 ? `${a.cost} chakra` : state.phase==='dream' ? 'Return to waking' : 'Enter the dream';
+  });
+}
+
+function updateJournal(entries){
+  const section=document.querySelector('#journal-section');
+  if(!section)return;
+  section.hidden=entries.length===0;
+  setText('journal-count',entries.length);
+  const signature=JSON.stringify(entries);
+  if(signature===journalSignature)return;
+  journalSignature=signature;
+  document.querySelector('#journal-entries').innerHTML=entries.map(entry=>typeof entry==='string' ? `<li>${escapeHtml(entry)}</li>` : `<li><strong>${escapeHtml(entry.title || 'A discovery')}</strong><p>${escapeHtml(entry.text || '')}</p>${entry.phase ? `<span>${escapeHtml(entry.phase)} side</span>` : ''}</li>`).join('');
 }
 function setText(id,value){ const el=document.getElementById(id); if(el&&value!==undefined)el.textContent=value; }
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -288,7 +342,7 @@ function renderMap(){
   const ctx=canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
   const scale=Math.min(canvas.width/WORLD_SIZE.width,canvas.height/WORLD_SIZE.height);
-  drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.entities || []});
+  drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.entities || [],phase:lastState?.phase});
   if(lastState){const x=lastState.x*scale,y=lastState.y*scale;ctx.fillStyle='#fff8dc';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f0643b';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();}
   if(lastState?.destination){const x=lastState.destination.x*scale,y=lastState.destination.y*scale;ctx.fillStyle='#f3ce72';ctx.strokeStyle='#3e4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+5,y);ctx.lineTo(x,y+6);ctx.lineTo(x-5,y);ctx.closePath();ctx.fill();ctx.stroke();}
 }
@@ -303,9 +357,15 @@ function startAmbient(theme){
     soundContext ||= new (window.AudioContext||window.webkitAudioContext)();
     soundContext.resume();
     const gain=soundContext.createGain();gain.gain.value=0.016;gain.connect(soundContext.destination);
-    const notes={moss:[130.81,196,261.63],neon:[110,164.81,220],dust:[146.83,220,293.66],odd:[174.61,261.63,349.23]}[theme];
+    const notes={moss:[130.81,196,261.63],neon:[110,164.81,220],dust:[146.83,220,293.66],odd:[174.61,261.63,349.23],lynch:[65.41,98,138.59],shinobi:[146.83,196,293.66]}[theme];
     notes.forEach((frequency,i)=>{const oscillator=soundContext.createOscillator();oscillator.type='sine';oscillator.frequency.value=frequency;oscillator.detune.value=i*3;oscillator.connect(gain);oscillator.start();ambientOscillators.push(oscillator);});
   }catch{showGameToast('Ambient sound is unavailable in this browser.');}
 }
 function stopAmbient(){ambientOscillators.forEach(o=>{try{o.stop();}catch{}});ambientOscillators=[];}
 renderApp();
+function openLinkedWorld(){
+  const id=new URLSearchParams(location.search).get('world') || (location.hash.startsWith('#play-') ? location.hash.slice(6) : null);
+  if(worlds.some(w=>w.id===id)) openGame(id);
+}
+openLinkedWorld();
+window.addEventListener('hashchange',openLinkedWorld);
