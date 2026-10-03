@@ -1,5 +1,6 @@
 import { WORLD_SIZE, drawWorld, drawCharacter, getSpawn, getWorldFeatures, getObstacles, getWorldSize, getWorldRegions } from './world-renderer.js';
 import { NEW_STORIES } from './new-stories.js';
+import { getInteriors, getInterior, getBuildingPortals, getInteriorPlacements, drawInteriorWorld, drawExteriorDoors } from './interiors.js';
 
 // Each prototype shares controls, while its story, objectives and weapon differ.
 const ORIGINAL_STORIES = {
@@ -62,16 +63,32 @@ export function createGame(canvas, theme, callbacks = {}) {
   const worldSize = isNew ? getWorldSize(theme) : WORLD_SIZE;
   const regions = isNew ? getWorldRegions(theme) || [] : [];
   const regionsVisited = new Set();
+  const interiors = isNew ? getInteriors(theme) : [];
+  const placements = isNew ? getInteriorPlacements(theme) : [];
+  const portals = isNew ? getBuildingPortals(theme) : [];
+  const buildingsVisited = new Set();
+  const inspectedProps = new Set();
+  let activeInterior = null;
+  let sceneId = null;
   const context = canvas.getContext('2d');
   const spawn = getSpawn(theme);
+  let outdoorPosition = { ...spawn };
   const features = getWorldFeatures(theme).map((feature, index) => {
     const data = (feature.type === 'npc' ? story.npcs : story.landmarks)?.find(item => item.name === feature.name);
-    return { ...feature, id: `${theme}-${index}`, discovered: false, opened: false, ...(isNew ? { requiredPhase: data?.phase || feature.phase || 'both' } : {}), ...(data ? { storyData: data, role: data.role || feature.role } : {}) };
+    const placement = data?.role === 'guide' ? null : placements.find(item => item.feature === feature.name);
+    return { ...feature, id: `${theme}-${index}`, discovered: false, opened: false, ...(isNew ? { requiredPhase: data?.phase || feature.phase || 'both', sceneId: placement?.interiorId || null } : {}), ...(placement ? { x: placement.x, y: placement.y, outdoorAnchor: { ...placement.exterior } } : {}), ...(data ? { storyData: data, role: data.role || feature.role } : {}) };
   });
+  if (isNew) {
+    features.push(...portals.map(portal => ({ ...portal, sceneId: null, discovered: false })));
+    for (const interior of interiors) {
+      features.push(...(interior.props || []).map(prop => ({ ...prop, id: `${interior.id}-prop-${prop.id}`, type: 'prop', sceneId: interior.id, discovered: false })));
+      features.push({ ...interior.exit, id: `${interior.id}-exit`, type: 'exit', name: interior.name, sceneId: interior.id, discovered: false });
+    }
+  }
   const obstacles = getObstacles(theme) || [];
   const npcs = features.filter(f => f.type === 'npc');
   const giver = (isNew && npcs.find(npc => npc.role === 'guide')) || [...npcs].sort((a, b) => distance(a, spawn) - distance(b, spawn))[0];
-  const landmarks = features.filter(f => f.type === 'landmark').sort((a, b) => distance(b, spawn) - distance(a, spawn));
+  const landmarks = features.filter(f => f.type === 'landmark').sort((a, b) => distance(b.outdoorAnchor || b, spawn) - distance(a.outdoorAnchor || a, spawn));
   const chests = features.filter(f => f.type === 'chest');
   const targets = isNew ? landmarks.filter(feature => feature.main === true || feature.storyData?.main === true) : theme === 'dust' ? chests.slice(0, 2)
     : theme === 'odd' ? [...npcs.filter(f => f !== giver).slice(0, 2), ...landmarks.slice(0, 1)]
@@ -159,7 +176,7 @@ export function createGame(canvas, theme, callbacks = {}) {
   function combatCredit() { return theme === 'shinobi' && narrativeRoute ? killsNeeded : Math.min(kills, killsNeeded); }
   function questReady() { return completed.size >= targets.length && combatCredit() >= killsNeeded; }
   function questProgress() { return completed.size + combatCredit(); }
-  function visibleFeature(feature) { return theme !== 'lynch' || feature.type === 'landmark' || feature.type === 'waypoint' || !feature.phase || feature.phase === 'both' || feature.phase === worldPhase; }
+  function visibleFeature(feature) { return (!isNew || (feature.sceneId || null) === sceneId) && (theme !== 'lynch' || feature.type === 'landmark' || feature.type === 'waypoint' || !feature.phase || feature.phase === 'both' || feature.phase === worldPhase); }
   function addJournal(title, text, key = title) {
     if (recordedClues.has(key)) return;
     recordedClues.add(key);
@@ -236,9 +253,9 @@ export function createGame(canvas, theme, callbacks = {}) {
   function travelTo(id) {
     if (!isNew || destroyed) return false;
     const stop = travelPoints.find(point => point.id === id && point.discovered);
-    if (!stop || !canStand(stop.x, stop.y)) return false;
+    if (!stop || !canStandInScene(stop.x, stop.y, null)) return false;
     clearMovement(); dialogueOpen = false;
-    player.x = stop.x; player.y = stop.y;
+    changeScene(null, stop, stop);
     invulnerable = Math.max(invulnerable, 3);
     location = stop.name;
     toast(`Arrived at ${stop.name}.`);
@@ -248,15 +265,47 @@ export function createGame(canvas, theme, callbacks = {}) {
   function openTravel() {
     if (!isNew || destroyed || externallyPaused || dialogueOpen) return false;
     openDialogue(theme === 'lynch' ? 'County night service' : 'Shinobi travel routes', 'Return to a stop you have visited. Explore the roads to discover more routes.', [
-      ...travelPoints.filter(point => point.discovered).map(point => ({ label: `${point.name}${distance(point, player) < 100 ? ' · here' : ''}`, action: () => travelTo(point.id) })),
+      ...travelPoints.filter(point => point.discovered).map(point => ({ label: `${point.name}${!activeInterior && distance(point, player) < 100 ? ' · here' : ''}`, action: () => travelTo(point.id) })),
       { label: 'Stay here', action: () => {} },
     ]);
     return true;
   }
 
-  function canStand(x, y, radius = 8) {
-    if (x < 22 || y < 25 || x > worldSize.width - 22 || y > worldSize.height - 22) return false;
-    return !obstacles.some(o => x + radius > o.x && x - radius < o.x + o.width && y + radius > o.y && y - radius < o.y + o.height);
+  function canStandInScene(x, y, interior = activeInterior, radius = 8) {
+    const bounds = interior?.size || worldSize;
+    if (x < 22 || y < 25 || x > bounds.width - 22 || y > bounds.height - 22) return false;
+    return !(interior?.obstacles || obstacles).some(o => x + radius > o.x && x - radius < o.x + o.width && y + radius > o.y && y - radius < o.y + o.height);
+  }
+  function canStand(x, y, radius = 8) { return canStandInScene(x, y, activeInterior, radius); }
+  function changeScene(interior, position, anchor = outdoorPosition) {
+    clearMovement(); projectiles.length = 0; effects.length = 0; clones.length = 0;
+    activeInterior = interior; sceneId = interior?.id || null;
+    outdoorPosition = { ...anchor };
+    player.x = position.x; player.y = position.y;
+    player.facing = position.facing || (interior ? 'up' : 'down');
+    player.moving = false; player.attacking = 0; afterimageTime = 0;
+    invulnerable = Math.max(invulnerable, 1.2);
+    location = interior?.name || regions.find(region => position.x >= region.x && position.y >= region.y && position.x < region.x + region.width && position.y < region.y + region.height)?.name || 'The connecting roads';
+    callbacks.onSceneChange?.({ sceneId, interior: interior ? { id: interior.id, name: interior.name } : null });
+  }
+  function enterBuilding(id) {
+    if (!isNew || destroyed || paused() || activeInterior) return false;
+    const interior = getInterior(theme, id) || getInterior(theme, portals.find(portal => portal.id === id)?.interiorId);
+    if (!interior || distance(player, interior.door) > 58 || !canStandInScene(interior.entry.x, interior.entry.y, interior)) return false;
+    changeScene(interior, interior.entry, interior.door);
+    buildingsVisited.add(interior.id);
+    toast(`Entered ${interior.name}.`);
+    emitState();
+    return true;
+  }
+  function exitBuilding() {
+    if (!isNew || destroyed || paused() || !activeInterior || distance(player, activeInterior.exit) > 58 || !canStandInScene(activeInterior.door.x, activeInterior.door.y, null)) return false;
+    const exterior = activeInterior.door;
+    changeScene(null, exterior, exterior);
+    invulnerable = Math.max(invulnerable, 2);
+    toast('Back outside.');
+    emitState();
+    return true;
   }
 
   function move(entity, dx, dy) {
@@ -273,14 +322,15 @@ export function createGame(canvas, theme, callbacks = {}) {
     if (canStand(nx, ny)) { player.x = nx; player.y = ny; }
   }
   const safeSpawn = { x: player.x, y: player.y };
+  const outdoorSafeFeatures = [...npcs.filter(npc => !npc.sceneId), ...travelPoints, ...portals];
   for (const enemy of enemies) {
-    if (!canStand(enemy.x, enemy.y) || (isNew && [...npcs, ...travelPoints].some(feature => distance(feature, enemy) < 130))) {
+    if (!canStand(enemy.x, enemy.y) || (isNew && outdoorSafeFeatures.some(feature => distance(feature, enemy) < 130))) {
       let relocated = false;
       for (let radius = 24; radius <= 192 && !relocated; radius += 24) {
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
           const x = enemy.x + Math.cos(angle) * radius;
           const y = enemy.y + Math.sin(angle) * radius;
-          if (canStand(x, y) && (!isNew || [...npcs, ...travelPoints].every(feature => distance(feature, { x, y }) >= 135))) { enemy.x = x; enemy.y = y; relocated = true; break; }
+          if (canStand(x, y) && (!isNew || outdoorSafeFeatures.every(feature => distance(feature, { x, y }) >= 135))) { enemy.x = x; enemy.y = y; relocated = true; break; }
         }
       }
       enemy.homeX = enemy.x;
@@ -296,6 +346,14 @@ export function createGame(canvas, theme, callbacks = {}) {
     const horizontal = Math.abs(dx) > 45 ? (dx < 0 ? 'west' : 'east') : '';
     return [vertical, horizontal].filter(Boolean).join('-');
   }
+  function projectFeature(feature) {
+    if (!feature) return null;
+    return feature.sceneId ? { ...feature, x: feature.outdoorAnchor.x, y: feature.outdoorAnchor.y } : { ...feature };
+  }
+  function featureDistance(feature) {
+    if (!isNew || (feature.sceneId || null) === sceneId) return distance(feature, player);
+    return distance(projectFeature(feature), activeInterior ? outdoorPosition : player) + (activeInterior ? distance(player, activeInterior.exit) + 70 : 0);
+  }
 
   function mainDestination() {
     if (questComplete) return null;
@@ -307,34 +365,45 @@ export function createGame(canvas, theme, callbacks = {}) {
         const availableB = b.requiredPhase === 'both' || b.requiredPhase === worldPhase;
         if (availableA !== availableB) return availableA ? -1 : 1;
       }
-      return distance(a, player) - distance(b, player);
+      if (activeInterior && (a.sceneId === sceneId) !== (b.sceneId === sceneId)) return a.sceneId === sceneId ? -1 : 1;
+      return featureDistance(a) - featureDistance(b);
     })[0];
     if (theme === 'shinobi' && !narrativeRoute && kills < killsNeeded) return npcs.find(npc => npc.name === 'Sora') || giver;
     return enemies.filter(enemy => !enemy.defeated).sort((a, b) => distance(a, player) - distance(b, player))[0] || giver;
   }
-  function nextDestination() {
+  function questDestination() {
     if (isNew && trackedQuest !== 'main') {
       const destination = sideDestination(sideQuestRecords.find(record => record.data.id === trackedQuest));
       if (destination) return destination;
     }
     return mainDestination();
   }
+  function nextDestination() {
+    const destination = questDestination();
+    if (isNew && !destination && activeInterior) return { ...features.find(feature => feature.type === 'exit' && feature.sceneId === sceneId), routeHint: `Leave ${activeInterior.name}` };
+    if (!isNew || !destination || (destination.sceneId || null) === sceneId) return destination;
+    if (activeInterior) return { ...features.find(feature => feature.type === 'exit' && feature.sceneId === sceneId), requiredPhase: destination.requiredPhase, routeHint: `Exit ${activeInterior.name} for ${destination.name}` };
+    const portal = portals.find(item => item.interiorId === destination.sceneId);
+    return portal ? { ...portal, requiredPhase: destination.requiredPhase, routeHint: `Enter ${portal.name} for ${destination.name}` } : destination;
+  }
 
   function nearestFeature() {
-    return features.filter(feature => visibleFeature(feature) && distance(feature, player) < (feature.type === 'npc' ? 88 : 66))
+    return features.filter(feature => visibleFeature(feature) && distance(feature, player) < (feature.type === 'npc' ? 88 : ['door', 'exit'].includes(feature.type) ? 58 : 66))
       .sort((a, b) => distance(a, player) + (isNew && travelPoints.includes(a) ? 60 : 0) - distance(b, player) - (isNew && travelPoints.includes(b) ? 60 : 0))[0];
   }
 
   function getState() {
     const nearest = nearestFeature();
     const destination = nextDestination();
+    const mapDestination = projectFeature(questDestination());
+    const mapPosition = activeInterior ? outdoorPosition : player;
     const ready = questReady();
     let description = story.objective;
     if (questComplete) description = chosenEnding?.worldConsequence || 'Your first story is complete. Explore the world, meet its people, and improve your gear.';
     else if (ready) description = `Return to ${giver?.name || 'your guide'} to finish the story and claim your reward.`;
     else if (theme === 'shinobi' && completed.size >= targets.length) description = 'Resolve two rogue shinobi, or ask Elder Sora for the watchtower passphrase to negotiate safe passage.';
     const phaseHint = theme === 'lynch' && destination?.requiredPhase && destination.requiredPhase !== 'both' ? ` · ${destination.requiredPhase === 'dream' ? 'Dream' : 'Waking'} ${destination.requiredPhase !== worldPhase ? '(Q to cross)' : ''}` : '';
-    const destinationHint = destination ? `${destination.name}${phaseHint} · ${directionTo(destination)} · ${Math.round(distance(player, destination) / 8)}m` : 'Free exploration';
+    const destinationHint = destination ? `${destination.routeHint || destination.name}${phaseHint} · ${directionTo(destination)} · ${Math.round(distance(player, destination) / 8)}m` : 'Free exploration';
     return {
       health: Math.ceil(player.health), maxHealth: player.maxHealth, level: player.level,
       xp: player.xp, xpNext: player.xpNext, coins, currency: story.currency,
@@ -343,10 +412,10 @@ export function createGame(canvas, theme, callbacks = {}) {
       questComplete, questReady: ready, location, x: player.x, y: player.y,
       facing: player.facing, theme, inventory: [...inventory], inventoryCount: inventory.length,
       kills, explored: visited.size, totalPlaces: features.length,
-      interactHint: nearest ? `${nearest.type === 'npc' ? 'Talk to' : travelPoints.includes(nearest) ? 'Travel from' : nearest.type === 'chest' ? (nearest.opened ? 'Inspect' : 'Open') : 'Investigate'} ${nearest.name}` : '',
+      interactHint: nearest ? `${nearest.type === 'npc' ? 'Talk to' : nearest.type === 'door' ? 'Enter' : nearest.type === 'exit' ? 'Leave' : nearest.type === 'prop' ? 'Inspect' : travelPoints.includes(nearest) ? 'Travel from' : nearest.type === 'chest' ? (nearest.opened ? 'Inspect' : 'Open') : 'Investigate'} ${nearest.name}` : '',
       destinationHint, destination: destination ? { x: destination.x, y: destination.y, name: destination.name } : null,
-      objectives: targets.map(target => ({ name: target.name, completed: completed.has(target.id), x: target.x, y: target.y, phase: target.requiredPhase })),
-      entities: [...features.filter(visibleFeature), ...enemies.filter(enemy => !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))].map(entity => ({ ...entity })),
+      objectives: targets.map(target => ({ name: target.name, completed: completed.has(target.id), x: (isNew ? projectFeature(target) : target).x, y: (isNew ? projectFeature(target) : target).y, phase: target.requiredPhase, ...(isNew ? { sceneId: target.sceneId } : {}) })),
+      entities: [...features.filter(visibleFeature), ...enemies.filter(enemy => !activeInterior && !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))].map(entity => ({ ...entity })),
       player: { ...player }, paused: paused(),
       ...(isNew ? {
         resource: { label: theme === 'shinobi' ? 'Chakra' : 'Composure', value: Math.ceil(resource), max: maxResource },
@@ -355,7 +424,13 @@ export function createGame(canvas, theme, callbacks = {}) {
         rank: theme === 'shinobi' ? (chosenEnding?.rank || (player.level >= 3 ? 'Genin · field ready' : story.rank || 'Genin · apprentice')) : story.rank || 'Visitor',
         narrativeRoute, ending: chosenEnding?.id || null,
         worldSize: { ...worldSize }, regionsVisited: [...regionsVisited],
-        currentRegionName: regions.find(region => player.x >= region.x && player.y >= region.y && player.x < region.x + region.width && player.y < region.y + region.height)?.name || 'The connecting roads',
+        sceneId, interior: activeInterior ? { id: activeInterior.id, name: activeInterior.name, size: { ...activeInterior.size }, exit: { ...activeInterior.exit } } : null,
+        sceneSize: { ...(activeInterior?.size || worldSize) }, outdoorPosition: { ...outdoorPosition },
+        mapPosition: { x: mapPosition.x, y: mapPosition.y },
+        mapEntities: [...features.filter(feature => !['prop', 'exit'].includes(feature.type)).map(projectFeature), ...enemies.filter(enemy => !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))].map(entity => ({ ...entity })),
+        mapDestination: mapDestination ? { x: mapDestination.x, y: mapDestination.y, name: mapDestination.name, sceneId: mapDestination.sceneId || null } : null,
+        buildingsVisited: [...buildingsVisited], totalBuildings: interiors.length, interiorPropsInspected: inspectedProps.size,
+        currentRegionName: regions.find(region => mapPosition.x >= region.x && mapPosition.y >= region.y && mapPosition.x < region.x + region.width && mapPosition.y < region.y + region.height)?.name || 'The connecting roads',
         dialogueFlags: [...dialogueFlags], rememberedReplies: Object.fromEntries(rememberedReplies),
         trackedQuest,
         trackedQuestTitle: trackedQuest === 'main' ? story.title : sideQuestRecords.find(record => record.data.id === trackedQuest)?.data.title || story.title,
@@ -363,7 +438,7 @@ export function createGame(canvas, theme, callbacks = {}) {
           id: record.data.id, title: record.data.title, giver: record.data.giver, status: record.status,
           progress: record.completed.size, target: record.data.steps.length,
           description: record.status === 'complete' ? record.data.completeText : record.status === 'ready' ? record.data.returnText : record.data.intro,
-          destination: sideDestination(record) ? { x: sideDestination(record).x, y: sideDestination(record).y, name: sideDestination(record).name, phase: sideDestination(record).requiredPhase || 'both' } : null,
+          destination: sideDestination(record) ? { x: projectFeature(sideDestination(record)).x, y: projectFeature(sideDestination(record)).y, name: sideDestination(record).name, phase: sideDestination(record).requiredPhase || 'both', sceneId: sideDestination(record).sceneId || null } : null,
         })),
         travelPoints: travelPoints.map(point => ({ id: point.id, name: point.name, x: point.x, y: point.y, discovered: point.discovered })),
       } : {}),
@@ -570,6 +645,18 @@ export function createGame(canvas, theme, callbacks = {}) {
     const feature = nearestFeature();
     if (!feature) { toast('Walk closer to a person, landmark, or supply crate.'); return; }
     if (feature.type === 'npc') talkTo(feature);
+    else if (isNew && feature.type === 'door') enterBuilding(feature.interiorId);
+    else if (isNew && feature.type === 'exit') exitBuilding();
+    else if (isNew && feature.type === 'prop') {
+      const text = (worldPhase === 'dream' && feature.dreamText) || feature.text || 'Someone left this here for a reason.';
+      if (!inspectedProps.has(feature.id)) {
+        inspectedProps.add(feature.id);
+        feature.inspected = true;
+        journal.push({ title: `${activeInterior.name} · ${feature.name}`, text, phase: worldPhase });
+        toast(`Notebook updated: ${feature.name}`);
+      }
+      openDialogue(feature.name, text, [{ label: 'Keep exploring', action: () => {} }]);
+    }
     else if (isNew && travelPoints.includes(feature)) openTravel();
     else if (feature.type === 'chest') {
       if (!feature.opened) {
@@ -644,7 +731,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       cooldown = 0.8;
       player.attacking = 0.22;
       effects.push({ kind: 'flash', x: player.x, y: player.y - 7, t: 0.38, maxT: 0.38 });
-      for (const enemy of enemies) {
+      for (const enemy of activeInterior ? [] : enemies) {
         const d = distance(enemy, player);
         if (worldPhase === 'dream' && d < 130 && !enemy.defeated) {
           enemy.stunned = 3.5;
@@ -662,7 +749,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       cooldown = 0.32;
       player.attacking = 0.18;
       let dx = facing.x, dy = facing.y;
-      const target = enemies.filter(enemy => !enemy.defeated && !enemy.pacified && distance(enemy, player) < 220).filter(enemy => {
+      const target = (activeInterior ? [] : enemies).filter(enemy => !enemy.defeated && !enemy.pacified && distance(enemy, player) < 220).filter(enemy => {
         const d = distance(enemy, player) || 1;
         return ((enemy.x - player.x) * dx + (enemy.y - player.y) * dy) / d > 0.48;
       }).sort((a, b) => distance(a, player) - distance(b, player))[0];
@@ -758,8 +845,8 @@ export function createGame(canvas, theme, callbacks = {}) {
     effects.push({ kind: 'hurt', x: player.x, y: player.y - 24, value: amount, t: 0.6, maxT: 0.6 });
     if (player.health <= 0) {
       player.health = player.maxHealth;
-      player.x = safeSpawn.x;
-      player.y = safeSpawn.y;
+      if (isNew) changeScene(null, safeSpawn, safeSpawn);
+      else { player.x = safeSpawn.x; player.y = safeSpawn.y; }
       coins = Math.max(0, coins - 5);
       invulnerable = 3;
       clearMovement();
@@ -829,17 +916,18 @@ export function createGame(canvas, theme, callbacks = {}) {
       }
     }
     if (isNew) {
-      const region = regions.find(item => player.x >= item.x && player.y >= item.y && player.x < item.x + item.width && player.y < item.y + item.height);
+      const regionPosition = activeInterior ? outdoorPosition : player;
+      const region = regions.find(item => regionPosition.x >= item.x && regionPosition.y >= item.y && regionPosition.x < item.x + item.width && regionPosition.y < item.y + item.height);
       if (region && !regionsVisited.has(region.id)) {
         regionsVisited.add(region.id);
         if (regionsVisited.size > 1) { addXP(15); toast(`Discovered ${region.name} · +15 XP`); }
       }
     }
     const near = features.filter(f => visibleFeature(f) && distance(f, player) < 150).sort((a, b) => distance(a, player) - distance(b, player))[0];
-    location = near?.name || (isNew ? regions.find(item => player.x >= item.x && player.y >= item.y && player.x < item.x + item.width && player.y < item.y + item.height)?.name || 'The connecting roads' : theme === 'moss' ? 'The wandering woods' : theme === 'neon' ? 'The lower streets' : theme === 'dust' ? 'The open frontier' : 'Somewhere after school');
+    location = activeInterior?.name || near?.name || (isNew ? regions.find(item => player.x >= item.x && player.y >= item.y && player.x < item.x + item.width && player.y < item.y + item.height)?.name || 'The connecting roads' : theme === 'moss' ? 'The wandering woods' : theme === 'neon' ? 'The lower streets' : theme === 'dust' ? 'The open frontier' : 'Somewhere after school');
 
     for (const enemy of enemies) {
-      if (enemy.defeated || enemy.pacified || (theme === 'lynch' && worldPhase !== 'dream')) continue;
+      if (activeInterior || enemy.defeated || enemy.pacified || (theme === 'lynch' && worldPhase !== 'dream')) continue;
       enemy.attackCooldown = Math.max(0, enemy.attackCooldown - dt);
       enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
       enemy.stunned = Math.max(0, enemy.stunned - dt);
@@ -867,11 +955,11 @@ export function createGame(canvas, theme, callbacks = {}) {
       projectile.t -= dt;
       projectile.x += projectile.dx * projectile.speed * dt;
       projectile.y += projectile.dy * projectile.speed * dt;
-      const target = enemies.find(enemy => !enemy.defeated && !enemy.pacified && Math.hypot(enemy.x - projectile.x, enemy.y - 7 - projectile.y) < (projectile.kind === 'ember' ? 25 : 17));
+      const target = (activeInterior ? [] : enemies).find(enemy => !enemy.defeated && !enemy.pacified && Math.hypot(enemy.x - projectile.x, enemy.y - 7 - projectile.y) < (projectile.kind === 'ember' ? 25 : 17));
       const stopped = !canStand(projectile.x, projectile.y, 2);
       if (projectile.kind === 'ember') {
         if (target || projectile.t <= 0 || stopped) {
-          for (const enemy of enemies) {
+          for (const enemy of activeInterior ? [] : enemies) {
             const d = distance(enemy, projectile);
             if (!enemy.defeated && !enemy.pacified && d < 78) {
               damageEnemy(enemy, projectile.damage, (enemy.x - projectile.x) / (d || 1), (enemy.y - projectile.y) / (d || 1));
@@ -909,15 +997,22 @@ export function createGame(canvas, theme, callbacks = {}) {
   function draw() {
     const viewWidth = width / scale;
     const viewHeight = height / scale;
-    camera.x = clamp(player.x - viewWidth / 2, 0, Math.max(0, worldSize.width - viewWidth));
-    camera.y = clamp(player.y - viewHeight / 2, 0, Math.max(0, worldSize.height - viewHeight));
+    const sceneSize = activeInterior?.size || worldSize;
+    camera.x = clamp(player.x - viewWidth / 2, 0, Math.max(0, sceneSize.width - viewWidth));
+    camera.y = clamp(player.y - viewHeight / 2, 0, Math.max(0, sceneSize.height - viewHeight));
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.clearRect(0, 0, width, height);
-    drawWorld(context, theme, { x: camera.x, y: camera.y, width, height, scale, time: elapsed,
+    const drawOptions = { x: camera.x, y: camera.y, width, height, scale, time: elapsed,
       phase: worldPhase,
-      entities: [...features.filter(visibleFeature), ...enemies.filter(enemy => !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))],
+      ...(isNew ? { buildingsVisited: [...buildingsVisited] } : {}),
+      entities: [...features.filter(visibleFeature), ...enemies.filter(enemy => !activeInterior && !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream'))],
       player: { ...player, invulnerable: invulnerable > 0, attacking: player.attacking > 0, sprinting: held.sprint },
-    });
+    };
+    if (activeInterior) drawInteriorWorld(context, theme, activeInterior, drawOptions);
+    else {
+      drawWorld(context, theme, drawOptions);
+      if (isNew) drawExteriorDoors(context, theme, drawOptions);
+    }
     const sx = value => (value - camera.x) * scale;
     const sy = value => (value - camera.y) * scale;
     // Jutsu art uses whole world pixels, the same grid as the character sprites.
@@ -992,7 +1087,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       context.restore();
     }
     for (const enemy of enemies) {
-      if (enemy.defeated || enemy.health >= enemy.maxHealth || (theme === 'lynch' && worldPhase !== 'dream')) continue;
+      if (activeInterior || enemy.defeated || enemy.health >= enemy.maxHealth || (theme === 'lynch' && worldPhase !== 'dream')) continue;
       const x = sx(enemy.x);
       const y = sy(enemy.y - 24);
       if (isNew) {
@@ -1220,7 +1315,7 @@ export function createGame(canvas, theme, callbacks = {}) {
   frameId = requestAnimationFrame(tick);
 
   return {
-    interact, attack, useAbility, trackQuest, openTravel, travelTo, setMove, getState, dismissDialogue, togglePause,
+    interact, attack, useAbility, trackQuest, openTravel, travelTo, enterBuilding, exitBuilding, setMove, getState, dismissDialogue, togglePause,
     destroy() {
       destroyed = true;
       cancelAnimationFrame(frameId);

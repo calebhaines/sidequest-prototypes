@@ -1,5 +1,6 @@
 import './style.css';
 import { drawPreview, drawWorld, drawCharacter, getWorldSize, getWorldRegions } from './world-renderer.js';
+import { getInterior, drawInteriorWorld } from './interiors.js';
 import { createGame } from './game-engine.js';
 
 const icons = {
@@ -48,6 +49,7 @@ let ambientOscillators = [];
 let abilitiesSignature = '';
 let journalSignature = '';
 let explorationSignature = '';
+let roomMap = false;
 const isFinalist = id => id === 'lynch' || id === 'shinobi';
 
 function renderApp() {
@@ -157,6 +159,7 @@ function handleClick(event) {
   if (action === 'surprise') openGame(worlds[Math.floor(Math.random()*worlds.length)].id);
   if (action === 'close-game') closeGame();
   if (action === 'map') toggleMap();
+  if (action === 'room-map' && lastState?.interior) { roomMap=!roomMap; renderMap(); }
   if (action === 'travel') { if(mapOpen)toggleMap(); activeGame?.openTravel?.(); }
   if (action === 'sound') toggleSound();
   if (action === 'interact') activeGame?.interact();
@@ -204,8 +207,15 @@ function openGame(id) {
     <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${w.id === 'lynch' ? 'Camera flash' : w.id === 'shinobi' ? 'Kunai' : 'Attack'}</span>${w.id === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : w.id === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}${isFinalist(w.id) ? '<span><kbd>T</kbd> Travel</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
   </section>`;
   overlay.hidden = false;
+  if(isFinalist(w.id)){
+    const heading=overlay.querySelector('.map-heading');
+    const button=document.createElement('button');
+    button.id='room-map-toggle';button.className='room-map-button';button.dataset.action='room-map';button.hidden=true;
+    heading.insertBefore(button,heading.querySelector('button'));
+  }
   document.body.classList.add('modal-open');
   mapOpen = false;
+  roomMap = false;
   lastState = null;
   abilitiesSignature = '';
   journalSignature = '';
@@ -262,8 +272,9 @@ function updateGameState(state) {
   setText('destination-hint',state.destinationHint || state.destination || 'Follow the paths. Talk to the locals.');
   if (state.inventory) setText('inventory-text',Array.isArray(state.inventory) ? state.inventory.join(' · ') || 'Room for a few discoveries.' : state.inventory);
   const phaseLabel=document.querySelector('.location-sub');
-  if(phaseLabel) phaseLabel.textContent=state.phase ? (state.phase==='dream' ? 'DREAM SIDE' : 'WAKING SIDE') : 'FREE TO WANDER';
+  if(phaseLabel) phaseLabel.textContent=state.interior ? (state.phase==='dream' ? 'INSIDE · DREAM SIDE' : 'INSIDE') : state.phase ? (state.phase==='dream' ? 'DREAM SIDE' : 'WAKING SIDE') : 'FREE TO WANDER';
   document.querySelector('.game-shell')?.setAttribute('data-phase',state.phase || '');
+  document.querySelector('.game-shell')?.setAttribute('data-interior',state.interior?.id || '');
   updateAbilities(state);
   updateJournal(state.journal || []);
   updateExploration(state);
@@ -312,8 +323,10 @@ function updateExploration(state){
   const visited=Array.isArray(state.regionsVisited) ? state.regionsVisited.length : Number(state.regionsVisited || 0);
   const stops=state.travelPoints || [];
   const unlocked=stops.filter(stop=>stop.discovered).length;
-  setText('exploration-summary',`${visited} / ${regions.length} districts discovered · ${unlocked} travel stops`);
-  setText('map-exploration',`${visited} / ${regions.length} districts · ${unlocked} / ${stops.length} travel stops found`);
+  const interiors=state.buildingsVisited?.length || 0;
+  const rooms=state.totalBuildings || 0;
+  setText('exploration-summary',`${visited} / ${regions.length} districts discovered · ${unlocked} travel stops${rooms ? ` · ${interiors} / ${rooms} interiors explored` : ''}`);
+  setText('map-exploration',`${visited} / ${regions.length} districts · ${unlocked} / ${stops.length} travel stops${rooms ? ` · ${interiors} / ${rooms} interiors` : ''}`);
   const quests=state.sideQuests || [];
   setText('side-story-count',quests.filter(q=>q.status!=='complete').length);
   const signature=JSON.stringify({tracked:state.trackedQuest,quests:quests.map(q=>[q.id,q.title,q.status,q.progress,q.target,q.description])});
@@ -337,7 +350,7 @@ function showDialogue(dialogue) {
     ctx.save();ctx.translate(28,54);ctx.scale(1.05,1.05);
     drawCharacter(ctx,0,0,activeWorld.id,{...actor,npc:Boolean(actor),type:actor ? 'npc' : 'player',facing:'down',phase:lastState?.phase || 'waking'});
     ctx.restore();
-    setText('dialogue-context',lastState?.currentRegionName || lastState?.location || activeWorld.location);
+    setText('dialogue-context',lastState?.interior?.name || lastState?.currentRegionName || lastState?.location || activeWorld.location);
   }
   const choices=document.querySelector('#dialogue-choices');
   choices.innerHTML='';
@@ -373,19 +386,43 @@ function toggleMap(){
   mapOpen=!mapOpen;
   document.querySelector('#map-overlay').hidden=!mapOpen;
   activeGame.togglePause?.(mapOpen);
-  if(mapOpen)renderMap();else document.querySelector('#game-canvas').focus();
+  if(mapOpen)renderMap();else { roomMap=false;document.querySelector('#game-canvas').focus(); }
 }
 function renderMap(){
   const canvas=document.querySelector('#map-canvas');if(!canvas||!activeWorld)return;
   const ctx=canvas.getContext('2d');
   ctx.imageSmoothingEnabled=false;
+  const roomToggle=document.querySelector('#room-map-toggle');
+  if(roomToggle){roomToggle.hidden=!lastState?.interior;roomToggle.textContent=roomMap ? 'World map' : 'Room floor plan';roomToggle.setAttribute('aria-pressed',String(roomMap));}
+  if(roomMap && lastState?.interior){
+    const interior=getInterior(activeWorld.id,lastState.interior.id);
+    if(interior){
+      const scale=Math.min(canvas.width/interior.size.width,canvas.height/interior.size.height);
+      drawInteriorWorld(ctx,activeWorld.id,interior,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState.entities || [],player:lastState.player || lastState,phase:lastState.phase});
+      document.querySelector('.map-heading .eyebrow').textContent='ROOM FLOOR PLAN';
+      document.querySelector('.map-heading h3').textContent=interior.name;
+      document.querySelector('.map-legend>span:first-child').innerHTML='<i></i> You are here';
+      document.querySelector('.map-legend>span:last-child').textContent='The marked exit leads back outside.';
+      if(lastState.destination){const x=Math.round(lastState.destination.x*scale),y=Math.round(lastState.destination.y*scale);ctx.fillStyle='#f3ce72';ctx.fillRect(x-3,y-2,6,4);ctx.fillRect(x-2,y-3,4,6);}
+      return;
+    }
+  }
+  const mapTitle=document.querySelector('.map-heading h3');if(mapTitle)mapTitle.textContent=activeWorld.name;
   const size=lastState?.worldSize || getWorldSize(activeWorld.id);
   const scale=Math.min(canvas.width/size.width,canvas.height/size.height);
-  drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.entities || [],phase:lastState?.phase});
+  drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.mapEntities || lastState?.entities || [],phase:lastState?.phase});
   if(isFinalist(activeWorld.id)){
+    const heading=document.querySelector('.map-heading .eyebrow');
+    if(heading)heading.textContent=lastState?.interior ? 'THE WORLD OUTSIDE YOUR DOOR' : 'ROADS YOU HAVE YET TO WALK';
+    const positionLabel=document.querySelector('.map-legend>span:first-child');
+    if(positionLabel)positionLabel.innerHTML=`<i></i> ${lastState?.interior ? 'Your doorway' : 'You are here'}`;
+    document.querySelector('.map-legend>span:last-child').textContent='Gold: your next stop · Blue: travel · Squares: doors';
+    const visited=new Set(lastState?.buildingsVisited || []);
+    for(const door of lastState?.mapEntities?.filter(entity=>entity.type==='door') || []){const x=Math.round(door.x*scale),y=Math.round(door.y*scale);ctx.fillStyle=visited.has(door.interiorId) ? '#a3c8b1' : '#d9bc8e';ctx.fillRect(x-2,y-2,4,4);}
     for(const stop of lastState?.travelPoints || []){if(!stop.discovered)continue;const x=Math.round(stop.x*scale),y=Math.round(stop.y*scale);ctx.fillStyle='#bce2f0';ctx.fillRect(x-3,y-3,6,6);ctx.fillStyle='#438aac';ctx.fillRect(x-1,y-1,2,2);}
-    if(lastState?.destination){const x=Math.round(lastState.destination.x*scale),y=Math.round(lastState.destination.y*scale);ctx.fillStyle='#f3ce72';ctx.fillRect(x-4,y-2,8,4);ctx.fillRect(x-2,y-4,4,8);}
-    if(lastState){const x=Math.round(lastState.x*scale),y=Math.round(lastState.y*scale);ctx.fillStyle='#fff8dc';ctx.fillRect(x-4,y-3,8,6);ctx.fillStyle='#f0643b';ctx.fillRect(x-2,y-2,4,4);}
+    const destination=lastState && Object.hasOwn(lastState,'mapDestination') ? lastState.mapDestination : lastState?.destination;
+    if(destination){const x=Math.round(destination.x*scale),y=Math.round(destination.y*scale);ctx.fillStyle='#f3ce72';ctx.fillRect(x-4,y-2,8,4);ctx.fillRect(x-2,y-4,4,8);}
+    if(lastState){const position=lastState.mapPosition || lastState;const x=Math.round(position.x*scale),y=Math.round(position.y*scale);ctx.fillStyle='#fff8dc';ctx.fillRect(x-4,y-3,8,6);ctx.fillStyle='#f0643b';ctx.fillRect(x-2,y-2,4,4);}
   }else{
     if(lastState){const x=lastState.x*scale,y=lastState.y*scale;ctx.fillStyle='#fff8dc';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f0643b';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();}
     if(lastState?.destination){const x=lastState.destination.x*scale,y=lastState.destination.y*scale;ctx.fillStyle='#f3ce72';ctx.strokeStyle='#3e4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+5,y);ctx.lineTo(x,y+6);ctx.lineTo(x-5,y);ctx.closePath();ctx.fill();ctx.stroke();}

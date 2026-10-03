@@ -74,6 +74,8 @@ THE WORLDS
 Velvet Static and Hidden Ember are the two expanded finalists. Each map has
 nine times its original area, fourteen characters, six main objectives,
 three side stories, branching conversations, and pixel artwork without outlines.
+Every enclosed building is enterable: Velvet Static has 31 furnished interiors,
+including six motel doors, three rail coaches and a ferry cabin; Hidden Ember has 25.
 The four original prototypes keep their existing worlds and gameplay.
 
 CONTROLS
@@ -83,6 +85,9 @@ Velvet Static: Q crosses between waking and dream; Space uses a camera flash.
 Hidden Ember: 1 Ember Release, 2 Shadow Clone, 3 Substitution; Space throws kunai.
 Both finalists: T opens discovered travel stops; the map also has a travel button.
 Accept side stories through conversations and track them under Other stories.
+Stand by a marked doorstep and press E to enter; use E at the indoor EXIT to leave.
+Inspect room objects and talk to residents with E. Quest guides lead to indoor clues.
+M shows the outdoor map with your doorway; T also works from inside buildings.
 Small-screen browsers show touch controls. Ambient sound is optional.
 
 Your chosen world and shortlist are stored in your browser, when local

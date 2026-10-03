@@ -95,6 +95,10 @@
 .map-travel-row>button{border:0;border-radius:4px;padding:9px 12px;background:#e7eadb;color:#596a4b;font-size:10px;display:flex;align-items:center;gap:12px}
 .map-travel-row>button:hover{background:#dbe2cb}
 .map-travel-row>button kbd{font-size:9px}
+.room-map-button{margin-left:auto;margin-right:12px;border:0;border-radius:4px;background:var(--world-chip);color:var(--world-color);padding:9px 12px;font-size:10px;flex-shrink:0}
+.room-map-button:hover{filter:brightness(.97)}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .interact-hint{max-width:calc(100% - 24px);white-space:normal;justify-content:center;line-height:1.4;text-align:center}
+.game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .interact-hint>kbd{flex-shrink:0}
 .game-shell[data-theme="shinobi"] .side-stories{background:#f8edda}
 .game-shell[data-theme="shinobi"] .side-story-card>p{color:#687984}
 .game-shell[data-theme="lynch"] .side-stories{background:#efe5e5}
@@ -123,4 +127,6 @@
   .map-travel-row{align-items:flex-start;flex-direction:column;gap:8px;margin-top:9px}
   .map-travel-row>span{font-size:8px}
   .map-travel-row>button{width:100%;font-size:9px;justify-content:space-between;padding:8px 10px}
+  .room-map-button{font-size:8px;padding:8px;margin-right:5px}
+  .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .map-heading h3{font-size:17px;line-height:1.2;max-width:170px}
 }
