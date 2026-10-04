@@ -2,8 +2,19 @@
 (function () {
   'use strict';
   const TAU = Math.PI * 2, LOG1000 = Math.log(1000), EPSILON = 0.000001;
-  const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate'];
+  const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate', 'bell', 'bowl', 'tube'];
   const COLORS = ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'];
+  // Contact compliance changes the force itself, before it reaches the body.
+  // Neutral is the original TINE mallet, including its exact sample shape.
+  const MATERIALS = {
+    neutral: { label: 'Neutral', durationScale: 1, exponentBase: .7, exponentSlope: 6, rippleDepth: 0, rippleCycles: 0, textureCutoff: 10000, textureBrightness: .25 },
+    felt: { label: 'Felt', durationScale: 1.9, exponentBase: .55, exponentSlope: 3.2, rippleDepth: 0, rippleCycles: 0, textureCutoff: 1500, textureBrightness: 0 },
+    rubber: { label: 'Rubber', durationScale: 1.45, exponentBase: .9, exponentSlope: 4.1, rippleDepth: .06, rippleCycles: 1, textureCutoff: 3200, textureBrightness: .1 },
+    wood: { label: 'Wood', durationScale: .8, exponentBase: 1.1, exponentSlope: 6.5, rippleDepth: .075, rippleCycles: 2.5, textureCutoff: 6500, textureBrightness: .35 },
+    nylon: { label: 'Nylon', durationScale: .6, exponentBase: .9, exponentSlope: 8.2, rippleDepth: .035, rippleCycles: 3, textureCutoff: 10500, textureBrightness: .45 },
+    ceramic: { label: 'Ceramic', durationScale: .4, exponentBase: 1.6, exponentSlope: 9.5, rippleDepth: .11, rippleCycles: 4.2, textureCutoff: 14000, textureBrightness: .7 },
+    metal: { label: 'Metal', durationScale: .28, exponentBase: 1.9, exponentSlope: 11, rippleDepth: .14, rippleCycles: 5.4, textureCutoff: 16000, textureBrightness: .85 }
+  };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(+value) ? +value : min));
   function randomGenerator(seed) {
     let value = seed >>> 0;
@@ -12,9 +23,9 @@
   function readTrack(input) {
     if (window.TineModel && typeof window.TineModel.normalizeTrack === 'function') return window.TineModel.normalizeTrack(input);
     const track = input || {};
-    const defaults = { pitchHz: 220, decay: .55, tone: .5, stiffness: .1, damping: .35, position: .23, mallet: .8, hardness: .5, strikeTime: .002, noise: .1, noiseAttack: .0005, noiseDecay: .035, noiseCutoff: 6000, direct: .1, pitchEnv: 0, pitchTime: .035, variation: .035, velocityTone: .3, level: .5, pan: 0 };
-    const ranges = { pitchHz: [20, 2000], decay: [.04, 4], position: [.02, .98], strikeTime: [.0003, .03], noiseAttack: [.0005, .3], noiseDecay: [.005, 1], noiseCutoff: [100, 16000], pitchEnv: [-24, 24], pitchTime: [.002, .5], pan: [-1, 1] };
-    const result = { model: MODELS.includes(track.model) ? track.model : 'membrane', noiseColor: COLORS.includes(track.noiseColor) ? track.noiseColor : 'pink' };
+    const defaults = { pitchHz: 220, decay: .55, tone: .5, stiffness: .1, damping: .35, position: .23, mallet: .8, hardness: .5, strikeTime: .002, contactTexture: 0, rebound: 0, reboundTime: .018, noise: .1, noiseAttack: .0005, noiseDecay: .035, noiseCutoff: 6000, direct: .1, pitchEnv: 0, pitchTime: .035, variation: .035, velocityTone: .3, level: .5, pan: 0 };
+    const ranges = { pitchHz: [20, 2000], decay: [.04, 4], position: [.02, .98], strikeTime: [.0003, .03], reboundTime: [.002, .08], noiseAttack: [.0005, .3], noiseDecay: [.005, 1], noiseCutoff: [100, 16000], pitchEnv: [-24, 24], pitchTime: [.002, .5], pan: [-1, 1] };
+    const result = { model: MODELS.includes(track.model) ? track.model : 'membrane', noiseColor: COLORS.includes(track.noiseColor) ? track.noiseColor : 'pink', strikeMaterial: Object.prototype.hasOwnProperty.call(MATERIALS, track.strikeMaterial) ? track.strikeMaterial : 'neutral' };
     Object.keys(defaults).forEach(key => { const range = ranges[key] || [0, 1]; const raw = key === 'decay' && track.decay === undefined ? track.decayT60 : track[key]; result[key] = clamp(raw === undefined ? defaults[key] : raw, range[0], range[1]); });
     return result;
   }
@@ -32,6 +43,12 @@
   const rectangular = [[1,1], [1,2], [2,2], [1,3], [2,3], [1,4], [3,3], [2,4], [1,5], [3,4], [2,5], [4,4], [1,6], [3,5], [2,6], [4,5]];
   const beam = [1, 2.756, 5.404, 8.933, 13.344, 18.638, 24.813, 31.871, 39.812, 48.635, 58.340, 68.928, 80.398, 92.750, 105.985, 120.102];
   const marimba = [1, 4.01, 10.02, 17.96, 28.05, 40.02, 54.16, 70.21, 88.36, 108.6, 131, 155.5, 182, 210.6, 241, 273.9];
+  // Cast bells have a hum, prime, minor tierce, quint, and nominal; the higher
+  // partials are shell bending modes rather than a harmonic oscillator bank.
+  const bell = [1, 2, 2.378, 2.997, 4, 5.18, 5.8, 6.75, 8, 9.3, 10.7, 12, 13.65, 15.1, 17, 19.2];
+  // A curved bowl supports near-degenerate pairs. Their small frequency
+  // separation produces natural beating without an added modulation effect.
+  const bowl = [1, 1.018, 2.71, 2.756, 5.14, 5.238, 8.36, 8.535, 12.36, 12.58, 17.13, 17.5, 22.67, 23.1, 29, 29.61];
   function inspectModes(data, sampleRate = 44100) {
     const t = readTrack(data), result = [];
     const sr = clamp(sampleRate, 8000, 192000), limit = sr * .43;
@@ -46,6 +63,20 @@
         const [order, root] = circular[index]; ratio = root / circular[0][1];
         ratio *= Math.sqrt((1 + t.stiffness * .085 * ratio * ratio) / (1 + t.stiffness * .085));
         shape = bessel(order, root * t.position) * (order ? 2.1 : 1);
+      } else if (t.model === 'bell') {
+        ratio = bell[index] * (1 + t.stiffness * .024 * Math.pow(bell[index] - 1, .72));
+        const order = 2 + Math.floor(index / 2);
+        shape = (.6 + .4 * Math.sin(Math.PI * t.position / 2)) * Math.cos(order * Math.PI * t.position + (index % 2) * .8);
+        if (index === 0) shape = .68 + .32 * Math.sin(Math.PI * t.position / 2);
+      } else if (t.model === 'bowl') {
+        ratio = bowl[index] * (1 + t.stiffness * .014 * Math.pow(bowl[index] - 1, .72));
+        const order = 2 + Math.floor(index / 2), angle = TAU * t.position;
+        shape = index % 2 ? Math.sin(order * angle) : Math.cos(order * angle);
+      } else if (t.model === 'tube') {
+        const n = index * 2 + 1;
+        ratio = n * Math.sqrt((1 + .0009 * t.stiffness * n * n) / (1 + .0009 * t.stiffness));
+        // Pressure antinode at the closed end, node at the open end.
+        shape = Math.cos(Math.PI * n * t.position / 2);
       } else {
         const [m, n] = rectangular[index], squared = (m * m + n * n) / 2;
         ratio = t.model === 'plate' ? squared : Math.sqrt(squared);
@@ -56,7 +87,7 @@
       const frequency = t.pitchHz * ratio;
       const startFrequency = frequency * Math.pow(2, t.pitchEnv / 12);
       if (frequency > limit || startFrequency > limit) continue;
-      const materialLoss = { string: .016, beam: .12, marimba: .17, drumhead: .07, membrane: .065, plate: .028 }[t.model];
+      const materialLoss = { string: .016, beam: .12, marimba: .17, drumhead: .07, membrane: .065, plate: .028, bell: .026, bowl: .019, tube: .11 }[t.model];
       const t60 = Math.max(.015, t.decay / (1 + (materialLoss + t.damping * 1.3) * Math.pow(ratio - 1, .8)));
       // RBJ bandpass pole radius gives this exact digital T60. The usual
       // Q=pi*f*T60/log(1000) approximation over-rings at high frequencies.
@@ -69,14 +100,45 @@
     result.forEach(mode => { mode.weight /= total; mode.gain = mode.weight; });
     return result;
   }
-  function makeMallet(context, t) {
-    const count = Math.max(3, Math.ceil(t.strikeTime * context.sampleRate));
+  function inspectExciter(data) {
+    const t = readTrack(data), id = Object.prototype.hasOwnProperty.call(MATERIALS, t.strikeMaterial) ? t.strikeMaterial : 'neutral', material = MATERIALS[id];
+    const contactDuration = t.strikeTime * material.durationScale, contacts = [{ time: 0, duration: contactDuration, gain: 1 }];
+    if (t.rebound > 0) {
+      const coefficient = .72 * t.rebound, spacings = [1, 2.12, 3.36], shortening = [.86, .75, .66];
+      spacings.forEach((spacing, index) => contacts.push({ time: spacing * t.reboundTime, duration: contactDuration * shortening[index], gain: Math.pow(coefficient, index + 1) }));
+      // Constant contact energy prevents rebound becoming a hidden volume knob.
+      const scale = 1 / Math.sqrt(contacts.reduce((sum, contact) => sum + contact.gain * contact.gain, 0));
+      contacts.forEach(contact => { contact.gain *= scale; });
+    }
+    return { material: { id, label: material.label }, duration: Math.max(...contacts.map(contact => contact.time + contact.duration)), contactDuration, contacts, hardness: t.hardness, pulseExponent: material.exponentBase + t.hardness * material.exponentSlope, rippleDepth: material.rippleDepth, rippleCycles: material.rippleCycles, contactTexture: t.contactTexture, rebound: t.rebound, reboundTime: t.reboundTime };
+  }
+  function makeMallet(context, t, description, contact, random) {
+    const count = Math.max(3, Math.ceil(contact.duration * context.sampleRate));
     const buffer = context.createBuffer(1, count, context.sampleRate), data = buffer.getChannelData(0);
     let sum = 0;
-    for (let i = 0; i < count; i++) { data[i] = Math.pow(Math.max(0, Math.sin(Math.PI * i / (count - 1))), .7 + t.hardness * 6); sum += data[i]; }
+    for (let i = 0; i < count; i++) {
+      const phase = i / (count - 1);
+      data[i] = Math.pow(Math.max(0, Math.sin(Math.PI * i / (count - 1))), description.pulseExponent) * (1 + description.rippleDepth * Math.cos(TAU * description.rippleCycles * phase)); sum += data[i];
+    }
     // Discrete area of one: a longer contact physically removes high-mode
     // energy without adding energy simply because there are more samples.
     for (let i = 0; i < count; i++) data[i] /= sum || 1;
+    if (t.contactTexture > 0) {
+      // Microcontacts are a separate, very short roughness force. Color follows
+      // the striking material, independently of the sustained noise exciter.
+      const material = MATERIALS[description.material.id], texture = new Float32Array(count), coefficient = 1 - Math.exp(-TAU * Math.min(material.textureCutoff, context.sampleRate * .43) / context.sampleRate);
+      let low = 0, previous = 0, area = 0, energy = 0, pulseEnergy = 0;
+      for (let i = 0; i < count; i++) {
+        const white = random() * 2 - 1; low += coefficient * (white - low);
+        const color = low * (1 - material.textureBrightness) + (white - previous) * material.textureBrightness * .7; previous = white;
+        texture[i] = color * Math.sqrt(Math.max(0, data[i])); area += texture[i]; pulseEnergy += data[i] * data[i];
+      }
+      // Zero area retains the same macroscopic contact impulse; RMS scaling
+      // bounds the added energy even at the hardest, shortest contact setting.
+      for (let i = 0; i < count; i++) { texture[i] -= area * data[i]; energy += texture[i] * texture[i]; }
+      const scale = t.contactTexture * .8 * Math.sqrt(pulseEnergy / Math.max(1e-12, energy));
+      for (let i = 0; i < count; i++) data[i] += texture[i] * scale;
+    }
     return { buffer, directScale: Math.min(12, Math.sqrt(count)) * .72 };
   }
   function makeNoise(context, t, random) {
@@ -151,8 +213,8 @@
     if (active.filter(voice => !voice.stolen).length >= 48) { fadeVoice(active.find(voice => !voice.stolen), now); environment.stolen++; }
     if (t.variation) { t.pitchHz *= Math.pow(2, (random() * 2 - 1) * t.variation * .4 / 12); t.position = clamp(t.position + (random() * 2 - 1) * t.variation * .045, .02, .98); t.decay = clamp(t.decay * (1 + (random() * 2 - 1) * t.variation * .08), .04, 4); }
     t.tone = clamp(t.tone + (accent ? .24 : -.025) * t.velocityTone, 0, 1); t.hardness = clamp(t.hardness + (accent ? .22 : -.025) * t.velocityTone, 0, 1); t.noiseCutoff = clamp(t.noiseCutoff * Math.pow(2, (accent ? .7 : 0) * t.velocityTone), 100, 16000);
-    const modes = inspectModes(t, context.sampleRate);
-    const excitationDuration = Math.max(t.mallet > 0 ? t.strikeTime : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0);
+    const modes = inspectModes(t, context.sampleRate), exciter = inspectExciter(t);
+    const excitationDuration = Math.max(t.mallet > 0 ? exciter.duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0);
     const longest = Math.max(t.decay, ...modes.map(mode => mode.t60));
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
@@ -162,13 +224,13 @@
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
     let pending = 0;
-    const source = (buffer, amount, directScale) => {
+    const source = (buffer, amount, directScale, offset = 0) => {
       const node = add(context.createBufferSource()), level = add(context.createGain()); node.buffer = buffer; level.gain.value = amount; node.connect(level); level.connect(force);
       if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(bus); }
       // Excitation ends naturally while the resonator lifetime clock keeps
       // the filter state alive. Offline nodes stay connected before rendering.
       node.loop = false; node.onended = () => { pending--; if (!pending && context.currentTime >= voice.stopTime - .005) clean(); };
-      node.start(now); node.stop(now + duration); voice.sources.push(node); pending++;
+      node.start(now + offset); node.stop(now + duration); voice.sources.push(node); pending++;
     };
     modes.forEach(mode => {
       const filter = add(context.createBiquadFilter()), gain = add(context.createGain()); filter.type = 'bandpass';
@@ -177,12 +239,13 @@
       const radiusTerm = 2 * Math.tanh(LOG1000 / (context.sampleRate * mode.t60));
       const firstQ = Math.sin(TAU * firstFrequency / context.sampleRate) / radiusTerm;
       filter.Q.setValueAtTime(Math.max(.05, firstQ), now); filter.Q.exponentialRampToValueAtTime(Math.max(.05, mode.q), now + t.pitchTime);
-      gain.gain.value = mode.weight * .74 / radiusTerm;
+      const bodyGain = { bell: .94, bowl: .92, tube: 1.08 }[t.model] || 1;
+      gain.gain.value = mode.weight * .74 / radiusTerm * bodyGain;
       // Compensation precedes the filter: browsers otherwise prune the tiny
       // unamplified filter tail while it is still audible after compensation.
       force.connect(gain); gain.connect(filter); filter.connect(bus);
     });
-    if (t.mallet > 0) { const mallet = makeMallet(context, t); source(mallet.buffer, t.mallet, mallet.directScale); }
+    if (t.mallet > 0) { exciter.contacts.forEach(contact => { const mallet = makeMallet(context, t, exciter, contact, random); source(mallet.buffer, t.mallet * contact.gain, mallet.directScale, contact.time); }); }
     if (t.noise > 0) { const noise = makeNoise(context, t, random); source(noise.buffer, t.noise, noise.directScale); }
     // BufferSource ends at its short force duration. A tiny DC clock owns
     // resonator cleanup and preserves the full natural ringing tail.
@@ -207,6 +270,7 @@
   class TineEngine {
     constructor() { this.context = null; this.graph = null; this.environment = null; this.running = false; this.state = null; this.onStep = null; this.currentStep = 0; this.nextNoteTime = 0; this.timer = null; this.worker = null; this.displayTimers = new Set(); this.generation = 0; this.values = { master: .8, drive: 0, space: .15 }; this._initPromise = null; this._disposingPromise = null; }
     static inspectModes(track, sampleRate) { return inspectModes(track, sampleRate); }
+    static inspectExciter(track) { return inspectExciter(track); }
     async init() {
       if (this._disposingPromise) await this._disposingPromise;
       if (this._initPromise) await this._initPromise;
@@ -237,7 +301,7 @@
     async exportWav(state) {
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, duration = 16 * 60 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
-      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? t.strikeTime : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
+      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
       const tail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
       let time = .015; for (let i = 0; i < 64; i++) { const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }

@@ -22,18 +22,21 @@
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
     banks[bank] = state.tracks.map((track) => [...track.steps]);
-    return { app: 'TINE', version: 1, state: clone(state), banks: clone(banks), bank, selected };
+    return { app: 'TINE', version: 2, state: clone(state), banks: clone(banks), bank, selected };
   }
   function validateProject(data) {
-    if (!model.validateProject(data)) throw new Error('Please choose a valid TINE project. Its sound and pattern settings must be complete.');
-    return data;
+    try { return model.upgradeProject(data); }
+    catch (_) { throw new Error('Please choose a valid TINE project. Its sound and pattern settings must be complete.'); }
   }
   function restore(data) {
     const valid = validateProject(data);
     state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
     state.tracks = state.tracks.map((track, index) => { const next = model.normalizeTrack(track); next.steps = [...banks[bank][index]]; return next; });
   }
-  try { const saved = localStorage.getItem(storageKey); if (saved) restore(JSON.parse(saved)); } catch (_) { /* A private or offline browser can play without storage. */ }
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) { restore(JSON.parse(saved)); localStorage.setItem(storageKey, JSON.stringify(project())); }
+  } catch (_) { /* A private or offline browser can play without storage. */ }
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 240);
@@ -116,7 +119,10 @@
       plate: 'M4 9l15-6 12 12-15 10zM7 10l19 10M15 5l-4 18',
       string: 'M3 15h6q4-20 8 0t8 0h6',
       beam: 'M4 8h26v14H4zM8 8v14M26 8v14M9 15q8-10 16 0',
-      marimba: 'M4 7h7v19H4zM14 5h7v19h-7zM24 3h7v19h-7z'
+      marimba: 'M4 7h7v19H4zM14 5h7v19h-7zM24 3h7v19h-7z',
+      bell: 'M6 23c5-4 4-7 5-12 1-9 11-9 12 0 1 5 0 8 5 12zM6 23c7 4 15 4 22 0M15 27h4M17 2v4',
+      bowl: 'M4 12c0-6 26-6 26 0M4 12c2 18 24 18 26 0M4 12c0 6 26 6 26 0M11 7l-4-4',
+      tube: 'M8 6c0-4 18-4 18 0v18c0 4-18 4-18 0zM8 6c0 4 18 4 18 0M8 24c0-4 18-4 18 0M12 10v10M22 10v10'
     };
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 34 30'); svg.setAttribute('aria-hidden', 'true');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', paths[id] || paths.membrane); path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '1.3'); svg.append(path); return svg;
@@ -171,7 +177,7 @@
   }
   function knob(descriptor, initial, change, prefix = '') {
     const key = descriptor.key || descriptor.id, label = descriptor.label;
-    const tile = document.createElement('div'); tile.className = 'knob-control'; tile.title = descriptor.hint || label;
+    const tile = document.createElement('div'); tile.className = 'knob-control'; tile.dataset.param = key; tile.title = descriptor.hint || label;
     const control = document.createElement('button'); control.type = 'button'; control.className = 'slider-knob'; control.setAttribute('role', 'slider'); control.setAttribute('aria-label', label); control.setAttribute('aria-valuemin', descriptor.min); control.setAttribute('aria-valuemax', descriptor.max); control.dataset.param = key; control.dataset.focusKey = prefix + 'param-' + key;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 56 56'); svg.setAttribute('aria-hidden', 'true');
     ['knob-track', 'knob-progress'].forEach((className) => { const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('class', className); circle.setAttribute('cx', '28'); circle.setAttribute('cy', '28'); circle.setAttribute('r', '23'); svg.append(circle); });
@@ -207,16 +213,43 @@
     document.querySelectorAll('button[data-tab]').forEach((button) => { const active = button.dataset.tab === tab; button.classList.toggle('active', active); button.setAttribute('aria-selected', active); button.tabIndex = active ? 0 : -1; });
     $('knob-grid').setAttribute('aria-labelledby', 'tab-' + tab); $('knob-grid').dataset.group = tab; $('knob-grid').dataset.tab = tab;
     const note = document.querySelector('.editor-note');
-    if (note) note.textContent = ({ resonance: 'Strike position changes which modes vibrate. Damping shortens their upper harmonics.', exciter: 'Mallet and filtered noise excite the body. Direct exciter adds the unresonated attack.', motion: 'Each accent is louder. Accent color brightens it; variation gives each strike small differences.' })[tab];
+    if (note) note.textContent = ({ resonance: 'Strike position changes which modes vibrate. Damping shortens their upper harmonics.', exciter: 'Striking material shapes the contact. Texture adds surface detail; rebound creates diminishing repeat strikes.', motion: 'Each accent is louder. Accent color brightens it; variation gives each strike small differences.' })[tab];
     $('knob-grid').replaceChildren();
-    model.groups[tab].forEach((descriptor) => { const key = descriptor.key || descriptor.id; $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; drawVoice(); refreshTrackMeta(); })); });
+    const addKnob = (descriptor) => {
+      const key = descriptor.key || descriptor.id;
+      $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; drawVoice(); refreshTrackMeta(); }));
+    };
+    if (tab === 'exciter') {
+      [
+        ['Contact', ['mallet', 'hardness', 'strikeTime', 'contactTexture']],
+        ['Noise', ['noise', 'noiseAttack', 'noiseDecay', 'noiseCutoff']],
+        ['Rebound & mix', ['rebound', 'reboundTime', 'direct']]
+      ].forEach(([label, keys]) => {
+        const heading = document.createElement('div'); heading.className = 'knob-section'; heading.setAttribute('role', 'heading'); heading.setAttribute('aria-level', '3'); heading.textContent = label;
+        $('knob-grid').append(heading);
+        keys.forEach((key) => { const descriptor = model.groups.exciter.find((item) => (item.key || item.id) === key); if (descriptor) addKnob(descriptor); });
+      });
+    } else model.groups[tab].forEach(addKnob);
     $('selectors').replaceChildren();
     if (tab === 'exciter') {
-      const wrapper = document.createElement('div'); wrapper.className = 'selector synthesis-selector';
+      const materialWrapper = document.createElement('div'); materialWrapper.className = 'selector synthesis-selector material-selector';
+      const materialLabel = document.createElement('label'); materialLabel.htmlFor = 'strike-material'; materialLabel.textContent = 'Striking material';
+      const materialSelect = document.createElement('select'); materialSelect.id = 'strike-material'; materialSelect.dataset.focusKey = 'strike-material'; materialSelect.setAttribute('aria-describedby', 'strike-material-description');
+      const materialDescription = document.createElement('p'); materialDescription.className = 'selector-description'; materialDescription.id = 'strike-material-description';
+      const describeMaterial = () => {
+        const selectedMaterial = model.strikeMaterials.find((item) => item.id === track.strikeMaterial) || model.strikeMaterials[0];
+        materialDescription.textContent = selectedMaterial.description || selectedMaterial.hint;
+        materialSelect.title = selectedMaterial.hint || selectedMaterial.description || selectedMaterial.name;
+      };
+      model.strikeMaterials.forEach((material) => { const option = document.createElement('option'); option.value = material.id; option.textContent = material.name; option.title = material.description || material.hint || material.name; materialSelect.append(option); });
+      materialSelect.value = track.strikeMaterial;
+      materialSelect.addEventListener('change', () => { remember(); track.strikeMaterial = materialSelect.value; describeMaterial(); drawVoice(); persist(); if (!playing) audition(track); });
+      materialWrapper.append(materialLabel, materialSelect); $('selectors').append(materialWrapper);
+      const wrapper = document.createElement('div'); wrapper.className = 'selector synthesis-selector noise-selector';
       const label = document.createElement('label'); label.htmlFor = 'noise-color'; label.textContent = 'Noise color';
       const select = document.createElement('select'); select.id = 'noise-color'; select.dataset.focusKey = 'noise-color'; select.setAttribute('aria-label', 'Noise color');
       ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'].forEach((color) => { const option = document.createElement('option'); option.value = color; option.textContent = color.charAt(0).toUpperCase() + color.slice(1); select.append(option); }); select.value = track.noiseColor;
-      select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper);
+      select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper, materialDescription); describeMaterial();
     }
     drawVoice(); restoreFocus(focus);
   }
@@ -237,13 +270,15 @@
   }
   function mutateVoice() {
     remember(); const track = state.tracks[selected];
-    ['tone', 'stiffness', 'damping', 'position', 'mallet', 'hardness', 'noise', 'variation', 'velocityTone'].forEach((key) => {
+    ['tone', 'stiffness', 'damping', 'position', 'mallet', 'hardness', 'noise', 'variation', 'velocityTone', 'contactTexture', 'rebound'].forEach((key) => {
       const min = key === 'position' ? .02 : 0, max = key === 'position' ? .98 : 1;
-      track[key] = clamp(track[key] + (Math.random() - .5) * (key === 'noise' ? .24 : .35), min, max);
+      const amount = key === 'contactTexture' || key === 'rebound' ? .16 : key === 'noise' ? .24 : .35;
+      track[key] = clamp(track[key] + (Math.random() - .5) * amount, min, max);
     });
     track.pitchHz = clamp(track.pitchHz * 2 ** ((Math.random() - .5) * .5), 20, 2000);
     track.decay = clamp(track.decay * (.75 + Math.random() * .5), .04, 4);
     track.pitchEnv = clamp(track.pitchEnv + (Math.random() - .5) * 6, -24, 24);
+    track.reboundTime = clamp(track.reboundTime * (.85 + Math.random() * .3), .002, .08);
     renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Same voice. A new material character.');
   }
   function randomPattern() {
@@ -283,6 +318,13 @@
     } catch (_) { /* The diagram remains available before the audio context starts. */ }
     return Array.from({ length: 12 }, (_, index) => ({ frequency: track.pitchHz * (index + 1) ** (track.model === 'plate' ? 1.3 : track.model === 'beam' ? 1.5 : 1), gain: Math.exp(-index * (.14 + track.damping * .3)), decay: track.decay }));
   }
+  function exciterFor(track) {
+    try {
+      const inspected = window.TineEngine.inspectExciter(track);
+      if (inspected && Array.isArray(inspected.contacts)) return inspected;
+    } catch (_) { /* The diagram can draw before audio starts. */ }
+    return { material: { id: track.strikeMaterial, label: track.strikeMaterial }, duration: track.strikeTime, contactDuration: track.strikeTime, contacts: [{ time: 0, duration: track.strikeTime, gain: 1 }], pulseExponent: .7 + track.hardness * 6, rippleDepth: 0, rippleCycles: 0 };
+  }
   function drawVoice() {
     const track = state.tracks[selected], modes = modesFor(track), graph = canvasContext('resonator-canvas');
     if (graph) {
@@ -301,16 +343,37 @@
     $('mode-summary').textContent = modes.length + ' MODES · ' + Math.round(track.pitchHz) + ' Hz · T60 ' + track.decay.toFixed(2) + ' s';
     const excitation = canvasContext('exciter-canvas');
     if (excitation) {
-      const { ctx, width: w, height: h } = excitation, duration = Math.max(.06, track.noiseAttack + track.noiseDecay, track.strikeTime * 8), mid = h * .6;
-      ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, mid); ctx.lineTo(w - 8, mid); ctx.stroke();
-      ctx.strokeStyle = '#9daead'; ctx.lineWidth = 1.5; ctx.beginPath();
+      const { ctx, width: w, height: h } = excitation, exciter = exciterFor(track);
+      const contacts = exciter.contacts.filter((contact) => contact.duration > 0 && contact.gain > 0);
+      const contactDuration = Math.max(.003, exciter.duration * 1.13), noiseDuration = Math.max(.03, track.noiseAttack + track.noiseDecay);
+      const contactBaseline = h * .46, noiseBaseline = h - 5, amplitude = h * .27;
+      const axis = (baseline) => { ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, baseline); ctx.lineTo(w - 8, baseline); ctx.stroke(); };
+      axis(contactBaseline); axis(noiseBaseline);
+      const milliseconds = (duration) => (duration * 1000 < 10 ? (duration * 1000).toFixed(1) : Math.round(duration * 1000)) + ' ms';
+      ctx.font = '8px monospace'; ctx.fillStyle = colors[selected]; ctx.fillText('CONTACT', 9, 9);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(contactDuration), w - 9, 9); ctx.textAlign = 'left';
+      ctx.fillStyle = '#9daead'; ctx.fillText('NOISE', 9, h * .55);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(noiseDuration), w - 9, h * .55); ctx.textAlign = 'left';
+      const strikeAt = (time) => contacts.reduce((sum, contact) => {
+        const phase = (time - contact.time) / contact.duration;
+        if (phase <= 0 || phase >= 1) return sum;
+        const ripple = 1 + (exciter.rippleDepth || 0) * Math.cos(Math.PI * 2 * (exciter.rippleCycles || 0) * phase);
+        return sum + Math.max(0, Math.sin(Math.PI * phase)) ** exciter.pulseExponent * ripple * contact.gain;
+      }, 0);
+      // Sample every contact independently so even sub-millisecond impacts stay visible.
+      const contactTimes = [0, contactDuration];
+      contacts.forEach((contact) => { for (let point = 0; point <= 72; point++) contactTimes.push(contact.time + contact.duration * point / 72); });
+      contactTimes.sort((a, b) => a - b);
+      const peak = Math.max(1, ...contactTimes.map(strikeAt));
+      ctx.strokeStyle = colors[selected]; ctx.lineWidth = 1.5; ctx.beginPath();
+      contactTimes.forEach((time, index) => { const x = 8 + time / contactDuration * (w - 16), y = contactBaseline - strikeAt(time) / peak * track.mallet * amplitude; if (!index) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke();
+      ctx.strokeStyle = '#9daead'; ctx.beginPath();
       for (let x = 8; x <= w - 8; x++) {
-        const time = (x - 8) / (w - 16) * duration, noise = time < track.noiseAttack ? time / track.noiseAttack : Math.exp(-6.9 * (time - track.noiseAttack) / track.noiseDecay);
-        const y = mid - Math.max(0, noise) * track.noise * h * .42; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const time = (x - 8) / (w - 16) * noiseDuration;
+        const noise = time < track.noiseAttack ? time / track.noiseAttack : Math.exp(-6.9 * (time - track.noiseAttack) / track.noiseDecay);
+        const y = noiseBaseline - Math.max(0, noise) * track.noise * amplitude; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       } ctx.stroke();
-      ctx.strokeStyle = colors[selected]; ctx.beginPath();
-      for (let x = 8; x <= w - 8; x++) { const time = (x - 8) / (w - 16) * duration, strike = time <= track.strikeTime ? Math.sin(Math.PI * time / track.strikeTime) : 0; const y = mid - strike * track.mallet * h * .5; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
-      ctx.fillStyle = '#918a83'; ctx.font = '9px monospace'; ctx.fillText('STRIKE', 9, h - 7); ctx.fillStyle = '#9daead'; ctx.fillText('NOISE', 65, h - 7); ctx.fillStyle = '#918a83'; ctx.textAlign = 'right'; ctx.fillText(Math.round(duration * 1000) + ' ms', w - 9, h - 7); ctx.textAlign = 'left';
+      $('exciter-canvas').setAttribute('aria-label', (exciter.material.label || track.strikeMaterial) + ' contact envelope, ' + contacts.length + ' impact' + (contacts.length === 1 ? '' : 's') + ', and ' + track.noiseColor + ' noise envelope. Contact scale ' + milliseconds(contactDuration) + '; noise scale ' + milliseconds(noiseDuration) + '.');
     }
   }
   let heroTime = 0, lastFrame = 0;
@@ -344,13 +407,14 @@
   model.models.forEach((info) => {
     const button = document.createElement('button'); button.className = 'model-button'; button.dataset.model = info.id; button.dataset.focusKey = 'model-' + info.id; button.setAttribute('aria-label', 'Use ' + info.name + ' model');
     const name = document.createElement('span'); name.className = 'model-name'; name.textContent = info.name;
-    const subtitle = document.createElement('span'); subtitle.className = 'model-subtitle'; subtitle.textContent = ({ membrane: 'Flexible surface', drumhead: 'Skin & drums', plate: 'Metal & cymbals', string: 'Plucks & wires', beam: 'Wood & bars', marimba: 'Tuned wood' })[info.id] || 'Resonant material'; button.append(glyph(info.id), name, subtitle);
+    const subtitle = document.createElement('span'); subtitle.className = 'model-subtitle'; subtitle.textContent = ({ membrane: 'Flexible surface', drumhead: 'Skin & drums', plate: 'Metal & cymbals', string: 'Plucks & wires', beam: 'Wood & bars', marimba: 'Tuned wood', bell: 'Cast & metallic', bowl: 'Singing vessel', tube: 'Hollow column' })[info.id] || 'Resonant material'; button.append(glyph(info.id), name, subtitle);
     button.addEventListener('click', () => {
       const previous = state.tracks[selected]; if (previous.model === info.id) return; remember();
       previous.model = info.id;
       renderRows(); renderVoice(); persist(); if (!playing) audition();
     }); $('model-buttons').append(button);
   });
+  if ($('model-count')) $('model-count').textContent = model.models.length + ' MODELS';
   document.querySelectorAll('button[data-tab]').forEach((button, index, buttons) => {
     button.id = 'tab-' + button.dataset.tab;
     button.addEventListener('click', () => { tab = button.dataset.tab; renderVoice(); });

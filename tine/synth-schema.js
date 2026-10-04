@@ -14,7 +14,19 @@
     Object.freeze({ id: 'marimba', name: 'Marimba', description: 'A tuned wooden bar. Soft mallets reveal rounded fundamentals and bell-like overtones.', material: 'Tuned wood', color: '#a7b892' }),
     Object.freeze({ id: 'drumhead', name: 'Drumhead', description: 'A circular head under tension. Responsive toms, snares, and hand-drum tones.', material: 'Taut skin', color: '#c4a196' }),
     Object.freeze({ id: 'membrane', name: 'Membrane', description: 'A flexible resonating surface. Deep kicks, rubbery impacts, and bending low percussion.', material: 'Flexible surface', color: '#d0b095' }),
-    Object.freeze({ id: 'plate', name: 'Plate', description: 'A dense sheet of resonant metal. Shimmering cymbals, gongs, and bright inharmonic impacts.', material: 'Metal sheet', color: '#99afb6' })
+    Object.freeze({ id: 'plate', name: 'Plate', description: 'A dense sheet of resonant metal. Shimmering cymbals, gongs, and bright inharmonic impacts.', material: 'Metal sheet', color: '#99afb6' }),
+    Object.freeze({ id: 'bell', name: 'Bell', description: 'A cast shell with a low hum, a singing prime, and distinct upper partials. Clear chimes and dense, bronze-like strikes.', material: 'Cast shell', color: '#d0b081' }),
+    Object.freeze({ id: 'bowl', name: 'Bowl', description: 'A curved shell with closely paired resonances. Rounded singing tones and slowly shimmering, gong-like percussion.', material: 'Curved shell', color: '#b6accb' }),
+    Object.freeze({ id: 'tube', name: 'Tube', description: 'A closed air column with odd harmonic modes. Hollow knocks, bamboo-like percussion, and woody pitched pulses.', material: 'Air column', color: '#a8bbb0' })
+  ]);
+  const strikeMaterials = Object.freeze([
+    Object.freeze({ id: 'neutral', name: 'Neutral', description: 'The original shaped contact pulse. Hardness and contact time define the strike directly.', hint: 'Original contact response; preserves earlier TINE sounds.' }),
+    Object.freeze({ id: 'felt', name: 'Felt', description: 'A yielding, rounded contact that rolls off sharp upper frequencies.', hint: 'Soft, broad contact for warm fundamentals and gentle attacks.' }),
+    Object.freeze({ id: 'rubber', name: 'Rubber', description: 'An elastic, springy contact with a rounded attack and subtle contact ringing.', hint: 'Supple contact for rounded, bouncy percussion.' }),
+    Object.freeze({ id: 'wood', name: 'Wood', description: 'A firm contact with a dry click and restrained high-frequency energy.', hint: 'Dry, firm contact for sticks, blocks, and hollow knocks.' }),
+    Object.freeze({ id: 'nylon', name: 'Nylon', description: 'A smooth, firm tip with a clear attack and bright but rounded upper modes.', hint: 'Clean, focused contact between soft and brittle materials.' }),
+    Object.freeze({ id: 'ceramic', name: 'Ceramic', description: 'A brittle, bright contact that sends fine, high-frequency detail into the body.', hint: 'Crisp contact for glassy, brittle attacks.' }),
+    Object.freeze({ id: 'metal', name: 'Metal', description: 'A rigid, sharp contact with bright contact ringing and dense upper-frequency energy.', hint: 'Hard, bright contact for metallic edges and clear chimes.' })
   ]);
   const noiseColors = Object.freeze([
     Object.freeze({ id: 'white', name: 'White', description: 'Even broadband energy for snare wires and crisp strikes.' }),
@@ -35,8 +47,11 @@
     ]),
     exciter: Object.freeze([
       descriptor('mallet', 'Mallet', 0, 1, false, '%', 'Strength of the short physical strike that excites the resonator.'),
-      descriptor('hardness', 'Hardness', 0, 1, false, '%', 'Soft felt emphasizes the fundamental; hard contact excites upper modes.'),
-      descriptor('strikeTime', 'Contact time', 0.0003, 0.03, true, 's', 'Duration of the mallet contact. Short contact is sharp; longer contact softens the impact.'),
+      descriptor('hardness', 'Hardness', 0, 1, false, '%', 'Vary the firmness within the selected striking material. Softer contact favors the fundamental; harder contact excites upper modes.'),
+      descriptor('strikeTime', 'Contact time', 0.0003, 0.03, true, 's', 'Base duration of the mallet contact; the selected material shapes its width. Short contact is sharp; longer contact softens the impact.'),
+      descriptor('contactTexture', 'Contact texture', 0, 1, false, '%', 'Add material-colored friction to the contact itself. This follows the strike and stays separate from the noise envelope.'),
+      descriptor('rebound', 'Rebound', 0, 1, false, '%', 'Allow the striker to bounce into smaller repeat contacts. At zero, every trigger produces one strike.'),
+      descriptor('reboundTime', 'Bounce spacing', 0.002, 0.08, true, 's', 'Time between the first strike and its first rebound. Short spacing makes a buzz; longer spacing reveals separate bounces.'),
       descriptor('noise', 'Noise', 0, 1, false, '%', 'Amount of filtered noise exciting the resonator: brushes, wires, friction, or a rattle.'),
       descriptor('noiseAttack', 'Noise attack', 0.0005, 0.3, true, 's', 'Time for the noise exciter to rise to its peak.'),
       descriptor('noiseDecay', 'Noise decay', 0.005, 1, true, 's', 'Time for the noise excitation to fade after its attack.'),
@@ -54,15 +69,22 @@
   });
   const numeric = Object.freeze(Object.values(groups).flat());
   const modelIds = models.map((model) => model.id);
+  const legacyModelIds = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate'];
+  const materialIds = strikeMaterials.map((material) => material.id);
   const colorIds = noiseColors.map((color) => color.id);
-  const trackKeys = ['name', 'model', 'noiseColor', 'mute', 'solo', 'steps', ...numeric.map((parameter) => parameter.key)];
+  const newNumericKeys = ['contactTexture', 'rebound', 'reboundTime'];
+  const legacyNumeric = numeric.filter((parameter) => !newNumericKeys.includes(parameter.key));
+  const legacyTrackKeys = ['name', 'model', 'noiseColor', 'mute', 'solo', 'steps', ...legacyNumeric.map((parameter) => parameter.key)];
+  const trackKeys = ['name', 'model', 'strikeMaterial', 'noiseColor', 'mute', 'solo', 'steps', ...numeric.map((parameter) => parameter.key)];
+  const neutralContact = Object.freeze({ strikeMaterial: 'neutral', contactTexture: 0, rebound: 0, reboundTime: 0.018 });
 
   const common = Object.freeze({
     name: 'NEW VOICE', pitchHz: 220, decay: 0.55, tone: 0.5, stiffness: 0.1,
     damping: 0.35, position: 0.23, mallet: 0.8, hardness: 0.5, strikeTime: 0.002,
     noise: 0.1, noiseColor: 'pink', noiseAttack: 0.0005, noiseDecay: 0.035,
     noiseCutoff: 6000, direct: 0.1, pitchEnv: 0, pitchTime: 0.035,
-    variation: 0.035, velocityTone: 0.3, level: 0.5, pan: 0, mute: false, solo: false
+    variation: 0.035, velocityTone: 0.3, level: 0.5, pan: 0, mute: false, solo: false,
+    ...neutralContact
   });
   const voicing = Object.freeze({
     string: Object.freeze({ name: 'WIRE PLUCK', pitchHz: 220, decay: 1.25, tone: 0.52, stiffness: 0.12, damping: 0.22, position: 0.19, mallet: 0.76, hardness: 0.44, strikeTime: 0.0025, noise: 0.1, noiseDecay: 0.026, noiseCutoff: 4200, direct: 0.12, pitchTime: 0.022, variation: 0.025, velocityTone: 0.28, level: 0.5 }),
@@ -70,7 +92,10 @@
     marimba: Object.freeze({ name: 'FELT MARIMBA', pitchHz: 261.626, decay: 0.95, tone: 0.42, stiffness: 0.025, damping: 0.3, mallet: 0.95, hardness: 0.22, strikeTime: 0.0035, noise: 0.035, noiseColor: 'brown', noiseAttack: 0.0008, noiseDecay: 0.028, noiseCutoff: 2400, direct: 0.035, level: 0.48 }),
     drumhead: Object.freeze({ name: 'TAUT DRUMHEAD', pitchHz: 190, decay: 0.58, tone: 0.57, stiffness: 0.11, damping: 0.38, position: 0.38, mallet: 0.72, hardness: 0.57, strikeTime: 0.0015, noise: 0.38, noiseColor: 'white', noiseDecay: 0.09, noiseCutoff: 7200, direct: 0.22, pitchEnv: 3, level: 0.58 }),
     membrane: Object.freeze({ name: 'FELT KICK', pitchHz: 52, decay: 0.55, tone: 0.24, stiffness: 0.045, damping: 0.3, position: 0.15, mallet: 0.92, hardness: 0.36, strikeTime: 0.003, noise: 0.055, noiseColor: 'brown', noiseDecay: 0.026, noiseCutoff: 1800, direct: 0.16, pitchEnv: 14, level: 0.7 }),
-    plate: Object.freeze({ name: 'BRUSHED PLATE', pitchHz: 620, decay: 0.8, tone: 0.7, stiffness: 0.68, damping: 0.18, position: 0.41, mallet: 0.72, hardness: 0.8, strikeTime: 0.0008, noise: 0.45, noiseColor: 'blue', noiseDecay: 0.045, noiseCutoff: 14000, direct: 0.2, variation: 0.05, level: 0.34 })
+    plate: Object.freeze({ name: 'BRUSHED PLATE', pitchHz: 620, decay: 0.8, tone: 0.7, stiffness: 0.68, damping: 0.18, position: 0.41, mallet: 0.72, hardness: 0.8, strikeTime: 0.0008, noise: 0.45, noiseColor: 'blue', noiseDecay: 0.045, noiseCutoff: 14000, direct: 0.2, variation: 0.05, level: 0.34 }),
+    bell: Object.freeze({ name: 'CAST BELL', pitchHz: 440, decay: 1.8, tone: 0.6, stiffness: 0.06, damping: 0.19, position: 0.72, mallet: 0.78, hardness: 0.7, strikeTime: 0.0009, strikeMaterial: 'metal', contactTexture: 0.04, noise: 0.025, noiseColor: 'pink', noiseDecay: 0.018, noiseCutoff: 10500, direct: 0.03, variation: 0.018, velocityTone: 0.25, level: 0.38 }),
+    bowl: Object.freeze({ name: 'SINGING BOWL', pitchHz: 196, decay: 2.4, tone: 0.48, stiffness: 0.04, damping: 0.13, position: 0.79, mallet: 0.93, hardness: 0.34, strikeTime: 0.0025, strikeMaterial: 'felt', contactTexture: 0.03, noise: 0.018, noiseColor: 'brown', noiseDecay: 0.03, noiseCutoff: 2200, direct: 0.015, variation: 0.018, velocityTone: 0.22, level: 0.42 }),
+    tube: Object.freeze({ name: 'HOLLOW TUBE', pitchHz: 220, decay: 0.7, tone: 0.44, stiffness: 0.025, damping: 0.36, position: 0.16, mallet: 0.9, hardness: 0.57, strikeTime: 0.0018, strikeMaterial: 'wood', contactTexture: 0.07, noise: 0.06, noiseColor: 'pink', noiseDecay: 0.028, noiseCutoff: 3800, direct: 0.085, variation: 0.045, velocityTone: 0.3, level: 0.46 })
   });
 
   function defaults(model) {
@@ -90,6 +115,7 @@
         result[parameter.key] = clamp(input[parameter.key], parameter.min, parameter.max);
       }
     }
+    if (materialIds.includes(input.strikeMaterial)) result.strikeMaterial = input.strikeMaterial;
     if (colorIds.includes(input.noiseColor)) result.noiseColor = input.noiseColor;
     for (const key of ['mute', 'solo']) if (typeof input[key] === 'boolean') result[key] = input[key];
     if (Array.isArray(input.steps)) {
@@ -106,24 +132,43 @@
   const validSteps = (steps) => Array.isArray(steps) && steps.length === 16
     && Array.from(steps).every((step) => Number.isInteger(step) && step >= 0 && step <= 2);
 
-  function validateTrack(track) {
-    return exactKeys(track, trackKeys) && typeof track.name === 'string' && track.name.trim().length > 0
+  function validTrackShape(track, keys, acceptedModels, parameters) {
+    return exactKeys(track, keys) && typeof track.name === 'string' && track.name.trim().length > 0
       && track.name.length <= 32 && !/[\u0000-\u001f\u007f]/.test(track.name)
-      && modelIds.includes(track.model) && colorIds.includes(track.noiseColor)
+      && acceptedModels.includes(track.model) && colorIds.includes(track.noiseColor)
       && typeof track.mute === 'boolean' && typeof track.solo === 'boolean' && validSteps(track.steps)
-      && numeric.every((parameter) => finite(track[parameter.key], parameter.min, parameter.max));
+      && parameters.every((parameter) => finite(track[parameter.key], parameter.min, parameter.max));
+  }
+
+  function validateTrack(track) {
+    return validTrackShape(track, trackKeys, modelIds, numeric) && materialIds.includes(track.strikeMaterial);
+  }
+
+  function validateLegacyTrack(track) {
+    return validTrackShape(track, legacyTrackKeys, legacyModelIds, legacyNumeric);
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || project.version !== 1) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2].includes(project.version)) return false;
     const state = project.state;
     if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks'])) return false;
     if (typeof state.name !== 'string' || !state.name.trim() || state.name.length > 80 || /[\u0000-\u001f\u007f]/.test(state.name)) return false;
     if (!finite(state.bpm, 40, 240) || !finite(state.swing, 0, 0.6) || !['drive', 'space', 'master'].every((key) => finite(state[key], 0, 1))) return false;
-    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(validateTrack)) return false;
+    const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
+    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
       && Number.isInteger(project.selected) && project.selected >= 0 && project.selected <= 7;
+  }
+
+  function upgradeProject(project) {
+    if (!validateProject(project)) throw new Error('Invalid TINE project.');
+    const upgraded = JSON.parse(JSON.stringify(project));
+    if (upgraded.version === 1) {
+      upgraded.state.tracks = upgraded.state.tracks.map((track) => Object.assign({}, track, neutralContact));
+      upgraded.version = 2;
+    }
+    return upgraded;
   }
 
   function format(parameter, value) {
@@ -140,5 +185,5 @@
     }
   }
 
-  window.TineModel = Object.freeze({ models, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, format });
+  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format });
 }());

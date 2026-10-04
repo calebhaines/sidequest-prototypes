@@ -20,7 +20,7 @@ GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build
 
 FORM 2.0.1 is in `music/form/`, with a standalone `index.html` and the complete editable project in `FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Music Lab card opens the app or downloads its offline HTML.
 
-TINE's editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command.
+TINE 1.1 has nine resonator bodies, selectable striking materials, contact texture and rebound controls, and eight grooves. Its editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command. Existing TINE projects upgrade automatically with their original excitation preserved.
 
 Run `npm run music:sync` to copy the music page, apps, and assets to both `public/music/` and `docs/music/`. The sync also runs before `npm run dev` and `npm run build`. GitHub Pages publishes `docs/`, so commit the refreshed copies when publishing.
 

@@ -1,4 +1,4 @@
-/* Six original kits. Every sound is an exciter driving a modeled resonator. */
+/* Eight original kits. Every sound is an exciter driving a modeled resonator. */
 (function () {
   'use strict';
 
@@ -97,6 +97,36 @@
         voice('BRIGHT KEY', 'marimba', '0001 0000 0010 0001', { pitchHz: 391.995, decay: 0.39, tone: 0.57, stiffness: 0.07, damping: 0.53, hardness: 0.51, strikeTime: 0.0022, noise: 0.025, direct: 0.02, level: 0.34, pan: 0.3 }),
         voice('ELASTIC WIRE', 'string', '0000 0100 0000 1000', { pitchHz: 195.998, decay: 0.35, tone: 0.56, stiffness: 0.2, damping: 0.66, position: 0.13, hardness: 0.64, strikeTime: 0.0012, noise: 0.055, direct: 0.07, pitchEnv: -7, pitchTime: 0.035, variation: 0.12, level: 0.3, pan: -0.09 }),
         voice('SMALL TOM', 'drumhead', '0000 0000 0100 0011', { pitchHz: 261.626, decay: 0.26, tone: 0.54, damping: 0.63, position: 0.61, hardness: 0.62, noise: 0.09, noiseColor: 'pink', noiseDecay: 0.02, direct: 0.07, pitchEnv: 6, pitchTime: 0.025, variation: 0.16, level: 0.35, pan: 0.38 })
+      ]
+    },
+    {
+      name: 'Porcelain orbit',
+      tagline: 'Ceramic chimes, felted bronze, and hollow wood turning around a quiet pulse.',
+      bpm: 112, swing: 0.09, drive: 0.06, space: 0.35,
+      tracks: [
+        voice('FELT PULSE', 'membrane', '2000 0010 2000 0010', { pitchHz: 49, decay: 0.48, tone: 0.23, damping: 0.45, hardness: 0.49, strikeTime: 0.0022, strikeMaterial: 'felt', pitchEnv: 13, pitchTime: 0.04, noise: 0.035, direct: 0.1, level: 0.74 }),
+        voice('NYLON SKIN', 'drumhead', '0000 2001 0000 2010', { pitchHz: 207.652, decay: 0.3, tone: 0.53, damping: 0.7, hardness: 0.59, strikeTime: 0.0012, strikeMaterial: 'nylon', contactTexture: 0.18, noise: 0.54, noiseColor: 'pink', noiseDecay: 0.1, direct: 0.29, pitchEnv: 3, level: 0.52 }),
+        voice('PORCELAIN TICK', 'bell', '1010 1011 1010 1001', { pitchHz: 1174.659, decay: 0.15, tone: 0.78, damping: 0.81, position: 0.62, hardness: 0.77, strikeTime: 0.0005, strikeMaterial: 'ceramic', contactTexture: 0.18, mallet: 0.6, noise: 0.015, direct: 0.09, level: 0.27, pan: -0.23 }),
+        voice('BRONZE ORBIT', 'bell', '0000 0010 0000 0010', { pitchHz: 587.33, decay: 1.16, tone: 0.55, damping: 0.24, hardness: 0.66, strikeTime: 0.001, strikeMaterial: 'metal', contactTexture: 0.08, noise: 0.01, direct: 0.025, level: 0.28, pan: 0.25 }),
+        voice('WOODEN AIR', 'tube', '0010 0001 0010 0000', { pitchHz: 293.665, decay: 0.32, tone: 0.47, damping: 0.63, hardness: 0.61, strikeTime: 0.0016, strikeMaterial: 'wood', contactTexture: 0.16, rebound: 0.24, reboundTime: 0.034, noise: 0.045, direct: 0.08, level: 0.35, pan: -0.33 }),
+        voice('FELT HALO', 'bowl', '1000 0000 0010 0000', { pitchHz: 293.665, decay: 1.75, tone: 0.42, damping: 0.22, hardness: 0.38, strikeTime: 0.0018, strikeMaterial: 'felt', contactTexture: 0.04, noise: 0.01, direct: 0.01, level: 0.35, pan: 0.32 }),
+        voice('RUBBER KEY', 'marimba', '0001 0000 0100 0001', { pitchHz: 440, decay: 0.44, tone: 0.4, hardness: 0.62, strikeTime: 0.0015, strikeMaterial: 'rubber', contactTexture: 0.04, rebound: 0.18, reboundTime: 0.026, noise: 0.015, direct: 0.025, level: 0.32, pan: -0.08 }),
+        voice('GLAZED RIM', 'bowl', '0000 0000 0100 0001', { pitchHz: 146.832, decay: 0.76, tone: 0.62, damping: 0.49, position: 0.68, hardness: 0.7, strikeTime: 0.001, strikeMaterial: 'ceramic', contactTexture: 0.13, noise: 0.035, noiseColor: 'white', direct: 0.04, pitchEnv: 1.5, level: 0.29, pan: 0.1 })
+      ]
+    },
+    {
+      name: 'Hollow rituals',
+      tagline: 'Springy sticks, breathing tubes, and slow shells in a room of moving shadows.',
+      bpm: 96, swing: 0.2, drive: 0.09, space: 0.3,
+      tracks: [
+        voice('ELASTIC FLOOR', 'membrane', '2000 0001 0020 0010', { pitchHz: 46.249, decay: 0.62, tone: 0.27, damping: 0.4, hardness: 0.51, strikeTime: 0.0028, strikeMaterial: 'rubber', contactTexture: 0.03, pitchEnv: 10, pitchTime: 0.052, noise: 0.035, direct: 0.12, level: 0.75 }),
+        voice('STICK & SKIN', 'drumhead', '0000 2000 0000 2001', { pitchHz: 164.814, decay: 0.34, tone: 0.48, damping: 0.64, position: 0.56, hardness: 0.56, strikeTime: 0.0017, strikeMaterial: 'wood', contactTexture: 0.24, rebound: 0.17, reboundTime: 0.038, noise: 0.38, noiseColor: 'pink', noiseDecay: 0.074, direct: 0.24, pitchEnv: 2, variation: 0.12, level: 0.52 }),
+        voice('BRITTLE BEADS', 'bell', '2010 1011 2010 1010', { pitchHz: 1318.51, decay: 0.105, tone: 0.72, damping: 0.9, hardness: 0.69, strikeTime: 0.0005, strikeMaterial: 'ceramic', contactTexture: 0.32, rebound: 0.33, reboundTime: 0.008, mallet: 0.42, noise: 0.025, direct: 0.13, variation: 0.15, level: 0.25, pan: -0.24 }),
+        voice('HOLLOW BREATH', 'tube', '0010 0000 0010 0001', { pitchHz: 329.628, decay: 0.53, tone: 0.39, damping: 0.42, position: 0.18, hardness: 0.5, strikeTime: 0.0018, strikeMaterial: 'nylon', contactTexture: 0.12, noise: 0.1, noiseColor: 'pink', noiseDecay: 0.046, direct: 0.08, variation: 0.08, level: 0.35, pan: 0.27 }),
+        voice('BAMBOO BOUNCE', 'tube', '0001 0000 0000 0010', { pitchHz: 493.883, decay: 0.2, tone: 0.59, damping: 0.71, hardness: 0.72, strikeTime: 0.0012, strikeMaterial: 'wood', contactTexture: 0.2, rebound: 0.59, reboundTime: 0.047, noise: 0.025, direct: 0.105, level: 0.32, pan: -0.35 }),
+        voice('LOW SINGING SHELL', 'bowl', '1000 0000 0010 0000', { pitchHz: 164.814, decay: 2.1, tone: 0.36, damping: 0.17, hardness: 0.33, strikeTime: 0.0028, strikeMaterial: 'felt', contactTexture: 0.07, noise: 0.018, direct: 0.012, variation: 0.025, level: 0.35, pan: 0.21 }),
+        voice('IRON ANSWER', 'bell', '0000 0001 0000 0100', { pitchHz: 659.255, decay: 0.82, tone: 0.66, damping: 0.37, position: 0.74, hardness: 0.73, strikeTime: 0.0007, strikeMaterial: 'metal', contactTexture: 0.11, rebound: 0.13, reboundTime: 0.021, noise: 0.015, direct: 0.035, level: 0.26, pan: -0.1 }),
+        voice('RUBBER CUP', 'bowl', '0000 0100 0000 0001', { pitchHz: 246.942, decay: 0.45, tone: 0.46, damping: 0.68, hardness: 0.64, strikeTime: 0.0016, strikeMaterial: 'rubber', contactTexture: 0.05, rebound: 0.39, reboundTime: 0.032, noise: 0.035, direct: 0.05, pitchEnv: 4, pitchTime: 0.026, variation: 0.1, level: 0.32, pan: 0.37 })
       ]
     }
   ];

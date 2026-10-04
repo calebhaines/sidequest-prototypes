@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#151619">
-  <meta name="tine-version" content="1.0.0">
+  <meta name="tine-version" content="1.1.0">
   <meta name="description" content="TINE is a physical modeling drum machine. Strike, shape, and sequence eight voices made from vibrating bodies. A standalone browser instrument.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23151619'/%3E%3Cg fill='none' stroke='%23dbb28d' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
   <title>TINE — Strike. Shape. Resonate.</title>
@@ -226,8 +226,17 @@ h3 { font-weight: 500; font-size: 25px; letter-spacing: -.7px; margin: 7px 0 8px
 .selector select, .synthesis-selector select, .selectors>select { background: #29232f; border: 1px solid #46384f; border-radius: 4px; padding: 8px 10px; color: #c9b7d6; font-size: 10px; width: 100%; min-height: 33px; cursor: pointer; }
 .selector-toggle, .synthesis-toggle { display: flex; align-items: center; gap: 8px; min-height: 33px; font-size: 10px; color: #bdacc9; }
 .selector-toggle input, .synthesis-toggle input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
+.material-selector,.noise-selector { max-width: none; }
+.material-selector label { color: #bc9f85; }
+.material-selector select { border-color: #67513e; background: #302922; color: #dfbc9c; }
+.selector-description { flex-basis: 100%; margin: 0; color: #9d8c9d; font-size: 9px; line-height: 1.75; }
 .knob-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
-.knob-grid[data-group=exciter] { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.knob-grid[data-group=exciter] { grid-template-columns: repeat(12,minmax(0,1fr)); }
+.knob-grid[data-group=exciter]>.knob-control { grid-column: span 3; }
+.knob-grid[data-group=exciter]>.knob-control:is([data-param=rebound],[data-param=reboundTime],[data-param=direct]) { grid-column: span 4; }
+.knob-section { grid-column: 1 / -1; display: flex; align-items: center; gap: 11px; color: #99899f; font: 6px var(--mono); letter-spacing: 1.25px; text-transform: uppercase; margin-top: 7px; }
+.knob-section:first-child { margin-top: 0; }
+.knob-section::after { content: ''; flex: 1; height: 1px; background: #3a323f; }
 .knob-control { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; position: relative; }
 .knob-grid>.knob-control { background: #1b181f4d; border: 1px solid #37303e; border-radius: 6px; padding: 14px 8px 12px; min-height: 125px; }
 .slider-knob, .knob { position: relative; width: 52px; height: 52px; border-radius: 50%; padding: 0; cursor: ns-resize; touch-action: none; user-select: none; }
@@ -245,7 +254,7 @@ h3 { font-weight: 500; font-size: 25px; letter-spacing: -.7px; margin: 7px 0 8px
 .preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .preview-heading .control-label { color: #a58e78; font-size: 7px; }
 .preview-label { color: #6e6179; font: 6px var(--mono); letter-spacing: 1px; }
-.exciter-preview canvas { width: 100%; height: 60px; display: block; margin: 10px 0 6px; }
+.exciter-preview canvas { width: 100%; height: 110px; display: block; margin: 12px 0 8px; }
 .preview-caption { display: flex; align-items: center; gap: 16px; color: #a38771; font: 6px var(--mono); letter-spacing: 1px; }
 .preview-caption>span { display: inline-flex; align-items: center; gap: 6px; }
 .legend-dot { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
@@ -290,6 +299,8 @@ dialog>p { font-size: 12px; line-height: 1.8; color: #b3a5bc; margin: 20px 0; }
 .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; margin: 24px 0; }
 .help-grid h3 { font-size: 13px; letter-spacing: -.1px; color: #decce6; }
 .help-grid p { font-size: 11px; line-height: 1.85; color: #a18dab; }
+.help-shortcuts { grid-column: 1 / -1; padding-top: 4px; border-top: 1px solid #44374b; }
+.shortcut-divider { color: #64516f; margin: 0 7px; }
 kbd { background: #382a43; border: 1px solid #5c456e; color: #cfb7dd; font: 10px var(--mono); padding: 1px 4px; margin: 2px 1px; border-radius: 3px; display: inline-block; }
 .help-note { border-top: 1px solid #4b3d54; padding-top: 18px; display: flex; align-items: center; gap: 8px; font-size: 10px; color: #b19abc; }
 dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; line-height: 1.7; }
@@ -308,14 +319,15 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
 @media (max-width: 760px) {
   .app-shell { padding: 0 20px; }.brand-description { padding-left: 14px; margin-left: 3px; font-size: 7px; letter-spacing: 1.2px; }.topbar-right { gap: 15px; }.music-link { font-size: 9px; }.intro { gap: 22px; }.intro-art { max-width: 39%; }.art-index,.art-source,.art-result,.art-rule { display: none; }.art-bottom { justify-content: center; }.art-top { font-size: 6px; letter-spacing: 1px; }h1 { font-size: 45px; }.intro p { font-size: 11px; }.sequencer-actions { gap: 13px; }.sequencer-hint { display: none; }
   .instrument-layout { grid-template-columns: 1fr; }.body-panel { border-right: 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 0 30px; padding: 24px; }.voice-identity { grid-column: 1; grid-row: 1; }.resonator-stage { grid-column: 1; grid-row: 2 / 5; margin-bottom: 0; margin-top: 18px; }.resonator-stage canvas { height: 165px; }.material-heading { grid-column: 2; grid-row: 1; align-self: end; margin-bottom: 0; padding-bottom: 8px; }.model-buttons { grid-column: 2; grid-row: 2; padding-top: 12px; }.model-button { min-height: 62px; }.model-description { grid-column: 2; grid-row: 3; margin-top: 11px; }.voice-identity h3 { font-size: 22px; }.voice-identity p { font-size: 9px; }
-  .topology { height: 47px; gap: 25px; font-size: 9px; }.editor-tabbar { padding: 12px 20px; }.editor-tabs { gap: 5px; }.editor-tab { padding: 10px 15px; font-size: 10px; gap: 7px; }.tab-number { font-size: 7px; }.editor-content { padding: 23px 24px; }.knob-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }.knob-grid[data-tab=resonance],.knob-grid[data-group=resonance],.knob-grid[data-tab=motion],.knob-grid[data-group=motion] { grid-template-columns: repeat(3,minmax(0,1fr)); }.knob-grid>.knob-control { min-height: 121px; }.knob-label { font-size: 7px; letter-spacing: .9px; }.slider-knob,.knob { width: 47px; height: 47px; }.slider-knob svg,.knob svg { width: 57px; height: 57px; }.knob-value { font-size: 10px; }.preview-label { font-size: 6px; }.exciter-preview canvas { height: 65px; }
+  .topology { height: 47px; gap: 25px; font-size: 9px; }.editor-tabbar { padding: 12px 20px; }.editor-tabs { gap: 5px; }.editor-tab { padding: 10px 15px; font-size: 10px; gap: 7px; }.tab-number { font-size: 7px; }.editor-content { padding: 23px 24px; }.knob-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }.knob-grid[data-tab=resonance],.knob-grid[data-group=resonance],.knob-grid[data-tab=motion],.knob-grid[data-group=motion] { grid-template-columns: repeat(3,minmax(0,1fr)); }.knob-grid>.knob-control { min-height: 121px; }.knob-label { font-size: 7px; letter-spacing: .9px; }.slider-knob,.knob { width: 47px; height: 47px; }.slider-knob svg,.knob svg { width: 57px; height: 57px; }.knob-value { font-size: 10px; }.preview-label { font-size: 6px; }
   .master-panel { gap: 23px; padding: 23px 24px; }.master-intro { min-width: 140px; }.master-intro p { font-size: 8px; }.master-knobs { gap: 24px; }.master-volume { min-width: 110px; padding-left: 23px; }.master-volume .control-label { font-size: 7px; }.footer-motto { display: none; }
 }
 @media (max-width: 600px) {
   .app-shell { padding: 0 16px; }.topbar { height: 76px; }.brand { gap: 10px; }.brand-word { font-size: 26px; }.brand-mark { transform: scale(.85); width: 29px; }.brand-description { display: none; }.topbar-right { gap: 12px; }.topbar-divider { display: none; }.music-link { font-size: 9px; }.music-link svg { width: 12px; }.intro { padding: 27px 0; gap: 10px; }.eyebrow { font-size: 7px; letter-spacing: 1.5px; margin-bottom: 12px; }h1 { font-size: 43px; letter-spacing: -2.3px; }.intro-copy { flex-shrink: 1; }.intro p { font-size: 10px; line-height: 1.8; margin-top: 12px; }.mobile-break { display: block; }.intro-art { width: 105px; min-width: 86px; max-width: 28%; opacity: .7; padding-top: 8px; }.intro-art canvas { height: 110px; margin: 6px 0; }.art-top { font-size: 5px; letter-spacing: .65px; justify-content: center; text-align: center; line-height: 1.6; }.art-bottom { font-size: 5px; letter-spacing: .6px; text-align: center; line-height: 1.6; }.transport { display: grid; grid-template-columns: 1.2fr .75fr 1fr; gap: 18px 12px; padding: 16px 15px; }.playback { gap: 5px; }.play-button { height: 41px; width: 78px; gap: 7px; font-size: 11px; }.restart { width: 26px; height: 28px; }.restart svg { width: 14px; }.tempo-control { min-width: 0; padding-left: 6px; }.tempo-control input { font-size: 23px; width: 43px; }.tempo-control>div { gap: 4px; }.tempo-control>div>span { font-size: 7px; }.control-label { font-size: 7px; letter-spacing: 1px; }.swing-control { width: auto; min-width: 0; }.swing-control .control-label { margin-bottom: 11px; }.preset-control { grid-column: 1 / 3; min-width: 0; padding-top: 14px; border-top: 1px solid var(--line); }.select-wrap select { font-size: 12px; }.file-actions { grid-column: 3; grid-row: 2; border-top: 1px solid var(--line); padding-top: 15px; justify-content: flex-end; margin-left: 0; gap: 3px; }.button.export { padding: 0 8px; height: 32px; font-size: 8px; gap: 5px; }.button.export svg { width: 12px; }.button.subtle { padding: 0; width: 24px; }.button.subtle svg { width: 13px; }.open-project { width: 24px; }.open-project svg { width: 14px; }
   .section-heading { height: 55px; padding: 0 15px; gap: 8px; }.heading-label { gap: 7px; }h2 { font-size: 8px; letter-spacing: 1.2px; }.section-number { font-size: 8px; padding: 2px 3px; }.heading-label .tag { display: none; }.sequencer-actions { gap: 11px; }.sequencer-actions .text-button { font-size: 8px; gap: 4px; }.text-button svg { width: 12px; height: 12px; }.action-divider { display: none; }.sequencer-scroll { padding: 0 15px; }.sequencer-inner { min-width: 730px; }.step-ruler,.track-row { grid-template-columns: 143px minmax(0,1fr) 55px; gap: 10px; }.track-icon,.track-info svg,.track-mini-wave { width: 26px; }.track-info,.track-name-button { gap: 7px; }.track-name { font-size: 9px; }.track-meta { font-size: 7px; }.track-index { display: none; }.track-row { height: 46px; }.step { height: 30px; }.sequencer-footer { padding: 12px 15px; gap: 8px; }.pattern-banks { gap: 8px; }.pattern-banks>.control-label { font-size: 6px; letter-spacing: .6px; }.bank-buttons { gap: 4px; }.bank-button { width: 24px; height: 25px; }.beat-indicator { gap: 8px; font-size: 8px; letter-spacing: .6px; }.time-signature { display: none; }
   .instrument { margin-top: 16px; }.instrument-heading { min-height: 55px; }.voice-actions { gap: 13px; }.voice-actions .text-button { font-size: 0; gap: 0; }.voice-actions .text-button svg { width: 14px; height: 14px; }.voice-actions .button { font-size: 9px; height: 30px; padding: 0 10px; gap: 5px; }.voice-actions .button svg { width: 12px; }.body-panel { display: block; padding: 22px 19px 19px; }.voice-identity h3 { font-size: 26px; }.voice-identity p { font-size: 10px; }.resonator-stage { margin: 20px 0; }.resonator-stage canvas { height: 188px; }.stage-bottom { font-size: 7px; }.material-heading { padding: 0; margin-bottom: 10px; }.model-buttons { padding-top: 0; gap: 7px; }.model-button { min-height: 63px; padding: 9px 11px; }.model-name { font-size: 9px; }.model-subtitle { font-size: 6px; }.model-description { margin: 12px 0 0; font-size: 9px; min-height: 0; }.topology { gap: 17px; font-size: 8px; height: 47px; }.topology-node { gap: 5px; }.editor-tabbar { padding: 10px 12px; }.editor-tabs { gap: 3px; justify-content: space-between; }.editor-tab { flex: 1; justify-content: center; padding: 9px 7px; font-size: 9px; gap: 5px; }.tab-number { font-size: 6px; }.editor-content { padding: 20px 17px; }.selectors { margin-bottom: 19px; gap: 10px; }.selector,.synthesis-selector { min-width: 115px; }.selector select { font-size: 10px; }.knob-grid,.knob-grid[data-group=exciter],.knob-grid[data-tab=resonance],.knob-grid[data-group=resonance],.knob-grid[data-tab=motion],.knob-grid[data-group=motion] { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }.knob-grid>.knob-control { padding: 13px 4px 12px; min-height: 117px; gap: 9px; }.slider-knob,.knob { width: 43px; height: 43px; }.slider-knob svg,.knob svg { width: 53px; height: 53px; }.knob-label { font-size: 6px; letter-spacing: .8px; }.knob-value { font-size: 9px; }.exciter-preview { margin-top: 19px; padding-top: 13px; }.preview-label { font-size: 5px; letter-spacing: .6px; }.preview-heading .control-label { font-size: 6px; letter-spacing: .9px; }.preview-caption { font-size: 5px; gap: 12px; }.editor-note { font-size: 7px; margin-top: 12px; }
-  .master-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 23px 18px; margin-top: 16px; padding: 21px 19px; }.master-intro { min-width: 0; }.master-intro p { font-size: 9px; line-height: 1.6; margin: 10px 0 0; }.master-knobs { gap: 23px; justify-content: flex-end; }.master-volume { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); padding: 17px 0 0; min-width: 0; width: 100%; }.master-volume .control-label { font-size: 7px; }.volume-slider { margin-top: 14px; }.footer { font-size: 6px; letter-spacing: .7px; padding: 22px 0 25px; }.footer-version { font-size: 7px; }.toast { font-size: 11px; padding: 12px 16px; width: max-content; max-width: calc(100% - 32px); }.help-grid { grid-template-columns: 1fr; gap: 9px; margin: 20px 0; }dialog { padding: 25px 22px; }.dialog-heading h2 { font-size: 26px; }dialog>p { font-size: 11px; }.help-grid p { font-size: 10px; }.help-note { font-size: 9px; line-height: 1.6; }
+  .knob-grid[data-group=exciter] { grid-template-columns: repeat(6,minmax(0,1fr)); }.knob-grid[data-group=exciter]>.knob-control { grid-column: span 3; }.knob-grid[data-group=exciter]>.knob-control:is([data-param=rebound],[data-param=reboundTime],[data-param=direct]) { grid-column: span 2; }.knob-section { font-size: 6px; margin-top: 9px; }.selector-description { font-size: 8px; }.preview-time { letter-spacing: .4px; }
+  .master-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 23px 18px; margin-top: 16px; padding: 21px 19px; }.master-intro { min-width: 0; }.master-intro p { font-size: 9px; line-height: 1.6; margin: 10px 0 0; }.master-knobs { gap: 23px; justify-content: flex-end; }.master-volume { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); padding: 17px 0 0; min-width: 0; width: 100%; }.master-volume .control-label { font-size: 7px; }.volume-slider { margin-top: 14px; }.footer { font-size: 6px; letter-spacing: .7px; padding: 22px 0 25px; }.footer-version { font-size: 7px; }.toast { font-size: 11px; padding: 12px 16px; width: max-content; max-width: calc(100% - 32px); }.help-grid { grid-template-columns: 1fr; gap: 9px; margin: 20px 0; }dialog { padding: 25px 22px; }.dialog-heading h2 { font-size: 26px; }dialog>p { font-size: 11px; }.help-grid p { font-size: 10px; }.help-note { font-size: 9px; line-height: 1.6; }.shortcut-divider { margin: 0 3px; }
 }
 @media (max-width: 360px) {
   .app-shell { padding: 0 12px; }.topbar-right { gap: 6px; }.music-link { font-size: 8px; gap: 5px; }.brand-word { font-size: 24px; }.brand { gap: 7px; }.intro { gap: 5px; }h1 { font-size: 34px; letter-spacing: -1.8px; }.intro-art { min-width: 72px; }.intro p { font-size: 9px; }.eyebrow { font-size: 6px; letter-spacing: 1.25px; }.transport { padding: 15px 12px; gap: 17px 7px; grid-template-columns: 1.15fr .65fr .9fr; }.play-button { width: 67px; font-size: 10px; }.play-button svg { width: 16px; }.restart { width: 23px; }.tempo-control input { width: 39px; font-size: 22px; }.tempo-control { padding-left: 2px; }.tempo-control>div>span { font-size: 6px; }.button.export span { font-size: 0; }.button.export { width: 29px; padding: 0; }.file-actions { gap: 6px; }.section-heading { padding: 0 12px; }.sequencer-actions { gap: 9px; }.sequencer-actions .text-button span { display: none; }.sequencer-actions .text-button { width: 18px; height: 26px; justify-content: center; }.sequencer-footer { padding-left: 12px; padding-right: 12px; }.pattern-banks { gap: 6px; }.bank-button { width: 23px; }.bank-buttons { gap: 3px; }.beat-indicator { font-size: 7px; }.body-panel { padding: 20px 16px; }.voice-identity h3 { font-size: 24px; }.voice-identity p { font-size: 9px; }.resonator-stage canvas { height: 170px; }.model-button { padding: 9px 8px; }.model-name { font-size: 8px; }.model-subtitle { font-size: 5px; }.topology { gap: 11px; font-size: 7px; }.editor-tab { font-size: 8px; gap: 4px; padding: 9px 5px; }.tab-number { font-size: 5px; }.editor-tabbar { padding-left: 9px; padding-right: 9px; }.editor-content { padding: 19px 13px; }.knob-grid { gap: 8px; }.knob-label { font-size: 5.5px; letter-spacing: .65px; }.knob-value { font-size: 8px; }.slider-knob,.knob { width: 39px; height: 39px; }.slider-knob svg,.knob svg { width: 49px; height: 49px; }.knob-grid>.knob-control { min-height: 110px; }.master-panel { padding: 20px 16px; gap: 20px 14px; }.master-knobs { gap: 20px; }.master-intro p { font-size: 8px; }
@@ -381,7 +393,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
           <aside class="body-panel">
             <div class="voice-identity"><span id="voice-index" class="selected-voice-label">VOICE 01</span><h3 id="voice-name">Membrane kick</h3><p id="voice-description">Low tension. Deep impact. A living drum skin.</p></div>
             <div class="resonator-stage"><span class="figure-label">RESONANT MODES</span><canvas id="resonator-canvas" width="800" height="460" role="img" aria-label="Resonant frequencies and relative mode strengths"></canvas><div class="stage-bottom"><span class="stage-axis">Hz <span>/</span> energy</span><span id="mode-summary">16 RESONANT MODES</span></div></div>
-            <div class="material-heading"><span class="control-label">CHOOSE YOUR BODY</span><span class="material-count">6 MODELS</span></div>
+            <div class="material-heading"><span class="control-label">CHOOSE YOUR BODY</span><span id="model-count" class="material-count">9 MODELS</span></div>
             <div id="model-buttons" class="model-buttons" role="group" aria-label="Physical resonator model"></div>
             <p id="model-description" class="model-description">A tensioned circular membrane, with modes that move like a real drumhead.</p>
           </aside>
@@ -392,7 +404,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
             <div class="editor-content">
               <div id="selectors" class="selectors"></div>
               <div id="knob-grid" class="knob-grid" role="tabpanel" aria-labelledby="tab-resonance" tabindex="0"></div>
-              <div class="exciter-preview"><div class="preview-heading"><span class="control-label">THE INITIAL IMPACT</span><span class="preview-label">EXCITATION ENVELOPE</span></div><canvas id="exciter-canvas" width="1000" height="170" role="img" aria-label="Excitation envelope preview"></canvas><div class="preview-caption"><span><span class="legend-dot mallet-dot"></span> MALLET</span><span><span class="legend-dot noise-dot"></span> NOISE</span><span class="preview-time">ENERGY → TIME</span></div></div>
+              <div class="exciter-preview"><div class="preview-heading"><span class="control-label">THE SHAPE OF A STRIKE</span><span class="preview-label">EXCITATION ENVELOPE</span></div><canvas id="exciter-canvas" width="1000" height="250" role="img" aria-label="Material contact, rebound, and noise excitation preview"></canvas><div class="preview-caption"><span><span class="legend-dot mallet-dot"></span> CONTACT</span><span><span class="legend-dot noise-dot"></span> NOISE</span><span class="preview-time">TWO TIME SCALES</span></div></div>
               <p class="editor-note">Shape the strike. Tune the material. Let it ring.</p>
             </div>
           </div>
@@ -402,11 +414,11 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
       <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>A little space around your sound.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">FROM VIBRATION<br>TO FEELING.</span></section>
     </main>
 
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">NOTHING RECORDED. EVERYTHING RESONATES.</span><span class="footer-version">TINE <span>v1.0</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">NOTHING RECORDED. EVERYTHING RESONATES.</span><span class="footer-version">TINE <span>v1.1</span></span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">WELCOME TO TINE</div><h2 id="help-title">Give sound a shape.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. The body’s resonances turn that impact into a drum, a bell, a string, or something beautifully unfamiliar.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Pattern banks A–D hold four variations.</p></div><div><h3>Find your material</h3><p>Choose one of six physical bodies. Resonator controls tune its pitch, structure, decay, damping, and strike position. Exciter controls shape the mallet and noise energy. Motion + mix adds movement and places the voice in the stereo field. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">WELCOME TO TINE</div><h2 id="help-title">Give sound a shape.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. The body’s resonances turn that impact into a drum, a bell, a string, or something beautifully unfamiliar.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Pattern banks A–D hold four variations.</p></div><div><h3>Find your body</h3><p>Choose one of nine resonators, including a bell, a singing bowl, and a tube. Tune its pitch, structure, decay, damping, and strike position. Motion + mix adds movement and places the voice in the stereo field.</p></div><div><h3>Choose your contact</h3><p>Exciter offers felt, rubber, wood, nylon, ceramic, and metal alongside the original neutral mallet. Each shapes the contact differently. Refine hardness and contact time, add surface texture, or let the mallet rebound. Noise has its own color, filter, and envelope. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div class="help-shortcuts"><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause <span class="shortcut-divider">·</span> <kbd>1</kbd>–<kbd>8</kbd> Audition <span class="shortcut-divider">·</span> <kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob <span class="shortcut-divider">·</span> <kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
   <script>
 /* TINE uses physical units throughout its voice editor and synthesis engine. */
 (function () {
@@ -424,7 +436,19 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     Object.freeze({ id: 'marimba', name: 'Marimba', description: 'A tuned wooden bar. Soft mallets reveal rounded fundamentals and bell-like overtones.', material: 'Tuned wood', color: '#a7b892' }),
     Object.freeze({ id: 'drumhead', name: 'Drumhead', description: 'A circular head under tension. Responsive toms, snares, and hand-drum tones.', material: 'Taut skin', color: '#c4a196' }),
     Object.freeze({ id: 'membrane', name: 'Membrane', description: 'A flexible resonating surface. Deep kicks, rubbery impacts, and bending low percussion.', material: 'Flexible surface', color: '#d0b095' }),
-    Object.freeze({ id: 'plate', name: 'Plate', description: 'A dense sheet of resonant metal. Shimmering cymbals, gongs, and bright inharmonic impacts.', material: 'Metal sheet', color: '#99afb6' })
+    Object.freeze({ id: 'plate', name: 'Plate', description: 'A dense sheet of resonant metal. Shimmering cymbals, gongs, and bright inharmonic impacts.', material: 'Metal sheet', color: '#99afb6' }),
+    Object.freeze({ id: 'bell', name: 'Bell', description: 'A cast shell with a low hum, a singing prime, and distinct upper partials. Clear chimes and dense, bronze-like strikes.', material: 'Cast shell', color: '#d0b081' }),
+    Object.freeze({ id: 'bowl', name: 'Bowl', description: 'A curved shell with closely paired resonances. Rounded singing tones and slowly shimmering, gong-like percussion.', material: 'Curved shell', color: '#b6accb' }),
+    Object.freeze({ id: 'tube', name: 'Tube', description: 'A closed air column with odd harmonic modes. Hollow knocks, bamboo-like percussion, and woody pitched pulses.', material: 'Air column', color: '#a8bbb0' })
+  ]);
+  const strikeMaterials = Object.freeze([
+    Object.freeze({ id: 'neutral', name: 'Neutral', description: 'The original shaped contact pulse. Hardness and contact time define the strike directly.', hint: 'Original contact response; preserves earlier TINE sounds.' }),
+    Object.freeze({ id: 'felt', name: 'Felt', description: 'A yielding, rounded contact that rolls off sharp upper frequencies.', hint: 'Soft, broad contact for warm fundamentals and gentle attacks.' }),
+    Object.freeze({ id: 'rubber', name: 'Rubber', description: 'An elastic, springy contact with a rounded attack and subtle contact ringing.', hint: 'Supple contact for rounded, bouncy percussion.' }),
+    Object.freeze({ id: 'wood', name: 'Wood', description: 'A firm contact with a dry click and restrained high-frequency energy.', hint: 'Dry, firm contact for sticks, blocks, and hollow knocks.' }),
+    Object.freeze({ id: 'nylon', name: 'Nylon', description: 'A smooth, firm tip with a clear attack and bright but rounded upper modes.', hint: 'Clean, focused contact between soft and brittle materials.' }),
+    Object.freeze({ id: 'ceramic', name: 'Ceramic', description: 'A brittle, bright contact that sends fine, high-frequency detail into the body.', hint: 'Crisp contact for glassy, brittle attacks.' }),
+    Object.freeze({ id: 'metal', name: 'Metal', description: 'A rigid, sharp contact with bright contact ringing and dense upper-frequency energy.', hint: 'Hard, bright contact for metallic edges and clear chimes.' })
   ]);
   const noiseColors = Object.freeze([
     Object.freeze({ id: 'white', name: 'White', description: 'Even broadband energy for snare wires and crisp strikes.' }),
@@ -445,8 +469,11 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     ]),
     exciter: Object.freeze([
       descriptor('mallet', 'Mallet', 0, 1, false, '%', 'Strength of the short physical strike that excites the resonator.'),
-      descriptor('hardness', 'Hardness', 0, 1, false, '%', 'Soft felt emphasizes the fundamental; hard contact excites upper modes.'),
-      descriptor('strikeTime', 'Contact time', 0.0003, 0.03, true, 's', 'Duration of the mallet contact. Short contact is sharp; longer contact softens the impact.'),
+      descriptor('hardness', 'Hardness', 0, 1, false, '%', 'Vary the firmness within the selected striking material. Softer contact favors the fundamental; harder contact excites upper modes.'),
+      descriptor('strikeTime', 'Contact time', 0.0003, 0.03, true, 's', 'Base duration of the mallet contact; the selected material shapes its width. Short contact is sharp; longer contact softens the impact.'),
+      descriptor('contactTexture', 'Contact texture', 0, 1, false, '%', 'Add material-colored friction to the contact itself. This follows the strike and stays separate from the noise envelope.'),
+      descriptor('rebound', 'Rebound', 0, 1, false, '%', 'Allow the striker to bounce into smaller repeat contacts. At zero, every trigger produces one strike.'),
+      descriptor('reboundTime', 'Bounce spacing', 0.002, 0.08, true, 's', 'Time between the first strike and its first rebound. Short spacing makes a buzz; longer spacing reveals separate bounces.'),
       descriptor('noise', 'Noise', 0, 1, false, '%', 'Amount of filtered noise exciting the resonator: brushes, wires, friction, or a rattle.'),
       descriptor('noiseAttack', 'Noise attack', 0.0005, 0.3, true, 's', 'Time for the noise exciter to rise to its peak.'),
       descriptor('noiseDecay', 'Noise decay', 0.005, 1, true, 's', 'Time for the noise excitation to fade after its attack.'),
@@ -464,15 +491,22 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   });
   const numeric = Object.freeze(Object.values(groups).flat());
   const modelIds = models.map((model) => model.id);
+  const legacyModelIds = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate'];
+  const materialIds = strikeMaterials.map((material) => material.id);
   const colorIds = noiseColors.map((color) => color.id);
-  const trackKeys = ['name', 'model', 'noiseColor', 'mute', 'solo', 'steps', ...numeric.map((parameter) => parameter.key)];
+  const newNumericKeys = ['contactTexture', 'rebound', 'reboundTime'];
+  const legacyNumeric = numeric.filter((parameter) => !newNumericKeys.includes(parameter.key));
+  const legacyTrackKeys = ['name', 'model', 'noiseColor', 'mute', 'solo', 'steps', ...legacyNumeric.map((parameter) => parameter.key)];
+  const trackKeys = ['name', 'model', 'strikeMaterial', 'noiseColor', 'mute', 'solo', 'steps', ...numeric.map((parameter) => parameter.key)];
+  const neutralContact = Object.freeze({ strikeMaterial: 'neutral', contactTexture: 0, rebound: 0, reboundTime: 0.018 });
 
   const common = Object.freeze({
     name: 'NEW VOICE', pitchHz: 220, decay: 0.55, tone: 0.5, stiffness: 0.1,
     damping: 0.35, position: 0.23, mallet: 0.8, hardness: 0.5, strikeTime: 0.002,
     noise: 0.1, noiseColor: 'pink', noiseAttack: 0.0005, noiseDecay: 0.035,
     noiseCutoff: 6000, direct: 0.1, pitchEnv: 0, pitchTime: 0.035,
-    variation: 0.035, velocityTone: 0.3, level: 0.5, pan: 0, mute: false, solo: false
+    variation: 0.035, velocityTone: 0.3, level: 0.5, pan: 0, mute: false, solo: false,
+    ...neutralContact
   });
   const voicing = Object.freeze({
     string: Object.freeze({ name: 'WIRE PLUCK', pitchHz: 220, decay: 1.25, tone: 0.52, stiffness: 0.12, damping: 0.22, position: 0.19, mallet: 0.76, hardness: 0.44, strikeTime: 0.0025, noise: 0.1, noiseDecay: 0.026, noiseCutoff: 4200, direct: 0.12, pitchTime: 0.022, variation: 0.025, velocityTone: 0.28, level: 0.5 }),
@@ -480,7 +514,10 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     marimba: Object.freeze({ name: 'FELT MARIMBA', pitchHz: 261.626, decay: 0.95, tone: 0.42, stiffness: 0.025, damping: 0.3, mallet: 0.95, hardness: 0.22, strikeTime: 0.0035, noise: 0.035, noiseColor: 'brown', noiseAttack: 0.0008, noiseDecay: 0.028, noiseCutoff: 2400, direct: 0.035, level: 0.48 }),
     drumhead: Object.freeze({ name: 'TAUT DRUMHEAD', pitchHz: 190, decay: 0.58, tone: 0.57, stiffness: 0.11, damping: 0.38, position: 0.38, mallet: 0.72, hardness: 0.57, strikeTime: 0.0015, noise: 0.38, noiseColor: 'white', noiseDecay: 0.09, noiseCutoff: 7200, direct: 0.22, pitchEnv: 3, level: 0.58 }),
     membrane: Object.freeze({ name: 'FELT KICK', pitchHz: 52, decay: 0.55, tone: 0.24, stiffness: 0.045, damping: 0.3, position: 0.15, mallet: 0.92, hardness: 0.36, strikeTime: 0.003, noise: 0.055, noiseColor: 'brown', noiseDecay: 0.026, noiseCutoff: 1800, direct: 0.16, pitchEnv: 14, level: 0.7 }),
-    plate: Object.freeze({ name: 'BRUSHED PLATE', pitchHz: 620, decay: 0.8, tone: 0.7, stiffness: 0.68, damping: 0.18, position: 0.41, mallet: 0.72, hardness: 0.8, strikeTime: 0.0008, noise: 0.45, noiseColor: 'blue', noiseDecay: 0.045, noiseCutoff: 14000, direct: 0.2, variation: 0.05, level: 0.34 })
+    plate: Object.freeze({ name: 'BRUSHED PLATE', pitchHz: 620, decay: 0.8, tone: 0.7, stiffness: 0.68, damping: 0.18, position: 0.41, mallet: 0.72, hardness: 0.8, strikeTime: 0.0008, noise: 0.45, noiseColor: 'blue', noiseDecay: 0.045, noiseCutoff: 14000, direct: 0.2, variation: 0.05, level: 0.34 }),
+    bell: Object.freeze({ name: 'CAST BELL', pitchHz: 440, decay: 1.8, tone: 0.6, stiffness: 0.06, damping: 0.19, position: 0.72, mallet: 0.78, hardness: 0.7, strikeTime: 0.0009, strikeMaterial: 'metal', contactTexture: 0.04, noise: 0.025, noiseColor: 'pink', noiseDecay: 0.018, noiseCutoff: 10500, direct: 0.03, variation: 0.018, velocityTone: 0.25, level: 0.38 }),
+    bowl: Object.freeze({ name: 'SINGING BOWL', pitchHz: 196, decay: 2.4, tone: 0.48, stiffness: 0.04, damping: 0.13, position: 0.79, mallet: 0.93, hardness: 0.34, strikeTime: 0.0025, strikeMaterial: 'felt', contactTexture: 0.03, noise: 0.018, noiseColor: 'brown', noiseDecay: 0.03, noiseCutoff: 2200, direct: 0.015, variation: 0.018, velocityTone: 0.22, level: 0.42 }),
+    tube: Object.freeze({ name: 'HOLLOW TUBE', pitchHz: 220, decay: 0.7, tone: 0.44, stiffness: 0.025, damping: 0.36, position: 0.16, mallet: 0.9, hardness: 0.57, strikeTime: 0.0018, strikeMaterial: 'wood', contactTexture: 0.07, noise: 0.06, noiseColor: 'pink', noiseDecay: 0.028, noiseCutoff: 3800, direct: 0.085, variation: 0.045, velocityTone: 0.3, level: 0.46 })
   });
 
   function defaults(model) {
@@ -500,6 +537,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
         result[parameter.key] = clamp(input[parameter.key], parameter.min, parameter.max);
       }
     }
+    if (materialIds.includes(input.strikeMaterial)) result.strikeMaterial = input.strikeMaterial;
     if (colorIds.includes(input.noiseColor)) result.noiseColor = input.noiseColor;
     for (const key of ['mute', 'solo']) if (typeof input[key] === 'boolean') result[key] = input[key];
     if (Array.isArray(input.steps)) {
@@ -516,24 +554,43 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   const validSteps = (steps) => Array.isArray(steps) && steps.length === 16
     && Array.from(steps).every((step) => Number.isInteger(step) && step >= 0 && step <= 2);
 
-  function validateTrack(track) {
-    return exactKeys(track, trackKeys) && typeof track.name === 'string' && track.name.trim().length > 0
+  function validTrackShape(track, keys, acceptedModels, parameters) {
+    return exactKeys(track, keys) && typeof track.name === 'string' && track.name.trim().length > 0
       && track.name.length <= 32 && !/[\u0000-\u001f\u007f]/.test(track.name)
-      && modelIds.includes(track.model) && colorIds.includes(track.noiseColor)
+      && acceptedModels.includes(track.model) && colorIds.includes(track.noiseColor)
       && typeof track.mute === 'boolean' && typeof track.solo === 'boolean' && validSteps(track.steps)
-      && numeric.every((parameter) => finite(track[parameter.key], parameter.min, parameter.max));
+      && parameters.every((parameter) => finite(track[parameter.key], parameter.min, parameter.max));
+  }
+
+  function validateTrack(track) {
+    return validTrackShape(track, trackKeys, modelIds, numeric) && materialIds.includes(track.strikeMaterial);
+  }
+
+  function validateLegacyTrack(track) {
+    return validTrackShape(track, legacyTrackKeys, legacyModelIds, legacyNumeric);
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || project.version !== 1) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2].includes(project.version)) return false;
     const state = project.state;
     if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks'])) return false;
     if (typeof state.name !== 'string' || !state.name.trim() || state.name.length > 80 || /[\u0000-\u001f\u007f]/.test(state.name)) return false;
     if (!finite(state.bpm, 40, 240) || !finite(state.swing, 0, 0.6) || !['drive', 'space', 'master'].every((key) => finite(state[key], 0, 1))) return false;
-    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(validateTrack)) return false;
+    const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
+    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
       && Number.isInteger(project.selected) && project.selected >= 0 && project.selected <= 7;
+  }
+
+  function upgradeProject(project) {
+    if (!validateProject(project)) throw new Error('Invalid TINE project.');
+    const upgraded = JSON.parse(JSON.stringify(project));
+    if (upgraded.version === 1) {
+      upgraded.state.tracks = upgraded.state.tracks.map((track) => Object.assign({}, track, neutralContact));
+      upgraded.version = 2;
+    }
+    return upgraded;
   }
 
   function format(parameter, value) {
@@ -550,10 +607,10 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     }
   }
 
-  window.TineModel = Object.freeze({ models, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, format });
+  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format });
 }());
 
-/* Six original kits. Every sound is an exciter driving a modeled resonator. */
+/* Eight original kits. Every sound is an exciter driving a modeled resonator. */
 (function () {
   'use strict';
 
@@ -653,6 +710,36 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
         voice('ELASTIC WIRE', 'string', '0000 0100 0000 1000', { pitchHz: 195.998, decay: 0.35, tone: 0.56, stiffness: 0.2, damping: 0.66, position: 0.13, hardness: 0.64, strikeTime: 0.0012, noise: 0.055, direct: 0.07, pitchEnv: -7, pitchTime: 0.035, variation: 0.12, level: 0.3, pan: -0.09 }),
         voice('SMALL TOM', 'drumhead', '0000 0000 0100 0011', { pitchHz: 261.626, decay: 0.26, tone: 0.54, damping: 0.63, position: 0.61, hardness: 0.62, noise: 0.09, noiseColor: 'pink', noiseDecay: 0.02, direct: 0.07, pitchEnv: 6, pitchTime: 0.025, variation: 0.16, level: 0.35, pan: 0.38 })
       ]
+    },
+    {
+      name: 'Porcelain orbit',
+      tagline: 'Ceramic chimes, felted bronze, and hollow wood turning around a quiet pulse.',
+      bpm: 112, swing: 0.09, drive: 0.06, space: 0.35,
+      tracks: [
+        voice('FELT PULSE', 'membrane', '2000 0010 2000 0010', { pitchHz: 49, decay: 0.48, tone: 0.23, damping: 0.45, hardness: 0.49, strikeTime: 0.0022, strikeMaterial: 'felt', pitchEnv: 13, pitchTime: 0.04, noise: 0.035, direct: 0.1, level: 0.74 }),
+        voice('NYLON SKIN', 'drumhead', '0000 2001 0000 2010', { pitchHz: 207.652, decay: 0.3, tone: 0.53, damping: 0.7, hardness: 0.59, strikeTime: 0.0012, strikeMaterial: 'nylon', contactTexture: 0.18, noise: 0.54, noiseColor: 'pink', noiseDecay: 0.1, direct: 0.29, pitchEnv: 3, level: 0.52 }),
+        voice('PORCELAIN TICK', 'bell', '1010 1011 1010 1001', { pitchHz: 1174.659, decay: 0.15, tone: 0.78, damping: 0.81, position: 0.62, hardness: 0.77, strikeTime: 0.0005, strikeMaterial: 'ceramic', contactTexture: 0.18, mallet: 0.6, noise: 0.015, direct: 0.09, level: 0.27, pan: -0.23 }),
+        voice('BRONZE ORBIT', 'bell', '0000 0010 0000 0010', { pitchHz: 587.33, decay: 1.16, tone: 0.55, damping: 0.24, hardness: 0.66, strikeTime: 0.001, strikeMaterial: 'metal', contactTexture: 0.08, noise: 0.01, direct: 0.025, level: 0.28, pan: 0.25 }),
+        voice('WOODEN AIR', 'tube', '0010 0001 0010 0000', { pitchHz: 293.665, decay: 0.32, tone: 0.47, damping: 0.63, hardness: 0.61, strikeTime: 0.0016, strikeMaterial: 'wood', contactTexture: 0.16, rebound: 0.24, reboundTime: 0.034, noise: 0.045, direct: 0.08, level: 0.35, pan: -0.33 }),
+        voice('FELT HALO', 'bowl', '1000 0000 0010 0000', { pitchHz: 293.665, decay: 1.75, tone: 0.42, damping: 0.22, hardness: 0.38, strikeTime: 0.0018, strikeMaterial: 'felt', contactTexture: 0.04, noise: 0.01, direct: 0.01, level: 0.35, pan: 0.32 }),
+        voice('RUBBER KEY', 'marimba', '0001 0000 0100 0001', { pitchHz: 440, decay: 0.44, tone: 0.4, hardness: 0.62, strikeTime: 0.0015, strikeMaterial: 'rubber', contactTexture: 0.04, rebound: 0.18, reboundTime: 0.026, noise: 0.015, direct: 0.025, level: 0.32, pan: -0.08 }),
+        voice('GLAZED RIM', 'bowl', '0000 0000 0100 0001', { pitchHz: 146.832, decay: 0.76, tone: 0.62, damping: 0.49, position: 0.68, hardness: 0.7, strikeTime: 0.001, strikeMaterial: 'ceramic', contactTexture: 0.13, noise: 0.035, noiseColor: 'white', direct: 0.04, pitchEnv: 1.5, level: 0.29, pan: 0.1 })
+      ]
+    },
+    {
+      name: 'Hollow rituals',
+      tagline: 'Springy sticks, breathing tubes, and slow shells in a room of moving shadows.',
+      bpm: 96, swing: 0.2, drive: 0.09, space: 0.3,
+      tracks: [
+        voice('ELASTIC FLOOR', 'membrane', '2000 0001 0020 0010', { pitchHz: 46.249, decay: 0.62, tone: 0.27, damping: 0.4, hardness: 0.51, strikeTime: 0.0028, strikeMaterial: 'rubber', contactTexture: 0.03, pitchEnv: 10, pitchTime: 0.052, noise: 0.035, direct: 0.12, level: 0.75 }),
+        voice('STICK & SKIN', 'drumhead', '0000 2000 0000 2001', { pitchHz: 164.814, decay: 0.34, tone: 0.48, damping: 0.64, position: 0.56, hardness: 0.56, strikeTime: 0.0017, strikeMaterial: 'wood', contactTexture: 0.24, rebound: 0.17, reboundTime: 0.038, noise: 0.38, noiseColor: 'pink', noiseDecay: 0.074, direct: 0.24, pitchEnv: 2, variation: 0.12, level: 0.52 }),
+        voice('BRITTLE BEADS', 'bell', '2010 1011 2010 1010', { pitchHz: 1318.51, decay: 0.105, tone: 0.72, damping: 0.9, hardness: 0.69, strikeTime: 0.0005, strikeMaterial: 'ceramic', contactTexture: 0.32, rebound: 0.33, reboundTime: 0.008, mallet: 0.42, noise: 0.025, direct: 0.13, variation: 0.15, level: 0.25, pan: -0.24 }),
+        voice('HOLLOW BREATH', 'tube', '0010 0000 0010 0001', { pitchHz: 329.628, decay: 0.53, tone: 0.39, damping: 0.42, position: 0.18, hardness: 0.5, strikeTime: 0.0018, strikeMaterial: 'nylon', contactTexture: 0.12, noise: 0.1, noiseColor: 'pink', noiseDecay: 0.046, direct: 0.08, variation: 0.08, level: 0.35, pan: 0.27 }),
+        voice('BAMBOO BOUNCE', 'tube', '0001 0000 0000 0010', { pitchHz: 493.883, decay: 0.2, tone: 0.59, damping: 0.71, hardness: 0.72, strikeTime: 0.0012, strikeMaterial: 'wood', contactTexture: 0.2, rebound: 0.59, reboundTime: 0.047, noise: 0.025, direct: 0.105, level: 0.32, pan: -0.35 }),
+        voice('LOW SINGING SHELL', 'bowl', '1000 0000 0010 0000', { pitchHz: 164.814, decay: 2.1, tone: 0.36, damping: 0.17, hardness: 0.33, strikeTime: 0.0028, strikeMaterial: 'felt', contactTexture: 0.07, noise: 0.018, direct: 0.012, variation: 0.025, level: 0.35, pan: 0.21 }),
+        voice('IRON ANSWER', 'bell', '0000 0001 0000 0100', { pitchHz: 659.255, decay: 0.82, tone: 0.66, damping: 0.37, position: 0.74, hardness: 0.73, strikeTime: 0.0007, strikeMaterial: 'metal', contactTexture: 0.11, rebound: 0.13, reboundTime: 0.021, noise: 0.015, direct: 0.035, level: 0.26, pan: -0.1 }),
+        voice('RUBBER CUP', 'bowl', '0000 0100 0000 0001', { pitchHz: 246.942, decay: 0.45, tone: 0.46, damping: 0.68, hardness: 0.64, strikeTime: 0.0016, strikeMaterial: 'rubber', contactTexture: 0.05, rebound: 0.39, reboundTime: 0.032, noise: 0.035, direct: 0.05, pitchEnv: 4, pitchTime: 0.026, variation: 0.1, level: 0.32, pan: 0.37 })
+      ]
     }
   ];
 }());
@@ -661,8 +748,19 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
 (function () {
   'use strict';
   const TAU = Math.PI * 2, LOG1000 = Math.log(1000), EPSILON = 0.000001;
-  const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate'];
+  const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate', 'bell', 'bowl', 'tube'];
   const COLORS = ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'];
+  // Contact compliance changes the force itself, before it reaches the body.
+  // Neutral is the original TINE mallet, including its exact sample shape.
+  const MATERIALS = {
+    neutral: { label: 'Neutral', durationScale: 1, exponentBase: .7, exponentSlope: 6, rippleDepth: 0, rippleCycles: 0, textureCutoff: 10000, textureBrightness: .25 },
+    felt: { label: 'Felt', durationScale: 1.9, exponentBase: .55, exponentSlope: 3.2, rippleDepth: 0, rippleCycles: 0, textureCutoff: 1500, textureBrightness: 0 },
+    rubber: { label: 'Rubber', durationScale: 1.45, exponentBase: .9, exponentSlope: 4.1, rippleDepth: .06, rippleCycles: 1, textureCutoff: 3200, textureBrightness: .1 },
+    wood: { label: 'Wood', durationScale: .8, exponentBase: 1.1, exponentSlope: 6.5, rippleDepth: .075, rippleCycles: 2.5, textureCutoff: 6500, textureBrightness: .35 },
+    nylon: { label: 'Nylon', durationScale: .6, exponentBase: .9, exponentSlope: 8.2, rippleDepth: .035, rippleCycles: 3, textureCutoff: 10500, textureBrightness: .45 },
+    ceramic: { label: 'Ceramic', durationScale: .4, exponentBase: 1.6, exponentSlope: 9.5, rippleDepth: .11, rippleCycles: 4.2, textureCutoff: 14000, textureBrightness: .7 },
+    metal: { label: 'Metal', durationScale: .28, exponentBase: 1.9, exponentSlope: 11, rippleDepth: .14, rippleCycles: 5.4, textureCutoff: 16000, textureBrightness: .85 }
+  };
   const clamp = (value, min, max) => Math.max(min, Math.min(max, Number.isFinite(+value) ? +value : min));
   function randomGenerator(seed) {
     let value = seed >>> 0;
@@ -671,9 +769,9 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   function readTrack(input) {
     if (window.TineModel && typeof window.TineModel.normalizeTrack === 'function') return window.TineModel.normalizeTrack(input);
     const track = input || {};
-    const defaults = { pitchHz: 220, decay: .55, tone: .5, stiffness: .1, damping: .35, position: .23, mallet: .8, hardness: .5, strikeTime: .002, noise: .1, noiseAttack: .0005, noiseDecay: .035, noiseCutoff: 6000, direct: .1, pitchEnv: 0, pitchTime: .035, variation: .035, velocityTone: .3, level: .5, pan: 0 };
-    const ranges = { pitchHz: [20, 2000], decay: [.04, 4], position: [.02, .98], strikeTime: [.0003, .03], noiseAttack: [.0005, .3], noiseDecay: [.005, 1], noiseCutoff: [100, 16000], pitchEnv: [-24, 24], pitchTime: [.002, .5], pan: [-1, 1] };
-    const result = { model: MODELS.includes(track.model) ? track.model : 'membrane', noiseColor: COLORS.includes(track.noiseColor) ? track.noiseColor : 'pink' };
+    const defaults = { pitchHz: 220, decay: .55, tone: .5, stiffness: .1, damping: .35, position: .23, mallet: .8, hardness: .5, strikeTime: .002, contactTexture: 0, rebound: 0, reboundTime: .018, noise: .1, noiseAttack: .0005, noiseDecay: .035, noiseCutoff: 6000, direct: .1, pitchEnv: 0, pitchTime: .035, variation: .035, velocityTone: .3, level: .5, pan: 0 };
+    const ranges = { pitchHz: [20, 2000], decay: [.04, 4], position: [.02, .98], strikeTime: [.0003, .03], reboundTime: [.002, .08], noiseAttack: [.0005, .3], noiseDecay: [.005, 1], noiseCutoff: [100, 16000], pitchEnv: [-24, 24], pitchTime: [.002, .5], pan: [-1, 1] };
+    const result = { model: MODELS.includes(track.model) ? track.model : 'membrane', noiseColor: COLORS.includes(track.noiseColor) ? track.noiseColor : 'pink', strikeMaterial: Object.prototype.hasOwnProperty.call(MATERIALS, track.strikeMaterial) ? track.strikeMaterial : 'neutral' };
     Object.keys(defaults).forEach(key => { const range = ranges[key] || [0, 1]; const raw = key === 'decay' && track.decay === undefined ? track.decayT60 : track[key]; result[key] = clamp(raw === undefined ? defaults[key] : raw, range[0], range[1]); });
     return result;
   }
@@ -691,6 +789,12 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   const rectangular = [[1,1], [1,2], [2,2], [1,3], [2,3], [1,4], [3,3], [2,4], [1,5], [3,4], [2,5], [4,4], [1,6], [3,5], [2,6], [4,5]];
   const beam = [1, 2.756, 5.404, 8.933, 13.344, 18.638, 24.813, 31.871, 39.812, 48.635, 58.340, 68.928, 80.398, 92.750, 105.985, 120.102];
   const marimba = [1, 4.01, 10.02, 17.96, 28.05, 40.02, 54.16, 70.21, 88.36, 108.6, 131, 155.5, 182, 210.6, 241, 273.9];
+  // Cast bells have a hum, prime, minor tierce, quint, and nominal; the higher
+  // partials are shell bending modes rather than a harmonic oscillator bank.
+  const bell = [1, 2, 2.378, 2.997, 4, 5.18, 5.8, 6.75, 8, 9.3, 10.7, 12, 13.65, 15.1, 17, 19.2];
+  // A curved bowl supports near-degenerate pairs. Their small frequency
+  // separation produces natural beating without an added modulation effect.
+  const bowl = [1, 1.018, 2.71, 2.756, 5.14, 5.238, 8.36, 8.535, 12.36, 12.58, 17.13, 17.5, 22.67, 23.1, 29, 29.61];
   function inspectModes(data, sampleRate = 44100) {
     const t = readTrack(data), result = [];
     const sr = clamp(sampleRate, 8000, 192000), limit = sr * .43;
@@ -705,6 +809,20 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
         const [order, root] = circular[index]; ratio = root / circular[0][1];
         ratio *= Math.sqrt((1 + t.stiffness * .085 * ratio * ratio) / (1 + t.stiffness * .085));
         shape = bessel(order, root * t.position) * (order ? 2.1 : 1);
+      } else if (t.model === 'bell') {
+        ratio = bell[index] * (1 + t.stiffness * .024 * Math.pow(bell[index] - 1, .72));
+        const order = 2 + Math.floor(index / 2);
+        shape = (.6 + .4 * Math.sin(Math.PI * t.position / 2)) * Math.cos(order * Math.PI * t.position + (index % 2) * .8);
+        if (index === 0) shape = .68 + .32 * Math.sin(Math.PI * t.position / 2);
+      } else if (t.model === 'bowl') {
+        ratio = bowl[index] * (1 + t.stiffness * .014 * Math.pow(bowl[index] - 1, .72));
+        const order = 2 + Math.floor(index / 2), angle = TAU * t.position;
+        shape = index % 2 ? Math.sin(order * angle) : Math.cos(order * angle);
+      } else if (t.model === 'tube') {
+        const n = index * 2 + 1;
+        ratio = n * Math.sqrt((1 + .0009 * t.stiffness * n * n) / (1 + .0009 * t.stiffness));
+        // Pressure antinode at the closed end, node at the open end.
+        shape = Math.cos(Math.PI * n * t.position / 2);
       } else {
         const [m, n] = rectangular[index], squared = (m * m + n * n) / 2;
         ratio = t.model === 'plate' ? squared : Math.sqrt(squared);
@@ -715,7 +833,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
       const frequency = t.pitchHz * ratio;
       const startFrequency = frequency * Math.pow(2, t.pitchEnv / 12);
       if (frequency > limit || startFrequency > limit) continue;
-      const materialLoss = { string: .016, beam: .12, marimba: .17, drumhead: .07, membrane: .065, plate: .028 }[t.model];
+      const materialLoss = { string: .016, beam: .12, marimba: .17, drumhead: .07, membrane: .065, plate: .028, bell: .026, bowl: .019, tube: .11 }[t.model];
       const t60 = Math.max(.015, t.decay / (1 + (materialLoss + t.damping * 1.3) * Math.pow(ratio - 1, .8)));
       // RBJ bandpass pole radius gives this exact digital T60. The usual
       // Q=pi*f*T60/log(1000) approximation over-rings at high frequencies.
@@ -728,14 +846,45 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     result.forEach(mode => { mode.weight /= total; mode.gain = mode.weight; });
     return result;
   }
-  function makeMallet(context, t) {
-    const count = Math.max(3, Math.ceil(t.strikeTime * context.sampleRate));
+  function inspectExciter(data) {
+    const t = readTrack(data), id = Object.prototype.hasOwnProperty.call(MATERIALS, t.strikeMaterial) ? t.strikeMaterial : 'neutral', material = MATERIALS[id];
+    const contactDuration = t.strikeTime * material.durationScale, contacts = [{ time: 0, duration: contactDuration, gain: 1 }];
+    if (t.rebound > 0) {
+      const coefficient = .72 * t.rebound, spacings = [1, 2.12, 3.36], shortening = [.86, .75, .66];
+      spacings.forEach((spacing, index) => contacts.push({ time: spacing * t.reboundTime, duration: contactDuration * shortening[index], gain: Math.pow(coefficient, index + 1) }));
+      // Constant contact energy prevents rebound becoming a hidden volume knob.
+      const scale = 1 / Math.sqrt(contacts.reduce((sum, contact) => sum + contact.gain * contact.gain, 0));
+      contacts.forEach(contact => { contact.gain *= scale; });
+    }
+    return { material: { id, label: material.label }, duration: Math.max(...contacts.map(contact => contact.time + contact.duration)), contactDuration, contacts, hardness: t.hardness, pulseExponent: material.exponentBase + t.hardness * material.exponentSlope, rippleDepth: material.rippleDepth, rippleCycles: material.rippleCycles, contactTexture: t.contactTexture, rebound: t.rebound, reboundTime: t.reboundTime };
+  }
+  function makeMallet(context, t, description, contact, random) {
+    const count = Math.max(3, Math.ceil(contact.duration * context.sampleRate));
     const buffer = context.createBuffer(1, count, context.sampleRate), data = buffer.getChannelData(0);
     let sum = 0;
-    for (let i = 0; i < count; i++) { data[i] = Math.pow(Math.max(0, Math.sin(Math.PI * i / (count - 1))), .7 + t.hardness * 6); sum += data[i]; }
+    for (let i = 0; i < count; i++) {
+      const phase = i / (count - 1);
+      data[i] = Math.pow(Math.max(0, Math.sin(Math.PI * i / (count - 1))), description.pulseExponent) * (1 + description.rippleDepth * Math.cos(TAU * description.rippleCycles * phase)); sum += data[i];
+    }
     // Discrete area of one: a longer contact physically removes high-mode
     // energy without adding energy simply because there are more samples.
     for (let i = 0; i < count; i++) data[i] /= sum || 1;
+    if (t.contactTexture > 0) {
+      // Microcontacts are a separate, very short roughness force. Color follows
+      // the striking material, independently of the sustained noise exciter.
+      const material = MATERIALS[description.material.id], texture = new Float32Array(count), coefficient = 1 - Math.exp(-TAU * Math.min(material.textureCutoff, context.sampleRate * .43) / context.sampleRate);
+      let low = 0, previous = 0, area = 0, energy = 0, pulseEnergy = 0;
+      for (let i = 0; i < count; i++) {
+        const white = random() * 2 - 1; low += coefficient * (white - low);
+        const color = low * (1 - material.textureBrightness) + (white - previous) * material.textureBrightness * .7; previous = white;
+        texture[i] = color * Math.sqrt(Math.max(0, data[i])); area += texture[i]; pulseEnergy += data[i] * data[i];
+      }
+      // Zero area retains the same macroscopic contact impulse; RMS scaling
+      // bounds the added energy even at the hardest, shortest contact setting.
+      for (let i = 0; i < count; i++) { texture[i] -= area * data[i]; energy += texture[i] * texture[i]; }
+      const scale = t.contactTexture * .8 * Math.sqrt(pulseEnergy / Math.max(1e-12, energy));
+      for (let i = 0; i < count; i++) data[i] += texture[i] * scale;
+    }
     return { buffer, directScale: Math.min(12, Math.sqrt(count)) * .72 };
   }
   function makeNoise(context, t, random) {
@@ -810,8 +959,8 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     if (active.filter(voice => !voice.stolen).length >= 48) { fadeVoice(active.find(voice => !voice.stolen), now); environment.stolen++; }
     if (t.variation) { t.pitchHz *= Math.pow(2, (random() * 2 - 1) * t.variation * .4 / 12); t.position = clamp(t.position + (random() * 2 - 1) * t.variation * .045, .02, .98); t.decay = clamp(t.decay * (1 + (random() * 2 - 1) * t.variation * .08), .04, 4); }
     t.tone = clamp(t.tone + (accent ? .24 : -.025) * t.velocityTone, 0, 1); t.hardness = clamp(t.hardness + (accent ? .22 : -.025) * t.velocityTone, 0, 1); t.noiseCutoff = clamp(t.noiseCutoff * Math.pow(2, (accent ? .7 : 0) * t.velocityTone), 100, 16000);
-    const modes = inspectModes(t, context.sampleRate);
-    const excitationDuration = Math.max(t.mallet > 0 ? t.strikeTime : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0);
+    const modes = inspectModes(t, context.sampleRate), exciter = inspectExciter(t);
+    const excitationDuration = Math.max(t.mallet > 0 ? exciter.duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0);
     const longest = Math.max(t.decay, ...modes.map(mode => mode.t60));
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
@@ -821,13 +970,13 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
     let pending = 0;
-    const source = (buffer, amount, directScale) => {
+    const source = (buffer, amount, directScale, offset = 0) => {
       const node = add(context.createBufferSource()), level = add(context.createGain()); node.buffer = buffer; level.gain.value = amount; node.connect(level); level.connect(force);
       if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(bus); }
       // Excitation ends naturally while the resonator lifetime clock keeps
       // the filter state alive. Offline nodes stay connected before rendering.
       node.loop = false; node.onended = () => { pending--; if (!pending && context.currentTime >= voice.stopTime - .005) clean(); };
-      node.start(now); node.stop(now + duration); voice.sources.push(node); pending++;
+      node.start(now + offset); node.stop(now + duration); voice.sources.push(node); pending++;
     };
     modes.forEach(mode => {
       const filter = add(context.createBiquadFilter()), gain = add(context.createGain()); filter.type = 'bandpass';
@@ -836,12 +985,13 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
       const radiusTerm = 2 * Math.tanh(LOG1000 / (context.sampleRate * mode.t60));
       const firstQ = Math.sin(TAU * firstFrequency / context.sampleRate) / radiusTerm;
       filter.Q.setValueAtTime(Math.max(.05, firstQ), now); filter.Q.exponentialRampToValueAtTime(Math.max(.05, mode.q), now + t.pitchTime);
-      gain.gain.value = mode.weight * .74 / radiusTerm;
+      const bodyGain = { bell: .94, bowl: .92, tube: 1.08 }[t.model] || 1;
+      gain.gain.value = mode.weight * .74 / radiusTerm * bodyGain;
       // Compensation precedes the filter: browsers otherwise prune the tiny
       // unamplified filter tail while it is still audible after compensation.
       force.connect(gain); gain.connect(filter); filter.connect(bus);
     });
-    if (t.mallet > 0) { const mallet = makeMallet(context, t); source(mallet.buffer, t.mallet, mallet.directScale); }
+    if (t.mallet > 0) { exciter.contacts.forEach(contact => { const mallet = makeMallet(context, t, exciter, contact, random); source(mallet.buffer, t.mallet * contact.gain, mallet.directScale, contact.time); }); }
     if (t.noise > 0) { const noise = makeNoise(context, t, random); source(noise.buffer, t.noise, noise.directScale); }
     // BufferSource ends at its short force duration. A tiny DC clock owns
     // resonator cleanup and preserves the full natural ringing tail.
@@ -866,6 +1016,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   class TineEngine {
     constructor() { this.context = null; this.graph = null; this.environment = null; this.running = false; this.state = null; this.onStep = null; this.currentStep = 0; this.nextNoteTime = 0; this.timer = null; this.worker = null; this.displayTimers = new Set(); this.generation = 0; this.values = { master: .8, drive: 0, space: .15 }; this._initPromise = null; this._disposingPromise = null; }
     static inspectModes(track, sampleRate) { return inspectModes(track, sampleRate); }
+    static inspectExciter(track) { return inspectExciter(track); }
     async init() {
       if (this._disposingPromise) await this._disposingPromise;
       if (this._initPromise) await this._initPromise;
@@ -896,7 +1047,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     async exportWav(state) {
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, duration = 16 * 60 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
-      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? t.strikeTime : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
+      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
       const tail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
       let time = .015; for (let i = 0; i < 64; i++) { const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
@@ -935,18 +1086,21 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
     banks[bank] = state.tracks.map((track) => [...track.steps]);
-    return { app: 'TINE', version: 1, state: clone(state), banks: clone(banks), bank, selected };
+    return { app: 'TINE', version: 2, state: clone(state), banks: clone(banks), bank, selected };
   }
   function validateProject(data) {
-    if (!model.validateProject(data)) throw new Error('Please choose a valid TINE project. Its sound and pattern settings must be complete.');
-    return data;
+    try { return model.upgradeProject(data); }
+    catch (_) { throw new Error('Please choose a valid TINE project. Its sound and pattern settings must be complete.'); }
   }
   function restore(data) {
     const valid = validateProject(data);
     state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
     state.tracks = state.tracks.map((track, index) => { const next = model.normalizeTrack(track); next.steps = [...banks[bank][index]]; return next; });
   }
-  try { const saved = localStorage.getItem(storageKey); if (saved) restore(JSON.parse(saved)); } catch (_) { /* A private or offline browser can play without storage. */ }
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) { restore(JSON.parse(saved)); localStorage.setItem(storageKey, JSON.stringify(project())); }
+  } catch (_) { /* A private or offline browser can play without storage. */ }
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 240);
@@ -1029,7 +1183,10 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
       plate: 'M4 9l15-6 12 12-15 10zM7 10l19 10M15 5l-4 18',
       string: 'M3 15h6q4-20 8 0t8 0h6',
       beam: 'M4 8h26v14H4zM8 8v14M26 8v14M9 15q8-10 16 0',
-      marimba: 'M4 7h7v19H4zM14 5h7v19h-7zM24 3h7v19h-7z'
+      marimba: 'M4 7h7v19H4zM14 5h7v19h-7zM24 3h7v19h-7z',
+      bell: 'M6 23c5-4 4-7 5-12 1-9 11-9 12 0 1 5 0 8 5 12zM6 23c7 4 15 4 22 0M15 27h4M17 2v4',
+      bowl: 'M4 12c0-6 26-6 26 0M4 12c2 18 24 18 26 0M4 12c0 6 26 6 26 0M11 7l-4-4',
+      tube: 'M8 6c0-4 18-4 18 0v18c0 4-18 4-18 0zM8 6c0 4 18 4 18 0M8 24c0-4 18-4 18 0M12 10v10M22 10v10'
     };
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 34 30'); svg.setAttribute('aria-hidden', 'true');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', paths[id] || paths.membrane); path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '1.3'); svg.append(path); return svg;
@@ -1084,7 +1241,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   }
   function knob(descriptor, initial, change, prefix = '') {
     const key = descriptor.key || descriptor.id, label = descriptor.label;
-    const tile = document.createElement('div'); tile.className = 'knob-control'; tile.title = descriptor.hint || label;
+    const tile = document.createElement('div'); tile.className = 'knob-control'; tile.dataset.param = key; tile.title = descriptor.hint || label;
     const control = document.createElement('button'); control.type = 'button'; control.className = 'slider-knob'; control.setAttribute('role', 'slider'); control.setAttribute('aria-label', label); control.setAttribute('aria-valuemin', descriptor.min); control.setAttribute('aria-valuemax', descriptor.max); control.dataset.param = key; control.dataset.focusKey = prefix + 'param-' + key;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 56 56'); svg.setAttribute('aria-hidden', 'true');
     ['knob-track', 'knob-progress'].forEach((className) => { const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('class', className); circle.setAttribute('cx', '28'); circle.setAttribute('cy', '28'); circle.setAttribute('r', '23'); svg.append(circle); });
@@ -1120,16 +1277,43 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     document.querySelectorAll('button[data-tab]').forEach((button) => { const active = button.dataset.tab === tab; button.classList.toggle('active', active); button.setAttribute('aria-selected', active); button.tabIndex = active ? 0 : -1; });
     $('knob-grid').setAttribute('aria-labelledby', 'tab-' + tab); $('knob-grid').dataset.group = tab; $('knob-grid').dataset.tab = tab;
     const note = document.querySelector('.editor-note');
-    if (note) note.textContent = ({ resonance: 'Strike position changes which modes vibrate. Damping shortens their upper harmonics.', exciter: 'Mallet and filtered noise excite the body. Direct exciter adds the unresonated attack.', motion: 'Each accent is louder. Accent color brightens it; variation gives each strike small differences.' })[tab];
+    if (note) note.textContent = ({ resonance: 'Strike position changes which modes vibrate. Damping shortens their upper harmonics.', exciter: 'Striking material shapes the contact. Texture adds surface detail; rebound creates diminishing repeat strikes.', motion: 'Each accent is louder. Accent color brightens it; variation gives each strike small differences.' })[tab];
     $('knob-grid').replaceChildren();
-    model.groups[tab].forEach((descriptor) => { const key = descriptor.key || descriptor.id; $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; drawVoice(); refreshTrackMeta(); })); });
+    const addKnob = (descriptor) => {
+      const key = descriptor.key || descriptor.id;
+      $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; drawVoice(); refreshTrackMeta(); }));
+    };
+    if (tab === 'exciter') {
+      [
+        ['Contact', ['mallet', 'hardness', 'strikeTime', 'contactTexture']],
+        ['Noise', ['noise', 'noiseAttack', 'noiseDecay', 'noiseCutoff']],
+        ['Rebound & mix', ['rebound', 'reboundTime', 'direct']]
+      ].forEach(([label, keys]) => {
+        const heading = document.createElement('div'); heading.className = 'knob-section'; heading.setAttribute('role', 'heading'); heading.setAttribute('aria-level', '3'); heading.textContent = label;
+        $('knob-grid').append(heading);
+        keys.forEach((key) => { const descriptor = model.groups.exciter.find((item) => (item.key || item.id) === key); if (descriptor) addKnob(descriptor); });
+      });
+    } else model.groups[tab].forEach(addKnob);
     $('selectors').replaceChildren();
     if (tab === 'exciter') {
-      const wrapper = document.createElement('div'); wrapper.className = 'selector synthesis-selector';
+      const materialWrapper = document.createElement('div'); materialWrapper.className = 'selector synthesis-selector material-selector';
+      const materialLabel = document.createElement('label'); materialLabel.htmlFor = 'strike-material'; materialLabel.textContent = 'Striking material';
+      const materialSelect = document.createElement('select'); materialSelect.id = 'strike-material'; materialSelect.dataset.focusKey = 'strike-material'; materialSelect.setAttribute('aria-describedby', 'strike-material-description');
+      const materialDescription = document.createElement('p'); materialDescription.className = 'selector-description'; materialDescription.id = 'strike-material-description';
+      const describeMaterial = () => {
+        const selectedMaterial = model.strikeMaterials.find((item) => item.id === track.strikeMaterial) || model.strikeMaterials[0];
+        materialDescription.textContent = selectedMaterial.description || selectedMaterial.hint;
+        materialSelect.title = selectedMaterial.hint || selectedMaterial.description || selectedMaterial.name;
+      };
+      model.strikeMaterials.forEach((material) => { const option = document.createElement('option'); option.value = material.id; option.textContent = material.name; option.title = material.description || material.hint || material.name; materialSelect.append(option); });
+      materialSelect.value = track.strikeMaterial;
+      materialSelect.addEventListener('change', () => { remember(); track.strikeMaterial = materialSelect.value; describeMaterial(); drawVoice(); persist(); if (!playing) audition(track); });
+      materialWrapper.append(materialLabel, materialSelect); $('selectors').append(materialWrapper);
+      const wrapper = document.createElement('div'); wrapper.className = 'selector synthesis-selector noise-selector';
       const label = document.createElement('label'); label.htmlFor = 'noise-color'; label.textContent = 'Noise color';
       const select = document.createElement('select'); select.id = 'noise-color'; select.dataset.focusKey = 'noise-color'; select.setAttribute('aria-label', 'Noise color');
       ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'].forEach((color) => { const option = document.createElement('option'); option.value = color; option.textContent = color.charAt(0).toUpperCase() + color.slice(1); select.append(option); }); select.value = track.noiseColor;
-      select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper);
+      select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper, materialDescription); describeMaterial();
     }
     drawVoice(); restoreFocus(focus);
   }
@@ -1150,13 +1334,15 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   }
   function mutateVoice() {
     remember(); const track = state.tracks[selected];
-    ['tone', 'stiffness', 'damping', 'position', 'mallet', 'hardness', 'noise', 'variation', 'velocityTone'].forEach((key) => {
+    ['tone', 'stiffness', 'damping', 'position', 'mallet', 'hardness', 'noise', 'variation', 'velocityTone', 'contactTexture', 'rebound'].forEach((key) => {
       const min = key === 'position' ? .02 : 0, max = key === 'position' ? .98 : 1;
-      track[key] = clamp(track[key] + (Math.random() - .5) * (key === 'noise' ? .24 : .35), min, max);
+      const amount = key === 'contactTexture' || key === 'rebound' ? .16 : key === 'noise' ? .24 : .35;
+      track[key] = clamp(track[key] + (Math.random() - .5) * amount, min, max);
     });
     track.pitchHz = clamp(track.pitchHz * 2 ** ((Math.random() - .5) * .5), 20, 2000);
     track.decay = clamp(track.decay * (.75 + Math.random() * .5), .04, 4);
     track.pitchEnv = clamp(track.pitchEnv + (Math.random() - .5) * 6, -24, 24);
+    track.reboundTime = clamp(track.reboundTime * (.85 + Math.random() * .3), .002, .08);
     renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Same voice. A new material character.');
   }
   function randomPattern() {
@@ -1196,6 +1382,13 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     } catch (_) { /* The diagram remains available before the audio context starts. */ }
     return Array.from({ length: 12 }, (_, index) => ({ frequency: track.pitchHz * (index + 1) ** (track.model === 'plate' ? 1.3 : track.model === 'beam' ? 1.5 : 1), gain: Math.exp(-index * (.14 + track.damping * .3)), decay: track.decay }));
   }
+  function exciterFor(track) {
+    try {
+      const inspected = window.TineEngine.inspectExciter(track);
+      if (inspected && Array.isArray(inspected.contacts)) return inspected;
+    } catch (_) { /* The diagram can draw before audio starts. */ }
+    return { material: { id: track.strikeMaterial, label: track.strikeMaterial }, duration: track.strikeTime, contactDuration: track.strikeTime, contacts: [{ time: 0, duration: track.strikeTime, gain: 1 }], pulseExponent: .7 + track.hardness * 6, rippleDepth: 0, rippleCycles: 0 };
+  }
   function drawVoice() {
     const track = state.tracks[selected], modes = modesFor(track), graph = canvasContext('resonator-canvas');
     if (graph) {
@@ -1214,16 +1407,37 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
     $('mode-summary').textContent = modes.length + ' MODES · ' + Math.round(track.pitchHz) + ' Hz · T60 ' + track.decay.toFixed(2) + ' s';
     const excitation = canvasContext('exciter-canvas');
     if (excitation) {
-      const { ctx, width: w, height: h } = excitation, duration = Math.max(.06, track.noiseAttack + track.noiseDecay, track.strikeTime * 8), mid = h * .6;
-      ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, mid); ctx.lineTo(w - 8, mid); ctx.stroke();
-      ctx.strokeStyle = '#9daead'; ctx.lineWidth = 1.5; ctx.beginPath();
+      const { ctx, width: w, height: h } = excitation, exciter = exciterFor(track);
+      const contacts = exciter.contacts.filter((contact) => contact.duration > 0 && contact.gain > 0);
+      const contactDuration = Math.max(.003, exciter.duration * 1.13), noiseDuration = Math.max(.03, track.noiseAttack + track.noiseDecay);
+      const contactBaseline = h * .46, noiseBaseline = h - 5, amplitude = h * .27;
+      const axis = (baseline) => { ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, baseline); ctx.lineTo(w - 8, baseline); ctx.stroke(); };
+      axis(contactBaseline); axis(noiseBaseline);
+      const milliseconds = (duration) => (duration * 1000 < 10 ? (duration * 1000).toFixed(1) : Math.round(duration * 1000)) + ' ms';
+      ctx.font = '8px monospace'; ctx.fillStyle = colors[selected]; ctx.fillText('CONTACT', 9, 9);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(contactDuration), w - 9, 9); ctx.textAlign = 'left';
+      ctx.fillStyle = '#9daead'; ctx.fillText('NOISE', 9, h * .55);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(noiseDuration), w - 9, h * .55); ctx.textAlign = 'left';
+      const strikeAt = (time) => contacts.reduce((sum, contact) => {
+        const phase = (time - contact.time) / contact.duration;
+        if (phase <= 0 || phase >= 1) return sum;
+        const ripple = 1 + (exciter.rippleDepth || 0) * Math.cos(Math.PI * 2 * (exciter.rippleCycles || 0) * phase);
+        return sum + Math.max(0, Math.sin(Math.PI * phase)) ** exciter.pulseExponent * ripple * contact.gain;
+      }, 0);
+      // Sample every contact independently so even sub-millisecond impacts stay visible.
+      const contactTimes = [0, contactDuration];
+      contacts.forEach((contact) => { for (let point = 0; point <= 72; point++) contactTimes.push(contact.time + contact.duration * point / 72); });
+      contactTimes.sort((a, b) => a - b);
+      const peak = Math.max(1, ...contactTimes.map(strikeAt));
+      ctx.strokeStyle = colors[selected]; ctx.lineWidth = 1.5; ctx.beginPath();
+      contactTimes.forEach((time, index) => { const x = 8 + time / contactDuration * (w - 16), y = contactBaseline - strikeAt(time) / peak * track.mallet * amplitude; if (!index) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke();
+      ctx.strokeStyle = '#9daead'; ctx.beginPath();
       for (let x = 8; x <= w - 8; x++) {
-        const time = (x - 8) / (w - 16) * duration, noise = time < track.noiseAttack ? time / track.noiseAttack : Math.exp(-6.9 * (time - track.noiseAttack) / track.noiseDecay);
-        const y = mid - Math.max(0, noise) * track.noise * h * .42; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const time = (x - 8) / (w - 16) * noiseDuration;
+        const noise = time < track.noiseAttack ? time / track.noiseAttack : Math.exp(-6.9 * (time - track.noiseAttack) / track.noiseDecay);
+        const y = noiseBaseline - Math.max(0, noise) * track.noise * amplitude; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       } ctx.stroke();
-      ctx.strokeStyle = colors[selected]; ctx.beginPath();
-      for (let x = 8; x <= w - 8; x++) { const time = (x - 8) / (w - 16) * duration, strike = time <= track.strikeTime ? Math.sin(Math.PI * time / track.strikeTime) : 0; const y = mid - strike * track.mallet * h * .5; if (x === 8) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
-      ctx.fillStyle = '#918a83'; ctx.font = '9px monospace'; ctx.fillText('STRIKE', 9, h - 7); ctx.fillStyle = '#9daead'; ctx.fillText('NOISE', 65, h - 7); ctx.fillStyle = '#918a83'; ctx.textAlign = 'right'; ctx.fillText(Math.round(duration * 1000) + ' ms', w - 9, h - 7); ctx.textAlign = 'left';
+      $('exciter-canvas').setAttribute('aria-label', (exciter.material.label || track.strikeMaterial) + ' contact envelope, ' + contacts.length + ' impact' + (contacts.length === 1 ? '' : 's') + ', and ' + track.noiseColor + ' noise envelope. Contact scale ' + milliseconds(contactDuration) + '; noise scale ' + milliseconds(noiseDuration) + '.');
     }
   }
   let heroTime = 0, lastFrame = 0;
@@ -1257,13 +1471,14 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #80708a; lin
   model.models.forEach((info) => {
     const button = document.createElement('button'); button.className = 'model-button'; button.dataset.model = info.id; button.dataset.focusKey = 'model-' + info.id; button.setAttribute('aria-label', 'Use ' + info.name + ' model');
     const name = document.createElement('span'); name.className = 'model-name'; name.textContent = info.name;
-    const subtitle = document.createElement('span'); subtitle.className = 'model-subtitle'; subtitle.textContent = ({ membrane: 'Flexible surface', drumhead: 'Skin & drums', plate: 'Metal & cymbals', string: 'Plucks & wires', beam: 'Wood & bars', marimba: 'Tuned wood' })[info.id] || 'Resonant material'; button.append(glyph(info.id), name, subtitle);
+    const subtitle = document.createElement('span'); subtitle.className = 'model-subtitle'; subtitle.textContent = ({ membrane: 'Flexible surface', drumhead: 'Skin & drums', plate: 'Metal & cymbals', string: 'Plucks & wires', beam: 'Wood & bars', marimba: 'Tuned wood', bell: 'Cast & metallic', bowl: 'Singing vessel', tube: 'Hollow column' })[info.id] || 'Resonant material'; button.append(glyph(info.id), name, subtitle);
     button.addEventListener('click', () => {
       const previous = state.tracks[selected]; if (previous.model === info.id) return; remember();
       previous.model = info.id;
       renderRows(); renderVoice(); persist(); if (!playing) audition();
     }); $('model-buttons').append(button);
   });
+  if ($('model-count')) $('model-count').textContent = model.models.length + ' MODELS';
   document.querySelectorAll('button[data-tab]').forEach((button, index, buttons) => {
     button.id = 'tab-' + button.dataset.tab;
     button.addEventListener('click', () => { tab = button.dataset.tab; renderVoice(); });
