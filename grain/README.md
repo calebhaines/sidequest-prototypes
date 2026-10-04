@@ -1,0 +1,32 @@
+# GRAIN.
+
+A self-contained, noise-powered drum machine with an analog-inspired dark interface.
+
+**Double-click `index.html` to open it in a modern browser, then press Play.** It works offline. No installation, server, account, external fonts, libraries, or samples are needed. All sound is synthesized in the browser.
+
+- Eight individually editable voices and a 16-step sequencer.
+- Twelve sources: white, pink, brown, blue, violet, grey, velvet, crackle, metallic, digital, dust, and radio noise.
+- Six curated grooves, four pattern banks, swing, accents, mute, solo, randomization, and undo.
+- Tone, decay, pitch, and level controls for each voice. Master saturation, reverb, and volume.
+- Automatic browser saving, downloadable project files, and project reopening.
+- Stereo 44.1 kHz / 16-bit WAV export: four bars plus a natural effect tail.
+
+Click a step to toggle it. Shift + click adds an accent; on touchscreens, press and hold. Select a voice to shape it in the Voice Lab. Drag a knob vertically, or focus it and use arrow keys. Hold Shift for fine adjustments. Press Space to play or pause, 1–8 to audition voices, and Ctrl / Cmd + Z to undo. The question-mark button has the full guide.
+
+The deliverable is `index.html`; all of its assets are embedded. The other root files are editable sources. To rebuild after editing, run `python build.py`. It embeds the locally available font files when present and falls back to system sans-serif otherwise.
+
+Browser verification covers playback, live tempo, step editing and accents, mute and solo, noise selection, keyboard controls, pattern banks, clear and undo, project save and import, stereo WAV export, persistence, and responsive layouts. The audio engine was also checked at maximum levels with every noise source and effect.
+
+## Site integration
+
+The live page is https://calebhaines.github.io/sidequest-prototypes/grain/.
+The GitHub Pages publishing directory is `docs/`; the Vite static directory is `public/`.
+From the repository root, rebuild and copy the standalone page with:
+
+```sh
+python grain/build.py
+cp grain/index.html public/grain/index.html
+cp grain/index.html docs/grain/index.html
+```
+
+The existing gallery is linked in both its editable source (`src/main.js`) and its standalone Pages build (`docs/index.html`). The existing RPG downloads retain their published version.

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111310">
+  <meta name="description" content="GRAIN. A noise-powered drum machine. Eight voices, sixteen steps, infinite possibilities. Open this file and make some beautiful noise.">
+  <title>GRAIN — Beautiful noise.</title>
+  <!-- STYLES -->
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="4"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 6M4 4v5h5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h13l3 3v15H3V3Zm2 0v6h10V3M7 21v-8h10v8"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3.5-2 5-5m3-4c1-2 3-3 4-3h3m-4-4 4 4-4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2-2.5 4M12 17h.01"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 20V5h7l2 3h9v12Z"/></symbol>
+  </defs></svg>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Grain drum machine"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span>GRAIN<span class="brand-period">.</span></span><span class="brand-description">NOISE-POWERED<br>DRUM MACHINE</span></a>
+      <div class="topbar-right"><span class="local-badge"><span></span> OFFLINE BY DESIGN</span><span class="topbar-divider"></span><button class="icon-button" id="help-button" aria-label="How to use Grain" title="Help & keyboard shortcuts"><svg><use href="#i-help"/></svg></button></div>
+    </header>
+
+    <main>
+      <section class="intro" aria-label="Welcome">
+        <div><div class="eyebrow">LESS SIGNAL. MORE SOUL.</div><h1>Beautiful noise<span>.</span></h1><p>Eight voices. Sixteen steps. Infinite possibilities.</p></div>
+        <div class="intro-art" aria-hidden="true"><span class="art-label">ORDER FROM CHAOS</span><canvas id="hero-wave" width="600" height="100"></canvas><div class="art-coordinates">∞ <span>PURE SYNTHESIS</span> 001—016</div></div>
+      </section>
+
+      <section class="transport panel" aria-label="Playback and pattern controls">
+        <div class="playback"><button id="play-button" class="play-button" aria-label="Play sequencer" title="Play / pause (Space)"><svg><use href="#i-play"/></svg><span>Play</span></button><button id="restart-button" class="icon-button restart" aria-label="Restart from step one" title="Restart from step one"><svg><use href="#i-reset"/></svg></button></div>
+        <div class="transport-divider"></div>
+        <div class="tempo-control"><label class="control-label" for="tempo">TEMPO</label><div><input id="tempo" type="number" min="40" max="240" step="1" value="118" aria-label="Tempo in beats per minute"><span>BPM</span></div></div>
+        <div class="swing-control"><div class="control-label"><label for="swing">SWING</label><span id="swing-value">12<span>%</span></span></div><input id="swing" type="range" min="0" max="60" value="12" aria-label="Swing amount"></div>
+        <div class="transport-divider preset-divider"></div>
+        <div class="preset-control"><label class="control-label" for="preset-select">THE STARTING POINT</label><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
+        <div class="file-actions"><button id="save-button" class="button subtle" aria-label="Save project" title="Download your project"><svg><use href="#i-save"/></svg><span>Save project</span></button><button id="export-button" class="button export"><svg><use href="#i-download"/></svg><span>Export WAV</span></button><button id="open-button" class="icon-button open-project" aria-label="Open saved project" title="Open saved project"><svg><use href="#i-folder"/></svg></button><input type="file" id="project-file" accept=".json,application/json" hidden></div>
+      </section>
+
+      <section class="sequencer panel" aria-labelledby="sequencer-title">
+        <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">STEP SEQUENCER</h2><span class="tag">16 STEPS</span></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>Randomize</span></button></div></div>
+        <div class="sequencer-scroll"><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>CLICK TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">MIX</div></div><div id="track-rows" class="track-rows"></div></div></div>
+        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Click to add a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
+      </section>
+
+      <section class="sound-panels" aria-label="Sound design">
+        <section class="voice-panel panel" aria-labelledby="voice-panel-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">02</span><h2 id="voice-panel-title">VOICE LAB</h2></div><button id="audition-button" class="text-button"><svg><use href="#i-speaker"/></svg>Audition</button></div><div class="voice-editor"><div class="voice-identity"><span class="selected-voice-label" id="selected-voice-index">VOICE 01</span><h3 id="selected-voice-name">Sub kick</h3><p id="voice-description">Deep, warm & a little unruly.</p><div class="voice-wave"><canvas id="voice-wave" width="420" height="80"></canvas><span id="selected-noise-label">BROWN NOISE</span></div></div><div class="voice-knobs" id="voice-knobs"></div></div></section>
+        <section class="noise-panel panel" aria-labelledby="noise-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">03</span><h2 id="noise-title">NOISE PALETTE</h2></div><span class="small-counter">12 SOURCES</span></div><div class="noise-sources" id="noise-sources"></div><p class="noise-caption" id="noise-caption">Brown noise. Warm, deep, and beautifully uneven.</p></section>
+        <section class="master-panel panel" aria-labelledby="master-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">04</span><h2 id="master-title">MASTER</h2></div><div class="master-led" id="master-led"></div></div><div class="master-effects" id="master-knobs"></div><div class="master-volume"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"><span id="volume-value">78%</span></div></section>
+      </section>
+    </main>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">A LITTLE CHAOS GOES A LONG WAY.</span><span class="footer-version">GRAIN <span>v1.0</span></span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">WELCOME TO GRAIN</div><h2 id="help-title">Make a little noise.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>Every sound starts as noise. Shape eight voices, build a groove, and see what happens.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for a louder accent, or press and hold on a touchscreen. Select a voice to change its noise source, tone, pitch, decay, and level. Drag knobs up or down; hold Shift for fine adjustments. Use M to mute a track or S to hear it solo.</p></div><div><h3>Make it yours</h3><p>Try a curated preset, or randomize for a new direction. Pattern banks A–D hold four variations. Copy sends your current pattern to the next bank. Changes are saved in this browser automatically.</p></div><div><h3>Take it with you</h3><p>Save project downloads an editable JSON file. The folder button opens it again. Export WAV renders four bars plus an effect tail as a stereo audio file, ready for your DAW.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span> Works offline. No samples, accounts, or external connections.</div></dialog>
+  <!-- SCRIPTS -->
+</body>
+</html>

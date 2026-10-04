@@ -4,6 +4,12 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
+## GRAIN — noise drum machine
+
+[**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
+
+The editable app is in [`grain/`](grain/). Its standalone page is copied to `public/grain/index.html` for Vite builds and `docs/grain/index.html` for the GitHub Pages deployment. The gallery links directly to it.
+
 ## Download and play
 
 Download [**sidequest-prototypes.zip**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.6.0/docs/sidequest-prototypes.zip), extract it, and open **sidequest/PLAY.html** in your browser. For a single file, save [**sidequest-play.html**](https://raw.githubusercontent.com/calebhaines/sidequest-prototypes/v0.6.0/docs/sidequest-play.html) and open the saved HTML. These downloads are fixed to **v0.6.0**.
