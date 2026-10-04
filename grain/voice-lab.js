@@ -241,7 +241,7 @@
       this.updateNote();
       if (this.tab === 'mod') {
         $('envelope-kicker').textContent = 'LOW-FREQUENCY OSCILLATOR';
-        $('envelope-title').textContent = 'A little movement.';
+        $('envelope-title').textContent = 'The clock wobbles.';
         $('envelope-description').textContent = targetNotes[synth.mod.target];
         this.timeDisplay([
           ['RATE', this.formatted('mod', 'rate', this.modulationRate(synth.mod))],
@@ -252,7 +252,7 @@
       } else {
         const settings = synth[this.tab];
         $('envelope-kicker').textContent = names[this.tab].toUpperCase() + ' AMPLITUDE';
-        $('envelope-title').textContent = 'Shape the transient.';
+        $('envelope-title').textContent = 'A thump, then tea.';
         $('envelope-description').textContent = this.tab === 'body'
           ? 'The oscillator rises, holds, and fades. Envelope time is shown to scale.'
           : 'A separate envelope shapes the filtered noise. Every burst follows this curve.';

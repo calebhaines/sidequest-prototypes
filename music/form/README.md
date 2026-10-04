@@ -1,6 +1,6 @@
 # FORM — Percussion Lab
 
-FORM 2.0.1 is a browser percussion studio with three synthesis layers, subtractive/FM/wavetable/granular/percussion engines, cross-layer modulation, local recording import, and sample/kit/pattern WAV export.
+FORM 2.0.2 is a browser percussion studio with three synthesis layers, subtractive/FM/wavetable/granular/percussion engines, cross-layer modulation, local recording import, and sample/kit/pattern WAV export. Its decorative copy describes a most improper layer-cake; synthesis controls and practical instructions remain clear.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/form/
 

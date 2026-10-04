@@ -279,7 +279,7 @@
     track.decay = clamp(track.decay * (.75 + Math.random() * .5), .04, 4);
     track.pitchEnv = clamp(track.pitchEnv + (Math.random() - .5) * 6, -24, 24);
     track.reboundTime = clamp(track.reboundTime * (.85 + Math.random() * .3), .002, .08);
-    renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Same voice. A new material character.');
+    renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Voice mutated. The saucepan has changed its mind.');
   }
   function randomPattern() {
     remember(); state.tracks.forEach((track, row) => {
@@ -290,7 +290,7 @@
         const chance = row === 2 ? step % 2 ? .28 : .85 : row === 3 ? .2 : row === 4 ? .15 : row === 5 ? .17 : row === 6 ? .16 : .1;
         return Math.random() < chance ? Math.random() < .15 ? 2 : 1 : 0;
       });
-    }); renderRows(); persist(); toast('A new rhythm, shaped around a steady pulse.');
+    }); renderRows(); persist(); toast('New groove generated. The teaspoons have voted.');
   }
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -402,7 +402,7 @@
   function animate(timestamp) { if (playing && !reducedMotion && timestamp - lastFrame > 65) { heroTime += .075; drawHero(heroTime); lastFrame = timestamp; } requestAnimationFrame(animate); }
 
   presets.forEach((preset, index) => { const option = document.createElement('option'); option.value = index; option.textContent = preset.name; $('preset-select').append(option); });
-  const custom = document.createElement('option'); custom.value = 'custom'; custom.textContent = 'My material study'; custom.hidden = true; $('preset-select').append(custom);
+  const custom = document.createElement('option'); custom.value = 'custom'; custom.textContent = 'Custom groove'; custom.hidden = true; $('preset-select').append(custom);
   for (let step = 0; step < 16; step++) { const label = document.createElement('span'); label.className = 'step-number' + (step % 4 === 0 ? ' beat' : ''); label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label); }
   model.models.forEach((info) => {
     const button = document.createElement('button'); button.className = 'model-button'; button.dataset.model = info.id; button.dataset.focusKey = 'model-' + info.id; button.setAttribute('aria-label', 'Use ' + info.name + ' model');
@@ -450,7 +450,7 @@
   $('open-button').addEventListener('click', () => $('project-file').click());
   $('project-file').addEventListener('change', async (event) => {
     const file = event.target.files[0]; if (!file) return;
-    try { if (file.size > 1024 * 1024) throw new Error('That file is too large for a TINE project.'); const data = validateProject(JSON.parse(await file.text())); remember(); stop(); restore(data); renderAll(); persist(); toast('Your material study restored.'); }
+    try { if (file.size > 1024 * 1024) throw new Error('That file is too large for a TINE project.'); const data = validateProject(JSON.parse(await file.text())); remember(); stop(); restore(data); renderAll(); persist(); toast('Project opened.'); }
     catch (error) { toast(error instanceof SyntaxError ? 'That file is not a valid TINE project.' : error.message || 'Could not open that project.'); }
     finally { event.target.value = ''; }
   });

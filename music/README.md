@@ -18,7 +18,7 @@ Edit `music/index.html` to change the page. Add another instrument article to it
 
 GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
-FORM 2.0.1 is in `music/form/`, with a standalone `index.html` and the complete editable project in `FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Music Lab card opens the app or downloads its offline HTML.
+FORM 2.0.2 is in `music/form/`, with a standalone `index.html` and the complete editable project in `FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Music Lab card opens the app or downloads its offline HTML.
 
 TINE 1.1 has nine resonator bodies, selectable striking materials, contact texture and rebound controls, and eight grooves. Its editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command. Existing TINE projects upgrade automatically with their original excitation preserved.
 

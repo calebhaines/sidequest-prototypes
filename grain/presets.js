@@ -21,7 +21,7 @@
   window.NOISE_PRESETS = [
     {
       name: 'Dust & concrete',
-      tagline: 'Warm lows. Loose pockets. A little beautiful dirt.',
+      tagline: 'Dust has put on its dancing trousers.',
       bpm: 104,
       swing: 0.16,
       drive: 0.18,
@@ -39,7 +39,7 @@
     },
     {
       name: 'Late-night transmission',
-      tagline: 'A slow signal through the city after midnight.',
+      tagline: 'The aerial is receiving tomorrow’s bedtime.',
       bpm: 82,
       swing: 0.23,
       drive: 0.12,
@@ -57,7 +57,7 @@
     },
     {
       name: 'Velvet break',
-      tagline: 'A soft-edged break with a restless heartbeat.',
+      tagline: 'Very soft shoes. Entirely improper footwork.',
       bpm: 122,
       swing: 0.11,
       drive: 0.25,
@@ -75,7 +75,7 @@
     },
     {
       name: 'Static bloom',
-      tagline: 'Glowing percussion opening into a wide, bright room.',
+      tagline: 'The wallpaper has flowered into hi-hats.',
       bpm: 116,
       swing: 0.04,
       drive: 0.1,
@@ -93,7 +93,7 @@
     },
     {
       name: 'Broken circuitry',
-      tagline: 'Sharp transients. Crooked rhythms. Controlled voltage.',
+      tagline: 'The volts are revolting, in excellent time.',
       bpm: 138,
       swing: 0.08,
       drive: 0.39,
@@ -111,7 +111,7 @@
     },
     {
       name: 'Empty room',
-      tagline: 'Sparse impact and the sound of space between.',
+      tagline: 'Nobody is here. Something is knocking.',
       bpm: 68,
       swing: 0.07,
       drive: 0.08,

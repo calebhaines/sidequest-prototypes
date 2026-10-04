@@ -11,7 +11,7 @@
   window.TINE_PRESETS = [
     {
       name: 'Soft machinery',
-      tagline: 'Felt, wire, wood, and skin. Eight small objects finding a pulse.',
+      tagline: 'The felt kick elects a cupboard. The wires refuse to sit down.',
       bpm: 108, swing: 0.12, drive: 0.1, space: 0.22,
       tracks: [
         voice('FELT KICK', 'membrane', '2000 0010 2000 0010', { pitchHz: 52, decay: 0.53, level: 0.76, tone: 0.21, pitchEnv: 15, pitchTime: 0.04, variation: 0.02 }),
@@ -26,7 +26,7 @@
     },
     {
       name: 'Amber courtyard',
-      tagline: 'Sun-warmed wood, low hand drums, and a loose afternoon pocket.',
+      tagline: 'The woodblock orders a second afternoon. The hand drum charges it by the beat.',
       bpm: 94, swing: 0.22, drive: 0.07, space: 0.3,
       tracks: [
         voice('PALM BASS', 'membrane', '2000 0001 0020 0010', { pitchHz: 58.27, decay: 0.64, tone: 0.29, position: 0.24, hardness: 0.27, strikeTime: 0.005, pitchEnv: 8, pitchTime: 0.06, noise: 0.07, level: 0.7 }),
@@ -41,7 +41,7 @@
     },
     {
       name: 'Tension study',
-      tagline: 'Prepared metal, taut wires, and a precisely crooked rhythm.',
+      tagline: 'The wires are terribly uptight. The woodblock has filed a complaint in triplicate.',
       bpm: 128, swing: 0.07, drive: 0.23, space: 0.16,
       tracks: [
         voice('RUBBER KICK', 'membrane', '2000 0020 1002 0010', { pitchHz: 47, decay: 0.34, stiffness: 0.19, tone: 0.34, damping: 0.5, position: 0.11, hardness: 0.62, strikeTime: 0.0013, pitchEnv: 20, pitchTime: 0.03, direct: 0.23, level: 0.73 }),
@@ -56,7 +56,7 @@
     },
     {
       name: 'Glasshouse pulse',
-      tagline: 'A steady floor beneath clear keys and floating silver.',
+      tagline: 'The glass keys insist the floor dance first. The floor wears four left shoes.',
       bpm: 122, swing: 0.03, drive: 0.08, space: 0.4,
       tracks: [
         voice('ROUND KICK', 'membrane', '2000 2000 2000 2000', { pitchHz: 55, decay: 0.46, tone: 0.27, damping: 0.44, pitchEnv: 12, pitchTime: 0.037, noise: 0.04, direct: 0.11, level: 0.74 }),
@@ -71,7 +71,7 @@
     },
     {
       name: 'Night on the low tide',
-      tagline: 'Slow pressure, worn brushes, and long resonances in the dark.',
+      tagline: 'The tide has borrowed the bass drum. It promises to return it yesterday.',
       bpm: 82, swing: 0.2, drive: 0.12, space: 0.44,
       tracks: [
         voice('DEEP MEMBRANE', 'membrane', '2000 0001 0020 0010', { pitchHz: 43.65, decay: 0.85, tone: 0.17, damping: 0.51, hardness: 0.2, strikeTime: 0.006, pitchEnv: 9, pitchTime: 0.07, noise: 0.028, direct: 0.07, level: 0.74 }),
@@ -86,7 +86,7 @@
     },
     {
       name: 'Objects in motion',
-      tagline: 'Fast hands on a table of found percussion. Bright, busy, alive.',
+      tagline: 'The table grows eight extra hands. The cups demand separate dressing rooms.',
       bpm: 140, swing: 0.1, drive: 0.16, space: 0.19,
       tracks: [
         voice('TAUT KICK', 'membrane', '2000 0010 0020 0100', { pitchHz: 58.27, decay: 0.31, tone: 0.35, damping: 0.62, hardness: 0.58, strikeTime: 0.0017, pitchEnv: 17, pitchTime: 0.025, direct: 0.17, level: 0.75 }),
@@ -101,7 +101,7 @@
     },
     {
       name: 'Porcelain orbit',
-      tagline: 'Ceramic chimes, felted bronze, and hollow wood turning around a quiet pulse.',
+      tagline: 'The teacups orbit a felt moon. No one will explain where the handles have gone.',
       bpm: 112, swing: 0.09, drive: 0.06, space: 0.35,
       tracks: [
         voice('FELT PULSE', 'membrane', '2000 0010 2000 0010', { pitchHz: 49, decay: 0.48, tone: 0.23, damping: 0.45, hardness: 0.49, strikeTime: 0.0022, strikeMaterial: 'felt', pitchEnv: 13, pitchTime: 0.04, noise: 0.035, direct: 0.1, level: 0.74 }),
@@ -116,7 +116,7 @@
     },
     {
       name: 'Hollow rituals',
-      tagline: 'Springy sticks, breathing tubes, and slow shells in a room of moving shadows.',
+      tagline: 'A bamboo stick knocks. The empty tube demands a password.',
       bpm: 96, swing: 0.2, drive: 0.09, space: 0.3,
       tracks: [
         voice('ELASTIC FLOOR', 'membrane', '2000 0001 0020 0010', { pitchHz: 46.249, decay: 0.62, tone: 0.27, damping: 0.4, hardness: 0.51, strikeTime: 0.0028, strikeMaterial: 'rubber', contactTexture: 0.03, pitchEnv: 10, pitchTime: 0.052, noise: 0.035, direct: 0.12, level: 0.75 }),
