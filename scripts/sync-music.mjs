@@ -9,6 +9,7 @@ if (!fs.existsSync(path.join(music, 'index.html'))) {
 }
 const grain = fs.readFileSync(path.join(root, 'grain', 'index.html'));
 const tine = fs.readFileSync(path.join(root, 'tine', 'index.html'));
+const mire = fs.readFileSync(path.join(root, 'mire', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
 <head>
@@ -29,8 +30,8 @@ const legacy = `<!doctype html>
 </html>
 `;
 
-// Keep Vite's static files and GitHub Pages identical. The authored GRAIN
-// source remains a complete standalone HTML file for offline use.
+// Keep Vite's static files and GitHub Pages identical. Each instrument's
+// generated page remains a complete standalone HTML file for offline use.
 for (const directory of ['public', 'docs']) {
   // Future apps can live in music/<app-name>/ and are copied with their assets.
   fs.cpSync(music, path.join(root, directory, 'music'), {
@@ -40,6 +41,7 @@ for (const directory of ['public', 'docs']) {
   for (const [relative, content] of [
     ['music/grain/index.html', grain],
     ['music/tine/index.html', tine],
+    ['music/mire/index.html', mire],
     ['grain/index.html', legacy],
   ]) {
     const target = path.join(root, directory, relative);

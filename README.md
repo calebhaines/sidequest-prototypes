@@ -6,7 +6,7 @@
 
 ## Music Lab
 
-[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, and TINE.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, and MIRE.
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
@@ -16,7 +16,9 @@ GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, i
 
 [**Play TINE**](https://calebhaines.github.io/sidequest-prototypes/music/tine/) for physical-modeling percussion inspired by exciter/resonator instruments such as Plonk. Eight voices, nine body geometries, independent mallet and noise excitation, selectable striking materials, contact texture and rebound controls, four pattern banks, eight curated grooves, project files, and stereo WAV export. TINE 1.1 adds bell, bowl, and tube resonators and upgrades existing projects automatically while preserving their sounds. Open `tine/index.html` for offline play; editable sources are in [`tine/`](tine/).
 
-The editable GRAIN and TINE sources are in [`grain/`](grain/) and [`tine/`](tine/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
+[**Play MIRE**](https://calebhaines.github.io/sidequest-prototypes/music/mire/) for a feedback instrument with four interconnected delay/resonator pools, six resonator bodies, eight exciter types including imported audio, and a sixteen-step sequencer. Shape the routing matrix and modulation, freeze the network, save projects, and export stereo WAV. Open `mire/index.html` for offline play; editable sources are in [`mire/`](mire/) and rebuild with `python mire/build.py`.
+
+The editable GRAIN, TINE, and MIRE sources are in [`grain/`](grain/), [`tine/`](tine/), and [`mire/`](mire/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
 
 ## Download and play
 
