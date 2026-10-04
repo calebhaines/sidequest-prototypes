@@ -60,6 +60,9 @@ const SAFE_POINTS=[
 [2310,620],[3600,1160],[3470,2750],[4250,680],[1600,2700],[810,1900],[2830,2170],[2240,750],[1800,1340],[3530,1220],[3370,2790],[1300,2500],[4230,790],[825,1970],[2850,2260],
 [2210,820],[3480,1320],[840,2040],[2800,2350],[3360,2870],[2440,860],[3720,1400],[965,2110],[1810,2820],[2950,2365],[3640,2910],
 ];
+// The 3D counterpart shares the authored routes and footprints with the pixel
+// renderer. Consumers read this layout; the existing drawing path is unchanged.
+export const VELVET_LAYOUT=Object.freeze({roads:ROADS,clearings:CLEARINGS,structures:STRUCTURES,water:WATER,safePoints:SAFE_POINTS});
 function plantSafe(x,y){if(SAFE_POINTS.some(([px,py])=>Math.abs(px-x)<70&&Math.abs(py-y)<82))return false;if(ROADS.some(r=>x>r.x-22&&x<r.x+r.w+22&&y>r.y-6&&y<r.y+r.h+69))return false;if(CLEARINGS.some(r=>x>r.x-10&&x<r.x+r.w+10&&y>r.y-5&&y<r.y+r.h+40))return false;if(WATER.some(r=>x>r.x-28&&x<r.x+r.w+28&&y>r.y-3&&y<r.y+r.h+72))return false;return true;}
 
 function pine(c,x,y,p,size=1,variant=0){

@@ -30,14 +30,19 @@ css = css.replace(/url\(\/?fonts\/([^)]+)\)/g, (_, rawName) => {
   const font = fs.readFileSync(path.join(root, 'public', 'fonts', name));
   return `url(data:font/ttf;base64,${font.toString('base64')})`;
 });
-const script = read(path.join(dist, 'assets', jsName)).replace(/<\/script/gi, '<\\/script');
+let script = read(path.join(dist, 'assets', jsName)).replace(/<\/script/gi, '<\\/script');
+// Preview images remain available when PLAY.html is opened without a server.
+for (const theme of ['lynch', 'shinobi']) {
+  const preview = fs.readFileSync(path.join(root, 'public', 'previews', `${theme}-3d.png`));
+  script = script.replaceAll(`/previews/${theme}-3d.png`, `data:image/png;base64,${preview.toString('base64')}`);
+}
 const favicon = Buffer.from(read(path.join(root, 'public', 'favicon.svg'))).toString('base64');
 const standalone = `<!doctype html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#f7f6f1">
 <meta name="sidequest-version" content="${version}">
-<title>Sidequest — Six playable pixel RPG prototypes</title>
+<title>Sidequest — Eight playable pixel and 3D RPG prototypes</title>
 <link rel="icon" href="data:image/svg+xml;base64,${favicon}">
 <style>${css}</style>
 </head><body><div id="app"></div><script type="module">${script}</script></body></html>\n`;
@@ -51,14 +56,14 @@ fs.mkdirSync(websiteDownloads, { recursive: true });
 fs.copyFileSync(standalonePath, path.join(websiteDownloads, 'sidequest-play.html'));
 fs.writeFileSync(path.join(dist, 'assets', jsName), script.replaceAll('/downloads/sidequest-prototypes.zip', '/downloads/sidequest-play.html'));
 
-const instructions = `SIDEQUEST — SIX PLAYABLE PIXEL RPG PROTOTYPES (${version})
+const instructions = `SIDEQUEST — EIGHT PLAYABLE PIXEL AND 3D RPG PROTOTYPES (${version})
 
 QUICKEST WAY TO PLAY
 1. Extract this ZIP.
 2. Double-click PLAY.html, or open it in Chrome, Edge, Firefox, or Safari.
 3. Pick a world and press Play prototype.
 
-All six games, fonts, and pixel art are inside PLAY.html.
+All eight versions, fonts, pixel art, and 3D graphics are inside PLAY.html.
 No installation, account, internet connection, or server is needed.
 If your browser downloads HTML instead of opening it, save it first and
 then use your browser's Open File command.
@@ -70,6 +75,8 @@ THE WORLDS
 04 Borrowed Sky — a surreal suburb and the missing Thursday.
 05 Velvet Static — an uncanny town, dream crossings, and contradictory witnesses.
 06 Hidden Ember — bright shinobi village, chakra, jutsus, and clan loyalties.
+07 Velvet Static 3D — the same county mystery in a true 3D world.
+08 Hidden Ember 3D — the same shinobi adventure in a true 3D world.
 
 Velvet Static and Hidden Ember are the two expanded finalists. Each map has
 nine times its original area, fourteen characters, six main objectives,
@@ -88,13 +95,15 @@ Accept side stories through conversations and track them under Other stories.
 Stand by a marked doorstep and press E to enter; use E at the indoor EXIT to leave.
 Inspect room objects and talk to residents with E. Quest guides lead to indoor clues.
 M shows the outdoor map with your doorway; T also works from inside buildings.
+3D versions: drag to orbit the camera; scroll to zoom. Camera buttons work on touch.
+Movement follows your camera. 3D requires WebGL in a current browser.
 Small-screen browsers show touch controls. Ambient sound is optional.
 
 Your chosen world and shortlist are stored in your browser, when local
 file storage is available. Gameplay starts fresh when you re-enter a world.
 
 IN THIS ZIP
-PLAY.html — standalone, ready-to-play version containing all six worlds.
+PLAY.html — standalone, ready-to-play version containing six worlds in eight playable versions.
 website/ — production web build; serve this folder as a static website.
 source/ — complete editable Vite project, including original source art.
 
@@ -106,6 +115,7 @@ To regenerate downloadable files: npm run package (requires Python 3).
 
 These are small playable concept prototypes, not finished huge open worlds.
 Font licenses are included in source/public/fonts and website/fonts.
+Three.js is bundled locally; its MIT license is included in public/licenses.
 `;
 const entries = [{ source: standalonePath, name: 'sidequest/PLAY.html' }];
 const instructionsPath = path.join(output, 'START-HERE.txt');
@@ -143,4 +153,4 @@ execFileSync('python3', ['-c', python, manifestPath], { stdio: 'inherit' });
 fs.unlinkSync(manifestPath);
 fs.copyFileSync(zipPath, path.join(browserOutput, 'sidequest-prototypes.zip'));
 console.log(`Standalone: ${standalonePath} (${fs.statSync(standalonePath).size.toLocaleString()} bytes)`);
-console.log(`All six + source: ${zipPath} (${fs.statSync(zipPath).size.toLocaleString()} bytes)`);
+console.log(`All eight + source: ${zipPath} (${fs.statSync(zipPath).size.toLocaleString()} bytes)`);

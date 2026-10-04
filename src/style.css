@@ -130,3 +130,22 @@
   .room-map-button{font-size:8px;padding:8px;margin-right:5px}
   .game-shell:is([data-theme="lynch"],[data-theme="shinobi"]) .map-heading h3{font-size:17px;line-height:1.2;max-width:170px}
 }
+/* Browser 3D counterparts share the existing game UI. */
+.three-d-preview{width:100%;height:100%;display:block;object-fit:cover}
+.three-d-badge{background:#293b39ed;color:#fff1d7;border:0}
+.game-shell[data-renderer="3d"] #game-canvas{image-rendering:auto;touch-action:none;cursor:grab}
+.game-shell[data-renderer="3d"] #game-canvas:active{cursor:grabbing}
+.camera-controls{position:absolute;right:16px;top:66px;display:flex;align-items:center;gap:4px;z-index:3}
+.camera-controls>span{color:#fff6e5;background:#243633c9;padding:7px 9px;border-radius:4px;font-size:9px;margin-right:3px;pointer-events:none}
+.camera-controls>button{border:0;border-radius:4px;background:#fff9e8ed;color:#32433b;width:29px;height:29px;font-size:17px;box-shadow:0 2px 8px #10262b25}
+.camera-controls>button:hover{background:#ffe5be}
+.help-camera{font-size:12px;line-height:1.7;color:#737d6b}
+.graphics-error{position:absolute;inset:0;z-index:12;background:#293b38;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:35px;color:#fff7e6;text-align:center;gap:14px}
+.graphics-error h3{font-size:22px;margin:0}
+.graphics-error p{font-size:13px;line-height:1.7;max-width:440px;margin:0 0 8px}
+.graphics-pixel-option{border:0;background:transparent;text-decoration:underline;color:inherit;font-size:12px;padding:10px}
+.filters{overflow-x:auto;scrollbar-width:thin}
+@media(max-width:800px){.camera-controls{right:12px;top:52px}.camera-controls>span{display:none}.camera-controls>button{width:27px;height:27px}.game-shell[data-renderer="3d"] .game-title h2{font-size:17px}}
+@media(max-width:560px){.game-shell[data-renderer="3d"] .camera-controls{top:49px}.game-shell[data-renderer="3d"] .game-title h2{font-size:18px}.graphics-error{padding:23px}.graphics-error h3{font-size:19px}}
+@media(max-width:360px){.site-header{gap:6px}.main-nav{gap:10px}}
+@media(max-width:560px){.game-shell[data-renderer="3d"] .camera-controls{top:108px}}

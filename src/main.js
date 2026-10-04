@@ -2,6 +2,7 @@ import './style.css';
 import { drawPreview, drawWorld, drawCharacter, getWorldSize, getWorldRegions } from './world-renderer.js';
 import { getInterior, drawInteriorWorld } from './interiors.js';
 import { createGame } from './game-engine.js';
+import { create3DRenderer } from './three-d-renderer.js';
 
 const icons = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -35,6 +36,19 @@ const worlds = [
   { id: 'shinobi', number: '06', name: 'Hidden Ember', category: 'Shinobi', genre: 'YOUR NINJA WAY STARTS HERE', color: '#d77529', chip: '#fff0d9', line: 'Beyond the village. Into your own legend.', description: 'Leave the Village Hidden in the Reeds for cedar forests, waterfall training, lantern markets, and distant clan outposts. Master chakra, hear every side of an old betrayal, and choose your ninja way.', tags: ['Chakra & jutsus', 'Distant districts', 'Clan missions'], location: 'Hidden Reed Village', role: 'The genin', hook: 'A stolen mission scroll has put two clans at odds. Your first field assignment could start a war—or stop one.', gradient: '#69a65c', isNew: true, isFinalist: true, time: '07:12' },
 ];
 
+
+// Both camera styles share the same authoritative world, story, and progression.
+for (const theme of ['lynch', 'shinobi']) {
+  const original = worlds.find(world => world.id === theme);
+  worlds.push({ ...original, id: `${theme}-3d`, theme, number: theme === 'lynch' ? '07' : '08', name: `${original.name} 3D`, is3D: true,
+    genre: theme === 'lynch' ? 'MERCY FALLS, IN THREE DIMENSIONS' : 'STEP INTO THE HIDDEN VILLAGE',
+    description: theme === 'lynch' ? 'Walk foggy county roads in 3D. Step inside the diner, motel, and red-curtain theater, question their residents, and cross into a dream that changes what you see.' : 'Explore orange-roof villages, cedar forests, and distant clan outposts in 3D. Enter homes and training halls, master your jutsus, and choose your own ninja way.',
+    tags: ['3D exploration', 'Furnished interiors', theme === 'lynch' ? 'Dream crossings' : 'Real-time jutsus'],
+    preview: theme === 'lynch' ? '/previews/lynch-3d.png' : '/previews/shinobi-3d.png',
+  });
+}
+const baseTheme = id => id?.replace(/-3d$/, '');
+
 let selectedWorld = null;
 let favorites = new Set();
 try { selectedWorld = localStorage.getItem('sidequest-selected'); favorites = new Set(JSON.parse(localStorage.getItem('sidequest-favorites') || '[]')); } catch {}
@@ -50,18 +64,18 @@ let abilitiesSignature = '';
 let journalSignature = '';
 let explorationSignature = '';
 let roomMap = false;
-const isFinalist = id => id === 'lynch' || id === 'shinobi';
+const isFinalist = id => ['lynch', 'shinobi'].includes(baseTheme(id));
 
 function renderApp() {
   document.querySelector('#app').innerHTML = `
     <header class="site-header">
       <a class="brand" href="#" aria-label="Sidequest home">${brandMark}<span>sidequest<span class="brand-period">.</span></span></a>
       <nav class="main-nav" aria-label="Main navigation">
-        <a class="nav-active" href="#worlds">The worlds <span>${String(worlds.length).padStart(2, '0')}</span></a>
+        <a class="nav-active" href="#worlds">The prototypes <span>${String(worlds.length).padStart(2, '0')}</span></a>
         <a href="#idea">The idea</a>
         <button class="nav-how" data-action="help">How to play ${icon('arrowUp')}</button>
       </nav>
-      ${location.protocol === 'file:' ? '<div class="header-status"><span class="status-dot"></span> Six worlds, wherever you go</div>' : `<a class="header-status download-link" href="/downloads/sidequest-prototypes.zip" download>${icon('download')} Download prototypes</a>`}
+      ${location.protocol === 'file:' ? '<div class="header-status"><span class="status-dot"></span> Eight adventures, wherever you go</div>' : `<a class="header-status download-link" href="/downloads/sidequest-prototypes.zip" download>${icon('download')} Download prototypes</a>`}
       <button class="mobile-help icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button>
     </header>
     <main>
@@ -72,16 +86,16 @@ function renderApp() {
         </div>
         <div class="hero-aside">
           <p>The charm of a classic pixel RPG.<br>The freedom to make your own story.</p>
-          <p class="hero-small">Two favorites. More roads and deeper stories.<br>Explore the expanded Velvet Static and Hidden Ember.</p>
+          <p class="hero-small">Your two favorites, now in 3D.<br>Play Velvet Static and Hidden Ember in either camera style.</p>
           <div class="hero-perks"><span>${icon('globe')} Open exploration</span><span>${icon('sword')} Real-time combat</span><span>${icon('chat')} Your choices</span></div>
         </div>
       </section>
       <section id="worlds" class="worlds-section" aria-labelledby="worlds-heading">
         <div class="section-topline"><div><h2 id="worlds-heading">Pick a world. Get a little lost.</h2><span class="section-subtitle">No downloads. No commitments. Just press play.</span></div><button class="surprise-button" data-action="surprise">${icon('shuffle')} Surprise me ${icon('arrow')}</button></div>
-        <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','Mystery','Shinobi','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? `<span class="filter-count">${worlds.length}</span>` : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>
+        <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','3D','Mystery','Shinobi','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? `<span class="filter-count">${worlds.length}</span>` : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>
         <div class="selection-banner" ${selectedWorld ? '' : 'hidden'}></div>
         <div class="world-grid" id="world-grid"></div>
-        <div class="gallery-note">${icon('spark')} Velvet Static and Hidden Ember are the finalists. Two worlds to keep exploring.</div>
+        <div class="gallery-note">${icon('spark')} Two finalists. Pixel art and 3D. Pick a camera style and keep exploring.</div>
       </section>
       <section class="idea-section" id="idea">
         <div class="idea-intro"><div class="eyebrow">THE LITTLE BIG IDEA</div><h2>Old-school soul.<br>Open-world spirit.</h2><p>Familiar pixels. Unfamiliar paths.<br>A world that makes room for your story.</p></div>
@@ -90,14 +104,14 @@ function renderApp() {
         <div class="idea-feature">${icon('sword')}<h3>Grow into your adventure</h3><p>Fight in real time, collect a little loot, and level up as you make your way.</p></div>
       </section>
     </main>
-    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span>Made for wandering.</span><div>Six worlds. Endless directions. <span class="footer-spark">✦</span></div></footer>
+    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span>Made for wandering.</span><div>Six worlds. Eight ways to explore. <span class="footer-spark">✦</span></div></footer>
     <div class="toast" id="toast" role="status"></div>
     <div class="overlay" id="help-overlay" hidden>
       <section class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">
         <button class="dialog-close icon-button" data-action="close-help" aria-label="Close instructions">${icon('close')}</button>
         <div class="eyebrow">A LITTLE FIELD GUIDE</div><h2 id="help-title">Just go exploring.</h2><p>Every world is a small, playable RPG. Talk to its people, follow a quest, and see what’s over the next hill.</p>
         <div class="control-list"><div><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> arrow keys</span><strong>Move</strong></div><div><span><kbd>Shift</kbd></span><strong>Sprint</strong></div><div><span><kbd>E</kbd> <span class="or">or</span> <kbd>Enter</kbd></span><strong>Talk / interact</strong></div><div><span><kbd>Space</kbd></span><strong>Attack / camera flash</strong></div><div><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><strong>Shinobi jutsus</strong></div><div><span><kbd>Q</kbd></span><strong>Cross into a dream</strong></div><div><span><kbd>M</kbd></span><strong>Open world map</strong></div><div><span><kbd>T</kbd></span><strong>Travel in the two finalists</strong></div><div><span><kbd>Esc</kbd></span><strong>Close / return</strong></div></div>
-        <p class="help-tip">${icon('chat')} Start by talking to the person near you. They have a story—and a quest.</p><button class="primary-button" data-action="close-help">Let’s wander ${icon('arrow')}</button>
+        <p class="help-camera">In the 3D versions, drag the scene to orbit and scroll to zoom. Camera buttons work on touch screens. Movement follows your camera.</p><p class="help-tip">${icon('chat')} Start by talking to the person near you. They have a story—and a quest.</p><button class="primary-button" data-action="close-help">Let’s wander ${icon('arrow')}</button>
       </section>
     </div>
     <div class="game-overlay" id="game-overlay" hidden></div>
@@ -109,18 +123,18 @@ function renderApp() {
 }
 
 function renderCards() {
-  const filtered = worlds.filter(w => currentFilter === 'All worlds' || w.category === currentFilter).sort((a, b) => Number(Boolean(b.isNew)) - Number(Boolean(a.isNew)));
+  const filtered = worlds.filter(w => currentFilter === 'All worlds' || (currentFilter === '3D' ? w.is3D : w.category === currentFilter)).sort((a, b) => Number(Boolean(b.is3D)) - Number(Boolean(a.is3D)) || Number(Boolean(b.isFinalist)) - Number(Boolean(a.isFinalist)));
   document.querySelector('#world-grid').innerHTML = filtered.map(w => `
     <article class="world-card ${selectedWorld === w.id ? 'is-selected' : ''}" style="--world-color:${w.color};--world-chip:${w.chip}" data-world="${w.id}">
       <div class="world-art" style="background:${w.gradient}">
-        <canvas id="preview-${w.id}" width="720" height="360" aria-label="Pixel-art view of ${w.name}"></canvas>
-        <div class="art-topline"><div class="art-badges"><span class="world-genre"><span></span>${w.category}</span>${w.isFinalist ? '<span class="new-world-badge finalist-badge">FINALIST</span>' : w.isNew ? '<span class="new-world-badge">NEW WORLD</span>' : ''}</div><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
+        ${w.is3D ? `<img class="three-d-preview" src="${w.preview}" alt="3D view of ${w.name}" width="960" height="540">` : `<canvas id="preview-${w.id}" width="720" height="360" aria-label="Pixel-art view of ${w.name}"></canvas>`}
+        <div class="art-topline"><div class="art-badges"><span class="world-genre"><span></span>${w.category}</span>${w.is3D ? '<span class="new-world-badge three-d-badge">NEW · 3D</span>' : w.isFinalist ? '<span class="new-world-badge finalist-badge">FINALIST</span>' : w.isNew ? '<span class="new-world-badge">NEW WORLD</span>' : ''}</div><button class="favorite-button ${favorites.has(w.id) ? 'is-favorite' : ''}" data-favorite="${w.id}" aria-label="${favorites.has(w.id) ? 'Remove' : 'Add'} ${w.name} ${favorites.has(w.id) ? 'from' : 'to'} shortlist" aria-pressed="${favorites.has(w.id)}">${icon('heart')}</button></div>
         <button class="scene-play" data-play="${w.id}" aria-label="Play ${w.name}"><span class="scene-play-icon">${icon('play')}</span><span>Step into this world</span></button>
         <div class="art-bottomline"><span class="pixel-coordinates">${w.location.toUpperCase()}<span> · </span> ${w.time || (w.number === '02' ? '23:48' : w.number === '04' ? '18:17' : '09:41')}</span><span class="art-number">WORLD ${w.number}</span></div>
       </div>
       <div class="card-content"><div class="card-eyebrow"><span>${w.genre}</span><span class="card-number">/ ${w.number}</span></div><div class="card-heading"><h3>${w.name}</h3><span class="selected-chip" ${selectedWorld === w.id ? '' : 'hidden'}>${icon('check')} Your pick</span></div><p>${w.description}</p><div class="card-bottom"><div class="world-tags">${w.tags.map(t => `<span>${t}</span>`).join('')}</div><button class="play-button" data-play="${w.id}">Play prototype ${icon('arrowUp')}</button></div></div>
     </article>`).join('');
-  filtered.forEach(w => drawPreview(document.getElementById(`preview-${w.id}`), w.id));
+  filtered.filter(w => !w.is3D).forEach(w => drawPreview(document.getElementById(`preview-${w.id}`), w.id));
 }
 
 function updateSelectionBanner() {
@@ -131,6 +145,13 @@ function updateSelectionBanner() {
 }
 
 function handleClick(event) {
+  const camera = event.target.closest('[data-camera]')?.dataset.camera;
+  if (camera) {
+    if (camera === 'left' || camera === 'right') activeGame?.rotateCamera?.((camera === 'left' ? -1 : 1) * Math.PI / 6);
+    else if (camera === 'reset') activeGame?.resetCamera?.();
+    else activeGame?.zoomCamera?.(camera === 'in' ? -1 : 1);
+    document.querySelector('#game-canvas')?.focus(); return;
+  }
   const ability = event.target.closest('[data-ability]');
   if (ability) { activeGame?.useAbility?.(ability.dataset.ability); document.querySelector('#game-canvas')?.focus(); return; }
   const play = event.target.closest('[data-play]');
@@ -195,16 +216,16 @@ function openGame(id) {
   activeWorld = worlds.find(w => w.id === id);
   const w = activeWorld;
   const overlay = document.querySelector('#game-overlay');
-  overlay.innerHTML = `<section class="game-shell" data-theme="${w.id}" role="dialog" aria-modal="true" aria-label="${w.name} playable prototype" style="--world-color:${w.color};--world-chip:${w.chip}">
-    <header class="game-header"><button class="back-button" data-action="close-game">${icon('arrow')}<span>All worlds</span></button><div class="game-title"><span>WORLD ${w.number}</span><h2>${w.name}</h2><span class="prototype-badge">PROTOTYPE</span></div><div class="game-header-actions"><button class="icon-button" data-action="sound" aria-label="Turn ambient sound on" title="Ambient sound">${icon('volume')}<span class="sound-slash"></span></button><button class="icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button><button class="icon-button" data-action="close-game" aria-label="Close prototype">${icon('close')}</button></div></header>
+  overlay.innerHTML = `<section class="game-shell" data-theme="${baseTheme(w.id)}" data-renderer="${w.is3D ? '3d' : '2d'}" role="dialog" aria-modal="true" aria-label="${w.name} playable prototype" style="--world-color:${w.color};--world-chip:${w.chip}">
+    <header class="game-header"><button class="back-button" data-action="close-game">${icon('arrow')}<span>All worlds</span></button><div class="game-title"><span>WORLD ${w.number}</span><h2>${w.name}</h2><span class="prototype-badge">${w.is3D ? '3D PROTOTYPE' : 'PIXEL PROTOTYPE'}</span></div><div class="game-header-actions"><button class="icon-button" data-action="sound" aria-label="Turn ambient sound on" title="Ambient sound">${icon('volume')}<span class="sound-slash"></span></button><button class="icon-button" data-action="help" aria-label="How to play">${icon('monitor')}</button><button class="icon-button" data-action="close-game" aria-label="Close prototype">${icon('close')}</button></div></header>
     <div class="game-body"><div class="game-viewport"><canvas id="game-canvas" width="960" height="640" tabindex="0" aria-label="Explore ${w.name} using WASD, E to interact, and Space to attack"></canvas><div class="location-overlay"><span class="status-dot"></span><span id="game-location">${w.location}</span><span class="location-sub">FREE TO WANDER</span></div><button class="map-button" data-action="map">${icon('map')}<span>World map</span><kbd>M</kbd></button><div class="interact-hint" id="interact-hint" hidden></div><div class="game-toast" id="game-toast" role="status"></div>
     <div class="dialogue-box" id="dialogue-box" hidden><div class="dialogue-heading"><span class="dialogue-avatar">${isFinalist(w.id) ? '<canvas id="dialogue-portrait" width="56" height="56" aria-hidden="true"></canvas>' : icon('chat')}</span>${isFinalist(w.id) ? '<div class="dialogue-speaker-block"><strong id="dialogue-speaker"></strong><span id="dialogue-context"></span></div>' : '<strong id="dialogue-speaker"></strong>'}<button class="icon-button" data-action="dismiss-dialogue" aria-label="Close dialogue">${icon('close')}</button></div><p id="dialogue-text"></p><div class="dialogue-choices" id="dialogue-choices"></div></div>
     <div class="map-overlay" id="map-overlay" hidden><div class="map-heading"><div><span class="eyebrow">${isFinalist(w.id) ? 'ROADS YOU HAVE YET TO WALK' : 'YOUR LITTLE OPEN WORLD'}</span><h3>${w.name}</h3></div><button class="icon-button" data-action="map" aria-label="Close world map">${icon('close')}</button></div><canvas id="map-canvas" width="800" height="576" aria-label="World map showing your position"></canvas><div class="map-legend"><span><i></i> You are here</span><span>${isFinalist(w.id) ? 'Gold: your next stop · Blue: a travel stop' : 'Explore the roads. Discover what’s between them.'}</span></div>${isFinalist(w.id) ? '<div class="map-travel-row"><span id="map-exploration"></span><button data-action="travel">Travel to a discovered stop <kbd>T</kbd></button></div>' : ''}</div>
-    <div class="ability-hud" id="ability-hud" hidden></div>
-    <div class="touch-controls"><div class="touch-dpad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><div><button data-action="interact">E</button><button data-action="attack" aria-label="${w.id === 'lynch' ? 'Camera flash' : 'Attack'}">${icon(w.id === 'lynch' ? 'spark' : 'sword')}</button></div></div></div>
+    ${w.is3D ? '<div class="camera-controls" aria-label="3D camera controls"><span>Drag to orbit · Scroll to zoom</span><button data-camera="left" aria-label="Rotate camera left">↶</button><button data-camera="reset" aria-label="Reset camera">⌂</button><button data-camera="right" aria-label="Rotate camera right">↷</button><button data-camera="in" aria-label="Zoom in">+</button><button data-camera="out" aria-label="Zoom out">−</button></div>' : ''}<div class="ability-hud" id="ability-hud" hidden></div>
+    <div class="touch-controls"><div class="touch-dpad"><button data-move="up" aria-label="Move up">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="down" aria-label="Move down">↓</button><button data-move="right" aria-label="Move right">→</button></div><div><button data-action="interact">E</button><button data-action="attack" aria-label="${baseTheme(w.id) === 'lynch' ? 'Camera flash' : 'Attack'}">${icon(baseTheme(w.id) === 'lynch' ? 'spark' : 'sword')}</button></div></div></div>
     <aside class="game-sidebar"><div class="character-card"><div class="character-avatar"><canvas id="avatar-canvas" width="64" height="64"></canvas></div><div><span>${w.role}</span><strong>Level <span id="player-level">1</span><span class="character-level-note"> · <span id="player-rank">Just getting started</span></span></strong></div></div><div class="stat-label"><span>HEALTH</span><span id="health-value">100 / 100</span></div><div class="stat-bar health-bar"><span id="health-fill" style="width:100%"></span></div><div class="stat-label"><span>EXPERIENCE</span><span id="xp-value">0 / 100</span></div><div class="stat-bar xp-bar"><span id="xp-fill" style="width:0%"></span></div><div class="resource-panel" id="resource-panel" hidden><div class="stat-label"><span id="resource-label"></span><span id="resource-value"></span></div><div class="stat-bar resource-bar"><span id="resource-fill"></span></div></div>
     <div class="sidebar-divider"></div><div class="sidebar-overline">${icon('flag')} YOUR FIRST CHAPTER</div><h3 id="quest-title">A story to follow</h3><p id="quest-description">${w.hook}</p><div class="quest-progress" id="quest-progress"></div><div class="destination-hint" id="destination-hint"></div>${isFinalist(w.id) ? '<div class="exploration-summary" id="exploration-summary"></div><details class="side-stories" id="side-stories"><summary>Other stories <span id="side-story-count">0</span></summary><div id="side-story-list"></div></details>' : ''}<details class="journal-section" id="journal-section" hidden><summary>Field notes <span id="journal-count">0</span></summary><ul id="journal-entries"></ul></details><div class="sidebar-divider"></div><div class="pocket-row">${icon('bag')}<span>In your pockets</span><strong id="coin-value">0 coins</strong></div><p class="inventory-text" id="inventory-text">Room for a few discoveries.</p><div class="field-note"><span>FIELD NOTE 01</span><p>${w.hook}</p></div><div class="sidebar-choice"><p>Feeling at home here?</p><button class="primary-button" data-action="select-world">Choose this world ${icon('check')}</button><span>You can change your mind anytime.</span></div></aside></div>
-    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${w.id === 'lynch' ? 'Camera flash' : w.id === 'shinobi' ? 'Kunai' : 'Attack'}</span>${w.id === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : w.id === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}${isFinalist(w.id) ? '<span><kbd>T</kbd> Travel</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
+    <div class="game-footer"><div><span><kbd>W A S D</kbd> Move</span><span><kbd>Shift</kbd> Sprint</span><span><kbd>E</kbd> Talk / interact</span><span><kbd>Space</kbd> ${baseTheme(w.id) === 'lynch' ? 'Camera flash' : baseTheme(w.id) === 'shinobi' ? 'Kunai' : 'Attack'}</span>${baseTheme(w.id) === 'lynch' ? '<span><kbd>Q</kbd> Dream crossing</span>' : baseTheme(w.id) === 'shinobi' ? '<span><kbd>1 / 2 / 3</kbd> Jutsus</span>' : ''}${isFinalist(w.id) ? '<span><kbd>T</kbd> Travel</span>' : ''}</div><span><span class="status-dot"></span> A SMALL SLICE OF A BIGGER WORLD</span></div>
   </section>`;
   overlay.hidden = false;
   if(isFinalist(w.id)){
@@ -220,14 +241,33 @@ function openGame(id) {
   abilitiesSignature = '';
   journalSignature = '';
   explorationSignature = '';
-  activeGame = createGame(document.querySelector('#game-canvas'), id, { onState: updateGameState, onDialogue: showDialogue, onToast: showGameToast, onMap: toggleMap, onDismissDialogue: () => { const box = document.querySelector('#dialogue-box'); if (box) box.hidden = true; } });
-  drawAvatar(w.id);
+  try { activeGame = createGame(document.querySelector('#game-canvas'), baseTheme(id), { onState: updateGameState, onDialogue: showDialogue, onToast: showGameToast, onMap: toggleMap, onDismissDialogue: () => { const box = document.querySelector('#dialogue-box'); if (box) box.hidden = true; } }, w.is3D ? {rendererFactory: create3DRenderer} : {});
+  } catch (error) { show3DError(error?.message); return; }
+  if (w.is3D) {
+    const gameCanvas = document.querySelector('#game-canvas');
+    gameCanvas.addEventListener('webglcontextlost', event => {
+      event.preventDefault();
+      // Releasing a closed WebGL context can report loss asynchronously.
+      if (gameCanvas !== document.querySelector('#game-canvas') || !activeGame) return;
+      activeGame.togglePause?.(true);
+      show3DError('The browser paused the 3D graphics. Reopen this prototype to continue.');
+    });
+  }
+  drawAvatar(baseTheme(w.id));
   document.querySelector('#game-canvas').focus();
   overlay.querySelectorAll('[data-move]').forEach(button => {
     button.addEventListener('pointerdown', e => { e.preventDefault(); button.setPointerCapture(e.pointerId); activeGame?.setMove(button.dataset.move,true); });
     for (const ev of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(ev,()=>activeGame?.setMove(button.dataset.move,false));
   });
-  if (soundOn) startAmbient(w.id);
+  if (soundOn) startAmbient(baseTheme(w.id));
+}
+
+function show3DError(message) {
+  const viewport = document.querySelector('.game-viewport');
+  const existing = viewport?.querySelector('.graphics-error'); if (existing) return;
+  const panel = document.createElement('div'); panel.className = 'graphics-error'; panel.setAttribute('role','alert');
+  panel.innerHTML = `<h3>3D graphics are unavailable</h3><p>${escapeHtml(message || 'This browser could not start WebGL. Try an up-to-date browser with hardware acceleration enabled.')}</p><button class="primary-button" data-action="close-game">Return to prototypes</button><button class="graphics-pixel-option" data-play="${baseTheme(activeWorld?.id)}">Play the pixel version</button>`;
+  viewport?.appendChild(panel);
 }
 
 function drawAvatar(theme) {
@@ -319,7 +359,7 @@ function updateJournal(entries){
 }
 function updateExploration(state){
   if(!activeWorld || !isFinalist(activeWorld.id))return;
-  const regions=getWorldRegions(activeWorld.id);
+  const regions=getWorldRegions(baseTheme(activeWorld.id));
   const visited=Array.isArray(state.regionsVisited) ? state.regionsVisited.length : Number(state.regionsVisited || 0);
   const stops=state.travelPoints || [];
   const unlocked=stops.filter(stop=>stop.discovered).length;
@@ -348,7 +388,7 @@ function showDialogue(dialogue) {
     const actor=dialogue.portrait || lastState?.entities?.find(entity=>entity.type==='npc' && entity.name===dialogue.speaker);
     const ctx=portrait.getContext('2d');ctx.clearRect(0,0,56,56);ctx.imageSmoothingEnabled=false;
     ctx.save();ctx.translate(28,54);ctx.scale(1.05,1.05);
-    drawCharacter(ctx,0,0,activeWorld.id,{...actor,npc:Boolean(actor),type:actor ? 'npc' : 'player',facing:'down',phase:lastState?.phase || 'waking'});
+    drawCharacter(ctx,0,0,baseTheme(activeWorld.id),{...actor,npc:Boolean(actor),type:actor ? 'npc' : 'player',facing:'down',phase:lastState?.phase || 'waking'});
     ctx.restore();
     setText('dialogue-context',lastState?.interior?.name || lastState?.currentRegionName || lastState?.location || activeWorld.location);
   }
@@ -395,10 +435,10 @@ function renderMap(){
   const roomToggle=document.querySelector('#room-map-toggle');
   if(roomToggle){roomToggle.hidden=!lastState?.interior;roomToggle.textContent=roomMap ? 'World map' : 'Room floor plan';roomToggle.setAttribute('aria-pressed',String(roomMap));}
   if(roomMap && lastState?.interior){
-    const interior=getInterior(activeWorld.id,lastState.interior.id);
+    const interior=getInterior(baseTheme(activeWorld.id),lastState.interior.id);
     if(interior){
       const scale=Math.min(canvas.width/interior.size.width,canvas.height/interior.size.height);
-      drawInteriorWorld(ctx,activeWorld.id,interior,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState.entities || [],player:lastState.player || lastState,phase:lastState.phase});
+      drawInteriorWorld(ctx,baseTheme(activeWorld.id),interior,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState.entities || [],player:lastState.player || lastState,phase:lastState.phase});
       document.querySelector('.map-heading .eyebrow').textContent='ROOM FLOOR PLAN';
       document.querySelector('.map-heading h3').textContent=interior.name;
       document.querySelector('.map-legend>span:first-child').innerHTML='<i></i> You are here';
@@ -408,9 +448,9 @@ function renderMap(){
     }
   }
   const mapTitle=document.querySelector('.map-heading h3');if(mapTitle)mapTitle.textContent=activeWorld.name;
-  const size=lastState?.worldSize || getWorldSize(activeWorld.id);
+  const size=lastState?.worldSize || getWorldSize(baseTheme(activeWorld.id));
   const scale=Math.min(canvas.width/size.width,canvas.height/size.height);
-  drawWorld(ctx,activeWorld.id,{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.mapEntities || lastState?.entities || [],phase:lastState?.phase});
+  drawWorld(ctx,baseTheme(activeWorld.id),{x:0,y:0,width:canvas.width,height:canvas.height,scale,time:0,entities:lastState?.mapEntities || lastState?.entities || [],phase:lastState?.phase});
   if(isFinalist(activeWorld.id)){
     const heading=document.querySelector('.map-heading .eyebrow');
     if(heading)heading.textContent=lastState?.interior ? 'THE WORLD OUTSIDE YOUR DOOR' : 'ROADS YOU HAVE YET TO WALK';
@@ -432,7 +472,7 @@ let toastTimeout;
 function showToast(message){const toast=document.querySelector('#toast');toast.innerHTML=`${icon('check')}<span>${escapeHtml(message)}</span>`;toast.classList.add('visible');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>toast.classList.remove('visible'),4000);}
 let gameToastTimeout;
 function showGameToast(message){const toast=document.querySelector('#game-toast');if(!toast)return;toast.textContent=message;toast.classList.add('visible');clearTimeout(gameToastTimeout);gameToastTimeout=setTimeout(()=>toast.classList.remove('visible'),3200);}
-function toggleSound(){soundOn=!soundOn;const button=document.querySelector('[data-action="sound"]');button?.classList.toggle('sound-on',soundOn);button?.setAttribute('aria-label',`Turn ambient sound ${soundOn?'off':'on'}`);if(soundOn&&activeWorld)startAmbient(activeWorld.id);else stopAmbient();}
+function toggleSound(){soundOn=!soundOn;const button=document.querySelector('[data-action="sound"]');button?.classList.toggle('sound-on',soundOn);button?.setAttribute('aria-label',`Turn ambient sound ${soundOn?'off':'on'}`);if(soundOn&&activeWorld)startAmbient(baseTheme(activeWorld.id));else stopAmbient();}
 function startAmbient(theme){
   stopAmbient();
   try{

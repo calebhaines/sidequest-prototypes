@@ -56,7 +56,7 @@ const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const GOLD = '#f3ce72';
 
-export function createGame(canvas, theme, callbacks = {}) {
+export function createGame(canvas, theme, callbacks = {}, options = {}) {
   theme = STORIES[theme] ? theme : 'moss';
   const story = STORIES[theme];
   const isNew = theme === 'lynch' || theme === 'shinobi';
@@ -70,7 +70,15 @@ export function createGame(canvas, theme, callbacks = {}) {
   const inspectedProps = new Set();
   let activeInterior = null;
   let sceneId = null;
-  const context = canvas.getContext('2d');
+  // WebGL canvases cannot claim a 2D context first. The simulation and story
+  // remain shared; only their presentation is delegated to the optional renderer.
+  const customRendering = typeof options.rendererFactory === 'function';
+  const renderer = customRendering ? options.rendererFactory(canvas, theme) : null;
+  if (customRendering && (!renderer || typeof renderer.draw !== 'function')) {
+    renderer?.destroy?.();
+    throw new Error('The game renderer could not initialize.');
+  }
+  const context = customRendering ? null : canvas.getContext('2d');
   const spawn = getSpawn(theme);
   let outdoorPosition = { ...spawn };
   const features = getWorldFeatures(theme).map((feature, index) => {
@@ -882,6 +890,13 @@ export function createGame(canvas, theme, callbacks = {}) {
     }
     let dx = (held.right ? 1 : 0) - (held.left ? 1 : 0);
     let dy = (held.down ? 1 : 0) - (held.up ? 1 : 0);
+    if ((dx !== 0 || dy !== 0) && renderer?.movementVector) {
+      const movement = renderer.movementVector(dx, dy);
+      if (Number.isFinite(movement?.x) && Number.isFinite(movement?.y)) {
+        dx = movement.x;
+        dy = movement.y;
+      }
+    }
     player.moving = dx !== 0 || dy !== 0;
     if (player.moving) {
       if (Math.abs(dx) > Math.abs(dy)) player.facing = dx > 0 ? 'right' : 'left';
@@ -986,6 +1001,10 @@ export function createGame(canvas, theme, callbacks = {}) {
     width = Math.max(240, Math.round(rect.width || 960));
     height = Math.max(240, Math.round(rect.height || 600));
     ratio = Math.min(window.devicePixelRatio || 1, 2);
+    if (renderer) {
+      renderer.resize?.(width, height, ratio);
+      return;
+    }
     if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
@@ -995,6 +1014,20 @@ export function createGame(canvas, theme, callbacks = {}) {
   }
 
   function draw() {
+    if (renderer) {
+      renderer.draw({
+        player: { ...player, sprinting: held.sprint },
+        interior: activeInterior, sceneId,
+        sceneSize: activeInterior?.size || worldSize, worldSize, theme,
+        phase: worldPhase, time: elapsed,
+        entities: features.filter(visibleFeature),
+        enemies: enemies.filter(enemy => !activeInterior && !enemy.defeated && (theme !== 'lynch' || worldPhase === 'dream')),
+        clones, projectiles, effects,
+        destination: nextDestination(), nearestFeature: nearestFeature(),
+        invulnerable, paused: paused(),
+      });
+      return;
+    }
     const viewWidth = width / scale;
     const viewHeight = height / scale;
     const sceneSize = activeInterior?.size || worldSize;
@@ -1316,7 +1349,12 @@ export function createGame(canvas, theme, callbacks = {}) {
 
   return {
     interact, attack, useAbility, trackQuest, openTravel, travelTo, enterBuilding, exitBuilding, setMove, getState, dismissDialogue, togglePause,
+    rotateCamera(delta) { if (!destroyed) return renderer?.rotateCamera?.(delta); },
+    zoomCamera(delta) { if (!destroyed) return renderer?.zoomCamera?.(delta); },
+    resetCamera() { if (!destroyed) return renderer?.resetCamera?.(); },
+    getRenderDiagnostics() { return renderer?.getDiagnostics?.() || { mode: customRendering ? 'custom' : '2d' }; },
     destroy() {
+      if (destroyed) return;
       destroyed = true;
       cancelAnimationFrame(frameId);
       observer?.disconnect();
@@ -1326,6 +1364,7 @@ export function createGame(canvas, theme, callbacks = {}) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', resize);
       clearMovement();
+      renderer?.destroy?.();
     },
   };
 }
