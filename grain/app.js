@@ -21,19 +21,21 @@
   const modes = ['kick', 'snare', 'hat', 'clap', 'rim', 'perc', 'texture', 'bass'];
   const engine = new window.NoiseEngine();
   let state = { ...clone(window.NOISE_PRESETS[0]), master: 0.78 };
+  state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
+  let voiceLab;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
   let bank = 0, selected = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let history = [], toastTimer, saveTimer, exporting = false;
-  const storageKey = 'grain-drum-machine-v1';
+  const storageKey = 'grain-drum-machine-v2';
   const icon = (name) => '<svg aria-hidden="true"><use href="#i-' + name + '"/></svg>';
   const pretty = (str) => str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
   function project() {
     banks[bank] = state.tracks.map((t) => [...t.steps]);
-    return { format: 'grain-project', version: 1, state: clone(state), banks: clone(banks), bank, selected };
+    return { format: 'grain-project', version: 2, state: clone(state), banks: clone(banks), bank, selected };
   }
   function validateProject(data) {
-    if (!data || data.format !== 'grain-project' || data.version !== 1 || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a GRAIN project file.');
+    if (!data || data.format !== 'grain-project' || ![1, 2].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a GRAIN project file.');
     const s = data.state;
     if (typeof s.name !== 'string' || !s.name.trim() || s.name.length > 80) throw new Error('The project needs a valid name.');
     const isNumber = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
@@ -41,6 +43,7 @@
     const validSteps = (steps) => Array.isArray(steps) && steps.length === 16 && steps.every((v) => v === 0 || v === 1 || v === 2);
     s.tracks.forEach((track) => {
       if (!track || typeof track.name !== 'string' || track.name.length > 40 || !sources.some((n) => n.id === track.noise) || !modes.includes(track.mode) || !validSteps(track.steps) || !['level', 'tone', 'decay', 'pitch'].every((key) => isNumber(track[key], 0, 1)) || !isNumber(track.pan, -1, 1) || typeof track.mute !== 'boolean' || typeof track.solo !== 'boolean') throw new Error('The project contains an invalid voice.');
+      if ((data.version === 2 || track.synth !== undefined) && !window.GrainSynth.validate(track.synth)) throw new Error('The project contains invalid synthesis settings.');
     });
     if (!Array.isArray(data.banks) || data.banks.length !== 4 || !data.banks.every((b) => Array.isArray(b) && b.length === 8 && b.every(validSteps))) throw new Error('The project contains an invalid pattern.');
     if (!Number.isInteger(data.bank) || data.bank < 0 || data.bank > 3 || !Number.isInteger(data.selected) || data.selected < 0 || data.selected > 7) throw new Error('The project contains invalid bank settings.');
@@ -49,9 +52,11 @@
   function restore(data) {
     const valid = validateProject(data);
     state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
-    state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; });
+    state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; window.GrainSynth.ensureTrack(t); });
   }
-  try { const stored = localStorage.getItem(storageKey); if (stored) restore(JSON.parse(stored)); } catch (_) { /* A blocked storage area still permits making music. */ }
+  for (const key of [storageKey, 'grain-drum-machine-v1']) {
+    try { const stored = localStorage.getItem(key); if (stored) { restore(JSON.parse(stored)); break; } } catch (_) { /* Try the older project, or start fresh if browser storage is unavailable. */ }
+  }
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 250);
@@ -85,7 +90,7 @@
     $('status-dot').classList.add('ready');
   }
   async function audition(track) {
-    try { await engine.preview(track); syncEffects(); audioReady(); } catch (error) { toast(error.message || 'Audio could not start. Please try again.'); }
+    try { await engine.preview(track, state.bpm); syncEffects(); audioReady(); } catch (error) { toast(error.message || 'Audio could not start. Please try again.'); }
   }
   async function play() {
     if (busy || playing) return;
@@ -240,24 +245,39 @@
       if (next === undefined) return;
       event.preventDefault(); remember(); next = clamp(next, 0, 1); draw(next); change(next); persist();
     });
-    control.append(knob, name, number); return control;
+    control.append(knob, name, number); control.updateValue = draw; return control;
+  }
+  function refreshMixer() {
+    const track = state.tracks[selected], synth = window.GrainSynth.ensureTrack(track);
+    const values = { 'body-level': synth.body.level, 'noise-level': synth.noise.level, level: track.level, pan: (track.pan + 1) / 2 };
+    Array.from($('voice-knobs').children).forEach((control) => { const knob = control.querySelector('.knob'); if (knob && control.updateValue) control.updateValue(values[knob.dataset.param]); });
   }
   function renderVoice() {
+    const active = document.activeElement;
+    const focusedParam = ($('voice-knobs').contains(active) || $('synthesis-knobs').contains(active)) ? active.dataset.param : null;
+    const focusedSelector = $('synthesis-selectors').contains(active) ? active.id : null;
     const track = state.tracks[selected];
+    const synth = window.GrainSynth.ensureTrack(track);
     $('selected-voice-index').textContent = 'VOICE 0' + (selected + 1);
     $('selected-voice-name').textContent = pretty(track.name);
     const descriptions = { kick: 'Deep, warm & a little unruly.', snare: 'Snap, body & beautiful friction.', hat: track.decay > .35 ? 'Let a little air into the room.' : 'A sharp edge. A steady pulse.', rim: 'Small sound. Plenty of character.', clap: 'A few hands. One big impression.', perc: 'The unexpected in the pocket.', texture: 'The details between the beats.', bass: 'Low frequencies. High feeling.' };
     $('voice-description').textContent = descriptions[track.mode];
     $('selected-noise-label').textContent = track.noise.toUpperCase() + ' NOISE';
+    $('synthesis-voice').textContent = '0' + (selected + 1) + ' / ' + track.name;
     $('voice-knobs').replaceChildren();
     const percent = (v) => Math.round(v * 100) + '%';
-    [['tone', 'TONE', percent], ['decay', 'DECAY', percent], ['pitch', 'PITCH', percent], ['level', 'LEVEL', percent]].forEach(([param, label, formatter]) => {
-      $('voice-knobs').append(knobControl(param, label, track[param], formatter, (value) => { track[param] = value; drawVoice(); }));
-    });
+    const refresh = () => { drawVoice(); if (voiceLab) { voiceLab.draw(); voiceLab.updateNote(); } };
+    $('voice-knobs').append(knobControl('body-level', 'BODY', synth.body.level, percent, (value) => { synth.body.level = value; refresh(); }));
+    $('voice-knobs').append(knobControl('noise-level', 'NOISE', synth.noise.level, percent, (value) => { synth.noise.level = value; refresh(); }));
+    $('voice-knobs').append(knobControl('level', 'LEVEL', track.level, percent, (value) => { track.level = value; refresh(); }));
+    $('voice-knobs').append(knobControl('pan', 'PAN', (track.pan + 1) / 2, (value) => Math.abs(value - .5) < .005 ? 'Center' : (value < .5 ? 'L ' : 'R ') + Math.round(Math.abs(value - .5) * 200), (value) => { track.pan = value * 2 - 1; refresh(); }));
     document.querySelectorAll('.noise-source').forEach((button) => { const active = button.dataset.noise === track.noise; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', active); });
     const source = sources.find((n) => n.id === track.noise);
     $('noise-caption').textContent = source.name + ' noise. ' + source.description;
     drawVoice();
+    if (voiceLab) voiceLab.render();
+    if (focusedParam) { const replacement = Array.from(document.querySelectorAll('.knob')).find((knob) => knob.dataset.param === focusedParam); if (replacement) replacement.focus({ preventScroll: true }); }
+    else if (focusedSelector && $(focusedSelector)) $(focusedSelector).focus({ preventScroll: true });
   }
   function renderMaster() {
     const container = $('master-knobs'); container.replaceChildren();
@@ -322,14 +342,24 @@
   }
   function drawVoice() {
     const canvas = $('voice-wave'), ctx = canvas.getContext('2d'); if (!ctx) return;
-    const track = state.tracks[selected], w = canvas.width, h = canvas.height;
+    const track = state.tracks[selected], synth = window.GrainSynth.ensureTrack(track), w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#344128'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
     ctx.strokeStyle = colors[selected]; ctx.lineWidth = 1.3; ctx.beginPath();
     const noiseIndex = sources.findIndex((s) => s.id === track.noise);
+    const duration = Math.max(.08, synth.body.level ? synth.body.attack + synth.body.hold + synth.body.decay : 0, synth.noise.level ? synth.noise.attack + synth.noise.hold + synth.noise.decay : 0);
+    const envelope = (time, layer) => {
+      if (time < layer.attack) return time / layer.attack;
+      if (time < layer.attack + layer.hold) return 1;
+      const phase = (time - layer.attack - layer.hold) / layer.decay;
+      if (phase >= 1) return 0;
+      return layer.curve === 'linear' ? 1 - phase : Math.exp(-9.2 * phase);
+    };
     for (let x = 0; x < w; x++) {
-      const envelope = Math.exp(-x / (w * (.09 + track.decay * .65))) * Math.min(1, x / 8);
-      const signal = Math.sin(x * (.22 + track.pitch * .4)) * .65 + Math.sin(x * (1.8 + noiseIndex * .41)) * (.1 + track.tone * .4);
-      const y = h / 2 + signal * envelope * 30;
+      const time = x / w * duration;
+      const body = Math.sin(time * synth.body.frequency * Math.PI * 2) * synth.body.level * envelope(time, synth.body);
+      const noise = Math.sin(x * (1.8 + noiseIndex * .41) * synth.noise.rate) * Math.cos(x * .29) * synth.noise.level * envelope(time, synth.noise);
+      const signal = (body + noise * .7) / Math.max(1, synth.body.level + synth.noise.level * .7);
+      const y = h / 2 + signal * track.level * 31;
       if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -351,7 +381,7 @@
   $('play-button').addEventListener('click', () => playing || busy ? stop() : play());
   $('restart-button').addEventListener('click', () => { stop(); play(); });
   $('audition-button').addEventListener('click', () => audition(state.tracks[selected]));
-  $('tempo').addEventListener('change', () => { remember(); state.bpm = Math.round(clamp($('tempo').value || state.bpm, 40, 240)); $('tempo').value = state.bpm; persist(); });
+  $('tempo').addEventListener('change', () => { remember(); state.bpm = Math.round(clamp($('tempo').value || state.bpm, 40, 240)); $('tempo').value = state.bpm; persist(); if (voiceLab) { voiceLab.draw(); voiceLab.updateNote(); } });
   $('swing').addEventListener('pointerdown', remember);
   const rangeKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
   $('swing').addEventListener('keydown', (event) => { if (rangeKeys.includes(event.key)) remember(); });
@@ -363,6 +393,7 @@
     const preset = window.NOISE_PRESETS[Number($('preset-select').value)]; if (!preset) return;
     remember(); const wasPlaying = playing || busy; if (wasPlaying) stop();
     state = { ...clone(preset), master: state.master }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0;
+    state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
     renderAll(); persist(); toast(preset.tagline); if (wasPlaying) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
@@ -384,6 +415,8 @@
     finally { event.target.value = ''; }
   });
   $('export-button').addEventListener('click', exportWav);
+  $('edit-synthesis').addEventListener('click', () => { $('synthesis-panel').scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); });
+  $('lab-audition').addEventListener('click', () => audition(state.tracks[selected]));
   $('help-button').addEventListener('click', () => $('help-dialog').showModal());
   $('close-help').addEventListener('click', () => $('help-dialog').close());
   $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) { const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); } });
@@ -396,6 +429,7 @@
   });
   window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
+  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); persist(); }, audition: () => audition(state.tracks[selected]) });
   renderAll(); drawHero(0); requestAnimationFrame(animate);
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine };
 }());

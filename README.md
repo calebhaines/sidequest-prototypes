@@ -8,6 +8,8 @@
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
+GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, independent attack/hold/decay envelopes, four noise filters, resonance, filter sweeps, saturation, burst trains, and tempo-synced or free-rate modulation. Open **Synthesis** beneath the Voice Lab to edit a selected voice. Existing projects upgrade automatically.
+
 The editable app is in [`grain/`](grain/). Its standalone page is copied to `public/grain/index.html` for Vite builds and `docs/grain/index.html` for the GitHub Pages deployment. The gallery links directly to it.
 
 ## Download and play

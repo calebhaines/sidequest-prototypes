@@ -31,6 +31,55 @@
     };
   }
 
+  // GrainSynth supplies the public schema. These compact defaults also let the
+  // audio engine run by itself, and the final clamps protect AudioParams even
+  // when a caller bypasses the project's import validation.
+  function readSynth(data, track) {
+    const t = track.tone, d = track.decay, p = track.pitch;
+    const legacy = {
+      kick: [33 + p * 34, 108 + p * 126, 0.038 + d * 0.025, 0.13 + d * 0.51, 1300 + t * 11000, 0.014 + t * 0.023],
+      snare: [115 + p * 145, 190 + p * 180, 0.04, (0.085 + d * 0.34) * 0.51, Math.sqrt((620 + t * 1050) * (3400 + t * 13800)), 0.085 + d * 0.34],
+      hat: [220, 220, 0.025, 0.12, Math.sqrt((3700 + t * 5200) * (9500 + t * 10000)), 0.025 + d * 0.28],
+      clap: [220, 220, 0.025, 0.12, Math.sqrt((700 + t * 750) * (2600 + t * 8800)), 0.08 + d * 0.37],
+      rim: [330 + p * 950, 390 + p * 1150, 0.014, 0.026 + d * 0.13, Math.sqrt((800 + t * 900) * (2100 + t * 10000)), (0.026 + d * 0.13) * 0.6],
+      perc: [100 + p * 590, (100 + p * 590) * 1.9, 0.04 + d * 0.04, 0.065 + d * 0.43, Math.sqrt((250 + t * 2000) * (1200 + t * 12800)), (0.065 + d * 0.43) * 0.79],
+      texture: [220, 220, 0.025, 0.12, 450 + t * t * 17800, 0.24 + d * 1.7],
+      bass: [29 + p * 119, (29 + p * 119) * 1.28, 0.035, 0.13 + d * 0.65, 140 + t * 1700, (0.13 + d * 0.65) * 0.5]
+    }[track.mode];
+    const fallback = {
+      body: { level: ['hat', 'clap', 'texture'].includes(track.mode) ? 0 : 1, wave: track.mode === 'rim' ? 'triangle' : 'sine', frequency: legacy[0], harmonics: 1, detune: 0, pitchAmount: 12 * Math.log2(legacy[1] / legacy[0]), pitchTime: legacy[2], attack: track.mode === 'bass' ? 0.004 : 0.001, hold: 0, decay: legacy[3], curve: 'exponential' },
+      noise: { level: 1, rate: 0.72 + p * 0.85, filter: ['kick', 'bass', 'texture'].includes(track.mode) ? 'lowpass' : 'bandpass', cutoff: legacy[4], resonance: 0.707, attack: track.mode === 'texture' ? 0.01 + d * 0.025 : 0.001, hold: 0, decay: legacy[5], curve: 'exponential', drive: 0, envAmount: 0, bursts: track.mode === 'clap' ? 4 : 1, spacing: 0.0175 },
+      mod: { target: 'off', wave: 'sine', rate: 4, depth: 0, sync: false, division: '1/16' }
+    };
+    let raw = data && data.synth || fallback;
+    if (window.GrainSynth && typeof window.GrainSynth.ensureTrack === 'function' && data && typeof data === 'object') raw = window.GrainSynth.ensureTrack(data);
+    const number = (group, key, min, max) => clamp(raw[group] && raw[group][key] !== undefined ? raw[group][key] : fallback[group][key], min, max);
+    const choice = (group, key, options) => options.includes(raw[group] && raw[group][key]) ? raw[group][key] : fallback[group][key];
+    return {
+      body: {
+        level: number('body', 'level', 0, 1), wave: choice('body', 'wave', ['sine', 'triangle', 'sawtooth', 'square']), frequency: number('body', 'frequency', 20, 2000), harmonics: number('body', 'harmonics', 0, 1), detune: number('body', 'detune', -50, 50), pitchAmount: number('body', 'pitchAmount', -24, 48), pitchTime: number('body', 'pitchTime', 0.002, 0.5), attack: number('body', 'attack', 0.001, 0.2), hold: number('body', 'hold', 0, 0.3), decay: number('body', 'decay', 0.01, 2), curve: choice('body', 'curve', ['exponential', 'linear'])
+      },
+      noise: {
+        level: number('noise', 'level', 0, 1), rate: number('noise', 'rate', 0.25, 4), filter: choice('noise', 'filter', ['lowpass', 'highpass', 'bandpass', 'notch']), cutoff: number('noise', 'cutoff', 40, 18000), resonance: number('noise', 'resonance', 0.1, 12), attack: number('noise', 'attack', 0.001, 0.3), hold: number('noise', 'hold', 0, 0.4), decay: number('noise', 'decay', 0.005, 3), curve: choice('noise', 'curve', ['exponential', 'linear']), drive: number('noise', 'drive', 0, 1), envAmount: number('noise', 'envAmount', -48, 48), bursts: Math.round(number('noise', 'bursts', 1, 6)), spacing: number('noise', 'spacing', 0.005, 0.06)
+      },
+      mod: {
+        target: choice('mod', 'target', ['off', 'filter', 'amplitude', 'pitch', 'pan']), wave: choice('mod', 'wave', ['sine', 'triangle', 'square', 'sawtooth', 'samplehold']), rate: number('mod', 'rate', 0.1, 40), depth: number('mod', 'depth', 0, 1), sync: !!(raw.mod && raw.mod.sync), division: choice('mod', 'division', ['1/4', '1/8', '1/16', '1/32'])
+      }
+    };
+  }
+
+  function envelopeLength(settings) {
+    return settings.attack + settings.hold + settings.decay + 0.004;
+  }
+
+  function noiseLength(settings) {
+    return envelopeLength(settings) + (settings.bursts - 1) * settings.spacing;
+  }
+
+  function modulationRate(settings, bpm) {
+    return settings.sync ? clamp(bpm || 120, 30, 300) / 60 * (Number(settings.division.split('/')[1]) / 4) : settings.rate;
+  }
+
   function makeNoise(context, type) {
     const length = context.sampleRate * 2;
     const buffer = context.createBuffer(1, length, context.sampleRate);
@@ -209,15 +258,38 @@
   }
 
   function createRenderEnvironment(context, graph, seed) {
-    return { context, graph, buffers: new Map(), voices: new Set(), hats: new Set(), random: randomGenerator(seed) };
+    return { context, graph, buffers: new Map(), voices: new Set(), hats: new Set(), random: randomGenerator(seed), modRandom: randomGenerator(seed ^ 0x71A39B5D) };
   }
 
-  function synthesize(environment, trackData, time, accent) {
+  function fadeVoice(voice, at, duration = 0.008) {
+    if (voice.disposed) return;
+    voice.bus.gain.cancelScheduledValues(at);
+    voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at);
+    voice.bus.gain.exponentialRampToValueAtTime(EPSILON, at + duration);
+    voice.sources.forEach(node => {
+      const end = Math.min(voice.sourceEnds.get(node), at + duration + 0.002);
+      voice.sourceEnds.set(node, end);
+      try { node.stop(end); } catch (_) {}
+    });
+    voice.stopTime = Math.min(voice.stopTime, at + duration + 0.002);
+    voice.stolen = true;
+  }
+
+  function synthesize(environment, trackData, time, accent, bpm = 120) {
     const track = readTrack(trackData);
     if (track.level <= 0) return null;
+    const settings = readSynth(trackData, track);
+    const body = settings.body, noise = settings.noise, mod = settings.mod;
+    if (body.level <= 0 && noise.level <= 0) return null;
     const { context, graph } = environment;
     const now = Math.max(time, context.currentTime);
-    const tone = track.tone, decay = track.decay, pitch = track.pitch;
+    // Long edited envelopes can otherwise accumulate hundreds of resonant
+    // filters. Steal the oldest hits gently; the same limits apply offline.
+    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now);
+    const sameTrack = active.filter(voice => voice.track === trackData);
+    if (sameTrack.length >= 16) fadeVoice(sameTrack[0], now);
+    if (active.filter(voice => !voice.stolen).length >= 128) fadeVoice(active.find(voice => !voice.stolen), now);
+    const frequencyLimit = context.sampleRate * 0.46;
     const bus = context.createGain();
     const panner = typeof context.createStereoPanner === 'function' ? context.createStereoPanner() : context.createPanner();
     if (panner.pan) panner.pan.value = track.pan;
@@ -228,14 +300,13 @@
         panner.positionZ.value = 1 - Math.abs(track.pan);
       } else panner.setPosition(track.pan, 0, 1 - Math.abs(track.pan));
     }
-    const velocity = accent ? 1.2 : 0.88;
-    const volume = track.level * velocity;
+    const volume = track.level * (accent ? 1.2 : 0.88);
     bus.gain.value = volume;
     bus.connect(panner);
     panner.connect(graph.input);
-    const voice = { sources: [], nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode };
+    const voice = { sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: trackData, stolen: false };
     environment.voices.add(voice);
-
+    const add = node => { voice.nodes.push(node); return node; };
     const clean = () => {
       if (voice.disposed) return;
       voice.disposed = true;
@@ -245,139 +316,161 @@
     };
     const source = (node, duration) => {
       voice.sources.push(node);
-      voice.nodes.push(node);
-      voice.stopTime = Math.max(voice.stopTime, now + duration + 0.02);
+      voice.sourceEnds.set(node, now + duration + 0.014);
+      add(node);
+      voice.stopTime = Math.max(voice.stopTime, now + duration + 0.014);
       node.onended = () => {
         voice.ended++;
         if (voice.ended >= voice.sources.length) clean();
       };
-      node.stop(now + duration + 0.02);
+      node.stop(now + duration + 0.014);
     };
-    const envelope = (peak, attack, duration, destination = bus, pattern = null) => {
-      const gain = context.createGain();
-      gain.gain.setValueAtTime(EPSILON, now);
-      if (pattern) {
-        pattern.forEach(([offset, value]) => gain.gain.linearRampToValueAtTime(Math.max(EPSILON, value * peak), now + offset));
-      } else gain.gain.linearRampToValueAtTime(Math.max(EPSILON, peak), now + attack);
-      gain.gain.exponentialRampToValueAtTime(EPSILON, now + Math.max(duration, attack + 0.001));
+    const envelope = (peak, values, destination, offset = 0, scale = 1) => {
+      const gain = add(context.createGain());
+      const begin = now + offset;
+      const attackEnd = begin + values.attack;
+      const holdEnd = attackEnd + values.hold * scale;
+      const decayEnd = holdEnd + values.decay * scale;
+      gain.gain.setValueAtTime(0, now);
+      if (offset) gain.gain.setValueAtTime(0, begin);
+      gain.gain.linearRampToValueAtTime(peak, attackEnd);
+      gain.gain.setValueAtTime(peak, holdEnd);
+      if (values.curve === 'linear') gain.gain.linearRampToValueAtTime(0, decayEnd);
+      else {
+        gain.gain.exponentialRampToValueAtTime(Math.max(1e-8, peak * 0.0001), decayEnd);
+        gain.gain.linearRampToValueAtTime(0, decayEnd + 0.004);
+      }
       gain.connect(destination);
-      voice.nodes.push(gain);
       return gain;
     };
-    const filter = (type, frequency, q, destination) => {
-      const node = context.createBiquadFilter();
-      node.type = type;
-      node.frequency.value = clamp(frequency, 20, context.sampleRate * 0.46);
-      node.Q.value = q || 0.707;
-      node.connect(destination);
-      voice.nodes.push(node);
-      return node;
-    };
-    const noise = (duration, peak, highpass, lowpass, attack = 0.001, pattern = null, color = track.noise, resonance = 0.707) => {
-      if (!environment.buffers.has(color)) environment.buffers.set(color, makeNoise(context, color));
-      const node = context.createBufferSource();
-      node.buffer = environment.buffers.get(color);
-      node.loop = true;
-      node.playbackRate.value = 0.72 + pitch * 0.85;
-      let destination = envelope(peak, attack, duration, bus, pattern);
-      if (lowpass) destination = filter('lowpass', lowpass, resonance, destination);
-      if (highpass) destination = filter('highpass', highpass, 0.707, destination);
-      node.connect(destination);
-      node.start(now, environment.random() * 1.5);
-      source(node, duration);
-      return node;
-    };
-    const oscillator = (wave, startFrequency, endFrequency, fallTime, peak, duration, attack = 0.001) => {
+    const oscillator = (wave, startFrequency, finalFrequency, sweepTime, peak, scale = 1, detune = body.detune) => {
       const node = context.createOscillator();
       node.type = wave;
-      node.frequency.setValueAtTime(Math.max(20, startFrequency), now);
-      if (endFrequency !== undefined) node.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + fallTime);
-      node.connect(envelope(peak, attack, duration));
+      node.detune.value = detune;
+      node.frequency.setValueAtTime(clamp(startFrequency, 20, frequencyLimit), now);
+      node.frequency.exponentialRampToValueAtTime(clamp(finalFrequency, 20, frequencyLimit), now + sweepTime);
+      node.connect(envelope(peak, body, bus, 0, scale));
       node.start(now);
-      source(node, duration);
-      return node;
+      source(node, body.attack + (body.hold + body.decay) * scale + 0.004);
     };
 
-    switch (track.mode) {
-      case 'kick': {
-        const length = 0.13 + decay * 0.51;
-        const low = 33 + pitch * 34;
-        oscillator('sine', 108 + pitch * 126, low, 0.038 + decay * 0.025, 0.95, length);
-        oscillator('triangle', low * 2.6, low, 0.04, 0.11 + tone * 0.09, length * 0.46);
-        noise(0.014 + tone * 0.023, 0.19 + tone * 0.18, 120, 1300 + tone * 11000);
-        break;
+    if (track.mode === 'hat') {
+      environment.hats.forEach(hat => {
+        if (!hat.disposed && hat.startTime <= now && hat.stopTime > now) {
+          fadeVoice(hat, now, 0.006);
+        }
+      });
+      environment.hats.add(voice);
+    }
+
+    // The secondary partial retains each drum's original harmonic character.
+    // Frequency, sweep, detune and layer envelopes remain independently editable.
+    if (body.level > 0) {
+      const p = track.pitch, t = track.tone;
+      const character = {
+        kick: [0.95, 'triangle', 2.6 * (33 + p * 34) / (108 + p * 126), 1, 0.11 + t * 0.09, 0.46],
+        snare: [0.49, 'triangle', (300 + p * 260) / (190 + p * 180), (210 + p * 190) / (115 + p * 145), 0.14, 0.57],
+        rim: [0.45, 'sine', (1020 + p * 2400) / (390 + p * 1150), (950 + p * 2100) / (330 + p * 950), 0.19, 0.55],
+        perc: [0.61, 'triangle', 2.01 / 1.9, 1.51, 0.12 + t * 0.12, 0.65],
+        bass: [0.73, 'triangle', 1 / 1.28, 1, 0.1 + t * 0.17, 0.8],
+        hat: [0.54, 'triangle', 2.76, 2.76, 0.12, 0.65],
+        clap: [0.54, 'triangle', 1.51, 1.51, 0.12, 0.65],
+        texture: [0.54, 'triangle', 2, 2, 0.12, 0.8]
+      }[track.mode];
+      const startFrequency = body.frequency * Math.pow(2, body.pitchAmount / 12);
+      oscillator(body.wave, startFrequency, body.frequency, body.pitchTime, character[0] * body.level);
+      if (body.harmonics > 0) oscillator(character[1], startFrequency * character[2], body.frequency * character[3], Math.max(0.002, body.pitchTime * 0.85), character[4] * body.level * body.harmonics, character[5], body.detune * -0.6);
+    }
+
+    let noiseSource = null, noiseFilter = null, amplitude = null;
+    if (noise.level > 0) {
+      if (!environment.buffers.has(track.noise)) environment.buffers.set(track.noise, makeNoise(context, track.noise));
+      noiseSource = context.createBufferSource();
+      noiseSource.buffer = environment.buffers.get(track.noise);
+      noiseSource.loop = true;
+      noiseSource.playbackRate.value = noise.rate;
+      // A DC guard precedes the user's filter; envelopes follow both filter and
+      // drive, so even extreme resonance cannot ring after a layer has ended.
+      const dc = add(context.createBiquadFilter());
+      dc.type = 'highpass'; dc.frequency.value = 20; dc.Q.value = 0.707;
+      noiseFilter = add(context.createBiquadFilter());
+      noiseFilter.type = noise.filter;
+      noiseFilter.Q.value = noise.resonance;
+      const cutoff = clamp(noise.cutoff, 20, frequencyLimit);
+      const initialCutoff = clamp(cutoff * Math.pow(2, noise.envAmount / 12), 20, frequencyLimit);
+      noiseFilter.frequency.setValueAtTime(initialCutoff, now);
+      noiseFilter.frequency.setValueAtTime(initialCutoff, now + noise.attack + noise.hold);
+      noiseFilter.frequency.exponentialRampToValueAtTime(cutoff, now + noise.attack + noise.hold + noise.decay);
+      noiseSource.connect(dc); dc.connect(noiseFilter);
+      let signal = noiseFilter;
+      if (noise.drive > 0) {
+        const drive = add(context.createWaveShaper());
+        drive.curve = saturation(noise.drive);
+        drive.oversample = '2x';
+        const trim = add(context.createGain());
+        trim.gain.value = 1 / (1 + noise.drive * 1.9);
+        signal.connect(drive); drive.connect(trim); signal = trim;
       }
-      case 'snare': {
-        const length = 0.085 + decay * 0.34;
-        noise(length, 1.28, 620 + tone * 1050, 3400 + tone * 13800);
-        oscillator('sine', 190 + pitch * 180, 115 + pitch * 145, 0.04, 0.49, length * 0.51);
-        oscillator('triangle', 300 + pitch * 260, 210 + pitch * 190, 0.027, 0.14, length * 0.29);
-        noise(0.018, 0.25, 2200, 17000);
-        break;
+      amplitude = add(context.createGain());
+      amplitude.gain.value = 1;
+      amplitude.connect(bus);
+      const strength = { kick: 0.19 + track.tone * 0.18, snare: 1.28, hat: 1.15, clap: 1.4, rim: 0.56, perc: 0.7, texture: 0.81, bass: 0.28 + track.tone * 0.12 }[track.mode];
+      for (let burst = 0; burst < noise.bursts; burst++) {
+        const gain = envelope(strength * noise.level / noise.bursts, noise, amplitude, burst * noise.spacing);
+        signal.connect(gain);
       }
-      case 'hat': {
-        environment.hats.forEach(hat => {
-          if (!hat.disposed && hat.startTime <= now && hat.stopTime > now) {
-            hat.bus.gain.cancelScheduledValues(now);
-            hat.bus.gain.setValueAtTime(hat.volume, now);
-            hat.bus.gain.exponentialRampToValueAtTime(EPSILON, now + 0.006);
-            hat.sources.forEach(node => { try { node.stop(now + 0.008); } catch (_) {} });
-            hat.stopTime = now + 0.008;
-          }
-        });
-        environment.hats.add(voice);
-        const length = 0.025 + decay * 0.28;
-        noise(length, 1.1, 3700 + tone * 5200, 9500 + tone * 10000);
-        noise(length * 0.75, 0.18 + tone * 0.08, 6500, 18000, 0.001, null, 'metallic');
-        break;
-      }
-      case 'clap': {
-        const length = 0.08 + decay * 0.37;
-        const bursts = [[0.001, 1], [0.012, 0.03], [0.018, 0.8], [0.029, 0.03], [0.035, 0.9], [0.047, 0.04], [0.054, 0.65]];
-        noise(length, 1.4, 700 + tone * 750, 2600 + tone * 8800, 0.001, bursts);
-        noise(length * 0.75, 0.19, 1200, 7000, 0.011);
-        break;
-      }
-      case 'rim': {
-        const length = 0.026 + decay * 0.13;
-        oscillator('triangle', 390 + pitch * 1150, 330 + pitch * 950, 0.014, 0.45, length);
-        oscillator('sine', 1020 + pitch * 2400, 950 + pitch * 2100, 0.015, 0.19, length * 0.55);
-        noise(length * 0.6, 0.56, 800 + tone * 900, 2100 + tone * 10000, 0.0005, null, track.noise, 2.1);
-        break;
-      }
-      case 'perc': {
-        const length = 0.065 + decay * 0.43;
-        const frequency = 100 + pitch * 590;
-        oscillator('sine', frequency * 1.9, frequency, 0.04 + decay * 0.04, 0.61, length);
-        oscillator('triangle', frequency * 2.01, frequency * 1.51, 0.033, 0.12 + tone * 0.12, length * 0.65);
-        noise(length * 0.79, 0.7, 250 + tone * 2000, 1200 + tone * 12800, 0.001, null, track.noise, 1.4);
-        break;
-      }
-      case 'texture': {
-        const length = 0.24 + decay * 1.7;
-        noise(length, 0.81, 40 + pitch * pitch * 2300, 450 + tone * tone * 17800, 0.01 + decay * 0.025);
-        break;
-      }
-      case 'bass': {
-        const length = 0.13 + decay * 0.65;
-        const frequency = 29 + pitch * 119;
-        oscillator('sine', frequency * 1.28, frequency, 0.035, 0.73, length, 0.004);
-        oscillator('triangle', frequency, frequency, 0.02, 0.1 + tone * 0.17, length * 0.8, 0.004);
-        noise(length * 0.5, 0.28 + tone * 0.12, 25, 140 + tone * 1700, 0.003);
-        break;
+      noiseSource.start(now, environment.random() * 1.5);
+      source(noiseSource, noiseLength(noise));
+    }
+
+    let target = null, depth = 0;
+    if (mod.depth > 0) {
+      if (mod.target === 'filter' && noiseFilter) { target = noiseFilter.detune; depth = mod.depth * 4800; }
+      else if (mod.target === 'pitch' && noiseSource && noiseSource.detune) { target = noiseSource.detune; depth = mod.depth * 2400; }
+      else if (mod.target === 'amplitude' && amplitude) {
+        amplitude.gain.value = 1 - mod.depth * 0.5;
+        target = amplitude.gain; depth = mod.depth * 0.5;
+      } else if (mod.target === 'pan') {
+        target = panner.pan || panner.positionX || null;
+        depth = mod.depth * (1 - Math.abs(track.pan));
       }
     }
+    if (target && depth > 0) {
+      const duration = Math.max(body.level > 0 ? envelopeLength(body) : 0, noise.level > 0 ? noiseLength(noise) : 0);
+      const rate = clamp(modulationRate(mod, bpm), 0.1, 40);
+      let lfo;
+      if (mod.wave === 'samplehold' && typeof context.createConstantSource === 'function') {
+        lfo = context.createConstantSource();
+        for (let offset = 0; offset < duration + 0.014; offset += 1 / rate) lfo.offset.setValueAtTime(environment.modRandom() * 2 - 1, now + offset);
+      } else if (mod.wave === 'samplehold') {
+        // Compatible fallback with a low-rate buffer, never a ScriptProcessor.
+        const sampleRate = 3000;
+        const buffer = context.createBuffer(1, Math.max(128, Math.ceil((duration + 0.03) * sampleRate)), sampleRate);
+        const samples = buffer.getChannelData(0);
+        let value = 0, last = -1;
+        for (let i = 0; i < samples.length; i++) {
+          const step = Math.floor(i / sampleRate * rate);
+          if (step !== last) { value = environment.modRandom() * 2 - 1; last = step; }
+          samples[i] = value;
+        }
+        lfo = context.createBufferSource(); lfo.buffer = buffer;
+      } else {
+        lfo = context.createOscillator(); lfo.type = mod.wave; lfo.frequency.value = rate;
+      }
+      const amount = add(context.createGain()); amount.gain.value = depth;
+      lfo.connect(amount); amount.connect(target);
+      lfo.start(now); source(lfo, duration);
+      voice.lfo = lfo;
+      voice.modulationRate = rate;
+    }
+    if (!voice.sources.length) clean();
     return voice;
   }
 
   function stopVoices(environment, at) {
     if (!environment) return;
     environment.voices.forEach(voice => {
-      if (voice.disposed) return;
-      voice.bus.gain.cancelScheduledValues(at);
-      voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at);
-      voice.bus.gain.exponentialRampToValueAtTime(EPSILON, at + 0.008);
-      voice.sources.forEach(node => { try { node.stop(at + 0.01); } catch (_) {} });
+      fadeVoice(voice, at);
     });
     environment.hats.clear();
   }
@@ -393,7 +486,7 @@
     const hasSolo = tracks.some(track => track.solo);
     tracks.forEach(track => {
       const hit = track.steps && track.steps[step];
-      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2);
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, state.bpm);
     });
   }
 
@@ -554,11 +647,11 @@
       this.currentStep = 0;
     }
 
-    async preview(track) {
+    async preview(track, bpm) {
       const generation = this.generation;
       await this.init();
       if (generation !== this.generation || !this.environment || this.context.state === 'closed') return;
-      synthesize(this.environment, track, this.context.currentTime + 0.005, false);
+      synthesize(this.environment, track, this.context.currentTime + 0.005, false, bpm === undefined ? this.state && this.state.bpm || 120 : bpm);
     }
 
     setMasterVolume(value) {
@@ -580,7 +673,17 @@
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] }));
       const sampleRate = 44100;
       const duration = 16 * 60 / clamp(snapshot.bpm || 120, 30, 300);
-      const tail = 3.85;
+      const tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks : [];
+      const hasSolo = tracks.some(track => track.solo);
+      let longest = 0;
+      tracks.forEach(data => {
+        if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return;
+        const track = readTrack(data);
+        if (track.level <= 0) return;
+        const settings = readSynth(data, track);
+        longest = Math.max(longest, settings.body.level > 0 ? envelopeLength(settings.body) : 0, settings.noise.level > 0 ? noiseLength(settings.noise) : 0);
+      });
+      const tail = Math.max(0.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
       const context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, {
         master: snapshot.master === undefined ? this.values.master : snapshot.master,

@@ -11,7 +11,7 @@ for weight, file in [(400, 'Regular'), (500, 'Medium'), (600, 'Semibold'), (700,
         data = base64.b64encode(path.read_bytes()).decode()
         faces.append(f"@font-face{{font-family:'Grain Sans';font-style:normal;font-weight:{weight};font-display:swap;src:url(data:font/woff2;base64,{data}) format('woff2')}}")
 css = css.replace('/* FONT_FACES */', '\n'.join(faces))
-scripts = '\n'.join((root / name).read_text() for name in ['presets.js', 'audio-engine.js', 'app.js'])
+scripts = '\n'.join((root / name).read_text() for name in ['synth-params.js', 'presets.js', 'audio-engine.js', 'voice-lab.js', 'app.js'])
 html = (root / 'app.html').read_text().replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
 (root / 'index.html').write_text(html)
 print(f'Built index.html: {len(html.encode()):,} bytes. No external dependencies.')
