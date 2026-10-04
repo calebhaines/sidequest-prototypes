@@ -184,20 +184,25 @@
     sampleRate=Math.round(clamp(sampleRate,8000,48000));const tempo=clamp(asset.tempo||92,40,180),bars=Math.round(clamp(asset.bars||1,1,4)),duration=Math.min(30,bars*240/tempo),frames=Math.max(32,Math.round(sampleRate*duration));
     const pcm=new Float32Array(frames*2),beat=60/tempo,pitch=Math.round(clamp(asset.pitch||48,24,84));let randomState=asset.seed>>>0||0x53504f4f;
     const random=()=>{let x=randomState;x^=x<<13;x^=x>>>17;x^=x<<5;randomState=x>>>0;return randomState/4294967296;};
+    // Musical decisions use their own stream, so a phrase stays the same at
+    // every sample rate and does not depend on how many noise samples ran.
+    let phraseState=((asset.seed>>>0)^0x9e3779b9)>>>0||1;
+    const phraseRandom=()=>{let x=phraseState;x^=x<<13;x^=x>>>17;x^=x<<5;phraseState=x>>>0;return phraseState/4294967296;};
     const notes=[0,3,7,10,12,15,19],TAU=Math.PI*2;
     function voice(kind,at,note,seconds,velocity=1,pan=0) {
-      const count=Math.min(frames,Math.round(seconds*sampleRate)),frequency=440*Math.pow(2,(note-69)/12),first=Math.round(at*sampleRate),left=Math.cos((pan+1)*Math.PI/4),right=Math.sin((pan+1)*Math.PI/4);let low=0;
+      const tonal=['bass','bells','pluck','reed','keys'].includes(kind),detune=tonal?Math.pow(2,(phraseRandom()-.5)*4/1200):1,color=tonal?.85+phraseRandom()*.3:1;
+      const count=Math.min(frames,Math.round(seconds*sampleRate)),frequency=440*Math.pow(2,(note-69)/12)*detune,first=Math.round(at*sampleRate),left=Math.cos((pan+1)*Math.PI/4),right=Math.sin((pan+1)*Math.PI/4);let low=0;
       for(let i=0;i<count;i++){const t=i/sampleRate,p=TAU*frequency*t,white=random()*2-1;let value=0,envelope=Math.min(1,t/.004)*Math.exp(-5.5*t/seconds);
         if(kind==='kick'){value=Math.sin(TAU*(frequency*t+frequency*.03*(1-Math.exp(-t*40))));envelope=Math.min(1,t/.001)*Math.exp(-7*t/seconds);value+=white*.12*Math.exp(-t*100);}
         else if(kind==='snare'){low+=.27*(white-low);value=(white-low)*.75+Math.sin(p)*.23;envelope=Math.min(1,t/.001)*Math.exp(-7*t/seconds);}
         else if(kind==='hat'){low+=.05*(white-low);value=(white-low)*.4+Math.sin(p*5.37)*.12;envelope=Math.min(1,t/.0006)*Math.exp(-9*t/seconds);}
-        else if(kind==='bass')value=(Math.sin(p)+Math.sin(p*2)*.23+Math.sin(p*3)*.07)*.7;
-        else if(kind==='bells')value=(Math.sin(p)+Math.sin(p*2.756)*.27+Math.sin(p*5.404)*.1)*.55;
-        else if(kind==='pluck')value=(Math.sin(p)+Math.sin(p*2)*.28+Math.sin(p*3)*.14+Math.sin(p*4)*.06)*.62;
-        else if(kind==='reed')value=(Math.sin(p)+Math.sin(p*2)*.25+Math.sin(p*3)*.17+Math.sin(p*4)*.07)*.57;
+        else if(kind==='bass')value=(Math.sin(p)+(Math.sin(p*2)*.23+Math.sin(p*3)*.07)*color)*.7;
+        else if(kind==='bells')value=(Math.sin(p)+(Math.sin(p*2.756)*.27+Math.sin(p*5.404)*.1)*color)*.55;
+        else if(kind==='pluck')value=(Math.sin(p)+(Math.sin(p*2)*.28+Math.sin(p*3)*.14+Math.sin(p*4)*.06)*color)*.62;
+        else if(kind==='reed')value=(Math.sin(p)+(Math.sin(p*2)*.25+Math.sin(p*3)*.17+Math.sin(p*4)*.07)*color)*.57;
         else if(kind==='texture'){low+=.015*(white-low);value=low*.45+Math.sin(p)*.13+Math.sin(p*1.004)*.13;envelope=Math.sin(Math.PI*Math.min(1,t/seconds))*.5;}
         else if(kind==='rhythm'){low+=.15*(white-low);value=(white-low)*.4+Math.sin(p)*.3;envelope=Math.exp(-9*t/seconds)*Math.min(1,t/.001);}
-        else value=(Math.sin(p)+Math.sin(p*2)*.12+Math.sin(p*3)*.035)*.65;
+        else value=(Math.sin(p)+(Math.sin(p*2)*.12+Math.sin(p*3)*.035)*color)*.65;
         const index=((first+i)%frames)*2;pcm[index]+=value*envelope*velocity*left;pcm[index+1]+=value*envelope*velocity*right;
       }
     }
@@ -209,16 +214,19 @@
         [1,3].forEach(b=>voice('snare',at+b*beat,pitch+12,.21,.65,-.12));
         for(let step=0;step<8;step++)voice('hat',at+(step*.5+(step%2?.055:0))*beat,pitch+42,step%2?.11:.065,step%2?.45:.65,step%2?.4:-.3);
       }else if(id==='bass'){
-        [0,.75,1.5,2.5,3.25].forEach((b,i)=>voice('bass',at+b*beat,pitch+[0,0,7,3,variation?10:7][i],beat*.7,.9));
+        const rhythms=[[0,.75,1.5,2.5,3.25],[0,.5,1.75,2.5,3.5],[0,.75,1.75,2.25,3.25]],contours=[[0,0,7,3,variation?10:7],[0,7,0,3,10],[0,0,3,7,3],[0,10,7,3,7]],rhythm=rhythms[Math.floor(phraseRandom()*rhythms.length)],contour=contours[Math.floor(phraseRandom()*contours.length)];
+        rhythm.forEach((b,i)=>voice('bass',at+b*beat,pitch+contour[i],beat*(.55+phraseRandom()*.25),.82+phraseRandom()*.1));
       }else if(id==='keys'){
-        [0,1.75,3].forEach((b,chord)=>[0,3,7,10].forEach((n,i)=>voice('keys',at+(b+i*.035)*beat,pitch+n+(chord===1?5:chord===2?7:0),beat*1.65,.55,(i-1.5)*.35)));
+        const rhythms=[[0,1.75,3],[0,1.5,3],[0,2,3.25]],voicings=[[0,3,7,10],[0,3,7,12],[0,7,10,15],[0,3,10,19]],rhythm=rhythms[Math.floor(phraseRandom()*rhythms.length)];
+        rhythm.forEach((b,chord)=>{const chordNotes=voicings[Math.floor(phraseRandom()*voicings.length)],strum=.022+phraseRandom()*.026,decay=beat*(1.4+phraseRandom()*.5);chordNotes.forEach((n,i)=>voice('keys',at+(b+i*strum)*beat,pitch+n+(chord===1?5:chord===2?7:0),decay,.5+phraseRandom()*.08,(i-1.5)*.35));});
       }else if(id==='texture'){
         [0,7,12].forEach((n,i)=>voice('texture',at+i*.12,pitch+n,beat*4,.7,(i-1)*.65));
       }else if(id==='rhythm'){
         [0,.5,.75,1.5,2.25,2.75,3.5].forEach((b,i)=>voice('rhythm',at+b*beat,pitch+[0,7,12,3][i%4],beat*.22,.6,i%2?.5:-.5));
       }else{
         const steps=id==='bells'?[0,1.25,2.75]:id==='reed'?[0,.75,1.5,2.5,3.25]:[0,.5,1.25,2,2.75,3.5];
-        steps.forEach((b,i)=>voice(id,at+b*beat,pitch+notes[(i+variation*2+(asset.seed%3))%notes.length],beat*(id==='bells'?2.2:id==='reed'?.8:1.25),.6+(i%2)*.15,Math.sin(i*1.7)*.5));
+        const offset=Math.floor(phraseRandom()*notes.length),direction=phraseRandom()<.3?-1:1;
+        steps.forEach((b,i)=>voice(id,at+(b+(i?phraseRandom()*.035:0))*beat,pitch+notes[((offset+i*direction+variation*2)%notes.length+notes.length)%notes.length],beat*(id==='bells'?2.2:id==='reed'?.8:1.25),.58+(i%2)*.15+phraseRandom()*.08,Math.sin(i*1.7)*.5));
       }
     }
     let peak=0;for(let i=0;i<pcm.length;i++)peak=Math.max(peak,Math.abs(pcm[i]));const gain=peak>.82?.82/peak:1;for(let i=0;i<pcm.length;i++)pcm[i]*=gain;
