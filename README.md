@@ -6,7 +6,7 @@
 
 ## Music Lab
 
-[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, and MIRE.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, MIRE, and SPOOL.
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
@@ -18,7 +18,9 @@ GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, i
 
 [**Play MIRE**](https://calebhaines.github.io/sidequest-prototypes/music/mire/) for a feedback instrument with four interconnected delay/resonator pools, six resonator bodies, eight exciter types including imported audio, and a sixteen-step sequencer. Shape the routing matrix and modulation, freeze the network, save projects, and export stereo WAV. Open `mire/index.html` for offline play; editable sources are in [`mire/`](mire/) and rebuild with `python mire/build.py`.
 
-The editable GRAIN, TINE, and MIRE sources are in [`grain/`](grain/), [`tine/`](tine/), and [`mire/`](mire/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
+[**Play SPOOL**](https://calebhaines.github.io/sidequest-prototypes/music/spool/) for a tape-loop playground with four overlapping stereo decks, eight tape studies, thirty seconds per deck, audio import, live microphone input, built-in keys, and overdubbing. Change speed, reverse playback, and trim loop regions; shape tone, tape wear, wow, and flutter. Save projects and export stereo WAV. Open `spool/index.html` for offline play; editable sources are in [`spool/`](spool/) and the [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/spool/SPOOL-source.zip). Rebuild both with `python spool/build.py`.
+
+The editable GRAIN, TINE, MIRE, and SPOOL sources are in [`grain/`](grain/), [`tine/`](tine/), [`mire/`](mire/), and [`spool/`](spool/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
 
 ## Download and play
 

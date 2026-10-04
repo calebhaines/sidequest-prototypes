@@ -10,6 +10,7 @@ if (!fs.existsSync(path.join(music, 'index.html'))) {
 const grain = fs.readFileSync(path.join(root, 'grain', 'index.html'));
 const tine = fs.readFileSync(path.join(root, 'tine', 'index.html'));
 const mire = fs.readFileSync(path.join(root, 'mire', 'index.html'));
+const spool = fs.readFileSync(path.join(root, 'spool', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
 <head>
@@ -42,6 +43,7 @@ for (const directory of ['public', 'docs']) {
     ['music/grain/index.html', grain],
     ['music/tine/index.html', tine],
     ['music/mire/index.html', mire],
+    ['music/spool/index.html', spool],
     ['grain/index.html', legacy],
   ]) {
     const target = path.join(root, directory, relative);
