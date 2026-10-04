@@ -73,7 +73,6 @@ function renderApp() {
       <nav class="main-nav" aria-label="Main navigation">
         <a class="nav-active" href="#worlds">The prototypes <span>${String(worlds.length).padStart(2, '0')}</span></a>
         <a href="#idea">The idea</a>
-        ${location.protocol === 'file:' ? '' : '<a class="grain-nav" href="./grain/" aria-label="Open GRAIN drum machine">GRAIN</a>'}
         <button class="nav-how" data-action="help">How to play ${icon('arrowUp')}</button>
       </nav>
       ${location.protocol === 'file:' ? '<div class="header-status"><span class="status-dot"></span> Eight adventures, wherever you go</div>' : `<a class="header-status download-link" href="/downloads/sidequest-prototypes.zip" download>${icon('download')} Download prototypes</a>`}
@@ -91,7 +90,6 @@ function renderApp() {
           <div class="hero-perks"><span>${icon('globe')} Open exploration</span><span>${icon('sword')} Real-time combat</span><span>${icon('chat')} Your choices</span></div>
         </div>
       </section>
-      ${location.protocol === 'file:' ? '' : '<a class="grain-feature" href="./grain/" aria-label="Open GRAIN, the noise-powered drum machine"><svg class="grain-feature-mark" viewBox="0 0 40 48" aria-hidden="true"><path d="M4 18v12M12 8v32M20 2v44M28 12v24M36 20v8"/></svg><div class="grain-feature-copy"><span class="grain-feature-eyebrow">A LITTLE DETOUR INTO SOUND</span><h2>GRAIN<span class="grain-feature-period">.</span> <span class="grain-feature-title">Beautiful noise.</span></h2><p>12 noise sources. 16 steps. Endless rhythm.</p></div><span class="grain-feature-action">Open drum machine <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></span></a>'}
       <section id="worlds" class="worlds-section" aria-labelledby="worlds-heading">
         <div class="section-topline"><div><h2 id="worlds-heading">Pick a world. Get a little lost.</h2><span class="section-subtitle">No downloads. No commitments. Just press play.</span></div><button class="surprise-button" data-action="surprise">${icon('shuffle')} Surprise me ${icon('arrow')}</button></div>
         <div class="filter-row"><div class="filters" role="group" aria-label="Filter worlds">${['All worlds','3D','Mystery','Shinobi','Fantasy','Sci-fi','Wasteland','Surreal'].map((filter,i) => `<button class="filter ${i === 0 ? 'active' : ''}" data-filter="${filter}">${filter}${i === 0 ? `<span class="filter-count">${worlds.length}</span>` : ''}</button>`).join('')}</div><span class="prototype-label"><span class="status-dot"></span> EARLY, PLAYABLE PROTOTYPES</span></div>

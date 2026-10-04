@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/sync-music.mjs",
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "node scripts/sync-music.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "music:sync": "node scripts/sync-music.mjs",
     "package": "node scripts/package-downloads.mjs"
   },
   "devDependencies": {

@@ -24,14 +24,14 @@ Browser verification covers playback, step editing, sound controls, envelope dis
 
 ## Site integration
 
-The live page is https://calebhaines.github.io/sidequest-prototypes/grain/.
+The live page is https://calebhaines.github.io/sidequest-prototypes/music/grain/.
+Its landing page is https://calebhaines.github.io/sidequest-prototypes/music/.
 The GitHub Pages publishing directory is `docs/`; the Vite static directory is `public/`.
 From the repository root, rebuild and copy the standalone page with:
 
 ```sh
 python grain/build.py
-cp grain/index.html public/grain/index.html
-cp grain/index.html docs/grain/index.html
+npm run music:sync
 ```
 
-The gallery links to GRAIN in both its source and standalone Pages build. Existing RPG downloads retain their published version.
+Music Lab links to GRAIN. Old `/grain/` URLs redirect to the new music route. The Sidequest RPG gallery has no music promotion. Existing RPG downloads retain their published version.

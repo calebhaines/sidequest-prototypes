@@ -4,13 +4,15 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
-## GRAIN — noise drum machine
+## Music Lab
 
-[**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and currently features GRAIN.
+
+[**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
 GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, independent attack/hold/decay envelopes, four noise filters, resonance, filter sweeps, saturation, burst trains, and tempo-synced or free-rate modulation. Open **Synthesis** beneath the Voice Lab to edit a selected voice. Existing projects upgrade automatically.
 
-The editable app is in [`grain/`](grain/). Its standalone page is copied to `public/grain/index.html` for Vite builds and `docs/grain/index.html` for the GitHub Pages deployment. The gallery links directly to it.
+The editable app is in [`grain/`](grain/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after editing either page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the new location, preserving their query strings and hashes. Saved projects use the same browser storage.
 
 ## Download and play
 
