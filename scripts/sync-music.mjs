@@ -8,6 +8,7 @@ if (!fs.existsSync(path.join(music, 'index.html'))) {
   throw new Error('The Music Lab source page is missing: music/index.html');
 }
 const grain = fs.readFileSync(path.join(root, 'grain', 'index.html'));
+const tine = fs.readFileSync(path.join(root, 'tine', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
 <head>
@@ -38,6 +39,7 @@ for (const directory of ['public', 'docs']) {
   });
   for (const [relative, content] of [
     ['music/grain/index.html', grain],
+    ['music/tine/index.html', tine],
     ['grain/index.html', legacy],
   ]) {
     const target = path.join(root, directory, relative);
@@ -45,4 +47,4 @@ for (const directory of ['public', 'docs']) {
     fs.writeFileSync(target, content);
   }
 }
-console.log('Synced Music Lab, GRAIN, and its compatibility redirect.');
+console.log('Synced Music Lab, its instruments, and the GRAIN compatibility redirect.');

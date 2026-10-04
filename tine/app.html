@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#151619">
+  <meta name="tine-version" content="1.0.0">
+  <meta name="description" content="TINE is a physical modeling drum machine. Strike, shape, and sequence eight voices made from vibrating bodies. A standalone browser instrument.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23151619'/%3E%3Cg fill='none' stroke='%23dbb28d' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
+  <title>TINE — Strike. Shape. Resonate.</title>
+  <!-- STYLES -->
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="4"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 6M4 4v5h5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h13l3 3v15H3V3Zm2 0v6h10V3M7 21v-8h10v8"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3.5-2 5-5m3-4c1-2 3-3 4-3h3m-4-4 4 4-4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m5-5-5 5 5 5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 2-2.5 2-2.5 4M12 17h.01"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 20V5h7l2 3h9v12Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6Z"/></symbol>
+  </defs></svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="TINE physical modeling drum machine">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-word">TINE<span class="brand-period">.</span></span>
+        <span class="brand-description">PHYSICAL MODELING<br>DRUM MACHINE</span>
+      </a>
+      <div class="topbar-right"><a id="music-home" class="music-link" href="../"><svg><use href="#i-back"/></svg><span>Music Lab</span></a><span class="local-badge"><span></span> OFFLINE BY DESIGN</span><span class="topbar-divider"></span><button class="icon-button" id="help-button" aria-label="How to use TINE" title="Help & keyboard shortcuts"><svg><use href="#i-help"/></svg></button></div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="intro-title">
+        <div class="intro-copy"><div class="eyebrow"><span></span> SOUND WITH SUBSTANCE.</div><h1 id="intro-title">Strike. Shape.<br><em>Resonate.</em></h1><p>Eight voices. Sixteen steps.<br class="mobile-break"> A world of vibrating possibilities.</p></div>
+        <div class="intro-art" aria-hidden="true"><div class="art-top"><span>ANATOMY OF AN IMPACT</span><span class="art-index">FIG. 001</span></div><canvas id="hero-canvas" width="900" height="330"></canvas><div class="art-bottom"><span class="art-source">ENERGY IN</span><span class="art-rule"></span><span>MATTER IN MOTION</span><span class="art-rule"></span><span class="art-result">SOUND OUT</span></div></div>
+      </section>
+
+      <section class="transport panel" aria-label="Playback and pattern controls">
+        <div class="playback"><button id="play-button" class="play-button" aria-label="Play sequencer" title="Play / pause (Space)"><svg><use href="#i-play"/></svg><span>Play</span></button><button id="restart-button" class="icon-button restart" aria-label="Restart from step one" title="Restart from step one"><svg><use href="#i-reset"/></svg></button></div>
+        <div class="transport-divider"></div>
+        <div class="tempo-control"><label class="control-label" for="tempo">TEMPO</label><div><input id="tempo" type="number" min="40" max="240" step="1" value="112" aria-label="Tempo in beats per minute"><span>BPM</span></div></div>
+        <div class="swing-control"><div class="control-label"><label for="swing">SWING</label><span id="swing-value">8%</span></div><input id="swing" type="range" min="0" max="60" value="8" aria-label="Swing amount"></div>
+        <div class="transport-divider preset-divider"></div>
+        <div class="preset-control"><label class="control-label" for="preset-select">FIND YOUR TINE</label><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
+        <div class="file-actions"><button id="save-button" class="button subtle" aria-label="Save project" title="Download your editable project"><svg><use href="#i-save"/></svg><span>Save project</span></button><button id="export-button" class="button export"><svg><use href="#i-download"/></svg><span>Export WAV</span></button><button id="open-button" class="icon-button open-project" aria-label="Open saved project" title="Open saved project"><svg><use href="#i-folder"/></svg></button><input type="file" id="project-file" accept=".json,application/json" hidden></div>
+      </section>
+
+      <section class="sequencer panel" aria-labelledby="sequencer-title">
+        <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">THE SEQUENCE</h2><span class="tag">16 STEPS</span></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>New groove</span></button></div></div>
+        <div class="sequencer-scroll" tabindex="0" aria-label="Sequencer grid. Scroll horizontally on small screens."><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>SELECT TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">M / S</div></div><div id="track-rows" class="track-rows"></div></div></div>
+        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Click for a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
+      </section>
+
+      <section class="instrument panel" aria-labelledby="instrument-title">
+        <div class="section-heading instrument-heading"><div class="heading-label"><span class="section-number">02</span><h2 id="instrument-title">THE INSTRUMENT</h2><span class="instrument-subtitle">ENERGY MEETS MATTER</span></div><div class="voice-actions"><button id="voice-reset" class="text-button" title="Restore this voice to its model defaults"><svg><use href="#i-reset"/></svg><span>Reset voice</span></button><button id="voice-mutate" class="text-button" title="Explore a related sound"><svg><use href="#i-spark"/></svg><span>Mutate</span></button><button id="audition-button" class="button audition"><svg><use href="#i-speaker"/></svg><span>Hear voice</span></button></div></div>
+        <div class="instrument-layout">
+          <aside class="body-panel">
+            <div class="voice-identity"><span id="voice-index" class="selected-voice-label">VOICE 01</span><h3 id="voice-name">Membrane kick</h3><p id="voice-description">Low tension. Deep impact. A living drum skin.</p></div>
+            <div class="resonator-stage"><span class="figure-label">RESONANT MODES</span><canvas id="resonator-canvas" width="800" height="460" role="img" aria-label="Resonant frequencies and relative mode strengths"></canvas><div class="stage-bottom"><span class="stage-axis">Hz <span>/</span> energy</span><span id="mode-summary">16 RESONANT MODES</span></div></div>
+            <div class="material-heading"><span class="control-label">CHOOSE YOUR BODY</span><span class="material-count">6 MODELS</span></div>
+            <div id="model-buttons" class="model-buttons" role="group" aria-label="Physical resonator model"></div>
+            <p id="model-description" class="model-description">A tensioned circular membrane, with modes that move like a real drumhead.</p>
+          </aside>
+
+          <div class="voice-design">
+            <div class="topology" aria-label="Synthesis topology: mallet plus noise excites a vibrating body, then goes to the mix"><span class="topology-node"><span class="topology-dot exciter-dot"></span>Mallet + noise</span><span class="topology-arrow">→</span><span class="topology-node"><span class="topology-dot resonator-dot"></span>Vibrating body</span><span class="topology-arrow">→</span><span class="topology-node">Mix</span></div>
+            <div class="editor-tabbar"><div class="editor-tabs" role="tablist" aria-label="Sound design section"><button id="tab-resonance" data-tab="resonance" role="tab" aria-selected="true" aria-controls="knob-grid" class="editor-tab active"><span class="tab-number">01</span>Resonator</button><button id="tab-exciter" data-tab="exciter" role="tab" aria-selected="false" aria-controls="knob-grid" tabindex="-1" class="editor-tab"><span class="tab-number">02</span>Exciter</button><button id="tab-motion" data-tab="motion" role="tab" aria-selected="false" aria-controls="knob-grid" tabindex="-1" class="editor-tab"><span class="tab-number">03</span>Motion + mix</button></div></div>
+            <div class="editor-content">
+              <div id="selectors" class="selectors"></div>
+              <div id="knob-grid" class="knob-grid" role="tabpanel" aria-labelledby="tab-resonance" tabindex="0"></div>
+              <div class="exciter-preview"><div class="preview-heading"><span class="control-label">THE INITIAL IMPACT</span><span class="preview-label">EXCITATION ENVELOPE</span></div><canvas id="exciter-canvas" width="1000" height="170" role="img" aria-label="Excitation envelope preview"></canvas><div class="preview-caption"><span><span class="legend-dot mallet-dot"></span> MALLET</span><span><span class="legend-dot noise-dot"></span> NOISE</span><span class="preview-time">ENERGY → TIME</span></div></div>
+              <p class="editor-note">Shape the strike. Tune the material. Let it ring.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>A little space around your sound.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">FROM VIBRATION<br>TO FEELING.</span></section>
+    </main>
+
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">NOTHING RECORDED. EVERYTHING RESONATES.</span><span class="footer-version">TINE <span>v1.0</span></span></footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">WELCOME TO TINE</div><h2 id="help-title">Give sound a shape.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. The body’s resonances turn that impact into a drum, a bell, a string, or something beautifully unfamiliar.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Pattern banks A–D hold four variations.</p></div><div><h3>Find your material</h3><p>Choose one of six physical bodies. Resonator controls tune its pitch, structure, decay, damping, and strike position. Exciter controls shape the mallet and noise energy. Motion + mix adds movement and places the voice in the stereo field. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
+  <!-- SCRIPTS -->
+</body>
+</html>

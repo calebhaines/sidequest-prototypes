@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171a17">
-  <meta name="music-version" content="1.1.0">
-  <meta name="description" content="Music Lab by Caleb Haines. Play GRAIN, a noise-based drum machine, and FORM, a layered percussion synthesizer with FM, wavetable, granular, and subtractive engines. Independent instruments, right in your browser.">
+  <meta name="music-version" content="1.2.0">
+  <meta name="description" content="Music Lab by Caleb Haines. Independent browser instruments for making, shaping, and playing with sound. Explore GRAIN, FORM, and TINE.">
   <title>Music Lab — Caleb Haines</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23171a17'/%3E%3Cpath d='M12 33h7l5-17 9 32 8-27 5 12h6' fill='none' stroke='%23eab08a' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <style>
@@ -32,6 +32,7 @@
     @media(max-width:760px){.form-art{max-width:360px}}
     @media(max-width:420px){.form-art{padding:20px 17px}.form-word{font-size:33px}.form-art-meta{margin-bottom:17px}.form-layer svg{height:26px}.form-engines{font-size:5px;letter-spacing:.08em}.form-routing{font-size:9px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}.open-app:hover{transform:none}}
+    .tine-cover{background:radial-gradient(ellipse at 50% 15%,#b9afd421,transparent 70%),#24222b}.tine-object{width:100%;max-width:380px;position:relative;padding:20px;border:1px solid #696071;border-radius:10px;background:linear-gradient(150deg,#393240,#29262f);box-shadow:0 18px 48px #08080c55;transform:rotate(3deg)}.tine-object-head{display:flex;justify-content:space-between;align-items:center;font-size:36px;font-weight:600;letter-spacing:-2px}.tine-object-head span:last-child{color:#c5b6de;font-size:8px;letter-spacing:.13em;font-weight:400}.tine-object svg{display:block;width:100%;height:auto;margin:12px 0 8px}.tine-object-caption{display:flex;justify-content:space-between;font-size:7px;letter-spacing:.13em;text-transform:uppercase;color:#bcb0c8}.tine-cover .art-small-label,.tine-cover .art-mark{color:#c5b6de9c}.tine-type:before{background:#b8a6ce}.tine-type{color:#c5b6de}@media(max-width:420px){.tine-object{padding:17px}.tine-object-head{font-size:31px}.tine-object-head span:last-child{font-size:6px}.tine-object-caption{font-size:6px}}
   </style>
 </head>
 <body>
@@ -78,7 +79,7 @@
         <div class="value"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m10 2 1.7 5.8L18 10l-6.3 2.2L10 18l-1.7-5.8L2 10l6.3-2.2L10 2Z" stroke="currentColor" stroke-linejoin="round"/></svg><span>Curious by design</span></div>
       </div>
       <section class="collection" id="instruments" aria-labelledby="collection-heading">
-        <div class="collection-heading"><div><div class="eyebrow">The collection</div><h2 id="collection-heading">The instrument shelf.</h2></div><span class="count">02 / INSTRUMENTS</span></div>
+        <div class="collection-heading"><div><div class="eyebrow">The collection</div><h2 id="collection-heading">The instrument shelf.</h2></div><span class="count">03 / INSTRUMENTS</span></div>
         <!-- Add future instruments as another .instrument article in this grid. -->
         <div class="instruments">
           <article class="instrument" aria-labelledby="grain-heading">
@@ -137,6 +138,39 @@
                 <a class="download" href="./form/index.html" download="FORM.html"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m-3-3 3 3 3-3M3 11v3h10v-3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>Download HTML</a>
               </div>
               <p class="instrument-note">Local sample import · Export WAV, kits &amp; patterns · Play offline</p>
+            </div>
+          </article>
+          <article class="instrument" aria-labelledby="tine-heading">
+            <div class="instrument-art tine-cover" aria-hidden="true">
+              <span class="art-mark">No. 003</span>
+              <div class="tine-object">
+                <div class="tine-object-head"><span>TINE</span><span>PHYSICAL MODELING</span></div>
+                <svg viewBox="0 0 320 185" fill="none">
+                  <ellipse cx="160" cy="104" rx="104" ry="61" stroke="#c5b6de" stroke-opacity=".6"/>
+                  <ellipse cx="160" cy="104" rx="80" ry="45" stroke="#c5b6de" stroke-opacity=".45"/>
+                  <ellipse cx="160" cy="104" rx="54" ry="29" stroke="#c5b6de" stroke-opacity=".35"/>
+                  <ellipse cx="160" cy="104" rx="27" ry="14" stroke="#eab08a" stroke-opacity=".7"/>
+                  <path d="M56 104h208M160 43v122" stroke="#c5b6de" stroke-opacity=".2" stroke-dasharray="3 6"/>
+                  <path d="m117 26 41 67" stroke="#eab08a" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="117" cy="26" r="7" fill="#eab08a"/>
+                  <circle cx="160" cy="99" r="4" fill="#eab08a"/>
+                  <path d="m266 66 10-6m-7 23 13-2m-16 25 11 4" stroke="#bfaecf" stroke-opacity=".6" stroke-linecap="round"/>
+                </svg>
+                <div class="tine-object-caption"><span>Excite → resonate</span><span>Six bodies. One playground.</span></div>
+              </div>
+              <span class="art-small-label">The music inside the material.</span>
+            </div>
+            <div class="instrument-copy">
+              <div class="instrument-type tine-type">Physical modeling &amp; percussion</div>
+              <h3 id="tine-heading">TINE</h3>
+              <p class="tagline">Objects, made musical.</p>
+              <p class="instrument-description">Strike strings, membranes, wood, and metal. Blend mallet and noise excitation, shape the vibrating body, and turn natural resonances into intricate rhythms.</p>
+              <ul class="specs" aria-label="TINE features"><li><strong>8</strong>Voices</li><li><strong>6</strong>Bodies</li><li><strong>16</strong>Steps</li></ul>
+              <div class="actions">
+                <a class="open-app" href="./tine/">Open TINE <svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 14 14 4M4 4h10v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+                <a class="download" href="./tine/index.html" download="tine.html"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m-3-3 3 3 3-3M3 11v3h10v-3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>Download HTML</a>
+              </div>
+              <p class="instrument-note">Save projects · Export WAV · Play offline</p>
             </div>
           </article>
         </div>

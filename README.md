@@ -6,7 +6,7 @@
 
 ## Music Lab
 
-[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN and FORM.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, and TINE.
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
@@ -14,7 +14,9 @@ GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, i
 
 [**Open FORM**](https://calebhaines.github.io/sidequest-prototypes/music/form/) for a hybrid percussion studio with three layers, subtractive/FM/wavetable/granular/percussion engines, cross-layer modulation, recording import, and WAV sample/kit/pattern export. FORM 2.0.1 includes individual layer audition and clear feedback for inactive routes. Download its standalone HTML from Music Lab to play offline; the complete [editable source](https://calebhaines.github.io/sidequest-prototypes/music/form/FORM-source.zip) is also included. See [`music/form/README.md`](music/form/README.md) for update instructions.
 
-The editable app is in [`grain/`](grain/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after editing either page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the new location, preserving their query strings and hashes. Saved projects use the same browser storage.
+[**Play TINE**](https://calebhaines.github.io/sidequest-prototypes/music/tine/) for physical-modeling percussion inspired by exciter/resonator instruments such as Plonk. Eight voices, six body geometries, independent mallet and noise excitation, detailed material controls, four pattern banks, curated grooves, project files, and stereo WAV export. Open `tine/index.html` for offline play; editable sources are in [`tine/`](tine/).
+
+The editable GRAIN and TINE sources are in [`grain/`](grain/) and [`tine/`](tine/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
 
 ## Download and play
 
