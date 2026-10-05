@@ -19,7 +19,7 @@ function dspChecks() {
   const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {} };
   scope.window = scope;
   vm.createContext(scope);
-  for (const file of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+  for (const file of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP), rate = 8000;
   const legacy = scope.LoomSchema.defaultState();
   delete legacy.recording.micCompensation; delete legacy.recording.micOffsetMs; delete legacy.recording.micInputGainDb;
@@ -95,7 +95,7 @@ async function serve() {
     const name = new URL(request.url, 'http://localhost').pathname;
     if (name === '/engine.html') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
+      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
       return;
     }
     // Both the repository and the extracted source archive expose identical
@@ -281,11 +281,11 @@ async function uiChecks(browser, url) {
     await page.locator('#microphoneRouteButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().trackId === 'track-2');
     assert(await page.locator('#microphoneRouteLabel').textContent());
     const layout = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, tracks: window.LoomApp.getState().tracks.length, slots: window.LoomApp.getState().tracks.map(t => t.effects.length), effects: window.LoomEffectsCatalog.length, monitor: document.getElementById('microphoneMonitorButton').getBoundingClientRect().toJSON() }));
-    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 4)); assert.equal(layout.effects, 9); assert(layout.monitor.width >= 35 && layout.monitor.height >= 35);
+    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 4)); assert.equal(layout.effects, 10); assert(layout.monitor.width >= 35 && layout.monitor.height >= 35);
     await page.locator('[data-slot="0"]').click();
     const chooser = await page.locator('#effectDialog').evaluate(el => ({ open: el.open, client: el.clientWidth, scroll: el.scrollWidth })); assert(chooser.open && chooser.scroll <= chooser.client + 1, 'The nine-effect chooser fits ' + width + 'px.');
     await page.locator('[data-add-effect="broiler"]').click();
-    assert.equal(await page.locator('[data-amp-preset]').count(), 9);
+    assert.equal(await page.locator('[data-amp-preset]').count(), 13);
     const presetIds = await page.evaluate(() => window.LoomEffectsCatalog.find(e => e.id === 'broiler').presets.map(p => p.id));
     for (const id of presetIds) {
       await page.locator('[data-amp-preset="' + id + '"]').click();

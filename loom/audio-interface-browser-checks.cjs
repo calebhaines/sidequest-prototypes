@@ -18,7 +18,7 @@ async function serve() {
     const pathname = new URL(request.url, 'http://localhost').pathname;
     if (pathname === '/engine.html') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>'); return;
+      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>'); return;
     }
     const base = pathname.startsWith('/loom/') ? __dirname : pathname.startsWith('/shared/') ? shared : root;
     const relative = pathname.startsWith('/loom/') ? pathname.slice(5) : pathname.startsWith('/shared/') ? pathname.slice(7) : pathname;

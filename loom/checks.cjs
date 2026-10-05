@@ -18,7 +18,7 @@ scope.window = scope;
 vm.createContext(scope);
 const patternSchemaPath = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInContext(fs.readFileSync(patternSchemaPath, 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js', 'instrument-host.js']) {
+for (const name of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js', 'instrument-host.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 }
 const S = scope.LoomSchema;
@@ -59,6 +59,19 @@ check('ROUX is a bundled instrument with portable native state and unchanged tra
   assert(restored.tracks.every(track => track.effects.length === 4));
 });
 state.tracks[0].effects[0] = S.effect({ type: 'cinder', params: scope.LoomEffectsCatalog.find(e => e.id === 'cinder').defaults });
+check('BATTER sample references and GLAZE controls survive native GALLEY projects', () => {
+  const host = Object.create(scope.LoomInstrumentHost.prototype), definition = host.manifest.find(item => item.id === 'batter');
+  assert.equal(definition.name, 'BATTER'); assert.equal(definition.facade, 'BatterApp'); assert.equal(definition.storageKey, 'batter-project-v1');
+  const project = session(), glaze = scope.LoomEffectsCatalog.find(effect => effect.id === 'glaze');
+  assert(glaze && glaze.params.some(param => param.key === 'pitchWindow'));
+  project.tracks[0].instrument = { id: 'batter', name: 'BATTER', snapshot: { format: 'loom-instrument-state', version: 1, app: 'batter', state: { lanes: [{ id: 'snare', sampleIds: ['iron-service-38-01'], choke: 2 }], assets: [], patterns: [{ id: 'A', length: 64 }] }, storage: {} } };
+  project.tracks[0].effects[0] = S.effect({ type: 'glaze', params: { ...glaze.defaults, pitch: 'correct', key: 'A', scale: 'minor' } });
+  project.tracks[0].automation = [lane('fx:0:deessAmount', [[0, .2], [4, .8]], 'linear', 'glaze')];
+  const portable = S.serializeProject(project), restored = S.parseProject(portable);
+  assert.equal(S.serializeProject(restored), portable); assert.equal(restored.tracks[0].instrument.snapshot.state.lanes[0].sampleIds[0], 'iron-service-38-01');
+  assert.equal(restored.tracks[0].effects[0].params.pitch, 'correct'); assert.equal(restored.tracks[0].effects[0].params.scale, 'minor');
+  assert.equal(restored.tracks[0].automation[0].effectType, 'glaze'); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 4));
+});
 state.tracks[0].automation = [
   lane('level', [[0, 0], [2, 1]]),
   lane('pan', [[0, -1], [2, 1]]),

@@ -6,7 +6,7 @@ An eight-track browser studio for Kitchen. Eight tracks. One increasingly specif
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all ten Kitchen instruments,
+The standalone `index.html` bundles all eleven Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -14,7 +14,12 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other nine instruments.
+are available inside GALLEY alongside the other ten instruments.
+
+**BATTER** sequences recorded acoustic drums across twelve lanes and eight
+pattern banks. Its embedded starter kit plays offline; additional recorded kits
+can be loaded on the site or imported as downloaded bundles. The same editor,
+sample editing, shared audio, and drum-note voices are available inside GALLEY.
 
 ## Making a piece
 
@@ -198,6 +203,7 @@ instrument and replace its chosen starter destination.
 | ROTISSERIE | 30 seconds | One of four stereo tape decks |
 | DICER | 20 seconds | Stereo sample and sixteen slices |
 | STEAM | 20 seconds | Audio analysis into an editable spectral score |
+| BATTER | 120 seconds | One of twelve stereo drum sample lanes |
 
 Loaded future instruments with `audioImport` are included automatically; their
 number or string destination IDs and declared limits are preserved. The original
@@ -213,7 +219,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Nine effects
+## Ten effects
 
 | Effect | Processing |
 | --- | --- |
@@ -226,19 +232,43 @@ is unavailable, keep a WAV or packet for the next session.
 | PROOF | Windowed, phase-aligned pitch shifting |
 | WHISK | Tempo-locked rhythmic gating and auto-pan |
 | BROILER | Bass and guitar amp heads, power-stage dynamics, speaker cabinets, microphone position, and protected clean lows |
+| GLAZE | Vocal cleanup, de-essing, compression, tone, saturation, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, echo, reverb, and rhythmic chopping |
 
-BROILER contains five bass models (clean solid-state, flip-top valves, valve stack,
-modern grind, and doom fuzz) plus American clean, British crunch, and high-gain
-guitar models. Its four control groups follow the signal: input/preamp, low end
+BROILER contains nine bass models: the original clean solid-state, flip-top,
+valve stack, modern grind, and doom fuzz, plus four characters inspired by the
+Ampeg B-15 Portaflex, classic SVT, V-4B, and SVT-PRO. These additional models use
+distinct gain staging, tone shaping, power curves, and sag response. American
+clean, British crunch, and high-gain guitar models remain available.
+Its four control groups follow the signal: input/preamp, low end
 and tone, power/dynamics, then cabinet/output. Clean low blend protects the
 fundamental under heavy drive; its crossover sets the clean band's edge. Tone,
 presence, depth, power drive, sag, gate threshold/release, speaker breakup,
 microphone position/distance, cabinet air, and output are independently adjustable.
-Eight cabinet choices include three bass cabs, three guitar cabs, DI, and an
-unlikely steel cupboard. DI disables the cabinet-only controls. Stereo/mono
-input options, nine complete recipe presets, dry/wet, bypass, and automation
+Eleven cabinet choices include six bass cabs, three guitar cabs, DI, and an
+unlikely steel cupboard. The new bass cabinets are a Portaflex-style 1×15,
+sealed 8×10, and ported 4×10. DI disables the cabinet-only controls. Stereo/mono
+input options, thirteen complete recipe presets, dry/wet, bypass, and automation
 work on clips, instruments, and monitored microphone input. No impulse-response
 downloads or network audio are needed.
+
+GLAZE is a complete vocal channel strip occupying one insert. Start with a
+recipe and the Essentials view; Full pantry exposes every stage. The signal
+passes through input/high-pass/gate, split-band de-essing, compression, tonal EQ,
+saturation, optional pitch processing and harmonies, doubling, resonant vowel
+filters, robot/vocoder, rhythmic chopping, ducked echo and reverb, then output
+and peak protection. Every stage has its own mode or enable control.
+
+The microphone shortcut **Sing through GLAZE** connects the selected input to
+the selected track without overwriting an existing strip or occupied rack.
+Recorded takes stay dry, so effect settings can change after recording.
+Input/output levels, dynamics reduction, detected pitch, and pitch-path timing
+come from the actual insert engine. Practical processing has no lookahead
+buffer. Optional windowed pitch shifting adds wet-path delay, and pitch
+correction also needs time to detect a single voiced note. Choose its key,
+scale, speed, and window for the source; it is not a polyphonic note editor.
+Vowel controls use resonant filters to change vocal colour. The vocoder uses a
+multiband envelope detector and synthesized carrier, not a recorded voice.
+GLAZE runs through the same DSP in live monitoring and offline WAV exports.
 
 ## Projects, recording, and export
 
@@ -279,9 +309,12 @@ Run `npm run check:loom` for the dependency-free Node engine checks. These verif
 project compatibility, automation in playback and export, sample-exact
 count-in/punch recording, and cropped stereo transfers with clip edits and limits.
 From an extracted archive, run `node checks.cjs`.
-Run `npm run check:loom-amp` and `npm run check:loom-mic` for BROILER audio and
+Run `npm run check:loom-amp`, `npm run check:loom-vocal`, and `npm run check:loom-mic` for BROILER, GLAZE, and
 microphone timing/routing checks. The extracted equivalents are
-`node amp-checks.cjs` and `node microphone-engine-checks.cjs`.
+`node amp-checks.cjs`, `node vocal-checks.cjs`, and `node microphone-engine-checks.cjs`.
+`npm run check:loom-vocal-browser` verifies real GLAZE monitoring, dry takes,
+exports, actual insert meters, presets, and responsive vocal controls with
+Playwright and Chromium; the extracted command is `node vocal-browser-checks.cjs`.
 `npm run check:loom-mic-browser` uses Playwright and Chromium to verify actual
 microphone monitoring, permission cleanup, dry recording, amp exports, and
 responsive controls. Set `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` when using
@@ -294,15 +327,19 @@ The extracted equivalents are `node audio-interface-checks.cjs` and
 on the actual interface, driver and browser and is not measured by these tests.
 Run `npm run check:patterns` and `npm run check:loom-notes` for portable-pattern
 and reversible-source checks. Extracted archives include `note-checks.cjs`.
+Run `npm run check:loom-batter` for recorded drum playback, shared-clock timing,
+clip transfers, source revision, offline sample restoration, and shared-library
+exports through the actual embedded BATTER editor. The extracted equivalent is
+`node batter-integration-checks.cjs`, with Playwright and Chromium available.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all ten standalone instrument pages in
+archive includes all eleven standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.8.0.
+font license notices. Version 1.9.0.
 
 ## Compatibility
 

@@ -1,8 +1,11 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP() {
+  function createLoomEffectsDSP(vocalFactory) {
     'use strict';
+    // Keep every Worklet dependency explicit: this factory is also serialized.
+    const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
+    const vocal = makeVocal ? makeVocal() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -14,8 +17,9 @@
       vestige: { size: [0, 1, 0.55], decay: [0.2, 12, 2.8], damping: [800, 18000, 6500], predelay: [0, 180, 22], diffusion: [0, 1, 0.75], width: [0, 1, 0.9], mix: [0, 1, 0.25] },
       halo: { semitones: [-24, 24, 7], fine: [-50, 50, 0], window: [20, 120, 60], feedback: [0, 0.65, 0.12], tone: [1000, 20000, 12000], spread: [0, 1, 0.65], mix: [0, 1, 0.35] },
       tremor: { division: ['1/8', '1/32', '1/16', '1/8.', '1/4', '1/4.', '1/2', '1', '2'], shape: ['sine', 'triangle', 'gate', 'pulse'], depth: [0, 1, 0.65], pan: [0, 1, 0.5], duty: [0.05, 0.95, 0.5], phase: [0, 360, 0], smooth: [0, 80, 4], mix: [0, 1, 1] },
-      broiler: { model: ['clean-bass', 'flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz', 'american-clean', 'british-crunch', 'high-gain'], input: [-18, 24, 0], drive: [0, 36, 6], cleanLow: [0, 1, 0.35], crossover: [50, 500, 150], bass: [-15, 15, 2], mid: [-18, 18, -1], midFreq: [80, 2500, 550], treble: [-15, 15, 0], presence: [0, 1, 0.35], depth: [0, 1, 0.4], master: [0, 1, 0.45], sag: [0, 1, 0.3], gate: [-90, -20, -75], gateRelease: [20, 800, 160], cabinet: ['bass410', 'di', 'bass15', 'bass810', 'guitar112open', 'guitar212', 'guitar412', 'metalbox'], speakerDrive: [0, 1, 0.2], mic: [0, 1, 0.45], distance: [0, 1, 0.15], air: [0, 1, 0.3], stereo: ['stereo', 'mono'], output: [-24, 12, -4], mix: [0, 1, 1] }
+      broiler: { model: ['clean-bass', 'flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz', 'american-clean', 'british-crunch', 'high-gain', 'portaflex-64', 'svt-69', 'v4b-71', 'svt-pro'], input: [-18, 24, 0], drive: [0, 36, 6], cleanLow: [0, 1, 0.35], crossover: [50, 500, 150], bass: [-15, 15, 2], mid: [-18, 18, -1], midFreq: [80, 2500, 550], treble: [-15, 15, 0], presence: [0, 1, 0.35], depth: [0, 1, 0.4], master: [0, 1, 0.45], sag: [0, 1, 0.3], gate: [-90, -20, -75], gateRelease: [20, 800, 160], cabinet: ['bass410', 'di', 'bass15', 'bass810', 'guitar112open', 'guitar212', 'guitar412', 'metalbox', 'portaflex115', 'sealed810', 'ported410'], speakerDrive: [0, 1, 0.2], mic: [0, 1, 0.45], distance: [0, 1, 0.15], air: [0, 1, 0.3], stereo: ['stereo', 'mono'], output: [-24, 12, -4], mix: [0, 1, 1] }
     };
+    if (vocal) specifications.glaze = vocal.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -27,6 +31,7 @@
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'glaze' && vocal) return vocal.normalize(params);
       const spec = specifications[type];
       if (!spec) throw new Error('Unknown LOOM effect: ' + type);
       const source = params && typeof params === 'object' ? params : {};
@@ -81,6 +86,7 @@
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
       let p = normalize(type, params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
       let update, run, reset, fastSet, tail = () => 0;
@@ -158,7 +164,14 @@
           'doom-fuzz': { stages: 2, gain: 1.8, next: 1.5, bias: 0.22, cut: 20, inter: 5300, coupling: 12, shape: 'fuzz', level: 0.67, power: 1.4, powerBias: 0.12, bass: 3, mid: 2, midFreq: 300, treble: -3 },
           'american-clean': { stages: 1, gain: 0.9, next: 1, bias: 0.04, cut: 50, inter: 12200, coupling: 25, shape: 'valve', level: 1.18, power: 0.8, powerBias: 0.02, bass: 0, mid: -3, midFreq: 650, treble: 3 },
           'british-crunch': { stages: 3, gain: 1.35, next: 1.2, bias: 0.13, cut: 60, inter: 8800, coupling: 48, shape: 'valve', level: 0.84, power: 1.2, powerBias: 0.1, bass: -1, mid: 3.5, midFreq: 980, treble: 1 },
-          'high-gain': { stages: 4, gain: 1.65, next: 1.5, bias: -0.025, cut: 85, inter: 9600, coupling: 70, shape: 'diode', level: 0.7, power: 1.05, powerBias: 0.01, bass: 0, mid: -2.5, midFreq: 620, treble: 2 }
+          'high-gain': { stages: 4, gain: 1.65, next: 1.5, bias: -0.025, cut: 85, inter: 9600, coupling: 70, shape: 'diode', level: 0.7, power: 1.05, powerBias: 0.01, bass: 0, mid: -2.5, midFreq: 620, treble: 2 },
+          // Original character models inspired by four Ampeg families. The
+          // distinct gain staging, pre-emphasis, EQ corners and power response
+          // are audible with identical controls; these are not preset aliases.
+          'portaflex-64': { stages: 2, gain: 1.02, next: 1.1, bias: 0.18, cut: 19, inter: 4800, coupling: 10, shape: 'valve', level: 0.91, power: 1, powerBias: 0.1, bass: 2.4, mid: 1.2, midFreq: 330, treble: -2.7, driveScale: 0.78, bassFreq: 85, midQ: 0.65, trebleFreq: 2200, preMode: 'high', preFreq: 2200, preGain: -2.2, powerShape: 'beam', powerKnee: 0.8, sagAttack: 0.006, sagBase: 0.09, sagRange: 0.31, sagDepth: 2.65 },
+          'svt-69': { stages: 3, gain: 1.24, next: 1.22, bias: 0.07, cut: 23, inter: 7400, coupling: 18, shape: 'valve', level: 0.8, power: 1.3, powerBias: 0.018, bass: 1.2, mid: 2.3, midFreq: 850, treble: 0.1, driveScale: 0.87, bassFreq: 80, midQ: 0.72, trebleFreq: 2500, preMode: 'peak', preFreq: 950, preGain: 2.4, powerShape: 'pentode', powerKnee: 1.1, sagAttack: 0.002, sagBase: 0.04, sagRange: 0.16, sagDepth: 1.1 },
+          'v4b-71': { stages: 2, gain: 1.24, next: 1.6, bias: 0.11, cut: 27, inter: 8700, coupling: 26, shape: 'valve', level: 0.91, power: 1.55, powerBias: 0.06, bass: 0.3, mid: 3.2, midFreq: 1000, treble: 0.8, driveScale: 0.82, bassFreq: 70, midQ: 1.12, trebleFreq: 2800, preMode: 'peak', preFreq: 1200, preGain: 1.7, powerShape: 'beam', powerKnee: 0.9, sagAttack: 0.0035, sagBase: 0.07, sagRange: 0.21, sagDepth: 2 },
+          'svt-pro': { stages: 3, gain: 1.3, next: 1.25, bias: -0.025, cut: 30, inter: 11000, coupling: 28, shape: 'hybrid', level: 0.85, power: 0.95, powerBias: 0, bass: 0.8, mid: -1.7, midFreq: 440, treble: 1.5, driveScale: 0.8, bassFreq: 90, midQ: 0.85, trebleFreq: 3200, preMode: 'high', preFreq: 2800, preGain: 1.8, powerShape: 'solid', powerKnee: 1.25, sagAttack: 0.0015, sagBase: 0.03, sagRange: 0.1, sagDepth: 0.65 }
         };
         const cabinets = {
           di: null,
@@ -168,20 +181,23 @@
           guitar112open: { cut: 74, resonance: 125, bump: 2, notch: 500, scoop: -3.5, upper: 2450, bite: 3.5, roll: 6200, reflection: 0.63, polarity: 1, damping: 0.13 },
           guitar212: { cut: 67, resonance: 118, bump: 3, notch: 650, scoop: -2, upper: 2800, bite: 4, roll: 5500, reflection: 1.1, polarity: -1, damping: 0.18 },
           guitar412: { cut: 63, resonance: 104, bump: 4.5, notch: 530, scoop: -3, upper: 2400, bite: 4.5, roll: 4900, reflection: 1.55, polarity: -1, damping: 0.21 },
-          metalbox: { cut: 80, resonance: 180, bump: 5, notch: 750, scoop: -5, upper: 1450, bite: 6.5, roll: 3800, reflection: 2.35, polarity: 1, damping: 0.45 }
+          metalbox: { cut: 80, resonance: 180, bump: 5, notch: 750, scoop: -5, upper: 1450, bite: 6.5, roll: 3800, reflection: 2.35, polarity: 1, damping: 0.45 },
+          portaflex115: { cut: 27, resonance: 66, bump: 5.1, notch: 610, scoop: -1.4, upper: 1600, bite: 0.6, roll: 3900, reflection: 1.15, polarity: -1, damping: 0.19 },
+          sealed810: { cut: 39, resonance: 112, bump: 2.8, notch: 530, scoop: -0.7, upper: 2250, bite: 3.8, roll: 5100, reflection: 0.48, polarity: -1, damping: 0.12 },
+          ported410: { cut: 31, resonance: 58, bump: 4.6, notch: 410, scoop: -2.7, upper: 2850, bite: 2.3, roll: 7900, reflection: 0.82, polarity: 1, damping: 0.17 }
         };
         const states = Array.from({ length: 15 }, () => new Float64Array(4));
-        const previous = new Float64Array(2), interLP = new Float64Array(8), couplingPrevious = new Float64Array(8), couplingOut = new Float64Array(8), antiAlias = new Float64Array(8);
+        const previous = new Float64Array(2), interLP = new Float64Array(8), couplingPrevious = new Float64Array(8), couplingOut = new Float64Array(8), antiAlias = new Float64Array(8), preToneState = new Float64Array(4);
         const sagEnvelope = new Float64Array(2), gateEnvelope = new Float64Array(2), gateGain = new Float64Array(2), dcPrevious = new Float64Array(2), dcOut = new Float64Array(2);
         const reflectionLength = Math.ceil(sr * 0.009) + 4, reflections = [new Float32Array(reflectionLength), new Float32Array(reflectionLength)];
         // Fourth-order Butterworth low-pass before decimation. The oversampled
         // Nyquist is four times higher; remove those newly generated harmonics
         // before returning to host rate rather than relying on cabinet roll-off.
         const decimationFilters = [biquad('lowpass', sr * 0.37, 0.5411961, 0, sr * 4), biquad('lowpass', sr * 0.37, 1.306563, 0, sr * 4)];
-        const decimated = new Float64Array(2), dcCoefficient = Math.exp(-TAU * 12 / sr), sagAttack = Math.exp(-1 / (sr * 0.004)), gateSmooth = 1 - Math.exp(-1 / (sr * 0.00035));
+        const decimated = new Float64Array(2), dcCoefficient = Math.exp(-TAU * 12 / sr), gateSmooth = 1 - Math.exp(-1 / (sr * 0.00035));
         let model, cabinet, coefficients = [], crossoverCoefficient, cabCoefficients = [], modelKey = '', toneKey = '', cabKey = '', crossKey = -1;
         let lastInput, lastDrive, driveModel = '', lastMaster, powerModel = '', lastSpeaker, speakerCabinet, lastOutput, lastSag, lastGate, lastRelease, wasMono = false, quietFrames = Infinity;
-        let trim = 1, preGain = 1, preNormalization = 1, interCoefficient = 1, couplingCoefficient = 1, powerGain = 1, powerNormalization = 1, powerZero = 0, level = 1, sagRelease = 1, gateRelease = 1, gateThreshold = 0, reflectionDelay = 1, reflectionAmount = 0, reflectionPosition = 0, speakerGain = 1, speakerNormalization = 1;
+        let trim = 1, preGain = 1, preNormalization = 1, interCoefficient = 1, couplingCoefficient = 1, powerGain = 1, powerNormalization = 1, powerZero = 0, level = 1, sagAttack = 1, sagRelease = 1, sagDepth = 1.8, gateRelease = 1, gateThreshold = 0, reflectionDelay = 1, reflectionAmount = 0, reflectionPosition = 0, speakerGain = 1, speakerNormalization = 1, preToneCoefficient = null;
         const biasZeros = new Float64Array(4);
         function ampBound(value) { return value > 8 ? 8 : value < -8 ? -8 : value === value ? value : 0; }
         function ampFilter(value, coefficients, state, offset) {
@@ -196,26 +212,36 @@
         function nonlinear(value, bias, stage) {
           if (model.shape === 'fuzz') return value / (0.14 + Math.abs(value));
           if (model.shape === 'diode') return value >= 0 ? saturate(value) : saturate(value * 1.35) / 1.35;
+          if (model.shape === 'hybrid' && stage > 0) return value >= 0 ? saturate(value * 0.92) / 0.92 : saturate(value * 1.12) / 1.12;
           return saturate(value + bias) - biasZeros[stage];
+        }
+        function powerShape(value) {
+          if (!model.powerShape) return saturate(value);
+          const knee = model.powerKnee;
+          if (model.powerShape === 'solid') return value / Math.sqrt(1 + value * value / (knee * knee));
+          if (model.powerShape === 'beam') return saturate(value / knee) * knee;
+          // A stiffer, broad push-pull knee leaves more attack before clipping.
+          const square = value * value / (knee * knee);
+          return value / Math.sqrt(Math.sqrt(1 + square * square));
         }
         update = () => {
           model = models[p.model]; cabinet = cabinets[p.cabinet];
           if (lastInput !== p.input) { lastInput = p.input; trim = db(p.input); }
-          if (lastDrive !== p.drive || driveModel !== p.model) { lastDrive = p.drive; driveModel = p.model; preGain = db(p.drive * (p.model === 'clean-bass' || p.model === 'american-clean' ? 0.7 : 0.85)) * model.gain; preNormalization = model.level * Math.pow(preGain, -0.19); }
-          if (lastMaster !== p.master || powerModel !== p.model) { lastMaster = p.master; powerModel = p.model; powerGain = model.power * (1 + 3.5 * p.master); powerNormalization = 1 / Math.pow(powerGain, 0.55); powerZero = saturate(model.powerBias); }
+          if (lastDrive !== p.drive || driveModel !== p.model) { lastDrive = p.drive; driveModel = p.model; preGain = db(p.drive * (model.driveScale || (p.model === 'clean-bass' || p.model === 'american-clean' ? 0.7 : 0.85))) * model.gain; preNormalization = model.level * Math.pow(preGain, -0.19); }
+          if (lastMaster !== p.master || powerModel !== p.model) { lastMaster = p.master; powerModel = p.model; powerGain = model.power * (1 + 3.5 * p.master); powerNormalization = 1 / Math.pow(powerGain, 0.55); powerZero = powerShape(model.powerBias); }
           if (lastSpeaker !== p.speakerDrive || speakerCabinet !== !!cabinet) { lastSpeaker = p.speakerDrive; speakerCabinet = !!cabinet; speakerGain = cabinet ? 1 + p.speakerDrive * 1.8 : 1; speakerNormalization = 1 / Math.pow(speakerGain, 0.7); }
           if (lastOutput !== p.output) { lastOutput = p.output; level = db(p.output); }
-          if (lastSag !== p.sag) { lastSag = p.sag; sagRelease = Math.exp(-1 / (sr * (0.06 + p.sag * 0.24))); }
+          if (lastSag !== p.sag || modelKey !== p.model) { lastSag = p.sag; sagAttack = Math.exp(-1 / (sr * (model.sagAttack || 0.004))); sagRelease = Math.exp(-1 / (sr * ((model.sagBase || 0.06) + p.sag * (model.sagRange || 0.24)))); sagDepth = model.sagDepth || 1.8; }
           if (lastRelease !== p.gateRelease) { lastRelease = p.gateRelease; gateRelease = Math.exp(-1 / (sr * p.gateRelease * 0.001)); }
           if (lastGate !== p.gate) { lastGate = p.gate; gateThreshold = db(p.gate); }
-          if (modelKey !== p.model) { modelKey = p.model; coefficients[0] = biquad('highpass', model.cut, 0.707, 0, sr); interCoefficient = lowpass(model.inter, sr * 4); couplingCoefficient = Math.exp(-TAU * model.coupling / (sr * 4)); for (let stage = 0; stage < 4; stage++) biasZeros[stage] = saturate(model.bias * (stage & 1 ? -0.7 : 1)); }
+          if (modelKey !== p.model) { modelKey = p.model; coefficients[0] = biquad('highpass', model.cut, 0.707, 0, sr); preToneCoefficient = model.preMode ? biquad(model.preMode, model.preFreq, 0.8, model.preGain, sr) : null; preToneState.fill(0); interCoefficient = lowpass(model.inter, sr * 4); couplingCoefficient = Math.exp(-TAU * model.coupling / (sr * 4)); for (let stage = 0; stage < 4; stage++) biasZeros[stage] = saturate(model.bias * (stage & 1 ? -0.7 : 1)); }
           const nextTone = [p.model, p.bass, p.mid, p.midFreq, p.treble, p.presence, p.depth].join('|');
           if (nextTone !== toneKey) {
             toneKey = nextTone;
-            coefficients[1] = biquad('low', 110, 0.707, p.bass + model.bass, sr);
-            coefficients[2] = biquad('peak', model.midFreq, 0.7, model.mid, sr);
+            coefficients[1] = biquad('low', model.bassFreq || 110, 0.707, p.bass + model.bass, sr);
+            coefficients[2] = biquad('peak', model.midFreq, model.midQ || 0.7, model.mid, sr);
             coefficients[3] = biquad('peak', p.midFreq, 0.8, p.mid, sr);
-            coefficients[4] = biquad('high', 2800, 0.707, p.treble + model.treble, sr);
+            coefficients[4] = biquad('high', model.trebleFreq || 2800, 0.707, p.treble + model.treble, sr);
             coefficients[5] = biquad('high', 3400, 0.707, -2 + p.presence * 9, sr);
             coefficients[6] = biquad('low', 65, 0.707, p.depth * 7, sr);
           }
@@ -252,8 +278,10 @@
           gateGain[channel] += gateSmooth * (open - gateGain[channel]);
           const envelopeCoefficient = peak > sagEnvelope[channel] ? sagAttack : sagRelease;
           sagEnvelope[channel] = envelopeCoefficient * sagEnvelope[channel] + (1 - envelopeCoefficient) * peak;
-          const supply = 1 / (1 + p.sag * sagEnvelope[channel] * 1.8);
-          const head = ampFilter(trimmed, coefficients[0], states[0], stateOffset), prior = previous[channel];
+          const supply = 1 / (1 + p.sag * sagEnvelope[channel] * sagDepth);
+          let head = ampFilter(trimmed, coefficients[0], states[0], stateOffset);
+          if (preToneCoefficient) head = ampFilter(head, preToneCoefficient, preToneState, stateOffset);
+          const prior = previous[channel];
           for (let sub = 1; sub <= 4; sub++) {
             let value = (prior + (head - prior) * sub * 0.25) * preGain;
             for (let stage = 0; stage < model.stages; stage++) {
@@ -263,7 +291,7 @@
               couplingOut[index] = value - couplingPrevious[index] + couplingCoefficient * couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
             }
             value *= preNormalization;
-            value = (saturate(value * powerGain * supply + model.powerBias) - powerZero) * powerNormalization;
+            value = (powerShape(value * powerGain * supply + model.powerBias) - powerZero) * powerNormalization;
             if (cabinet && p.speakerDrive > 0) value = saturate(value * speakerGain) * speakerNormalization;
             value = ampFilter(value, decimationFilters[0], antiAlias, offset);
             value = ampFilter(value, decimationFilters[1], antiAlias, offset + 2);
@@ -290,6 +318,7 @@
         }
         function synchronizeMonoState() {
           for (const state of states) { state[2] = state[0]; state[3] = state[1]; }
+          preToneState[2] = preToneState[0]; preToneState[3] = preToneState[1];
           for (const state of [interLP, couplingPrevious, couplingOut, antiAlias]) for (let i = 0; i < 4; i++) state[4 + i] = state[i];
           for (const state of [previous, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut]) state[1] = state[0];
           reflections[1].set(reflections[0]);
@@ -313,9 +342,9 @@
             if (++reflectionPosition === reflectionLength) reflectionPosition = 0;
           }
           wasMono = monoInput;
-          meter.reductionDb = 20 * Math.log10(1 + p.sag * Math.max(sagEnvelope[0], monoInput ? sagEnvelope[0] : sagEnvelope[1]) * 1.8);
+          meter.reductionDb = 20 * Math.log10(1 + p.sag * Math.max(sagEnvelope[0], monoInput ? sagEnvelope[0] : sagEnvelope[1]) * sagDepth);
         };
-        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; };
+        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, preToneState, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; };
         tail = () => 0.35;
       } else if (type === 'undertow') {
         const length = Math.ceil(sr * 0.08) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);

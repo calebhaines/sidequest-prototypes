@@ -14,6 +14,7 @@ APPS = {
     'ravel': ('RavelApp', '#ff8d45', '.topline'),
     'fable': ('FableApp', '#f1ecdc', '.masthead-actions'),
     'roux': ('RouxApp', '#e7be76', '.masthead-actions'),
+    'batter': ('BatterApp', '#dcaa6b', '.masthead-actions'),
     'loom': ('LoomApp', '#dcc85e', '.topline'),
 }
 
@@ -21,7 +22,7 @@ APPS = {
 APP_NAMES = {
     'grain': 'SIZZLE', 'tine': 'CLATTER', 'form': 'HOTPLATE', 'mire': 'REDUCE',
     'spool': 'ROTISSERIE', 'haze': 'STEAM', 'bower': 'SKEWER', 'ravel': 'DICER',
-    'fable': 'STOCK', 'roux': 'ROUX', 'loom': 'GALLEY',
+    'fable': 'STOCK', 'roux': 'ROUX', 'batter': 'BATTER', 'loom': 'GALLEY',
 }
 
 EXCHANGE_FILES = [

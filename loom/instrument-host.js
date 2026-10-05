@@ -11,7 +11,8 @@
     { id: 'bower', name: 'SKEWER', description: 'Generative physical strings', facade: 'BowerApp', storageKey: 'musiclab-bower-score-v1', color: '#c9be98' },
     { id: 'ravel', name: 'DICER', description: 'Stereo sample slicer', facade: 'RavelApp', storageKey: 'ravel-project-v1', color: '#ef9b70' },
     { id: 'fable', name: 'STOCK', description: 'Polyphonic multisample instrument', facade: 'FableApp', storageKey: 'fable-project-v1', color: '#acb9b3' },
-    { id: 'roux', name: 'ROUX', description: 'Circular recipe bass synthesizer', facade: 'RouxApp', storageKey: 'roux-project-v1', color: '#ddbf67' }
+    { id: 'roux', name: 'ROUX', description: 'Circular recipe bass synthesizer', facade: 'RouxApp', storageKey: 'roux-project-v1', color: '#ddbf67' },
+    { id: 'batter', name: 'BATTER', description: 'Recorded acoustic drums and intricate rhythms', facade: 'BatterApp', storageKey: 'batter-project-v1', color: '#dcaa6b' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));

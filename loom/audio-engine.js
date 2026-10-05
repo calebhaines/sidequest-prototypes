@@ -139,7 +139,9 @@
         for (const pair of this.buffers) for (const buffer of pair) buffer.fill(0);
         this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
       }
-      getMeters() { return this.meters; }
+      getMeters() {
+        return { ...this.meters, effects: this.slots.map((row, track) => row.map((slot, insert) => slot ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || this.tracks[track].effects[insert].params?.bypass === true } : null)) };
+      }
       _sample(asset, position, channel) {
         const data = channel ? (asset.right || asset.left) : asset.left;
         if (!data || position < 0 || position >= data.length) return 0;
@@ -607,9 +609,10 @@
           let url;
           try {
             const source = `
+              const createVocal=${window.createLoomVocalDSP ? window.createLoomVocalDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(createEffects);
+              const DSP=createEngine(()=>createEffects(createVocal));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -672,11 +675,11 @@
           this.merger.connect(this.node);
           this.node.onaudioprocess = e => {
             const inputs = Array.from({ length: 9 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
-            const meters = this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
             this.recorder.capture(inputs, e.outputBuffer.length, this.core);
             this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
-            this._acceptMeters(meters, this._transportEpoch, Number.isFinite(e.playbackTime) ? e.playbackTime + e.outputBuffer.length / this.context.sampleRate : this.context.currentTime);
+            this._acceptMeters(this.core.getMeters(), this._transportEpoch, Number.isFinite(e.playbackTime) ? e.playbackTime + e.outputBuffer.length / this.context.sampleRate : this.context.currentTime);
           };
           this.mode = 'fallback';
         }

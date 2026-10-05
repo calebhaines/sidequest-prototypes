@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {}, performance: { now: () => 10000 } };
 scope.window = scope;
 vm.createContext(scope);
-for (const filename of ['effects-catalog.js', 'effects.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
+for (const filename of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
 const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP);
 const rate = 8000;
 const passed = [];

@@ -332,6 +332,99 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
   .amp-control-group .effect-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .amp-control-group .control:has(select) { grid-column: span 2; }
 }
+
+/* GLAZE: plum enamel, copper piping, and a vocal strip with an open pantry. */
+.effect-editor.vocal-editor { border-color: #a17c92; }
+.vocal-editor .effect-hero { background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 6px), radial-gradient(ellipse at 15% 0, #63444b88, transparent 70%), #23262a; }
+.vocal-editor .effect-hero h2 { color: #e8bdcf; font-size: 49px; letter-spacing: .035em; }
+.vocal-editor .effect-art { height: 166px; margin-top: 24px; filter: drop-shadow(0 8px 8px #0005); }
+.vocal-editor .effect-right { background: linear-gradient(155deg, #2f3034, #232c2e); min-width: 0; }
+.vocal-editor .effect-toolbar { border-bottom: 1px solid #ad849353; padding-bottom: 14px; margin-bottom: 20px; }
+.vocal-signal-route { display: flex; flex-direction: column; align-items: center; padding: 15px 6px; gap: 3px; margin: 15px 0; border-top: 1px dashed #c49a9266; border-bottom: 1px dashed #c49a9266; color: #e4beaf; font-family: var(--kk-mono, monospace); font-size: 8px; letter-spacing: .07em; }
+.vocal-signal-route i { font-style: normal; font-size: 12px; color: #a08094; }
+.vocal-stage-overview { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin: 18px 0; }
+.vocal-stage-overview>span { display: flex; align-items: center; gap: 7px; color: #85908d; font-family: var(--kk-mono, monospace); font-size: 8px; }
+.vocal-stage-overview i { width: 5px; height: 5px; border-radius: 50%; border: 1px solid #92928e; flex: none; }
+.vocal-stage-overview .active { color: #edc9cc; }
+.vocal-stage-overview .active i { border-color: #e8b5c9; background: #e8b5c9; }
+.vocal-editor .effect-info { line-height: 1.8; }
+.vocal-latency-note { border: 1px solid #536763; background: #19282577; padding: 10px; color: #b5d3be; margin-top: 16px; font-family: var(--kk-mono, monospace); font-size: 8px; line-height: 1.8; }
+.vocal-latency-note.pitch-active { color: #edc6a3; border-color: #927d5c; background: #3b302677; }
+.vocal-dry-note { font-family: var(--kk-mono, monospace); color: #a3b2aa; font-size: 8px; margin-top: 12px; }
+.vocal-recipe-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 15px; align-items: end; margin-bottom: 16px; }
+.vocal-recipe-bar label { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.vocal-recipe-bar .eyebrow { font-size: 7px; color: #d5adbd; letter-spacing: .04em; line-height: 1.6; }
+.vocal-recipe-bar select { width: 100%; min-width: 0; min-height: 42px; font-size: 11px; color: #f3dbd2; border-color: #8b6e7d; background: #282329; }
+.vocal-recipe-bar p { font-family: var(--kk-mono, monospace); font-size: 9px; line-height: 1.75; color: #c2c9bd; margin: 0 0 3px; }
+.vocal-meter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; padding: 1px; background: #74646a66; margin-bottom: 19px; }
+.vocal-meter-caption { grid-column: 1 / -1; padding: 7px 10px; background: #393235; color: #c7a8b5; font-family: var(--kk-mono, monospace); font-size: 7px; letter-spacing: .09em; }
+.vocal-meter-grid>div { min-width: 0; background: #172324; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+.vocal-meter-grid>div>span { color: #b4c1b8; font-family: var(--kk-mono, monospace); font-size: 7px; }
+.vocal-meter-grid output { font-family: var(--kk-mono, monospace); font-size: 11px; color: #e3c3ce; overflow-wrap: anywhere; }
+.vocal-view-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 19px; }
+.vocal-view-buttons { display: flex; gap: 0; flex: none; }
+.vocal-view-buttons button { min-height: 35px; padding: 8px 13px; border-radius: 0; font-family: var(--kk-mono, monospace); font-size: 9px; border-color: #927481; }
+.vocal-view-buttons button:first-child { border-radius: 3px 0 0 3px; }
+.vocal-view-buttons button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
+.vocal-view-buttons button[aria-pressed=true] { background: #71535e; color: #ffeadf; }
+.vocal-view-bar>span { color: #a4b2aa; font-size: 9px; line-height: 1.6; max-width: 280px; }
+.vocal-control-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 14px; }
+.vocal-control-group { min-width: 0; margin: 0; padding: 13px; border: 1px solid #726672; background: #1c252577; transition: border-color .15s; }
+.vocal-control-group legend { max-width: calc(100% + 5px); display: flex; align-items: center; gap: 10px; padding: 0 6px; color: #e8c4d0; font-family: var(--kk-heading, sans-serif); font-size: 17px; line-height: 1.3; }
+.vocal-stage-mode { width: 76px; max-width: 76px; min-width: 0; padding: 5px 6px!important; min-height: 31px; color: #f5d7cc; font-family: var(--kk-mono, monospace); font-size: 9px; background: #342d33; border-color: #9d7c8d; border-radius: 3px; }
+.vocal-stage-mode.vocal-mode-wide { width: 145px; max-width: 145px; }
+.vocal-control-group.vocal-compact { padding-top: 8px; padding-bottom: 10px; }
+.vocal-compact-note { display: block; font-family: var(--kk-mono, monospace); color: #889a8d; font-size: 7px; margin-top: 4px; }
+.vocal-group-note { margin: 0 0 15px; font-family: var(--kk-mono, monospace); color: #aebcb2; font-size: 8px; line-height: 1.7; }
+.vocal-control-group .effect-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 13px; }
+.vocal-control-group .control { min-width: 0; }
+.vocal-control-group .control label { gap: 6px; font-size: 8px; white-space: normal; }
+.vocal-control-group .control output { font-size: 8px; white-space: nowrap; }
+.vocal-control-group .control input[type=range] { min-height: 30px; accent-color: #dda8c4; }
+.vocal-control-group .control select { width: 100%; min-width: 0; min-height: 35px; font-size: 10px; }
+.vocal-control-group .control:has(select) { grid-column: 1 / -1; }
+.vocal-control-group.stage-off { border-color: #4c5454; }
+.vocal-control-group.stage-off legend { color: #a5aaa1; }
+.vocal-control-group .control:has(:disabled) { opacity: .45; }
+.vocal-control-group .control:has(:disabled) input { cursor: default; }
+.interface-vocal-practice { border-color: #a58196; background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 6px), #332c35; }
+.interface-vocal-practice .interface-practice-heading { color: #e5b5cd; }
+.interface-vocal-practice .interface-practice-heading h3 { color: #ecc4d6; }
+.interface-vocal-practice .interface-practice-heading .eyebrow { color: #dcb3c5; }
+.interface-vocal-practice .interface-practice-heading svg { color: #ddb0bf; }
+.interface-vocal-practice .interface-practice-buttons button { border-color: #b18ca1; color: #f4d6d3; background: #51414d; }
+@media (min-width: 901px) { .vocal-editor { scroll-margin-top: 153px; } }
+@media (max-width: 1180px) {
+  .vocal-control-groups { grid-template-columns: 1fr; }
+  .vocal-control-group .effect-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .vocal-control-group .control:has(select) { grid-column: span 2; }
+  .vocal-recipe-bar { grid-template-columns: 1fr; gap: 9px; }
+  .vocal-control-group legend { max-width: 100%; }
+}
+@media (max-width: 620px) {
+  .vocal-editor .effect-hero h2 { font-size: 39px; }
+  .vocal-editor .effect-art { height: 105px; margin: 0; }
+  .vocal-signal-route { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; flex-wrap: wrap; font-size: 6px; gap: 5px; padding: 10px 0; margin: 10px 0 0; }
+  .vocal-signal-route i { transform: rotate(-90deg); }
+  .vocal-stage-overview { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 0; gap: 7px; }
+  .vocal-stage-overview>span { font-size: 7px; gap: 5px; }
+  .vocal-editor .effect-info { margin-top: 14px; }
+  .vocal-latency-note { font-size: 8px; margin-top: 12px; }
+  .vocal-meter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vocal-meter-grid output { font-size: 10px; }
+  .vocal-recipe-bar select { font-size: 10px; min-height: 44px; }
+  .vocal-view-buttons { width: 100%; }
+  .vocal-view-buttons button { flex: 1; min-height: 42px; }
+  .vocal-view-bar { gap: 8px; }
+  .vocal-view-bar>span { font-size: 8px; }
+  .vocal-control-group { padding: 12px; }
+  .vocal-control-group legend { flex-wrap: wrap; gap: 7px; font-size: 17px; }
+  .vocal-stage-mode { min-height: 38px; max-width: 76px; width: 76px; font-size: 9px; }
+  .vocal-control-group .effect-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; }
+  .vocal-control-group .control:has(select) { grid-column: 1 / -1; }
+  .vocal-control-group .control input[type=range] { min-height: 35px; }
+  .vocal-control-group .control select { min-height: 40px; }
+}
 @media (max-width: 620px) {
   .mic-input-panel { margin-bottom: 15px; }
   .mic-input-panel summary { padding: 12px; gap: 9px; }

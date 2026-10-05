@@ -16,6 +16,7 @@ const bower = fs.readFileSync(path.join(root, 'bower', 'index.html'));
 const ravel = fs.readFileSync(path.join(root, 'ravel', 'index.html'));
 const fable = fs.readFileSync(path.join(root, 'fable', 'index.html'));
 const roux = fs.readFileSync(path.join(root, 'roux', 'index.html'));
+const batter = fs.readFileSync(path.join(root, 'batter', 'index.html'));
 const loom = fs.readFileSync(path.join(root, 'loom', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
@@ -43,7 +44,8 @@ for (const directory of ['public', 'docs']) {
   // Future apps can live in music/<app-name>/ and are copied with their assets.
   fs.cpSync(music, path.join(root, directory, 'music'), {
     recursive: true,
-    filter: source => !['README.md', '.DS_Store', 'source', 'node_modules'].includes(path.basename(source)),
+    filter: source => !['.DS_Store', 'source', 'node_modules'].includes(path.basename(source)) &&
+      (path.basename(source) !== 'README.md' || source === path.join(music, 'batter', 'samples', 'tools', 'README.md')),
   });
   for (const [relative, content] of [
     ['music/grain/index.html', grain],
@@ -55,6 +57,7 @@ for (const directory of ['public', 'docs']) {
     ['music/ravel/index.html', ravel],
     ['music/fable/index.html', fable],
     ['music/roux/index.html', roux],
+    ['music/batter/index.html', batter],
     ['music/loom/index.html', loom],
     ['grain/index.html', legacy],
   ]) {

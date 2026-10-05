@@ -33,7 +33,7 @@ scope.window = scope;
 vm.createContext(scope);
 const patternSchemaPath = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInContext(fs.readFileSync(patternSchemaPath, 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const file of ['effects-catalog.js', 'schema.js', 'note-renderer.js', 'note-workflow.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+for (const file of ['vocal-catalog.js', 'effects-catalog.js', 'schema.js', 'note-renderer.js', 'note-workflow.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
 const S = scope.LoomSchema, Renderer = scope.LoomNoteRenderer;
 function packet() { return { format: 'musiclab-pattern', version: 1, name: 'A little staircase', sourceApp: 'fixture', tempo: 120, swing: 0, meter: [4, 4], lengthBeats: 4, voices: [{ id: 'melody', name: 'Melody' }], notes: [{ id: 'one', beat: 0, duration: 1, pitch: 60, velocity: .8, voice: 'melody', probability: 1 }], seed: 7, tags: [] }; }
 function instrument() { return { id: 'fable', name: 'FABLE', snapshot: { format: 'loom-instrument-state', version: 1, app: 'fable', state: { gain: .2 }, storage: {} } }; }

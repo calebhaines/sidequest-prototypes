@@ -105,3 +105,21 @@ git push origin main
 Project data is unchanged by the interface release. Device preferences belong to
 the current browser and are ignored by the older version. Review conflicts if
 later releases modify the same files.
+
+## BATTER, GLAZE, and bass amplifier release
+
+GALLEY 1.9 adds the GLAZE vocal strip and four additional BROILER bass amp
+characters. BATTER adds recorded acoustic drums, sample editing, and intricate
+step sequencing to Kitchen and GALLEY. The complete previous site is preserved
+at `pre-batter-glaze-2026-10-05`, commit
+`73950b20987a5e420188181beaf5bf50203059bc`. The release is tagged
+`batter-glaze-v1`. To restore GALLEY 1.8 and the previous equipment list:
+
+```sh
+git revert --no-edit batter-glaze-v1
+git push origin main
+```
+
+Save portable projects before reverting. Older GALLEY versions cannot restore
+GLAZE inserts or BATTER instruments. Both published songs remain available.
+Review conflicts if later work changes these files.

@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['effects-catalog.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'vocal-dsp.js', 'effects-catalog.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const definition = LoomEffectsCatalog.find(effect => effect.id === 'broiler');
@@ -20,6 +20,17 @@ const passed = [];
 const check = (name, test) => { test(); passed.push(name); };
 const options = key => definition.params.find(param => param.key === key).options.map(option => option.value);
 const sr = 48000;
+const inspiredModels = ['portaflex-64', 'svt-69', 'v4b-71', 'svt-pro'];
+const legacyFingerprints = {
+  'clean-bass': 'bbd83187e90099f739f1d8ab053b0d593bfcdc597be767c696c8d4b552d7a4f2',
+  'flip-top': '6567de5eae12d8d549e8b10b5990b6ad3eb0a2a02f9cf3c37322249a65856bf0',
+  'valve-stack': '16588ff690720270c7360d894e41c1348c907e9680de4ec4bb251d6a6fb4b84a',
+  'modern-grind': 'd512cf529690f93032cd6341a1998db988e8a62b4c6bcfd6aac2f499cf75815b',
+  'doom-fuzz': '8f237cd895255c7dc9cafbf8283788ac3250b46a1d853e1b0cfb033e2761642e',
+  'american-clean': 'abd36a5357c514e20657347468622b5b2e65caaf61f3dc5c8f6ee1a53ae4e975',
+  'british-crunch': 'fe1eb982d8efac29200b0bb559b6029b03a55e0c0b1095bf5e0a3f2facc90daa',
+  'high-gain': '2c15c7a79d213c1db9a921e2354cf0351742cd96587603d664331df11a35ef13'
+};
 function signal(rate = sr, seconds = .45, pitch = 55, amplitude = .15) {
   return Float32Array.from({ length: Math.round(rate * seconds) }, (_, i) => {
     const t = i / rate, envelope = Math.min(1, t * 120) * (0.7 + .3 * Math.cos(t * 8));
@@ -46,10 +57,12 @@ function amplitudeAt(data, frequency, rate = sr) {
 }
 function finiteAudio(data) { assert(data.every(value => Number.isFinite(value) && Math.abs(value) <= 8), 'Nonfinite or unbounded audio'); }
 
-check('BROILER adds a ninth effect and preserves eight tracks with four slots', () => {
-  assert.equal(LoomEffectsCatalog.length, 9);
+check('BROILER preserves the original inserts, eight tracks and four slots while expanding bass choices', () => {
+  assert.equal(LoomEffectsCatalog.length, 10);
+  assert.equal(LoomEffectsCatalog[9].id, 'glaze');
   assert.deepEqual(LoomEffectsCatalog.slice(0, 8).map(effect => effect.id), ['prism', 'velvet', 'cinder', 'undertow', 'parallax', 'vestige', 'halo', 'tremor']);
-  assert.equal(options('model').length, 8); assert.equal(options('cabinet').length, 8);
+  assert.equal(options('model').length, 12); assert.equal(options('cabinet').length, 11);
+  assert.equal(definition.presets.length, 13);
   const state = LoomSchema.defaultState(); assert.equal(state.tracks.length, 8); assert(state.tracks.every(track => track.effects.length === 4));
 });
 
@@ -65,7 +78,7 @@ check('Catalog, DSP defaults, preset values and project serialization agree', ()
   assert.equal(new Set(definition.groups.flatMap(group => group.keys)).size, definition.params.length);
 });
 
-check('All eight amplifier characters and eight cabinets are audible and distinct', () => {
+check('All twelve amplifier characters and eleven cabinets are audible and distinct', () => {
   for (const key of ['model', 'cabinet']) {
     const hashes = new Set();
     for (const value of options(key)) {
@@ -78,10 +91,61 @@ check('All eight amplifier characters and eight cabinets are audible and distinc
 
 check('Every preset produces useful finite audio without injecting noise into silence', () => {
   for (const preset of definition.presets) {
-    const source = signal(sr, .3, preset.params.model.includes('bass') || ['flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz'].includes(preset.params.model) ? 55 : 165);
+    const source = signal(sr, .3, preset.params.model.includes('bass') || ['flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz', ...inspiredModels].includes(preset.params.model) ? 55 : 165);
     const audio = render(preset.params, source).left; finiteAudio(audio); assert(rms(audio) > .008, preset.name); assert(peak(audio) < 1.6, preset.name + ' excessive preset output');
     assert.equal(peak(render(preset.params, new Float32Array(6000)).left), 0, preset.name + ' injected signal into silence');
   }
+});
+
+check('The eight original models remain sample-identical for existing projects', () => {
+  // Captured before adding the new families, using the original factory/defaults.
+  const source = Float32Array.from({ length: 9600 }, (_, i) => .15 * Math.sin(2 * Math.PI * 55 * i / sr) + .04 * Math.sin(2 * Math.PI * 1700 * i / sr));
+  for (const [model, expected] of Object.entries(legacyFingerprints)) assert.equal(fingerprint(render({ model }, source).left), expected, model + ' changed old project audio');
+});
+
+check('The four Ampeg-inspired families have distinct spectral and power responses at identical settings', () => {
+  const source = signal(sr, .5, 55, .28), patch = { cabinet: 'di', cleanLow: 0, drive: 9, master: .55, sag: .45, bass: 0, mid: 0, treble: 0, presence: 2 / 9, depth: 0, output: -6 };
+  const signals = inspiredModels.map(model => render({ ...patch, model }, source).left);
+  const normalized = signals.map(data => Float32Array.from(data, value => value / rms(data)));
+  const spectralRatios = signals.map(data => {
+    const fundamental = amplitudeAt(data, 55);
+    return [110, 165, 220, 330, 1200, 3800].map(freq => amplitudeAt(data, freq) / fundamental);
+  });
+  for (let a = 0; a < inspiredModels.length; a++) {
+    for (let b = a + 1; b < inspiredModels.length; b++) {
+      assert(difference(normalized[a], normalized[b]) > .025, `${inspiredModels[a]} and ${inspiredModels[b]} differ beyond overall gain`);
+      assert(Math.hypot(...spectralRatios[a].map((value, i) => value - spectralRatios[b][i])) > .05, `${inspiredModels[a]} and ${inspiredModels[b]} have distinct spectral balance`);
+    }
+    const model = inspiredModels[a], mild = render({ ...patch, model, drive: 0, master: .1, sag: 0 }, source).left;
+    const driven = render({ ...patch, model, drive: 26, master: .95, sag: 0 }, source).left;
+    const sagging = render({ ...patch, model, drive: 26, master: .95, sag: 1 }, source).left;
+    assert(difference(mild, driven) > .005, model + ' should have gain/power dynamics');
+    assert(difference(driven, sagging) > .0005, model + ' should respond to supply sag');
+    const spectrum = [55, 110, 165, 220, 330].map(freq => amplitudeAt(signals[a], freq));
+    assert(spectrum.every(Number.isFinite) && spectrum[0] > .01, model + ' useful bass response');
+  }
+});
+
+check('New bass families retain protected low B and add no fixed monitoring buffer', () => {
+  const fundamental = 30.8677, source = sine(fundamental, .15), impulse = new Float32Array(256); impulse[0] = .5;
+  for (const model of inspiredModels) {
+    const patch = { model, cabinet: 'sealed810', drive: 30, cleanLow: 1, crossover: 180, bass: 0, mid: 0, treble: 0, depth: 0, presence: 2 / 9, master: .8, sag: .7, output: 0, gate: -90 };
+    assert(amplitudeAt(render(patch, source).left, fundamental) > .12, model + ' protected low B');
+    const response = render({ ...patch, cleanLow: 0 }, impulse).left;
+    assert.notEqual(response[0], 0, model + ' should respond on the first sample');
+    assert(peak(response) > .001, model + ' impulse audibility');
+  }
+});
+
+check('Vocal effects use an explicit, independently serializable optional factory', () => {
+  const normalize = params => ({ accepted: params?.value || 0 });
+  const makeVocal = () => ({ specifications: { value: [0, 1, 0] }, normalize, create: (rate, params) => ({ rate, params }) });
+  const instance = createLoomEffectsDSP(makeVocal), serialized = workletFactory(makeVocal);
+  assert.deepEqual(instance.normalize('glaze', { value: .7 }), { accepted: .7 });
+  assert.deepEqual(serialized.normalize('glaze', { value: .7 }), { accepted: .7 });
+  assert.deepEqual(instance.create('glaze', 44100, { value: .3 }), { rate: 44100, params: { value: .3 } });
+  assert.deepEqual(serialized.create('glaze', 44100, { value: .3 }), { rate: 44100, params: { value: .3 } });
+  assert.throws(() => workletEffects.create('glaze', sr, {}), /Unknown LOOM effect/);
 });
 
 check('Protected clean lows preserve a low-B fundamental underneath extreme distortion', () => {
@@ -201,6 +265,21 @@ check('Extreme parameters, sample rates, parameter updates and invalid inputs re
       insert.setParams({ drive: NaN, input: Infinity, output: -Infinity, model: 'unknown', cabinet: 'missing' });
       const tail = new Float32Array(Math.round(rate * .4)); insert.process(tail, tail.slice()); finiteAudio(tail); assert(rms(tail.subarray(Math.round(rate * .3))) < .0001);
     }
+  }
+});
+
+check('New bass models and matching cabinets remain stable at extreme controls and sample rates', () => {
+  const matching = { 'portaflex-64': 'portaflex115', 'svt-69': 'sealed810', 'v4b-71': 'sealed810', 'svt-pro': 'ported410' };
+  for (const rate of [8000, 44100, 48000, 96000, 192000]) for (const model of inspiredModels) for (const extreme of ['min', 'max']) {
+    const patch = { ...definition.defaults, model, cabinet: matching[model] };
+    for (const control of definition.params) if (control.type === 'range') patch[control.key] = control[extreme];
+    patch.mix = 1; patch.gate = -90;
+    const result = render(patch, signal(rate, .06, 41, 1.5), 128, rate);
+    finiteAudio(result.left); finiteAudio(result.right);
+    result.insert.setParams({ model: 'svt-69', cabinet: 'sealed810', sag: .8, drive: 36, cleanLow: .65 });
+    const continued = signal(rate, .04, 82, .6), right = continued.slice(); result.insert.process(continued, right);
+    finiteAudio(continued); finiteAudio(right);
+    result.insert.reset(); const silence = new Float32Array(256); result.insert.process(silence, silence.slice()); assert.equal(peak(silence), 0);
   }
 });
 
