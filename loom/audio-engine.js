@@ -13,7 +13,13 @@
         this.options = options;
         this.beat = 0;
         this.playing = false;
+        this.ended = false;
+        this.recordingHold = false;
         this.silent = false;
+        this.lastOutput = [0, 0];
+        this.seekOrigin = [0, 0];
+        this.seekFadeFrames = Math.max(1, Math.round(this.sampleRate * .006));
+        this.seekFadeRemaining = 0;
         this.recordOnly = new Set();
         this.auditionTracks = new Set();
         this.slots = Array.from({ length: 8 }, () => Array(4).fill(null));
@@ -26,7 +32,7 @@
         this.previousClickBeat = -1;
         this.setAssets(assets);
         this.setState(state);
-        this.meters = { beat: 0, playing: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
+        this.meters = { beat: 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
       }
       setAssets(assets) {
         this.assets = assets instanceof Map ? assets : new Map(Object.entries(assets || {}));
@@ -63,19 +69,33 @@
           }
         }
       }
-      start(beat = this.beat) { this.seek(beat); this.playing = true; this.silent = false; }
-      stop() { this.playing = false; this.clickRemaining = 0; }
-      seek(beat) { this.beat = clamp(beat, 0, 256, 0); this.previousClickBeat = -1; this.clickRemaining = 0; }
+      get endBeat() { return clamp(this.state.lengthBars, 1, 64, 4) * 4; }
+      start(beat = this.beat) { this.seek(beat); this.playing = true; this.silent = false; this.meters = { ...this.meters, beat: this.beat, playing: true, ended: false }; }
+      stop() { this.playing = false; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended }; }
+      seek(beat) {
+        this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
+        if (!this.options.linear) {
+          // Discard audio from the previous timeline position, then crossfade the
+          // last audible sample into the new position over six milliseconds.
+          this.seekOrigin[0] = this.lastOutput[0]; this.seekOrigin[1] = this.lastOutput[1];
+          this.seekFadeRemaining = this.playing || Math.abs(this.lastOutput[0]) + Math.abs(this.lastOutput[1]) > 1e-8 ? this.seekFadeFrames : 0;
+          for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
+        }
+        this.meters = { ...this.meters, beat: this.beat, playing: this.playing, ended: false };
+        return this.beat;
+      }
+      setRecordingHold(value) { this.recordingHold = value === true; }
       setRecordOnly(index, value) { if (value) this.recordOnly.add(index); else this.recordOnly.delete(index); }
       resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
-        this.playing = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
+        this.playing = false; this.ended = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
+        this.lastOutput.fill(0); this.seekOrigin.fill(0); this.seekFadeRemaining = 0;
         this.masterGain = 0;
         for (const pair of this.gains) pair.fill(0);
         for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         for (const pair of this.buffers) for (const buffer of pair) buffer.fill(0);
-        this.meters = { beat: this.beat, playing: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
+        this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
       }
       getMeters() { return this.meters; }
       _sample(asset, position, channel) {
@@ -87,13 +107,16 @@
       processBlock(left, right, inputs = []) {
         const n = Math.min(left.length, right.length), sr = this.sampleRate;
         left.fill(0); right.fill(0);
-        if (this.silent) { this.meters = { beat: this.beat, playing: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() }; return this.meters; }
+        if (this.silent) { this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() }; return this.meters; }
         if (!this.buffers.length || this.buffers[0][0].length !== n) this.buffers = Array.from({ length: 8 }, () => [new Float32Array(n), new Float32Array(n)]);
         const blockBeat = this.beat, advance = this.tempo / (60 * sr), secondsPerBeat = 60 / this.tempo;
         const anySolo = this.tracks.some(t => t.solo === true), selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks);
         const audible = this.tracks.map((t, i) => !t.mute && (!anySolo || t.solo) && (selected < 0 || i === selected));
         const loopStart = clamp(this.state.loopStart, 0, 255, 0), loopEnd = clamp(this.state.loopEnd, loopStart + .25, 256, 16);
         const loop = !this.options.linear && this.state.loopEnabled === true;
+        const stopAtEnd = !this.options.linear && !loop && !this.recordingHold;
+        const sessionEnd = this.endBeat, blockPlaying = this.playing;
+        let playingFrames = this.playing ? n : 0;
         const blockEnd = blockBeat + advance * n, wraps = loop && blockEnd >= loopEnd - 1e-10, wholeLoop = loop && advance * n >= loopEnd - loopStart;
         const wrappedEnd = wraps ? loopStart + Math.max(0, blockEnd - loopEnd) % (loopEnd - loopStart) : loopStart;
         const candidates = this.clipLists.map(list => !this.playing ? [] : list.filter(item => {
@@ -106,11 +129,19 @@
         for (const list of candidates) for (const item of list) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
         for (let t = 0; t < 8; t++) {
           const [l, r] = this.buffers[t], input = inputs[t], useInput = (this.tracks[t].instrumentLive !== false || this.auditionTracks.has(t)) && !this.recordOnly.has(t);
-          if (useInput && input?.[0]) { l.set(input[0].subarray(0, n)); r.set((input[1] || input[0]).subarray(0, n)); }
+          if (useInput && input?.[0]) {
+            l.set(input[0].subarray(0, n)); r.set((input[1] || input[0]).subarray(0, n));
+            if (this.playing && stopAtEnd && blockEnd >= sessionEnd - advance * this.seekFadeFrames && !this.auditionTracks.has(t)) for (let frame = 0; frame < n; frame++) {
+              const fade = Math.max(0, Math.min(1, (sessionEnd - blockBeat - frame * advance) / (advance * this.seekFadeFrames)));
+              l[frame] *= fade; r[frame] *= fade;
+            }
+          }
           else { l.fill(0); r.fill(0); }
         }
         for (let frame = 0; frame < n; frame++) {
+          if (this.playing && stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame; }
           const beat = this.beat;
+          if (this.ended) for (let t = 0; t < 8; t++) if (!this.auditionTracks.has(t)) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
           if (this.playing) {
             for (let t = 0; t < 8; t++) {
               const [l, r] = this.buffers[t];
@@ -129,6 +160,7 @@
             }
             this.beat += advance;
             if (loop && this.beat >= loopEnd - 1e-10) this.beat = loopStart + Math.max(0, this.beat - loopEnd) % (loopEnd - loopStart);
+            else if (stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame + 1; }
           }
         }
         const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
@@ -147,12 +179,12 @@
           }
           trackMeters.push({ peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) });
         }
-        const masterLevel = clamp(this.state.master?.level, 0, 1.5, .8), metronome = this.options.includeMetronome && this.state.master?.metronome && this.playing;
+        const masterLevel = clamp(this.state.master?.level, 0, 1.5, .8), metronome = this.options.includeMetronome && this.state.master?.metronome && blockPlaying;
         let peak = 0, powerL = 0, powerR = 0, clickBeat = blockBeat;
         for (let f = 0; f < n; f++) {
           this.masterGain += (masterLevel - this.masterGain) * slew;
           let a = left[f] * this.masterGain, b = right[f] * this.masterGain;
-          if (metronome) {
+          if (metronome && f < playingFrames) {
             const integerBeat = Math.floor(clickBeat + 1e-9);
             if (integerBeat !== this.previousClickBeat) { this.previousClickBeat = integerBeat; this.clickRemaining = Math.round(sr * .028); this.clickPhase = 0; this.clickFrequency = integerBeat % 4 === 0 ? 1500 : 1000; }
             if (this.clickRemaining > 0) { const env = this.clickRemaining / (sr * .028), sample = Math.sin(this.clickPhase) * env * env * .12; this.clickPhase += Math.PI * 2 * this.clickFrequency / sr; this.clickRemaining--; a += sample; b += sample; }
@@ -161,9 +193,14 @@
           const maximum = Math.max(Math.abs(a), Math.abs(b)), target = maximum > .98 ? .98 / maximum : 1;
           this.limitGain = target < this.limitGain ? target : this.limitGain + (target - this.limitGain) * (1 - Math.exp(-1 / (.08 * sr)));
           a *= this.limitGain; b *= this.limitGain;
+          if (this.seekFadeRemaining > 0) {
+            const progress = 1 - this.seekFadeRemaining / this.seekFadeFrames, blend = .5 - .5 * Math.cos(Math.PI * progress);
+            a = this.seekOrigin[0] * (1 - blend) + a * blend; b = this.seekOrigin[1] * (1 - blend) + b * blend; this.seekFadeRemaining--;
+          }
+          this.lastOutput[0] = a; this.lastOutput[1] = b;
           left[f] = a; right[f] = b; peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
-        this.meters = { beat: this.beat, playing: this.playing, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
+        this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
         return this.meters;
       }
     }
@@ -202,7 +239,7 @@
     return { Core, Recorder };
   }
 
-  const silenceMeters = beat => ({ beat: beat || 0, playing: false, tracks: Array.from({ length: 8 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), master: { peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 } });
+  const silenceMeters = beat => ({ beat: beat || 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), master: { peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 } });
   const abortError = () => new DOMException('Export canceled.', 'AbortError');
   // Project files can contain many megabytes of PCM, bundled HTML, and native
   // instrument snapshots. None of those bytes belong in a realtime state update.
@@ -236,7 +273,7 @@
   class LoomAudio {
     constructor(state) {
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
-      this.generation = 0; this._transportEpoch = 0; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
+      this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null;
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
@@ -253,7 +290,7 @@
         if (this.context.audioWorklet && window.AudioWorkletNode) {
           let url;
           try {
-            const source = `const createEffects=${window.createLoomEffectsDSP.toString()};const createEngine=${createLoomEngineDSP.toString()};const DSP=createEngine(createEffects);class LoomProcessor extends AudioWorkletProcessor{constructor(options){super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.epoch=options.processorOptions.epoch||0;this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:'limit',...m}));this.port.onmessage=e=>{const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;if(m.type==='state')this.core.setState(m.state);else if(m.type==='assets')this.core.setAssets(m.assets);else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);else if(m.type==='play')this.core.start(m.beat);else if(m.type==='stop')this.core.stop();else if(m.type==='seek')this.core.seek(m.beat);else if(m.type==='audition')this.core.resumeAudition(m.track);else if(m.type==='clearAudition')this.core.clearAudition(m.track);else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}else if(m.type==='recordStart'){this.recorder.start(m.id,m.tracks,this.core.beat,m.maxFrames);this.port.postMessage({type:'recordStarted',id:m.id,startBeat:this.core.beat});}else if(m.type==='recordStop'){const meta=this.recorder.stop();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}else if(m.type==='recordCancel')this.recorder.cancel();else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}};}process(inputs,outputs){const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;this.recorder.capture(inputs,n);this.core.processBlock(out[0],out[1]||out[0],inputs);if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active});return true;}}registerProcessor('loom-eight-track',LoomProcessor);`;
+            const source = `const createEffects=${window.createLoomEffectsDSP.toString()};const createEngine=${createLoomEngineDSP.toString()};const DSP=createEngine(createEffects);class LoomProcessor extends AudioWorkletProcessor{constructor(options){super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:'limit',...m}));this.port.onmessage=e=>{const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;if(m.type==='state')this.core.setState(m.state);else if(m.type==='assets')this.core.setAssets(m.assets);else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);else if(m.type==='play')this.core.start(m.beat);else if(m.type==='stop')this.core.stop();else if(m.type==='seek')this.core.seek(m.beat);else if(m.type==='recordHold')this.core.setRecordingHold(m.value);else if(m.type==='audition')this.core.resumeAudition(m.track);else if(m.type==='clearAudition')this.core.clearAudition(m.track);else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}else if(m.type==='recordStart'){this.recorder.start(m.id,m.tracks,this.core.beat,m.maxFrames);this.port.postMessage({type:'recordStarted',id:m.id,startBeat:this.core.beat});}else if(m.type==='recordStop'){const meta=this.recorder.stop();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}else if(m.type==='recordCancel')this.recorder.cancel();else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}};}process(inputs,outputs){const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;this.recorder.capture(inputs,n);this.core.processBlock(out[0],out[1]||out[0],inputs);if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,meters:this.core.getMeters()});}else if(!this.core.ended)this.endedSent=false;if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active});return true;}}registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
             this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 8, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch } });
             this.node.port.onmessage = e => this._message(e.data);
@@ -272,11 +309,11 @@
           this.node.onaudioprocess = e => {
             const inputs = Array.from({ length: 8 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
             this.recorder.capture(inputs, e.outputBuffer.length);
-            this._meters = this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            this._acceptMeters(this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs), this._transportEpoch);
           };
           this.mode = 'fallback';
         }
-        this.node.connect(this.context.destination); this._send({ type: 'state', state: dspState(this.state) }); this._syncAssets(); if (this._panicLatched) this._send({ type: 'panic' });
+        this.node.connect(this.context.destination); this._send({ type: 'state', state: dspState(this.state) }); this._send({ type: 'seek', beat: this._meters.beat }); this._updateRecordHold(); this._syncAssets(); if (this._panicLatched) this._send({ type: 'panic' });
         this.onStatus?.({ type: 'ready', mode: this.mode, sampleRate: this.context.sampleRate });
         return this.context;
       })().catch(error => { this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; throw error; });
@@ -293,6 +330,7 @@
       else if (m.type === 'play') this.core.start(m.beat);
       else if (m.type === 'stop') this.core.stop();
       else if (m.type === 'seek') this.core.seek(m.beat);
+      else if (m.type === 'recordHold') this.core.setRecordingHold(m.value);
       else if (m.type === 'audition') this.core.resumeAudition(m.track);
       else if (m.type === 'clearAudition') this.core.clearAudition(m.track);
       else if (m.type === 'panic') { this.core.panic(); this.recorder.cancel(); }
@@ -302,13 +340,24 @@
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
     }
     _message(m) {
-      if (m.type === 'meters' && m.epoch === this._transportEpoch) { this._meters = m.meters; if (this.isRecording && m.recordId === this._recordId) this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); }
+      if ((m.type === 'meters' || m.type === 'transportEnded') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch); if (this.isRecording && m.recordId === this._recordId) this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); }
       else if (m.type === 'chunk' && m.id === this._recordId) { if (!this._chunks.has(m.trackIndex)) this._chunks.set(m.trackIndex, []); this._chunks.get(m.trackIndex).push({ left: m.left, right: m.right }); this._recordStartBeat = m.startBeat; }
       else if (m.type === 'recordStarted' && m.id === this._recordId) this._recordStartBeat = m.startBeat;
       else if (m.type === 'limit' && m.id === this._recordId) { this.isRecording = false; this._recordFrames = m.frames; this._recordStartBeat = m.startBeat; this._releaseMic(); const info = { reason: this._recordCapReason, seconds: m.frames / this.context.sampleRate, frames: m.frames, trackIds: [...this._chunks.keys()].map(i => this.state.tracks[i].id) }; this.onRecordingLimit?.(info); this.onStatus?.({ type: 'recording-limit', ...info }); }
       else if (m.type === 'recordStopped' && this._recordStop?.id === m.stopId) { this._recordFrames = m.frames || 0; this._recordStartBeat = Number.isFinite(m.startBeat) ? m.startBeat : this._recordStartBeat; this._recordStop.resolve(); this._recordStop = null; }
       else if (m.type === 'gateAck') { this._gates.get(m.id)?.(); this._gates.delete(m.id); }
     }
+    _acceptMeters(meters, epoch) {
+      this._meters = meters;
+      if (meters.ended && !this.recordingBusy && this._transportEndedEpoch !== epoch) {
+        this._transportEndedEpoch = epoch;
+        const info = { beat: meters.beat, epoch };
+        this.onTransportEnd?.(info); this.onStatus?.({ type: 'transport-ended', ...info });
+      }
+    }
+    get recordingBusy() { return Boolean(this.isRecording || this._recordPreparing || this._micPending || this._stopPromise || this._chunks.size); }
+    _updateRecordHold() { this._send({ type: 'recordHold', value: this.recordingBusy }); }
+    _clampBeat(beat) { return Math.max(0, Math.min(Math.max(1, Math.min(64, Number(this.state.lengthBars) || 4)) * 4, Number(beat) || 0)); }
     setState(state) { this.state = state; this._send({ type: 'state', state: dspState(state) }); }
     setAssets(assets) { this.assets = assets instanceof Map ? new Map(assets) : new Map(Object.entries(assets || {})); this._syncAssets(); }
     _syncAssets() {
@@ -322,34 +371,40 @@
     async play(fromBeat = this._meters.beat) {
       const generation = this.generation, request = ++this._playRequest; await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
       await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
-      this._panicLatched = false; this._meters.playing = true; this._send({ type: 'play', beat: fromBeat }); return true;
+      this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
     }
     stop() { this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters.playing = false; this._send({ type: 'stop' }); }
-    seek(beat) { this._meters.beat = Math.max(0, Math.min(256, Number(beat) || 0)); this._send({ type: 'seek', beat: this._meters.beat }); }
+    seek(beat) {
+      if (this.recordingBusy) throw Error('Finish or cancel the current take before moving the playhead.');
+      this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
+    }
     resumeAudition(id) { this._panicLatched = false; this._send({ type: 'audition', track: id == null ? undefined : this._trackIndex(id) }); }
     clearAudition(id) { this._send({ type: 'clearAudition', track: id == null ? undefined : this._trackIndex(id) }); }
     panic() {
       this.generation++; this._panicLatched = true; this._playRequest++; this.cancelRecording(); this._send({ type: 'panic' }); this._meters = silenceMeters(this._meters.beat);
       for (const resolve of this._gates.values()) resolve(); this._gates.clear();
     }
-    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordSeconds: this.context ? frames / this.context.sampleRate : 0 }; }
+    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordingPending: this.recordingBusy && !this.isRecording, recordSeconds: this.context ? frames / this.context.sampleRate : 0 }; }
     async startRecording(trackIds, options = {}) {
-      if (this.isRecording || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
-      const generation = this.generation, request = ++this._recordRequest; await this.init(); if (generation !== this.generation || request !== this._recordRequest) return false;
-      const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._trackIndex(id)))]; if (!tracks.length) throw Error('Arm a track before recording.');
-      await this.context.resume(); if (generation !== this.generation || request !== this._recordRequest) return false;
-      const maxSeconds = Math.min(120, Math.max(.01, Number(options.maxSeconds) || 120));
-      const budget = Math.min(64 * 1024 * 1024, options.budgetBytes == null ? 32 * 1024 * 1024 : Math.max(0, Number(options.budgetBytes) || 0));
-      const durationFrames = Math.floor(this.context.sampleRate * maxSeconds), budgetFrames = Math.floor(budget / (tracks.length * 4)), maxFrames = Math.min(durationFrames, budgetFrames);
-      if (maxFrames < 1) throw Error('The project audio budget is full. Remove unused audio before recording.');
-      this._recordCapReason = budgetFrames < durationFrames ? 'budget' : 'duration';
-      this._chunks = new Map(tracks.map(t => [t, []])); this._recordFrames = 0; this._recordStartBeat = this._meters.beat; this._recordId++; this.isRecording = true;
-      if (options.startTransport !== false && !this._meters.playing) { this._meters.playing = true; this._send({ type: 'play', beat: this._meters.beat }); }
-      this._panicLatched = false; this._send({ type: 'audition' }); this._send({ type: 'recordStart', id: this._recordId, tracks, maxFrames }); this.onStatus?.({ type: 'recording-started', trackIds: tracks.map(i => this.state.tracks[i].id) }); return true;
+      if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
+      this._recordPreparing = true; this._updateRecordHold();
+      try {
+        const generation = this.generation, request = ++this._recordRequest; await this.init(); if (generation !== this.generation || request !== this._recordRequest) return false;
+        const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._trackIndex(id)))]; if (!tracks.length) throw Error('Arm a track before recording.');
+        await this.context.resume(); if (generation !== this.generation || request !== this._recordRequest) return false;
+        const maxSeconds = Math.min(120, Math.max(.01, Number(options.maxSeconds) || 120));
+        const budget = Math.min(64 * 1024 * 1024, options.budgetBytes == null ? 32 * 1024 * 1024 : Math.max(0, Number(options.budgetBytes) || 0));
+        const durationFrames = Math.floor(this.context.sampleRate * maxSeconds), budgetFrames = Math.floor(budget / (tracks.length * 4)), maxFrames = Math.min(durationFrames, budgetFrames);
+        if (maxFrames < 1) throw Error('The project audio budget is full. Remove unused audio before recording.');
+        this._recordCapReason = budgetFrames < durationFrames ? 'budget' : 'duration';
+        this._chunks = new Map(tracks.map(t => [t, []])); this._recordFrames = 0; this._recordStartBeat = this._meters.beat; this._recordId++; this.isRecording = true;
+        if (options.startTransport !== false && !this._meters.playing) { this._meters.playing = true; this._meters.ended = false; this._send({ type: 'play', beat: this._meters.beat }); }
+        this._panicLatched = false; this._send({ type: 'audition' }); this._send({ type: 'recordStart', id: this._recordId, tracks, maxFrames }); this.onStatus?.({ type: 'recording-started', trackIds: tracks.map(i => this.state.tracks[i].id) }); return true;
+      } finally { this._recordPreparing = false; this._updateRecordHold(); }
     }
     stopRecording() {
       if (this._stopPromise) return this._stopPromise;
-      this._stopPromise = this._finishRecording().finally(() => { this._stopPromise = null; }); return this._stopPromise;
+      this._stopPromise = this._finishRecording().finally(() => { this._stopPromise = null; this._updateRecordHold(); }); return this._stopPromise;
     }
     async _finishRecording() {
       const generation = this.generation; this._recordRequest++; this.isRecording = false;
@@ -368,15 +423,17 @@
     cancelRecording() {
       this._recordRequest++; this._recordId++; this.isRecording = false; this._chunks.clear(); this._recordFrames = 0; this._send({ type: 'recordCancel' }); this._releaseMic();
       if (this._recordStop) { this._recordStop.resolve(); this._recordStop = null; }
+      this._updateRecordHold();
     }
     async _recordGate(track, value) {
       if (this.mode === 'fallback') { this.core.setRecordOnly(track, value); return; }
       await new Promise(resolve => { const id = ++this._gateId; this._gates.set(id, resolve); this._send({ type: 'gate', id, track, value }); });
     }
     async startMicrophoneRecording(trackId, options = {}) {
-      if (this.isRecording || this._stopPromise || this._chunks.size || this._micPending) return false;
+      if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
       if (!navigator.mediaDevices?.getUserMedia) throw Error('Microphone recording needs HTTPS or localhost in a browser with microphone access.');
       const generation = this.generation, request = ++this._recordRequest; this._micPending = true; let stream, track;
+      this._updateRecordHold();
       try {
         await this.init(); track = this._trackIndex(trackId); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
         if (generation !== this.generation || request !== this._recordRequest) { stream.getTracks().forEach(t => t.stop()); return false; }
@@ -385,7 +442,7 @@
         const source = this.context.createMediaStreamSource(stream); this._mic = { stream, source, track }; source.connect(this.inputs[track]);
         const started = await this.startRecording([track], { ...options, _microphone: true }); if (!started) this._releaseMic(); return started;
       } catch (error) { this._releaseMic(); stream?.getTracks().forEach(t => t.stop()); if (track != null) this._send({ type: 'gate', id: 0, track, value: false }); throw error; }
-      finally { this._micPending = false; }
+      finally { this._micPending = false; this._updateRecordHold(); }
     }
     _releaseMic() {
       if (!this._mic) return; const { source, stream, track } = this._mic; this._mic = null; try { source.disconnect(); } catch {} stream.getTracks().forEach(t => t.stop()); this._send({ type: 'gate', id: 0, track, value: false });

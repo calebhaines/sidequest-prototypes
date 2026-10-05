@@ -32,6 +32,25 @@ The bundled starter session contains actual rendered RAVEL percussion, BOWER
 strings, and HAZE clouds, with matching instrument states. The other tracks are
 ready for new parts. Empty session starts with eight blank tracks.
 
+## Transport and navigation
+
+Play continues from the current position. Pause holds the position; Stop finishes
+any recording and returns to the beginning. The recording button finishes a take
+and holds its position. Start/End and bar-step controls move the needle, loop
+boundary buttons jump to the loop's edges, and Restart plays from the beginning.
+Non-loop playback stops at the session end, including live hosted instruments.
+
+Drag the ruler or playhead handle to scrub. Click the clock to enter an exact bar,
+beat, and tick; 1,000 ticks make a beat. Follow keeps the playing needle visible;
+manually scrolling pauses following briefly. Loop this clip sets the loop to the
+selected clip's time range. Position and loop-range controls lock while recording
+is preparing, active, or finalizing, keeping recorded timing intact.
+
+Space plays/pauses, Enter stops and returns to the beginning, Home/End jumps to
+the session boundaries, Alt + Left/Right steps by bars, and Shift + Space restarts.
+G opens Go To, [ and ] jump to loop edges, F toggles Follow, L toggles looping, and
+Shift + L loops the selected clip. Inputs and dialogs keep their normal keys.
+
 ## Eight effects
 
 | Effect | Processing |
@@ -83,4 +102,4 @@ source projects are available from Music Lab.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.0.0.
+font license notices. Version 1.1.0.

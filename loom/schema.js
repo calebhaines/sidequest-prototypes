@@ -1,7 +1,7 @@
 /* LOOM projects. Eight rooms, with rather firm walls. */
 (() => {
   'use strict';
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const COLORS = ['#edab7c', '#b6c995', '#b8a7e0', '#87bfcc', '#dfb0c4', '#ceb581', '#96bdac', '#a5b5de'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel'];
@@ -25,7 +25,7 @@
     return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], clips: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Eight rooms for a very odd orchestra', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange' }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Eight rooms for a very odd orchestra', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
   }
   function effect(value, strict = false) {
     if (value == null) return null;
@@ -86,7 +86,7 @@
     }
     if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds LOOM’s 64 MB audio budget. Remove unused audio or shorten a take.');
     const assetMap = new Map(assets.map(a => [a.id, a]));
-    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange' }, tracks: [], assets };
+    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
     const clipIds = new Set(); let snapshotBytes = 0;
     for (let i = 0; i < 8; i++) {
@@ -120,6 +120,7 @@
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
     strictNumbers(s.view, ['zoom', 'snap'], 'The project contains invalid view settings.');
     if (typeof s.master.metronome !== 'boolean' || !['arrange', 'mixer'].includes(s.view.tab) || ![0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(s.view.snap)) throw Error('The project contains invalid options.');
+    if(s.view.follow !== undefined && typeof s.view.follow !== 'boolean') throw Error('The project contains an invalid playhead follow setting.');
     const ids = new Set(), clipIds = new Set();
     for (const a of s.assets) { validateAsset(a); if (ids.has(a.id)) throw Error('Audio asset IDs must be unique.'); ids.add(a.id); }
     for (let i = 0; i < 8; i++) {
