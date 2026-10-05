@@ -64,10 +64,35 @@ integration boundary for instruments chosen by the user. Custom URLs stay on
 the studio’s site; external app assets need their usual browser access. A
 self-contained HTML app makes offline hosting straightforward.
 
-Native app clocks may have their own pattern lengths and swing. Record parts
-into LOOM clips to place and edit them precisely on the arrangement clock.
-Tempo-synchronized effects use LOOM’s clock; exported clips and inserts use the
-same deterministic DSP as arrangement playback.
+Native pattern lengths and swing are preserved against LOOM’s shared bar/beat
+clock. Registered note adapters let the host schedule discrete notes and silence
+the app’s autonomous sequencer, preventing duplicate playback. Continuous apps
+can consume transport updates with exact context timestamps. Tempo-synchronized
+effects use the same clock; live and exported clips use the same deterministic DSP.
+
+## Notes, patterns, and reversible sources
+
+An app may expose `window.MusicLabPatternInstrument` separately from its transport
+registration. The optional adapter supplies `patternExport`, `exportPattern`,
+`patternImport`, `importPattern`, `notes`, `prepare`, `scheduleNote`, `cancelNotes`,
+and `renderPattern`. The host discovers these capabilities automatically. Use
+`MusicLabHost.patternLibrary` to share the parent studio’s pattern library.
+
+`scheduleNote` is synchronous after preparation and receives an absolute shared
+AudioContext `when`, pitch, velocity, voice ID, duration in seconds, and source ID.
+Cancel only notes belonging to the requested source. Honor a supplied cancellation
+`when` at that context timestamp and declare `notes.scheduledCancel: true` to enable
+precise bar changes. Other adapters switch at the boundary through the safe fallback.
+`renderPattern` snapshots
+native state before awaiting and renders the instrument’s actual synthesis to
+stereo PCM or WAV. It runs in an isolated editor, preserving the user’s live patch
+and studio context. Apps without a native renderer may still be played and recorded.
+
+LOOM keeps complete instrument snapshots with printed clips, including sample
+assets. Track inserts are applied after source synthesis and remain editable.
+Patterns and source metadata are strictly validated when opening projects.
+See [PATTERN-CONTRACT.md](../shared/PATTERN-CONTRACT.md) for packet fields,
+timestamp rules, cancellation, voice mappings, and the complete optional API.
 
 ## Receiving audio from the arrangement
 

@@ -108,7 +108,7 @@ class Graph {
     const limit = clamp(m.polyphony, 8, 64); while (this.voices.filter(v => !v.stolen && v.endAt > at).length > limit) this.steal(at);
   }
   updateVoice(voice, zone, at) {
-    if (voice.stolen || voice.endAt <= at) return;
+    if (voice.stolen || voice.endAt <= at || Number.isFinite(voice.cancelAt) && voice.cancelAt <= at) return;
     const old = voice.zone, envelope = { ...old.envelope, sustain: zone.envelope.sustain, release: zone.envelope.release }, currentEnvelope = this.env(voice, at);
     const futureRelease = voice.releaseAt !== null && voice.releaseAt > at;
     if (old.engine === 'texture' && old.stretch !== zone.stretch) {
@@ -137,7 +137,7 @@ class Graph {
       }
       if (voice.releaseAt !== null) voice.sources.forEach(source => { try { source.stop(voice.endAt + .002); } catch (_) {} });
     }
-    const now = Math.max(at, voice.at); [voice.level.gain, voice.panner.pan, voice.filter.frequency, ...(voice.classic ? [voice.classic.playbackRate] : [])].forEach(param => param.cancelScheduledValues(now)); voice.nextMod = Math.min(voice.nextMod, now); this.automate(voice, now);
+    const now = Math.max(at, voice.at); [voice.level.gain, voice.panner.pan, voice.filter.frequency, ...(voice.classic ? [voice.classic.playbackRate] : [])].forEach(param => param.cancelScheduledValues(now)); voice.nextMod = Math.min(voice.nextMod, now); this.automate(voice, now); if (Number.isFinite(voice.cancelAt) && voice.cancelAt >= at) this.applyCancellation(voice, voice.cancelAt);
   }
   prepared(asset, zone) {
     const audio = this.getAudio(asset), frames = audio.left.length, start = Math.min(frames - 1, Math.max(0, Math.floor(clamp(zone.start, 0, 1) * frames))), end = Math.max(start + 1, Math.min(frames, Math.ceil(clamp(zone.end, 0, 1) * frames)));
@@ -229,7 +229,8 @@ class Graph {
         voice.naturalAt = at + sample.naturalDuration * clamp(zone.stretch, .125, 8); voice.endAt = voice.naturalAt + Math.max(.005, zone.envelope.release); this.release(voice, voice.naturalAt, zone.envelope.release, true);
       }
       this.voices.push(voice); ids.push(voice.id);
-      if (Number.isFinite(options.duration) && (zone.playMode !== 'oneshot' || options.source === 'preview')) this.release(voice, at + Math.max(.01, options.duration), undefined, options.source === 'preview');
+      const timedSource = ['pattern-clip', 'standalone-pattern'].includes(options.source) || String(options.source || '').startsWith('loom');
+      if (Number.isFinite(options.duration) && (zone.playMode !== 'oneshot' || options.source === 'preview' || timedSource)) this.release(voice, at + Math.max(.01, options.duration), undefined, options.source === 'preview' || timedSource);
       if (!this.offline) this.onNote?.({ note, velocity, on: true, zoneId: zone.id, voiceId: voice.id });
       this.automate(voice, at);
     }
@@ -241,6 +242,24 @@ class Graph {
     const release = Math.max(.005, override ?? voice.zone.envelope.release), level = this.env(voice, at); voice.releaseAt = at; voice.releaseLevel = level; voice.endAt = Math.min(voice.endAt, at + release); voice.sustained = false;
     voice.amp.gain.cancelScheduledValues(at); voice.amp.gain.setValueAtTime(level, at); voice.amp.gain.linearRampToValueAtTime(0, at + release);
     for (const source of voice.sources) try { source.stop(at + release + .002); } catch (_) {}
+  }
+  applyCancellation(voice, at) {
+    if (voice.endAt <= at) return;
+    const level = this.env(voice, at);
+    voice.cancelAt = at; voice.releaseAt = at; voice.releaseLevel = level; voice.endAt = Math.min(voice.endAt, at + .012); voice.sustained = false;
+    voice.amp.gain.cancelScheduledValues(at); voice.amp.gain.setValueAtTime(level, at); voice.amp.gain.linearRampToValueAtTime(0, voice.endAt);
+    voice.sources.forEach(source => { try { source.stop(voice.endAt + .002); } catch (_) {} });
+  }
+  cancelSource(source, at) {
+    const now = this.context.currentTime;
+    for (const voice of this.voices) if (!source || voice.source === source) {
+      if (voice.at >= at) {
+        voice.stolen = true; voice.endAt = now; voice.amp.gain.cancelScheduledValues(now); voice.amp.gain.setValueAtTime(0, now);
+        voice.sources.forEach(node => { try { node.stop(now); node.disconnect(); } catch (_) {} });
+        this.grains.filter(grain => grain.voiceId === voice.id).forEach(grain => { try { grain.source.stop(now); grain.source.disconnect(); grain.gain.disconnect(); } catch (_) {} });
+        voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} });
+      } else this.applyCancellation(voice, at);
+    }
   }
   noteOff(note, at, source) {
     for (const v of this.voices) if (v.note === note && (!source || v.source === source) && v.endAt > at && v.zone.playMode !== 'oneshot') { if (this.sustain) v.sustained = true; else this.release(v, at); }
@@ -271,7 +290,7 @@ class Graph {
     source.buffer = sample.buffer; source.playbackRate.setValueAtTime(ratio, at); source.loop = z.loopMode !== 'off'; source.loopStart = sample.loopStart; source.loopEnd = sample.loopEnd; source.connect(gain); gain.connect(voice.amp);
     const curve = new Float32Array(32); for (let i = 0; i < 32; i++) curve[i] = Math.pow(Math.sin(Math.PI * i / 31), 2) * normalization;
     gain.gain.setValueCurveAtTime(curve, at, duration); source.start(at, offset, duration * ratio); source.stop(at + duration + .001);
-    const grain = { source, gain, end: at + duration }; this.grains.push(grain);
+    const grain = { source, gain, voiceId: voice.id, end: at + duration }; this.grains.push(grain);
     source.onended = () => { try { source.disconnect(); gain.disconnect(); } catch (_) {} };
   }
   tick(from, to) {
@@ -306,7 +325,7 @@ class Graph {
 class FableAudio {
   constructor({ getState, onNote, onStep, onMeters, onStatus } = {}) {
     this.getState = getState || (() => window.FableSchema.defaultState()); this.state = this.getState(); this.onNote = onNote; this.onStep = onStep; this.onMeters = onMeters; this.onStatus = onStatus;
-    this._context = null; this.graph = null; this.pending = null; this.timer = null; this.playing = false; this.generation = 0; this.assetCache = new Map(); this.held = new Map(); this.heldOrder = 0; this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.sustain = false; this.stepQueue = []; this.nextAt = 0; this.step = 0; this.arpStep = 0; this.random = randomGenerator(this.state.seed);
+    this._context = null; this.graph = null; this.pending = null; this.timer = null; this.playing = false; this.generation = 0; this.assetCache = new Map(); this.futureCancels = new Map(); this.held = new Map(); this.heldOrder = 0; this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.sustain = false; this.stepQueue = []; this.nextAt = 0; this.step = 0; this.arpStep = 0; this.random = randomGenerator(this.state.seed);
   }
   get context() { return this._context; }
   get isPlaying() { return this.playing; }
@@ -340,8 +359,8 @@ class FableAudio {
     const at = Math.max(this._context.currentTime, Number.isFinite(when) ? when : this._context.currentTime);
     const heldSource = source !== 'sequence' && source !== 'arp' && source !== 'preview' && !zoneId;
     if (heldSource) this.held.set(`${source}:${note}`, { note, velocity, source, down: true, order: ++this.heldOrder });
-    if (heldSource && this.playing && this.state.performance.mode === 'arp') return [];
-    const ids = this.graph.noteOn(note, velocity, at, { zoneId, duration, source }); this.graph.tick(at, at + .08); return ids;
+    if (heldSource && this.playing && !this._externalPattern && this.state.performance.mode === 'arp') return [];
+    const ids = this.graph.noteOn(note, velocity, at, { zoneId, duration, source }); this.graph.tick(this._context.currentTime, this._context.currentTime + .16); return ids;
   }
   noteOff(note, { source, when } = {}) {
     if (!this.graph) return; note = Math.round(clamp(note, 0, 127)); const at = Math.max(this._context.currentTime, Number.isFinite(when) ? when : this._context.currentTime);
@@ -357,7 +376,7 @@ class FableAudio {
     if (this.state.performance.mode === 'arp') this.graph.voices.forEach(v => this.graph.release(v, this._context.currentTime, .03, true));
     this.tick(); return true;
   }
-  stop() { this.generation++; this.playing = false; this.stepQueue = []; this.graph?.allNotesOff(this._context.currentTime); this.held.clear(); this.sustain = false; this.onStep?.(-1); }
+  stop() { this.generation++; this.futureCancels.clear(); this.playing = false; this.stepQueue = []; this.graph?.allNotesOff(this._context.currentTime); this.held.clear(); this.sustain = false; this.onStep?.(-1); }
   panic() {
     this.stop(); this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.graph?.destroy();
     if (this._context && this._context.state !== 'closed') this.graph = new Graph(this._context, this.state, asset => this.getAssetAudio(asset), { onNote: event => this.onNote?.(event) });
@@ -382,16 +401,20 @@ class FableAudio {
   tick() {
     if (!this.graph || this._context.state !== 'running') return;
     const now = this._context.currentTime, until = now + .085;
-    if (this.playing) { if (this.nextAt < now - .3) this.nextAt = now + .01; let guard = 0; while (this.nextAt < until && guard++ < 32) this.scheduleStep(this.nextAt); }
+    if (this.playing && !this._externalPattern) { if (this.nextAt < now - .3) this.nextAt = now + .01; let guard = 0; while (this.nextAt < until && guard++ < 32) this.scheduleStep(this.nextAt); }
     this.graph.tick(now, until);
     while (this.stepQueue[0]?.at <= now + .003) { const due = this.stepQueue.shift(); this.onStep?.(due.index); }
     this.onMeters?.(this.getMeters());
   }
+  scheduleNote({ voiceId = 'auto', note = 60, velocity = .8, when, durationSeconds = .25, source = 'loom' } = {}) { if (!this.graph || !this._context || this._context.state === 'closed') throw new Error('Prepare the sampler before scheduling notes.');const at=Math.max(this._context.currentTime,Number.isFinite(when)?when:this._context.currentTime);if(this.futureCancels.has(source)&&at>=this.futureCancels.get(source))return [];const ids=this.graph.noteOn(note,velocity,at,{zoneId:voiceId==='auto'?undefined:voiceId,duration:durationSeconds,source});this.graph.tick(this._context.currentTime,this._context.currentTime+.16);return ids; }
+  stopNotes({ source, when } = {}) { if (!this.graph || !this._context) return;const now=this._context.currentTime,at=Math.max(now,Number.isFinite(when)?when:now);if(source&&at>now){if(this.futureCancels.size>=256&&!this.futureCancels.has(source)){for(const [id,time]of this.futureCancels)if(time<=now)this.futureCancels.delete(id);if(this.futureCancels.size>=256)throw new Error('The cancellation queue is full.');}this.futureCancels.set(source,Math.min(this.futureCancels.get(source)??Infinity,at));}else if(source)this.futureCancels.delete(source);else this.futureCancels.clear();this.graph.cancelSource(source,at);for (const [key,held] of this.held)if(!source||held.source===source)this.held.delete(key); }
+  renderNotes(options = {}) { return this.render({ ...options, scope: 'events' }); }
   getMeters() { return this.graph ? this.graph.getMeters(this.playing) : { peak: 0, rms: 0, voices: 0, grains: 0, playing: false }; }
-  async render({ state = this.state, scope = 'pattern', zoneId, note, velocity = .8, bars = 1, tailSeconds = 0, signal } = {}) {
+  async render({ state = this.state, scope = 'pattern', zoneId, note, velocity = .8, bars = 1, tailSeconds = 0, signal, events, tempo, lengthBeats } = {}) {
     abort(signal); const snapshot = window.FableSchema.normalize(window.FableSchema.copy(state));
-    if (!['zone', 'pattern'].includes(scope)) throw new Error('Choose a sample zone or pattern to render.');
-    const tail = clamp(tailSeconds, 0, 12), count = Math.round(clamp(bars, 1, 16)); let body = count * 240 / snapshot.tempo, zone = null;
+    if (scope === 'events') { if (!Array.isArray(events) || events.length > 8192 || !Number.isFinite(tempo) || tempo < 5 || tempo > 1920 || !Number.isFinite(lengthBeats) || lengthBeats <= 0 || lengthBeats > 256) throw new Error('Choose a valid timed note pattern.'); snapshot.tempo = tempo; }
+    if (!['zone', 'pattern', 'events'].includes(scope)) throw new Error('Choose a sample zone or pattern to render.');
+    const tail = clamp(tailSeconds, 0, scope === 'events' ? 30 : 12), count = Math.round(clamp(bars, 1, 16)); let body = scope === 'events' ? lengthBeats * 60 / snapshot.tempo : count * 240 / snapshot.tempo, zone = null;
     if (scope === 'zone') {
       zone = snapshot.zones.find(z => z.id === (zoneId || snapshot.selectedZone)); if (!zone) throw new Error('Choose a sample zone first.');
       const asset = snapshot.assets.find(a => a.id === zone.assetId); if (!asset) throw new Error('This zone has no sample.');
@@ -406,7 +429,7 @@ class FableAudio {
     /* Decode and capture all assets before the first await. Imported samples never fall back to a factory oscillator. */
     const audios = new Map(snapshot.assets.map(asset => [asset.id, this.getAssetAudio(asset)]));
     const context = new Offline(2, frames, SR), graph = new Graph(context, snapshot, asset => audios.get(asset.id), { offline: true }), random = randomGenerator(snapshot.seed);
-    let nextStep = 0, index = 0, stopped = false, aborted = false, cursor = 0;
+    let nextStep = 0, index = 0, eventIndex = 0, stopped = false, aborted = false, cursor = 0;const sortedEvents = scope === 'events' ? events.map(e => ({...e})).sort((a,b)=>a.startBeat-b.startBeat) : [];
     const onAbort = () => { aborted = true; }; signal?.addEventListener('abort', onAbort, { once: true });
     const schedule = (from, to) => {
       abort(signal); if (aborted) abort({ aborted: true });
@@ -418,6 +441,7 @@ class FableAudio {
           index++; nextStep += interval;
         }
       }
+      if (scope === 'events') { while (eventIndex < sortedEvents.length && sortedEvents[eventIndex].startBeat * 60 / snapshot.tempo < Math.min(to, body) - .000001) { const event = sortedEvents[eventIndex++]; graph.noteOn(event.note, event.velocity, event.startBeat * 60 / snapshot.tempo, { zoneId: event.voiceId === 'auto' ? undefined : event.voiceId, source: 'pattern-clip', duration: Math.max(.001, event.durationBeats * 60 / snapshot.tempo) }); } }
       if (!stopped && to >= body) { graph.allNotesOff(body); stopped = true; }
       graph.tick(from, to);
     };
@@ -434,7 +458,7 @@ class FableAudio {
       const buffer = await rendered; abort(signal);
       const left = buffer.getChannelData(0), right = buffer.getChannelData(1), pcm = new Float32Array(frames * 2), fade = Math.min(240, Math.floor(frames / 4));
       for (let i = 0; i < frames; i++) { const edge = Math.min(1, i / fade, (frames - 1 - i) / fade); pcm[i * 2] = clamp(left[i] * edge, -1, 1); pcm[i * 2 + 1] = clamp(right[i] * edge, -1, 1); }
-      abort(signal); return { pcm, sampleRate: SR, name: scope === 'zone' ? zone.name : `${snapshot.name} — ${snapshot.patterns[snapshot.selectedPattern].name}`, tempo: snapshot.tempo, sourceApp: 'fable', sourceLabel: scope === 'zone' ? 'Sample zone' : 'Pattern', scope, bars: scope === 'pattern' ? count : undefined };
+      abort(signal); return { pcm, sampleRate: SR, name: scope === 'zone' ? zone.name : scope === 'events' ? snapshot.name : `${snapshot.name} — ${snapshot.patterns[snapshot.selectedPattern].name}`, tempo: snapshot.tempo, sourceApp: 'fable', sourceLabel: scope === 'zone' ? 'Sample zone' : 'Pattern', scope, bars: scope === 'pattern' ? count : undefined };
     } finally { signal?.removeEventListener('abort', onAbort); graph.destroy(); if (context.state === 'suspended') context.resume().catch(() => {}); /* A cancelled suspended render is released to finish with a disconnected graph. */ }
   }
 }

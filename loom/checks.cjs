@@ -9,13 +9,15 @@ const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
 const scope = {
-  Blob, DOMException, Math, Number, Map, Set, Promise, setTimeout,
+  Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout,
   navigator: {}, crypto: webcrypto,
   btoa: value => Buffer.from(value, 'binary').toString('base64'),
   atob: value => Buffer.from(value, 'base64').toString('binary')
 };
 scope.window = scope;
 vm.createContext(scope);
+const patternSchemaPath = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
+vm.runInContext(fs.readFileSync(patternSchemaPath, 'utf8'), scope, { filename: 'pattern-schema.js' });
 for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 }
@@ -77,6 +79,57 @@ check('Malformed automation rejects; replacing an effect removes incompatible la
   const swapped = S.copy(state);
   swapped.tracks[0].effects[0] = S.effect({ type: 'prism', params: scope.LoomEffectsCatalog[0].defaults });
   assert(!S.normalize(swapped).tracks[0].automation.some(item => item.effectType === 'cinder'));
+});
+
+function notesPacket() {
+  return { format: 'musiclab-pattern', version: 1, name: 'A score in the cupboard', sourceApp: 'loom', tempo: 120, swing: 0, lengthBeats: 4, meter: [4, 4], voices: [{ id: 'keys', name: 'Keys' }], notes: [{ id: 'a', pitch: 60, beat: 0, duration: .75, velocity: .8, voice: 'keys', probability: 1 }, { id: 'b', pitch: 67, beat: 1.25, duration: 1, velocity: .45, voice: 'keys', probability: .75 }] };
+}
+function notesClip() {
+  return { id: 'score', name: 'Score', type: 'notes', pattern: notesPacket(), voiceMap: { keys: 'notes' }, start: 2, length: 8, sourceOffset: .25, rate: 1.5, loop: true, gain: .7, fadeIn: .1, fadeOut: .2, transpose: -12 };
+}
+check('Note clips are portable without audio assets and retain their musical controls', () => {
+  const musical = session(); musical.tracks[0].clips = [notesClip()];
+  const serialized = S.serializeProject(musical), restored = S.parseProject(serialized);
+  assert.equal(S.serializeProject(restored), serialized);
+  const c = restored.tracks[0].clips[0];
+  assert.equal(c.type, 'notes'); assert.equal(c.transpose, -12); assert.equal(c.sourceOffset, .25);
+  assert.equal(c.pattern.notes[1].velocity, .45); assert.equal(c.pattern.notes[1].probability, .75);
+  assert.equal(c.voiceMap.keys, 'notes'); assert.equal(restored.assets.length, 0);
+  assert.equal(S.pruneAssets(restored).tracks[0].clips.length, 1);
+  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(t => t.effects.length === 4));
+});
+check('Corrupt patterns, maps, unknown clip types, and invalid note timing reject atomically', () => {
+  const musical = session(); musical.tracks[0].clips = [notesClip()];
+  const base = JSON.parse(S.serializeProject(musical));
+  for (const mutate of [
+    c => { c.pattern.notes[0].pitch = 128; },
+    c => { c.pattern.notes[0].voice = 'missing'; },
+    c => { c.pattern.notes[0].duration = 5; },
+    c => { c.voiceMap.missing = 'notes'; },
+    c => { c.transpose = .5; },
+    c => { c.sourceOffset = 99; },
+    c => { c.type = 'unknown'; },
+    c => { c.assetId = 'unexpected'; }
+  ]) {
+    const damaged = JSON.parse(JSON.stringify(base)); mutate(damaged.state.tracks[0].clips[0]);
+    assert.throws(() => S.parseProject(JSON.stringify(damaged)));
+  }
+  const raw = S.copy(musical); raw.tracks[0].clips[0].pattern.notes[0].pitch = -1;
+  assert.throws(() => S.normalize(raw), /pitch/i, 'Normalize must not silently drop corrupt note clips');
+});
+check('Printed sources retain a complete instrument and reject recursive or missing origins', () => {
+  const musical = session(), tone = S.encodeAsset({ left: Float32Array.from({ length: 800 }, (_, i) => Math.sin(i * .17) * .1), right: Float32Array.from({ length: 800 }, (_, i) => Math.cos(i * .17) * .1), sampleRate: 8000, name: 'Printed notes' });
+  musical.assets = [tone];
+  const origin = { format: 'loom-render-source', version: 1, instrument: { id: 'fable', name: 'FABLE', snapshot: { format: 'loom-instrument-state', version: 1, app: 'fable', state: { patch: 'bell', assets: [{ pcm: 'a long immutable sample' }] }, storage: {} } }, pattern: notesPacket(), voiceMap: { keys: 'notes' }, tempo: 120, tailSeconds: 0, sourceClip: notesClip(), renderedAt: 1000 };
+  musical.tracks[0].clips = [{ id: 'printed', name: 'Printed', type: 'audio', assetId: tone.id, start: 0, length: .2, sourceStart: 0, sourceEnd: .1, sourceOffset: 0, rate: 1, reverse: false, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, origin }];
+  const restored = S.parseProject(S.serializeProject(musical));
+  assert.equal(restored.tracks[0].clips[0].origin.instrument.snapshot.state.patch, 'bell');
+  assert.equal(restored.tracks[0].clips[0].origin.sourceClip.transpose, -12);
+  assert.equal(restored.tracks[0].clips[0].origin.pattern.notes[1].velocity, .45);
+  const broken = JSON.parse(S.serializeProject(musical)); delete broken.state.tracks[0].clips[0].origin.instrument.snapshot;
+  assert.throws(() => S.parseProject(JSON.stringify(broken)), /saved instrument/i);
+  const recursive = JSON.parse(S.serializeProject(musical)); recursive.state.tracks[0].clips[0].origin.sourceClip.origin = {};
+  assert.throws(() => S.parseProject(JSON.stringify(recursive)), /nested source/i);
 });
 
 const sampleRate = 48000;

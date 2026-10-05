@@ -1,6 +1,6 @@
-# Music Lab audio exchange
+# Music Lab audio and pattern exchange
 
-`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and LOOM. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Music Lab packets. The module has no network requests, external dependencies, or cloud storage.
+`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and LOOM. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Music Lab packets. A companion **Patterns** dialog shares editable musical parts. Both modules have no network requests, external dependencies, or cloud storage.
 
 ## Using the dialog
 
@@ -216,3 +216,62 @@ Packets contain rendered audio and provenance, not app patches, sequencer state,
 `bundle_audio_exchange.py` embeds the shared module and CSS into Python-built standalone apps and supplies shared source files for archives. Add future apps to its `APPS` mapping with facade name, accent, and toolbar selector. `bundle_audio_exchange.mjs` provides the equivalent embedding helper for FORM's Node build.
 
 The published HTML embeds the module and styles so Samples works without an adjacent JavaScript/CSS file or a server. Include these sources and the relevant helper in app source archives to keep extracted projects rebuildable.
+
+## Shared editable patterns
+
+**Patterns** is a second shared library alongside Samples. It moves notes, beat positions, lengths, velocity, probability, and named source voices between instruments without flattening a part into audio.
+
+1. Open **Patterns → Send pattern**, choose a source, and select **Read current pattern**.
+2. **Save to library**, or download a `.musiclab-pattern.json` file for another browser or an offline HTML file.
+3. In another instrument, open **Patterns → Library**, select the part, and review the receiving destination. Drum lanes require an explicit source-to-destination voice assignment. Replacing a destination that already contains notes requires the replacement checkbox.
+4. In LOOM, select a track and use **Load instrument voices** if the instrument is not loaded. **Receive pattern** adds an editable note clip. Existing arrangement clips remain in place.
+
+Some native sequencers have a fixed grid or monophonic editor. Their pattern adapter retains the exact received part as a portable `musicLabPattern` overlay rather than silently shortening notes, dropping polyphony, or quantizing beat positions. This overlay travels with the native app project. **Use native sequence** restores the instrument's own sequence while retaining its sound. Editing the native sequence can also return the app to that sequence, as explained by the receiving adapter.
+
+The panel previews the part as a note diagram. Sharing a pattern preserves the musical part; the receiving instrument supplies its own sound. Sample assets and patches belong in native instrument projects or LOOM projects, rather than ordinary note-pattern packets.
+
+### Pattern storage and limits
+
+The local database is **`musiclab-patterns-v1`**, version `1`, with a `patterns` object store. It holds up to **128 patterns / 16 MiB** and is shared on the same origin and browser profile. Quota checking and writes share one transaction so simultaneous tabs cannot exceed the limit. Saving never evicts another part.
+
+A portable pattern supports **4,096 notes, 64 source voices, and 256 quarter-note beats**. Each packet must fit within **1 MiB** of UTF-8 JSON. Tempo is 20–400 BPM. Notes use MIDI pitches 0–127, finite nonnegative beat positions, positive lengths fitting inside the pattern, velocity and probability 0–1, and explicit source voice IDs. IDs must be unique, and every referenced voice must exist. An optional unsigned 32-bit seed preserves deterministic probability choices.
+
+If IndexedDB is denied, the library explicitly falls back to memory. Download note-pattern files before closing the page. Offline files may have isolated storage; portable pattern files work between them. A hosted instrument delegates to `MusicLabHost.patternLibrary.{list,get,save,remove}`, so LOOM's isolated instrument storage does not create separate note libraries.
+
+### Portable note format and adapter
+
+```js
+const part = {
+  format: 'musiclab-pattern', version: 1,
+  name: 'A borrowed turn', sourceApp: 'FUTURE', kind: 'notes',
+  tempo: 120, swing: 0, lengthBeats: 4, meter: [4, 4],
+  voices: [{ id: 'keys', name: 'Keys' }],
+  notes: [{ id: 'n1', pitch: 60, beat: 0, duration: 1,
+    velocity: 0.8, voice: 'keys', probability: 1 }],
+  tags: [], seed: 17,
+};
+```
+
+`kind` may be `"notes"` or `"drums"`; omitting it defaults to `"notes"`. Native adapters bake their swing into note positions and export `swing: 0` to avoid applying it twice. `MusicLabPatternSchema.normalize`, `parse`, `serialize`, `clone`, `fingerprint`, and `durationSeconds` validate and copy portable parts. File serialization uses compact JSON so a large valid part remains within its own import limit.
+
+Register a future app alongside its Samples registration:
+
+```js
+MusicLabPatterns.register({
+  id: 'future', name: 'FUTURE', accent: '#a8e4c0',
+  mountSelector: '.toolbar-actions',
+  getAdapter: () => window.MusicLabPatternInstrument,
+});
+```
+
+The adapter exposes `patternExport.scopes`, `exportPattern({scope,signal})`, dynamic `patternImport.targets` and `.voices`, and `importPattern({pattern,options:{target,voiceMap,replace},signal})`. Target and destination voice IDs retain their native types. `voiceMap` maps source string IDs to destination IDs. The native facade repeats validation and replacement checks before committing, including after asynchronous preparation.
+
+Optional `prepareTarget({target,pattern,signal})` loads a LOOM track's instrument and makes its voices available for mapping. Optional `getImportedPattern()` and `clearImportedPattern()` enable the **Use native sequence** controls. The low-level `notes`, `prepare`, `scheduleNote`, `cancelNotes`, `renderPattern`, and `transport` APIs support LOOM's shared clock and reversible rendering; their exact contract is in [PATTERN-CONTRACT.md](PATTERN-CONTRACT.md).
+
+`window.MusicLabPatterns` exposes `register`, `open`, `close`, `list`, `get`, `save`, `remove`, `download`, `normalizePattern`, `patternFromJSON`, and `persistent`. `list()` returns metadata including note and voice counts. `get(id)` returns a copied full pattern record; normalizing it removes library-only fields such as `id`, `createdAt`, and `bytes`.
+
+### Standalone build order
+
+The Python and Node embedding helpers include both exchange dialogs and all adapter modules. **`pattern-schema.js` is inserted at the start of `<head>`**, before native app schemas restore exact-note overlays. The pitched/drum adapter modules run after the native app scripts, followed by the pattern dialog and lazy registration. All CSS, JavaScript, contract documentation, and tests are included in source ZIPs. No adjacent files, server, or network connection is needed to use a published standalone HTML file.
+
+Run `node shared/pattern-checks.cjs` to verify portable-note boundaries, complete 4,096-note round trips, fallback-library quotas, and host delegation.

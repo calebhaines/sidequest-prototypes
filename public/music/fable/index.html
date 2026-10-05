@@ -1,6 +1,101 @@
 <!doctype html>
 <html lang="en">
 <head>
+<!-- MUSIC_LAB_EXCHANGE -->
+<script>
+/* Music Lab portable, beat-based note patterns. No synthesis or browser dependencies. */
+(function (global) {
+  'use strict';
+  if (global.MusicLabPatternSchema) return;
+  const VERSION = 1, MAX_NOTES = 4096, MAX_VOICES = 64, MAX_BEATS = 256, MAX_BYTES = 1024 * 1024;
+  const object = value => value && Object.prototype.toString.call(value) === '[object Object]';
+  function text(value, name, max, fallback) {
+    if (value === undefined && fallback !== undefined) return fallback;
+    if (typeof value !== 'string' || value.length > max || /[\u0000-\u001f\u007f]/.test(value)) throw new Error(name + ' must be text of at most ' + max + ' characters.');
+    return value;
+  }
+  function number(value, name, min, max, fallback) {
+    if (value === undefined && fallback !== undefined) return fallback;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) throw new Error(name + ' must be between ' + min + ' and ' + max + '.');
+    return value;
+  }
+  function identity(value, name) {
+    const id = text(value, name, 80);
+    if (!id || ['__proto__', 'prototype', 'constructor'].includes(id)) throw new Error(name + ' is invalid.');
+    return id;
+  }
+  function normalize(input) {
+    if (!object(input)) throw new Error('Choose a Music Lab note-pattern object.');
+    if (input.format !== 'musiclab-pattern' || input.version !== VERSION) throw new Error('This is not a supported Music Lab note pattern (version 1).');
+    const lengthBeats = number(input.lengthBeats, 'Pattern length', .25, MAX_BEATS);
+    const meter = input.meter === undefined ? [4, 4] : input.meter;
+    if (!Array.isArray(meter) || meter.length !== 2 || !Number.isInteger(meter[0]) || meter[0] < 1 || meter[0] > 16 || ![1, 2, 4, 8, 16].includes(meter[1])) throw new Error('Pattern meter must be a supported time signature.');
+    if (!Array.isArray(input.voices) || input.voices.length < 1 || input.voices.length > MAX_VOICES) throw new Error('A note pattern needs 1–64 named source voices.');
+    const voiceIds = new Set();
+    const voices = input.voices.map((voice, index) => {
+      if (!object(voice)) throw new Error('Source voice ' + (index + 1) + ' is invalid.');
+      const id = identity(voice.id, 'Source voice ID');
+      if (voiceIds.has(id)) throw new Error('Source voice IDs must be unique.');
+      voiceIds.add(id);
+      const result = { id, name: text(voice.name, 'Source voice name', 100, id) };
+      if (voice.pitch !== undefined) { result.pitch = number(voice.pitch, 'Source voice pitch', 0, 127); if (!Number.isInteger(result.pitch)) throw new Error('Source voice pitch must be a MIDI note number.'); }
+      return result;
+    });
+    if (!Array.isArray(input.notes) || input.notes.length > MAX_NOTES) throw new Error('A note pattern can contain at most 4,096 notes.');
+    const noteIds = new Set();
+    const notes = input.notes.map((note, index) => {
+      if (!object(note)) throw new Error('Note ' + (index + 1) + ' is invalid.');
+      const id = note.id === undefined ? 'n' + (index + 1) : identity(note.id, 'Note ID');
+      if (noteIds.has(id)) throw new Error('Note IDs must be unique.');
+      noteIds.add(id);
+      const pitch = number(note.pitch, 'Note pitch', 0, 127);
+      if (!Number.isInteger(pitch)) throw new Error('Note pitch must be a MIDI note number.');
+      const beat = number(note.beat, 'Note position', 0, lengthBeats);
+      const duration = number(note.duration, 'Note duration', Number.MIN_VALUE, lengthBeats);
+      if (beat >= lengthBeats || beat + duration > lengthBeats + 1e-8) throw new Error('Notes must fit within the pattern length.');
+      const voice = note.voice === undefined && voices.length === 1 ? voices[0].id : identity(note.voice, 'Note voice');
+      if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
+      return { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+    });
+    const tags = input.tags === undefined ? [] : input.tags;
+    if (!Array.isArray(tags) || tags.length > 24) throw new Error('Use at most 24 pattern tags.');
+    const result = {
+      format: 'musiclab-pattern', version: VERSION,
+      name: text(input.name, 'Pattern name', 160, 'Untitled pattern'),
+      sourceApp: text(input.sourceApp, 'Source app', 80, ''),
+      kind: input.kind === undefined ? 'notes' : input.kind,
+      tempo: number(input.tempo, 'Pattern tempo', 20, 400, 120),
+      swing: number(input.swing, 'Pattern swing', 0, .75, 0),
+      lengthBeats, meter: meter.slice(), voices, notes,
+      tags: tags.map(tag => text(tag, 'Pattern tag', 40)),
+    };
+    if (!['notes', 'drums'].includes(result.kind)) throw new Error('Pattern kind must be notes or drums.');
+    if (input.seed !== undefined) { const seed = number(input.seed, 'Pattern seed', 0, 4294967295); if (!Number.isInteger(seed)) throw new Error('Pattern seed must be an integer.'); result.seed = seed; }
+    // Bound the canonical object as well as imported files.
+    if (new TextEncoder().encode(JSON.stringify(result)).length > MAX_BYTES) throw new Error('A portable note pattern must fit within 1 MiB.');
+    return result;
+  }
+  function parse(value) {
+    if (typeof value !== 'string') return normalize(value);
+    if (value.length > MAX_BYTES || new TextEncoder().encode(value).length > MAX_BYTES) throw new Error('Choose a note-pattern file smaller than 1 MiB.');
+    let parsed;
+    try { parsed = JSON.parse(value); } catch (_) { throw new Error('This note-pattern file is not valid JSON.'); }
+    return normalize(parsed);
+  }
+  const serialize = value => JSON.stringify(normalize(value));
+  const clone = value => normalize(value);
+  function fingerprint(value) {
+    // Stable non-cryptographic content identity for detecting changed musical parts.
+    const normalized = normalize(value), source = JSON.stringify(normalized);
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index++) { hash ^= source.charCodeAt(index); hash = Math.imul(hash, 16777619); }
+    return 'pattern-v1-' + (hash >>> 0).toString(16).padStart(8, '0');
+  }
+  function durationSeconds(value, tempo) { const pattern = normalize(value); return pattern.lengthBeats * 60 / number(tempo === undefined ? pattern.tempo : tempo, 'Playback tempo', 20, 400); }
+  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, normalize, parse, serialize, clone, fingerprint, durationSeconds });
+})(typeof window === 'object' ? window : globalThis);
+
+</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101e1d"><meta name="fable-version" content="1.0.0">
 <meta name="description" content="FABLE — a polyphonic sample instrument. Build layered instruments, explore granular textures, play and sequence your collected sounds.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23101e1d'/%3E%3Cpath d='M19 49V15h28M19 31h20M29 49V23h18' stroke='%239bdcc9' stroke-width='2' fill='none'/%3E%3Ccircle cx='43' cy='46' r='8' stroke='%23ded1af' fill='none'/%3E%3C/svg%3E">
@@ -190,7 +285,7 @@ License-Reference: /usr/share/common-licenses/GPL-3
 .inspector-body::-webkit-scrollbar{width:4px}.inspector-body::-webkit-scrollbar-track{background:#17281c}.inspector-body::-webkit-scrollbar-thumb{background:#5b7550;border-radius:4px}.inspector-scroll-note{display:flex;justify-content:space-between;gap:10px;padding:8px 16px;border-top:1px solid #35492f;color:#8ca37a;font-size:7px;letter-spacing:.3px;background:#19291c}.inspector-scroll-note span{font-size:10px;line-height:1}@media(max-width:1090px){.inspector-scroll-note{display:none}}
 
 </style>
-<!-- MUSIC_LAB_EXCHANGE -->
+
 <style>
 /* Deliberately scoped: instruments retain their own typography and controls. */
 .ml-ex-launcher{--ml-ex-accent:#a8e4c0;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:34px!important;padding:8px 13px!important;border:1px solid color-mix(in srgb,var(--ml-ex-accent) 35%,#42444a)!important;border-radius:8px!important;background:#171b20!important;color:#e6e8ed!important;font-family:inherit!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;cursor:pointer!important;white-space:nowrap!important;width:auto!important;box-shadow:none!important;text-transform:none!important}.ml-ex-launcher span{font-size:16px;color:var(--ml-ex-accent)}.ml-ex-launcher:hover{background:#22272d!important;border-color:var(--ml-ex-accent)!important}.ml-ex-launcher:focus-visible{outline:2px solid var(--ml-ex-accent)!important;outline-offset:3px!important}.ml-ex-launcher-floating{position:fixed!important;bottom:18px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
@@ -199,6 +294,16 @@ License-Reference: /usr/share/common-licenses/GPL-3
 .ml-ex-launcher>svg{display:block!important;width:17px!important;height:17px!important;flex:none!important;color:var(--ml-ex-accent)!important}.ml-ex-orbit>svg{display:block!important;width:23px!important;height:23px!important;color:var(--ml-ex-accent)!important}
 
 .ml-ex-sample-glyph{transform:none!important}.ml-ex-sample-glyph>svg{display:block!important;width:31px!important;height:31px!important;color:var(--ml-ex-accent)!important}.ml-ex-sample-arrow>svg{display:block!important;width:16px!important;height:16px!important;color:var(--ml-ex-accent)!important}
+
+/* Scoped note exchange: the host instrument keeps its own controls and palette. */
+.ml-pat-launcher{--ml-pat-accent:#a8e4c0;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;width:auto!important;min-height:34px!important;padding:8px 12px!important;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 35%,#42444a)!important;border-radius:8px!important;background:#171b20!important;color:#e6e8ed!important;font-family:inherit!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;text-transform:none!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-launcher svg{width:17px!important;height:17px!important;flex:none!important;color:var(--ml-pat-accent)!important}.ml-pat-launcher:hover{border-color:var(--ml-pat-accent)!important;background:#22272d!important}.ml-pat-floating{position:fixed!important;bottom:60px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
+.ml-pat-dialog{--ml-pat-accent:#a8e4c0;position:fixed!important;inset:0!important;margin:auto!important;box-sizing:border-box!important;width:min(780px,calc(100vw - 28px))!important;max-width:780px!important;max-height:min(88vh,900px)!important;padding:0!important;border:1px solid #3a4048!important;border-radius:18px!important;background:#11151b!important;color:#e8eaf0!important;color-scheme:dark!important;box-shadow:0 40px 140px #000b,0 0 70px color-mix(in srgb,var(--ml-pat-accent) 6%,transparent)!important;font-family:inherit!important;font-size:13px!important;text-align:left!important;letter-spacing:normal!important;overflow:auto!important;z-index:2147483001!important}.ml-pat-dialog::backdrop{background:#05070cc9;backdrop-filter:blur(10px)}.ml-pat-dialog *{box-sizing:border-box!important}.ml-pat-dialog [hidden]{display:none!important}.ml-pat-shell{min-width:0;background:radial-gradient(ellipse at 90% 0%,color-mix(in srgb,var(--ml-pat-accent) 9%,transparent),transparent 48%),#11151b}.ml-pat-header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;padding:27px 28px 21px!important;border:0!important;background:none!important;position:static!important;height:auto!important;min-height:0!important;box-shadow:none!important}.ml-pat-eyebrow{display:block!important;font-size:9px!important;line-height:1.5!important;letter-spacing:.18em!important;font-weight:650!important;color:var(--ml-pat-accent)!important}.ml-pat-header h2{margin:9px 0 6px!important;font:italic 32px/1.2 Georgia,'Times New Roman',serif!important;letter-spacing:-.035em!important;text-transform:none!important;color:#f0f0ee!important}.ml-pat-header p{margin:0!important;font-size:12px!important;line-height:1.65!important;color:#969fae!important}.ml-pat-tabs{display:flex!important;gap:0!important;padding:0 28px!important;border-bottom:1px solid #2a3039!important;background:transparent!important}.ml-pat-tabs button{position:relative!important;flex:1!important;width:auto!important;min-height:42px!important;padding:13px 8px!important;border:0!important;border-radius:0!important;background:none!important;color:#8992a0!important;font-family:inherit!important;font-weight:600!important;font-size:11px!important;line-height:1.4!important;letter-spacing:.025em!important;text-transform:none!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-tabs button[aria-selected=true]{color:var(--ml-pat-accent)!important}.ml-pat-tabs button[aria-selected=true]:after{content:'';position:absolute;bottom:-1px;left:12px;right:12px;height:2px;background:var(--ml-pat-accent)}.ml-pat-count{display:inline-block;padding:2px 5px;border-radius:4px;background:#ffffff0b;font-size:9px!important;margin-left:5px}.ml-pat-main{display:block!important;padding:23px 28px!important;min-height:300px!important;overflow:visible!important}.ml-pat-main section{display:block!important;position:static!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}.ml-pat-dialog :is(h2,h3,h4,p,label,nav,main,footer){max-width:none!important}.ml-pat-dialog button{touch-action:manipulation!important}.ml-pat-dialog button:disabled{opacity:.4!important;cursor:default!important}.ml-pat-dialog button:focus-visible,.ml-pat-launcher:focus-visible,.ml-pat-file:focus-within{outline:2px solid var(--ml-pat-accent)!important;outline-offset:3px!important}
+.ml-pat-dialog input:not([type=checkbox]):not([type=file]),.ml-pat-dialog select{display:block!important;max-width:100%!important;width:100%!important;min-width:0!important;height:36px!important;padding:8px 10px!important;border:1px solid #303844!important;border-radius:6px!important;background:#0d1117!important;color:#e6e8ed!important;font-family:inherit!important;font-weight:400!important;font-size:12px!important;line-height:1.4!important;letter-spacing:normal!important;text-transform:none!important;outline:none!important;box-shadow:none!important;appearance:auto!important}.ml-pat-dialog input:focus,.ml-pat-dialog select:focus{border-color:var(--ml-pat-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--ml-pat-accent) 10%,transparent)!important}.ml-pat-dialog input[type=checkbox]{appearance:auto!important;accent-color:var(--ml-pat-accent)!important;width:15px!important;height:15px!important;margin:0!important;flex:none!important}.ml-pat-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:auto!important;min-height:34px!important;padding:9px 12px!important;border:1px solid #35404c!important;border-radius:7px!important;background:#1b222b!important;color:#d3dae4!important;font-family:inherit!important;font-size:11px!important;font-weight:600!important;line-height:1.3!important;letter-spacing:normal!important;text-transform:none!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-button:hover{background:#26313d!important;border-color:#647180!important}.ml-pat-primary{background:color-mix(in srgb,var(--ml-pat-accent) 16%,#131b21)!important;color:var(--ml-pat-accent)!important;border-color:color-mix(in srgb,var(--ml-pat-accent) 40%,#263540)!important}.ml-pat-primary:hover{border-color:var(--ml-pat-accent)!important;background:color-mix(in srgb,var(--ml-pat-accent) 24%,#131b21)!important}.ml-pat-header [data-action=close]{width:29px!important;min-height:29px!important;padding:0!important;flex:none!important;margin-top:0!important;background:transparent!important;border-color:#303742!important;font-size:16px!important}
+.ml-pat-library-head{display:flex!important;gap:10px!important;align-items:center!important;margin-bottom:16px!important}.ml-pat-library{display:flex;flex-direction:column;gap:7px;max-height:400px;overflow:auto}.ml-pat-row{display:flex;gap:6px;align-items:center;min-width:0}.ml-pat-entry{display:flex!important;align-items:center!important;gap:13px!important;flex:1!important;width:100%!important;min-width:0!important;padding:12px!important;border:1px solid #2b3440!important;border-radius:9px!important;background:linear-gradient(105deg,#19212a,#141a22)!important;color:#e7ecf2!important;text-align:left!important;text-transform:none!important;letter-spacing:normal!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-entry:hover{border-color:color-mix(in srgb,var(--ml-pat-accent) 45%,#303945)!important;background:#1c2631!important}.ml-pat-entry-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 17%,#2b3440);border-radius:9px;background:radial-gradient(circle,color-mix(in srgb,var(--ml-pat-accent) 8%,transparent),transparent)}.ml-pat-entry-icon svg{width:27px;height:27px;color:var(--ml-pat-accent)}.ml-pat-entry>span:nth-child(2){display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.ml-pat-entry strong{display:block!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e9edf2!important;font-size:12px!important;font-weight:600!important}.ml-pat-entry small{display:block!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px!important;color:#8999ab!important}.ml-pat-entry b{font-size:20px!important;font-weight:400!important;color:var(--ml-pat-accent)}.ml-pat-delete{display:grid!important;place-items:center!important;flex:none!important;width:28px!important;height:28px!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:#6d7b8c!important;font-family:inherit!important;font-size:20px!important;line-height:1!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-delete:hover{background:#ff817c14!important;color:#ff9b90!important}.ml-pat-delete-confirm{width:54px!important;background:#ff817c14!important;color:#ff9b90!important;font-size:9px!important}.ml-pat-capacity{margin:14px 0 0!important;font-size:9px!important;line-height:1.6!important;color:#6f7e90!important}.ml-pat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px;padding:20px 30px;text-align:center}.ml-pat-empty>svg{width:64px;height:64px;color:var(--ml-pat-accent);opacity:.6}.ml-pat-empty h3{margin:15px 0 8px!important;font:italic 22px/1.3 Georgia,serif!important;color:#d6dce4!important;letter-spacing:normal!important}.ml-pat-empty p{margin:0!important;max-width:390px!important;color:#969fae!important;font-size:12px!important;line-height:1.7!important}
+.ml-pat-intro{display:flex;gap:16px;align-items:center;margin-bottom:23px}.ml-pat-intro>span{display:grid;place-items:center;flex:none;width:47px;height:47px;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 25%,#2f3945);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--ml-pat-accent) 9%,transparent),transparent);color:var(--ml-pat-accent)}.ml-pat-intro svg{width:25px;height:25px}.ml-pat-intro h3{margin:0 0 5px!important;font:italic 20px/1.3 Georgia,serif!important;color:#e6e7ea!important;letter-spacing:normal!important;text-transform:none!important}.ml-pat-intro p{margin:0!important;font-size:12px!important;line-height:1.65!important;color:#969fae!important}.ml-pat-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}.ml-pat-fields label,.ml-pat-destination>label{display:flex!important;flex-direction:column!important;gap:7px!important;margin:0!important;color:#9faabb!important;font-size:10px!important;font-weight:500!important;line-height:1.5!important;letter-spacing:.02em!important;text-transform:none!important}.ml-pat-export-hint,.ml-pat-import-hint,.ml-pat-export-meta,.ml-pat-incoming-meta,.ml-pat-receive-empty{margin:12px 0!important;color:#8694a6!important;font-size:10px!important;line-height:1.7!important}.ml-pat-receive-empty{text-align:center;padding:24px 0}.ml-pat-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:16px}.ml-pat-actions:has(>[hidden]:only-child){display:none}.ml-pat-exported{margin-top:22px;padding-top:20px;border-top:1px solid #2c3541}.ml-pat-preview{height:128px;border:1px solid #2d3642;border-radius:8px;background:linear-gradient(135deg,#0b131a,#101b22);overflow:hidden;color:var(--ml-pat-accent)}.ml-pat-preview svg{display:block;width:100%;height:100%}.ml-pat-note-1{color:#a9b4db}.ml-pat-note-2{color:#d5af96}.ml-pat-note-3{color:#c7c69a}.ml-pat-file{display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;min-height:59px!important;margin:0 0 19px!important;border:1px dashed #465668!important;border-radius:9px!important;background:#17212c!important;color:var(--ml-pat-accent)!important;font-size:12px!important;cursor:pointer!important}.ml-pat-file input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}.ml-pat-destination{margin-top:23px;padding-top:19px;border-top:1px solid #2b3540}.ml-pat-dialog .ml-pat-replace{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;margin-top:16px!important;color:#d0bca0!important;font-size:10px!important;letter-spacing:normal!important}.ml-pat-mapping:not(:empty){margin:18px 0 0;padding:16px;border:1px solid #303b45;border-radius:9px;background:#0e151c}.ml-pat-mapping h4{margin:0 0 5px!important;color:#dce2e9!important;font-family:inherit!important;font-size:11px!important;font-weight:600!important;letter-spacing:.02em!important;text-transform:none!important}.ml-pat-mapping p{margin:0 0 13px!important;color:#7e8d9f!important;font-size:10px!important;line-height:1.6!important}.ml-pat-mapping label{display:grid!important;grid-template-columns:minmax(90px,1fr) minmax(0,2fr)!important;align-items:center!important;gap:12px!important;margin:8px 0 0!important;color:#a7b2c1!important;font-size:10px!important;line-height:1.5!important;letter-spacing:normal!important;text-transform:none!important}.ml-pat-mapping label>span{overflow-wrap:anywhere}.ml-pat-imported-part{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 22px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 25%,#303944);border-radius:9px;background:color-mix(in srgb,var(--ml-pat-accent) 5%,#11151b)}.ml-pat-imported-part p{margin:0!important;font-size:10px!important;line-height:1.6!important;color:#b6c4cb!important}.ml-pat-imported-part button{flex:none!important}
+.ml-pat-footer{display:block!important;position:static!important;min-height:58px!important;margin:0!important;padding:15px 28px 20px!important;border-top:1px solid #27303b!important;background:#0e1319!important;text-align:left!important}.ml-pat-storage{margin:0!important;color:#6f7e8f!important;font-size:9px!important;line-height:1.7!important}.ml-pat-status{margin:7px 0 0!important;color:var(--ml-pat-accent)!important;font-size:11px!important;line-height:1.6!important;min-height:0!important}.ml-pat-status:empty{display:none!important}.ml-pat-error{color:#ffa296!important}
+@media(max-width:540px){.ml-pat-dialog{width:calc(100vw - 16px)!important;max-height:92dvh!important;border-radius:12px!important}.ml-pat-header{padding:22px 18px 17px!important;gap:10px!important}.ml-pat-header h2{font-size:27px!important}.ml-pat-tabs{padding:0 12px!important}.ml-pat-tabs button{font-size:10px!important;padding:13px 4px!important}.ml-pat-count{margin-left:3px}.ml-pat-main{padding:19px 17px!important}.ml-pat-footer{padding:13px 17px 17px!important}.ml-pat-fields{gap:12px}.ml-pat-intro{gap:11px;margin-bottom:18px}.ml-pat-intro>span{width:38px;height:38px}.ml-pat-intro h3{font-size:19px!important}.ml-pat-intro p{font-size:11px!important}.ml-pat-library-head{gap:6px!important}.ml-pat-library-head input{font-size:10px!important}.ml-pat-entry{padding:10px!important;gap:10px!important}.ml-pat-entry-icon{width:32px;height:32px}.ml-pat-entry-icon svg{width:23px;height:23px}.ml-pat-entry strong{font-size:11px!important}.ml-pat-entry small{font-size:9px!important}.ml-pat-empty{padding:16px;min-height:220px}.ml-pat-floating{right:12px!important;bottom:58px!important}.ml-pat-mapping{padding:12px!important}.ml-pat-mapping label{grid-template-columns:minmax(65px,1fr) minmax(0,2fr)!important;gap:8px!important}.ml-pat-imported-part{flex-direction:column;align-items:flex-start;gap:8px}}
+@media(prefers-reduced-motion:no-preference){.ml-pat-dialog[open]{animation:ml-pat-arrive .18s ease-out}.ml-pat-button,.ml-pat-entry,.ml-pat-launcher{transition:background .15s,border-color .15s!important}@keyframes ml-pat-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
 
 </style>
 </head>
@@ -428,7 +533,7 @@ License-Reference: /usr/share/common-licenses/GPL-3
       modulation: Array.from({ length: 8 }, () => ({ source: 'off', target: 'pitch', amount: 0 })), performance: { mode: 'sequence', arpMode: 'up', hold: false, octaves: 1, division: .25, gate: .7, velocity: .8 },
       patterns: Array.from({ length: 4 }, (_, i) => ({ name: String.fromCharCode(65 + i), length: 16, steps: Array.from({ length: 64 }, (_, index) => defaultStep(index)) })) };
   }
-  function normalize(raw) {
+  function normalizePlain(raw) {
     const d = defaultState(); raw = isObject(raw) ? raw : {};
     const inputAssets = raw.assets === undefined ? d.assets : raw.assets;
     if (!Array.isArray(inputAssets) || inputAssets.length > MAX_ASSETS) throw new Error('The cabinet holds at most 32 sample assets.');
@@ -459,7 +564,7 @@ License-Reference: /usr/share/common-licenses/GPL-3
   function strictControls(raw, normalized, path = '') {
     if (!isObject(raw) || !isObject(normalized)) throw new Error('The project is incomplete at ' + (path || 'instrument') + '.');
     for (const key of Object.keys(normalized)) {
-      if (key === 'version') continue;
+      if (key === 'version' || key === 'musicLabPattern') continue;
       const expected = normalized[key], actual = raw[key], label = path ? path + '.' + key : key;
       if (!own(raw, key)) throw new Error('The project is missing ' + label + '.');
       if (Array.isArray(expected)) {
@@ -597,6 +702,25 @@ License-Reference: /usr/share/common-licenses/GPL-3
       result.forEach((zone, i) => { zone.low = 0; zone.high = 127; zone.velLow = Math.floor(i * 127 / result.length) + 1; zone.velHigh = Math.floor((i + 1) * 127 / result.length); });
     } else result.forEach((zone, i) => { zone.low = zone.high = 36 + i; zone.tracking = false; });
     return result;
+  }
+
+  // Exact imported notes travel with the native patch, without flattening chords or timing.
+  function normalize(raw) {
+    const state = normalizePlain(raw);
+    if (raw && raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern, schema = window.MusicLabPatternSchema;
+      if (!schema) throw new Error('The portable note-pattern validator is unavailable.');
+      if (!overlay || Object.prototype.toString.call(overlay) !== '[object Object]' || !overlay.voiceMap || Object.prototype.toString.call(overlay.voiceMap) !== '[object Object]') throw new Error('The imported note pattern is incomplete.');
+      const pattern = schema.parse(overlay.pattern), targets = new Set(['auto',...state.zones.map(z=>z.id)]), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const target = overlay.voiceMap[voice.id];
+        if (!Object.prototype.hasOwnProperty.call(overlay.voiceMap, voice.id) || typeof target !== 'string' || !targets.has(target)) throw new Error('The imported pattern refers to an unavailable instrument voice.');
+        voiceMap[voice.id] = target;
+      }
+      if (Object.keys(overlay.voiceMap).some(id => !pattern.voices.some(voice => voice.id === id))) throw new Error('The imported voice map contains an unknown source voice.');
+      state.musicLabPattern = { pattern, voiceMap };
+    }
+    return state;
   }
   window.FableSchema = Object.freeze({ VERSION, MAX_ASSETS, MAX_ZONES, MAX_SECONDS, MAX_PCM_BYTES, MAX_PROJECT_BYTES, RECIPES, SOURCES, TARGETS, FILTERS, SHAPES, defaultState, normalize, normalizeAsset, parseProject, serializeProject, copy, uid, createZone, encodeAsset, decodeAsset, detectPitch, trimSilence, onsets, autoMap, assetBytes });
 })();
@@ -791,7 +915,7 @@ class Graph {
     const limit = clamp(m.polyphony, 8, 64); while (this.voices.filter(v => !v.stolen && v.endAt > at).length > limit) this.steal(at);
   }
   updateVoice(voice, zone, at) {
-    if (voice.stolen || voice.endAt <= at) return;
+    if (voice.stolen || voice.endAt <= at || Number.isFinite(voice.cancelAt) && voice.cancelAt <= at) return;
     const old = voice.zone, envelope = { ...old.envelope, sustain: zone.envelope.sustain, release: zone.envelope.release }, currentEnvelope = this.env(voice, at);
     const futureRelease = voice.releaseAt !== null && voice.releaseAt > at;
     if (old.engine === 'texture' && old.stretch !== zone.stretch) {
@@ -820,7 +944,7 @@ class Graph {
       }
       if (voice.releaseAt !== null) voice.sources.forEach(source => { try { source.stop(voice.endAt + .002); } catch (_) {} });
     }
-    const now = Math.max(at, voice.at); [voice.level.gain, voice.panner.pan, voice.filter.frequency, ...(voice.classic ? [voice.classic.playbackRate] : [])].forEach(param => param.cancelScheduledValues(now)); voice.nextMod = Math.min(voice.nextMod, now); this.automate(voice, now);
+    const now = Math.max(at, voice.at); [voice.level.gain, voice.panner.pan, voice.filter.frequency, ...(voice.classic ? [voice.classic.playbackRate] : [])].forEach(param => param.cancelScheduledValues(now)); voice.nextMod = Math.min(voice.nextMod, now); this.automate(voice, now); if (Number.isFinite(voice.cancelAt) && voice.cancelAt >= at) this.applyCancellation(voice, voice.cancelAt);
   }
   prepared(asset, zone) {
     const audio = this.getAudio(asset), frames = audio.left.length, start = Math.min(frames - 1, Math.max(0, Math.floor(clamp(zone.start, 0, 1) * frames))), end = Math.max(start + 1, Math.min(frames, Math.ceil(clamp(zone.end, 0, 1) * frames)));
@@ -912,7 +1036,8 @@ class Graph {
         voice.naturalAt = at + sample.naturalDuration * clamp(zone.stretch, .125, 8); voice.endAt = voice.naturalAt + Math.max(.005, zone.envelope.release); this.release(voice, voice.naturalAt, zone.envelope.release, true);
       }
       this.voices.push(voice); ids.push(voice.id);
-      if (Number.isFinite(options.duration) && (zone.playMode !== 'oneshot' || options.source === 'preview')) this.release(voice, at + Math.max(.01, options.duration), undefined, options.source === 'preview');
+      const timedSource = ['pattern-clip', 'standalone-pattern'].includes(options.source) || String(options.source || '').startsWith('loom');
+      if (Number.isFinite(options.duration) && (zone.playMode !== 'oneshot' || options.source === 'preview' || timedSource)) this.release(voice, at + Math.max(.01, options.duration), undefined, options.source === 'preview' || timedSource);
       if (!this.offline) this.onNote?.({ note, velocity, on: true, zoneId: zone.id, voiceId: voice.id });
       this.automate(voice, at);
     }
@@ -924,6 +1049,24 @@ class Graph {
     const release = Math.max(.005, override ?? voice.zone.envelope.release), level = this.env(voice, at); voice.releaseAt = at; voice.releaseLevel = level; voice.endAt = Math.min(voice.endAt, at + release); voice.sustained = false;
     voice.amp.gain.cancelScheduledValues(at); voice.amp.gain.setValueAtTime(level, at); voice.amp.gain.linearRampToValueAtTime(0, at + release);
     for (const source of voice.sources) try { source.stop(at + release + .002); } catch (_) {}
+  }
+  applyCancellation(voice, at) {
+    if (voice.endAt <= at) return;
+    const level = this.env(voice, at);
+    voice.cancelAt = at; voice.releaseAt = at; voice.releaseLevel = level; voice.endAt = Math.min(voice.endAt, at + .012); voice.sustained = false;
+    voice.amp.gain.cancelScheduledValues(at); voice.amp.gain.setValueAtTime(level, at); voice.amp.gain.linearRampToValueAtTime(0, voice.endAt);
+    voice.sources.forEach(source => { try { source.stop(voice.endAt + .002); } catch (_) {} });
+  }
+  cancelSource(source, at) {
+    const now = this.context.currentTime;
+    for (const voice of this.voices) if (!source || voice.source === source) {
+      if (voice.at >= at) {
+        voice.stolen = true; voice.endAt = now; voice.amp.gain.cancelScheduledValues(now); voice.amp.gain.setValueAtTime(0, now);
+        voice.sources.forEach(node => { try { node.stop(now); node.disconnect(); } catch (_) {} });
+        this.grains.filter(grain => grain.voiceId === voice.id).forEach(grain => { try { grain.source.stop(now); grain.source.disconnect(); grain.gain.disconnect(); } catch (_) {} });
+        voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} });
+      } else this.applyCancellation(voice, at);
+    }
   }
   noteOff(note, at, source) {
     for (const v of this.voices) if (v.note === note && (!source || v.source === source) && v.endAt > at && v.zone.playMode !== 'oneshot') { if (this.sustain) v.sustained = true; else this.release(v, at); }
@@ -954,7 +1097,7 @@ class Graph {
     source.buffer = sample.buffer; source.playbackRate.setValueAtTime(ratio, at); source.loop = z.loopMode !== 'off'; source.loopStart = sample.loopStart; source.loopEnd = sample.loopEnd; source.connect(gain); gain.connect(voice.amp);
     const curve = new Float32Array(32); for (let i = 0; i < 32; i++) curve[i] = Math.pow(Math.sin(Math.PI * i / 31), 2) * normalization;
     gain.gain.setValueCurveAtTime(curve, at, duration); source.start(at, offset, duration * ratio); source.stop(at + duration + .001);
-    const grain = { source, gain, end: at + duration }; this.grains.push(grain);
+    const grain = { source, gain, voiceId: voice.id, end: at + duration }; this.grains.push(grain);
     source.onended = () => { try { source.disconnect(); gain.disconnect(); } catch (_) {} };
   }
   tick(from, to) {
@@ -989,7 +1132,7 @@ class Graph {
 class FableAudio {
   constructor({ getState, onNote, onStep, onMeters, onStatus } = {}) {
     this.getState = getState || (() => window.FableSchema.defaultState()); this.state = this.getState(); this.onNote = onNote; this.onStep = onStep; this.onMeters = onMeters; this.onStatus = onStatus;
-    this._context = null; this.graph = null; this.pending = null; this.timer = null; this.playing = false; this.generation = 0; this.assetCache = new Map(); this.held = new Map(); this.heldOrder = 0; this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.sustain = false; this.stepQueue = []; this.nextAt = 0; this.step = 0; this.arpStep = 0; this.random = randomGenerator(this.state.seed);
+    this._context = null; this.graph = null; this.pending = null; this.timer = null; this.playing = false; this.generation = 0; this.assetCache = new Map(); this.futureCancels = new Map(); this.held = new Map(); this.heldOrder = 0; this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.sustain = false; this.stepQueue = []; this.nextAt = 0; this.step = 0; this.arpStep = 0; this.random = randomGenerator(this.state.seed);
   }
   get context() { return this._context; }
   get isPlaying() { return this.playing; }
@@ -1023,8 +1166,8 @@ class FableAudio {
     const at = Math.max(this._context.currentTime, Number.isFinite(when) ? when : this._context.currentTime);
     const heldSource = source !== 'sequence' && source !== 'arp' && source !== 'preview' && !zoneId;
     if (heldSource) this.held.set(`${source}:${note}`, { note, velocity, source, down: true, order: ++this.heldOrder });
-    if (heldSource && this.playing && this.state.performance.mode === 'arp') return [];
-    const ids = this.graph.noteOn(note, velocity, at, { zoneId, duration, source }); this.graph.tick(at, at + .08); return ids;
+    if (heldSource && this.playing && !this._externalPattern && this.state.performance.mode === 'arp') return [];
+    const ids = this.graph.noteOn(note, velocity, at, { zoneId, duration, source }); this.graph.tick(this._context.currentTime, this._context.currentTime + .16); return ids;
   }
   noteOff(note, { source, when } = {}) {
     if (!this.graph) return; note = Math.round(clamp(note, 0, 127)); const at = Math.max(this._context.currentTime, Number.isFinite(when) ? when : this._context.currentTime);
@@ -1040,7 +1183,7 @@ class FableAudio {
     if (this.state.performance.mode === 'arp') this.graph.voices.forEach(v => this.graph.release(v, this._context.currentTime, .03, true));
     this.tick(); return true;
   }
-  stop() { this.generation++; this.playing = false; this.stepQueue = []; this.graph?.allNotesOff(this._context.currentTime); this.held.clear(); this.sustain = false; this.onStep?.(-1); }
+  stop() { this.generation++; this.futureCancels.clear(); this.playing = false; this.stepQueue = []; this.graph?.allNotesOff(this._context.currentTime); this.held.clear(); this.sustain = false; this.onStep?.(-1); }
   panic() {
     this.stop(); this.expression = { wheel: 0, pressure: 0, bend: 0 }; this.graph?.destroy();
     if (this._context && this._context.state !== 'closed') this.graph = new Graph(this._context, this.state, asset => this.getAssetAudio(asset), { onNote: event => this.onNote?.(event) });
@@ -1065,16 +1208,20 @@ class FableAudio {
   tick() {
     if (!this.graph || this._context.state !== 'running') return;
     const now = this._context.currentTime, until = now + .085;
-    if (this.playing) { if (this.nextAt < now - .3) this.nextAt = now + .01; let guard = 0; while (this.nextAt < until && guard++ < 32) this.scheduleStep(this.nextAt); }
+    if (this.playing && !this._externalPattern) { if (this.nextAt < now - .3) this.nextAt = now + .01; let guard = 0; while (this.nextAt < until && guard++ < 32) this.scheduleStep(this.nextAt); }
     this.graph.tick(now, until);
     while (this.stepQueue[0]?.at <= now + .003) { const due = this.stepQueue.shift(); this.onStep?.(due.index); }
     this.onMeters?.(this.getMeters());
   }
+  scheduleNote({ voiceId = 'auto', note = 60, velocity = .8, when, durationSeconds = .25, source = 'loom' } = {}) { if (!this.graph || !this._context || this._context.state === 'closed') throw new Error('Prepare the sampler before scheduling notes.');const at=Math.max(this._context.currentTime,Number.isFinite(when)?when:this._context.currentTime);if(this.futureCancels.has(source)&&at>=this.futureCancels.get(source))return [];const ids=this.graph.noteOn(note,velocity,at,{zoneId:voiceId==='auto'?undefined:voiceId,duration:durationSeconds,source});this.graph.tick(this._context.currentTime,this._context.currentTime+.16);return ids; }
+  stopNotes({ source, when } = {}) { if (!this.graph || !this._context) return;const now=this._context.currentTime,at=Math.max(now,Number.isFinite(when)?when:now);if(source&&at>now){if(this.futureCancels.size>=256&&!this.futureCancels.has(source)){for(const [id,time]of this.futureCancels)if(time<=now)this.futureCancels.delete(id);if(this.futureCancels.size>=256)throw new Error('The cancellation queue is full.');}this.futureCancels.set(source,Math.min(this.futureCancels.get(source)??Infinity,at));}else if(source)this.futureCancels.delete(source);else this.futureCancels.clear();this.graph.cancelSource(source,at);for (const [key,held] of this.held)if(!source||held.source===source)this.held.delete(key); }
+  renderNotes(options = {}) { return this.render({ ...options, scope: 'events' }); }
   getMeters() { return this.graph ? this.graph.getMeters(this.playing) : { peak: 0, rms: 0, voices: 0, grains: 0, playing: false }; }
-  async render({ state = this.state, scope = 'pattern', zoneId, note, velocity = .8, bars = 1, tailSeconds = 0, signal } = {}) {
+  async render({ state = this.state, scope = 'pattern', zoneId, note, velocity = .8, bars = 1, tailSeconds = 0, signal, events, tempo, lengthBeats } = {}) {
     abort(signal); const snapshot = window.FableSchema.normalize(window.FableSchema.copy(state));
-    if (!['zone', 'pattern'].includes(scope)) throw new Error('Choose a sample zone or pattern to render.');
-    const tail = clamp(tailSeconds, 0, 12), count = Math.round(clamp(bars, 1, 16)); let body = count * 240 / snapshot.tempo, zone = null;
+    if (scope === 'events') { if (!Array.isArray(events) || events.length > 8192 || !Number.isFinite(tempo) || tempo < 5 || tempo > 1920 || !Number.isFinite(lengthBeats) || lengthBeats <= 0 || lengthBeats > 256) throw new Error('Choose a valid timed note pattern.'); snapshot.tempo = tempo; }
+    if (!['zone', 'pattern', 'events'].includes(scope)) throw new Error('Choose a sample zone or pattern to render.');
+    const tail = clamp(tailSeconds, 0, scope === 'events' ? 30 : 12), count = Math.round(clamp(bars, 1, 16)); let body = scope === 'events' ? lengthBeats * 60 / snapshot.tempo : count * 240 / snapshot.tempo, zone = null;
     if (scope === 'zone') {
       zone = snapshot.zones.find(z => z.id === (zoneId || snapshot.selectedZone)); if (!zone) throw new Error('Choose a sample zone first.');
       const asset = snapshot.assets.find(a => a.id === zone.assetId); if (!asset) throw new Error('This zone has no sample.');
@@ -1089,7 +1236,7 @@ class FableAudio {
     /* Decode and capture all assets before the first await. Imported samples never fall back to a factory oscillator. */
     const audios = new Map(snapshot.assets.map(asset => [asset.id, this.getAssetAudio(asset)]));
     const context = new Offline(2, frames, SR), graph = new Graph(context, snapshot, asset => audios.get(asset.id), { offline: true }), random = randomGenerator(snapshot.seed);
-    let nextStep = 0, index = 0, stopped = false, aborted = false, cursor = 0;
+    let nextStep = 0, index = 0, eventIndex = 0, stopped = false, aborted = false, cursor = 0;const sortedEvents = scope === 'events' ? events.map(e => ({...e})).sort((a,b)=>a.startBeat-b.startBeat) : [];
     const onAbort = () => { aborted = true; }; signal?.addEventListener('abort', onAbort, { once: true });
     const schedule = (from, to) => {
       abort(signal); if (aborted) abort({ aborted: true });
@@ -1101,6 +1248,7 @@ class FableAudio {
           index++; nextStep += interval;
         }
       }
+      if (scope === 'events') { while (eventIndex < sortedEvents.length && sortedEvents[eventIndex].startBeat * 60 / snapshot.tempo < Math.min(to, body) - .000001) { const event = sortedEvents[eventIndex++]; graph.noteOn(event.note, event.velocity, event.startBeat * 60 / snapshot.tempo, { zoneId: event.voiceId === 'auto' ? undefined : event.voiceId, source: 'pattern-clip', duration: Math.max(.001, event.durationBeats * 60 / snapshot.tempo) }); } }
       if (!stopped && to >= body) { graph.allNotesOff(body); stopped = true; }
       graph.tick(from, to);
     };
@@ -1117,7 +1265,7 @@ class FableAudio {
       const buffer = await rendered; abort(signal);
       const left = buffer.getChannelData(0), right = buffer.getChannelData(1), pcm = new Float32Array(frames * 2), fade = Math.min(240, Math.floor(frames / 4));
       for (let i = 0; i < frames; i++) { const edge = Math.min(1, i / fade, (frames - 1 - i) / fade); pcm[i * 2] = clamp(left[i] * edge, -1, 1); pcm[i * 2 + 1] = clamp(right[i] * edge, -1, 1); }
-      abort(signal); return { pcm, sampleRate: SR, name: scope === 'zone' ? zone.name : `${snapshot.name} — ${snapshot.patterns[snapshot.selectedPattern].name}`, tempo: snapshot.tempo, sourceApp: 'fable', sourceLabel: scope === 'zone' ? 'Sample zone' : 'Pattern', scope, bars: scope === 'pattern' ? count : undefined };
+      abort(signal); return { pcm, sampleRate: SR, name: scope === 'zone' ? zone.name : scope === 'events' ? snapshot.name : `${snapshot.name} — ${snapshot.patterns[snapshot.selectedPattern].name}`, tempo: snapshot.tempo, sourceApp: 'fable', sourceLabel: scope === 'zone' ? 'Sample zone' : 'Pattern', scope, bars: scope === 'pattern' ? count : undefined };
     } finally { signal?.removeEventListener('abort', onAbort); graph.destroy(); if (context.state === 'suspended') context.resume().catch(() => {}); /* A cancelled suspended render is released to finish with a disconnected graph. */ }
   }
 }
@@ -1816,6 +1964,627 @@ window.FableAudio = FableAudio;
 })(window);
 
 MusicLabExchange.register({...{"id":"fable","name":"FABLE","accent":"#8bdacb","mountSelector":".masthead-actions"},getAdapter:()=>window.FableApp});
+</script>
+<script>
+/* Native Music Lab note adapters. Imported polyphonic phrases remain editable portable notes. */
+(() => {
+  'use strict';
+  if (window.MusicLabPatternInstrument) return;
+  const candidates = [['fable', 'FableApp', 'FableSchema'], ['bower', 'BowerApp', 'BowerSchema'], ['mire', 'MireApp', 'MireSchema'], ['haze', 'HazeApp', 'HazeSchema']];
+  const found = candidates.find(([, facade]) => window[facade]);
+  if (!found) return;
+  const [appId, facadeName, schemaName] = found, app = window[facadeName], S = window[schemaName], P = window.MusicLabPatternSchema, engine = app.engine;
+  if (!P || !engine) throw new Error('Portable pattern support needs the native instrument and Music Lab pattern validator.');
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k), copy = v => JSON.parse(JSON.stringify(v));
+  const abort = signal => { if (signal?.aborted) throw new DOMException('Pattern operation cancelled.', 'AbortError'); };
+  const state = () => app.getState();
+  const notify = () => { document.dispatchEvent(new CustomEvent('musiclab:patternchange', { detail: { app: appId } })); window.MusicLabHost?.notifyStateChange?.(); };
+  const midi = hz => Math.max(0, Math.min(127, Math.round(69 + 12 * Math.log2(hz / 440))));
+  const randomFor = seed => { let x = (seed >>> 0) || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; }; };
+  function voicesFor(s) {
+    if (appId === 'fable') return [{ id: 'auto', name: 'Key / velocity sample mapping' }, ...s.zones.map(z => ({ id: z.id, name: z.name, pitch: z.root }))];
+    if (appId === 'bower') return s.lanes.map((l, i) => ({ id: String(i), name: l.name, pitch: S.degreeMidi(s, i, 0) }));
+    if (appId === 'mire') return s.sources.map((source, i) => ({ id: String(i), name: source.name || 'Source ' + (i + 1), pitch: source.pitch }));
+    return [{ id: 'auto', name: 'Nearest tuned band · quantizes pitch' }, ...Array.from({ length: 24 }, (_, i) => ({ id: String(i), name: 'Band ' + (i + 1) + ' · ' + Math.round(window.HazeDSP.frequencyForBand(s, i)) + ' Hz', pitch: midi(window.HazeDSP.frequencyForBand(s, i)) }))];
+  }
+  function sequenceSignature(s) {
+    if (appId === 'fable') return JSON.stringify([s.selectedPattern, s.patterns]);
+    if (appId === 'bower') return JSON.stringify([s.evolution, s.lanes.map(l => [l.steps, l.length, l.division, l.direction])]);
+    if (appId === 'mire') return JSON.stringify(s.sources.map(source => source.steps));
+    return JSON.stringify([s.score, s.direction, s.bars]);
+  }
+  let importedSignature = state().musicLabPattern ? sequenceSignature(state()) : null;
+  const nativeSetState = engine.setState.bind(engine);
+  engine.setState = function (incoming) {
+    if (incoming.musicLabPattern) {
+      const signature = sequenceSignature(incoming);
+      const available = new Set(voicesFor(incoming).map(v => v.id));
+      if (importedSignature !== null && signature !== importedSignature || Object.values(incoming.musicLabPattern.voiceMap).some(id => !available.has(id))) { delete incoming.musicLabPattern; importedSignature = null; engine.stop(); }
+      else importedSignature = signature;
+    } else importedSignature = null;
+    return nativeSetState(incoming);
+  };
+  function packetBase(s, name, lengthBeats, voices) {
+    return { format: 'musiclab-pattern', version: 1, sourceApp: appId, name, tempo: s.tempo, swing: 0, lengthBeats, meter: [4, 4], voices, notes: [], seed: s.seed ?? 0x4d495245, tags: [appId] };
+  }
+  function addNote(packet, pitch, beat, duration, velocity, voice, probability = 1) {
+    if (beat >= packet.lengthBeats - 1e-8 || duration <= 0) return;
+    packet.notes.push({ id: 'n' + (packet.notes.length + 1), pitch: Math.round(pitch), beat: Math.max(0, beat), duration: Math.min(duration, packet.lengthBeats - beat), velocity, voice, probability });
+  }
+  function fableDuration(s,step,interval,phraseLength) {
+    let duration=Math.max(.001,interval/step.ratchet*step.gate);
+    const velocity=Math.round(step.velocity*127);
+    for(const zone of s.zones)if(zone.enabled&&step.note>=zone.low&&step.note<=zone.high&&velocity>=zone.velLow&&velocity<=zone.velHigh&&zone.playMode==='oneshot'){
+      if(zone.loopMode!=='off')duration=Math.max(duration,phraseLength);
+      else {const asset=s.assets.find(a=>a.id===zone.assetId);if(!asset)continue;const shift=(zone.tracking?step.note-zone.root:0)+zone.transpose+s.master.transpose+(zone.tune+s.master.tune)/100,seconds=asset.duration*Math.max(.0001,zone.end-zone.start)*(zone.engine==='texture'?zone.stretch:Math.pow(2,-shift/12))+(zone.engine==='texture'?zone.envelope.release:0);duration=Math.max(duration,seconds*s.tempo/60);}
+    }
+    return duration;
+  }
+  function nativePattern(s, scope = 'pattern') {
+    if (appId === 'fable') {
+      const index = /^pattern-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : s.selectedPattern, pattern = s.patterns[index];
+      const out = packetBase(s, s.name + ' · ' + pattern.name, pattern.length / 4, [{ id: 'auto', name: 'Key / velocity sample mapping' }]);
+      let beat = 0;
+      for (let i = 0; i < pattern.length; i++) { const step = pattern.steps[i], interval = .25 * (1 + (i % 2 === 0 ? 1 : -1) * s.swing * .5); if (step.on) for (let r = 0; r < step.ratchet; r++) addNote(out, step.note, beat + interval * r / step.ratchet, fableDuration(s,step,interval,pattern.length/4), step.velocity, 'auto', step.probability); beat += interval; }
+      return P.normalize(out);
+    }
+    if (appId === 'mire') {
+      const out = packetBase(s, s.name + ' · source pattern', 4, voicesFor(s)); let beat = 0;
+      for (let step = 0; step < 16; step++) { const interval = .25 * (step % 2 ? 1 - s.swing : 1 + s.swing); for (let i = 0; i < 4; i++) { const source = s.sources[i], hit = source.steps[step]; if (!source.mute && hit.on) for (let r = 0; r < hit.ratchet; r++) addNote(out, source.pitch, beat + interval * r / hit.ratchet, Math.min(source.decay * s.tempo / 60000, interval / hit.ratchet), hit.velocity * (r ? .88 : 1), String(i), hit.probability); } beat += interval; }
+      return P.normalize(out);
+    }
+    if (appId === 'bower') {
+      const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      const out = packetBase(s, s.name + ' · four-bar phrase', 16, voices), random = randomFor(s.seed);
+      const solo = s.lanes.some(l => l.solo);
+      for (let i = 0; i < 4; i++) { if (selected !== null && i !== selected) continue; const lane = s.lanes[i]; if (lane.mute || solo && !lane.solo) continue; let beat = 0, count = 0; while (beat < 16 - 1e-8 && count < 1024) { let at = count % lane.length; if (lane.direction === 'reverse') at = lane.length - 1 - at; else if (lane.direction === 'pendulum') { const cycle = Math.max(1, lane.length * 2 - 2), pos = count % cycle; at = pos < lane.length ? pos : cycle - pos; } else if (lane.direction === 'random') at = Math.floor(random() * lane.length); const hit = lane.steps[at], interval = S.DIVISIONS[lane.division] * (1 + (count % 2 === 0 ? 1 : -1) * s.swing * .5); if (hit.on) { let degree = hit.degree; if (s.evolution && random() < lane.evolve) degree += random() < .5 ? -1 : 1; addNote(out, S.degreeMidi(s, i, degree), beat, lane.decay * s.tempo / 60, hit.velocity, String(i), hit.probability); } beat += interval; count++; } }
+      out.notes.sort((a, b) => a.beat - b.beat); return P.normalize(out);
+    }
+    const cycle = s.bars * 4, length = s.direction === 'pingpong' ? cycle * 2 : cycle;
+    const out = packetBase(s, s.name + ' · tuned bands', length, voicesFor(s).filter(v => v.id !== 'auto'));
+    const columns = s.direction === 'pingpong' ? 64 : 32;
+    for (let x = 0; x < columns; x++) { const column = s.direction === 'reverse' ? (32 - x) % 32 : s.direction === 'pingpong' && x >= 32 ? 63 - x : x; for (let y = 0; y < 24; y++) if (s.score[y][column] > 0) addNote(out, midi(window.HazeDSP.frequencyForBand(s, y)), x * cycle / 32, cycle / 32, s.score[y][column], String(y)); }
+    return P.normalize(out);
+  }
+  function exportPattern({ scope = 'pattern' } = {}) { const s = state(); if (s.musicLabPattern && scope === 'pattern') { const packet = P.clone(s.musicLabPattern.pattern); packet.tempo = s.tempo; return packet; } return nativePattern(s, scope); }
+  function validateMapping(pattern, voiceMap, s, sampleRate) {
+    const choices = new Set(voicesFor(s).map(v => v.id)), mapped = {};
+    if (!voiceMap || Object.prototype.toString.call(voiceMap) !== '[object Object]') throw new Error('Map each source voice to an instrument voice.');
+    for (const source of pattern.voices) { const target = voiceMap[source.id]; if (!own(voiceMap, source.id) || typeof target !== 'string' || !choices.has(target)) throw new Error('Choose a destination for source voice “' + source.name + '”.'); mapped[source.id] = target; }
+    if (Object.keys(voiceMap).some(id => !pattern.voices.some(v => v.id === id))) throw new Error('The voice map refers to an unknown source voice.');
+    for (const note of pattern.notes) eventFor(note, mapped[note.voice], s, sampleRate);
+    return mapped;
+  }
+  function nearestBand(pitch, s) {
+    const values = Array.from({ length: 24 }, (_, row) => 69 + 12 * Math.log2(window.HazeDSP.frequencyForBand(s, row) / 440));
+    if (pitch < values[0] - .51 || pitch > values[23] + .51) throw new Error('This note is outside HAZE’s tuned bands. Change its tuning, or map the source to a specific band.');
+    let best = 0; for (let i = 1; i < 24; i++) if (Math.abs(values[i] - pitch) < Math.abs(values[best] - pitch)) best = i; return String(best);
+  }
+  function swungNote(note, packet) {const step=Math.round(note.beat*4),onGrid=Math.abs(note.beat*4-step)<1e-7,beat=Math.min(packet.lengthBeats-1/1024,note.beat+(onGrid&&step%2?packet.swing/4:0));return {...note,beat,duration:Math.max(1/1024,Math.min(note.duration,packet.lengthBeats-beat))};}
+  function eventFor(note, voice, s, sampleRate = engine.context?.sampleRate || 48000) {
+    if (appId === 'bower' && (note.pitch < 24 || note.pitch > 100)) throw new Error('BOWER’s strings support MIDI notes 24–100. Transpose this pattern into that range.');
+    if (appId === 'mire' && s.sources[Number(voice)]?.kind !== 'sample') { const minPitch=16,maxPitch=Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)));if(note.pitch<minPitch||note.pitch>maxPitch)throw new Error('This MIRE exciter supports MIDI notes '+minPitch+'–'+maxPitch+' at '+Math.round(sampleRate/1000)+' kHz. Transpose the pattern, or map it to a sample source.'); }
+    if (appId === 'haze' && voice === 'auto') voice = nearestBand(note.pitch, s);
+    return { note: note.pitch, velocity: note.velocity, voiceId: voice, startBeat: note.beat, durationBeats: note.duration };
+  }
+  async function importPattern({ pattern, options = {}, signal } = {}) {
+    abort(signal); const normalized = P.parse(pattern), snapshot = state();
+    if (options.target !== undefined && options.target !== 'pattern') throw new Error('Choose the imported performance pattern.');
+    const occupied = snapshot.musicLabPattern ? snapshot.musicLabPattern.pattern.notes.length > 0 : nativePattern(snapshot).notes.length > 0;
+    if (occupied && options.replace !== true) throw new Error('Confirm replacement of the current performance pattern.');
+    const voiceMap = validateMapping(normalized, options.voiceMap, snapshot), candidate = S.normalize({ ...snapshot, musicLabPattern: { pattern: normalized, voiceMap } });
+    abort(signal); engine.stop(); importedSignature = sequenceSignature(candidate); app.loadState(candidate); notify();
+    return { target: 'pattern', name: normalized.name, notes: normalized.notes.length, mode: 'notes', exact: true };
+  }
+  function clearImportedPattern() { const snapshot = state(); if (!snapshot.musicLabPattern) return false; delete snapshot.musicLabPattern; engine.stop(); importedSignature = null; app.loadState(snapshot); notify(); return true; }
+  async function prepare() { await engine.init(); if (engine.context?.state === 'suspended') await engine.context.resume(); return true; }
+  function scheduleNote({ id, pitch, velocity = .8, voice, when, durationSeconds = .25, source = 'loom' } = {}) {
+    if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127 || typeof velocity !== 'number' || !Number.isFinite(velocity) || velocity < 0 || velocity > 1 || !Number.isFinite(when) || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || durationSeconds > 15360) throw new Error('Choose a valid timed note.');
+    const s = engine.state || state(), choices = new Set(voicesFor(s).map(v => v.id));
+    if (typeof voice !== 'string' || !choices.has(voice)) throw new Error('Choose a valid instrument voice.');
+    const native = eventFor({ pitch, velocity, beat: 0, duration: 1 }, voice, s);
+    if (velocity === 0) return;
+    return engine.scheduleNote({ ...native, when, durationSeconds, source, id });
+  }
+  function cancelNotes({source='loom',when}={}) { if(when!==undefined&&!Number.isFinite(when))throw new Error('Choose a finite cancellation time.');engine.stopNotes({source,when}); }
+  async function renderPattern({ pattern, state: sourceState, tempo, tailSeconds = 0, voiceMap: explicitMap, signal } = {}) {
+    abort(signal); const normalized = P.parse(pattern), snapshot = sourceState?.format === 'fable-project' && appId === 'fable' ? S.parseProject(JSON.stringify(sourceState)) : S.normalize(sourceState === undefined ? state() : S.copy(sourceState));
+    const renderTempo = tempo === undefined ? normalized.tempo : tempo;
+    if (!Number.isFinite(renderTempo) || renderTempo < 5 || renderTempo > 1920 || !Number.isFinite(tailSeconds) || tailSeconds < 0 || tailSeconds > 30 || normalized.lengthBeats * 60 / renderTempo + tailSeconds > 120) throw new Error('A source pattern must render within 120 seconds. Split the phrase or reduce its tail.');
+    const targetIds = new Set(voicesFor(snapshot).map(v => v.id)); let map;
+    if (explicitMap) map = explicitMap;
+    else if (snapshot.musicLabPattern && P.fingerprint(snapshot.musicLabPattern.pattern) === P.fingerprint(normalized)) map = snapshot.musicLabPattern.voiceMap;
+    else if (normalized.voices.every(v => targetIds.has(v.id))) map = Object.fromEntries(normalized.voices.map(v => [v.id, v.id]));
+    else if (snapshot.musicLabPattern && normalized.voices.every(v => own(snapshot.musicLabPattern.voiceMap, v.id))) map = snapshot.musicLabPattern.voiceMap;
+    else if (normalized.voices.length === 1) map = { [normalized.voices[0].id]: appId === 'fable' || appId === 'haze' ? 'auto' : '0' };
+    else throw new Error('Map this pattern’s source voices before rendering it.');
+    const voiceMap = validateMapping(normalized, map, snapshot, 48000), random = randomFor(normalized.seed ?? 1), events = [];
+    for (const note of normalized.notes) if (note.velocity > 0 && random() < note.probability) events.push(eventFor(swungNote(note,normalized), voiceMap[note.voice], snapshot, 48000));
+    const result = await engine.renderNotes({ events, state: snapshot, tempo: renderTempo, lengthBeats: normalized.lengthBeats, tailSeconds, signal }); abort(signal);
+    return { ...result, name: normalized.name, tempo: renderTempo, sourceApp: appId };
+  }
+  // Native Play follows exact imported phrases; LOOM schedules the same DSP directly.
+  let overlayTimer = null, overlayGeneration = 0, overlayPlaying = false, overlayNext = 0, overlayCycle = 0, overlayAnchor = 0, overlayRandom = null, overlayNotes = [];
+  const nativeStart = engine.start.bind(engine), nativeStop = engine.stop.bind(engine), nativePanic = engine.panic.bind(engine);
+  function stopOverlay() { overlayGeneration++; clearInterval(overlayTimer); overlayTimer = null; overlayPlaying = false; engine._externalPattern = false; }
+  function overlayTick() {
+    if (!overlayPlaying || !engine.context || engine.context.state !== 'running') return;
+    const s = engine.state || state(), imported = s.musicLabPattern;
+    if (!imported) { engine.stop(); return; }
+    const packet = imported.pattern, tempo = s.tempo, seconds = 60 / tempo, now = engine.context.currentTime, until = now + .12, notes = overlayNotes;
+    let guard = 0;
+    while (notes.length && guard++ < 8192) {
+      const note = notes[overlayNext], at = overlayAnchor + (overlayCycle * packet.lengthBeats + note.beat) * seconds;
+      if (at >= until) break;
+      if (at >= now - .025 && note.velocity > 0 && overlayRandom() < note.probability) { try { scheduleNote({ id: note.id, pitch: note.pitch, velocity: note.velocity, voice: imported.voiceMap[note.voice], when: Math.max(now, at), durationSeconds: note.duration * seconds, source: 'standalone-pattern' }); } catch(error) { engine.stop();engine.onStatus?.(error.message);document.dispatchEvent(new CustomEvent('musiclab:pattern-error',{detail:{message:error.message}}));return; } }
+      overlayNext++; if (overlayNext >= notes.length) { overlayNext = 0; overlayCycle++; }
+    }
+    const beat = Math.max(0, (now - overlayAnchor) / seconds) % packet.lengthBeats;
+    engine.onStep?.(Math.floor(beat * 4) % 16, now);
+  }
+  engine.start = async function (when) {
+    if (!(engine.state || state()).musicLabPattern) return nativeStart(when);
+    nativeStop(); stopOverlay(); const generation = overlayGeneration; await prepare(); if (generation !== overlayGeneration) return false;
+    const imported = (engine.state || state()).musicLabPattern; if (!imported) return false;
+    // Packet order is arbitrary; sorting its cloned events never alters the saved phrase.
+    overlayNotes = imported.pattern.notes.map(note=>swungNote(note,imported.pattern)).sort((a, b) => a.beat - b.beat || a.id.localeCompare(b.id));
+    overlayNext = 0; overlayCycle = 0; overlayAnchor = Math.max(engine.context.currentTime + .02, Number.isFinite(when) ? when : 0); overlayRandom = randomFor(imported.pattern.seed ?? 1); overlayPlaying = true; engine._externalPattern = true;
+    if (appId === 'fable') engine.playing = true; else engine.isPlaying = true;
+    overlayTick(); overlayTimer = setInterval(overlayTick, 25); return true;
+  };
+  engine.stop = function () { stopOverlay(); engine.stopNotes(); return nativeStop(); };
+  engine.panic = function () { stopOverlay(); return nativePanic(); };
+  let clockRevision = null;
+  const adapter = {
+    get patternExport() { const scopes = [{ id: 'pattern', label: state().musicLabPattern ? 'Imported performance pattern' : 'Current pattern' }]; if (appId === 'fable') for (let i = 0; i < 4; i++) scopes.push({ id: 'pattern-' + i, label: 'Native pattern ' + String.fromCharCode(65 + i) }); if (appId === 'bower') for (let i = 0; i < 4; i++) scopes.push({ id: 'voice-' + i, label: 'Native string ' + (i + 1) }); return { scopes, defaultScope: 'pattern' }; },
+    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze' ? 'bands' : 'notes', description: appId === 'bower' ? 'BOWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'MIRE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
+    get notes() {const s=state(),sampleRate=engine.context?.sampleRate||48000,voices=voicesFor(s).map(voice=>{let pitchRange=appId==='bower'?[24,100]:[0,127];if(appId==='mire'&&s.sources[Number(voice.id)]?.kind!=='sample')pitchRange=[16,Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)))];if(appId==='haze'&&voice.id==='auto')pitchRange=[Math.max(0,Math.ceil(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,0)/440)-.51)),Math.min(127,Math.floor(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,23)/440)+.51))];return{...voice,pitchRange};});return { voices, polyphonic: true, pitched: appId !== 'haze', scheduledCancel:true, ...(appId==='bower'?{minPitch:24,maxPitch:100,pitchRange:[24,100]}:{pitchRange:[0,127]}) }; },
+    get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },
+    getImportedPattern() { return this.importedPattern; },
+    exportPattern, importPattern, clearImportedPattern, prepare, scheduleNote, cancelNotes, renderPattern,
+    validateNote: ({pitch,voice}={}) => {if(!Number.isInteger(pitch)||pitch<0||pitch>127)throw new Error('Choose a valid MIDI note.');const s=engine.state||state();if(!voicesFor(s).some(v=>v.id===voice))throw new Error('Choose a valid instrument voice.');eventFor({pitch,velocity:.8,beat:0,duration:.25},voice,s);return true;},
+    panic: () => engine.panic(),
+    transport: ({ beat, when, revision, playing } = {}) => { if (appId !== 'haze') return;if (playing===false || revision!==clockRevision) {engine.clearClockPositions();clockRevision=revision;}if(playing!==false&&Number.isFinite(beat))engine.seekBeat(beat,{when}); },
+  };
+  Object.defineProperty(window, 'MusicLabPatternInstrument', { value: Object.freeze(adapter), writable: false, configurable: false });
+})();
+
+/* Music Lab's native drum, slice and tape adapters. No alternate synthesis engine. */
+(() => {
+  'use strict';
+  const IDS = ['grain', 'tine', 'form', 'ravel', 'spool'];
+  const FACADES = { grain:'GrainApp', tine:'TineApp', form:'FormApp', ravel:'RavelApp', spool:'SpoolApp' };
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const abort = signal => { if (signal?.aborted) throw new DOMException('Pattern operation cancelled.', 'AbortError'); };
+  const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
+  const eventBeat = (packet,note) => {
+    const grid=Math.round(note.beat*4),onGrid=Math.abs(note.beat*4-grid)<1e-7;
+    return Math.min(packet.lengthBeats-1e-8,note.beat+(onGrid&&grid%2?packet.swing/4:0));
+  };
+  function install(id) {
+    if (!IDS.includes(id)) throw new Error('Unknown native pattern instrument.');
+    if (window.MusicLabPatternInstrument?.app === id) return window.MusicLabPatternInstrument;
+    const schema = () => { if (!window.MusicLabPatternSchema) throw new Error('The portable pattern schema is unavailable.'); return window.MusicLabPatternSchema; };
+    const native = () => { const app=window[FACADES[id]]; if (!app) throw new Error('The instrument is still opening.'); return app; };
+    const engine = () => native().engine;
+    const state = () => native().getState();
+    const viewState = () => native().getPatternState?.() || ((id==='ravel'||id==='spool')?engine().state:state());
+    const unwrap = snapshot => snapshot?.state || snapshot?.project || snapshot;
+    const tempoOf = s => s.bpm ?? s.tempo ?? 120;
+    const voicesFor = s => {
+      if (id==='ravel') return Array.from({length:16},(_,i)=>({id:'slice-'+i,name:'Slice '+String(i+1).padStart(2,'0'),pitch:60+i}));
+      if (id==='spool') return s.decks.map((deck,i)=>({id:'deck-'+i,name:'Deck '+String.fromCharCode(65+i)+' · '+deck.name,pitch:60+i}));
+      return (s.tracks||s.sounds).map((voice,i)=>({id:'voice-'+i,name:voice.name||'Voice '+(i+1),pitch:36+i}));
+    };
+    const indexOfVoice = (voice,s) => { const index=voicesFor(s).findIndex(v=>v.id===voice); if (index<0) throw new Error('Choose a valid '+id.toUpperCase()+' voice.'); return index; };
+    let timer=null, startTime=0, cursor=0, scheduledState=null, display=null, generation=0, wrappedEngine=null;
+    function clearTimer() { ++generation; if(timer!==null)clearInterval(timer);timer=null;scheduledState=null; }
+    function stopPattern() { clearTimer(); }
+    function validateMap(pattern,map,s) {
+      if (!map || typeof map!=='object' || Array.isArray(map)) throw new Error('Map each source voice explicitly before sending the pattern.');
+      const allowed=new Set(voicesFor(s).map(v=>v.id)), result={};
+      for(const voice of pattern.voices){const target=map[voice.id];if(typeof target!=='string'||!allowed.has(target))throw new Error('Choose a destination for '+voice.name+'.');Object.defineProperty(result,voice.id,{value:target,enumerable:true,writable:true,configurable:true});}
+      for(const key of Object.keys(map))if(!pattern.voices.some(voice=>voice.id===key))throw new Error('The mapping contains an unknown source voice.');
+      return result;
+    }
+    function nativeMap(pattern,s) {
+      const available=voicesFor(s), result={};
+      for(const voice of pattern.voices){const match=available.find(v=>v.id===voice.id);if(!match)throw new Error('This pattern needs explicit voice mapping for '+id.toUpperCase()+'.');Object.defineProperty(result,voice.id,{value:match.id,enumerable:true,writable:true,configurable:true});}
+      return result;
+    }
+    function validateNotes(pattern,map,s) {
+      const target=voicesFor(s);
+      for(const note of pattern.notes){const voice=target.find(v=>v.id===map[note.voice]);if(!voice)throw new Error('Missing note voice mapping.');const offset=note.pitch-voice.pitch;if(offset<-48||offset>48)throw new Error(id.toUpperCase()+' supports up to four octaves of note transposition from each voice.');}
+      if(id==='spool'){
+        const ends=new Map();
+        for(const note of [...pattern.notes].sort((a,b)=>a.beat-b.beat)) {const voice=map[note.voice],end=ends.get(voice)||0;if(note.beat<end-1e-8)throw new Error('Each SPOOL deck plays one tape at a time. Shorten overlapping notes or map them to separate decks.');ends.set(voice,note.beat+note.duration);}
+      }
+    }
+    function applyOverlay(overlay) {
+      const app=native();
+      if(app.applyMusicLabPattern) app.applyMusicLabPattern(overlay);
+      else {const next=state();if(overlay)next.musicLabPattern=clone(overlay);else delete next.musicLabPattern;app.loadState(next);}
+      document.dispatchEvent(new CustomEvent('musiclab:state-change',{bubbles:true,detail:{app:id,kind:'pattern'}}));
+    }
+    function random(seed) {let value=seed>>>0;return()=>{value+=0x6D2B79F5;let x=Math.imul(value^value>>>15,1|value);x^=x+Math.imul(x^x>>>7,61|x);return((x^x>>>14)>>>0)/4294967296;};}
+    function packetFromNative(s,options={}) {
+      if(s.musicLabPattern){
+        const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
+        return schema().normalize({...packet,sourceApp:id,kind:'drums',voices:available.filter(v=>used.has(v.id)),notes:packet.notes.map(note=>({...note,voice:map[note.voice]}))});
+      }
+      const all=voicesFor(s), notes=[], selected=Number(options.voice??0), scope=options.scope||'pattern';
+      let lengthBeats=4, counter=0;
+      const add=(voice,beat,duration,velocity,pitch,probability=1)=>notes.push({id:'note-'+counter++,voice:voice.id,pitch,beat:Math.max(0,beat),duration:Math.min(duration,lengthBeats-Math.max(0,beat)),velocity,probability});
+      if(id==='grain'||id==='tine') {
+        const solo=s.tracks.some(track=>track.solo);
+        s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,4-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
+      } else if(id==='form') {
+        lengthBeats=s.steps[0].length/4;
+        s.steps.forEach((steps,index)=>{if(s.muted[index]||scope==='voice'&&index!==selected)return;steps.forEach((on,step)=>{if(on){const beat=step/4+(step%2?s.swing/400:0);add(all[index],beat,Math.min(.25,lengthBeats-beat),step%4===0?1:.86,all[index].pitch);}});});
+      } else if(id==='ravel') {
+        const steps=s.patterns[s.selectedPattern].steps;
+        steps.forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<4)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),4-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
+      } else {
+        lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
+        s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
+      }
+      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+id.toUpperCase(),sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??0x5a17c0de});
+    }
+    function prepareEngineWrappers() {
+      const audio=engine();if(!audio||audio===wrappedEngine)return;wrappedEngine=audio;
+      if(typeof audio.start==='function') {
+        const start=audio.start.bind(audio);
+        audio.start=async (...args)=>{
+          if(!state().musicLabPattern)return start(...args);
+          const token=++generation;await adapter.prepare();if(token!==generation)return false;
+          if(id==='grain'||id==='tine'){audio.state=args[0];audio.onStep=args[1];audio.running=true;}
+          else audio.isPlaying=true;
+          startPattern(typeof args[1]==='function'?args[1]:null);return true;
+        };
+      }
+      const stopName=typeof audio.stop==='function'?'stop':null;
+      if(stopName){const stop=audio.stop.bind(audio);audio.stop=(...args)=>{clearTimer();return stop(...args);};}
+      if(typeof audio.panic==='function'){const panic=audio.panic.bind(audio);audio.panic=(...args)=>{clearTimer();return panic(...args);};}
+    }
+    function startPattern(onStep=null) {
+      clearTimer();const s=viewState(),overlay=s.musicLabPattern;if(!overlay)return;
+      const pattern=schema().normalize(overlay.pattern),map=validateMap(pattern,overlay.voiceMap,s);validateNotes(pattern,map,s);
+      scheduledState={pattern,map,s};startTime=(engine().context||engine().audioContext).currentTime+.055;cursor=0;display=onStep;
+      const draw=()=>{
+        if(!scheduledState)return;const audio=engine(),context=audio.context||audio.audioContext;
+        const tempo=tempoOf(viewState()),seconds=60/tempo,length=pattern.lengthBeats*seconds;
+        if(context.state!=='running')return;
+        const current=context.currentTime;
+        let budget=0;
+        while(budget++<512){
+          const cycle=Math.floor(cursor/Math.max(1,pattern.notes.length)),note=pattern.notes[cursor%Math.max(1,pattern.notes.length)];if(!note)break;
+          const when=startTime+cycle*length+eventBeat(pattern,note)*seconds;if(when>current+.13)break;cursor++;
+          if(when<current-.03)continue;
+          const rng=random((pattern.seed||0)^cycle^cursor);if(rng()>= (note.probability??1))continue;
+          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
+        }
+        if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%16);
+      };
+      pattern.notes.sort((a,b)=>a.beat-b.beat);draw();timer=setInterval(draw,25);
+    }
+    const adapter={
+      app:id,
+      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
+      get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
+      validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
+      exportPattern(options={}){return packetFromNative(viewState(),options);},
+      async importPattern({pattern,options={},signal}={}){
+        abort(signal);abort(options.signal);const s=viewState(),packet=schema().normalize(pattern);if(options.target!==undefined&&options.target!=='current')throw new Error('Choose the received pattern destination.');
+        const map=validateMap(packet,options.voiceMap,s);validateNotes(packet,map,s);
+        if(adapter.patternImport.targets[0].occupied&&options.replace!==true)throw new Error('Confirm replacing the active part before sending this pattern.');
+        abort(signal);abort(options.signal);applyOverlay({pattern:packet,voiceMap:map});adapter.cancelNotes();return{app:id,target:'current',notes:packet.notes.length};
+      },
+      get importedPattern(){return viewState().musicLabPattern?.pattern||null;},
+      getImportedPattern(){return viewState().musicLabPattern?.pattern||null;},
+      clearImportedPattern(){applyOverlay(undefined);adapter.cancelNotes();},
+      async prepare(){const app=native();if(app.prepare)await app.prepare();else {const audio=engine();if(audio.init)await audio.init();else await audio.resume();}prepareEngineWrappers();const audio=engine(),context=audio.context||audio.audioContext;if(context?.state==='suspended')await context.resume();const s=state();if(audio.setMasterVolume&&s.master!==undefined&&typeof s.master==='number')audio.setMasterVolume(s.master);if(audio.setEffects)audio.setEffects({drive:s.drive||0,space:s.space||0});},
+      scheduleNote(note){
+        const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
+        if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
+        const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
+        if(id==='form')return native().scheduleNativeNote(index,note.when,options);
+        return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);
+      },
+      cancelNotes(options={}){if(options.source===undefined||options.source==='pattern')clearTimer();const audio=engine();if(!audio)return;if(audio.cancelNativeNotes)audio.cancelNativeNotes(options);else if(audio.stopAll)audio.stopAll();else audio.stop();},
+      panic(){clearTimer();const app=native(),audio=engine();if(!audio)return;if(app.panic)app.panic();else if(audio.panic)audio.panic();else if(app.stop)app.stop();else audio.stopAll?.();},
+      async renderPattern({pattern,state:snapshot,tempo,tailSeconds=0,voiceMap:explicitMap,signal}={}){
+        abort(signal);const s=clone(unwrap(snapshot)||state()),packet=schema().normalize(pattern),bpm=tempo??packet.tempo;
+        if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
+        const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
+        const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
+        const events=packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
+        const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
+        if(id==='form'){
+          if(snapshot&&native().renderNativeSnapshotEvents)result=await native().renderNativeSnapshotEvents(s,events,options);
+          else result=await native().renderNativeEvents(events,options);
+        }else result=await engine().renderNativeEvents(s,events,options);
+        abort(signal);return{...result,name:packet.name,tempo:bpm,sourceApp:id};
+      },
+      startPattern,stopPattern,
+      transport(clock){if(id==='spool')engine().followTransport(clock);},
+    };
+    window.MusicLabPatternInstrument=adapter;
+    const ready=()=>{try{prepareEngineWrappers();}catch(_){}};ready();document.addEventListener('musiclab:app-ready',ready);
+    return adapter;
+  }
+  window.MusicLabPatternDrums=Object.freeze({install});
+  const found=IDS.find(id=>window[FACADES[id]])||(/\bFORM\b/.test(document.title)?'form':null);
+  if(found)install(found);
+})();
+
+/* Music Lab's shared editable-note library. Standalone, offline, and host-aware. */
+(function (global) {
+  'use strict';
+  if (global.MusicLabPatterns) return;
+  const S = global.MusicLabPatternSchema;
+  if (!S) throw new Error('Load the Music Lab pattern schema before its library.');
+  const MAX_PATTERNS = 128, MAX_BYTES = 16 * 1024 * 1024;
+  const registrations = new Map(), memory = new Map();
+  let databasePromise, persistent = true, dialog, active;
+  const uid = () => global.crypto?.randomUUID?.() || 'pattern-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+  const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+  const abortError = () => new DOMException('Pattern exchange cancelled.', 'AbortError');
+  const icon = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5h18M3 12h18M3 19h18" opacity=".3"/><path d="M4 5h5m3 0h6M7 12h6m3 0h4M4 19h4m4 0h5" stroke-width="3" stroke-linecap="round"/></svg>';
+  const button = (text, action, primary) => '<button type="button" class="ml-pat-button' + (primary ? ' ml-pat-primary' : '') + '" data-action="' + action + '">' + text + '</button>';
+  const hostLibrary = () => global.MusicLabHost?.patternLibrary;
+  const bytes = value => new TextEncoder().encode(JSON.stringify(value)).length;
+  function metadata(record) {
+    return { id: record.id, createdAt: record.createdAt, name: record.name, sourceApp: record.sourceApp, tempo: record.tempo, swing: record.swing, lengthBeats: record.lengthBeats, meter: record.meter, kind: record.kind || 'notes', notes: record.notes.length, voices: record.voices.length, tags: record.tags, bytes: record.bytes };
+  }
+  function database() {
+    if (databasePromise) return databasePromise;
+    databasePromise = new Promise((resolve, reject) => {
+      if (!global.indexedDB) return reject(new Error('Browser storage is unavailable.'));
+      let request;
+      try { request = global.indexedDB.open('musiclab-patterns-v1', 1); } catch (error) { return reject(error); }
+      request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('patterns')) request.result.createObjectStore('patterns', { keyPath: 'id' }); };
+      request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
+      request.onerror = () => reject(request.error || new Error('Could not open the pattern library.'));
+      request.onblocked = () => reject(new Error('Close an older Music Lab tab to unlock the pattern library.'));
+    }).catch(() => { persistent = false; return null; });
+    return databasePromise;
+  }
+  async function read(method, key) {
+    const db = await database();
+    if (!db) return method === 'getAll' ? [...memory.values()] : memory.get(key);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('patterns', 'readonly'), store = tx.objectStore('patterns'), request = key === undefined ? store[method]() : store[method](key);
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+  }
+  async function list() {
+    const host = hostLibrary(), values = host?.list ? await host.list() : (await read('getAll')).map(metadata);
+    return values.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+  async function get(id) { const host = hostLibrary(); const value = host?.get ? await host.get(String(id)) : await read('get', String(id)); return value ? JSON.parse(JSON.stringify(value)) : value; }
+  async function save(value) {
+    const pattern = S.normalize(value), host = hostLibrary();
+    if (host?.save) return host.save(pattern);
+    const record = { ...pattern, id: uid(), createdAt: Date.now(), bytes: bytes(pattern) }, db = await database();
+    function quota(items) {
+      if (items.length >= MAX_PATTERNS || items.reduce((total, item) => total + (item.bytes || 0), 0) + record.bytes > MAX_BYTES) throw new Error('The pattern library is full (128 patterns / 16 MiB). Delete an entry or download this pattern.');
+    }
+    if (!db) { quota([...memory.values()]); memory.set(record.id, record); return metadata(record); }
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('patterns', 'readwrite'), store = tx.objectStore('patterns'), request = store.getAll();
+      let error;
+      request.onsuccess = () => { try { quota(request.result); store.put(record); } catch (problem) { error = problem; tx.abort(); } };
+      tx.oncomplete = () => resolve(metadata(record));
+      tx.onerror = tx.onabort = () => reject(error || tx.error || new Error('Could not save this pattern. Download a portable file instead.'));
+    });
+  }
+  async function remove(id) {
+    const host = hostLibrary(); if (host?.remove) return host.remove(String(id));
+    const db = await database(); if (!db) { memory.delete(String(id)); return; }
+    return new Promise((resolve, reject) => { const tx = db.transaction('patterns', 'readwrite'); tx.objectStore('patterns').delete(String(id)); tx.oncomplete = resolve; tx.onerror = tx.onabort = () => reject(tx.error); });
+  }
+  function still(token) { return active?.token === token && !active.controller.signal.aborted; }
+  const query = selector => dialog.querySelector(selector);
+  function message(text, error) { if (!dialog) return; const line = query('.ml-pat-status'); line.textContent = text; line.classList.toggle('ml-pat-error', Boolean(error)); }
+  function storageNote() {
+    const keeps = hostLibrary()?.persistent ?? persistent;
+    query('.ml-pat-storage').textContent = global.location?.protocol === 'file:' ? 'Offline files may use separate libraries. Download a pattern file to move notes between them.' : keeps ? 'Saved in this browser. All Music Lab apps on this site share this library.' : 'Storage is unavailable. This library lasts until the page closes; download patterns to keep them.';
+  }
+  function ensureDialog() {
+    if (dialog) return;
+    dialog = document.createElement('dialog'); dialog.className = 'ml-pat-dialog'; dialog.setAttribute('aria-labelledby', 'ml-pat-title');
+    dialog.innerHTML = '<div class="ml-pat-shell"><header class="ml-pat-header"><div><span class="ml-pat-eyebrow">MUSIC LAB / EDITABLE PARTS</span><h2 id="ml-pat-title">Notes with wandering feet.</h2><p>Borrow a rhythm. Keep the notes, timing, and touch.</p></div>' + button('×', 'close') + '</header><nav class="ml-pat-tabs" aria-label="Pattern exchange"><button type="button" data-tab="library" aria-selected="true">Library <span class="ml-pat-count">0</span></button><button type="button" data-tab="send" aria-selected="false">Send pattern</button><button type="button" data-tab="receive" aria-selected="false">Receive pattern</button></nav><main class="ml-pat-main">' +
+      '<section data-panel="library"><div class="ml-pat-library-head"><input type="search" name="search" aria-label="Search note patterns" placeholder="Find a phrase, app, or tag…">' + button('Refresh', 'refresh') + '</div><div class="ml-pat-library"></div><p class="ml-pat-capacity"></p></section>' +
+      '<section data-panel="send" hidden><div class="ml-pat-imported-part" hidden><p></p>' + button('Use native sequence', 'native') + '</div><div class="ml-pat-intro"><span>' + icon + '</span><div><h3>A tune escapes its teacup.</h3><p>Share editable notes rather than a recording. The receiving instrument supplies the sound.</p></div></div><div class="ml-pat-fields"><label>Source<select name="scope"></select></label><label>Pattern name<input name="export-name" maxlength="160" placeholder="A name for this phrase"></label></div><p class="ml-pat-export-hint"></p><div class="ml-pat-actions">' + button('Read current pattern', 'export', true) + '</div><div class="ml-pat-exported" hidden><div class="ml-pat-preview" data-preview="exported"></div><p class="ml-pat-export-meta"></p><div class="ml-pat-actions">' + button('Save to library', 'save-exported', true) + button('↓ Pattern file', 'download-exported') + '<button type="button" class="ml-pat-button" data-action="loom-exported" hidden>Add to LOOM</button></div></div></section>' +
+      '<section data-panel="receive" hidden><label class="ml-pat-file">＋ Choose a note-pattern file<input type="file" name="file" accept=".json,.musiclab-pattern.json,application/json"></label><p class="ml-pat-receive-empty">Choose a pattern from the Library or open a portable pattern file.</p><div class="ml-pat-incoming" hidden><div class="ml-pat-preview" data-preview="incoming"></div><p class="ml-pat-incoming-meta"></p><div class="ml-pat-destination"><label>Destination<select name="target"></select></label><p class="ml-pat-import-hint"></p><div class="ml-pat-actions"><button type="button" class="ml-pat-button" data-action="prepare-target" hidden>Load instrument voices</button></div><div class="ml-pat-mapping"></div><label class="ml-pat-replace"><input name="replace" type="checkbox"> Replace the notes currently in this destination</label><div class="ml-pat-actions">' + button('Receive pattern', 'receive', true) + button('Save to library', 'save-incoming') + button('↓ Pattern file', 'download-incoming') + '<button type="button" class="ml-pat-button" data-action="loom-incoming" hidden>Add to LOOM</button></div></div></div></section></main><footer class="ml-pat-footer"><p class="ml-pat-storage"></p><p class="ml-pat-status" role="status" aria-live="polite"></p></footer></div>';
+    document.body.append(dialog);
+    query('[data-action="close"]').setAttribute('aria-label', 'Close pattern exchange');
+    dialog.addEventListener('click', event => {
+      const tab = event.target.closest('[data-tab]'); if (tab) switchTab(tab.dataset.tab);
+      const action = event.target.closest('[data-action]'); if (action && !action.disabled) act(action.dataset.action, action);
+      const selected = event.target.closest('[data-pattern-id]'); if (selected) choose(selected.dataset.patternId);
+      if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) close(); }
+    });
+    dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+    dialog.addEventListener('close', () => { if (!dialog.open) { active?.controller.abort(); active = null; } });
+    dialog.addEventListener('keydown', event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); close(); } });
+    query('[name="search"]').addEventListener('input', drawLibrary);
+    query('[name="target"]').addEventListener('change', () => { query('[name="replace"]').checked = false; updateTarget(); });
+    query('[name="scope"]').addEventListener('change', exportHint);
+    query('[name="file"]').addEventListener('change', async event => {
+      const file = event.target.files[0], token = active?.token; if (!file) return;
+      try { if (file.size > S.MAX_BYTES) throw new Error('Choose a note-pattern file smaller than 1 MiB.'); const pattern = S.parse(await file.text()); if (still(token)) { setIncoming(pattern); message('Choose a destination and review the source voices.'); } }
+      catch (error) { if (still(token)) message(error.message, true); }
+      event.target.value = '';
+    });
+  }
+  function spec() { const value = active.adapter.patternImport; return typeof value === 'function' ? value() || {} : value || {}; }
+  function fillTargets(keepTarget) {
+    const value = spec(), targets = typeof value.targets === 'function' ? value.targets() : value.targets;
+    active.targets = Array.isArray(targets) && targets.length ? targets.slice() : [{ id: 'default', name: 'Current pattern', occupied: false }];
+    query('[name="target"]').innerHTML = active.targets.map((target, index) => '<option value="' + index + '">' + escape(target.name || target.id) + (target.occupied ? ' · contains notes' : '') + '</option>').join('');
+    const selected = active.targets.findIndex(item => item.id === keepTarget);
+    query('[name="target"]').value = String(selected < 0 ? 0 : selected); updateTarget();
+  }
+  function target() { return active.targets[Number(query('[name="target"]').value)] || active.targets[0]; }
+  function updateTarget() {
+    if (!active) return;
+    const value = spec(), destination = target(), capable = typeof active.adapter.importPattern === 'function';
+    query('.ml-pat-replace').hidden = !destination?.occupied || value.mode === 'append';
+    query('.ml-pat-import-hint').textContent = capable ? value.description || (value.mode === 'append' ? 'Adds an editable note clip. Existing clips remain in the arrangement.' : 'The instrument keeps its sound and receives this musical part.') : 'This instrument does not accept editable notes. Save this part and open it in LOOM or a compatible instrument.';
+    query('[data-action="receive"]').hidden = !capable;
+    const voices = destination?.voices || (typeof value.voices === 'function' ? value.voices(destination?.id) : value.voices);
+    active.destinationVoices = Array.isArray(voices) ? voices.slice() : [];
+    const strictMapping = value.mode === 'drums' || value.requiresVoiceMap || active.incoming?.kind === 'drums';
+    const needsMapping = active.incoming && active.destinationVoices.length && (strictMapping || active.destinationVoices.length > 1);
+    query('[data-action="prepare-target"]').hidden = typeof active.adapter.prepareTarget !== 'function';
+    query('.ml-pat-mapping').innerHTML = needsMapping ? '<h4>Match the source voices</h4><p>Choose the sound for every source lane. Pitches and timing remain editable.</p>' + active.incoming.voices.map((voice, index) => '<label><span>' + escape(voice.name) + '</span><select data-map-index="' + index + '"><option value="">Choose a destination voice…</option>' + active.destinationVoices.map((dest, destIndex) => '<option value="' + destIndex + '"' + (!strictMapping && (String(dest.id) === voice.id || destIndex === 0 && !active.destinationVoices.some(candidate => String(candidate.id) === voice.id)) ? ' selected' : '') + '>' + escape(dest.name || dest.id) + '</option>').join('') + '</select></label>').join('') : '';
+  }
+  function importedHint() {
+    const value = active.adapter.getImportedPattern?.() || active.adapter.importedPattern;
+    const area = query('.ml-pat-imported-part');
+    area.hidden = !value || typeof active.adapter.clearImportedPattern !== 'function';
+    if (value) area.querySelector('p').textContent = 'Received part: ' + (value.name || 'Imported pattern') + ' · ' + value.lengthBeats + ' beats. Its exact notes take precedence over the native sequence.';
+  }
+  function exportHint() {
+    const current = active.scopes.find(scope => String(scope.id) === query('[name="scope"]').value);
+    query('.ml-pat-export-hint').textContent = current?.description || active.adapter.patternExport?.description || 'Exports notes, beat timing, velocity, and source voice names. Instrument patches are kept separately.';
+  }
+  async function open(id) {
+    const registration = registrations.get(String(id)); if (!registration) throw new Error('This app has not registered pattern exchange.');
+    const adapter = await registration.getAdapter(); if (!adapter) throw new Error('This instrument is still opening. Try Patterns again in a moment.');
+    close(); ensureDialog();
+    active = { id: String(id), registration, adapter, token: {}, controller: new AbortController(), entries: [], incoming: null, exported: null, busy: false, targets: [] };
+    dialog.style.setProperty('--ml-pat-accent', registration.accent || '#a8e4c0');
+    query('[name="search"]').value = ''; query('[name="export-name"]').value = ''; query('[name="replace"]').checked = false;
+    query('.ml-pat-exported').hidden = true; query('.ml-pat-incoming').hidden = true; query('.ml-pat-receive-empty').hidden = false;
+    dialog.querySelectorAll('[data-action]').forEach(element => { element.disabled = false; });
+    const exportSpec = typeof adapter.patternExport === 'function' ? adapter.patternExport() : adapter.patternExport;
+    active.scopes = exportSpec?.scopes || [{ id: 'pattern', label: 'Current pattern' }];
+    query('[name="scope"]').innerHTML = active.scopes.map(scope => '<option value="' + escape(scope.id) + '">' + escape(scope.label || scope.name || scope.id) + '</option>').join('');
+    query('[data-tab="send"]').disabled = typeof adapter.exportPattern !== 'function';
+    dialog.querySelectorAll('[data-action^="loom-"]').forEach(element => { element.hidden = typeof global.MusicLabHost?.importPattern !== 'function'; });
+    fillTargets(); exportHint(); importedHint(); message('');
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    const token = active.token; switchTab('library'); if (!hostLibrary()) await database(); if (still(token)) storageNote();
+  }
+  function close() { active?.controller.abort(); if (dialog?.open) dialog.close(); active = null; }
+  function switchTab(name) {
+    if (!active) return;
+    dialog.querySelectorAll('[data-tab]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === name)));
+    dialog.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
+    if (name === 'library') refresh();
+  }
+  async function refresh() {
+    const token = active?.token; if (!token) return;
+    try { const entries = await list(); if (still(token)) { active.entries = entries; drawLibrary(); storageNote(); } }
+    catch (error) { if (still(token)) message(error.message, true); }
+  }
+  function drawLibrary() {
+    if (!active) return;
+    const search = query('[name="search"]').value.trim().toLowerCase(), entries = active.entries.filter(item => [item.name, item.sourceApp, ...(item.tags || [])].join(' ').toLowerCase().includes(search));
+    query('.ml-pat-count').textContent = active.entries.length;
+    query('.ml-pat-library').innerHTML = entries.length ? entries.map(item => '<div class="ml-pat-row"><button class="ml-pat-entry" type="button" data-pattern-id="' + escape(item.id) + '"><span class="ml-pat-entry-icon">' + icon + '</span><span><strong>' + escape(item.name) + '</strong><small>' + escape(item.sourceApp || 'Music Lab') + ' · ' + item.notes + ' notes · ' + item.lengthBeats + ' beats · ' + Math.round(item.tempo) + ' BPM</small></span><b>↗</b></button><button class="ml-pat-delete" type="button" data-action="delete" data-id="' + escape(item.id) + '" aria-label="Delete ' + escape(item.name) + '">×</button></div>').join('') : '<div class="ml-pat-empty">' + icon + '<h3>' + (search ? 'No phrases by that name.' : 'The tune has yet to hatch.') + '</h3><p>' + (search ? 'Try an instrument name or another tag.' : 'Read an instrument’s current pattern, then save it here. Other apps can borrow its notes.') + '</p></div>';
+    query('.ml-pat-capacity').textContent = active.entries.length + ' / ' + MAX_PATTERNS + ' patterns · ' + (active.entries.reduce((total, item) => total + (item.bytes || 0), 0) / 1048576).toFixed(2) + ' / 16 MiB';
+  }
+  async function choose(id) {
+    const token = active?.token; message('Opening pattern…');
+    try { const value = await get(id); if (still(token)) { if (!value) throw new Error('This pattern was removed in another tab. Refresh the library.'); setIncoming(S.normalize(value)); switchTab('receive'); message('Choose a destination and review the source voices.'); } }
+    catch (error) { if (still(token)) message(error.message, true); }
+  }
+  function summary(pattern) { return pattern.notes.length + ' notes · ' + pattern.lengthBeats + ' beats · ' + pattern.voices.length + ' source ' + (pattern.voices.length === 1 ? 'voice' : 'voices') + ' · ' + Math.round(pattern.tempo) + ' BPM'; }
+  function preview(pattern, selector) {
+    const area = query(selector), voices = new Map(pattern.voices.map((voice, index) => [voice.id, index]));
+    const pitches = pattern.notes.map(note => note.pitch), low = pitches.length ? Math.max(0, Math.min(...pitches) - 2) : 48;
+    const range = pitches.length ? Math.max(12, Math.min(127, Math.max(...pitches) + 2) - low + 1) : 24, high = low + range - 1;
+    const drumLanes = pattern.kind === 'drums';
+    const shown = pattern.notes;
+    area.innerHTML = '<svg viewBox="0 0 640 128" preserveAspectRatio="none" role="img" aria-label="Editable note pattern: ' + escape(summary(pattern)) + '"><defs><pattern id="ml-pat-grid-' + selector.replace(/\W/g, '') + '" width="' + (640 * 4 / pattern.lengthBeats) + '" height="16" patternUnits="userSpaceOnUse"><path d="M0 0H640M0 0V128" stroke="currentColor" opacity=".1"/></pattern></defs><rect width="640" height="128" fill="url(#ml-pat-grid-' + selector.replace(/\W/g, '') + ')"/>' + shown.map(note => { const x = note.beat / pattern.lengthBeats * 640, y = drumLanes ? ((voices.get(note.voice) || 0) + .5) / Math.max(1, voices.size) * 112 : (high - note.pitch) / range * 112 + 5, width = Math.max(2, note.duration / pattern.lengthBeats * 640), phase = (voices.get(note.voice) || 0) % 4; return '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + width.toFixed(2) + '" height="' + (drumLanes ? Math.max(2, Math.min(12, 72 / Math.max(1, voices.size))) : Math.max(2, Math.min(8, 100 / range))).toFixed(2) + '" rx="1" fill="currentColor" opacity="' + (.3 + note.velocity * .65).toFixed(2) + '" class="ml-pat-note-' + phase + '"/>'; }).join('') + '</svg>';
+  }
+  function setIncoming(value) {
+    active.incoming = S.normalize(value); query('.ml-pat-incoming').hidden = false; query('.ml-pat-receive-empty').hidden = true;
+    query('.ml-pat-incoming-meta').textContent = active.incoming.name + ' · ' + summary(active.incoming);
+    query('[name="replace"]').checked = false; fillTargets(); preview(active.incoming, '[data-preview="incoming"]');
+  }
+  function download(pattern) {
+    const value = S.normalize(pattern), blob = new Blob([S.serialize(value)], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
+    link.href = url; link.download = (value.name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100) || 'Music Lab pattern') + '.musiclab-pattern.json';
+    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  async function act(action, element) {
+    if (!active) return;
+    if (action === 'close') return close(); if (action === 'refresh') return refresh();
+    const token = active.token;
+    if (action === 'delete') {
+      if (!element.dataset.confirmed) { element.dataset.confirmed = 'yes'; element.textContent = 'Delete?'; element.classList.add('ml-pat-delete-confirm'); return; }
+      element.disabled = true;
+      try { await remove(element.dataset.id); if (still(token)) { message('Pattern removed from the library. Imported copies are kept.'); await refresh(); } } catch (error) { if (still(token)) { element.disabled = false; message(error.message, true); } }
+      return;
+    }
+    if (active.busy) return;
+    active.busy = true; element.disabled = true;
+    try {
+      if (action === 'native') {
+        await active.adapter.clearImportedPattern(); if (!still(token)) throw abortError(); importedHint(); message('Native sequence restored. The instrument patch is kept.'); global.MusicLabHost?.notifyStateChange?.();
+      } else if (action === 'prepare-target') {
+        if (!active.incoming) throw new Error('Choose a pattern first.');
+        const selected = target()?.id; message('Loading this track’s instrument voices…');
+        await active.adapter.prepareTarget({ target: selected, pattern: S.normalize(active.incoming), signal: active.controller.signal });
+        if (!still(token)) throw abortError(); fillTargets(selected); message('Instrument voices loaded. Review the source-voice assignments.');
+      } else if (action === 'export') {
+        message('Reading editable notes…');
+        const value = await active.adapter.exportPattern({ scope: query('[name="scope"]').value, signal: active.controller.signal });
+        if (!still(token)) throw abortError();
+        const pattern = S.normalize(value), name = query('[name="export-name"]').value.trim(); if (name) pattern.name = name;
+        active.exported = S.normalize(pattern); preview(active.exported, '[data-preview="exported"]'); query('.ml-pat-exported').hidden = false; query('.ml-pat-export-meta').textContent = active.exported.name + ' · ' + summary(active.exported); message('Notes are ready to share.');
+      } else if (action.startsWith('save-')) {
+        const pattern = action === 'save-exported' ? active.exported : active.incoming; if (!pattern) throw new Error('Choose or read a pattern first.');
+        await save(pattern); if (!still(token)) throw abortError(); message('“' + pattern.name + '” saved to the shared pattern library.'); await refresh();
+      } else if (action.startsWith('download-')) {
+        const pattern = action === 'download-exported' ? active.exported : active.incoming; if (!pattern) throw new Error('Choose or read a pattern first.'); download(pattern); message('Portable note pattern downloaded.');
+      } else if (action.startsWith('loom-')) {
+        const pattern = action === 'loom-exported' ? active.exported : active.incoming; if (!pattern) throw new Error('Choose or read a pattern first.');
+        await global.MusicLabHost.importPattern(S.normalize(pattern), { signal: active.controller.signal }); if (!still(token)) throw abortError(); message('Editable note clip added to LOOM.');
+      } else if (action === 'receive') {
+        if (!active.incoming) throw new Error('Choose a note pattern first.');
+        const destination = target(), value = spec(), replace = query('[name="replace"]').checked;
+        if (destination?.occupied && value.mode !== 'append' && !replace) throw new Error('Confirm replacement of this destination’s existing notes.');
+        const voiceMap = Object.create(null);
+        for (const field of dialog.querySelectorAll('[data-map-index]')) {
+          if (field.value === '') throw new Error('Choose a destination voice for every source lane.');
+          voiceMap[active.incoming.voices[Number(field.dataset.mapIndex)].id] = active.destinationVoices[Number(field.value)].id;
+        }
+        const result = await active.adapter.importPattern({ pattern: S.normalize(active.incoming), options: { target: destination?.id, voiceMap, replace, signal: active.controller.signal }, signal: active.controller.signal });
+        if (!still(token)) throw abortError(); if (result === false) throw new Error('The instrument did not accept this note pattern.');
+        fillTargets(); importedHint(); message('“' + active.incoming.name + '” received. The instrument supplies the sound.'); global.MusicLabHost?.notifyStateChange?.();
+      }
+    } catch (error) { if (error.name !== 'AbortError' && still(token)) message(error.message || 'Could not complete pattern exchange.', true); }
+    finally { if (still(token)) { active.busy = false; element.disabled = false; } }
+  }
+  function register(options) {
+    if (!options?.id || typeof options.getAdapter !== 'function') throw new TypeError('Pattern exchange registration needs id and getAdapter.');
+    const id = String(options.id); registrations.set(id, options);
+    function mount() {
+      let launcher = document.querySelector('[data-musiclab-patterns="' + CSS.escape(id) + '"]');
+      if (!launcher) {
+        launcher = document.createElement('button'); launcher.type = 'button'; launcher.className = 'ml-pat-launcher'; launcher.dataset.musiclabPatterns = id; launcher.style.setProperty('--ml-pat-accent', options.accent || '#a8e4c0'); launcher.innerHTML = icon + ' Patterns'; launcher.setAttribute('aria-label', 'Open shared note-pattern library');
+        launcher.addEventListener('click', () => open(id).catch(error => { launcher.title = error.message; console.error(error); }));
+      }
+      const destination = options.mountSelector ? document.querySelector(options.mountSelector) : null;
+      if (destination) { launcher.classList.remove('ml-pat-floating'); destination.append(launcher); } else { launcher.classList.add('ml-pat-floating'); document.body.append(launcher); }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
+    document.addEventListener('musiclab:app-ready', mount);
+    return { open: () => open(id), dispose: () => { registrations.delete(id); document.querySelector('[data-musiclab-patterns="' + CSS.escape(id) + '"]')?.remove(); if (active?.id === id) close(); } };
+  }
+  global.addEventListener('pagehide', close);
+  global.MusicLabPatterns = Object.freeze({ version: 1, MAX_PATTERNS, MAX_BYTES, register, open, close, list, get, save, remove, normalizePattern: S.normalize, patternFromJSON: S.parse, download, get persistent() { return hostLibrary()?.persistent ?? persistent; } });
+})(window);
+
+MusicLabPatterns.register({...{"id":"fable","name":"FABLE","accent":"#8bdacb","mountSelector":".masthead-actions"},getAdapter:()=>window.MusicLabPatternInstrument});
 </script>
 </body>
 </html>

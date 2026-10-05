@@ -34,6 +34,17 @@
       const x = raw.patterns?.[p]?.steps?.[i] || step(i);
       return { on: !!x.on, slice: Math.round(clamp(x.slice, 0, 15, i)), velocity: clamp(x.velocity, 0, 1, .85), probability: clamp(x.probability, 0, 1, 1), ratchet: Math.round(clamp(x.ratchet, 1, 4, 1)), reverse: !!x.reverse, pitch: clamp(x.pitch, -12, 12, 0), micro: clamp(x.micro, -.45, .45, 0), gate: clamp(x.gate, .05, 2, 1) };
     }) }));
+    if (raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern;
+      if (!overlay || typeof overlay !== 'object' || !overlay.voiceMap || typeof overlay.voiceMap !== 'object' || Array.isArray(overlay.voiceMap) || !window.MusicLabPatternSchema) throw new Error('Invalid shared pattern.');
+      const pattern = window.MusicLabPatternSchema.normalize(overlay.pattern), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const destination = overlay.voiceMap[voice.id];
+        if (typeof destination !== 'string' || !/^slice-(?:[0-9]|1[0-5])$/.test(destination)) throw new Error('Invalid shared voice mapping.');
+        voiceMap[voice.id] = destination;
+      }
+      s.musicLabPattern = { pattern, voiceMap };
+    }
     return s;
   }
   function parseProject(data) {

@@ -72,7 +72,7 @@
     return { name: text(asset.name, 'Imported sound', 100), sampleRate, pcm: asset.pcm, duration: bytes / 4 / sampleRate };
   }
 
-  function normalize(input) {
+  function normalizePlain(input) {
     const defaults = defaultState();
     const raw = input && typeof input === 'object' ? input : {};
     const master = raw.master || {}, garden = raw.garden || {};
@@ -148,6 +148,25 @@
   function noteName(midi) {
     const n = Math.round(midi);
     return ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][(n % 12 + 12) % 12] + (Math.floor(n / 12) - 1);
+  }
+
+  // Exact imported notes travel with the native patch, without flattening chords or timing.
+  function normalize(raw) {
+    const state = normalizePlain(raw);
+    if (raw && raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern, schema = window.MusicLabPatternSchema;
+      if (!schema) throw new Error('The portable note-pattern validator is unavailable.');
+      if (!overlay || Object.prototype.toString.call(overlay) !== '[object Object]' || !overlay.voiceMap || Object.prototype.toString.call(overlay.voiceMap) !== '[object Object]') throw new Error('The imported note pattern is incomplete.');
+      const pattern = schema.parse(overlay.pattern), targets = new Set(Array.from({length:4},(_,i)=>String(i))), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const target = overlay.voiceMap[voice.id];
+        if (!Object.prototype.hasOwnProperty.call(overlay.voiceMap, voice.id) || typeof target !== 'string' || !targets.has(target)) throw new Error('The imported pattern refers to an unavailable instrument voice.');
+        voiceMap[voice.id] = target;
+      }
+      if (Object.keys(overlay.voiceMap).some(id => !pattern.voices.some(voice => voice.id === id))) throw new Error('The imported voice map contains an unknown source voice.');
+      state.musicLabPattern = { pattern, voiceMap };
+    }
+    return state;
   }
   window.MireSchema = { VERSION, NODE_MODELS, SOURCE_KINDS, DIVISIONS, LFO_TARGETS, defaultState, normalize, parseProject, serializeProject, noteName, copy };
 })();

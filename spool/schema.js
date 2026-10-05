@@ -108,6 +108,17 @@
       });
       state.assets.push(normalizeAsset(Array.isArray(raw.assets) ? raw.assets[i] : d.assets[i]));
     }
+    if (raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern;
+      if (!overlay || typeof overlay !== 'object' || !overlay.voiceMap || typeof overlay.voiceMap !== 'object' || Array.isArray(overlay.voiceMap) || !window.MusicLabPatternSchema) throw new Error('Invalid shared pattern.');
+      const pattern = window.MusicLabPatternSchema.normalize(overlay.pattern), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const destination = overlay.voiceMap[voice.id];
+        if (typeof destination !== 'string' || !/^deck-[0-3]$/.test(destination)) throw new Error('Invalid shared voice mapping.');
+        voiceMap[voice.id] = destination;
+      }
+      state.musicLabPattern = { pattern, voiceMap };
+    }
     return state;
   }
   function parseProject(json) {

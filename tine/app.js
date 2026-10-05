@@ -485,5 +485,10 @@
   let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawVoice(); drawHero(heroTime); }, 80); });
   renderAll(); drawHero(); requestAnimationFrame(animate);
   window.TineApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+    applyMusicLabPattern(overlay) {
+      const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
+      validateProject(next); remember(); stop(); restore(next); renderAll(); persist();
+    },
+    loadState(data) { const next = validateProject(clone(data)); remember(); stop(); restore(next); renderAll(); persist(); },
     audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
 }());

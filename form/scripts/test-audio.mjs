@@ -266,6 +266,7 @@ test("Web Audio warm-up shares cached buffers; scheduling, master volume, and st
     release = parameter();
   }
   class Source extends Node {
+    playbackRate = parameter();
     onended = null;
     start(at) {
       this.started = at;
@@ -336,7 +337,8 @@ test("Web Audio warm-up shares cached buffers; scheduling, master volume, and st
     assert.equal(context.gains[1].gain.value, 0.7);
     engine.setMasterVolume(0.2);
     assert.equal(context.gains[0].gain.value, 0.2);
-    await engine.play(kit[0], 1, 0.1);
+    await engine.play(kit[0], 1, 0.1, 12);
+    assert.equal(context.sources[1].playbackRate.value, 2, "per-note pitch is applied without changing the patch");
     assert.equal(
       context.sources[1].started,
       0.5,

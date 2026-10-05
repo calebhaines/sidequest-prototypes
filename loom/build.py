@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable']
-SCRIPTS = ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'app.js']
+SCRIPTS = ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -39,7 +39,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -60,7 +60,7 @@ print(f'Built LOOM: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Music L
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
-    sources = ['app.html', 'styles.css', 'automation.css', *SCRIPTS, 'build.py', 'checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
+    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     files += exchange_helpers['exchange_sources'](ROOT)
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]

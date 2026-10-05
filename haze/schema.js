@@ -15,9 +15,9 @@
     for(let c=0;c<COLS;c++){score[(Math.floor(c/4)*2+[0,2,4,2][Math.floor(c/8)])%12][c]=c%4===0?.82:.48;if(c%8<6)score[7+Math.floor(c/8)%3][c]=.25;}
     return {version:VERSION,name:'The sky has mislaid its notes',tempo:88,bars:2,direction:'forward',freeze:false,position:0,root:45,scale:'pentatonic',stretch:1,color:.26,drift:.15,blur:.15,attack:35,release:420,cutoff:9500,drive:.12,spread:.82,volume:.66,echo:.25,echoDivision:'3/16',feedback:.38,room:.28,score};
   }
-  function normalize(raw){
+  function normalizePlain(raw){
     const r=raw&&typeof raw==='object'?raw:{},d=defaultState(),s={version:VERSION,name:text(r.name,d.name)};
-    for(const [key,lo,hi] of [['tempo',40,180],['stretch',.5,1.8],['color',0,1],['drift',0,1],['blur',0,1],['attack',2,1200],['release',10,5000],['cutoff',200,18000],['drive',0,1],['spread',0,1],['volume',0,1],['echo',0,1],['feedback',0,.82],['room',0,1],['position',0,31.999]])s[key]=number(r[key],lo,hi,d[key]);
+    for(const [key,lo,hi] of [['tempo',40,240],['stretch',.5,1.8],['color',0,1],['drift',0,1],['blur',0,1],['attack',2,1200],['release',10,5000],['cutoff',200,18000],['drive',0,1],['spread',0,1],['volume',0,1],['echo',0,1],['feedback',0,.82],['room',0,1],['position',0,31.999]])s[key]=number(r[key],lo,hi,d[key]);
     s.bars=choice(r.bars,[1,2,4,8],d.bars);s.root=integer(r.root,24,72,d.root);s.scale=choice(r.scale,SCALES.map(x=>x.id),d.scale);s.direction=choice(r.direction,DIRECTIONS.map(x=>x.id),d.direction);s.echoDivision=choice(r.echoDivision,DIVISIONS,d.echoDivision);s.freeze=r.freeze===true;
     s.score=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>number(r.score?.[y]?.[x],0,1,d.score[y][x])));
     return s;
@@ -34,5 +34,24 @@
   }
   const serializeProject=s=>JSON.stringify({format:'haze-project',formatVersion:1,appVersion:VERSION,state:normalize(s)},null,2);
   const noteName=m=>['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][((Math.round(m)%12)+12)%12]+(Math.floor(m/12)-1);
+
+  // Exact imported notes travel with the native patch, without flattening chords or timing.
+  function normalize(raw) {
+    const state = normalizePlain(raw);
+    if (raw && raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern, schema = window.MusicLabPatternSchema;
+      if (!schema) throw new Error('The portable note-pattern validator is unavailable.');
+      if (!overlay || Object.prototype.toString.call(overlay) !== '[object Object]' || !overlay.voiceMap || Object.prototype.toString.call(overlay.voiceMap) !== '[object Object]') throw new Error('The imported note pattern is incomplete.');
+      const pattern = schema.parse(overlay.pattern), targets = new Set(['auto',...Array.from({length:24},(_,i)=>String(i))]), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const target = overlay.voiceMap[voice.id];
+        if (!Object.prototype.hasOwnProperty.call(overlay.voiceMap, voice.id) || typeof target !== 'string' || !targets.has(target)) throw new Error('The imported pattern refers to an unavailable instrument voice.');
+        voiceMap[voice.id] = target;
+      }
+      if (Object.keys(overlay.voiceMap).some(id => !pattern.voices.some(voice => voice.id === id))) throw new Error('The imported voice map contains an unknown source voice.');
+      state.musicLabPattern = { pattern, voiceMap };
+    }
+    return state;
+  }
   window.HazeSchema=Object.freeze({VERSION,COLS,ROWS,SCALES,DIRECTIONS,DIVISIONS,defaultState,normalize,parseProject,serializeProject,copy,noteName});
 })();

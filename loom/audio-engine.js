@@ -28,6 +28,7 @@
         this.countInTotal = 0;
         this.recordingPunch = false;
         this.sampleClock = 0;
+        this.transportCycle = 0;
         this.silent = false;
         this.lastOutput = [0, 0];
         this.seekOrigin = [0, 0];
@@ -101,6 +102,7 @@
       stop() { this.playing = false; this.countInRemaining = 0; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended, countInBeatsRemaining: 0 }; }
       seek(beat) {
         this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
+        this.transportCycle = 0;
         this.sampleClock = 0;
         if (!this.options.linear) {
           // Discard audio from the previous timeline position, then crossfade the
@@ -109,7 +111,7 @@
           this.seekFadeRemaining = this.playing || Math.abs(this.lastOutput[0]) + Math.abs(this.lastOutput[1]) > 1e-8 ? this.seekFadeFrames : 0;
           for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         }
-        this.meters = { ...this.meters, beat: this.beat, playing: this.playing, ended: false };
+        this.meters = { ...this.meters, beat: this.beat, cycle: 0, playing: this.playing, ended: false };
         return this.beat;
       }
       setRecordingHold(value) { this.recordingHold = value === true; }
@@ -117,6 +119,7 @@
         this.recordingPunch = schedule.punchEnabled === true;
         if (schedule.startTransport !== false && !this.playing) this.start(this.beat);
         this.countInTotal = this.countInRemaining = Math.max(0, Math.round(clamp(schedule.countInBeats, 0, 8, 0) * 60 / this.tempo * this.sampleRate));
+        this.meters = { ...this.meters, playing: this.playing, countInBeatsRemaining: this.countInRemaining * this.tempo / (60 * this.sampleRate) };
         this.previousClickBeat = -1; this.clickRemaining = 0;
       }
       endRecording() { this.countInRemaining = 0; this.recordingPunch = false; }
@@ -166,7 +169,7 @@
         const minimumFade = .003 / secondsPerBeat;
         for (const list of candidates) for (const item of list) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
         for (let t = 0; t < 8; t++) {
-          const [l, r] = this.buffers[t], input = inputs[t], useInput = (this.tracks[t].instrumentLive !== false || this.auditionTracks.has(t)) && !this.recordOnly.has(t);
+          const [l, r] = this.buffers[t], input = inputs[t], useInput = (this.tracks[t].instrumentLive !== false || this.tracks[t].notePlayback === true || this.auditionTracks.has(t)) && !this.recordOnly.has(t);
           if (useInput && input?.[0]) {
             l.set(input[0].subarray(0, n)); r.set((input[1] || input[0]).subarray(0, n));
             if (this.playing && stopAtEnd && blockEnd >= sessionEnd - advance * this.seekFadeFrames && !this.auditionTracks.has(t)) for (let frame = 0; frame < n; frame++) {
@@ -207,7 +210,7 @@
               }
             }
             this.beat += advance;
-            if (loop && this.beat >= loopEnd - 1e-10) this.beat = loopStart + Math.max(0, this.beat - loopEnd) % (loopEnd - loopStart);
+            if (loop && this.beat >= loopEnd - 1e-10) { this.beat = loopStart + Math.max(0, this.beat - loopEnd) % (loopEnd - loopStart); this.transportCycle++; }
             else if (stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame + 1; }
           }
         }
@@ -267,7 +270,7 @@
           left[f] = a; right[f] = b; peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
         this.sampleClock += n;
-        this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
+        this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
         return this.meters;
       }
     }
@@ -334,7 +337,7 @@
       master: { level: state.master?.level, metronome: state.master?.metronome },
       tracks: Array.from({ length: 8 }, (_, index) => {
         const track = state.tracks?.[index] || {};
-        return { id: track.id, level: track.level, pan: track.pan, mute: track.mute, solo: track.solo, instrumentLive: track.instrumentLive,
+        return { id: track.id, level: track.level, pan: track.pan, mute: track.mute, solo: track.solo, instrumentLive: track.instrumentLive, notePlayback: (track.clips || []).some(clip => clip.type === 'notes'),
           automation: (track.automation || []).map(lane => ({ target: lane.target, effectType: lane.effectType, enabled: lane.enabled, interpolation: lane.interpolation, points: (lane.points || []).map(p => ({ beat: p.beat, value: p.value })) })),
           effects: Array.from({ length: 4 }, (_, slot) => { const effect = track.effects?.[slot]; return effect ? { type: effect.type, bypass: effect.bypass, params: { ...effect.params } } : null; }),
           clips: (track.clips || []).map(clip => ({ assetId: clip.assetId, start: clip.start, length: clip.length, sourceStart: clip.sourceStart, sourceEnd: clip.sourceEnd,
@@ -362,6 +365,8 @@
       this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null;
       this._recordStage = 'idle'; this._recordTransportStarted = false;
+      this._transportListeners = new Set(); this._clockAnchor = { beat: 0, time: 0, cycle: 0, countIn: 0 };
+      this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
     async init() {
@@ -405,6 +410,7 @@
                     else if(m.type==='recordStop'){const meta=this.recorder.stop();this.core.endRecording();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}
                     else if(m.type==='recordCancel'){this.recorder.cancel();this.core.endRecording();}
                     else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}
+                    if(Number.isInteger(m.epoch))this.port.postMessage({type:'clock',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});
                   };
                 }
                 process(inputs,outputs) {
@@ -412,9 +418,9 @@
                   this.core.processBlock(out[0],out[1]||out[0],inputs);
                   if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
                   this.recorder.capture(inputs,n,this.core);
-                  if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,meters:this.core.getMeters()});}
+                  if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters()});}
                   else if(!this.core.ended)this.endedSent=false;
-                  if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active,recordStage:this.recorder.stage});
+                  if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active,recordStage:this.recorder.stage});
                   return true;
                 }
               }
@@ -440,7 +446,7 @@
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
             this.recorder.capture(inputs, e.outputBuffer.length, this.core);
             this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
-            this._acceptMeters(meters, this._transportEpoch);
+            this._acceptMeters(meters, this._transportEpoch, Number.isFinite(e.playbackTime) ? e.playbackTime + e.outputBuffer.length / this.context.sampleRate : this.context.currentTime);
           };
           this.mode = 'fallback';
         }
@@ -453,6 +459,11 @@
     getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize LOOM audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
       if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
+      if (Number.isInteger(m.epoch)) {
+        const now = this.context?.currentTime || 0;
+        this._clockAnchor = { beat: this._meters.beat || 0, cycle: m.type === 'seek' || m.type === 'play' ? 0 : this._clockAnchor.cycle || 0, time: now, countIn: this._meters.countInBeatsRemaining || 0 };
+        this._notifyTransport(m.type);
+      }
       if (this.mode === 'worklet') { this.node.port.postMessage(m); return; }
       if (!this.core) return;
       if (m.type === 'state') this.core.setState(m.state);
@@ -469,9 +480,10 @@
       else if (m.type === 'recordStop') { const meta = this.recorder.stop(); this.core.endRecording(); this._message({ type: 'recordStopped', ...meta, stopId: m.stopId }); }
       else if (m.type === 'recordCancel') { this.recorder.cancel(); this.core.endRecording(); }
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
+      if (Number.isInteger(m.epoch)) this._acceptMeters(this.core.getMeters(), m.epoch, this.context?.currentTime || 0);
     }
     _message(m) {
-      if ((m.type === 'meters' || m.type === 'transportEnded') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch); if (this.isRecording && m.recordId === this._recordId) { this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); this._recordStage = m.recordStage || this._recordStage; } }
+      if ((m.type === 'meters' || m.type === 'transportEnded' || m.type === 'clock') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch, m.contextTime); if (this.isRecording && m.recordId === this._recordId) { this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); this._recordStage = m.recordStage || this._recordStage; } }
       else if (m.type === 'chunk' && m.id === this._recordId) { if (!this._chunks.has(m.trackIndex)) this._chunks.set(m.trackIndex, []); this._chunks.get(m.trackIndex).push({ left: m.left, right: m.right }); this._recordStartBeat = m.startBeat; }
       else if (m.type === 'recordStarted' && m.id === this._recordId) this._recordStartBeat = m.startBeat;
       else if (m.type === 'countInEnd' && m.id === this._recordId && this.isRecording) this._recordTransportStart();
@@ -479,18 +491,46 @@
       else if (m.type === 'recordStopped' && this._recordStop?.id === m.stopId) { this._recordFrames = m.frames || 0; this._recordStartBeat = Number.isFinite(m.startBeat) ? m.startBeat : this._recordStartBeat; this._recordStop.resolve(); this._recordStop = null; }
       else if (m.type === 'gateAck') { this._gates.get(m.id)?.(); this._gates.delete(m.id); }
     }
-    _acceptMeters(meters, epoch) {
+    _acceptMeters(meters, epoch, contextTime) {
+      const previousCountIn = this._clockAnchor.countIn || 0;
       this._meters = meters;
+      this._clockAnchor = { beat: Number(meters.beat) || 0, cycle: Number(meters.cycle) || 0, time: Number.isFinite(contextTime) ? contextTime : this.context?.currentTime || 0, countIn: Number(meters.countInBeatsRemaining) || 0 };
+      if (previousCountIn > 0 && !this._clockAnchor.countIn) this._notifyTransport('count-in-end');
       if (meters.ended && !this.recordingBusy && this._transportEndedEpoch !== epoch) {
         this._transportEndedEpoch = epoch;
         const info = { beat: meters.beat, epoch };
+        this._notifyTransport('end');
         this.onTransportEnd?.(info); this.onStatus?.({ type: 'transport-ended', ...info });
       }
+    }
+    subscribeTransport(listener) { if (typeof listener !== 'function') throw TypeError('Provide a transport listener.'); this._transportListeners.add(listener); return () => this._transportListeners.delete(listener); }
+    _notifyTransport(reason) { const clock = this.getTransport(); for (const listener of this._transportListeners) { try { listener(clock, reason); } catch (error) { this.onStatus?.({ type: 'error', message: error.message }); } } }
+    getTransport(atTime = this.context?.currentTime || 0) {
+      const configuration = this._clockConfiguration, tempo = Math.max(40, Math.min(240, Number(configuration.tempo) || 120)), anchor = this._clockAnchor;
+      const sessionEnd = Math.max(1, Math.min(64, Number(configuration.lengthBars) || 4)) * 4, endBeat = this.recordingBusy && !this._recordSchedule?.punchEnabled ? 256 : sessionEnd;
+      const loopStart = Math.max(0, Number(configuration.loopStart) || 0), loopEnd = Math.min(sessionEnd, Number(configuration.loopEnd) || sessionEnd);
+      const loopEnabled = configuration.loopEnabled === true && !(this.isRecording && this._recordSchedule?.punchEnabled), span = Math.max(.25, loopEnd - loopStart);
+      const playing = this._meters.playing === true && !this._panicLatched;
+      const elapsed = playing ? (atTime - anchor.time) * tempo / 60 : 0, countIn = Math.max(0, anchor.countIn - Math.max(0, elapsed));
+      let beat = anchor.beat + (playing ? Math.max(0, elapsed - anchor.countIn) : 0), cycle = anchor.cycle;
+      // Worklet anchors refer to the end of a processed block. Interpolation
+      // back to currentTime avoids a quantum-sized jump in UI and note timing.
+      if (playing && elapsed < 0 && !anchor.countIn) beat = anchor.beat + elapsed;
+      if (loopEnabled && cycle > 0 && beat < loopStart) { beat += span; cycle--; }
+      if (playing && loopEnabled && beat >= loopEnd) { const wraps = 1 + Math.floor((beat - loopEnd) / span); beat = loopStart + (beat - loopEnd) % span; cycle += wraps; }
+      if (!loopEnabled && !this.recordingBusy) beat = Math.min(endBeat, beat);
+      beat = Math.max(0, beat);
+      return { beat, absoluteBeat: beat + cycle * span, cycle, contextTime: atTime, anchorTime: anchor.time, anchorBeat: anchor.beat, tempo, playing, revision: this._transportEpoch, loopEnabled, loopStart, loopEnd, endBeat, countInBeatsRemaining: countIn, mode: this.mode };
     }
     get recordingBusy() { return Boolean(this.isRecording || this._recordPreparing || this._micPending || this._stopPromise || this._chunks.size); }
     _updateRecordHold() { this._send({ type: 'recordHold', value: this.recordingBusy }); }
     _clampBeat(beat) { return Math.max(0, Math.min(Math.max(1, Math.min(64, Number(this.state.lengthBars) || 4)) * 4, Number(beat) || 0)); }
-    setState(state) { this.state = state; this._send({ type: 'state', state: dspState(state) }); }
+    setState(state) {
+      const old = this._clockConfiguration, changedClock = ['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].some(key => old?.[key] !== state?.[key]);
+      if (changedClock) this._meters = { ...this._meters, beat: this.getTransport().beat };
+      this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
+      this.state = state; this._send({ type: 'state', state: dspState(state), ...(changedClock ? { epoch: ++this._transportEpoch } : {}) });
+    }
     setAssets(assets) { this.assets = assets instanceof Map ? new Map(assets) : new Map(Object.entries(assets || {})); this._syncAssets(); }
     _syncAssets() {
       if (!this.node || this.mode === 'idle') return;
@@ -505,7 +545,7 @@
       await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
       this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
     }
-    stop() { this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters.playing = false; this._send({ type: 'stop' }); }
+    stop() { this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
       if (this.recordingBusy) throw Error('Finish or cancel the current take before moving the playhead.');
       this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
@@ -616,7 +656,7 @@
       }
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
     }
-    async dispose() { this.panic(); this.node?.disconnect(); for (const input of this.inputs) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this._init = null; this.mode = 'idle'; }
+    async dispose() { this.panic(); this._transportListeners.clear(); this.node?.disconnect(); for (const input of this.inputs) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this._init = null; this.mode = 'idle'; }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
   window.LoomAudio = LoomAudio;

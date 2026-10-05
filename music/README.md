@@ -32,11 +32,22 @@ Every instrument and LOOM has a **Samples** panel. In **Send audio**, render a h
 
 FABLE receives up to 120 seconds of stereo audio into a new or existing playable sample zone, with up to 64 zones and a 64 MiB decoded audio budget. FORM receives audio into any granular layer (2 seconds), MIRE into any of four source exciters (10 seconds), SPOOL into any deck (30 seconds), and RAVEL into its slicing engine (20 seconds). HAZE analyzes up to 20 seconds into an editable spectral score. LOOM appends up to 120 seconds as a clip on any track. GRAIN, TINE, and BOWER contribute synthesized sounds to the library. See [the exchange contract](../shared/README.md) for future apps and portable packet details.
 
+## Sharing musical parts
+
+Every instrument and LOOM also has a **Patterns** panel. Share editable notes,
+timing, durations, velocities, probability, and named voices through a separate
+browser library or portable JSON. Receivers preserve the exact musical part and
+require explicit voice mapping and replacement where needed. LOOM receives parts
+as note clips with a piano roll, plays them through native instrument synthesis,
+and exports them alongside audio. Live instruments follow the studio’s shared
+bar/beat clock. Print retains the source patch and pattern for **Edit source**,
+**Update audio**, or **Restore notes**. See [the pattern contract](../shared/PATTERN-CONTRACT.md).
+
 ## Editing and adding apps
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
 
-LOOM 1.4 is an eight-track browser DAW with audio arrangement, all nine Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the nine instruments for offline use, including FABLE's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
+LOOM 1.5 is an eight-track browser DAW with audio and note arrangement, all nine Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the nine instruments for offline use, including FABLE's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
 GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 

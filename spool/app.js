@@ -423,7 +423,12 @@
   document.addEventListener('keyup', e => { const id = 'k' + e.key.toLowerCase(), note = heldNotes.get(id); if (note != null) releaseNote(note, id); });
   window.addEventListener('blur', () => { releaseNotes(); releaseBrake(); releaseReverse(); gestureEnd(); }); document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseNotes(); releaseBrake(); releaseReverse(); } });
   if (location.protocol === 'file:') { $('music-home').href = 'https://calebhaines.github.io/sidequest-prototypes/music/'; $('download-html').href = 'https://calebhaines.github.io/sidequest-prototypes/music/spool/index.html'; $('download-source').href = 'https://calebhaines.github.io/sidequest-prototypes/music/spool/SPOOL-source.zip'; }
-  window.SpoolApp = Object.freeze({ get state() { return snapshot(); }, get engine() { return engine; }, getState: snapshot, loadState(next) { installState(next); }, selectDeck, importAudio, exportAudio,
+  window.SpoolApp = Object.freeze({ get state() { return snapshot(); }, get engine() { return engine; }, getState: snapshot, loadState(next) { installState(next); },
+    applyMusicLabPattern(overlay) {
+      if (destructiveBlocked()) throw new Error('Finish the current recording or import before replacing the pattern.');
+      const next = snapshot(); if (overlay) next.musicLabPattern = JSON.parse(JSON.stringify(overlay)); else delete next.musicLabPattern;
+      const validated = S.normalize(next); remember(); installState(validated);
+    }, selectDeck, importAudio, exportAudio,
     audioExport: { scopes: [{ id: 'mix', label: 'All decks / with master effects' }, { id: 'deck', label: 'Selected deck / tape processing', usesBars: false }, { id: 'source', label: 'Selected deck source / unprocessed', usesBars: false }], defaultBars: 1, maxBars: 16 },
     get audioImport() { return { maxSeconds: 30, decks: 4, targets: state.decks.map((deck, id) => ({ id, name: 'Deck ' + String.fromCharCode(65 + id), occupied: !!state.assets[id], assetName: state.assets[id]?.name || '' })) }; }
   });

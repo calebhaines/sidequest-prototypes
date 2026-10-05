@@ -934,11 +934,55 @@ export function renderPattern(
   return [left, right];
 }
 
+export type NativePatternEvent = { voice: number; at: number; velocity: number; pitch?: number; duration?: number };
+/** Arbitrary beat clips use FORM's native synthesis and pan/effect processing. */
+export async function renderNativeEvents(
+  sounds: SoundParams[], events: NativePatternEvent[],
+  options: { durationSeconds: number; tailSeconds?: number; signal?: AbortSignal; master?: number },
+): Promise<{ pcm: Float32Array; sampleRate: number; channels: number; duration: number }> {
+  const check = () => options.signal?.throwIfAborted();
+  check();
+  const seconds = options.durationSeconds, tail = options.tailSeconds ?? 3;
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 600 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192)
+    throw new Error("Invalid FORM pattern render bounds.");
+  const snapshot = sounds.map(cloneParams), sampleRate = 48000;
+  const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
+  const pcm = new Float32Array(frames * 2), cache = new Map<string, Float32Array>();
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index], sound = snapshot[event.voice];
+    if (!sound || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1)
+      throw new Error("Invalid FORM scheduled note.");
+    const variation = hasHitRandom(sound) ? index % RANDOM_VARIATIONS : 0;
+    const key = `${event.voice}:${variation}`;
+    let samples = cache.get(key);
+    if (!samples) { samples = renderSound(hitVariation(sound, variation), sampleRate); cache.set(key, samples); }
+    const rate = Math.pow(2, clamp(finite(event.pitch ?? 0, 0), -48, 48) / 12);
+    const offset = Math.round(event.at * sampleRate), count = Math.min(frames - offset, Math.ceil(samples.length / rate));
+    const pan = clamp(sound.mix.pan, -1, 1), gain = event.velocity * (options.master ?? .72);
+    const left = Math.cos((pan + 1) * Math.PI / 4) * gain, right = Math.sin((pan + 1) * Math.PI / 4) * gain;
+    for (let frame = 0; frame < count; frame++) {
+      const position = frame * rate, at = Math.floor(position), mix = position - at;
+      const value = (samples[at] || 0) * (1 - mix) + (samples[at + 1] || 0) * mix;
+      pcm[(offset + frame) * 2] += value * left; pcm[(offset + frame) * 2 + 1] += value * right;
+    }
+    if (index % 16 === 0) { check(); await new Promise<void>(resolve => setTimeout(resolve, 0)); }
+  }
+  let peak = 1; for (const value of pcm) peak = Math.max(peak, Math.abs(value));
+  const trim = peak > 1 ? .98 / peak : 1, fade = Math.min(1440, Math.floor(frames / 2));
+  for (let frame = 0; frame < frames; frame++) {
+    const level = trim * Math.min(1, (frames - frame - 1) / fade);
+    pcm[frame * 2] *= level; pcm[frame * 2 + 1] *= level;
+  }
+  check(); return { pcm, sampleRate, channels: 2, duration: frames / sampleRate };
+}
+
 /** Audio starts on a user gesture and is kept behind a master safety compressor. */
 export class AudioEngine {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private sources = new Set<AudioBufferSourceNode>();
+  private sourceNotes = new Map<AudioBufferSourceNode, { scope: string; gain: GainNode; start: number; velocity: number }>();
+  private sourceCuts = new Map<string, number>();
   private cache = new Map<string, AudioBuffer>();
   private epoch = 0;
   private masterVolume = 0.72;
@@ -1019,24 +1063,34 @@ export class AudioEngine {
     }
   }
 
-  async play(params: SoundParams, velocity = 1, when?: number): Promise<void> {
+  async play(params: SoundParams, velocity = 1, when?: number, pitch = 0): Promise<void> {
     const epoch = this.epoch;
     await this.resume();
     if (epoch !== this.epoch || !this.context || !this.master) return;
+    this.schedulePrepared(params, velocity, when, pitch);
+  }
+
+  schedulePrepared(params: SoundParams, velocity = 1, when?: number, pitch = 0, scope = "native"): void {
+    if (!this.context || !this.master) throw new Error("Prepare FORM before scheduling notes.");
+    const at = Math.max(this.context.currentTime, when ?? this.context.currentTime);
+    if (at >= (this.sourceCuts.get(scope) ?? Infinity)) return;
     let p = sanitizeParams(params);
     if (hasHitRandom(p))
       p = hitVariation(p, Math.floor(Math.random() * RANDOM_VARIATIONS));
     const buffer = this.cachedBuffer(p);
     const source = this.context.createBufferSource();
     source.buffer = buffer;
+    source.playbackRate.value = Math.pow(2, clamp(finite(pitch, 0), -48, 48) / 12);
     const gain = this.context.createGain();
     gain.gain.value = clamp(finite(velocity, 1), 0, 1);
     const pan = this.context.createStereoPanner();
     pan.pan.value = p.mix.pan;
     source.connect(gain).connect(pan).connect(this.master);
     this.sources.add(source);
+    this.sourceNotes.set(source, { scope, gain, start: at, velocity: gain.gain.value });
     source.onended = () => {
       this.sources.delete(source);
+      this.sourceNotes.delete(source);
       source.disconnect();
       gain.disconnect();
       pan.disconnect();
@@ -1056,8 +1110,25 @@ export class AudioEngine {
       );
   }
 
+  cancelNativeNotes({ source, when }: { source?: string; when?: number } = {}): void {
+    if (!this.context) return;
+    const at = Math.max(this.context.currentTime, when ?? this.context.currentTime);
+    if (!Number.isFinite(at)) throw new Error("Provide a valid cancellation timestamp.");
+    if (source === undefined) this.sourceCuts.clear();
+    else if (when !== undefined && at > this.context.currentTime) this.sourceCuts.set(source, Math.min(this.sourceCuts.get(source) ?? Infinity, at));
+    else this.sourceCuts.delete(source);
+    for (const [node, note] of this.sourceNotes) {
+      if (source !== undefined && note.scope !== source) continue;
+      note.gain.gain.cancelScheduledValues(at);
+      note.gain.gain.setValueAtTime(note.start >= at ? 0 : note.velocity, at);
+      note.gain.gain.linearRampToValueAtTime(0, at + .008);
+      try { node.stop(at + .009); } catch { /* Already ended. */ }
+    }
+  }
+
   stopAll(): void {
     this.epoch++;
+    this.sourceCuts.clear();
     for (const source of this.sources) {
       try {
         source.stop();
@@ -1066,6 +1137,7 @@ export class AudioEngine {
       }
     }
     this.sources.clear();
+    this.sourceNotes.clear();
   }
 
   async close(): Promise<void> {

@@ -149,10 +149,12 @@
     const publicAPI = Object.freeze({
       version: 1, trackId: record.trackId,
       get tempo() { return tempo; },
+      get transport() { requireActive(); return clone(record.getTransport?.() || { beat: 0, tempo, playing: false, revision: 0 }); },
       get context() { if (!defaultContext || defaultContext.state === 'closed') defaultContext = createContext(); return defaultContext; },
       get destination() { return this.context.destination; },
       createAudioContext: createContext,
       audioLibrary: Object.freeze({get persistent(){return parent.MusicLabExchange?.persistent ?? false;},...Object.fromEntries(['list','get','save','remove'].map(method=>[method,(...args)=>{requireActive();const library=parent.MusicLabExchange;if(!library?.[method])throw Error('The shared sample library is unavailable.');return library[method](...args);}]))}),
+      patternLibrary: Object.freeze({get persistent(){return parent.MusicLabPatterns?.persistent ?? false;},...Object.fromEntries(['list','get','save','remove'].map(method=>[method,(...args)=>{requireActive();const library=parent.MusicLabPatterns;if(!library?.[method])throw Error('The shared pattern library is unavailable.');return library[method](...args);}]))}),
       registerInstrument(value) { if (!value || typeof value !== 'object') throw new TypeError('Register an instrument adapter object.'); adapter = value; notify('registered', null); return publicAPI; },
       notifyStateChange() { notify('change', null); },
       status(message) { notify('status', String(message)); }

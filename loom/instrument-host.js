@@ -15,6 +15,12 @@
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
   const cancelledError = () => new DOMException('This instrument operation was cancelled.', 'AbortError');
+  function withAbort(value, signals) {
+    const active = signals.filter(Boolean); if (active.some(signal => signal.aborted)) return Promise.reject(cancelledError());
+    let remove = () => {};
+    const canceled = new Promise((_, reject) => { const abort = () => reject(cancelledError()); active.forEach(signal => signal.addEventListener('abort', abort, { once: true })); remove = () => active.forEach(signal => signal.removeEventListener('abort', abort)); });
+    return Promise.race([Promise.resolve(value), canceled]).finally(remove);
+  }
 
   function instrumentHTML(html, key, baseURL, id) {
     const document = new DOMParser().parseFromString(html, 'text/html');
@@ -36,11 +42,12 @@
   }
 
   class LoomInstrumentHost {
-    constructor({ context, getTrackInput, onStatus, onStateChange, baseURL, embedded } = {}) {
+    constructor({ context, getTrackInput, transport, onStatus, onStateChange, baseURL, embedded } = {}) {
       if (typeof getTrackInput !== 'function') throw new TypeError('Provide getTrackInput(trackId).');
       this.context = context; this.getTrackInput = getTrackInput; this.onStatus = onStatus || (() => {}); this.onStateChange = onStateChange || (() => {});
       this.baseURL = baseURL || new URL('../', document.baseURI).href;
       this.embedded = embedded || global.LoomEmbeddedInstruments || {};
+      this.transport = typeof transport === 'function' ? transport : () => ({ beat: 0, tempo: this.tempo, when: this._context()?.currentTime || 0, playing: false, revision: 0 });
       this.records = new Map(); this.generation = 0; this.tempo = 120; this.disposed = false;
       global.__LoomHostRegistry ||= Object.create(null);
     }
@@ -73,6 +80,7 @@
       const record = { key, trackId, id, definition, iframe, descriptor: { ...descriptor }, storage, active: true, loaded: false, soundEnabled: false, tempo: this.tempo, abortController: new AbortController(), operation: 0 };
       record.getContext = () => { if (!this._current(record)) throw cancelledError(); return this._context(); };
       record.getInput = () => { if (!this._current(record)) throw cancelledError(); return this.getTrackInput(trackId); };
+      record.getTransport = () => { if (!this._current(record)) throw cancelledError(); return this.transport(); };
       record.notify = (type, value) => this._notify(record, type, value);
       this.records.set(trackId, record); global.__LoomHostRegistry[key] = record;
       const ready = this._load(record, descriptor || {}, state);
@@ -93,6 +101,7 @@
           html = await response.text();
         }
         if (typeof html !== 'string' || !html.trim() || html.length > 32 * 1024 * 1024) throw new Error('Choose an instrument HTML file smaller than 32 MB.');
+        const expectsPattern = html.includes('MusicLabPatternInstrument');
         if (!this._current(record)) throw cancelledError();
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads allow-modals');
         iframe.setAttribute('allow', 'autoplay; microphone');
@@ -102,11 +111,13 @@
         while (performance.now() < deadline) {
           if (!this._current(record)) throw cancelledError();
           const child = iframe.contentWindow;
-          if (child?.__LoomBridge && (child.__LoomBridge.adapter || (definition && child[definition.facade]) || (!definition && child.document.readyState === 'complete'))) break;
+          const appReady = child?.__LoomBridge && (child.__LoomBridge.adapter || (definition && child[definition.facade]) || (!definition && child.document.readyState === 'complete'));
+          if (appReady && (!expectsPattern || child.MusicLabPatternInstrument)) break;
           await delay(35);
         }
         if (!this._current(record)) throw cancelledError();
         if (!iframe.contentWindow?.__LoomBridge || (definition && !iframe.contentWindow[definition.facade] && !iframe.contentWindow.__LoomBridge.adapter)) throw new Error('The instrument did not become ready.');
+        if (expectsPattern && !iframe.contentWindow.MusicLabPatternInstrument) throw new Error('The instrument pattern adapter did not become ready.');
         record.loaded = true;
         if (state) await this._restore(record, state);
         await this._tempo(record, this.tempo);
@@ -118,13 +129,73 @@
       }
     }
     _parts(record) { const child = record.iframe.contentWindow; return { child, bridge: child?.__LoomBridge, app: record.definition ? child?.[record.definition.facade] : null }; }
+    getPatternAdapter(trackId) {
+      const record = this.records.get(trackId); if (!record?.loaded || !this._current(record)) return null;
+      const { child, bridge } = this._parts(record);
+      return child?.MusicLabPatternInstrument || (bridge?.adapter?.scheduleNote || bridge?.adapter?.exportPattern || bridge?.adapter?.transport ? bridge.adapter : null);
+    }
     capabilities(trackId) {
       const record = this.records.get(trackId); if (!record?.loaded) return { ready: false };
-      const { bridge, app } = this._parts(record), adapter = bridge?.adapter;
+      const { bridge, app } = this._parts(record), adapter = bridge?.adapter, patterns = this.getPatternAdapter(trackId);
       const importer = adapter?.importAudio ? adapter : app?.importAudio ? app : null;
       return { ready: true, transport: !!(adapter?.start || app), state: !!(adapter?.getState || app?.getState || bridge), tempo: !!(adapter?.tempo || app), custom: !record.definition,
-        importAudio: !!importer, audioImport: importer?.audioImport ? clone(importer.audioImport) : null, exportAudio: !!(adapter?.exportAudio || app?.exportAudio), audioExport: clone(adapter?.audioExport || app?.audioExport || null) };
+        importAudio: !!importer, audioImport: importer?.audioImport ? clone(importer.audioImport) : null, exportAudio: !!(adapter?.exportAudio || app?.exportAudio), audioExport: clone(adapter?.audioExport || app?.audioExport || null),
+        notes: patterns?.scheduleNote && patterns?.notes ? clone(patterns.notes) : null, patternImport: patterns?.importPattern ? clone(patterns.patternImport || {}) : null, patternExport: patterns?.exportPattern ? clone(patterns.patternExport || {}) : null, renderPattern: typeof patterns?.renderPattern === 'function' };
     }
+    async _patternReady(trackId, signal) {
+      if (signal?.aborted) throw cancelledError();
+      const record = this.records.get(trackId); if (!record) throw Error('Load an instrument on this track first.');
+      await record.ready;
+      if (!this._current(record) || signal?.aborted) throw cancelledError();
+      const adapter = this.getPatternAdapter(trackId); if (!adapter) throw Error('This instrument does not support Music Lab patterns.');
+      return { record, adapter };
+    }
+    async exportPattern(trackId, options = {}) {
+      const { record, adapter } = await this._patternReady(trackId, options.signal);
+      if (typeof adapter.exportPattern !== 'function') throw Error('This instrument cannot export patterns.');
+      const value = await adapter.exportPattern(options);
+      if (!this._current(record) || options.signal?.aborted) throw cancelledError();
+      return global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(clone(value)) : clone(value);
+    }
+    async importPattern(trackId, pattern, options = {}) {
+      const normalized = global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(clone(pattern)) : clone(pattern);
+      const { record, adapter } = await this._patternReady(trackId, options.signal);
+      if (typeof adapter.importPattern !== 'function') throw Error('This instrument cannot receive patterns.');
+      if (record.patternImporting) throw Error('A pattern transfer is already in progress on this track.');
+      record.patternImporting = true;
+      try {
+        const value = await adapter.importPattern({ pattern: normalized, options: { ...options }, signal: options.signal });
+        if (!this._current(record) || options.signal?.aborted) throw cancelledError();
+        if (value === false) throw Error('The receiving instrument declined this pattern.');
+        this._notify(record, 'change', null); return value === undefined ? true : value;
+      } finally { record.patternImporting = false; }
+    }
+    scheduleNote(trackId, event) {
+      const record = this.records.get(trackId), adapter = this.getPatternAdapter(trackId);
+      if (!record || !adapter?.scheduleNote || !this._current(record)) return false;
+      for (const key of ['pitch', 'velocity', 'when', 'durationSeconds']) if (!Number.isFinite(event?.[key])) throw TypeError('A scheduled note contains invalid ' + key + '.');
+      if (!Number.isInteger(event.pitch) || event.pitch < 0 || event.pitch > 127 || event.velocity < 0 || event.velocity > 1 || event.when < 0 || event.durationSeconds <= 0 || event.durationSeconds > 768) throw RangeError('A scheduled note is outside the supported range.');
+      this._parts(record).bridge?.mute(false);
+      return adapter.scheduleNote({ ...event });
+    }
+    cancelNotes(trackId, options = {}) {
+      const adapter = this.getPatternAdapter(trackId); if (!adapter?.cancelNotes) return false;
+      return adapter.cancelNotes(options);
+    }
+    async renderPattern(trackId, request = {}) {
+      const { record, adapter } = await this._patternReady(trackId, request.signal);
+      if (typeof adapter.renderPattern !== 'function') throw Error('This instrument cannot render note patterns.');
+      if (record.patternRendering) throw Error('This instrument is already rendering a pattern.');
+      const pattern = global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(clone(request.pattern)) : clone(request.pattern);
+      record.patternRendering = true;
+      try { const value = await withAbort(adapter.renderPattern({ ...request, pattern }), [request.signal, record.abortController.signal]); if (!this._current(record) || request.signal?.aborted) throw cancelledError(); return value; }
+      finally { record.patternRendering = false; }
+    }
+    transportInstrument(trackId, clock) {
+      const adapter = this.getPatternAdapter(trackId); if (!adapter?.transport) return false;
+      return adapter.transport({ ...clock, when: clock.when ?? clock.contextTime ?? this._context()?.currentTime ?? 0 });
+    }
+    setClockDriven(trackId, value) { const record = this.records.get(trackId); if (record) record.externalClock = value === true; }
     async exportAudio(trackId, options = {}) {
       if(options.signal?.aborted)throw cancelledError();
       const record=this.records.get(trackId);if(!record)throw Error('Load an instrument on this track first.');await record.ready;if(!this._current(record))throw cancelledError();
@@ -164,14 +235,17 @@
       if (command !== 'stop' && command !== 'panic') await record.ready;
       if (!this._current(record) || !record.loaded || operation !== record.operation) return false;
       const { child, bridge, app } = this._parts(record);
+      if (command === 'start' && record.externalClock) { bridge?.mute(false); return true; }
       if (command === 'tempo') return this._tempo(record, typeof payload === 'number' ? payload : payload?.tempo);
       if (command === 'prepare') {
         if (bridge.adapter?.prepare) await bridge.command('prepare', payload);
         else if (app?.prepare) await app.prepare();
         else await app?.engine?.init?.();
+        await this.getPatternAdapter(trackId)?.prepare?.();
         return this._current(record) && operation === record.operation;
       }
-      if (command === 'panic') { bridge.mute(true); bridge.releaseMedia(); }
+      if (command === 'panic' || command === 'stop') { this.cancelNotes(trackId, { source: 'loom' }); this.cancelNotes(trackId, { source: 'loom-live' }); }
+      if (command === 'panic') { bridge.mute(true); bridge.releaseMedia(); this.getPatternAdapter(trackId)?.panic?.(); }
       if (bridge.adapter?.[command] || (command === 'start' && bridge.adapter?.play)) {
         if (command === 'start') bridge.mute(false);
         return bridge.command(command === 'start' && !bridge.adapter.start ? 'play' : command, payload);
@@ -246,6 +320,7 @@
     unload(trackId) {
       const record = this.records.get(trackId); if (!record) return;
       const { bridge, app } = this._parts(record);
+      try { this.cancelNotes(trackId, { source: 'loom' }); this.cancelNotes(trackId, { source: 'loom-live' }); this.getPatternAdapter(trackId)?.panic?.(); } catch (_) {}
       try { app?.stop?.(); app?.engine?.panic?.(); Promise.resolve(bridge?.adapter?.panic?.()).catch(() => {}); } catch (_) {}
       record.active = false; record.operation++; record.abortController.abort(); clearTimeout(record.changeTimer);
       // Closing a child facade only disconnects that child's nodes, never the DAW context.

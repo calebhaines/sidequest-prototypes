@@ -17,6 +17,38 @@ audition lets you try sounds; Live makes the app follow the studio transport.
 Arm tracks and record their actual output into audio clips. Preparation loads
 the instrument’s engine before recording starts.
 
+Choose **+ Note clip** to write a part directly in the piano roll. Click to add
+notes, drag to move, and drag their ends to resize. Select several notes to move
+or quantize them together; edit velocity, probability, and destination voices.
+Note clips play the actual instrument through the track’s mixer and four inserts,
+including when Live is off. Their time rate changes timing without changing pitch;
+transpose changes pitch separately. Use note velocities and the track mixer for
+dynamics; printed audio adds clip level and fades. Drum and spectral parts retain
+named voices.
+Choose **Pan** to drag a longer score horizontally or vertically, including on
+a touchscreen. P toggles Pan while the piano roll is focused; Escape returns to Draw.
+
+Every app has a **Patterns** panel alongside Samples. Send an editable native
+sequence to the shared browser library, receive it in another app, or append it
+as a LOOM note clip. Map voices explicitly when instruments differ. Portable
+pattern JSON carries notes between devices and standalone HTML files. Imported
+parts retain their exact timing, durations, velocity, and probability. Choose
+**Use native sequence** in an instrument to return to its own sequencer.
+
+LOOM supplies a shared musical clock. Live instrument patterns follow its tempo,
+position, and loops; pattern changes enter at the next bar or loop boundary. Seeks cancel pending
+notes and restore held notes at the new position. Standalone apps keep independent
+transport controls.
+
+**Print** turns a note clip into audio while saving its complete native patch,
+samples, voice mapping, and pattern. **Edit source** reopens that patch and its
+notes; **Update audio** replaces the source while preserving placement, trims,
+gain, fades, and track effects. **Restore notes** makes the part editable again.
+After revising the instrument’s own sequencer, choose **Use instrument pattern**
+to copy that sequence into the source notes before updating.
+These sources travel inside projects and participate in Undo/Redo. A printed
+clip’s audio remains available while its source is being revised.
+
 Arrange clips by moving, trimming, splitting, duplicating, reversing, or looping
 them. Source trim, gain, fades, and speed are nondestructive. Speed also changes
 pitch. Snap and zoom make precise edits easier; the clip inspector offers
@@ -136,15 +168,19 @@ effects settings, native instrument states, and uploaded future-app HTML.
 Open project restores the session. Undo and Redo preserve editing history;
 downloaded projects remain available when browser storage is denied or full.
 
-Mix and track WAV exports render arranged audio through the same DSP as live
+Mix and track WAV exports render arranged audio and note clips through the same DSP as live
 playback, at 48 kHz, 16-bit stereo. Choose a render range and an effect tail;
 long feedback tails can continue beyond the chosen render. Progress and Cancel
-keep rendering manageable. Record live instrument parts into clips before
-exporting an arrangement.
+keep rendering manageable. Native note synthesis is rendered first, then passes
+through the studio mixer, automation, and inserts. Live performances outside
+note clips should be recorded before exporting.
 
 LOOM has eight fixed tracks, four slots each, up to 64 bars, and up to 128 clips
 per track. Each imported or recorded source holds up to 120 seconds. The source
-audio budget is 64 MB of PCM; native app snapshots have a separate 96 MB budget.
+audio budget is 64 MB of PCM; native app snapshots and saved sources share a
+separate 96 MB budget. A pattern can hold 4,096 notes, 64 voices, and 256 beats.
+Printing a single source is limited to 120 seconds; split longer parts or loop a
+shorter note clip. Note clips can fill the full arrangement.
 Microphone monitoring is optional and starts only after permission is granted.
 Panic stops the studio and instruments, cancels pending audio, clears effect
 buffers, discards unfinished takes, and releases microphone tracks.
@@ -164,6 +200,8 @@ Run `npm run check:loom` for the dependency-free Node engine checks. These verif
 project compatibility, automation in playback and export, sample-exact
 count-in/punch recording, and cropped stereo transfers with clip edits and limits.
 From an extracted archive, run `node checks.cjs`.
+Run `npm run check:patterns` and `npm run check:loom-notes` for portable-pattern
+and reversible-source checks. Extracted archives include `note-checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all nine standalone instrument pages in
@@ -172,4 +210,4 @@ source projects are available from Music Lab.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.4.0.
+font license notices. Version 1.5.0.

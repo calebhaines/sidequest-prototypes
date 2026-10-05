@@ -37,6 +37,12 @@
   function validateProject(data) {
     if (!data || data.format !== 'grain-project' || ![1, 2].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a GRAIN project file.');
     const s = data.state;
+    if (s.musicLabPattern !== undefined) {
+      const overlay = s.musicLabPattern;
+      if (!overlay || !window.MusicLabPatternSchema || !overlay.voiceMap || typeof overlay.voiceMap !== 'object' || Array.isArray(overlay.voiceMap)) throw new Error('Invalid shared pattern.');
+      const pattern = window.MusicLabPatternSchema.normalize(overlay.pattern);
+      if (pattern.voices.some(voice => !/^voice-[0-7]$/.test(overlay.voiceMap[voice.id]))) throw new Error('Invalid shared voice mapping.');
+    }
     if (typeof s.name !== 'string' || !s.name.trim() || s.name.length > 80) throw new Error('The project needs a valid name.');
     const isNumber = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
     if (!isNumber(s.bpm, 40, 240) || !isNumber(s.swing, 0, .6) || !['master', 'drive', 'space'].every((key) => isNumber(s[key], 0, 1))) throw new Error('The project contains invalid sound settings.');
@@ -446,5 +452,10 @@
   voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); persist(); }, audition: () => audition(state.tracks[selected]) });
   renderAll(); drawHero(0); requestAnimationFrame(animate);
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+    applyMusicLabPattern(overlay) {
+      const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
+      validateProject(next); remember(); stop(); restore(next); renderAll(); persist();
+    },
+    loadState(data) { const next = validateProject(clone(data)); remember(); stop(); restore(next); renderAll(); persist(); },
     audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
 }());

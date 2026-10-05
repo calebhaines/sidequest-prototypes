@@ -77,7 +77,7 @@
     class Core {
       constructor(sampleRate,state,seed=0x53504f4f) {
         this.sr=clamp(sampleRate,8000,192000);this.frame=0;this.transportFrames=0;this.running=false;this.seed=seed>>>0||1;
-        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.capture=null;this.completed=[];
+        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.patternMode=false;this.noteSequence=0;this.deckGates=Array(4).fill(null);this.sourceCuts=new Map();this.capture=null;this.completed=[];
         this.micEnabled=false;this.peak=0;this.rms=0;this.rmsLeft=0;this.rmsRight=0;this.inputRms=0;this.limiter=1;this.volume=.72;this.braking=false;this.brakeRate=1;
         this.echo=[new Float32Array(Math.ceil(this.sr*4)+4),new Float32Array(Math.ceil(this.sr*4)+4)];this.echoWrite=0;this.echoLP=[0,0];this.echoDelay=this.sr*.375;
         this.room=[.0297,.0371,.0411,.0437,.0307,.0383,.0423,.0449].map(s=>({pcm:new Float32Array(Math.round(s*this.sr)),index:0,low:0}));
@@ -85,7 +85,7 @@
       }
       random(){let x=this.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.seed=x>>>0;return this.seed/4294967296;}
       setState(state) {
-        this.state=state||{};this.tempo=clamp(state.tempo||92,40,200);
+        this.state=state||{};this.tempo=this.followingClock??clamp(state.tempo||92,40,200);
         this.decks.forEach((d,i)=>{const raw=(state.decks||[])[i]||{};const t=Object.assign({},d.target,raw);delete t.asset;
           ['level','pan','rate','start','end','phase','beats','seam','tone','highpass','saturation','wow','flutter','wear','hiss','dropouts'].forEach(k=>{t[k]=finite(t[k],d.target[k]);});
           t.level=clamp(t.level,0,1.5);t.pan=clamp(t.pan,-1,1);t.start=clamp(t.start,0,.999);t.end=clamp(t.end,t.start+.002,1);t.start=Math.min(t.start,t.end-.002);t.rate=clamp(t.rate,.25,2);t.phase=clamp(t.phase,0,1);t.beats=clamp(t.beats,1,64);t.seam=clamp(t.seam,0,250);
@@ -98,11 +98,41 @@
       }
       setSample(index,pcm,sampleRate,preserve=false){if(index<0||index>3)return;this.decks[index].setAsset(pcm?.length?{pcm,sampleRate:clamp(sampleRate,8000,96000)}:null,preserve);if(!preserve)this.decks[index].rewind();}
       start(rewind=false){if(rewind)this.rewind();this.running=true;}
-      stop(){this.running=false;this.voices.forEach(v=>v.releasing=true);}
+      stop(){this.running=false;this.followingClock=null;this.events=[];this.sourceCuts.clear();this.patternMode=false;this.deckGates.fill(null);this.voices.forEach(v=>v.releasing=true);}
       rewind(){this.transportFrames=0;this.decks.forEach(d=>d.rewind());}
       retrigger(index){this.decks[index]?.transition();this.decks[index]?.rewind();}
       seek(index,ratio){const d=this.decks[index];if(d){d.transition();d.position=clamp(ratio,0,1)*d.region().length;}}
       panic(){this.stop();this.voices=[];this.echo.forEach(x=>x.fill(0));this.echoLP=[0,0];this.room.forEach(x=>{x.pcm.fill(0);x.low=0;});this.decks.forEach(x=>{x.clear();x.crossfade=null;x.gain=0;});if(this.capture)this.cancelCapture();this.micEnabled=false;this.volume=0;this.braking=false;this.brakeRate=1;}
+      queueDeck(index, options, frame) {
+        if(frame>=(this.sourceCuts.get(options.source)??Infinity))return;
+        const token=++this.noteSequence;this.patternMode=true;
+        this.events.push({type:'deckOn',index,options,source:options.source,frame,token},{type:'deckOff',index,source:options.source,frame:frame+Math.max(1,Math.round(options.duration*this.sr)),token});
+        this.events.sort((a,b)=>a.frame-b.frame);return token;
+      }
+      clearPatternNotes(source,frame=this.frame,future=false){
+        if(source===undefined){this.events=[];this.sourceCuts.clear();this.deckGates.fill(null);this.patternMode=false;this.running=false;return;}
+        const at=future?Math.min(this.sourceCuts.get(source)??Infinity,frame):frame;
+        if(future)this.sourceCuts.set(source,at);else this.sourceCuts.delete(source);
+        this.events=this.events.filter(event=>event.source!==source||future&&event.frame<at);
+        this.events.push({type:'cancel',source,frame:at});this.events.sort((a,b)=>a.frame-b.frame);
+      }
+      clearClockEvents(){this.events=this.events.filter(event=>event.type!=='clock');}
+      queueClock(beat,tempo,playing,frame){this.events.push({type:'clock',beat,tempo,playing,frame});this.events.sort((a,b)=>a.frame-b.frame);}
+      clockSeek(beat,tempo,playing){
+        this.tempo=clamp(tempo,20,400);this.followingClock=playing?this.tempo:null;this.transportFrames=Math.max(0,beat)*60/this.tempo*this.sr;this.running=playing;
+        this.decks.forEach(d=>{d.transition();d.prepare(this.tempo,playing,this.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;d.position=wrap(d.target.phase*d.region().length+Math.max(0,beat)*60/this.tempo*(d.asset?.sampleRate||this.sr)*d.targetRate,d.region().length);});
+      }
+      applyEvent(event){
+        if(event.type==='cancel'){
+          this.decks.forEach(deck=>{if(this.deckGates[deck.index]?.source===event.source){this.deckGates[deck.index]=null;deck.targetGain=this.running&&this.followingClock!=null?clamp(deck.target.level,0,1.5):0;}});return;
+        }
+        if(event.type==='clock'){this.clockSeek(event.beat,event.tempo,event.playing);return;}
+        const deck=this.decks[event.index];if(!deck)return;
+        if(event.type==='deckOn'){this.deckGates[event.index]={source:event.source||'native',token:event.token,velocity:event.options.velocity,pitch:event.options.pitch||0};deck.transition();deck.rewind();}
+        else if(this.deckGates[event.index]?.token===event.token)this.deckGates[event.index]=null;
+        const continuous=this.running&&this.followingClock!=null;
+        deck.prepare(this.tempo,!!this.deckGates[event.index]||continuous,false,1);deck.targetGain*=this.deckGates[event.index]?.velocity??(continuous?1:0);deck.targetRate*=Math.pow(2,(this.deckGates[event.index]?.pitch||0)/12);if(event.type==='deckOn')deck.rate=deck.targetRate;
+      }
       noteOn(note,velocity=1){note=clamp(note,24,108)|0;this.noteOff(note);if(this.voices.length>=20)this.voices.shift();this.voices.push({note,frequency:midi(note),phase:0,age:0,envelope:0,releasing:false,velocity:clamp(velocity,.01,1),type:this.input.voice||'sine',low:0});}
       noteOff(note){this.voices.forEach(v=>{if(v.note===note)v.releasing=true;});}
       keyboardTick(){let out=0;for(let i=this.voices.length-1;i>=0;i--){const v=this.voices[i],t=v.age/this.sr;v.phase+=TAU*v.frequency/this.sr;
@@ -145,17 +175,18 @@
         this.completed.push(result);return result;
       }
       cancelCapture(){if(this.capture?.original)this.decks[this.capture.index].asset.pcm=this.capture.original;this.capture=null;}
-      processBlock(left,right,inputLeft,inputRight) {
-        const n=left.length,solo=this.decks.some(d=>d.target.solo);this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{d.prepare(this.tempo,this.running,solo,n);d.targetRate*=this.brakeRate;});
+      processBlock(left,right,inputLeft,inputRight,clockFrame=this.frame) {
+        const n=left.length,solo=this.decks.some(d=>d.target.solo);this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{const gate=this.deckGates[d.index],continuous=this.running&&this.followingClock!=null;d.prepare(this.tempo,this.patternMode?!!gate||continuous:this.running,solo,n);if(this.patternMode){d.targetGain*=gate?.velocity??(continuous?1:0);d.targetRate*=Math.pow(2,(gate?.pitch||0)/12);}d.targetRate*=this.brakeRate;});
         const m=this.master,volume=clamp(m.volume,0,1),width=clamp(m.width,0,2),echoMix=clamp(m.echo,0,1),space=clamp(m.space,0,1);
         const divisions={'1/16':.25,'1/8':.5,'3/16':.75,'1/4':1,'3/8':1.5,'1/2':2,'3/4':3,'1/1':4};
         const time=60/this.tempo*(divisions[m.echoDivision]||.5);
         const targetDelay=clamp(time*this.sr,1,this.echo[0].length-2),feedback=clamp(m.feedback,0,.88),roomFeedback=.81;
         for(let i=0;i<n;i++){
+          while(this.events.length&&this.events[0].frame<=clockFrame+i)this.applyEvent(this.events.shift());
           const key=this.keyboardTick(),micL=this.micEnabled?(inputLeft?.[i]||0):0,micR=this.micEnabled?(inputRight?.[i]??micL):0;
           const source=this.capture?.options.input||this.recordSettings.input;let il=(source==='mic'?micL:source==='both'?micL+key:key),ir=(source==='mic'?micR:source==='both'?micR+key:key);
           const positions=this.capture?.mode==='overdub'?this.decks[this.capture.index].position:0;
-          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
+          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),this.patternMode?!!this.deckGates[d.index]||this.running&&this.followingClock!=null:this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
           this.captureTick(il,ir,positions);
           if(this.input.monitor){l+=key+(this.micEnabled&&source!=='keys'?micL*.7:0);r+=key+(this.micEnabled&&source!=='keys'?micR*.7:0);}
           const mid=(l+r)*.5,side=(l-r)*.5*width;l=mid+side;r=mid-side;
@@ -265,6 +296,10 @@ class SpoolProcessor extends AudioWorkletProcessor {
   else if(m.type==='seek')this.core.seek(m.index,m.ratio);
   else if(m.type==='panic')this.core.panic();
   else if(m.type==='brake')this.core.braking=!!m.active;
+  else if(m.type==='scheduledDeck')this.core.queueDeck(m.index,m.options,m.frame);
+  else if(m.type==='clearNotes')this.core.clearPatternNotes(m.source,m.frame,m.future);
+  else if(m.type==='clearClocks')this.core.clearClockEvents();
+  else if(m.type==='clock')this.core.queueClock(m.beat,m.tempo,m.playing,m.frame);
   else if(m.type==='noteOn')this.core.noteOn(m.note,m.velocity);
   else if(m.type==='noteOff')this.core.noteOff(m.note);
   else if(m.type==='mic')this.core.micEnabled=!!m.enabled;
@@ -276,7 +311,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
  };}
  flushCaptures(){while(this.core.completed.length){const result=this.core.completed.shift(),pcm=new Float32Array(result.pcm);result.pcm=pcm;this.port.postMessage({type:'deckRecorded',token:this.captureToken,result},[pcm.buffer]);}}
  flushMix(){if(this.mixPosition){const pcm=this.mixData.slice(0,this.mixPosition);this.port.postMessage({type:'mixChunk',token:this.mixToken,pcm},[pcm.buffer]);this.mixPosition=0;}}
- process(inputs,outputs){const output=outputs[0];if(!output||output.length<2)return true;const l=output[0],r=output[1];this.core.processBlock(l,r,inputs[0]?.[0],inputs[0]?.[1]);this.flushCaptures();
+ process(inputs,outputs){const output=outputs[0];if(!output||output.length<2)return true;const l=output[0],r=output[1];this.core.processBlock(l,r,inputs[0]?.[0],inputs[0]?.[1],currentFrame);this.flushCaptures();
   if(this.mixRecording){for(let i=0;i<l.length;i++){this.mixData[this.mixPosition++]=l[i];this.mixData[this.mixPosition++]=r[i];this.mixFrames++;if(this.mixPosition===this.mixData.length)this.flushMix();if(this.mixFrames>=sampleRate*180){this.flushMix();this.mixRecording=false;this.port.postMessage({type:'mixStopped',token:this.mixToken,limit:true});break;}}}
   if((this.meterCounter+=l.length)>=sampleRate/30){this.meterCounter=0;this.port.postMessage({type:'meters',meters:this.core.meters()});}return true;
  }
@@ -298,13 +333,13 @@ class SpoolProcessor extends AudioWorkletProcessor {
         if(this.context.audioWorklet&&window.AudioWorkletNode){try{url=URL.createObjectURL(new Blob([processorSource()],{type:'text/javascript'}));await this.context.audioWorklet.addModule(url);if(this._disposed)throw new Error('The audio engine has been closed.');this.node=new AudioWorkletNode(this.context,'spool-tape',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2],channelCount:2,channelCountMode:'explicit',processorOptions:{state:stateForDSP(this.state)}});this.node.port.onmessage=event=>this._message(event.data);this.mode='worklet';}catch(error){this.node=null;}finally{if(url)URL.revokeObjectURL(url);}}
         if(this._disposed)throw new Error('The audio engine has been closed.');
         if(!this.node){this._core=new DSP(this.context.sampleRate,stateForDSP(this.state));this.node=this.context.createScriptProcessor(1024,2,2);this.mode='fallback';
-          this.node.onaudioprocess=event=>{const left=event.outputBuffer.getChannelData(0),right=event.outputBuffer.getChannelData(1);this._core.processBlock(left,right,event.inputBuffer.getChannelData(0),event.inputBuffer.numberOfChannels>1?event.inputBuffer.getChannelData(1):null);this._updateMeters(this._core.meters());this._drainCaptures();if(this.isRecording){const count=Math.min(left.length,Math.max(0,this.context.sampleRate*180-this._mixFrames)),pcm=new Float32Array(count*2);for(let i=0;i<count;i++){pcm[i*2]=left[i];pcm[i*2+1]=right[i];}this._mixChunks.push(pcm);this._mixFrames+=count;if(this._mixFrames>=this.context.sampleRate*180){this.isRecording=false;this.onRecordingLimit?.();}}};
+          this.node.onaudioprocess=event=>{const left=event.outputBuffer.getChannelData(0),right=event.outputBuffer.getChannelData(1);this._core.processBlock(left,right,event.inputBuffer.getChannelData(0),event.inputBuffer.numberOfChannels>1?event.inputBuffer.getChannelData(1):null,Math.round(event.playbackTime*this.context.sampleRate));this._updateMeters(this._core.meters());this._drainCaptures();if(this.isRecording){const count=Math.min(left.length,Math.max(0,this.context.sampleRate*180-this._mixFrames)),pcm=new Float32Array(count*2);for(let i=0;i<count;i++){pcm[i*2]=left[i];pcm[i*2+1]=right[i];}this._mixChunks.push(pcm);this._mixFrames+=count;if(this._mixFrames>=this.context.sampleRate*180){this.isRecording=false;this.onRecordingLimit?.();}}};
         }
         this._output=this.context.createGain();this._output.gain.value=1;this.node.connect(this._output);this._output.connect(this.context.destination);this._loadAssets(this.state.assets||[],true);return this;
       })().catch(error=>{this._initPromise=null;this.node?.disconnect();this.node=null;this.context?.close().catch(()=>{});this.context=null;throw error;});return this._initPromise;
     }
     _send(message){if(!this.node)return;if(this.mode==='worklet'){this.node.port.postMessage(message);return;}const c=this._core;
-      if(message.type==='state')c.setState(message.state);else if(message.type==='sample')c.setSample(message.index,message.pcm,message.sampleRate,message.preserve);else if(message.type==='start')c.start(message.rewind);else if(message.type==='stop')c.stop();else if(message.type==='rewind')c.rewind();else if(message.type==='retrigger')c.retrigger(message.index);else if(message.type==='seek')c.seek(message.index,message.ratio);else if(message.type==='panic')c.panic();else if(message.type==='brake')c.braking=!!message.active;else if(message.type==='noteOn')c.noteOn(message.note,message.velocity);else if(message.type==='noteOff')c.noteOff(message.note);else if(message.type==='mic')c.micEnabled=!!message.enabled;
+      if(message.type==='state')c.setState(message.state);else if(message.type==='sample')c.setSample(message.index,message.pcm,message.sampleRate,message.preserve);else if(message.type==='start')c.start(message.rewind);else if(message.type==='stop')c.stop();else if(message.type==='rewind')c.rewind();else if(message.type==='retrigger')c.retrigger(message.index);else if(message.type==='seek')c.seek(message.index,message.ratio);else if(message.type==='panic')c.panic();else if(message.type==='brake')c.braking=!!message.active;else if(message.type==='scheduledDeck')c.queueDeck(message.index,message.options,message.frame);else if(message.type==='clearNotes')c.clearPatternNotes(message.source,message.frame,message.future);else if(message.type==='clearClocks')c.clearClockEvents();else if(message.type==='clock')c.queueClock(message.beat,message.tempo,message.playing,message.frame);else if(message.type==='noteOn')c.noteOn(message.note,message.velocity);else if(message.type==='noteOff')c.noteOff(message.note);else if(message.type==='mic')c.micEnabled=!!message.enabled;
       else if(message.type==='captureStart')c.startCapture(message.index,message.options);else if(message.type==='captureStop'){const result=c.finishCapture(false);this._drainCaptures();if(!result)this._captureIdle(message.token??this._captureToken);}else if(message.type==='captureCancel'){c.cancelCapture();c.completed=[];}
     }
     _drainCaptures(){while(this._core?.completed.length)this._finishDeck(this._core.completed.shift(),this._captureToken);}
@@ -317,6 +352,33 @@ class SpoolProcessor extends AudioWorkletProcessor {
     async start(){const token=++this._startToken,panic=this._panicToken;await this.init();if(token!==this._startToken||panic!==this._panicToken||this._disposed)return false;await this.context.resume();if(token!==this._startToken||panic!==this._panicToken||this._disposed)return false;this.isPlaying=true;this._send({type:'start',rewind:false});return true;}
     stop(){++this._startToken;if(this.deckRecording?.status==='armed')this.cancelDeckRecording();this.isPlaying=false;this._send({type:'stop'});this._meter.step=-1;this._keyTokens.clear();}
     rewind(){this._send({type:'rewind'});this._meter.positions=[0,0,0,0];}
+    scheduleNativeNote(index,when,options={}) {
+      if(!this.node||!this.context)throw new Error('Prepare SPOOL before scheduling notes.');
+      if(!Number.isInteger(index)||index<0||index>3||!Number.isFinite(when)||!Number.isFinite(options.duration)||options.duration<=0)throw new Error('Invalid SPOOL deck note.');
+      this._send({type:'scheduledDeck',index,options,frame:Math.round(when*this.context.sampleRate)});
+    }
+    cancelNativeNotes({source,when}={}){
+      if(!this.context)return;const at=when===undefined?this.context.currentTime:Math.max(this.context.currentTime,Number(when));
+      if(!Number.isFinite(at))throw new Error('Provide a valid cancellation timestamp.');
+      this._send({type:'clearNotes',source,frame:Math.round(at*this.context.sampleRate),future:when!==undefined&&at>this.context.currentTime});
+    }
+    followTransport({beat,tempo,when,playing,revision}){
+      if(!this.context||!this.node)return;
+      if(revision!==this._clockRevision||!playing){this._clockRevision=revision;this._send({type:'clearClocks'});}
+      this.isPlaying=!!playing;
+      this._send({type:'clock',beat,tempo,playing:!!playing,frame:Math.round(when*this.context.sampleRate)});
+    }
+    async renderNativeEvents(state,events,options={}) {
+      const check=()=>{if(options.signal?.aborted)throw new DOMException('Pattern render cancelled.','AbortError');};check();
+      const snapshot=SpoolSchema.normalize(state),seconds=options.durationSeconds,tail=options.tailSeconds??0;
+      if(!Number.isFinite(seconds)||seconds<=0||seconds>120||!Number.isFinite(tail)||tail<0||tail>15||!Array.isArray(events)||events.length>8192)throw new Error('Invalid SPOOL render bounds.');
+      const sampleRate=48000,core=new DSP(sampleRate,stateForDSP(snapshot));core.tempo=options.tempo??snapshot.tempo;snapshot.assets.forEach((asset,index)=>{const decoded=decodePCM(asset);if(decoded)core.setSample(index,decoded.pcm,decoded.sampleRate);});
+      for(const event of events){if(!Number.isInteger(event.voice)||event.voice<0||event.voice>3||!Number.isFinite(event.at)||event.at<0||event.at>=seconds||!Number.isFinite(event.velocity)||event.velocity<0||event.velocity>1)throw new Error('Invalid SPOOL render note.');core.queueDeck(event.voice,{velocity:event.velocity,pitch:event.pitch||0,duration:event.duration},Math.round(event.at*sampleRate));}
+      const frames=Math.ceil((seconds+tail)*sampleRate),chunks=[];let at=0,block=0;
+      while(at<frames){const count=Math.min(4096,frames-at),left=new Float32Array(count),right=new Float32Array(count),pcm=new Float32Array(count*2);core.processBlock(left,right);
+        for(let i=0;i<count;i++){const gain=Math.min(1,(frames-at-i-1)/480);pcm[i*2]=left[i]*gain;pcm[i*2+1]=right[i]*gain;}chunks.push(pcm);at+=count;if(++block%16===0){check();await new Promise(resolve=>setTimeout(resolve,0));}}
+      check();return{blob:wavBlob(chunks,frames,sampleRate),sampleRate,duration:frames/sampleRate};
+    }
     async retrigger(index){const panic=this._panicToken;await this.init();if(panic!==this._panicToken||this._disposed)return false;await this.context.resume();if(panic!==this._panicToken||this._disposed)return false;this._send({type:'retrigger',index:clamp(index,0,3)|0});return true;}
     seekDeck(index,ratio){this._send({type:'seek',index:clamp(index,0,3)|0,ratio:clamp(ratio,0,1)});}
     brake(active){this._send({type:'brake',active:!!active});}

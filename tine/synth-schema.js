@@ -151,7 +151,15 @@
   function validateProject(project) {
     if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2].includes(project.version)) return false;
     const state = project.state;
-    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks'])) return false;
+    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (state.musicLabPattern !== undefined) {
+      try {
+        const overlay = state.musicLabPattern;
+        if (!overlay || !window.MusicLabPatternSchema || !isRecord(overlay.voiceMap)) return false;
+        const pattern = window.MusicLabPatternSchema.normalize(overlay.pattern);
+        if (pattern.voices.some(voice => !/^voice-[0-7]$/.test(overlay.voiceMap[voice.id]))) return false;
+      } catch (_) { return false; }
+    }
     if (typeof state.name !== 'string' || !state.name.trim() || state.name.length > 80 || /[\u0000-\u001f\u007f]/.test(state.name)) return false;
     if (!finite(state.bpm, 40, 240) || !finite(state.swing, 0, 0.6) || !['drive', 'space', 'master'].every((key) => finite(state[key], 0, 1))) return false;
     const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;

@@ -205,8 +205,8 @@
     voice.stopTime = Math.min(voice.stopTime, at + duration + .002);
     voice.sources.forEach(source => { try { source.stop(at + duration + .002); } catch (_) {} });
   }
-  function synthesize(environment, data, time, accent) {
-    const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
+  function synthesize(environment, data, time, accent, expression = {}) {
+    const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
     const { context, graph, random } = environment, now = Math.max(time, context.currentTime);
     const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.track === data);
     if (sameTrack.length >= 6) { fadeVoice(sameTrack[0], now); environment.stolen++; }
@@ -218,8 +218,8 @@
     const longest = Math.max(t.decay, ...modes.map(mode => mode.t60));
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
-    const volume = t.level * (accent ? 1.12 : .86); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
-    const voice = { track: data, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
+    const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
+    const voice = { scopeSource: expression.source || 'native', track: data, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
@@ -293,17 +293,61 @@
       if (skipped >= 4096) this.nextNoteTime = currentTime + .025;
       while (this.nextNoteTime < currentTime + .13) { const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime); playStep(this.environment, this.state, step, when); if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); } this.nextNoteTime += stepLength(this.state, step); this.currentStep = (step + 1) % 16; }
     }
-    _stopTransport() { this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
+    _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
     stop() { this.generation++; this._stopTransport(); this.currentStep = 0; }
     async preview(track, bpm = 120) { const generation = this.generation; await this.init(); if (generation !== this.generation || !this.environment || this.context.state === 'closed') return; synthesize(this.environment, track, this.context.currentTime + .005, false); }
     setMasterVolume(value) { this.values.master = clamp(value, 0, 1); if (this.context && this.graph) this.graph.master.gain.setTargetAtTime(this.values.master, this.context.currentTime, .015); }
     setEffects(values) { values = values || {}; if (values.drive !== undefined) this.values.drive = clamp(values.drive, 0, 1); if (values.space !== undefined) this.values.space = clamp(values.space, 0, 1); if (this.context && this.graph) updateGraph(this.context, this.graph, this.values, false); }
+    // The Music Lab note scheduler uses the same synthesis graph as the native sequencer.
+    scheduleNativeNote(track, when, options = {}) {
+      if (!this.context || !this.environment) throw new Error('Prepare the instrument before scheduling notes.');
+      if (!Number.isFinite(when)) throw new Error('Provide an audio clock timestamp.');
+      if (this._sourceCuts?.has(options.source) && when >= this._sourceCuts.get(options.source)) return null;
+      return synthesize(this.environment, track, when, options.velocity >= .95, options);
+    }
+    cancelNativeNotes({ source, when } = {}) {
+      if (!this.context || !this.environment) return;
+      const at = Math.max(this.context.currentTime, when === undefined ? this.context.currentTime : Number(when));
+      if (!Number.isFinite(at)) throw new Error('Provide a valid cancellation timestamp.');
+      if (source !== undefined) {
+        if (!this._sourceCuts) this._sourceCuts = new Map();
+        if (when !== undefined && at > this.context.currentTime) this._sourceCuts.set(source, Math.min(this._sourceCuts.get(source) ?? Infinity, at));
+        else this._sourceCuts.delete(source);
+      } else this._sourceCuts?.clear();
+      for (const voice of this.environment.voices) {
+        if (source !== undefined && voice.scopeSource !== source) continue;
+        const stolen = voice.stolen; fadeVoice(voice, at);
+        if (at > this.context.currentTime) voice.stolen = stolen;
+      }
+    }
+    async renderNativeEvents(state, events, options = {}) {
+      const check = () => { if (options.signal?.aborted) throw new DOMException('Pattern render cancelled.', 'AbortError'); };
+      check();
+      const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!Offline) throw new Error('Offline audio rendering is unavailable.');
+      const snapshot = JSON.parse(JSON.stringify(state));
+      const duration = Number(options.durationSeconds), tail = options.tailSeconds === undefined ? 3 : Number(options.tailSeconds);
+      if (!Number.isFinite(duration) || duration <= 0 || duration > 600 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192) throw new Error('Invalid pattern render bounds.');
+      const sampleRate = 48000, context = new Offline(2, Math.max(1, Math.ceil((duration + tail) * sampleRate)), sampleRate);
+      const graph = buildGraph(context, { master: snapshot.master ?? this.values.master, drive: snapshot.drive || 0, space: snapshot.space || 0 });
+      const environment = createEnvironment(context, graph, 0x5A17C0DE, true);
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i], track = snapshot.tracks[event.voice];
+        if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, event);
+        if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
+      }
+      const end = duration + tail, fade = Math.min(.03, end / 2);
+      graph.master.gain.setValueAtTime(graph.master.gain.value, end - fade); graph.master.gain.linearRampToValueAtTime(0, end);
+      const rendered = await context.startRendering(); check(); return {blob: encodeWav(rendered), sampleRate, duration: rendered.duration};
+    }
+
     async exportWav(state, options = {}) {
       const checkCancelled = () => { if (options.signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError'); };
       checkCancelled();
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4))), duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
-      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
+      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
       const naturalTail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0)), tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail, context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
       let time = .015; for (let i = 0; i < (hit ? 1 : bars * 16); i++) { if (i % 16 === 0) { checkCancelled(); if (options.signal) await new Promise(resolve => setTimeout(resolve, 0)); checkCancelled(); } const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }

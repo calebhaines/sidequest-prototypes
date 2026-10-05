@@ -1,7 +1,7 @@
 /* LOOM projects. Eight rooms, with rather firm walls. */
 (() => {
   'use strict';
-  const VERSION = '1.4.0';
+  const VERSION = '1.5.0';
   const COLORS = ['#edab7c', '#b6c995', '#b8a7e0', '#87bfcc', '#dfb0c4', '#ceb581', '#96bdac', '#a5b5de'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable'];
@@ -112,6 +112,40 @@
     }
     return result;
   }
+  function pattern(value) {
+    if (!window.MusicLabPatternSchema) throw Error('The Music Lab pattern schema is unavailable.');
+    return window.MusicLabPatternSchema.normalize(value);
+  }
+  function voiceMap(value = {}, packet) {
+    if (!plain(value)) throw Error('A note clip contains an invalid voice map.');
+    const result = {}, sources = new Set(packet.voices.map(v => v.id)), entries = Object.entries(value);
+    if (entries.length > 64) throw Error('A note clip contains too many voice mappings.');
+    for (const [source, target] of entries) {
+      if (!sources.has(source) || ['__proto__', 'constructor', 'prototype'].includes(source) || typeof target !== 'string' || !target || target.length > 100 || /[\u0000-\u001f\u007f]/.test(target) || ['__proto__', 'constructor', 'prototype'].includes(target)) throw Error('A note clip contains an invalid source or destination voice.');
+      result[source] = target;
+    }
+    return result;
+  }
+  function noteClip(value, totalBeats = LIMITS.bars * 4, strict = false) {
+    if (!plain(value) || value.type !== 'notes' || value.origin != null || value.assetId != null) throw Error('A note clip must contain a pattern without audio or a nested source.');
+    const packet = pattern(value.pattern), map = voiceMap(value.voiceMap, packet);
+    if (strict) {
+      if (typeof value.id !== 'string' || !value.id || typeof value.name !== 'string') throw Error('A note clip contains invalid names or identifiers.');
+      strictNumbers(value, ['start', 'length', 'sourceOffset', 'rate', 'gain', 'fadeIn', 'fadeOut', 'transpose'], 'A note clip contains invalid controls.');
+      if (value.start < 0 || value.length < 1 / 64 || value.start + value.length > totalBeats + 1e-6 || value.sourceOffset < 0 || value.sourceOffset > packet.lengthBeats || value.rate < .125 || value.rate > 8 || value.gain < 0 || value.gain > 2 || value.fadeIn < 0 || value.fadeOut < 0 || value.fadeIn > value.length / 2 || value.fadeOut > value.length / 2 || !Number.isInteger(value.transpose) || value.transpose < -48 || value.transpose > 48 || typeof value.loop !== 'boolean') throw Error('A note clip contains invalid timing or options.');
+    }
+    const start = number(value.start, 0, totalBeats - 1 / 64, 0), length = number(value.length, 1 / 64, totalBeats - start, Math.min(packet.lengthBeats, totalBeats - start));
+    return { id: text(value.id, uid()), name: text(value.name, packet.name), type: 'notes', pattern: packet, voiceMap: map, start, length, sourceOffset: number(value.sourceOffset, 0, packet.lengthBeats, 0), rate: number(value.rate, .125, 8, 1), loop: bool(value.loop), gain: number(value.gain, 0, 2, 1), fadeIn: number(value.fadeIn, 0, length / 2, 0), fadeOut: number(value.fadeOut, 0, length / 2, 0), transpose: integer(value.transpose, -48, 48, 0) };
+  }
+  function renderSource(value) {
+    if (!plain(value) || value.format !== 'loom-render-source' || value.version !== 1) throw Error('A printed clip contains an invalid musical source.');
+    const descriptor = instrument(value.instrument);
+    if (!descriptor || !descriptor.snapshot) throw Error('A printed clip needs its saved instrument state.');
+    const packet = pattern(value.pattern), map = voiceMap(value.voiceMap, packet), sourceClip = noteClip(value.sourceClip, LIMITS.bars * 4, true);
+    strictNumbers(value, ['tempo', 'tailSeconds', 'renderedAt'], 'A printed clip contains invalid rendering metadata.');
+    if (value.tempo < 20 || value.tempo > 400 || value.tailSeconds < 0 || value.tailSeconds > 30 || value.renderedAt < 0) throw Error('A printed clip contains invalid rendering metadata.');
+    return { format: 'loom-render-source', version: 1, instrument: descriptor, pattern: packet, voiceMap: map, tempo: value.tempo, tailSeconds: value.tailSeconds, sourceClip, renderedAt: value.renderedAt };
+  }
   function normalize(raw = {}) {
     const d = defaultState(), totalBeats = integer(raw.lengthBars, 1, LIMITS.bars, d.lengthBars) * 4;
     const assets = [], ids = new Set(); let pcmBytes = 0;
@@ -135,6 +169,13 @@
       t.automation = automation(r.automation, t, totalBeats);
       if (t.instrument?.snapshot) snapshotBytes += JSON.stringify(t.instrument.snapshot).length;
       for (const c of (Array.isArray(r.clips) ? r.clips : []).slice(0, LIMITS.clipsPerTrack)) {
+        if (c?.type === 'notes') {
+          const normalized = noteClip(c, totalBeats);
+          if (clipIds.has(normalized.id)) normalized.id = uid();
+          clipIds.add(normalized.id); snapshotBytes += JSON.stringify(normalized.pattern).length;
+          t.clips.push(normalized); continue;
+        }
+        if (c?.type !== undefined && c.type !== 'audio') throw Error('A clip contains an unsupported type.');
         const asset = assetMap.get(c?.assetId);
         if (!asset) continue;
         const start = number(c.start, 0, totalBeats - 1 / 64, 0), sourceDuration = asset.frames / asset.sampleRate;
@@ -142,11 +183,13 @@
         const sourceEnd = number(c.sourceEnd, sourceStart + 1 / asset.sampleRate, sourceDuration, sourceDuration);
         const length = number(c.length, 1 / 64, totalBeats - start, Math.min(totalBeats - start, (sourceEnd - sourceStart) * s.tempo / 60));
         let id = text(c.id, uid()); if (clipIds.has(id)) id = uid(); clipIds.add(id);
-        t.clips.push({ id, name: text(c.name, asset.name), assetId: asset.id, start, length, sourceStart, sourceEnd, sourceOffset: number(c.sourceOffset, 0, sourceDuration, 0), rate: number(c.rate, 0.125, 8, 1), reverse: bool(c.reverse), loop: bool(c.loop), gain: number(c.gain, 0, 2, 1), fadeIn: number(c.fadeIn, 0, length / 2, Math.min(0.02, length / 2)), fadeOut: number(c.fadeOut, 0, length / 2, Math.min(0.04, length / 2)) });
+        const normalized = { id, name: text(c.name, asset.name), type: 'audio', assetId: asset.id, start, length, sourceStart, sourceEnd, sourceOffset: number(c.sourceOffset, 0, sourceDuration, 0), rate: number(c.rate, 0.125, 8, 1), reverse: bool(c.reverse), loop: bool(c.loop), gain: number(c.gain, 0, 2, 1), fadeIn: number(c.fadeIn, 0, length / 2, Math.min(0.02, length / 2)), fadeOut: number(c.fadeOut, 0, length / 2, Math.min(0.04, length / 2)) };
+        if (c.origin != null) { normalized.origin = renderSource(c.origin); snapshotBytes += JSON.stringify(normalized.origin).length; }
+        t.clips.push(normalized);
       }
       s.tracks.push(t);
     }
-    if (snapshotBytes > LIMITS.snapshotBytes) throw Error('Instrument states exceed the 96 MB budget. Print parts into clips and clear unused instrument recordings.');
+    if (snapshotBytes > LIMITS.snapshotBytes) throw Error('Instrument states, note patterns, and printed sources exceed the 96 MB budget. Remove unused parts or saved sources.');
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
@@ -192,8 +235,11 @@
         }
       }
       for (const c of t.clips) {
-        if (!plain(c) || typeof c.id !== 'string' || !c.id || clipIds.has(c.id) || typeof c.name !== 'string' || !ids.has(c.assetId)) throw Error('A clip contains an invalid or missing audio reference.');
+        if (!plain(c) || typeof c.id !== 'string' || !c.id || clipIds.has(c.id) || typeof c.name !== 'string') throw Error('A clip contains invalid or duplicate identifiers.');
         clipIds.add(c.id);
+        if (c.type === 'notes') { noteClip(c, s.lengthBars * 4, true); continue; }
+        if ((c.type !== undefined && c.type !== 'audio') || !ids.has(c.assetId)) throw Error('A clip contains an invalid or missing audio reference.');
+        if (c.origin != null) renderSource(c.origin);
         strictNumbers(c, ['start', 'length', 'sourceStart', 'sourceEnd', 'sourceOffset', 'rate', 'gain', 'fadeIn', 'fadeOut'], 'A clip contains invalid controls.');
         if (c.start < 0 || c.length <= 0 || c.start + c.length > s.lengthBars * 4 + 1e-6 || c.sourceStart < 0 || c.sourceEnd <= c.sourceStart || c.sourceOffset < 0 || c.sourceOffset > 120 || c.rate <= 0 || c.gain < 0 || typeof c.reverse !== 'boolean' || typeof c.loop !== 'boolean') throw Error('A clip contains invalid timing or options.');
         const a = s.assets.find(a => a.id === c.assetId); if (c.sourceEnd > a.frames / a.sampleRate + 1 / a.sampleRate) throw Error('A clip extends beyond its source audio.');
@@ -242,5 +288,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

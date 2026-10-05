@@ -145,7 +145,7 @@
       constructor(sampleRate,state,seed=0x4d495245) {
         this.sr=clamp(sampleRate,8000,192000); this.frame=0; this.seed=(seed>>>0)||1;
         this.nodes=Array.from({length:4},(_,i)=>new Node(this.sr,i)); this.samples=Array(4).fill(null);
-        this.voices=[]; this.events=[]; this.previous=new Float64Array(4); this.injection=new Float64Array(4);
+        this.voices=[]; this.events=[]; this.cancellations=[]; this.previous=new Float64Array(4); this.injection=new Float64Array(4);
         this.phase=[0,.37]; this.randomOld=[0,0]; this.randomNext=[0,0]; this.lfo=[0,0];
         this.master={volume:.65,mix:.65,drive:.15,width:.8}; this.garden={circulation:.7,damping:.25,freeze:false};
         this.limiter=1; this.outDC=[0,0]; this.peak=0; this.rms=0; this.clipped=false; this.micDestination=0; this.micGain=0;
@@ -180,15 +180,16 @@
         this.samples[index]=pcm&&pcm.length?{pcm,sampleRate:clamp(sampleRate,8000,192000)}:null;
       }
       trigger(event) {
-        const item={index:clamp(event.index,0,3)|0,velocity:clamp(event.velocity===undefined?1:event.velocity,.05,1),frame:Math.max(this.frame,Math.round(finite(event.frame,this.frame))),audition:!!event.audition,destination:clamp(event.destination||0,0,3)|0};
+        if(this.cancellations.some(c=>(!c.source||c.source===event.source)&&event.frame>=c.frame))return false;
+        const item={source:typeof event.source==='string'?event.source:'native',index:clamp(event.index,0,3)|0,velocity:clamp(event.velocity===undefined?1:event.velocity,.05,1),frame:Math.max(this.frame,Math.round(finite(event.frame,this.frame))),note:Number.isFinite(event.note)?clamp(event.note,0,127):null,durationSeconds:Number.isFinite(event.durationSeconds)?clamp(event.durationSeconds,.001,15360):null,audition:!!event.audition,destination:clamp(event.destination||0,0,3)|0};
         const queue=this.events;
         if(!queue.length||queue[queue.length-1].frame<=item.frame)queue.push(item);
         else{let low=0,high=queue.length;while(low<high){const middle=(low+high)>>>1;if(queue[middle].frame<=item.frame)low=middle+1;else high=middle;}queue.splice(low,0,item);}
         if(this.events.length>8192)this.events.splice(8192);
       }
-      stopSources() { this.events=[];this.voices.forEach(v=>{v.release=Math.min(v.release||Infinity,this.sr*.012);}); }
-      clear(immediate=false) {
-        this.events=[];this.voices=[];
+      stopSources(source,frame=this.frame) {frame=Math.max(this.frame,Math.round(Number.isFinite(frame)?frame:this.frame));if(frame>this.frame){this.events=this.events.filter(e=>(source&&e.source!==source)||e.frame<frame);if(this.cancellations.length>=256)throw new Error('The cancellation queue is full.');this.cancellations.push({source,frame});this.cancellations.sort((a,b)=>a.frame-b.frame);return;}this.cancellations=source?this.cancellations.filter(c=>c.source!==source):[];this.events=source?this.events.filter(e=>e.source!==source):[];this.voices.forEach(v=>{if(!source||v.source===source)v.release=Math.min(v.release||Infinity,this.sr*.012);}); }
+      clear(immediate=false,preservePending=false) {
+        if(!preservePending){this.events=[];this.voices=[];this.cancellations=[];}
         if(immediate) {this.nodes.forEach(n=>n.clear());this.previous.fill(0);this.outDC=[0,0];this.limiter=1;this.peak=0;this.rms=0;this.clipped=false;this.waveform.fill(0);this.clearRemaining=0;this.clearStage=0;return;}
         this.clearRemaining=this.clearLength;this.clearStage=1;
       }
@@ -197,18 +198,18 @@
         const source=event.audition?{kind:'dust',pitch:this.nodes[event.destination].values.pitch,decay:90,tone:11000,texture:.75,level:.9,destination:event.destination,mute:false}:((this.state.sources||[])[event.index]||{});
         if(source.mute)return;
         const kind=['drop','pluck','dust','chime','reed','pulse','bow','sample'].includes(source.kind)?source.kind:'drop';
-        const frequency=clamp(midi(clamp(source.pitch===undefined?60:source.pitch,24,96)),20,this.sr*.2);
-        const voice={kind,index:event.index,age:0,phase:0,low:0,dc:0,frequency,decay:clamp(source.decay===undefined?300:source.decay,15,10000)/1000,
+        const frequency=clamp(midi(event.note===null?clamp(source.pitch===undefined?60:source.pitch,24,96):event.note),20,this.sr*.2);
+        const voice={kind,source:event.source,index:event.index,age:0,phase:0,low:0,dc:0,frequency,decay:clamp(source.decay===undefined?300:source.decay,15,10000)/1000,
           texture:clamp(source.texture||0,0,1),level:clamp(source.level===undefined?.65:source.level,0,1)*event.velocity,
           cutoff:clamp(source.tone===undefined?8000:source.tone,120,this.sr*.43),destination:clamp(source.destination||0,0,3)|0,
-          attack:({drop:.001,pluck:.001,dust:.003,chime:.002,reed:.007,pulse:.002,bow:.028,sample:.002})[kind],release:Infinity};
+          gateFrames:event.durationSeconds===null?Infinity:Math.round(event.durationSeconds*this.sr),attack:({drop:.001,pluck:.001,dust:.003,chime:.002,reed:.007,pulse:.002,bow:.028,sample:.002})[kind],release:Infinity};
         voice.coefficient=1-Math.exp(-TAU*voice.cutoff/this.sr);
         if(kind==='pluck') {
           voice.buffer=new Float32Array(Math.max(4,Math.round(this.sr/frequency)));voice.write=0;let low=0;
           for(let i=0;i<voice.buffer.length;i++){const white=this.random()*2-1;low+=voice.coefficient*(white-low);voice.buffer[i]=low*.7;}
           voice.feedback=Math.exp(-6.907755/(frequency*voice.decay));voice.pluckLow=0;
         }
-        if(kind==='sample') {voice.sample=this.samples[event.index];if(!voice.sample)return;voice.position=0;voice.increment=voice.sample.sampleRate/this.sr*Math.pow(2,(finite(source.pitch,60)-60)/12);}
+        if(kind==='sample') {voice.sample=this.samples[event.index];if(!voice.sample)return;voice.position=0;voice.increment=voice.sample.sampleRate/this.sr*Math.pow(2,((event.note===null?finite(source.pitch,60):event.note)-60)/12);}
         if(this.voices.length>=48)this.voices.shift();
         this.voices.push(voice);
       }
@@ -249,7 +250,7 @@
           envelope*=Math.exp(-6.907755*t/Math.max(.015,v.decay));
         }
         v.low+=v.coefficient*(value-v.low);v.dc+=.0015*(v.low-v.dc);
-        v.age++;
+        v.age++;if(v.age>=v.gateFrames&&v.release===Infinity)v.release=this.sr*.012;
         const release=Number.isFinite(v.release)?Math.max(0,v.release--)/(this.sr*.012):1;
         const done=v.kind==='pluck'?t>v.decay+v.attack:t>v.decay+v.attack+.012;
         v.done=done||v.release<=0;return (v.low-v.dc)*envelope*v.level*.424264*Math.min(1,release);
@@ -279,6 +280,7 @@
       processBlock(left,right,input) {
         this.prepare(left.length);
         for(let s=0;s<left.length;s++) {
+          while(this.cancellations.length&&this.cancellations[0].frame<=this.frame){const cancel=this.cancellations.shift();this.stopSources(cancel.source);}
           while(this.events.length&&this.events[0].frame<=this.frame)this.addVoice(this.events.shift());
           this.injection.fill(0);let dryL=0,dryR=0;
           this.inputGate+=((this.garden.freeze?0:1)-this.inputGate)*this.inputSlew;
@@ -315,7 +317,7 @@
           this.limiter=wanted<this.limiter?wanted:this.limiter+(wanted-this.limiter)*.00035;
           l*=this.limiter;r*=this.limiter;
           if(this.clearStage) {
-            if(this.clearStage===1){const gain=this.clearRemaining/this.clearLength;l*=gain;r*=gain;if(--this.clearRemaining<=0){this.clear(true);this.clearStage=2;this.clearRemaining=this.clearLength;}}
+            if(this.clearStage===1){const gain=this.clearRemaining/this.clearLength;l*=gain;r*=gain;if(--this.clearRemaining<=0){this.clear(true,true);this.clearStage=2;this.clearRemaining=this.clearLength;}}
             else{const gain=1-this.clearRemaining/this.clearLength;l*=gain;r*=gain;if(--this.clearRemaining<=0)this.clearStage=0;}
           }
           left[s]=clamp(l,-.9,.9);right[s]=clamp(r,-.9,.9);
@@ -363,7 +365,7 @@ class MireProcessor extends AudioWorkletProcessor {
  this.port.onmessage=event=>{const m=event.data;
   if(m.type==='state')this.core.setState(m.state);
   else if(m.type==='trigger')this.core.trigger(m.event);
-  else if(m.type==='stop')this.core.stopSources();
+  else if(m.type==='stop')this.core.stopSources(m.source,m.frame);
   else if(m.type==='clear')this.core.clear();
   else if(m.type==='sample')this.core.setSample(m.index,m.pcm,m.sampleRate);
   else if(m.type==='mic'){this.core.micGain=m.enabled?.12:0;this.core.micDestination=m.destination|0;}
@@ -423,7 +425,7 @@ class MireProcessor extends AudioWorkletProcessor {
       const core=this._core;
       if(message.type==='state')core.setState(message.state);
       else if(message.type==='trigger')core.trigger(message.event);
-      else if(message.type==='stop')core.stopSources();
+      else if(message.type==='stop')core.stopSources(message.source,message.frame);
       else if(message.type==='clear')core.clear();
       else if(message.type==='sample')core.setSample(message.index,message.pcm,message.sampleRate);
       else if(message.type==='mic'){core.micGain=message.enabled?.12:0;core.micDestination=message.destination|0;}
@@ -478,6 +480,9 @@ class MireProcessor extends AudioWorkletProcessor {
     panic() {this._panicGeneration=(this._panicGeneration||0)+1;this.stop();this._micRequest=(this._micRequest||0)+1;this._micNode?.disconnect();this._micNode=null;this._stream?.getTracks().forEach(track=>track.stop());this._stream=null;this.micEnabled=false;this._send({type:'mic',enabled:false,destination:0});this._send({type:'clear'});this._meter.nodes=[0,0,0,0];this._meter.peak=0;this._meter.rms=0;this._meter.clipped=false;}
     async trigger(sourceIndex,velocity=1) {const generation=this._panicGeneration||0;await this.init();if(generation!==(this._panicGeneration||0)||this._disposed)return false;await this.context.resume();if(generation!==(this._panicGeneration||0)||this._disposed)return false;this._send({type:'trigger',event:{index:sourceIndex,velocity,frame:Math.round((this.context.currentTime+.005)*this.context.sampleRate)}});return true;}
     async triggerNode(nodeIndex) {const generation=this._panicGeneration||0;await this.init();if(generation!==(this._panicGeneration||0)||this._disposed)return false;await this.context.resume();if(generation!==(this._panicGeneration||0)||this._disposed)return false;this._send({type:'trigger',event:{index:0,audition:true,destination:Math.max(0,Math.min(3,nodeIndex|0)),velocity:1,frame:Math.round((this.context.currentTime+.005)*this.context.sampleRate)}});return true;}
+    scheduleNote({voiceId='0',note=60,velocity=.8,when,durationSeconds=.25,source='loom'}={}) {if(!this.context||!this.node)throw new Error('Prepare the instrument before scheduling notes.');const index=Number(voiceId);if(!Number.isInteger(index)||index<0||index>3)throw new Error('Choose one of MIRE’s four sources.');this._send({type:'trigger',event:{index,note,velocity,durationSeconds,source,frame:Math.round(Math.max(this.context.currentTime,Number(when)||this.context.currentTime)*this.context.sampleRate)}});return true;}
+    stopNotes({source,when}={}){this._send({type:'stop',source,frame:this.context?Math.round(Math.max(this.context.currentTime,Number.isFinite(when)?when:this.context.currentTime)*this.context.sampleRate):undefined});}
+    async renderNotes({events,tempo=120,lengthBeats=4,tailSeconds=4,signal,state=this.state}={}) {const check=()=>{if(signal?.aborted)throw new DOMException('Pattern render cancelled.','AbortError');};check();const snapshot=JSON.parse(JSON.stringify(stateForDSP(window.MireSchema.normalize(state))));snapshot.tempo=tempo;const sr=48000,body=lengthBeats*60/tempo,tail=Math.min(30,Math.max(0,Number(tailSeconds)||0));if(!Number.isFinite(body)||body<=0||body+tail>180)throw new Error('Pattern render must be between zero and 180 seconds.');const core=new DSP(sr,snapshot,0x504f4e44);for(let i=0;i<4;i++){const asset=state.samples?.[i];if(asset?.pcm)core.setSample(i,fromBase64(asset.pcm),asset.sampleRate);}for(const e of events)core.trigger({index:Number(e.voiceId??0),note:e.note,velocity:e.velocity,frame:Math.round(e.startBeat*60/tempo*sr),durationSeconds:e.durationBeats*60/tempo});const frames=Math.ceil((body+tail)*sr),chunks=[];for(let at=0;at<frames;){check();const length=Math.min(8192,frames-at),pcm=new Float32Array(length*2);for(let offset=0;offset<length;offset+=128){const n=Math.min(128,length-offset),l=new Float32Array(n),r=new Float32Array(n);core.processBlock(l,r);for(let i=0;i<n;i++){pcm[(offset+i)*2]=l[i];pcm[(offset+i)*2+1]=r[i];}}chunks.push(pcm);at+=length;await new Promise(resolve=>setTimeout(resolve,0));}check();return{blob:wavBlob(chunks,frames,sr),sampleRate:sr,tempo,sourceApp:'mire'};}
     getMeters() {return this._meter;}
     async setMic(enabled,destination=0) {
       const request=this._micRequest=(this._micRequest||0)+1;await this.init();

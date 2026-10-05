@@ -275,11 +275,14 @@
     voice.stolen = true;
   }
 
-  function synthesize(environment, trackData, time, accent, bpm = 120) {
+  function synthesize(environment, trackData, time, accent, bpm = 120, expression = {}) {
     const track = readTrack(trackData);
     if (track.level <= 0) return null;
     const settings = readSynth(trackData, track);
     const body = settings.body, noise = settings.noise, mod = settings.mod;
+    const transposition = Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12);
+    body.frequency = clamp(body.frequency * transposition, 10, 16000);
+    noise.rate = clamp(noise.rate * transposition, .0625, 16);
     if (body.level <= 0 && noise.level <= 0) return null;
     const { context, graph } = environment;
     const now = Math.max(time, context.currentTime);
@@ -300,11 +303,11 @@
         panner.positionZ.value = 1 - Math.abs(track.pan);
       } else panner.setPosition(track.pan, 0, 1 - Math.abs(track.pan));
     }
-    const volume = track.level * (accent ? 1.2 : 0.88);
+    const volume = track.level * (expression.velocity === undefined ? (accent ? 1.2 : 0.88) : clamp(expression.velocity, 0, 1));
     bus.gain.value = volume;
     bus.connect(panner);
     panner.connect(graph.input);
-    const voice = { sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: trackData, stolen: false };
+    const voice = { scopeSource: expression.source || 'native', sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: trackData, stolen: false };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => {
@@ -631,6 +634,7 @@
     }
 
     _stopTransport() {
+      this._sourceCuts?.clear();
       this.running = false;
       if (this.timer) clearInterval(this.timer);
       this.timer = null;
@@ -664,6 +668,50 @@
       if (values.drive !== undefined) this.values.drive = clamp(values.drive, 0, 1);
       if (values.space !== undefined) this.values.space = clamp(values.space, 0, 1);
       if (this.context && this.graph) updateGraph(this.context, this.graph, this.values, false);
+    }
+
+    // The Music Lab note scheduler uses the same synthesis graph as the native sequencer.
+    scheduleNativeNote(track, when, options = {}) {
+      if (!this.context || !this.environment) throw new Error('Prepare the instrument before scheduling notes.');
+      if (!Number.isFinite(when)) throw new Error('Provide an audio clock timestamp.');
+      if (this._sourceCuts?.has(options.source) && when >= this._sourceCuts.get(options.source)) return null;
+      return synthesize(this.environment, track, when, options.velocity >= .95, options.tempo || 120, options);
+    }
+    cancelNativeNotes({ source, when } = {}) {
+      if (!this.context || !this.environment) return;
+      const at = Math.max(this.context.currentTime, when === undefined ? this.context.currentTime : Number(when));
+      if (!Number.isFinite(at)) throw new Error('Provide a valid cancellation timestamp.');
+      if (source !== undefined) {
+        if (!this._sourceCuts) this._sourceCuts = new Map();
+        if (when !== undefined && at > this.context.currentTime) this._sourceCuts.set(source, Math.min(this._sourceCuts.get(source) ?? Infinity, at));
+        else this._sourceCuts.delete(source);
+      } else this._sourceCuts?.clear();
+      for (const voice of this.environment.voices) {
+        if (source !== undefined && voice.scopeSource !== source) continue;
+        const stolen = voice.stolen; fadeVoice(voice, at);
+        if (at > this.context.currentTime) voice.stolen = stolen;
+      }
+    }
+    async renderNativeEvents(state, events, options = {}) {
+      const check = () => { if (options.signal?.aborted) throw new DOMException('Pattern render cancelled.', 'AbortError'); };
+      check();
+      const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!Offline) throw new Error('Offline audio rendering is unavailable.');
+      const snapshot = JSON.parse(JSON.stringify(state));
+      const duration = Number(options.durationSeconds), tail = options.tailSeconds === undefined ? 3 : Number(options.tailSeconds);
+      if (!Number.isFinite(duration) || duration <= 0 || duration > 600 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192) throw new Error('Invalid pattern render bounds.');
+      const sampleRate = 48000, context = new Offline(2, Math.max(1, Math.ceil((duration + tail) * sampleRate)), sampleRate);
+      const graph = buildGraph(context, { master: snapshot.master ?? this.values.master, drive: snapshot.drive || 0, space: snapshot.space || 0 });
+      const environment = createRenderEnvironment(context, graph, 0x5A17C0DE);
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i], track = snapshot.tracks[event.voice];
+        if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, snapshot.bpm || 120, event);
+        if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
+      }
+      const end = duration + tail, fade = Math.min(.03, end / 2);
+      graph.master.gain.setValueAtTime(graph.master.gain.value, end - fade); graph.master.gain.linearRampToValueAtTime(0, end);
+      const rendered = await context.startRendering(); check(); return {blob: encodeWav(rendered), sampleRate, duration: rendered.duration};
     }
 
     async exportWav(state, options = {}) {

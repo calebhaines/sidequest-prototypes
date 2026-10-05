@@ -201,6 +201,7 @@
 
   engine.onStatus = message => { $('audio-status').textContent = String(message).toUpperCase(); updatePlayback(); };
   engine.onStep = (step, audioTime) => {
+    if (!Number.isInteger(step) || step < 0 || step >= 16) { clearStep(); return; }
     const delay = engine.context ? Math.max(0, (audioTime - engine.context.currentTime) * 1000) : 0;
     const timer = setTimeout(() => { stepTimers.delete(timer); if (!engine.isPlaying) return; currentStep = step; document.querySelectorAll('.step').forEach(button => button.classList.toggle('current', +button.dataset.step === step)); $('beat-position').textContent = `1 . ${Math.floor(step / 4) + 1} . ${step % 4 + 1}`; state.sources.forEach((source, i) => { if (source.steps[step].on && !source.mute) sourceFlashes[source.destination] = performance.now(); }); }, delay); stepTimers.add(timer);
   };

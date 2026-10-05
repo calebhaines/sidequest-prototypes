@@ -49,6 +49,7 @@ import {
   buildDefaultKit,
   renderSound,
   renderPattern,
+  renderNativeEvents,
   sanitizeParams,
   ensureArchitecture,
   createLayerPreview,
@@ -74,6 +75,7 @@ type Project = {
   muted: boolean[];
   bpm: number;
   swing: number;
+  musicLabPattern?: { pattern: unknown; voiceMap: Record<string, string> };
 };
 type SavedProject = { id: string; date: string; project: Project };
 type History = { past: Project[]; present: Project; future: Project[] };
@@ -172,6 +174,14 @@ function validSound(input: unknown): input is SoundParams {
 function validProject(input: unknown): input is Project {
   if (!input || typeof input !== "object") return false;
   const p = input as Project;
+  if (p.musicLabPattern !== undefined) {
+    try {
+      const overlay = p.musicLabPattern;
+      const schema = (window as typeof window & { MusicLabPatternSchema?: { normalize: (value: unknown) => { voices: { id: string }[] } } }).MusicLabPatternSchema;
+      if (!schema || !overlay || !overlay.voiceMap || typeof overlay.voiceMap !== "object" || Array.isArray(overlay.voiceMap)) return false;
+      if (schema.normalize(overlay.pattern).voices.some(voice => !/^voice-[0-7]$/.test(overlay.voiceMap[voice.id]))) return false;
+    } catch { return false; }
+  }
   return (
     typeof p.name === "string" &&
     p.name.length <= 120 &&
@@ -594,6 +604,8 @@ export default function App() {
     Promise.resolve(audio.preload(latest.current.project.sounds))
       .then(() => {
         if (cancelled) return;
+        const patternInstrument = (window as typeof window & { MusicLabPatternInstrument?: { startPattern: () => void; stopPattern: () => void } }).MusicLabPatternInstrument;
+        if (latest.current.project.musicLabPattern && patternInstrument) { patternInstrument.startPattern(); return; }
         nextTime = audio.now() + 0.07;
         const schedule = () => {
           const { project: p, solo: soloIndex } = latest.current;
@@ -645,6 +657,7 @@ export default function App() {
       cancelled = true;
       if (timer) clearInterval(timer);
       indicators.forEach(clearTimeout);
+      (window as typeof window & { MusicLabPatternInstrument?: { stopPattern: () => void } }).MusicLabPatternInstrument?.stopPattern();
       audio.stopAll();
     };
   }, [isPlaying, engine, notify]);
@@ -1095,6 +1108,10 @@ export default function App() {
     const api = Object.freeze({
       version: 1,
       getState: () => clone(latest.current.project),
+      getPatternState: () => {
+        const p = latest.current.project;
+        return { name: p.name, bpm: p.bpm, swing: p.swing, muted: p.muted, steps: p.steps, musicLabPattern: p.musicLabPattern, sounds: p.sounds.map(voice => ({ name: voice.name })) };
+      },
       getProject: () => clone(latest.current.project),
       get engine() { return engineRef.current; },
       isPlaying: () => latest.current.isPlaying,
@@ -1121,6 +1138,27 @@ export default function App() {
         latest.current.solo = null;
         setSelected(0);
         setSolo(null);
+      },
+      scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string } = {}) => {
+        const sound = latest.current.project.sounds[voice];
+        if (!sound || !Number.isFinite(when)) throw new Error("Choose a valid FORM voice and audio timestamp.");
+        return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native");
+      },
+      renderNativeEvents: (events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
+        renderNativeEvents(latest.current.project.sounds, events, options),
+      renderNativeSnapshotEvents: (snapshot: Project, events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
+        renderNativeEvents(snapshot.sounds, events, options),
+      applyMusicLabPattern: (overlay?: Project["musicLabPattern"]) => {
+        const next = { ...latest.current.project };
+        if (overlay) next.musicLabPattern = clone(overlay); else delete next.musicLabPattern;
+        if (!validProject(next)) throw new Error("Invalid shared pattern or FORM voice mapping.");
+        stop(); commit(next); notify(overlay ? "Shared pattern received. Press Play to hear it." : "Native sequence restored.");
+      },
+      applyPattern: (steps: boolean[][], bpm?: number) => {
+        const p = latest.current.project;
+        const next = { ...p, steps: clone(steps), bpm: bpm ?? p.bpm };
+        if (!validProject(next)) throw new Error("This pattern cannot fit the FORM step grid.");
+        stop(); commit(next); notify("Pattern received. The cake has learned a new dance.");
       },
       importAudio,
       exportAudio,

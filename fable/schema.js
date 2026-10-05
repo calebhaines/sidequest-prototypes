@@ -152,7 +152,7 @@
       modulation: Array.from({ length: 8 }, () => ({ source: 'off', target: 'pitch', amount: 0 })), performance: { mode: 'sequence', arpMode: 'up', hold: false, octaves: 1, division: .25, gate: .7, velocity: .8 },
       patterns: Array.from({ length: 4 }, (_, i) => ({ name: String.fromCharCode(65 + i), length: 16, steps: Array.from({ length: 64 }, (_, index) => defaultStep(index)) })) };
   }
-  function normalize(raw) {
+  function normalizePlain(raw) {
     const d = defaultState(); raw = isObject(raw) ? raw : {};
     const inputAssets = raw.assets === undefined ? d.assets : raw.assets;
     if (!Array.isArray(inputAssets) || inputAssets.length > MAX_ASSETS) throw new Error('The cabinet holds at most 32 sample assets.');
@@ -183,7 +183,7 @@
   function strictControls(raw, normalized, path = '') {
     if (!isObject(raw) || !isObject(normalized)) throw new Error('The project is incomplete at ' + (path || 'instrument') + '.');
     for (const key of Object.keys(normalized)) {
-      if (key === 'version') continue;
+      if (key === 'version' || key === 'musicLabPattern') continue;
       const expected = normalized[key], actual = raw[key], label = path ? path + '.' + key : key;
       if (!own(raw, key)) throw new Error('The project is missing ' + label + '.');
       if (Array.isArray(expected)) {
@@ -321,6 +321,25 @@
       result.forEach((zone, i) => { zone.low = 0; zone.high = 127; zone.velLow = Math.floor(i * 127 / result.length) + 1; zone.velHigh = Math.floor((i + 1) * 127 / result.length); });
     } else result.forEach((zone, i) => { zone.low = zone.high = 36 + i; zone.tracking = false; });
     return result;
+  }
+
+  // Exact imported notes travel with the native patch, without flattening chords or timing.
+  function normalize(raw) {
+    const state = normalizePlain(raw);
+    if (raw && raw.musicLabPattern !== undefined) {
+      const overlay = raw.musicLabPattern, schema = window.MusicLabPatternSchema;
+      if (!schema) throw new Error('The portable note-pattern validator is unavailable.');
+      if (!overlay || Object.prototype.toString.call(overlay) !== '[object Object]' || !overlay.voiceMap || Object.prototype.toString.call(overlay.voiceMap) !== '[object Object]') throw new Error('The imported note pattern is incomplete.');
+      const pattern = schema.parse(overlay.pattern), targets = new Set(['auto',...state.zones.map(z=>z.id)]), voiceMap = {};
+      for (const voice of pattern.voices) {
+        const target = overlay.voiceMap[voice.id];
+        if (!Object.prototype.hasOwnProperty.call(overlay.voiceMap, voice.id) || typeof target !== 'string' || !targets.has(target)) throw new Error('The imported pattern refers to an unavailable instrument voice.');
+        voiceMap[voice.id] = target;
+      }
+      if (Object.keys(overlay.voiceMap).some(id => !pattern.voices.some(voice => voice.id === id))) throw new Error('The imported voice map contains an unknown source voice.');
+      state.musicLabPattern = { pattern, voiceMap };
+    }
+    return state;
   }
   window.FableSchema = Object.freeze({ VERSION, MAX_ASSETS, MAX_ZONES, MAX_SECONDS, MAX_PCM_BYTES, MAX_PROJECT_BYTES, RECIPES, SOURCES, TARGETS, FILTERS, SHAPES, defaultState, normalize, normalizeAsset, parseProject, serializeProject, copy, uid, createZone, encodeAsset, decodeAsset, detectPitch, trimSilence, onsets, autoMap, assetBytes });
 })();
