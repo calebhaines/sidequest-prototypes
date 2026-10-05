@@ -6,7 +6,7 @@
 
 ## Music Lab
 
-[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, MIRE, and SPOOL.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, MIRE, SPOOL, HAZE, BOWER, and RAVEL.
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
@@ -20,7 +20,13 @@ GRAIN 1.1 adds separate drum/noise mixing, oscillator tuning and pitch sweeps, i
 
 [**Play SPOOL**](https://calebhaines.github.io/sidequest-prototypes/music/spool/) for a tape-loop playground with four overlapping stereo decks, eight tape studies, thirty seconds per deck, audio import, live microphone input, built-in keys, and overdubbing. Change speed, reverse playback, and trim loop regions; shape tone, tape wear, wow, and flutter. Save projects and export stereo WAV. Open `spool/index.html` for offline play; editable sources are in [`spool/`](spool/) and the [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/spool/SPOOL-source.zip). Rebuild both with `python spool/build.py`.
 
-The editable GRAIN, TINE, MIRE, and SPOOL sources are in [`grain/`](grain/), [`tine/`](tine/), [`mire/`](mire/), and [`spool/`](spool/), and the music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
+[**Play HAZE**](https://calebhaines.github.io/sidequest-prototypes/music/haze/) to paint sound across time and pitch. A thirty-two-column, twenty-four-band spectral canvas controls forty-eight additive partials, cloud motion, and freeze. Save projects and export stereo WAV. Open `haze/index.html` for offline play; editable sources are in [`haze/`](haze/), with a [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/haze/HAZE-source.zip). Rebuild both with `python haze/build.py`.
+
+[**Play BOWER**](https://calebhaines.github.io/sidequest-prototypes/music/bower/) for a generative waveguide string instrument. Four strings combine sixteen-step patterns, scales, Euclidean rhythms, probability, and independent loop lengths for polyrhythms. Shape each pluck and resonant body, save projects, and export stereo WAV. Open `bower/index.html` for offline play; editable sources are in [`bower/`](bower/), with a [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/bower/BOWER-source.zip). Rebuild both with `python bower/build.py`.
+
+[**Play RAVEL**](https://calebhaines.github.io/sidequest-prototypes/music/ravel/) to cut stereo recordings into a new rhythm. Sixteen sample slices and sixteen steps include transient auto-slicing, microphone capture, import, ratchets, and step editing. Save projects and export stereo WAV. Open `ravel/index.html` for offline play; editable sources are in [`ravel/`](ravel/), with a [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/ravel/RAVEL-source.zip). Rebuild both with `python ravel/build.py`.
+
+The editable instrument sources are in [`grain/`](grain/), [`tine/`](tine/), [`mire/`](mire/), [`spool/`](spool/), [`haze/`](haze/), [`bower/`](bower/), and [`ravel/`](ravel/); FORM's editable project is in [`music/form/`](music/form/). The music landing page is in [`music/`](music/). Run `npm run music:sync` after rebuilding an app or editing the landing page to copy it into `public/music/` for Vite and `docs/music/` for GitHub Pages. This also runs before development and production builds. Old `/grain/` links redirect to the music section, preserving their query strings and hashes. Saved projects use the same browser storage.
 
 ## Download and play
 

@@ -14,6 +14,12 @@ MIRE: https://calebhaines.github.io/sidequest-prototypes/music/mire/
 
 SPOOL: https://calebhaines.github.io/sidequest-prototypes/music/spool/
 
+HAZE: https://calebhaines.github.io/sidequest-prototypes/music/haze/
+
+BOWER: https://calebhaines.github.io/sidequest-prototypes/music/bower/
+
+RAVEL: https://calebhaines.github.io/sidequest-prototypes/music/ravel/
+
 The music page has its own design and navigation, separate from the Sidequest RPG gallery. All typography and artwork are embedded in `index.html`.
 
 ## Editing and adding apps
@@ -29,6 +35,14 @@ TINE 1.1 has nine resonator bodies, selectable striking materials, contact textu
 MIRE 1.0 is a feedback instrument with four interconnected delay/resonator pools, six processor models, eight exciter types including imported audio, and four sixteen-step lanes. Its routing matrix, two LFOs, assignable XY pad, freeze, live microphone input, and stereo recording turn short sounds into evolving loops and textures. Eight complete garden presets are included. The editable source is in `mire/`; rebuild its standalone page and `music/mire/MIRE-source.zip` with `python mire/build.py`. Music Lab opens the app at `./mire/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
 
 SPOOL 1.0 is a tape-loop playground with four overlapping stereo decks, eight tape-study presets, thirty seconds per deck, audio import, live microphone input, built-in keys, and overdubbing. Shape speed, reverse playback, loop regions, tape wear, tone, wow, and flutter; save projects and export stereo WAV. Its editable source is in `spool/`; rebuild the standalone page and `music/spool/SPOOL-source.zip` with `python spool/build.py`. Music Lab opens the app at `./spool/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
+
+HAZE 1.0 is a spectral painting instrument. Its thirty-two-column, twenty-four-band canvas turns time and pitch into forty-eight additive partials, with cloud motion, overtone shaping, and spectral freeze. Its editable source is in `haze/`; run `python haze/build.py` to rebuild the standalone page and `music/haze/HAZE-source.zip`. Music Lab opens it at `./haze/` or downloads the same self-contained HTML for offline play.
+
+BOWER 1.0 is a generative string instrument with four waveguide voices, sixteen-step patterns, scales, Euclidean rhythms, probability, and independent loop lengths for polyrhythms. Its editable source is in `bower/`; run `python bower/build.py` to rebuild the standalone page and `music/bower/BOWER-source.zip`. Music Lab opens it at `./bower/` or downloads the same self-contained HTML for offline play.
+
+RAVEL 1.0 is a stereo sample-slicing instrument with sixteen slices, a sixteen-step sequencer, transient auto-slicing, audio import, microphone recording, ratchets, and step editing. Its editable source is in `ravel/`; run `python ravel/build.py` to rebuild the standalone page and `music/ravel/RAVEL-source.zip`. Music Lab opens it at `./ravel/` or downloads the same self-contained HTML for offline play.
+
+All three apps include project files, stereo WAV export, and editable source ZIP downloads in their Help panels. Typography, artwork, and audio code are bundled in each standalone HTML file.
 
 Run `npm run music:sync` to copy the music page, apps, and assets to both `public/music/` and `docs/music/`. The sync also runs before `npm run dev` and `npm run build`. GitHub Pages publishes `docs/`, so commit the refreshed copies when publishing.
 
