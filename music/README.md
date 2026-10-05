@@ -6,6 +6,13 @@ Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
 GALLEY studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
+Two-minute GALLEY session: https://calebhaines.github.io/sidequest-prototypes/music/listen/
+
+**The Cupboard at Low Tide** is the original two-minute arrangement made in the
+studio. The listening page includes a browser player and the unchanged stereo
+48 kHz / 16-bit WAV master. Its source page and recording live in `music/listen/`;
+`npm run music:sync` copies them into the published site.
+
 SIZZLE: https://calebhaines.github.io/sidequest-prototypes/music/grain/
 
 HOTPLATE: https://calebhaines.github.io/sidequest-prototypes/music/form/
