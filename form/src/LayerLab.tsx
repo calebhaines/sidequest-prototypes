@@ -437,14 +437,14 @@ export default function LayerLab({
           : `Layer ${LETTERS[interaction.source]} shapes the amplitude of layer ${LETTERS[interaction.target]} at audio rate.`;
 
   return (
-    <section className="layer-lab" aria-label="Modular synthesis laboratory">
+    <section className="layer-lab" aria-label="Modular synthesis controls">
       <div className="ll-header">
         <div>
           <div className="ll-eyebrow">
             <Layers3 size={13} /> THREE-LAYER SYNTHESIS
           </div>
-          <h2>Unmix the layer-cake.</h2>
-          <p>Five engines. Three layers. The third half is especially loud.</p>
+          <h2>Three burners. Your recipe.</h2>
+          <p>Choose the engines. Set the layers. The third burner has opinions.</p>
         </div>
         <span className="ll-engine-count">
           <span />
@@ -1307,7 +1307,7 @@ export default function LayerLab({
           aria-labelledby="ll-modulation-tab"
         >
           <div className="ll-mod-intro">
-            <strong>A little motion goes a long way.</strong>
+            <strong>Stir occasionally. Or continuously.</strong>
             <p>
               Route an LFO, envelope or per-hit random value into any layer.
               Positive and negative amounts push in opposite directions.
@@ -1429,7 +1429,7 @@ export default function LayerLab({
             {architecture.routes.length === 0 ? (
               <div className="ll-empty-matrix">
                 <Link2 size={22} strokeWidth={1.3} />
-                <strong>Send the pitch round the bend.</strong>
+                <strong>Set the motion in the kitchen.</strong>
                 <p>
                   Try LFO 1 → table position for motion, or random → pitch for a
                   different shade on every hit.

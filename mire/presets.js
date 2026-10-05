@@ -1,4 +1,4 @@
-/* Eight small gardens. Every preset contains its complete, editable patch. */
+/* Eight complete reductions. Every preset contains its complete, editable patch. */
 (() => {
   'use strict';
   const presets = [];
@@ -15,9 +15,9 @@
   const pitches = (state, notes) => notes.forEach((pitch, i) => state.nodes[i].pitch = pitch);
   const kinds = (state, ids) => ids.forEach((kind, i) => state.sources[i].kind = kind);
 
-  add('patient', 'The patient puddle', 'A few droplets, a little copper. The puddle is considering its reply.');
+  add('patient', 'The patient stockpot', 'Short droplets and copper echoes. The stockpot is considering a second opinion.');
 
-  add('copper', 'Copper has opinions', 'Ringing bowls and springy replies. Nobody asked the teaspoon.', s => {
+  add('copper', 'The saucepan has opinions', 'Ringing bowls and springy replies. The saucepan has overruled the teaspoon.', s => {
     s.tempo = 92; s.swing = .04; s.garden = { circulation: .66, damping: .15, freeze: false };
     types(s, ['bowl', 'bowl', 'spring', 'tape']); pitches(s, [48, 55, 60, 67]);
     kinds(s, ['chime', 'pluck', 'pulse', 'drop']);
@@ -27,7 +27,7 @@
     s.modulators = [{ shape: 'sine', rate: .042, depth: .23, target: 'n0.pan' }, { shape: 'triangle', rate: .065, depth: .18, target: 'n1.tone' }];
   });
 
-  add('corners', 'A room with no corners', 'Slow reflections and bowed air. The walls have gone for a walk.', s => {
+  add('corners', 'After-hours bain-marie', 'Slow reflections and bowed air. The heat lamp refuses to clock out.', s => {
     s.tempo = 68; s.swing = 0; types(s, ['diffuser', 'cloud', 'tape', 'cloud']);
     s.garden.circulation = .83; s.garden.damping = .37; s.master.mix = .98; s.master.drive = .07;
     kinds(s, ['bow', 'reed', 'dust', 'chime']);
@@ -38,7 +38,7 @@
     s.modulators = [{ shape: 'sine', rate: .025, depth: .2, target: 'n1.time' }, { shape: 'sine', rate: .037, depth: .45, target: 'n3.pan' }];
   });
 
-  add('roots', 'Tin roots', 'Four tuned bodies, plucked in passing. The roots are made of cutlery.', s => {
+  add('roots', 'Cutlery reduction', 'Four tuned bodies, plucked in passing. The cutlery has joined the sauce.', s => {
     s.tempo = 116; s.swing = .11; types(s, ['string', 'spring', 'string', 'cloud']); pitches(s, [48, 55, 60, 64]);
     s.garden.circulation = .59; s.garden.damping = .22; kinds(s, ['pluck', 'pulse', 'drop', 'pluck']);
     s.sources.forEach((source, i) => { source.pitch = [48, 55, 64, 67][i]; source.destination = i; source.level = [.45, .24, .35, .30][i]; source.decay = [180, 60, 140, 240][i]; });
@@ -47,7 +47,7 @@
     s.modulators = [{ shape: 'triangle', rate: .13, depth: .24, target: 'n2.tone' }, { shape: 'sine', rate: .073, depth: .34, target: 'n3.pan' }];
   });
 
-  add('radio', 'Swamp radio', 'A crooked little pulse train. The aerial has developed gills.', s => {
+  add('radio', 'Ticket printer soup', 'A crooked pulse train. The ticket printer appears to be making stock.', s => {
     s.tempo = 128; s.swing = .18; types(s, ['tape', 'string', 'spring', 'diffuser']);
     s.garden.circulation = .63; s.garden.damping = .32; s.master.drive = .34; s.master.mix = .72;
     kinds(s, ['pulse', 'reed', 'dust', 'pluck']);
@@ -57,7 +57,7 @@
     s.modulators = [{ shape: 'random', rate: .42, depth: .18, target: 'n2.tone' }, { shape: 'triangle', rate: .12, depth: .16, target: 'drive' }];
   });
 
-  add('weather', 'Weather in a teacup', 'Scattered dust and swelling friction. Please bring an indoor umbrella.', s => {
+  add('weather', 'Steam in the sauce', 'Scattered noise and swelling friction. The sauce has reached atmospheric pressure.', s => {
     s.tempo = 82; s.swing = .04; types(s, ['cloud', 'diffuser', 'cloud', 'bowl']); pitches(s, [48, 55, 60, 67]);
     s.garden.circulation = .79; s.garden.damping = .17; s.master.mix = .94; kinds(s, ['dust', 'bow', 'dust', 'chime']);
     s.sources.forEach((source, i) => { source.decay = [260, 2100, 120, 650][i]; source.level = [.23, .29, .18, .20][i]; source.texture = [ .85, .55, .95, .42 ][i]; source.destination = i; });
@@ -66,7 +66,7 @@
     s.modulators = [{ shape: 'random', rate: .08, depth: .22, target: 'n0.time' }, { shape: 'sine', rate: .038, depth: .37, target: 'n3.pitch' }];
   });
 
-  add('walking', 'The room walks home', 'An uneven procession of echoes. The left wall is leading.', s => {
+  add('walking', 'Four pans, no handles', 'An uneven procession of echoes. The saucepan has escaped the line.', s => {
     s.tempo = 106; s.swing = .12; types(s, ['spring', 'diffuser', 'tape', 'bowl']); pitches(s, [45, 52, 57, 64]);
     kinds(s, ['pluck', 'drop', 'reed', 'pulse']); s.garden.circulation = .73;
     s.sources.forEach((source, i) => { source.pitch = [45, 52, 57, 64][i]; source.destination = i; source.level = [.35, .50, .26, .23][i]; });
@@ -75,7 +75,7 @@
     s.modulators = [{ shape: 'sine', rate: .16, depth: .45, target: 'n0.pan' }, { shape: 'sine', rate: .11, depth: .48, target: 'n3.pan' }];
   });
 
-  add('thursday', 'All pools lead to Thursday', 'A slow, luminous loop. Thursday is refusing to leave the water.', s => {
+  add('thursday', 'Reduced beyond recognition', 'A slow luminous loop. Chef cannot remember what went in first.', s => {
     s.tempo = 58; s.swing = 0; types(s, ['tape', 'cloud', 'diffuser', 'string']); pitches(s, [48, 55, 60, 67]);
     kinds(s, ['bow', 'chime', 'reed', 'dust']); s.garden.circulation = .90; s.garden.damping = .28; s.master.drive = .06; s.master.mix = .98;
     s.sources.forEach((source, i) => { source.pitch = [48, 67, 55, 72][i]; source.decay = [2500, 900, 1800, 500][i]; source.level = [.25, .21, .23, .12][i]; source.destination = i; });

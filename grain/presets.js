@@ -20,8 +20,8 @@
 
   window.NOISE_PRESETS = [
     {
-      name: 'Dust & concrete',
-      tagline: 'Dust has put on its dancing trousers.',
+      name: 'Flat-top special',
+      tagline: 'The griddle is keeping impeccable time.',
       bpm: 104,
       swing: 0.16,
       drive: 0.18,
@@ -38,8 +38,8 @@
       ]
     },
     {
-      name: 'Late-night transmission',
-      tagline: 'The aerial is receiving tomorrow’s bedtime.',
+      name: 'After-hours service',
+      tagline: 'A quiet order from the table that never leaves.',
       bpm: 82,
       swing: 0.23,
       drive: 0.12,
@@ -49,15 +49,15 @@
         voice('SOFT SNARE', 'pink', 'snare', '0000 2000 0000 2000', { level: 0.59, tone: 0.35, decay: 0.35, pitch: 0.37 }),
         voice('VELVET HAT', 'velvet', 'hat', '2010 1011 2010 1010', { level: 0.31, pan: -0.22, tone: 0.63, decay: 0.12, pitch: 0.59 }),
         voice('AIR HAT', 'grey', 'hat', '0000 0000 0010 0000', { level: 0.24, pan: 0.25, tone: 0.56, decay: 0.6, pitch: 0.48 }),
-        voice('SIGNAL RIM', 'digital', 'rim', '0001 0000 0000 0010', { level: 0.24, pan: -0.35, tone: 0.47, decay: 0.17, pitch: 0.56 }),
-        voice('GHOST CLAP', 'white', 'clap', '0000 1000 0000 1000', { level: 0.24, pan: 0.12, tone: 0.38, decay: 0.42, pitch: 0.41 }),
-        voice('ANTENNA', 'metallic', 'perc', '0000 0010 0001 0000', { level: 0.22, pan: 0.39, tone: 0.34, decay: 0.39, pitch: 0.32 }),
-        voice('TRANSMISSION', 'radio', 'texture', '1000 0000 1000 0000', { level: 0.13, pan: -0.08, tone: 0.27, decay: 0.86, pitch: 0.3 })
+        voice('SERVICE RIM', 'digital', 'rim', '0001 0000 0000 0010', { level: 0.24, pan: -0.35, tone: 0.47, decay: 0.17, pitch: 0.56 }),
+        voice('CLOTH CLAP', 'white', 'clap', '0000 1000 0000 1000', { level: 0.24, pan: 0.12, tone: 0.38, decay: 0.42, pitch: 0.41 }),
+        voice('EXTRACTOR', 'metallic', 'perc', '0000 0010 0001 0000', { level: 0.22, pan: 0.39, tone: 0.34, decay: 0.39, pitch: 0.32 }),
+        voice('KITCHEN RADIO', 'radio', 'texture', '1000 0000 1000 0000', { level: 0.13, pan: -0.08, tone: 0.27, decay: 0.86, pitch: 0.3 })
       ]
     },
     {
-      name: 'Velvet break',
-      tagline: 'Very soft shoes. Entirely improper footwork.',
+      name: 'Soft scramble',
+      tagline: 'Low heat. Loose wrist. Unexpected footwork.',
       bpm: 122,
       swing: 0.11,
       drive: 0.25,
@@ -70,12 +70,12 @@
         voice('WOODY RIM', 'dust', 'rim', '0000 0100 0010 0000', { level: 0.3, pan: -0.29, tone: 0.42, decay: 0.1, pitch: 0.44 }),
         voice('PALM CLAP', 'grey', 'clap', '0000 1000 0000 1000', { level: 0.3, pan: 0.09, tone: 0.51, decay: 0.25, pitch: 0.52 }),
         voice('SHUFFLE', 'pink', 'perc', '0100 0011 0100 0001', { level: 0.27, pan: 0.32, tone: 0.53, decay: 0.14, pitch: 0.71 }),
-        voice('TAPE DUST', 'dust', 'texture', '1000 0000 0000 1000', { level: 0.12, pan: -0.05, tone: 0.35, decay: 0.61, pitch: 0.42 })
+        voice('PREP CRUMBS', 'dust', 'texture', '1000 0000 0000 1000', { level: 0.12, pan: -0.05, tone: 0.35, decay: 0.61, pitch: 0.42 })
       ]
     },
     {
-      name: 'Static bloom',
-      tagline: 'The wallpaper has flowered into hi-hats.',
+      name: 'Steam release',
+      tagline: 'The pressure valve has prepared a four-on-the-floor special.',
       bpm: 116,
       swing: 0.04,
       drive: 0.1,
@@ -84,16 +84,16 @@
         voice('PULSE KICK', 'brown', 'kick', '2000 2000 2000 2000', { level: 0.83, tone: 0.32, decay: 0.38, pitch: 0.32 }),
         voice('STATIC SNARE', 'grey', 'snare', '0000 2000 0000 2000', { level: 0.57, tone: 0.6, decay: 0.32, pitch: 0.52 }),
         voice('BLUE HAT', 'blue', 'hat', '1010 1010 1010 1011', { level: 0.3, pan: -0.24, tone: 0.71, decay: 0.08, pitch: 0.7 }),
-        voice('BLOOM HAT', 'pink', 'hat', '0020 0020 0020 0020', { level: 0.32, pan: 0.28, tone: 0.65, decay: 0.58, pitch: 0.56 }),
+        voice('VENT HAT', 'pink', 'hat', '0020 0020 0020 0020', { level: 0.32, pan: 0.28, tone: 0.65, decay: 0.58, pitch: 0.56 }),
         voice('GLASS RIM', 'metallic', 'rim', '0000 0001 0000 0100', { level: 0.24, pan: -0.39, tone: 0.65, decay: 0.22, pitch: 0.74 }),
         voice('WHITE CLAP', 'white', 'clap', '0000 1000 0000 1000', { level: 0.36, pan: 0.08, tone: 0.59, decay: 0.35, pitch: 0.56 }),
-        voice('PETAL PERC', 'velvet', 'perc', '0100 0010 0100 0011', { level: 0.28, pan: 0.34, tone: 0.68, decay: 0.25, pitch: 0.78 }),
-        voice('VIOLET AIR', 'violet', 'texture', '1000 0000 1000 0000', { level: 0.11, pan: -0.1, tone: 0.53, decay: 0.79, pitch: 0.6 })
+        voice('UTENSIL PERC', 'velvet', 'perc', '0100 0010 0100 0011', { level: 0.28, pan: 0.34, tone: 0.68, decay: 0.25, pitch: 0.78 }),
+        voice('PRESSURE HISS', 'violet', 'texture', '1000 0000 1000 0000', { level: 0.11, pan: -0.1, tone: 0.53, decay: 0.79, pitch: 0.6 })
       ]
     },
     {
-      name: 'Broken circuitry',
-      tagline: 'The volts are revolting, in excellent time.',
+      name: 'Ticket jam',
+      tagline: 'The order printer is producing more rhythm than receipts.',
       bpm: 138,
       swing: 0.08,
       drive: 0.39,
@@ -106,25 +106,25 @@
         voice('RELAY RIM', 'metallic', 'rim', '0001 0000 0010 0100', { level: 0.31, pan: -0.34, tone: 0.7, decay: 0.13, pitch: 0.82 }),
         voice('SHORT CIRCUIT', 'crackle', 'clap', '0000 1000 0000 1001', { level: 0.25, pan: 0.08, tone: 0.56, decay: 0.22, pitch: 0.62 }),
         voice('DATA PERC', 'digital', 'perc', '0100 1001 0010 0101', { level: 0.26, pan: 0.4, tone: 0.58, decay: 0.11, pitch: 0.77 }),
-        voice('POWER LEAK', 'radio', 'texture', '1000 0000 0010 0000', { level: 0.1, pan: -0.07, tone: 0.43, decay: 0.48, pitch: 0.47 })
+        voice('WALK-IN HUM', 'radio', 'texture', '1000 0000 0010 0000', { level: 0.1, pan: -0.07, tone: 0.43, decay: 0.48, pitch: 0.47 })
       ]
     },
     {
-      name: 'Empty room',
-      tagline: 'Nobody is here. Something is knocking.',
+      name: 'Last pan standing',
+      tagline: 'Service is over. One pan has additional remarks.',
       bpm: 68,
       swing: 0.07,
       drive: 0.08,
       space: 0.58,
       tracks: [
-        voice('ROOM KICK', 'brown', 'kick', '2000 0000 0000 0010', { level: 0.82, tone: 0.19, decay: 0.59, pitch: 0.21 }),
+        voice('COLD ROOM KICK', 'brown', 'kick', '2000 0000 0000 0010', { level: 0.82, tone: 0.19, decay: 0.59, pitch: 0.21 }),
         voice('DISTANT SNARE', 'pink', 'snare', '0000 0000 2000 0000', { level: 0.5, tone: 0.34, decay: 0.51, pitch: 0.35 }),
         voice('QUIET HAT', 'velvet', 'hat', '0010 0010 0010 0001', { level: 0.25, pan: -0.28, tone: 0.52, decay: 0.11, pitch: 0.51 }),
         voice('SOFT AIR', 'grey', 'hat', '0000 0000 0000 1000', { level: 0.22, pan: 0.31, tone: 0.39, decay: 0.7, pitch: 0.43 }),
         voice('DOOR RIM', 'dust', 'rim', '0000 0001 0000 0000', { level: 0.28, pan: -0.43, tone: 0.3, decay: 0.18, pitch: 0.29 }),
-        voice('WALL CLAP', 'pink', 'clap', '0000 0000 1000 0000', { level: 0.2, pan: 0.07, tone: 0.3, decay: 0.47, pitch: 0.36 }),
+        voice('TILE CLAP', 'pink', 'clap', '0000 0000 1000 0000', { level: 0.2, pan: 0.07, tone: 0.3, decay: 0.47, pitch: 0.36 }),
         voice('HOLLOW PERC', 'metallic', 'perc', '0000 0010 0000 0010', { level: 0.21, pan: 0.38, tone: 0.27, decay: 0.49, pitch: 0.24 }),
-        voice('FLOOR DUST', 'crackle', 'texture', '1000 0000 0000 0000', { level: 0.15, pan: -0.09, tone: 0.23, decay: 0.95, pitch: 0.28 })
+        voice('CLOSING CRUMBS', 'crackle', 'texture', '1000 0000 0000 0000', { level: 0.15, pan: -0.09, tone: 0.23, decay: 0.95, pitch: 0.28 })
       ]
     }
   ];

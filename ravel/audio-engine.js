@@ -150,8 +150,8 @@ function buildRavelDSP() {
     panic() { this.generation++;this.stop();this.command('panic');this.pendingPads.clear();this.recordToken++;this.isRecording=false;for(const take of this.recordTakes.values())take.resolve?.();this.recordTakes.clear();this.recordTake=null;this.recordFrames=0;this.cancelMicCapture(); }
     setState(state) { this.state=state;this.command('state',{state:payload(state)});const key=this.sampleKey,sample=this.getSample();if(key!==this.sampleKey)this.command('sample',{sample:{pcm:sample.pcm.slice(),sampleRate:sample.sampleRate}}); }
     scheduleNativeNote(slice, when, options = {}) {
-      if (!this.node || !this.context) throw new Error('Prepare RAVEL before scheduling notes.');
-      if (!Number.isInteger(slice) || slice < 0 || slice > 15 || !Number.isFinite(when) || !Number.isFinite(options.duration) || options.duration <= 0) throw new Error('Invalid RAVEL note.');
+      if (!this.node || !this.context) throw new Error('Prepare DICER before scheduling notes.');
+      if (!Number.isInteger(slice) || slice < 0 || slice > 15 || !Number.isFinite(when) || !Number.isFinite(options.duration) || options.duration <= 0) throw new Error('Invalid DICER note.');
       this.command('scheduledPad', { slice, options, frame: Math.round(when * this.context.sampleRate) });
     }
     cancelNativeNotes({ source, when } = {}) {
@@ -164,10 +164,10 @@ function buildRavelDSP() {
       const check = () => { if (options.signal?.aborted) throw new DOMException('Pattern render cancelled.', 'AbortError'); }; check();
       const snapshot = RavelSchema.normalize(state), sample = snapshot.asset.kind === 'seed' ? DSP.generateSeed(snapshot.asset) : decodePCM(snapshot.asset);
       const seconds = options.durationSeconds, tail = options.tailSeconds ?? 0;
-      if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 120 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192) throw new Error('Invalid RAVEL render bounds.');
+      if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 120 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192) throw new Error('Invalid DICER render bounds.');
       const sr = 48000, frames = Math.ceil((seconds + tail) * sr), pcm = new Float32Array(frames * 2), core = DSP.createCore(payload(snapshot), sample, sr);
       for (const event of events) {
-        if (!Number.isInteger(event.voice) || event.voice < 0 || event.voice > 15 || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid RAVEL render note.');
+        if (!Number.isInteger(event.voice) || event.voice < 0 || event.voice > 15 || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid DICER render note.');
         core.queueSlice(event.voice, { velocity: event.velocity, pitch: event.pitch || 0, duration: event.duration, reverse: !!event.reverse }, Math.round(event.at * sr));
       }
       let at = 0, block = 0; while (at < frames) {

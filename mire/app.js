@@ -1,4 +1,4 @@
-/* MIRE interface. All synthesis lives in audio-engine.js. */
+/* REDUCE interface. All synthesis lives in audio-engine.js. */
 (() => {
   'use strict';
   const S = window.MireSchema, presets = window.MirePresets;
@@ -10,7 +10,7 @@
   const ms = v => v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + ' ms';
   const pan = v => Math.abs(v) < .02 ? 'Center' : Math.round(Math.abs(v) * 100) + (v < 0 ? ' L' : ' R');
   const copy = value => JSON.parse(JSON.stringify(value));
-  const colors = ['#d5ef89', '#baaacf', '#96bcb2', '#d5a884'];
+  const colors = ['#ff8d45', '#d6c05b', '#a2b7bd', '#ef7357'];
   const storageKey = 'mire-project-v1';
   let state = S.normalize(presets[0].state), engine, selectedNode = 0, selectedSource = 0, selectedStep = 0;
   let autosaveTimer, toastTimer, storageWarned = false, busy = false, playBusy = false, recordBusy = false, recordStarted = 0, popover;
@@ -34,7 +34,7 @@
   function toast(message) { $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3800); }
   function errorMessage(error) { return error?.message || 'This action could not be completed.'; }
   function download(blob, filename) { const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 20000); }
-  function filename(suffix) { return 'MIRE-' + state.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 50).toLowerCase() + suffix; }
+  function filename(suffix) { return 'REDUCE-' + state.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 50).toLowerCase() + suffix; }
   function optionList(options, selected) { return options.map(o => { const id = typeof o === 'string' ? o : o.id; return `<option value="${esc(id)}"${id === selected ? ' selected' : ''}>${esc(typeof o === 'string' ? o : o.name)}</option>`; }).join(''); }
   function field(label, options, value, callback, ariaLabel) {
     const wrap = document.createElement('div'); wrap.className = 'parameter compact';
@@ -60,13 +60,13 @@
 
   function renderTransport() {
     $('tempo').value = state.tempo; $('swing').value = state.swing; $('swing').style.setProperty('--fill', pct(state.swing / .45)); $('swing-value').textContent = pct(state.swing);
-    $('preset-select').innerHTML = optionList(presets, presetId) + `<option value="custom"${presetId === 'custom' ? ' selected' : ''}>Custom garden</option>`;
+    $('preset-select').innerHTML = optionList(presets, presetId) + `<option value="custom"${presetId === 'custom' ? ' selected' : ''}>Custom reduction</option>`;
     updatePlayback(); updateFreeze();
   }
   function updatePlayback() { const playing = !!engine.isPlaying; $('play-button').classList.toggle('playing', playing); $('play-button').setAttribute('aria-label', playing ? 'Stop sequencer' : 'Play sequencer'); $('play-button').querySelector('use').setAttribute('href', playing ? '#icon-stop' : '#icon-play'); $('play-button').querySelector('span').textContent = playing ? 'Stop' : 'Play'; $('audio-status-dot').classList.toggle('active', playing || engine.micEnabled); updateMic(); }
-  function updateFreeze() { $('freeze-button').classList.toggle('active', state.garden.freeze); $('freeze-button').setAttribute('aria-pressed', String(state.garden.freeze)); $('network-status').textContent = state.garden.freeze ? 'THE RETURN IS HELD' : engine.isPlaying ? 'CIRCULATING SOUND' : 'WAITING FOR A SEED'; }
+  function updateFreeze() { $('freeze-button').classList.toggle('active', state.garden.freeze); $('freeze-button').setAttribute('aria-pressed', String(state.garden.freeze)); $('network-status').textContent = state.garden.freeze ? 'THE RETURN IS HELD' : engine.isPlaying ? 'CIRCULATING SOUND' : 'AWAITING INGREDIENTS'; }
   function updateMic() { $('mic-button').classList.toggle('mic-active', !!engine.micEnabled); $('mic-button').setAttribute('aria-pressed', String(!!engine.micEnabled)); $('mic-button').querySelector('span').textContent = engine.micEnabled ? 'Mic live' : 'Microphone'; }
-  function nodeShort(index) { return state.nodes[index].name.replace(/^[A-D]\s*[·:]\s*/, ''); }
+  function nodeShort(index) { const name = state.nodes[index].name.replace(/^[A-D]\s*[·:]\s*/, ''); return ({ Moss: 'Stockpot', Silt: 'Bain-marie', Reed: 'Saucepan', Hollow: 'Kettle' })[name] || name; }
   function renderNodeButtons() {
     $('node-buttons').innerHTML = state.nodes.map((n, i) => `<button class="node-select${selectedNode === i ? ' active' : ''}" data-node="${i}" style="--node-color:${colors[i]}" aria-pressed="${selectedNode === i}" aria-label="Select node ${String.fromCharCode(65 + i)}: ${esc(nodeShort(i))}"><span class="node-symbol" aria-hidden="true"></span><span><b>${esc(nodeShort(i))}</b><small>${String.fromCharCode(65 + i)} · ${esc(S.NODE_MODELS.find(m => m.id === n.model)?.name || n.model)}</small></span></button>`).join('');
     $('node-buttons').querySelectorAll('button').forEach(button => button.addEventListener('click', () => { selectedNode = +button.dataset.node; renderNodeButtons(); renderNodeEditor(); }));
@@ -133,7 +133,7 @@
         const input = cell.querySelector('input'); input.addEventListener('pointerdown', gestureStart); input.addEventListener('keydown', gestureStart); input.addEventListener('input', () => { gestureStart(); const value = +input.value; state.routing[i][j] = value; cell.classList.toggle('zero', value < .001); cell.style.setProperty('--route-level', pct(value)); cell.querySelector('output').textContent = Math.round(value * 100); input.setAttribute('aria-valuetext', pct(value)); markChanged(); }); ['change', 'pointerup', 'keyup', 'blur'].forEach(type => input.addEventListener(type, gestureEnd)); matrix.append(cell);
       }
     }
-    $('network-controls').replaceChildren(range('CIRCULATION', 0, 1, state.garden.circulation, pct, v => { state.garden.circulation = v; }, { aria: 'Garden circulation' }), range('DAMPING', 0, 1, state.garden.damping, pct, v => { state.garden.damping = v; }, { aria: 'Garden damping' }));
+    $('network-controls').replaceChildren(range('CIRCULATION', 0, 1, state.garden.circulation, pct, v => { state.garden.circulation = v; }, { aria: 'Feedback circulation' }), range('DAMPING', 0, 1, state.garden.damping, pct, v => { state.garden.damping = v; }, { aria: 'Feedback damping' }));
   }
   function renderModulation() {
     const container = $('lfo-controls'); container.replaceChildren();
@@ -175,10 +175,10 @@
     window.MusicLabHost?.notifyStateChange();
   }
   function importAudio({ pcm, sampleRate, name = 'Shared sample', options = {} } = {}) {
-    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current MIRE recording or render before importing audio.');
+    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current REDUCE recording or render before importing audio.');
     const target = options.deck ?? options.target ?? selectedSource;
     const index = typeof target === 'string' && /^[0-3]$/.test(target) ? Number(target) : target;
-    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a MIRE source from 1 to 4.');
+    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a REDUCE source from 1 to 4.');
     if (state.samples[index] && options.replace !== true) throw new Error('Confirm replacing the sample on source ' + (index + 1) + ' before importing audio.');
     const asset = engine.createSample(pcm, sampleRate, name);
     installSample(index, asset);
@@ -186,8 +186,8 @@
     return { deck: index, name: asset.name, duration: asset.duration, sampleRate: asset.sampleRate, channels: 1 };
   }
   async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds = 0, signal } = {}) {
-    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current MIRE recording or render before sharing audio.');
-    if (scope !== 'pattern') throw new Error('Choose the current MIRE network pattern to export.');
+    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current REDUCE recording or render before sharing audio.');
+    if (scope !== 'pattern') throw new Error('Choose the current REDUCE network pattern to export.');
     if (signal?.aborted) throw new DOMException('Render canceled.', 'AbortError');
     if (!Number.isInteger(bars) || bars < 1 || bars > 16 || !Number.isFinite(tailSeconds) || tailSeconds < 0 || tailSeconds > 30) throw new Error('Choose 1–16 bars and an effect tail from 0 to 30 seconds.');
     const tempo = state.tempo, name = state.name;
@@ -209,7 +209,7 @@
   function clearStep() { for (const timer of stepTimers) clearTimeout(timer); stepTimers.clear(); currentStep = -1; document.querySelectorAll('.step.current').forEach(button => button.classList.remove('current')); $('beat-position').textContent = '1 . 1 . 1'; }
   async function togglePlayback() { if (playBusy) return; playBusy = true; $('play-button').disabled = true; try { if (engine.isPlaying) { engine.stop(); clearStep(); } else await engine.start(); updatePlayback(); updateFreeze(); } catch (error) { toast(errorMessage(error)); } finally { playBusy = false; $('play-button').disabled = false; } }
   async function audition(index) { try { if (await engine.trigger(index, .85) === false) return; sourceFlashes[state.sources[index].destination] = performance.now(); $('audio-status-dot').classList.add('active'); $('audio-status').textContent = 'A SOUND HAS BEEN PLANTED'; } catch (error) { toast(errorMessage(error)); } }
-  function panic() { engine.panic(); $('mic-button').classList.remove('mic-active'); $('mic-button').setAttribute('aria-pressed', 'false'); $('mic-button').querySelector('span').textContent = 'Microphone'; state.garden.freeze = false; clearStep(); updatePlayback(); updateFreeze(); renderTransport(); markChanged(); $('audio-status').textContent = 'NETWORK SILENCED'; toast('Network silenced. The echo has left the premises.'); }
+  function panic() { engine.panic(); $('mic-button').classList.remove('mic-active'); $('mic-button').setAttribute('aria-pressed', 'false'); $('mic-button').querySelector('span').textContent = 'Microphone'; state.garden.freeze = false; clearStep(); updatePlayback(); updateFreeze(); renderTransport(); markChanged(); $('audio-status').textContent = 'NETWORK SILENCED'; toast('Network silenced. The reduction is off the heat.'); }
   async function finishRecording(message) {
     try { const blob = await engine.stopRecording(); recordStarted = 0; $('record-button').classList.remove('recording'); $('record-button').querySelector('span').textContent = 'Record output'; $('record-time').textContent = '00:00'; if (blob?.size) { download(blob, filename('-live.wav')); toast(message || 'Live stereo recording saved.'); } else toast('No audio was recorded.'); }
     catch (error) { recordStarted = 0; $('record-button').classList.remove('recording'); $('record-button').querySelector('span').textContent = 'Record output'; toast(errorMessage(error)); }
@@ -231,15 +231,15 @@
   $('clear-button').addEventListener('click', () => { remember(); state.sources.forEach(source => source.steps.forEach(step => { step.on = false; })); markChanged(); renderSources(); toast('All source patterns cleared.'); });
   $('random-button').addEventListener('click', () => {
     remember(); const choose = list => list[Math.floor(Math.random() * list.length)];
-    state.name = 'A most misplaced puddle'; state.garden.freeze = false; state.garden.circulation = .48 + Math.random() * .34;
+    state.name = 'An unsupervised reduction'; state.garden.freeze = false; state.garden.circulation = .48 + Math.random() * .34;
     state.nodes.forEach((n, i) => { n.model = choose(S.NODE_MODELS).id; n.pitch = choose([36, 43, 48, 55, 60, 67, 72]); n.tone = 1400 + Math.random() * 7200; n.decay = .55 + Math.random() * .36; n.drift = Math.random() * .32; n.resonance = .2 + Math.random() * .45; n.division = choose(['1/8', '3/16', '1/4', '3/8']); n.time = 120 + Math.random() * 700; n.pan = i % 2 ? .3 + Math.random() * .4 : -.3 - Math.random() * .4; n.mute = false; });
     state.routing = state.nodes.map((_, i) => state.nodes.map((__, j) => i === j ? .3 + Math.random() * .3 : Math.random() > .55 ? Math.random() * .38 : 0));
     state.sources.forEach((source, i) => { source.kind = choose(S.SOURCE_KINDS.filter(kind => kind.id !== 'sample')).id; source.name = S.SOURCE_KINDS.find(k => k.id === source.kind).name; source.destination = i; source.pitch = choose([36, 43, 48, 55, 60, 67, 72]); source.level = .2 + Math.random() * .32; source.mute = false; source.steps.forEach((step, j) => { step.on = Math.random() < (i === 0 ? .21 : .15) || (i === 0 && j === 0); step.velocity = .45 + Math.random() * .45; step.probability = Math.random() < .15 ? .65 : 1; step.ratchet = 1; }); });
-    markChanged(); renderAll(); toast('A new garden. The roots decline to explain themselves.');
+    markChanged(); renderAll(); toast('New recipe. The sauce is withholding its reasons.');
   });
   $('save-button').addEventListener('click', () => { download(new Blob([S.serializeProject(state)], { type: 'application/json' }), filename('.mire.json')); toast('Project saved, including imported samples.'); });
   $('open-button').addEventListener('click', () => $('project-file').click());
-  $('project-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; try { if (file.size > 32 * 1024 * 1024) throw new Error('Choose a MIRE project smaller than 32 MB.'); const imported = S.parseProject(await file.text()); engine.panic(); clearStep(); loadState(imported); toast('Project opened.'); } catch (error) { toast(errorMessage(error)); } finally { e.target.value = ''; } });
+  $('project-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; try { if (file.size > 32 * 1024 * 1024) throw new Error('Choose a REDUCE project smaller than 32 MB.'); const imported = S.parseProject(await file.text()); engine.panic(); clearStep(); loadState(imported); toast('Project opened.'); } catch (error) { toast(errorMessage(error)); } finally { e.target.value = ''; } });
   $('import-sample-button').addEventListener('click', () => $('sample-file').click());
   $('sample-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; const sourceIndex = selectedSource; const button = $('import-sample-button'); button.disabled = true; try { if (file.size > 20 * 1024 * 1024) throw new Error('Choose an audio file smaller than 20 MB.'); const asset = await engine.decodeSample(file); installSample(sourceIndex, asset); toast('Sample loaded. Imports use the first 10 seconds.'); } catch (error) { toast(errorMessage(error)); } finally { button.disabled = false; e.target.value = ''; } });
   const micSelect = document.createElement('select'); micSelect.className = 'mic-destination'; micSelect.setAttribute('aria-label', 'Microphone destination'); micSelect.title = 'Live microphone input destination'; micSelect.innerHTML = state.nodes.map((_, i) => `<option value="${i}">Mic → ${String.fromCharCode(65 + i)}</option>`).join(''); $('mic-button').after(micSelect);
@@ -275,7 +275,7 @@
   window.addEventListener('pointerup', gestureEnd);
   window.addEventListener('beforeunload', () => { try { localStorage.setItem(storageKey, S.serializeProject(state)); } catch (_) {} engine.dispose(); });
 
-  /* The garden diagram is a live view of routes and actual node energy. */
+  /* The station diagram is a live view of routes and actual node energy. */
   const canvas = $('garden-canvas'), ctx = canvas.getContext('2d');
   let cw = 600, ch = 350, gardenPoints = [], lastMeters = { nodes: [0, 0, 0, 0], peak: 0, rms: 0 }, lastMeterTime = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -287,13 +287,13 @@
     if (!cw || !ch) { requestAnimationFrame(drawGarden); return; }
     if (now - lastMeterTime > 70) {
       try { lastMeters = engine.getMeters() || lastMeters; } catch (_) {} lastMeterTime = now;
-      const rms = Math.max(0, lastMeters.rms || 0), peak = Math.max(0, lastMeters.peak || 0); $('master-meter').style.width = pct(clamp(Math.sqrt(rms) * 1.6)); $('master-meter').style.background = lastMeters.clipped ? '#d5a884' : '#d5ef89'; $('meter-value').textContent = rms > .0001 ? Math.max(-80, 20 * Math.log10(rms)).toFixed(1) + ' dB' : '−∞ dB'; $('network-status-dot').classList.toggle('active', peak > .0001 || engine.isPlaying || state.garden.freeze);
+      const rms = Math.max(0, lastMeters.rms || 0), peak = Math.max(0, lastMeters.peak || 0); $('master-meter').style.width = pct(clamp(Math.sqrt(rms) * 1.6)); $('master-meter').style.background = lastMeters.clipped ? '#ef7357' : '#ff8d45'; $('meter-value').textContent = rms > .0001 ? Math.max(-80, 20 * Math.log10(rms)).toFixed(1) + ' dB' : '−∞ dB'; $('network-status-dot').classList.toggle('active', peak > .0001 || engine.isPlaying || state.garden.freeze);
       const routes = state.routing.reduce((n, row) => n + row.filter(v => v > .005).length, 0); $('route-summary').textContent = routes + ' OPEN PATHS';
       if (recordStarted) { const seconds = Math.floor((Date.now() - recordStarted) / 1000); $('record-time').textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); }
     }
     ctx.clearRect(0, 0, cw, ch); const time = reducedMotion ? 0 : now / 1000;
-    for (let x = 18; x < cw; x += 22) for (let y = 13; y < ch; y += 22) { ctx.fillStyle = 'rgba(169,191,143,.10)'; ctx.fillRect(x, y, 1, 1); }
-    ctx.strokeStyle = '#a4bc6c10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cw / 2, ch * .515, cw * .39, ch * .39, -.1, 0, Math.PI * 2); ctx.stroke();
+    for (let x = 18; x < cw; x += 22) for (let y = 13; y < ch; y += 22) { ctx.fillStyle = 'rgba(163,177,183,.10)'; ctx.fillRect(x, y, 1, 1); }
+    ctx.strokeStyle = '#a2abaf10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cw / 2, ch * .515, cw * .39, ch * .39, -.1, 0, Math.PI * 2); ctx.stroke();
     gardenPoints.forEach((a, i) => gardenPoints.forEach((d, j) => {
       const amount = state.routing[i][j]; if (amount < .005) return;
       const activity = clamp((lastMeters.nodes?.[i] || 0) * 3 + (now - sourceFlashes[i] < 450 ? .25 : 0)); let b, c;
@@ -306,12 +306,12 @@
     gardenPoints.forEach((p, i) => {
       const energy = clamp((lastMeters.nodes?.[i] || 0) * 4), pulse = Math.max(0, 1 - (now - sourceFlashes[i]) / 550), selected = i === selectedNode, radius = cw < 400 ? 28 : 34;
       const glow = ctx.createRadialGradient(p.x, p.y, radius * .6, p.x, p.y, radius * 2.1); glow.addColorStop(0, colors[i] + (selected ? '15' : '0a')); glow.addColorStop(1, colors[i] + '00'); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.1, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#18251b'; ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#202426'; ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2); ctx.fill();
       for (let ring = 0; ring < 3; ring++) { ctx.strokeStyle = colors[i]; ctx.globalAlpha = (selected ? .6 : .27) - ring * .07 + energy * .35; ctx.lineWidth = ring === 0 ? 1.2 : .7; ctx.beginPath(); const r = radius - ring * 7; ctx.ellipse(p.x, p.y, r, r * (1 - .12 * Math.sin(time * .35 + i + ring)), time * .035 + i * .8, 0, Math.PI * 2); ctx.stroke(); }
       if (pulse > 0) { ctx.globalAlpha = pulse * .55; ctx.beginPath(); ctx.arc(p.x, p.y, radius + (1 - pulse) * 22, 0, Math.PI * 2); ctx.stroke(); }
       ctx.globalAlpha = 1; ctx.fillStyle = colors[i]; ctx.font = '12px "Courier New",monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String.fromCharCode(65 + i), p.x, p.y);
-      ctx.font = '7px "Courier New",monospace'; ctx.fillStyle = selected ? '#dde9c7' : '#94a48a'; ctx.fillText(nodeShort(i).toUpperCase(), p.x, p.y + radius + 16); ctx.fillStyle = '#68815b'; ctx.font = '6px "Courier New",monospace'; ctx.fillText(S.NODE_MODELS.find(m => m.id === state.nodes[i].model).name.toUpperCase(), p.x, p.y + radius + 28);
-      if (state.nodes[i].mute) { ctx.strokeStyle = '#d5a884'; ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(p.x - 13, p.y - 13); ctx.lineTo(p.x + 13, p.y + 13); ctx.stroke(); ctx.globalAlpha = 1; }
+      ctx.font = '7px "Courier New",monospace'; ctx.fillStyle = selected ? '#f1ead8' : '#a8b0b1'; ctx.fillText(nodeShort(i).toUpperCase(), p.x, p.y + radius + 16); ctx.fillStyle = '#80898b'; ctx.font = '6px "Courier New",monospace'; ctx.fillText(S.NODE_MODELS.find(m => m.id === state.nodes[i].model).name.toUpperCase(), p.x, p.y + radius + 28);
+      if (state.nodes[i].mute) { ctx.strokeStyle = '#ef7357'; ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(p.x - 13, p.y - 13); ctx.lineTo(p.x + 13, p.y + 13); ctx.stroke(); ctx.globalAlpha = 1; }
     });
     requestAnimationFrame(drawGarden);
   }

@@ -7,7 +7,7 @@
   const bounded = (value, low, high) => Math.max(low, Math.min(high, value));
   const groups = ['body', 'noise', 'mod'];
   const names = { body: 'Body', noise: 'Noise', mod: 'Motion' };
-  const colors = { body: '#e8aa80', noise: '#b4c297', mod: '#b0a0c0' };
+  const colors = { body: '#ff8d45', noise: '#dcc85e', mod: '#91b7bd' };
   const waves = [['sine', 'Sine'], ['triangle', 'Triangle'], ['sawtooth', 'Sawtooth'], ['square', 'Square']];
   const curves = [['exponential', 'Exponential'], ['linear', 'Linear']];
   const filters = [['lowpass', 'Low-pass'], ['highpass', 'High-pass'], ['bandpass', 'Band-pass'], ['notch', 'Notch']];
@@ -241,7 +241,7 @@
       this.updateNote();
       if (this.tab === 'mod') {
         $('envelope-kicker').textContent = 'LOW-FREQUENCY OSCILLATOR';
-        $('envelope-title').textContent = 'The clock wobbles.';
+        $('envelope-title').textContent = 'A slightly irregular stir.';
         $('envelope-description').textContent = targetNotes[synth.mod.target];
         this.timeDisplay([
           ['RATE', this.formatted('mod', 'rate', this.modulationRate(synth.mod))],
@@ -252,7 +252,7 @@
       } else {
         const settings = synth[this.tab];
         $('envelope-kicker').textContent = names[this.tab].toUpperCase() + ' AMPLITUDE';
-        $('envelope-title').textContent = 'A thump, then tea.';
+        $('envelope-title').textContent = 'Attack. Hold. Take off the heat.';
         $('envelope-description').textContent = this.tab === 'body'
           ? 'The oscillator rises, holds, and fades. Envelope time is shown to scale.'
           : 'A separate envelope shapes the filtered noise. Every burst follows this curve.';
@@ -269,7 +269,7 @@
       context.clearRect(0, 0, width, height);
       const box = { left: 28, right: width - 22, top: 23, bottom: height - 43 };
       context.lineWidth = 1;
-      context.strokeStyle = 'rgba(170,185,149,.12)';
+      context.strokeStyle = 'rgba(185,199,195,.12)';
       context.setLineDash([3, 7]);
       for (let row = 0; row < 5; row++) {
         const y = box.top + (box.bottom - box.top) * row / 4;
@@ -277,7 +277,7 @@
       }
       context.setLineDash([]);
       context.font = '16px "Courier New", monospace';
-      context.fillStyle = '#89977a';
+      context.fillStyle = '#929c99';
       context.textBaseline = 'top';
       return { canvas, context, width, height, box };
     }
@@ -311,8 +311,8 @@
         return settings.curve === 'linear' ? 1 - progress : Math.exp(-9.21034037 * progress);
       };
       const gradient = context.createLinearGradient(0, box.top, 0, box.bottom);
-      gradient.addColorStop(0, this.tab === 'body' ? 'rgba(232,170,128,.2)' : 'rgba(180,194,151,.2)');
-      gradient.addColorStop(1, 'rgba(180,194,151,0)');
+      gradient.addColorStop(0, this.tab === 'body' ? 'rgba(255,141,69,.2)' : 'rgba(220,200,94,.2)');
+      gradient.addColorStop(1, 'rgba(220,200,94,0)');
       context.beginPath(); context.moveTo(box.left, box.bottom);
       for (let step = 0; step <= 240; step++) {
         const time = duration * step / 240;
@@ -352,7 +352,7 @@
         if (mod.wave === 'samplehold') return held[Math.min(held.length - 1, Math.floor(phase))];
         return Math.sin(phase * Math.PI * 2);
       };
-      context.strokeStyle = 'rgba(176,160,192,.22)'; context.lineWidth = 1;
+      context.strokeStyle = 'rgba(145,183,189,.22)'; context.lineWidth = 1;
       context.beginPath(); context.moveTo(box.left, center); context.lineTo(box.right, center); context.stroke();
       context.beginPath();
       for (let step = 0; step <= 480; step++) {
@@ -362,7 +362,7 @@
         if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
       }
       context.lineWidth = 2.5;
-      context.strokeStyle = mod.target === 'off' ? '#6c7464' : colors.mod;
+      context.strokeStyle = mod.target === 'off' ? '#717d80' : colors.mod;
       context.lineJoin = 'round'; context.stroke();
       this.axisTimes(frame, duration);
       canvas.setAttribute('role', 'img');

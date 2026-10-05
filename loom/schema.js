@@ -1,10 +1,13 @@
-/* LOOM projects. Eight rooms, with rather firm walls. */
+/* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
   const VERSION = '1.5.0';
-  const COLORS = ['#edab7c', '#b6c995', '#b8a7e0', '#87bfcc', '#dfb0c4', '#ceb581', '#96bdac', '#a5b5de'];
+  const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable'];
+  // Display branding is independent of legacy IDs, project formats and storage.
+  const INSTRUMENT_NAMES = Object.freeze({ grain: 'SIZZLE', form: 'HOTPLATE', tine: 'CLATTER', mire: 'REDUCE', spool: 'ROTISSERIE', haze: 'STEAM', bower: 'SKEWER', ravel: 'DICER', fable: 'STOCK' });
+  const instrumentName = value => value ? INSTRUMENT_NAMES[value.id] || value.name || value.id?.toUpperCase() || 'Custom instrument' : 'Choose a track instrument';
   const number = (v, lo, hi, d) => typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d;
   const integer = (v, lo, hi, d) => Math.round(number(v, lo, hi, d));
   const bool = (v, d = false) => typeof v === 'boolean' ? v : d;
@@ -25,7 +28,7 @@
     return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], automation: [], clips: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Eight rooms for a very odd orchestra', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
   }
   function automationTargets(t) {
     const result = [
@@ -95,7 +98,7 @@
   function instrument(value) {
     if (value == null) return null;
     if (!plain(value) || typeof value.id !== 'string' || !/^[a-z0-9_-]{1,100}$/i.test(value.id)) throw Error('An instrument has an invalid ID.');
-    const result = { id: value.id, name: text(value.name, BUILT_INS.includes(value.id) ? value.id.toUpperCase() : 'New instrument') };
+    const result = { id: value.id, name: text(value.name, INSTRUMENT_NAMES[value.id] || 'New instrument') };
     if (value.url != null) {
       if (typeof value.url !== 'string' || value.url.length > 2048 || /^(?:javascript|data|file):/i.test(value.url.trim())) throw Error('Choose a same-site instrument URL or a self-contained HTML file.');
       result.url = value.url;
@@ -113,7 +116,7 @@
     return result;
   }
   function pattern(value) {
-    if (!window.MusicLabPatternSchema) throw Error('The Music Lab pattern schema is unavailable.');
+    if (!window.MusicLabPatternSchema) throw Error('The Kilter Kitchen pattern schema is unavailable.');
     return window.MusicLabPatternSchema.normalize(value);
   }
   function voiceMap(value = {}, packet) {
@@ -154,7 +157,7 @@
       if (ids.has(a.id)) throw Error('Audio asset IDs must be unique.');
       ids.add(a.id); assets.push({ id: a.id, name: text(a.name, 'Audio'), sampleRate: a.sampleRate, channels: a.channels, frames: a.frames, duration: a.frames / a.sampleRate, pcm: a.pcm });
     }
-    if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds LOOM’s 64 MB audio budget. Remove unused audio or shorten a take.');
+    if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds GALLEY’s 64 MB audio budget. Remove unused audio or shorten a take.');
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
@@ -194,11 +197,11 @@
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
   function parseProject(json) {
-    if (typeof json !== 'string' || json.length > LIMITS.projectBytes) throw Error('Choose a LOOM project smaller than 256 MB.');
+    if (typeof json !== 'string' || json.length > LIMITS.projectBytes) throw Error('Choose a GALLEY project smaller than 256 MB.');
     let p; try { p = JSON.parse(json); } catch { throw Error('This file is not valid JSON.'); }
-    if (!plain(p) || p.format !== 'loom-project' || p.formatVersion !== 1 || !plain(p.state)) throw Error('Choose a LOOM project (.loom.json).');
+    if (!plain(p) || p.format !== 'loom-project' || p.formatVersion !== 1 || !plain(p.state)) throw Error('Choose a GALLEY project (.loom.json).');
     const s = p.state;
-    if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || s.tracks.length !== 8 || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A LOOM project must contain eight complete tracks.');
+    if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || s.tracks.length !== 8 || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain eight complete tracks.');
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack > 7 || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
@@ -288,5 +291,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

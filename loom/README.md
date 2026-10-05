@@ -1,13 +1,15 @@
-# LOOM
+# GALLEY
 
-An eight-track browser studio for Music Lab’s very odd orchestra.
+Kilter Kitchen’s central production station.
+
+An eight-track browser studio for Kilter Kitchen. Eight tracks. One increasingly specific order.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all nine Music Lab instruments,
+The standalone `index.html` bundles all nine Kilter Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
-the hosted version can discover and load new instruments from Music Lab.
+the hosted version can discover and load new instruments from Kilter Kitchen.
 
 ## Making a piece
 
@@ -30,12 +32,12 @@ a touchscreen. P toggles Pan while the piano roll is focused; Escape returns to 
 
 Every app has a **Patterns** panel alongside Samples. Send an editable native
 sequence to the shared browser library, receive it in another app, or append it
-as a LOOM note clip. Map voices explicitly when instruments differ. Portable
+as a GALLEY note clip. Map voices explicitly when instruments differ. Portable
 pattern JSON carries notes between devices and standalone HTML files. Imported
 parts retain their exact timing, durations, velocity, and probability. Choose
 **Use native sequence** in an instrument to return to its own sequencer.
 
-LOOM supplies a shared musical clock. Live instrument patterns follow its tempo,
+GALLEY supplies a shared musical clock. Live instrument patterns follow its tempo,
 position, and loops; pattern changes enter at the next bar or loop boundary. Seeks cancel pending
 notes and restore held notes at the new position. Standalone apps keep independent
 transport controls.
@@ -60,8 +62,8 @@ effects slots. Effects can be edited, bypassed, reordered, reset, or removed.
 Recordings capture live track input before the DAW inserts. Play existing clips
 while recording a new performance, then shape the recorded part afterward.
 
-The bundled starter session contains actual rendered RAVEL percussion, BOWER
-strings, and HAZE clouds, with matching instrument states. The other tracks are
+The bundled starter session contains actual rendered DICER percussion, SKEWER
+strings, and STEAM clouds, with matching instrument states. The other tracks are
 ready for new parts. Empty session starts with eight blank tracks.
 
 ## Transport and navigation
@@ -96,7 +98,7 @@ removing or replacing an insert removes its previous automation.
 
 The playback and export engines evaluate the same automation, including seeks,
 loop wraps, and partial-range renders. Instrument editor parameters are controlled
-inside each app; automation currently covers the LOOM mixer and insert effects.
+inside each app; automation currently covers the GALLEY mixer and insert effects.
 Automation and section markers persist in projects, recovery, and Undo/Redo.
 
 Add named, colored section markers at the playhead with + Marker or M. Clicking a
@@ -121,18 +123,18 @@ Delete clip. Right-clicking a clip opens an actions dialog; Undo restores deleti
 Send to instrument renders a selected region of that clip, including source
 trim/offset, speed, reverse, repetitions, level, and fades. Choose selection start
 and end in seconds; **Fit receiver limit** explicitly shortens the region. Track
-mixer settings and insert effects stay in LOOM. Existing receiving audio or
+mixer settings and insert effects stay in GALLEY. Existing receiving audio or
 synthesis layers require the replacement checkbox. Empty tracks load the chosen
 instrument and replace its chosen starter destination.
 
 | Destination | Limit | Interpretation |
 | --- | --- | --- |
-| FABLE | 120 seconds | New or existing stereo sample zone; up to 64 zones |
-| FORM | 2 seconds | One of 24 mono granular layers |
-| MIRE | 10 seconds | One of four mono source exciters |
-| SPOOL | 30 seconds | One of four stereo tape decks |
-| RAVEL | 20 seconds | Stereo sample and sixteen slices |
-| HAZE | 20 seconds | Audio analysis into an editable spectral score |
+| STOCK | 120 seconds | New or existing stereo sample zone; up to 64 zones |
+| HOTPLATE | 2 seconds | One of 24 mono granular layers |
+| REDUCE | 10 seconds | One of four mono source exciters |
+| ROTISSERIE | 30 seconds | One of four stereo tape decks |
+| DICER | 20 seconds | Stereo sample and sixteen slices |
+| STEAM | 20 seconds | Audio analysis into an editable spectral score |
 
 Loaded future instruments with `audioImport` are included automatically; their
 number or string destination IDs and declared limits are preserved. The original
@@ -140,7 +142,7 @@ clip remains in the arrangement. The receiving instrument keeps unrelated
 sounds, patterns, mixer, and effects. Imports persist in its native snapshot;
 transfer Undo/Redo restores the previous instrument audio.
 
-The **Samples** panel shares the same local library as all standalone Music Lab
+The **Samples** panel shares the same local library as all standalone Kilter Kitchen
 apps and hosted editors. Render the selected clip, arranged mix, or track
 instrument; save audio to the library or download WAV/portable packets. Receive a
 sample as a new clip on any of the eight tracks. Hosted instrument project storage
@@ -152,14 +154,14 @@ is unavailable, keep a WAV or packet for the next session.
 
 | Effect | Processing |
 | --- | --- |
-| PRISM | Three EQ bands and a resonant filter |
-| VELVET | Stereo-linked compressor with a soft knee |
-| CINDER | Saturation, diode distortion, or wavefolding |
-| UNDERTOW | Stereo chorus and flanging |
-| PARALLAX | Tempo-synced or free ping-pong echo |
-| VESTIGE | Eight-line algorithmic reverb |
-| HALO | Windowed, phase-aligned pitch shifting |
-| TREMOR | Tempo-locked rhythmic gating and auto-pan |
+| MANDOLINE | Three EQ bands and a resonant filter |
+| BUTTER | Stereo-linked compressor with a soft knee |
+| CHAR | Saturation, diode distortion, or wavefolding |
+| DOUBLE | Stereo chorus and flanging |
+| LEFTOVERS | Tempo-synced or free ping-pong echo |
+| HOOD | Eight-line algorithmic reverb |
+| PROOF | Windowed, phase-aligned pitch shifting |
+| WHISK | Tempo-locked rhythmic gating and auto-pan |
 
 ## Projects, recording, and export
 
@@ -175,7 +177,7 @@ keep rendering manageable. Native note synthesis is rendered first, then passes
 through the studio mixer, automation, and inserts. Live performances outside
 note clips should be recorded before exporting.
 
-LOOM has eight fixed tracks, four slots each, up to 64 bars, and up to 128 clips
+GALLEY has eight fixed tracks, four slots each, up to 64 bars, and up to 128 clips
 per track. Each imported or recorded source holds up to 120 seconds. The source
 audio budget is 64 MB of PCM; native app snapshots and saved sources share a
 separate 96 MB budget. A pattern can hold 4,096 notes, 64 voices, and 256 beats.
@@ -188,7 +190,7 @@ buffers, discards unfinished takes, and releases microphone tracks.
 ## Hosting and source
 
 [HOSTING.md](HOSTING.md) documents the MusicLabHost v1 bridge for future apps.
-Hosted apps keep their original interfaces. Their live AudioContexts share LOOM’s
+Hosted apps keep their original interfaces. Their live AudioContexts share GALLEY’s
 clock and route into their assigned track; offline app renderers keep their own
 OfflineAudioContexts. App storage is isolated from standalone saved projects.
 
@@ -205,9 +207,13 @@ and reversible-source checks. Extracted archives include `note-checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all nine standalone instrument pages in
-`instruments/`, complete LOOM sources, fonts, and demo audio. Individual app
-source projects are available from Music Lab.
+`instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
+source projects are available from Kilter Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
 font license notices. Version 1.5.0.
+
+## Compatibility
+
+The Kilter Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and four effects slots per track.

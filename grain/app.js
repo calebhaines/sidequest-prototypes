@@ -3,20 +3,20 @@
   const $ = (id) => document.getElementById(id);
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
-  const colors = ['#e8aa80', '#d0b782', '#adb895', '#93aaa2', '#a69db7', '#c1a08d', '#b4b982', '#839889'];
+  const colors = ['#ff8d45', '#dcc85e', '#bbc7c4', '#88adb5', '#d6a870', '#e4e0d1', '#bd976f', '#adb285'];
   const sources = [
-    { id: 'white', name: 'White', color: '#d5d9c9', description: 'Full spectrum. A blizzard in a sugar bowl.' },
-    { id: 'pink', name: 'Pink', color: '#cba8ad', description: 'Equal energy per octave. A blush with a broom.' },
-    { id: 'brown', name: 'Brown', color: '#be9176', description: 'Low, warm rumble. The floorboards are purring.' },
-    { id: 'blue', name: 'Blue', color: '#88a9be', description: 'Rising energy. A kettle losing its punctuation.' },
-    { id: 'violet', name: 'Violet', color: '#b09abd', description: 'High-frequency energy. Glass teeth, tiny grin.' },
-    { id: 'grey', name: 'Grey', color: '#a1a89b', description: 'A sculpted spectrum. A cloud in a sensible hat.' },
-    { id: 'velvet', name: 'Velvet', color: '#b4b087', description: 'Sparse impulses. A thousand mice in slippers.' },
-    { id: 'crackle', name: 'Crackle', color: '#c5a776', description: 'Broken sparks. The biscuit tin is gossiping.' },
-    { id: 'metallic', name: 'Metallic', color: '#8faaa9', description: 'Inharmonic frequencies. Forks at a family quarrel.' },
-    { id: 'digital', name: 'Digital', color: '#a4b982', description: 'Crushed bits. A clock eating its own arithmetic.' },
-    { id: 'dust', name: 'Dust', color: '#ae997e', description: 'Scattered impulses. Crumbs with impeccable timing.' },
-    { id: 'radio', name: 'Radio', color: '#92a17e', description: 'A wandering signal. A wireless asking after the moon.' }
+    { id: 'white', name: 'White', color: '#d5d9c9', description: 'Full spectrum. The extraction hood at full capacity.' },
+    { id: 'pink', name: 'Pink', color: '#cba8ad', description: 'Equal energy per octave. A steady fry across every octave.' },
+    { id: 'brown', name: 'Brown', color: '#be9176', description: 'Low, warm rumble. The extractor has opinions.' },
+    { id: 'blue', name: 'Blue', color: '#88a9be', description: 'Rising energy. The kettle has skipped inspection.' },
+    { id: 'violet', name: 'Violet', color: '#b09abd', description: 'High-frequency energy. The sharp end of a very small whisk.' },
+    { id: 'grey', name: 'Grey', color: '#a1a89b', description: 'A sculpted spectrum. Steam through a carefully adjusted vent.' },
+    { id: 'velvet', name: 'Velvet', color: '#b4b087', description: 'Sparse impulses. Fine crumbs falling through the service hatch.' },
+    { id: 'crackle', name: 'Crackle', color: '#c5a776', description: 'Broken sparks. The griddle is filing a hot complaint.' },
+    { id: 'metallic', name: 'Metallic', color: '#8faaa9', description: 'Inharmonic frequencies. The cutlery tray during a minor incident.' },
+    { id: 'digital', name: 'Digital', color: '#a4b982', description: 'Crushed bits. An order printer chewing its ticket.' },
+    { id: 'dust', name: 'Dust', color: '#ae997e', description: 'Scattered impulses. Pepper arriving one speck at a time.' },
+    { id: 'radio', name: 'Radio', color: '#92a17e', description: 'A wandering signal. The kitchen radio between official announcements.' }
   ];
   const modes = ['kick', 'snare', 'hat', 'clap', 'rim', 'perc', 'texture', 'bass'];
   const engine = new window.NoiseEngine();
@@ -35,7 +35,7 @@
     return { format: 'grain-project', version: 2, state: clone(state), banks: clone(banks), bank, selected };
   }
   function validateProject(data) {
-    if (!data || data.format !== 'grain-project' || ![1, 2].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a GRAIN project file.');
+    if (!data || data.format !== 'grain-project' || ![1, 2].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
     const s = data.state;
     if (s.musicLabPattern !== undefined) {
       const overlay = s.musicLabPattern;
@@ -266,7 +266,7 @@
     const synth = window.GrainSynth.ensureTrack(track);
     $('selected-voice-index').textContent = 'VOICE 0' + (selected + 1);
     $('selected-voice-name').textContent = pretty(track.name);
-    const descriptions = { kick: 'A large thump in a very small waistcoat.', snare: 'Two teaspoons arguing in a biscuit tin.', hat: track.decay > .35 ? 'A hat full of air, escaping sideways.' : 'A punctual tick with improper manners.', rim: 'A knuckle knock from the other side.', clap: 'Several hands. None admitting ownership.', perc: 'A tap that took the scenic route.', texture: 'Crumbs from the table of time.', bass: 'The cellar has begun to grumble.' };
+    const descriptions = { kick: 'A low thump from the walk-in. Nobody ordered that.', snare: 'A sharp slap from the prep counter.', hat: track.decay > .35 ? 'A long hiss from the pressure valve.' : 'A short hiss. The pan means business.', rim: 'One precise knock on the service hatch.', clap: 'Three chopping boards. One strongly held opinion.', perc: 'A utensil dropped with suspicious timing.', texture: 'A little residue from an ambitious service.', bass: 'The walk-in compressor has taken the bass part.' };
     $('voice-description').textContent = descriptions[track.mode];
     $('selected-noise-label').textContent = track.noise.toUpperCase() + ' NOISE';
     $('synthesis-voice').textContent = '0' + (selected + 1) + ' / ' + track.name;
@@ -322,7 +322,7 @@
   async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
     if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
-    if (exporting) throw new Error('Wait for the current GRAIN render to finish.');
+    if (exporting) throw new Error('Wait for the current SIZZLE render to finish.');
     const snapshot = clone(state), voice = selected;
     if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
     if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
@@ -330,13 +330,13 @@
     exporting = true;
     try {
       const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
-      return { blob, sampleRate: 44100, name: 'grain-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'grain', sourceLabel, scope };
+      return { blob, sampleRate: 44100, name: 'sizzle-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'grain', sourceLabel, scope };
     } finally { exporting = false; }
   }
   async function exportWav() {
     if (exporting) return;
     exporting = true; $('export-button').disabled = true; $('export-button').innerHTML = icon('download') + '<span>Rendering…</span>';
-    const snapshot = clone(state), filename = 'grain-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav';
+    const snapshot = clone(state), filename = 'sizzle-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav';
     toast('Rendering four bars of audio…');
     try { const blob = await engine.exportWav(snapshot); download(blob, filename); toast('Your four-bar loop is ready. Effect tail included.'); }
     catch (error) { toast(error.message || 'Could not render audio. Please try again.'); }
@@ -350,20 +350,20 @@
     const canvas = $('hero-wave'), ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = '#38432d'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    ctx.strokeStyle = '#3b4447'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
     for (let x = 2; x < w; x += 4) {
       const env = Math.sin(x / w * Math.PI) ** 1.8;
       const beat = .3 + .7 * Math.abs(Math.sin(x * .014 + time * .4));
       const signal = Math.abs(Math.sin(x * .73 + time) * Math.cos(x * .17 - time * .5));
       const amplitude = (3 + signal * 40) * env * beat;
-      ctx.strokeStyle = x < w * .48 ? '#c59672' : '#74865e'; ctx.globalAlpha = .3 + signal * .7; ctx.beginPath(); ctx.moveTo(x, h / 2 - amplitude); ctx.lineTo(x, h / 2 + amplitude); ctx.stroke();
+      ctx.strokeStyle = x < w * .48 ? '#ff8d45' : '#dcc85e'; ctx.globalAlpha = .3 + signal * .7; ctx.beginPath(); ctx.moveTo(x, h / 2 - amplitude); ctx.lineTo(x, h / 2 + amplitude); ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
   function drawVoice() {
     const canvas = $('voice-wave'), ctx = canvas.getContext('2d'); if (!ctx) return;
     const track = state.tracks[selected], synth = window.GrainSynth.ensureTrack(track), w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#344128'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#3b4447'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
     ctx.strokeStyle = colors[selected]; ctx.lineWidth = 1.3; ctx.beginPath();
     const noiseIndex = sources.findIndex((s) => s.id === track.noise);
     const duration = Math.max(.08, synth.body.level ? synth.body.attack + synth.body.hold + synth.body.decay : 0, synth.noise.level ? synth.noise.attack + synth.noise.hold + synth.noise.decay : 0);
@@ -424,14 +424,14 @@
   $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = Array(16).fill(0); }); renderRows(); persist(); toast('Pattern cleared.'); });
   $('random-button').addEventListener('click', random);
   $('undo-button').addEventListener('click', undo);
-  $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'grain-' + safeName() + '.json'); toast('Project saved.'); });
+  $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'sizzle-' + safeName() + '.json'); toast('Project saved.'); });
   $('open-button').addEventListener('click', () => $('project-file').click());
   $('project-file').addEventListener('change', async (event) => {
     const file = event.target.files[0]; if (!file) return;
     try {
-      if (file.size > 1024 * 1024) throw new Error('That file is too large for a GRAIN project.');
+      if (file.size > 1024 * 1024) throw new Error('That file is too large for a SIZZLE project.');
       const data = validateProject(JSON.parse(await file.text())); remember(); stop(); restore(data); renderAll(); persist(); toast('Project opened.');
-    } catch (error) { toast(error instanceof SyntaxError ? 'That file is not a valid GRAIN project.' : error.message); }
+    } catch (error) { toast(error instanceof SyntaxError ? 'That file is not a valid SIZZLE project.' : error.message); }
     finally { event.target.value = ''; }
   });
   $('export-button').addEventListener('click', exportWav);

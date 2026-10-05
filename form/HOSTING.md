@@ -1,6 +1,6 @@
-# Put FORM online for free
+# Put HOTPLATE online for free
 
-**Recommended: Cloudflare Pages Direct Upload.** It hosts this browser-only app for free, provides HTTPS and a `pages.dev` address, and requires no credit card. FORM runs its audio synthesis and sample export on your device, so hosting needs only the static files in `dist`.
+**Recommended: Cloudflare Pages Direct Upload.** It hosts this browser-only app for free, provides HTTPS and a `pages.dev` address, and requires no credit card. HOTPLATE runs its audio synthesis and sample export on your device, so hosting needs only the static files in `dist`.
 
 ## Build once
 
@@ -22,7 +22,7 @@ The finished website is in **`dist/`**. Upload this folder, including its `index
 1. Create a free account at [Cloudflare](https://dash.cloudflare.com/sign-up).
 2. Open **Workers & Pages**, then **Create application**. Choose **Pages** if the dashboard offers a choice.
 3. Choose **Get started → Drag and drop your files** / **Direct Upload**.
-4. Name your project, for example `my-percussion-lab`.
+4. Name your project, for example `my-hotplate`.
 5. Drop the **`dist` folder** into the upload area. A ZIP containing the contents of `dist` also works; `index.html` should be at the ZIP's top level.
 6. Select **Deploy site** / **Save and Deploy**. Open the supplied `https://your-project.pages.dev` address.
 

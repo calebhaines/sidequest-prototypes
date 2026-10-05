@@ -358,7 +358,7 @@ function Modal({
       >
         <div className="modal-header">
           <div>
-            <span className="eyebrow">FORM STUDIO</span>
+            <span className="eyebrow">KILTER KITCHEN / HOTPLATE</span>
             <h2>{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
@@ -789,8 +789,8 @@ export default function App() {
       });
       notify(
         subtle
-          ? "Variation created. The cake leans left."
-          : "New sound created. The crumbs deny everything.",
+          ? "Variation created. The recipe has taken a small liberty."
+          : "New sound created. Chef declines to identify the ingredient.",
       );
     },
     [selected, change, notify],
@@ -951,7 +951,7 @@ export default function App() {
       notify("Project imported. Welcome back.");
       setModal(null);
     } catch {
-      notify("That file isn’t a valid FORM project. Choose a .form.json file.");
+      notify("That file isn’t a valid HOTPLATE project. Choose a .form.json file.");
     }
     if (importRef.current) importRef.current.value = "";
   };
@@ -1021,7 +1021,7 @@ export default function App() {
       else change(() => next);
     };
     const importAudio = async (input: SharedAudio) => {
-      if (!input || typeof input !== "object") throw new Error("Provide audio to import into FORM.");
+      if (!input || typeof input !== "object") throw new Error("Provide audio to import into HOTPLATE.");
       const target = importTarget(input.options, latest.current.selected);
       const checkReplacement = () => {
         const current = targets().find(item => item.id === target.id)!;
@@ -1059,7 +1059,7 @@ export default function App() {
     const exportAudio = (options: { scope?: "voice" | "pattern"; mode?: "voice" | "pattern"; voice?: number; sampleRate?: number; bars?: number; tail?: boolean; tailSeconds?: number; signal?: AbortSignal } = {}) => {
       options.signal?.throwIfAborted();
       const scope = options.scope ?? options.mode ?? "voice";
-      if (!["voice", "pattern"].includes(scope)) throw new Error("Choose a FORM voice or pattern export.");
+      if (!["voice", "pattern"].includes(scope)) throw new Error("Choose a HOTPLATE voice or pattern export.");
       const p = latest.current.project;
       const sampleRate = options.sampleRate ?? 44100;
       if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 96000)
@@ -1067,12 +1067,12 @@ export default function App() {
       if (options.tailSeconds !== undefined && (!Number.isFinite(options.tailSeconds) || options.tailSeconds < 0 || options.tailSeconds > 10))
         throw new Error("Choose an effect tail between zero and ten seconds.");
       const voiceIndex = options.voice ?? latest.current.selected;
-      if (!Number.isInteger(voiceIndex) || voiceIndex < 0 || voiceIndex > 7) throw new Error("Choose a FORM voice from 1 to 8.");
+      if (!Number.isInteger(voiceIndex) || voiceIndex < 0 || voiceIndex > 7) throw new Error("Choose a HOTPLATE voice from 1 to 8.");
       let left: Float32Array, right: Float32Array, name: string;
       let bars = 0;
       if (scope === "pattern") {
         const repetitions = options.bars ?? 1;
-        if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 4) throw new Error("Export one to four repetitions of the FORM pattern.");
+        if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 4) throw new Error("Export one to four repetitions of the HOTPLATE pattern.");
         bars = repetitions * p.steps[0].length / 16;
         [left, right] = renderPattern(p.sounds.map((params, index) => ({
           params,
@@ -1092,7 +1092,7 @@ export default function App() {
           left = fit(left);
           right = fit(right);
         }
-        name = `${p.name} · FORM pattern`;
+        name = `${p.name} · HOTPLATE pattern`;
       } else {
         const voice = p.sounds[voiceIndex];
         const mono = renderSound(voice, sampleRate);
@@ -1100,7 +1100,7 @@ export default function App() {
         const leftGain = Math.cos((pan + 1) * Math.PI / 4), rightGain = Math.sin((pan + 1) * Math.PI / 4);
         left = Float32Array.from(mono, value => value * leftGain);
         right = Float32Array.from(mono, value => value * rightGain);
-        name = `${voice.name} · FORM`;
+        name = `${voice.name} · HOTPLATE`;
       }
       options.signal?.throwIfAborted();
       return { pcm: interleaveStereo(left, right), sampleRate, name, tempo: p.bpm, bpm: p.bpm, bars, sourceApp: "form", sourceLabel: scope === "pattern" ? "Current pattern" : `Voice ${voiceIndex + 1}`, channels: 2, duration: left.length / sampleRate };
@@ -1126,12 +1126,12 @@ export default function App() {
       stop,
       panic: stop,
       setTempo: (value: number) => {
-        if (!Number.isFinite(Number(value))) throw new Error("Provide a valid FORM tempo.");
+        if (!Number.isFinite(Number(value))) throw new Error("Provide a valid HOTPLATE tempo.");
         commit({ ...latest.current.project, bpm: Math.max(40, Math.min(240, Number(value))) });
       },
       loadState: (value: unknown) => {
         const p = (value as { project?: unknown })?.project || value;
-        if (!validProject(p)) throw new Error("Invalid FORM project.");
+        if (!validProject(p)) throw new Error("Invalid HOTPLATE project.");
         stop();
         commit({ ...clone(p), sounds: p.sounds.map(migrateSound) }, true);
         latest.current.selected = 0;
@@ -1141,7 +1141,7 @@ export default function App() {
       },
       scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string } = {}) => {
         const sound = latest.current.project.sounds[voice];
-        if (!sound || !Number.isFinite(when)) throw new Error("Choose a valid FORM voice and audio timestamp.");
+        if (!sound || !Number.isFinite(when)) throw new Error("Choose a valid HOTPLATE voice and audio timestamp.");
         return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native");
       },
       renderNativeEvents: (events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
@@ -1151,14 +1151,14 @@ export default function App() {
       applyMusicLabPattern: (overlay?: Project["musicLabPattern"]) => {
         const next = { ...latest.current.project };
         if (overlay) next.musicLabPattern = clone(overlay); else delete next.musicLabPattern;
-        if (!validProject(next)) throw new Error("Invalid shared pattern or FORM voice mapping.");
+        if (!validProject(next)) throw new Error("Invalid shared pattern or HOTPLATE voice mapping.");
         stop(); commit(next); notify(overlay ? "Shared pattern received. Press Play to hear it." : "Native sequence restored.");
       },
       applyPattern: (steps: boolean[][], bpm?: number) => {
         const p = latest.current.project;
         const next = { ...p, steps: clone(steps), bpm: bpm ?? p.bpm };
-        if (!validProject(next)) throw new Error("This pattern cannot fit the FORM step grid.");
-        stop(); commit(next); notify("Pattern received. The cake has learned a new dance.");
+        if (!validProject(next)) throw new Error("This pattern cannot fit the HOTPLATE step grid.");
+        stop(); commit(next); notify("Pattern received. Service has acquired a suspicious groove.");
       },
       importAudio,
       exportAudio,
@@ -1181,7 +1181,7 @@ export default function App() {
             setModal(null);
             setMobileSidebar((p) => !p);
           }}
-          aria-label="FORM studio navigation"
+          aria-label="HOTPLATE studio navigation"
         >
           <span className="brand-mark">
             <span />
@@ -1189,9 +1189,9 @@ export default function App() {
             <span />
           </span>
           <span className="brand-word">
-            form<span className="brand-period">.</span>
+            HOTPLATE<span className="brand-period">.</span>
           </span>
-          <span className="brand-label">PERCUSSION LAB</span>
+          <span className="brand-label">PERCUSSION UNIT</span>
         </button>
         <div className="session-path">
           <span>Studio</span>
@@ -1296,7 +1296,7 @@ export default function App() {
 
       <aside className={`sidebar ${mobileSidebar ? "mobile-open" : ""}`}>
         <div className="sidebar-section">
-          <span className="sidebar-label">WORKSPACE</span>
+          <span className="sidebar-label">PREP STATION</span>
           <nav className="main-nav">
             <button
               className="nav-item active"
@@ -1306,7 +1306,7 @@ export default function App() {
               }}
             >
               <SlidersHorizontal size={17} />
-              Sound lab
+              Sound station
               <span className="nav-active-dot" />
             </button>
             <button className="nav-item" onClick={() => openLibrary()}>
@@ -1334,7 +1334,7 @@ export default function App() {
         </div>
         <div className="sidebar-section sounds-section">
           <span className="sidebar-label">
-            SOUND EXPLORER{" "}
+            SOUND INGREDIENTS{" "}
             <button
               className="tiny-icon"
               aria-label="Browse all sounds"
@@ -1365,7 +1365,7 @@ export default function App() {
         </div>
         <div className="sidebar-section favorites-section">
           <span className="sidebar-label">
-            QUICK PICKS <Star size={12} />
+            HOUSE SPECIALS <Star size={12} />
           </span>
           {[PRESETS[0], PRESETS[6], PRESETS[12]].map((p) => (
             <button
@@ -1389,18 +1389,18 @@ export default function App() {
               <ArrowUpRight size={16} />
             </span>
             <strong>
-              Half a cake.
+              Three burners.
               <br />
-              Twice the noise.
+              One unusual order.
             </strong>
-            <span>This studio is bigger on the spoon.</span>
+            <span>The recipe is a starting point. Chef has left.</span>
             <span className="inspiration-link">
               Free. Private. All yours. <ArrowRight size={13} />
             </span>
           </button>
           <div className="audio-status">
             <span className="status-dot" />
-            <span>THE CAKE IS KEEPING TIME</span>
+            <span>SERVICE IS KEEPING TIME</span>
             <Headphones size={13} />
           </div>
         </div>
@@ -1411,12 +1411,12 @@ export default function App() {
           <div>
             <div className="eyebrow">
               <span className="eyebrow-line" />
-              PLEASE DO NOT FEED THE OSCILLATORS.
+              KILTER KITCHEN / UNIT 03
             </div>
             <h1>
-              Percussion Lab<span className="title-dot">.</span>
+              Apply heat<span className="title-dot">.</span>
             </h1>
-            <p>Three layers. Five engines. A cake that unmixes itself.</p>
+            <p>Three layers. Five engines. No one has located the off switch.</p>
           </div>
           <div className="heading-actions">
             <button
@@ -1438,6 +1438,36 @@ export default function App() {
               <ArrowUpRight size={14} />
             </button>
           </div>
+        </section>
+
+        <section className="hotplate-schematic" aria-label="Three synthesis layers routed into one percussion sound">
+          <div className="hotplate-ticket">
+            <span>STATION / 03</span>
+            <strong>HOTPLATE</strong>
+            <span>THREE LAYERS → ONE ORDER</span>
+          </div>
+          <svg viewBox="0 0 640 112" role="img" aria-label="Three burner diagram representing synthesis layers A, B and C, mixed into an audio waveform">
+            <g className="hotplate-drawing" fill="none" strokeWidth="1">
+              <path d="M16 13H307V98H16Z M28 23H295V88H28Z" />
+              {[76, 162, 248].map((x, i) => (
+                <g key={x}>
+                  <circle cx={x} cy="54" r="26" />
+                  <circle className="hotplate-burner" cx={x} cy="54" r="19" />
+                  <circle cx={x} cy="54" r="11" />
+                  <path d={`M${x - 31} 54H${x - 22} M${x + 22} 54H${x + 31} M${x} 23V32 M${x} 76V85`} />
+                  <text x={x} y="58" textAnchor="middle">{String.fromCharCode(65 + i)}</text>
+                </g>
+              ))}
+              <path d="M307 55H356 M347 48L356 55L347 62 M397 55H432 M423 48L432 55L423 62" />
+              <rect x="359" y="33" width="39" height="44" />
+              <path d="M367 44H390 M367 55H390 M367 66H390" />
+              <rect x="438" y="22" width="181" height="66" />
+              <path className="hotplate-output" d="M449 55H463L468 48L473 70L478 34L483 77L488 42L493 66L498 46L503 61L508 50L513 59L518 51L523 57L528 54H607" />
+              <path d="M23 8V18 M11 13H21 M312 13H302 M307 8V18 M23 98H11 M16 93V103 M302 98H312 M307 93V103" />
+            </g>
+            <g className="hotplate-caption"><text x="161" y="110" textAnchor="middle">SYNTHESIS SURFACE</text><text x="378" y="94" textAnchor="middle">MIX</text><text x="528" y="104" textAnchor="middle">ORDER UP / AUDIO OUT</text></g>
+          </svg>
+          <span className="hotplate-inspection">INSPECTED<br /><b>SLIGHTLY ASKEW</b><i>● READY</i></span>
         </section>
 
         <section className="pad-bank" aria-label="Drum pads">
@@ -1662,7 +1692,7 @@ export default function App() {
                 <div className="parameter-heading">
                   <span className="parameter-number">01</span>
                   <h3>Tone</h3>
-                  <span className="parameter-caption">A TUNEFUL BEAST</span>
+                  <span className="parameter-caption">TUNE THE BURNER</span>
                 </div>
                 <div className="knob-row">
                   <Knob
@@ -1786,7 +1816,7 @@ export default function App() {
                 <div className="parameter-heading">
                   <span className="parameter-number">03</span>
                   <h3>Noise</h3>
-                  <span className="parameter-caption">MICE IN WIRES</span>
+                  <span className="parameter-caption">SIZZLE TO TASTE</span>
                 </div>
                 <div className="knob-row">
                   <Knob
@@ -1893,7 +1923,7 @@ export default function App() {
                 <div className="parameter-heading">
                   <span className="parameter-number">02</span>
                   <h3>Bitcrusher</h3>
-                  <span className="parameter-caption">CRUMBS OF TIME</span>
+                  <span className="parameter-caption">DICE THE RESOLUTION</span>
                 </div>
                 <div className="knob-row two-knobs">
                   <Knob
@@ -1917,14 +1947,14 @@ export default function App() {
                   />
                 </div>
                 <p className="parameter-note">
-                  Lower the resolution. Turn up the personality.
+                  Lower the resolution. Chef likes a rough chop.
                 </p>
               </div>
               <div className="parameter-section">
                 <div className="parameter-heading">
                   <span className="parameter-number">03</span>
                   <h3>Space</h3>
-                  <span className="parameter-caption">ECHO TEA PARTY</span>
+                  <span className="parameter-caption">THE EMPTY DINING ROOM</span>
                 </div>
                 <div className="knob-row two-knobs">
                   <Knob
@@ -1960,7 +1990,7 @@ export default function App() {
                 <div className="parameter-heading">
                   <span className="parameter-number">01</span>
                   <h3>Output</h3>
-                  <span className="parameter-caption">MIND THE SEESAW</span>
+                  <span className="parameter-caption">PORTION CONTROL</span>
                 </div>
                 <div className="knob-row two-knobs">
                   <Knob
@@ -1995,7 +2025,7 @@ export default function App() {
                 <div className="parameter-heading">
                   <span className="parameter-number">02</span>
                   <h3>Engine</h3>
-                  <span className="parameter-caption">A NEW SET OF LEGS</span>
+                  <span className="parameter-caption">CHOOSE THE UTENSIL</span>
                 </div>
                 <label className="field-label engine-select-label">
                   VOICE MODEL
@@ -2069,8 +2099,8 @@ export default function App() {
               <div className="parameter-section">
                 <div className="parameter-heading">
                   <span className="parameter-number">03</span>
-                  <h3>Bottle the beast</h3>
-                  <span className="parameter-caption">CORK IT QUICKLY</span>
+                  <h3>Keep the recipe</h3>
+                  <span className="parameter-caption">LABEL BEFORE SERVICE</span>
                 </div>
                 <div className="sound-actions">
                   <button
@@ -2125,10 +2155,10 @@ export default function App() {
               </span>
               <div>
                 <h2>
-                  The clock ate a beat<span>.</span>
+                  Sequence the service<span>.</span>
                 </h2>
                 <p>
-                  {patternLength} steps. Eight sounds. It insists it was hungry.
+                  {patternLength} steps. Eight sounds. The kitchen keeps odd hours.
                 </p>
               </div>
             </div>
@@ -2337,8 +2367,8 @@ export default function App() {
         </section>
         <footer className="workspace-footer">
           <span>
-            The cake denies all rhythm.<span className="footer-dot">✳</span> FORM
-            PERCUSSION LAB
+            Chef requests more transients.<span className="footer-dot">✳</span> HOTPLATE
+            / KILTER KITCHEN
           </span>
           <div>
             <Volume2 size={13} />
@@ -2390,8 +2420,8 @@ export default function App() {
 
       {modal === "library" && (
         <Modal
-          title="Every tone brought a cousin."
-          subtitle="Each noise insists it arrived before itself. Choose one to load."
+          title="The prep shelf is well stocked."
+          subtitle="Presets, portioned and labelled. Choose a sound to load."
           onClose={closeModal}
           className="library-modal"
         >
@@ -2483,14 +2513,14 @@ export default function App() {
             {visiblePresets.length === 0 && (
               <div className="empty-state">
                 <Waves size={32} />
-                <h3>No crumbs, only the plate.</h3>
+                <h3>Nothing on the prep shelf.</h3>
                 <p>
                   {libraryFilter === "custom"
-                    ? "Save a sound from the lab to start your own collection."
+                    ? "Save a sound from the instrument to start your own collection."
                     : "Try a different search, or star some sounds to keep them here."}
                 </p>
                 <button className="outline-button" onClick={closeModal}>
-                  Back to the lab
+                  Back to HOTPLATE
                   <ArrowRight size={14} />
                 </button>
               </div>
@@ -2510,7 +2540,7 @@ export default function App() {
       )}
       {modal === "savePreset" && (
         <Modal
-          title="Bottle that third half."
+          title="Save the house recipe."
           subtitle="Save this sound to your collection in this browser."
           onClose={closeModal}
           className="small-modal"
@@ -2565,7 +2595,7 @@ export default function App() {
       )}
       {modal === "projects" && (
         <Modal
-          title="Cakes for later ears."
+          title="Projects on the ticket rail."
           subtitle="Sessions saved in this browser. Download a project to take it anywhere."
           onClose={closeModal}
         >
@@ -2590,7 +2620,7 @@ export default function App() {
             {savedProjects.length === 0 ? (
               <div className="empty-state">
                 <FolderOpen size={32} />
-                <h3>The plate is still empty.</h3>
+                <h3>No orders on the rail.</h3>
                 <p>
                   Save your current session to keep a snapshot of every sound
                   and step.
@@ -2649,8 +2679,8 @@ export default function App() {
       )}
       {modal === "help" && (
         <Modal
-          title="How to unmix a cake."
-          subtitle="Instructions, dictated by an inside-out metronome."
+          title="HOTPLATE operating instructions."
+          subtitle="Chef left a note. It is mostly helpful."
           onClose={closeModal}
           className="help-modal"
         >
@@ -2706,7 +2736,7 @@ export default function App() {
               <ArrowUpRight size={14} />
             </button>
             <button className="primary-button" onClick={closeModal}>
-              Back to the lab
+              Back to HOTPLATE
               <ArrowRight size={14} />
             </button>
           </div>
@@ -2714,8 +2744,8 @@ export default function App() {
       )}
       {modal === "hosting" && (
         <Modal
-          title="A cake without a kitchen."
-          subtitle="Free hosting for a studio that has misplaced its walls."
+          title="Take the kitchen with you."
+          subtitle="Run offline or host online. Service travels well."
           onClose={closeModal}
           className="hosting-modal"
         >
@@ -2781,7 +2811,7 @@ export default function App() {
               <ArrowUpRight size={14} />
             </a>
             <button className="primary-button" onClick={closeModal}>
-              Back to the lab
+              Back to HOTPLATE
               <ArrowRight size={14} />
             </button>
           </div>

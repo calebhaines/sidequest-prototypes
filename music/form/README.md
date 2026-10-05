@@ -1,6 +1,6 @@
-# FORM — Percussion Lab
+# HOTPLATE — Percussion Lab
 
-FORM 2.0.3 is a browser percussion studio with three synthesis layers, subtractive/FM/wavetable/granular/percussion engines, cross-layer modulation, local recording import, and sample/kit/pattern WAV export. Its decorative copy describes a most improper layer-cake; synthesis controls and practical instructions remain clear.
+HOTPLATE 2.0.3 is a browser percussion studio with three synthesis layers, subtractive/FM/wavetable/granular/percussion engines, cross-layer modulation, local recording import, and sample/kit/pattern WAV export. Its decorative copy describes three unruly kitchen burners; synthesis controls and practical instructions remain clear.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/form/
 
@@ -15,4 +15,4 @@ Live: https://calebhaines.github.io/sidequest-prototypes/music/form/
 
 GitHub Pages publishes the copy in `docs/music/form/`. Fonts and their license notices are embedded in the standalone app. Sound design and imported recordings remain local to the browser.
 
-The shared **Samples** panel exports voices and patterns, reads the Music Lab local library, and imports explicitly trimmed audio into any of 24 granular layer destinations. Existing synthesis layers require replacement confirmation. Audio is converted to mono at 22.05 kHz with a two-second limit; the other layers and voice settings remain intact. The native `FormApp` facade supplies the same contract to LOOM and future integrations.
+The shared **Samples** panel exports voices and patterns, reads the Kilter Kitchen local library, and imports explicitly trimmed audio into any of 24 granular layer destinations. Existing synthesis layers require replacement confirmation. Audio is converted to mono at 22.05 kHz with a two-second limit; the other layers and voice settings remain intact. The native `FormApp` facade supplies the same contract to GALLEY and future integrations.

@@ -1,14 +1,14 @@
-/* SPOOL's portable project format. Audio assets are stereo-safe 16-bit PCM. */
+/* ROTISSERIE's portable project format. Audio assets are stereo-safe 16-bit PCM. */
 (() => {
   'use strict';
   const VERSION = '1.0.0';
   const SEED_TYPES = [
     { id: 'drums', name: 'Drum phrase', description: 'A locally synthesized rhythm of rounded kicks, rattling snares and little hats.' },
-    { id: 'bass', name: 'Bass phrase', description: 'A warm, stepped bass line that keeps its own small appointment.' },
+    { id: 'bass', name: 'Bass phrase', description: 'A warm stepped bass line, cooked low and slow.' },
     { id: 'keys', name: 'Soft keys', description: 'A chord phrase made from soft, slowly fading harmonics.' },
     { id: 'bells', name: 'Bell phrase', description: 'Bright, inharmonic notes with room between their replies.' },
-    { id: 'pluck', name: 'Plucked phrase', description: 'A little repeating melody, plucked and left to wander.' },
-    { id: 'texture', name: 'Air & dust', description: 'A slowly breathing bed of filtered noise and softly beating tones.' },
+    { id: 'pluck', name: 'Plucked phrase', description: 'A short plucked melody, ready for another rotation.' },
+    { id: 'texture', name: 'Steam texture', description: 'A slowly breathing bed of filtered noise and softly beating tones.' },
     { id: 'reed', name: 'Reed phrase', description: 'A reedy harmonic phrase, for winding into the tape.' },
     { id: 'rhythm', name: 'Clockwork', description: 'A crisp, irregular pattern of pulses and metallic ticks.' },
   ];
@@ -32,7 +32,7 @@
   }
   function defaultDeck(index) {
     return {
-      name: ['The pocket clock', 'A warm rumour', 'Borrowed keys', 'Air, wound twice'][index],
+      name: ['The rhythm spit', 'Low simmer', 'Fresh chord batch', 'Recirculated steam'][index],
       rate: 1, reverse: false, level: [.80, .70, .62, .45][index], pan: [-.08, .12, -.28, .35][index], mute: false, solo: false,
       start: 0, end: 1, phase: 0, seam: 12, sync: true, beats: 8,
       tone: [11800, 7200, 9400, 6800][index], highpass: [32, 24, 95, 180][index],
@@ -41,14 +41,14 @@
   }
   function defaultState() {
     return {
-      version: VERSION, name: 'Yesterday, wound incorrectly', tempo: 96,
+      version: VERSION, name: 'The special keeps coming round', tempo: 96,
       master: { volume: .70, width: .83, echo: .15, echoDivision: '3/16', feedback: .36, space: .16 },
       decks: Array.from({ length: 4 }, (_, i) => defaultDeck(i)),
       assets: [
-        seedAsset('drums', 'The pocket clock', { seed: 4101, tempo: 96, pitch: 36 }),
-        seedAsset('bass', 'A warm rumour', { seed: 7102, tempo: 96, pitch: 36 }),
-        seedAsset('keys', 'Borrowed keys', { seed: 9103, tempo: 96, pitch: 48 }),
-        seedAsset('texture', 'Air, wound twice', { seed: 11104, tempo: 96, pitch: 60 }),
+        seedAsset('drums', 'The rhythm spit', { seed: 4101, tempo: 96, pitch: 36 }),
+        seedAsset('bass', 'Low simmer', { seed: 7102, tempo: 96, pitch: 36 }),
+        seedAsset('keys', 'Fresh chord batch', { seed: 9103, tempo: 96, pitch: 48 }),
+        seedAsset('texture', 'Recirculated steam', { seed: 11104, tempo: 96, pitch: 60 }),
       ],
       source: { voice: 'pluck', root: 48, decay: 900, tone: 8200, level: .60, monitor: true },
       record: { input: 'keys', bars: 2, quantize: true, feedback: .88 },
@@ -122,12 +122,12 @@
     return state;
   }
   function parseProject(json) {
-    if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a SPOOL project smaller than 32 MB.');
+    if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a ROTISSERIE project smaller than 32 MB.');
     let project;
     try { project = JSON.parse(json); } catch { throw new Error('This file is not valid JSON.'); }
-    if (!project || project.format !== 'spool-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a SPOOL project file (.spool.json).');
+    if (!project || project.format !== 'spool-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a ROTISSERIE project file (.spool.json).');
     const s = project.state;
-    if (!Array.isArray(s.decks) || s.decks.length !== 4 || !Array.isArray(s.assets) || s.assets.length !== 4 || !s.master || !s.source || !s.record) throw new Error('This SPOOL project needs four complete decks and their audio assets.');
+    if (!Array.isArray(s.decks) || s.decks.length !== 4 || !Array.isArray(s.assets) || s.assets.length !== 4 || !s.master || !s.source || !s.record) throw new Error('This ROTISSERIE project needs four complete decks and their audio assets.');
     const state = normalize(s);
     for (let i = 0; i < 4; i++) {
       const raw = s.assets[i], asset = state.assets[i];

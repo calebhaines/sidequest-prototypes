@@ -1,6 +1,6 @@
-# GRAIN.
+# SIZZLE.
 
-A self-contained, noise-powered drum machine with an analog-inspired dark interface.
+A self-contained, noise-powered drum machine with an commercial kitchen inspired dark interface.
 
 **Double-click `index.html` to open it in a modern browser, then press Play.** It works offline. No installation, server, account, external fonts, libraries, or samples are needed. All sound is synthesized in the browser.
 
@@ -20,7 +20,7 @@ Click a step to toggle it. Shift + click adds an accent; on touchscreens, press 
 
 ## Sharing samples
 
-The Samples panel shares a rendered pattern mix, selected voice pattern, or selected voice one-shot with the other Music Lab apps. Pattern renders can cover one to sixteen bars; one-shots include the voice's natural envelope and an optional effect tail. Rendering snapshots the current sound and pattern without changing the project or stopping playback. A selected voice can be shared even when it is muted in the mix. GRAIN generates samples; it does not replace its noise synthesis with imported recordings.
+The Samples panel shares a rendered pattern mix, selected voice pattern, or selected voice one-shot with the other Kilter Kitchen apps. Pattern renders can cover one to sixteen bars; one-shots include the voice's natural envelope and an optional effect tail. Rendering snapshots the current sound and pattern without changing the project or stopping playback. A selected voice can be shared even when it is muted in the mix. SIZZLE generates samples; it does not replace its noise synthesis with imported recordings.
 
 Integrations can call `GrainApp.exportAudio({scope, bars, tailSeconds, signal})` for an audio payload without starting a download. `GrainApp.audioExport` describes the supported scopes. Existing Export WAV still downloads four bars with the natural effect tail.
 
@@ -40,4 +40,8 @@ python grain/build.py
 npm run music:sync
 ```
 
-Music Lab links to GRAIN. Old `/grain/` URLs redirect to the new music route. The Sidequest RPG gallery has no music promotion. Existing RPG downloads retain their published version.
+Kilter Kitchen links to SIZZLE. Old `/grain/` URLs redirect to the new music route. The Sidequest RPG gallery has no music promotion. Existing RPG downloads retain their published version.
+
+## Display identity
+
+The kitchen name is a presentation change. Existing URL routes, JavaScript integration APIs, storage keys, and portable project identifiers remain unchanged so earlier sessions and shared projects still open.

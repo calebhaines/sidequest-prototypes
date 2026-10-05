@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#151619">
+  <meta name="theme-color" content="#141719">
   <meta name="tine-version" content="1.1.1">
-  <meta name="description" content="TINE is a physical modeling drum machine. Eight voices, sixteen steps, and a cupboard full of opinionated resonators. A standalone browser instrument.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23151619'/%3E%3Cg fill='none' stroke='%23dbb28d' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
-  <title>TINE — Who rang the soup?</title>
+  <meta name="description" content="CLATTER — a physical modeling drum machine from Kilter Kitchen. Eight voices, sixteen steps, and cookware with unexpected sustain.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23111517'/%3E%3Cg fill='none' stroke='%23dcc85e' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
+  <title>CLATTER — Kilter Kitchen</title>
   <!-- STYLES -->
 </head>
-<body>
+<body data-kitchen-app="clatter">
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="4"/></symbol>
@@ -32,17 +32,17 @@
 
   <div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="#" aria-label="TINE physical modeling drum machine">
-        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-word">TINE<span class="brand-period">.</span></span>
+      <a class="brand" href="#" aria-label="CLATTER physical modeling drum machine">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-word">CLATTER<span class="brand-period">.</span></span>
         <span class="brand-description">PHYSICAL MODELING<br>DRUM MACHINE</span>
       </a>
-      <div class="topbar-right"><a id="music-home" class="music-link" href="../"><svg><use href="#i-back"/></svg><span>Music Lab</span></a><span class="local-badge"><span></span> OFFLINE BY DESIGN</span><span class="topbar-divider"></span><button class="icon-button" id="help-button" aria-label="How to use TINE" title="Help & keyboard shortcuts"><svg><use href="#i-help"/></svg></button></div>
+      <div class="topbar-right"><a id="music-home" class="music-link" href="../"><svg><use href="#i-back"/></svg><span>Kilter Kitchen</span></a><span class="local-badge"><span></span> OFFLINE BY DESIGN</span><span class="topbar-divider"></span><button class="icon-button" id="help-button" aria-label="How to use CLATTER" title="Help & keyboard shortcuts"><svg><use href="#i-help"/></svg></button></div>
     </header>
 
     <main>
       <section class="intro" aria-labelledby="intro-title">
-        <div class="intro-copy"><div class="eyebrow"><span></span> THE CROCKERY HAS QUESTIONS.</div><h1 id="intro-title">Who rang<br><em>the soup?</em></h1><p>Eight voices. Sixteen steps.<br class="mobile-break"> The spoon denies everything.</p></div>
-        <div class="intro-art" aria-hidden="true"><div class="art-top"><span>INQUIRY INTO SOUP</span><span class="art-index">FIG. 001</span></div><canvas id="hero-canvas" width="900" height="330"></canvas><div class="art-bottom"><span class="art-source">QUESTION IN</span><span class="art-rule"></span><span>BOWL TAKES OFFENCE</span><span class="art-rule"></span><span class="art-result">ANSWER OUT</span></div></div>
+        <div class="intro-copy"><div class="eyebrow"><span></span> KILTER KITCHEN / IMPACT STATION</div><h1 id="intro-title">Give the pans<br><em>a talking-to.</em></h1><p>Eight voices. Sixteen steps.<br class="mobile-break"> Cookware with unexpected sustain.</p></div>
+        <div class="intro-art" aria-hidden="true"><div class="art-top"><span>COOKWARE / RESONANCE ASSEMBLY</span><span class="art-index">SPEC. 02</span></div><canvas id="hero-canvas" width="900" height="330"></canvas><div class="art-bottom"><span class="art-source">STRIKE IN</span><span class="art-rule"></span><span>PAN DEVELOPS OPINION</span><span class="art-rule"></span><span class="art-result">RESONANCE OUT</span></div></div>
       </section>
 
       <section class="transport panel" aria-label="Playback and pattern controls">
@@ -62,7 +62,7 @@
       </section>
 
       <section class="instrument panel" aria-labelledby="instrument-title">
-        <div class="section-heading instrument-heading"><div class="heading-label"><span class="section-number">02</span><h2 id="instrument-title">THE INSTRUMENT</h2><span class="instrument-subtitle">MATTER OBJECTS LOUDLY</span></div><div class="voice-actions"><button id="voice-reset" class="text-button" title="Restore this voice to its model defaults"><svg><use href="#i-reset"/></svg><span>Reset voice</span></button><button id="voice-mutate" class="text-button" title="Explore a related sound"><svg><use href="#i-spark"/></svg><span>Mutate</span></button><button id="audition-button" class="button audition"><svg><use href="#i-speaker"/></svg><span>Hear voice</span></button></div></div>
+        <div class="section-heading instrument-heading"><div class="heading-label"><span class="section-number">02</span><h2 id="instrument-title">THE INSTRUMENT</h2><span class="instrument-subtitle">POTS HAVE EXCELLENT PROJECTION</span></div><div class="voice-actions"><button id="voice-reset" class="text-button" title="Restore this voice to its model defaults"><svg><use href="#i-reset"/></svg><span>Reset voice</span></button><button id="voice-mutate" class="text-button" title="Explore a related sound"><svg><use href="#i-spark"/></svg><span>Mutate</span></button><button id="audition-button" class="button audition"><svg><use href="#i-speaker"/></svg><span>Hear voice</span></button></div></div>
         <div class="instrument-layout">
           <aside class="body-panel">
             <div class="voice-identity"><span id="voice-index" class="selected-voice-label">VOICE 01</span><h3 id="voice-name">Membrane kick</h3><p id="voice-description">A flexible resonating surface for deep kicks and bending low percussion.</p></div>
@@ -79,20 +79,20 @@
               <div id="selectors" class="selectors"></div>
               <div id="knob-grid" class="knob-grid" role="tabpanel" aria-labelledby="tab-resonance" tabindex="0"></div>
               <div class="exciter-preview"><div class="preview-heading"><span class="control-label">THE SHAPE OF A STRIKE</span><span class="preview-label">EXCITATION ENVELOPE</span></div><canvas id="exciter-canvas" width="1000" height="250" role="img" aria-label="Material contact, rebound, and noise excitation preview"></canvas><div class="preview-caption"><span><span class="legend-dot mallet-dot"></span> CONTACT</span><span><span class="legend-dot noise-dot"></span> NOISE</span><span class="preview-time">TWO TIME SCALES</span></div></div>
-              <p class="editor-note">Tap politely. The bowl may answer rudely.</p>
+              <p class="editor-note">Choose a striker. The cookware handles the encore.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>The cupboard has an echo.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">THE BOWL HAS<br>SPOKEN.</span></section>
+      <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>The dish pit has remarkable acoustics.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">CHECK THE<br>RING TIME.</span></section>
     </main>
 
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">THE MALLET IS INNOCENT. THE BOWL DISAGREES.</span><span class="footer-version">TINE <span>v1.1.1</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.1</span></span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">BY ORDER OF THE BOWL</div><h2 id="help-title">Ask the crockery.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. Its resonances turn that impact into a drum, bell, or string. The cupboard calls this a vigorous disagreement.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Pattern banks A–D hold four variations.</p></div><div><h3>Find your body</h3><p>Choose one of nine resonators, including a bell, a singing bowl, and a tube. Tune its pitch, structure, decay, damping, and strike position. Motion + mix adds movement and places the voice in the stereo field.</p></div><div><h3>Choose your contact</h3><p>Exciter offers felt, rubber, wood, nylon, ceramic, and metal alongside the original neutral mallet. Each shapes the contact differently. Refine hardness and contact time, add surface texture, or let the mallet rebound. Noise has its own color, filter, and envelope. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div class="help-shortcuts"><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause <span class="shortcut-divider">·</span> <kbd>1</kbd>–<kbd>8</kbd> Audition <span class="shortcut-divider">·</span> <kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob <span class="shortcut-divider">·</span> <kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / IMPACT & RESONANCE</div><h2 id="help-title">Conduct the cookware.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. Its resonances turn that impact into a drum, bell, or string. The kitchen calls this a perfectly reasonable use of a saucepan.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Pattern banks A–D hold four variations.</p></div><div><h3>Find your body</h3><p>Choose one of nine resonators, including a bell, a singing bowl, and a tube. Tune its pitch, structure, decay, damping, and strike position. Motion + mix adds movement and places the voice in the stereo field.</p></div><div><h3>Choose your contact</h3><p>Exciter offers felt, rubber, wood, nylon, ceramic, and metal alongside the original neutral mallet. Each shapes the contact differently. Refine hardness and contact time, add surface texture, or let the mallet rebound. Noise has its own color, filter, and envelope. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div class="help-shortcuts"><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause <span class="shortcut-divider">·</span> <kbd>1</kbd>–<kbd>8</kbd> Audition <span class="shortcut-divider">·</span> <kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob <span class="shortcut-divider">·</span> <kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
   <!-- SCRIPTS -->
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* Editable musical parts and source-aware printing, within LOOM's eight tracks. */
+/* Editable musical parts and source-aware printing, within GALLEY's eight tracks. */
 (() => {
   'use strict';
   const S = window.LoomSchema, P = window.MusicLabPatternSchema;
@@ -72,7 +72,7 @@
       if (!t) throw Error('Choose one of the eight tracks.');
       if (!t.instrument) {
         const id = S.BUILT_INS.includes(pattern?.sourceApp) ? pattern.sourceApp : 'fable', candidate = copy(current);
-        candidate.tracks[current.tracks.indexOf(t)].instrument = { id, name: id.toUpperCase() };
+        candidate.tracks[current.tracks.indexOf(t)].instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() };
         this.commit(S.normalize(candidate), { trackIndex: current.tracks.indexOf(t) });
       }
       const actual = this.getState().tracks.find(track => track.id === t.id); await this.ensureInstrument(actual);
@@ -88,7 +88,7 @@
       const current = this.getState(), candidate = copy(current), index = candidate.tracks.findIndex(t => t.id === String(options.target || current.tracks[current.selectedTrack].id));
       if (index < 0) throw Error('Choose one of the eight tracks.'); const t = candidate.tracks[index];
       if (t.clips.length >= 128) throw Error('This track has reached its 128-clip limit.');
-      if (!t.instrument) { const id = S.BUILT_INS.includes(packet.sourceApp) ? packet.sourceApp : 'fable'; t.instrument = { id, name: id.toUpperCase() }; }
+      if (!t.instrument) { const id = S.BUILT_INS.includes(packet.sourceApp) ? packet.sourceApp : 'fable'; t.instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() }; }
       const start = Math.max(0, Math.min(candidate.lengthBars * 4 - .25, this.snap(this.engine.getMeters().beat || 0))), id = S.uid('notes');
       const clip = { id, name: packet.name, type: 'notes', pattern: packet, voiceMap: S.voiceMap(options.voiceMap || {}, packet), start, length: Math.min(packet.lengthBeats, candidate.lengthBars * 4 - start), sourceOffset: 0, rate: 1, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 };
       t.clips.push(clip); const normalized = S.normalize(candidate);
@@ -103,7 +103,7 @@
       const available = this.voices(target), adapter = this.host.getPatternAdapter(target), pitched = adapter?.notes?.pitched !== false && (!adapter?.patternImport?.mode || adapter.patternImport.mode === 'notes');
       const chosen = pitched || available.length > 32 ? available.slice(0, 1) : available.slice(0, 64);
       const initialVoices = chosen.length ? chosen.map(v => ({ id: v.id, name: v.name, pitch: v.pitch ?? 60 })) : [{ id: 'main', name: 'Notes', pitch: 60 }];
-      const packet = P.normalize({ format: 'musiclab-pattern', version: 1, name: 'A phrase that has not happened yet', sourceApp: 'loom', kind: pitched ? 'notes' : 'drums', tempo: this.getState().tempo, swing: 0, lengthBeats: 16, meter: [4, 4], voices: initialVoices, notes: [], seed: 170519 });
+      const packet = P.normalize({ format: 'musiclab-pattern', version: 1, name: 'Untested special', sourceApp: 'loom', kind: pitched ? 'notes' : 'drums', tempo: this.getState().tempo, swing: 0, lengthBeats: 16, meter: [4, 4], voices: initialVoices, notes: [], seed: 170519 });
       return this.importPattern({ pattern: packet, options: { target, voiceMap: Object.fromEntries(initialVoices.map(voice => [voice.id, voice.id])) } });
     }
     async editNotes() {

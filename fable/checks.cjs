@@ -36,7 +36,7 @@ check('The default instrument is playable and exactly round-trips', () => {
   assert(initial.patterns.every(pattern => pattern.steps.length === 64 && pattern.length === 16));
 });
 
-check('All eight specimen presets are complete, distinct, and portable', () => {
+check('All eight house presets are complete, distinct, and portable', () => {
   assert.equal(scope.FablePresets.length, 8);
   assert.equal(new Set(scope.FablePresets.map(preset => preset.id)).size, 8);
   const fingerprints = new Set();
@@ -121,7 +121,7 @@ check('Portable state rejects corrupted controls instead of silently repairing t
   rejectEdit(s => s.selectedZone = 'missing', /selectedZone/i);
   rejectEdit(s => delete s.master, /master/i);
   rejectEdit(s => s.version = '9000.0.0', /version/i);
-  assert.throws(() => S.parseProject(JSON.stringify({ format: 'other-project', formatVersion: 1, state: S.defaultState() })), /FABLE/i);
+  assert.throws(() => S.parseProject(JSON.stringify({ format: 'other-project', formatVersion: 1, state: S.defaultState() })), /STOCK/i);
 });
 
 check('Undo copies controls independently while reusing immutable validated audio', () => {
@@ -179,5 +179,5 @@ check('Silence trim and onset boundaries retain meaningful stereo transients', (
   assert.equal(JSON.stringify(S.onsets(silent)), '[0,1]');
 });
 
-console.log('FABLE: ' + passed.length + ' checks passed.');
+console.log('STOCK: ' + passed.length + ' checks passed.');
 for (const name of passed) console.log('  ✓ ' + name);

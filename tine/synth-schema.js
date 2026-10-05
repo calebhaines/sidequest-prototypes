@@ -1,4 +1,4 @@
-/* TINE uses physical units throughout its voice editor and synthesis engine. */
+/* CLATTER uses physical units throughout its voice editor and synthesis engine. */
 (function () {
   'use strict';
 
@@ -20,7 +20,7 @@
     Object.freeze({ id: 'tube', name: 'Tube', description: 'A closed air column with odd harmonic modes. Hollow knocks, bamboo-like percussion, and woody pitched pulses.', material: 'Air column', color: '#a8bbb0' })
   ]);
   const strikeMaterials = Object.freeze([
-    Object.freeze({ id: 'neutral', name: 'Neutral', description: 'The original shaped contact pulse. Hardness and contact time define the strike directly.', hint: 'Original contact response; preserves earlier TINE sounds.' }),
+    Object.freeze({ id: 'neutral', name: 'Neutral', description: 'The original shaped contact pulse. Hardness and contact time define the strike directly.', hint: 'Original contact response; preserves earlier project sounds.' }),
     Object.freeze({ id: 'felt', name: 'Felt', description: 'A yielding, rounded contact that rolls off sharp upper frequencies.', hint: 'Soft, broad contact for warm fundamentals and gentle attacks.' }),
     Object.freeze({ id: 'rubber', name: 'Rubber', description: 'An elastic, springy contact with a rounded attack and subtle contact ringing.', hint: 'Supple contact for rounded, bouncy percussion.' }),
     Object.freeze({ id: 'wood', name: 'Wood', description: 'A firm contact with a dry click and restrained high-frequency energy.', hint: 'Dry, firm contact for sticks, blocks, and hollow knocks.' }),
@@ -170,7 +170,7 @@
   }
 
   function upgradeProject(project) {
-    if (!validateProject(project)) throw new Error('Invalid TINE project.');
+    if (!validateProject(project)) throw new Error('Invalid CLATTER project.');
     const upgraded = JSON.parse(JSON.stringify(project));
     if (upgraded.version === 1) {
       upgraded.state.tracks = upgraded.state.tracks.map((track) => Object.assign({}, track, neutralContact));

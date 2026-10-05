@@ -1,6 +1,6 @@
-# Music Lab patterns and LOOM 1.5 contract
+# Kilter Kitchen patterns and GALLEY 1.5 contract
 
-All existing apps and future compatible apps retain standalone offline HTML operation. LOOM keeps exactly eight tracks and four inserts per track.
+All existing apps and future compatible apps retain standalone offline HTML operation. GALLEY keeps exactly eight tracks and four inserts per track.
 
 ## Portable patterns
 
@@ -16,13 +16,13 @@ Each app exposes `window.MusicLabPatternInstrument`, independently of frozen leg
 - `patternImport:{targets:[{id,name,occupied}],voices:[{id,name,pitch?}],mode:'notes'|'drums'|'bands'|'decks',description}`; `importPattern({pattern,options:{target,voiceMap,replace},signal})` validates fully before mutation. `voiceMap` maps source string IDs to target string IDs. Existing native sequences require explicit replacement. Unsupported durations, pitch ranges, or grids must be explained or rejected; never silently discard notes. Future exact-pattern overlay storage is acceptable if complete native state/project carries it.
 - `notes:{voices:[{id,name,pitch?,pitchRange?:[min,max]}],polyphonic:boolean,pitched:boolean,scheduledCancel?:boolean,pitchRange?:[min,max]}`. Declare `scheduledCancel:true` only when `cancelNotes({source,when})` honors future audio timestamps. Optional synchronous `validateNote({pitch,voice})` and `validatePattern({pattern,voiceMap})` permit pure preflight without changing the patch.
 - `async prepare()`; synchronous `scheduleNote({id,pitch,velocity,voice,when,durationSeconds,source='loom'})` after preparation. `when` absolute shared AudioContext seconds. Returns a token or nothing. Native engine schedules exact event time; no asynchronous promise timer per note. Pitch supplied per event, no future global-patch mutation.
-- `cancelNotes({source='loom',when}={})` clears future events and releases held notes belonging to that source only; do not close the shared context. With an absolute context timestamp `when`, retain earlier events and release/cancel that source precisely at the boundary. Other sources continue. LOOM uses distinct source IDs for pending Live pattern revisions so changes can enter at the next bar or loop boundary without duplicate notes. `panic()` optional.
+- `cancelNotes({source='loom',when}={})` clears future events and releases held notes belonging to that source only; do not close the shared context. With an absolute context timestamp `when`, retain earlier events and release/cancel that source precisely at the boundary. Other sources continue. GALLEY uses distinct source IDs for pending Live pattern revisions so changes can enter at the next bar or loop boundary without duplicate notes. `panic()` optional.
 - `async renderPattern({pattern,state,tempo,tailSeconds=0,signal})` returns `{pcm:interleavedStereoFloat32Array,sampleRate,name,tempo,sourceApp}` or `{blob:WAV,sampleRate,name,...}`. Capture state before any await. Use actual native DSP, support event pitches and polyphony, cancellation and finite/budget guards; render no longer than 120 seconds per source asset. Source rendering must not mutate the editor or auto-start its sequencer.
-- optional `transport({beat,tempo,when,playing,revision})` for continuous native engines. Shared scheduler handles discrete native patterns without autonomous clocks. Continuous SPOOL/HAZE can follow musical seek/phase via this hook.
+- optional `transport({beat,tempo,when,playing,revision})` for continuous native engines. Shared scheduler handles discrete native patterns without autonomous clocks. Continuous ROTISSERIE/STEAM can follow musical seek/phase via this hook.
 
-`window.MusicLabPatterns` provides register/open/close/library/portable JSON. Each app is registered using its existing mount and `getAdapter:()=>window.MusicLabPatternInstrument`; LOOM exposes an adapter which receives patterns as new note clips. Hosted Patterns library is shared with the parent. Core panel does not require MIDI file support in this release.
+`window.MusicLabPatterns` provides register/open/close/library/portable JSON. Each app is registered using its existing mount and `getAdapter:()=>window.MusicLabPatternInstrument`; GALLEY exposes an adapter which receives patterns as new note clips. Hosted Patterns library is shared with the parent. Core panel does not require MIDI file support in this release.
 
-## LOOM note clips
+## GALLEY note clips
 
 Existing audio clips normalize to `type:'audio'` and preserve legacy fields. Note clips:
 
@@ -44,7 +44,7 @@ Audio clip `origin`:
 
 `{format:'loom-render-source',version:1,instrument:descriptorWithSnapshot,pattern:packet,voiceMap:{},tempo:number,tailSeconds:number,sourceClip:originalNoteClip,renderedAt:number}`.
 
-Descriptor includes ID/name and native snapshot, plus HTML/URL for a future app. A printed source always travels inside portable projects, with required sample assets inside its native snapshot. Count origin snapshots in the 96 MiB snapshot budget. `sourceClip` is a note clip without origin; prevent recursive origins. Rendering does not bake LOOM track effects; inserts/mixer continue processing the result.
+Descriptor includes ID/name and native snapshot, plus HTML/URL for a future app. A printed source always travels inside portable projects, with required sample assets inside its native snapshot. Count origin snapshots in the 96 MiB snapshot budget. `sourceClip` is a note clip without origin; prevent recursive origins. Rendering does not bake GALLEY track effects; inserts/mixer continue processing the result.
 
 Root uses `LoomNoteRenderer` (agent exposes exact constructor/functions promptly) to create isolated, muted native render frames. `prepareNotes(state,assets,options)` returns cloned `{state,assets}` with transient audio versions of note clips for the existing DSP. Render unique pattern+snapshot keys once and reuse loopable source assets; total decoded transient budget 64 MiB. Reject an individual source pattern over 120 seconds with a clear split-pattern instruction; long clip arrangements can loop bounded patterns. Live note playback remains independent of this render-source limit.
 

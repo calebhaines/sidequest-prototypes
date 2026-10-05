@@ -1,4 +1,4 @@
-/* SPOOL — one stereo tape engine for live playback, standalone fallback, and WAV rendering. */
+/* ROTISSERIE — one stereo tape engine for live playback, standalone fallback, and WAV rendering. */
 (function () {
   'use strict';
   function createSpoolDSP() {
@@ -353,8 +353,8 @@ class SpoolProcessor extends AudioWorkletProcessor {
     stop(){++this._startToken;if(this.deckRecording?.status==='armed')this.cancelDeckRecording();this.isPlaying=false;this._send({type:'stop'});this._meter.step=-1;this._keyTokens.clear();}
     rewind(){this._send({type:'rewind'});this._meter.positions=[0,0,0,0];}
     scheduleNativeNote(index,when,options={}) {
-      if(!this.node||!this.context)throw new Error('Prepare SPOOL before scheduling notes.');
-      if(!Number.isInteger(index)||index<0||index>3||!Number.isFinite(when)||!Number.isFinite(options.duration)||options.duration<=0)throw new Error('Invalid SPOOL deck note.');
+      if(!this.node||!this.context)throw new Error('Prepare ROTISSERIE before scheduling notes.');
+      if(!Number.isInteger(index)||index<0||index>3||!Number.isFinite(when)||!Number.isFinite(options.duration)||options.duration<=0)throw new Error('Invalid ROTISSERIE deck note.');
       this._send({type:'scheduledDeck',index,options,frame:Math.round(when*this.context.sampleRate)});
     }
     cancelNativeNotes({source,when}={}){
@@ -371,9 +371,9 @@ class SpoolProcessor extends AudioWorkletProcessor {
     async renderNativeEvents(state,events,options={}) {
       const check=()=>{if(options.signal?.aborted)throw new DOMException('Pattern render cancelled.','AbortError');};check();
       const snapshot=SpoolSchema.normalize(state),seconds=options.durationSeconds,tail=options.tailSeconds??0;
-      if(!Number.isFinite(seconds)||seconds<=0||seconds>120||!Number.isFinite(tail)||tail<0||tail>15||!Array.isArray(events)||events.length>8192)throw new Error('Invalid SPOOL render bounds.');
+      if(!Number.isFinite(seconds)||seconds<=0||seconds>120||!Number.isFinite(tail)||tail<0||tail>15||!Array.isArray(events)||events.length>8192)throw new Error('Invalid ROTISSERIE render bounds.');
       const sampleRate=48000,core=new DSP(sampleRate,stateForDSP(snapshot));core.tempo=options.tempo??snapshot.tempo;snapshot.assets.forEach((asset,index)=>{const decoded=decodePCM(asset);if(decoded)core.setSample(index,decoded.pcm,decoded.sampleRate);});
-      for(const event of events){if(!Number.isInteger(event.voice)||event.voice<0||event.voice>3||!Number.isFinite(event.at)||event.at<0||event.at>=seconds||!Number.isFinite(event.velocity)||event.velocity<0||event.velocity>1)throw new Error('Invalid SPOOL render note.');core.queueDeck(event.voice,{velocity:event.velocity,pitch:event.pitch||0,duration:event.duration},Math.round(event.at*sampleRate));}
+      for(const event of events){if(!Number.isInteger(event.voice)||event.voice<0||event.voice>3||!Number.isFinite(event.at)||event.at<0||event.at>=seconds||!Number.isFinite(event.velocity)||event.velocity<0||event.velocity>1)throw new Error('Invalid ROTISSERIE render note.');core.queueDeck(event.voice,{velocity:event.velocity,pitch:event.pitch||0,duration:event.duration},Math.round(event.at*sampleRate));}
       const frames=Math.ceil((seconds+tail)*sampleRate),chunks=[];let at=0,block=0;
       while(at<frames){const count=Math.min(4096,frames-at),left=new Float32Array(count),right=new Float32Array(count),pcm=new Float32Array(count*2);core.processBlock(left,right);
         for(let i=0;i<count;i++){const gain=Math.min(1,(frames-at-i-1)/480);pcm[i*2]=left[i]*gain;pcm[i*2+1]=right[i]*gain;}chunks.push(pcm);at+=count;if(++block%16===0){check();await new Promise(resolve=>setTimeout(resolve,0));}}

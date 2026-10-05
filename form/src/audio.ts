@@ -65,7 +65,7 @@ export function createLayerPreview(
 }
 
 const base: SoundParams = {
-  name: "Sub foundation",
+  name: "Stockpot sub",
   type: "kick",
   seed: 1207,
   tone: {
@@ -119,12 +119,12 @@ function preset(
 
 /** The bank is intentionally made from editable synthesis parameters, not samples. */
 export const PRESETS: Preset[] = [
-  preset("sub-foundation", "Sub foundation", "Analog", "kick"),
-  preset("warehouse", "Warehouse thump", "Analog", "kick", {
+  preset("sub-foundation", "Stockpot sub", "Analog", "kick"),
+  preset("warehouse", "Walk-in kick", "Analog", "kick", {
     tone: { frequency: 57, pitchAmount: 31, pitchDecay: 30, decay: 255 },
     effects: { drive: 0.4 },
   }),
-  preset("808-bloom", "808 bloom", "Classic", "kick", {
+  preset("808-bloom", "808 low boil", "Classic", "kick", {
     tone: {
       frequency: 42,
       pitchAmount: 25,
@@ -135,16 +135,16 @@ export const PRESETS: Preset[] = [
     noise: { level: 0.018 },
     effects: { drive: 0.05 },
   }),
-  preset("909-punch", "909 punch", "Classic", "kick", {
+  preset("909-punch", "909 plate punch", "Classic", "kick", {
     tone: { frequency: 60, pitchAmount: 43, pitchDecay: 22, decay: 220 },
     noise: { level: 0.15, decay: 8 },
     effects: { drive: 0.3 },
   }),
-  preset("concrete", "Concrete kick", "Industrial", "kick", {
+  preset("concrete", "Cast-iron kick", "Industrial", "kick", {
     tone: { frequency: 45, waveform: "triangle", pitchAmount: 48, decay: 390 },
     effects: { drive: 0.72, bitDepth: 10, sampleRate: 18000 },
   }),
-  preset("dry-snap", "Dry snap", "Analog", "snare", {
+  preset("dry-snap", "Dry service", "Analog", "snare", {
     tone: {
       frequency: 185,
       pitchAmount: 7,
@@ -155,7 +155,7 @@ export const PRESETS: Preset[] = [
     noise: { level: 0.8, color: "white", filter: 11000, decay: 190 },
     effects: { drive: 0.14 },
   }),
-  preset("tape-snare", "Tape snare", "Acoustic", "snare", {
+  preset("tape-snare", "Ticket snare", "Acoustic", "snare", {
     tone: {
       frequency: 165,
       pitchAmount: 10,
@@ -166,32 +166,32 @@ export const PRESETS: Preset[] = [
     noise: { level: 0.72, color: "pink", filter: 6300, decay: 235 },
     effects: { drive: 0.28 },
   }),
-  preset("gated-chrome", "Gated chrome", "Industrial", "snare", {
+  preset("gated-chrome", "Hood gate", "Industrial", "snare", {
     tone: { frequency: 220, pitchAmount: 14, decay: 130 },
     noise: { level: 0.9, filter: 14000, decay: 160 },
     effects: { drive: 0.5, reverb: 0.3 },
   }),
-  preset("pixel-snare", "Pixel snare", "Digital", "snare", {
+  preset("pixel-snare", "Timer snare", "Digital", "snare", {
     tone: { frequency: 240, waveform: "square", pitchAmount: 5, decay: 85 },
     noise: { level: 0.7, filter: 8500, decay: 130 },
     effects: { bitDepth: 7, sampleRate: 10000, drive: 0.3 },
   }),
-  preset("room-hands", "Room hands", "Acoustic", "clap", {
+  preset("room-hands", "Prep clap", "Acoustic", "clap", {
     tone: { frequency: 780, pitchAmount: 2, decay: 65 },
     noise: { level: 0.95, color: "pink", filter: 10500, decay: 180 },
     effects: { reverb: 0.2, drive: 0.12 },
   }),
-  preset("dusty-clap", "Dusty clap", "Classic", "clap", {
+  preset("dusty-clap", "Flour clap", "Classic", "clap", {
     tone: { frequency: 930, pitchAmount: 0, decay: 50 },
     noise: { level: 0.9, color: "brown", filter: 7800, decay: 150 },
     effects: { drive: 0.22, bitDepth: 12, sampleRate: 28000 },
   }),
-  preset("stadium-clap", "Stadium clap", "Experimental", "clap", {
+  preset("stadium-clap", "Full service", "Experimental", "clap", {
     tone: { frequency: 1100, decay: 90 },
     noise: { level: 0.88, filter: 13000, decay: 260 },
     effects: { reverb: 0.6, delay: 0.13 },
   }),
-  preset("closed-metal", "Closed metal", "Analog", "hat", {
+  preset("closed-metal", "Lid closed", "Analog", "hat", {
     tone: {
       frequency: 4100,
       pitchAmount: 1,
@@ -204,7 +204,7 @@ export const PRESETS: Preset[] = [
     effects: { drive: 0.1 },
     mix: { volume: 0.55, pan: 0.08 },
   }),
-  preset("open-air", "Open air", "Classic", "hat", {
+  preset("open-air", "Hood open", "Classic", "hat", {
     tone: {
       frequency: 4700,
       pitchAmount: 0,
@@ -216,19 +216,19 @@ export const PRESETS: Preset[] = [
     effects: { drive: 0.06 },
     mix: { volume: 0.48, pan: 0.12 },
   }),
-  preset("glass-hat", "Glass hat", "Digital", "hat", {
+  preset("glass-hat", "Glass rack", "Digital", "hat", {
     tone: { frequency: 5500, pitchAmount: 4, pitchDecay: 16, decay: 105 },
     noise: { level: 0.2, filter: 13000, decay: 130 },
     effects: { reverb: 0.22, delay: 0.12 },
     mix: { volume: 0.5, pan: -0.15 },
   }),
-  preset("broken-circuit", "Broken circuit", "Industrial", "hat", {
+  preset("broken-circuit", "Broken timer", "Industrial", "hat", {
     tone: { frequency: 3300, waveform: "sawtooth", pitchAmount: 12, decay: 90 },
     noise: { level: 0.45, filter: 8500, decay: 90 },
     effects: { bitDepth: 6, sampleRate: 11000, drive: 0.4 },
     mix: { volume: 0.55 },
   }),
-  preset("low-orbit", "Low orbit", "Analog", "tom", {
+  preset("low-orbit", "Low stockpot", "Analog", "tom", {
     tone: {
       frequency: 110,
       pitchAmount: 12,
@@ -239,11 +239,11 @@ export const PRESETS: Preset[] = [
     noise: { level: 0.04, color: "pink", filter: 3500, decay: 30 },
     effects: { drive: 0.12 },
   }),
-  preset("high-orbit", "High orbit", "Analog", "tom", {
+  preset("high-orbit", "High saucepan", "Analog", "tom", {
     tone: { frequency: 210, pitchAmount: 10, pitchDecay: 45, decay: 250 },
     noise: { level: 0.055, filter: 5000, decay: 18 },
   }),
-  preset("ceramic", "Ceramic drum", "Acoustic", "tom", {
+  preset("ceramic", "Ceramic bowl", "Acoustic", "tom", {
     tone: {
       frequency: 280,
       pitchAmount: 8,
@@ -254,7 +254,7 @@ export const PRESETS: Preset[] = [
     noise: { level: 0.14, color: "pink", filter: 4600, decay: 44 },
     effects: { reverb: 0.14 },
   }),
-  preset("wood-click", "Wood click", "Acoustic", "rim", {
+  preset("wood-click", "Board click", "Acoustic", "rim", {
     tone: {
       frequency: 830,
       pitchAmount: 5,
@@ -266,7 +266,7 @@ export const PRESETS: Preset[] = [
     effects: { drive: 0.08 },
     mix: { volume: 0.65 },
   }),
-  preset("rim-shot", "Rim shot", "Classic", "rim", {
+  preset("rim-shot", "Tray rim", "Classic", "rim", {
     tone: {
       frequency: 1300,
       pitchAmount: 10,
@@ -278,13 +278,13 @@ export const PRESETS: Preset[] = [
     effects: { drive: 0.22 },
     mix: { volume: 0.6 },
   }),
-  preset("laser-rim", "Laser rim", "Digital", "rim", {
+  preset("laser-rim", "Timer rim", "Digital", "rim", {
     tone: { frequency: 1800, pitchAmount: 24, pitchDecay: 28, decay: 110 },
     noise: { level: 0.05, decay: 10 },
     effects: { delay: 0.3, reverb: 0.16 },
     mix: { volume: 0.5, pan: -0.2 },
   }),
-  preset("fm-droplet", "FM droplet", "Digital", "perc", {
+  preset("fm-droplet", "FM reduction", "Digital", "perc", {
     tone: {
       frequency: 480,
       pitchAmount: 19,
@@ -296,7 +296,7 @@ export const PRESETS: Preset[] = [
     effects: { reverb: 0.13, drive: 0.08 },
     mix: { volume: 0.65, pan: -0.12 },
   }),
-  preset("cowbell", "Voltage cowbell", "Classic", "perc", {
+  preset("cowbell", "Order bell", "Classic", "perc", {
     tone: {
       frequency: 560,
       pitchAmount: 0,
@@ -308,7 +308,7 @@ export const PRESETS: Preset[] = [
     effects: { drive: 0.22 },
     mix: { volume: 0.5 },
   }),
-  preset("alien-pluck", "Alien pluck", "Experimental", "perc", {
+  preset("alien-pluck", "Strange garnish", "Experimental", "perc", {
     tone: {
       frequency: 340,
       pitchAmount: -15,
@@ -320,7 +320,7 @@ export const PRESETS: Preset[] = [
     effects: { delay: 0.3, reverb: 0.3, drive: 0.17 },
     mix: { volume: 0.6 },
   }),
-  preset("digital-pebble", "Digital pebble", "Digital", "perc", {
+  preset("digital-pebble", "Diced bits", "Digital", "perc", {
     tone: {
       frequency: 1250,
       pitchAmount: 28,
@@ -332,19 +332,19 @@ export const PRESETS: Preset[] = [
     effects: { bitDepth: 8, sampleRate: 15000, drive: 0.25 },
     mix: { volume: 0.6 },
   }),
-  preset("sand-grain", "Sand grain", "Acoustic", "shaker", {
+  preset("sand-grain", "Salt shaker", "Acoustic", "shaker", {
     tone: { frequency: 3200, pitchAmount: 0, decay: 35, release: 15 },
     noise: { level: 0.86, color: "pink", filter: 14000, decay: 95 },
     effects: { drive: 0.06 },
     mix: { volume: 0.6, pan: 0.2 },
   }),
-  preset("cabasa", "Cabasa shake", "Acoustic", "shaker", {
+  preset("cabasa", "Pepper shaker", "Acoustic", "shaker", {
     tone: { frequency: 2800, pitchAmount: 2, decay: 75 },
     noise: { level: 0.8, color: "brown", filter: 10500, decay: 180 },
     effects: { drive: 0.15 },
     mix: { volume: 0.65, pan: -0.18 },
   }),
-  preset("neon-rattle", "Neon rattle", "Experimental", "shaker", {
+  preset("neon-rattle", "Counter rattle", "Experimental", "shaker", {
     tone: {
       frequency: 4400,
       pitchAmount: 9,
@@ -356,7 +356,7 @@ export const PRESETS: Preset[] = [
     effects: { bitDepth: 10, reverb: 0.2, delay: 0.15 },
     mix: { volume: 0.55, pan: 0.25 },
   }),
-  preset("vinyl-dust", "Vinyl dust", "Lo-fi", "shaker", {
+  preset("vinyl-dust", "Flour dust", "Lo-fi", "shaker", {
     tone: { frequency: 2100, pitchAmount: 0, decay: 55 },
     noise: { level: 0.95, color: "brown", filter: 6200, decay: 140 },
     effects: { bitDepth: 9, sampleRate: 16000, drive: 0.2 },

@@ -1,4 +1,4 @@
-/* LOOM native note sources. Offline prints use private, muted instrument editors. */
+/* GALLEY native note sources. Offline prints use private, muted instrument editors. */
 (function (global) {
   'use strict';
   const MAX_SECONDS = 120, MAX_BYTES = 64 * 1024 * 1024;
@@ -183,7 +183,7 @@
       const packet = pattern(options.pattern || sourceClip.pattern), voiceMap = mapping(options.voiceMap || sourceClip.voiceMap, packet);
       const instrument = captureInstrument(options.instrument || track.instrument);
       const tempo = options.tempo ?? state.tempo;
-      if (!Number.isFinite(tempo) || tempo < 40 || tempo > 240) throw Error('Choose a LOOM tempo between 40 and 240 BPM.');
+      if (!Number.isFinite(tempo) || tempo < 40 || tempo > 240) throw Error('Choose a GALLEY tempo between 40 and 240 BPM.');
       const tailSeconds = options.tailSeconds ?? 0;
       if (!Number.isFinite(tailSeconds) || tailSeconds < 0 || tailSeconds > 20) throw Error('Choose a source tail between 0 and 20 seconds.');
       const transpose = sourceClip.transpose || 0;
@@ -216,7 +216,7 @@
           let prepared = rendered.get(key);
           if (!prepared) {
             const { audio } = await this._render(session, captured, options); this._active(options.signal);
-            const bytes = decodedBytes(audio); if (used + bytes > this.maxBytes) throw Error('These unique note sources exceed LOOM’s 64 MiB render budget. Print shorter patterns, reuse a loop, or export one track at a time.');
+            const bytes = decodedBytes(audio); if (used + bytes > this.maxBytes) throw Error('These unique note sources exceed GALLEY’s 64 MiB render budget. Print shorter patterns, reuse a loop, or export one track at a time.');
             used += bytes; const id = 'notes-render-' + key; prepared = { id, audio }; rendered.set(key, prepared); renderAssets[id] = audio; generatedIds.push(id);
           }
           const secondsPerBeat = 60 / captured.renderTempo;
@@ -234,9 +234,9 @@
       try {
         options.onProgress?.(0); const { audio } = await this._render(session, captured, options); this._active(options.signal);
         const encodedBytes = Math.floor(audio.left.length * Math.min(48000, audio.sampleRate) / audio.sampleRate) * 4;
-        if (used + encodedBytes > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed LOOM’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
+        if (used + encodedBytes > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed GALLEY’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
         const asset = global.LoomSchema.encodeAsset({ ...audio, name: options.name || captured.sourceClip.name || captured.packet.name });
-        if (used + asset.frames * asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed LOOM’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
+        if (used + asset.frames * asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed GALLEY’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
         let origin = { format: 'loom-render-source', version: 1, instrument: captured.instrument, pattern: captured.packet, voiceMap: captured.voiceMap, tempo: captured.tempo, tailSeconds: captured.tailSeconds, sourceClip: captured.sourceClip, renderedAt: Date.now() };
         if (global.LoomSchema.renderSource) origin = global.LoomSchema.renderSource(origin);
         const audioClip = { id: captured.sourceClip.id, name: captured.sourceClip.name, type: 'audio', assetId: asset.id, start: captured.sourceClip.start, length: captured.sourceClip.length, sourceStart: 0, sourceEnd: asset.duration, sourceOffset: captured.sourceClip.sourceOffset * 60 / captured.renderTempo, rate: 1, reverse: false, loop: captured.sourceClip.loop === true, gain: captured.sourceClip.gain, fadeIn: captured.sourceClip.fadeIn, fadeOut: captured.sourceClip.fadeOut, origin };
@@ -261,7 +261,7 @@
         left.set(result.audio.left); right.set(result.audio.right); result.audio = { left, right, sampleRate: result.audio.sampleRate };
         result.asset = global.LoomSchema.encodeAsset({ ...result.audio, id: result.asset.id, name: result.asset.name });
         const used = snapshot.assets.reduce((sum, value) => sum + value.frames * value.channels * 2, 0);
-        if (used + result.asset.frames * result.asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This update would exceed LOOM’s 64 MiB audio budget.');
+        if (used + result.asset.frames * result.asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This update would exceed GALLEY’s 64 MiB audio budget.');
       }
       result.clip = { ...geometry, assetId: result.asset.id, origin: result.origin };
       this._active(options.signal); return result;

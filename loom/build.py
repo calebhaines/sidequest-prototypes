@@ -1,4 +1,4 @@
-"""Build the complete LOOM studio and reproducible editable source archive."""
+"""Build GALLEY and its compatible reproducible editable source archive."""
 from pathlib import Path
 import base64
 import runpy
@@ -39,7 +39,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -55,12 +55,12 @@ html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').rep
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
 html = exchange_helpers['embed_exchange'](html, 'loom', ROOT)
 (ROOT / 'index.html').write_text(html)
-print(f'Built LOOM: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Music Lab instruments and all assets embedded.')
+print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kilter Kitchen instruments and all assets embedded.')
 
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
-    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
+    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     files += exchange_helpers['exchange_sources'](ROOT)
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]
@@ -71,5 +71,5 @@ if (ROOT.parent / 'music' / 'README.md').exists():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, data)
-    print(f'Packaged LOOM source: {target.stat().st_size:,} bytes, {len(files)} files.')
+    print(f'Packaged GALLEY source: {target.stat().st_size:,} bytes, {len(files)} files.')
     print('Standalone SHA-256: ' + hashlib.sha256(html.encode()).hexdigest())

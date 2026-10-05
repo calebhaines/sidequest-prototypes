@@ -1,4 +1,4 @@
-/* LOOM hosted-instrument bridge. Installed before any instrument script runs. */
+/* GALLEY hosted-instrument bridge. Installed before any instrument script runs. */
 (function (global) {
   'use strict';
 
@@ -77,7 +77,7 @@
     function createContext() {
       requireActive();
       const raw = record.getContext();
-      if (!raw) throw new Error('Start LOOM audio before playing an instrument.');
+      if (!raw) throw new Error('Start GALLEY audio before playing an instrument.');
       const output = raw.createGain(); output.gain.value = record.soundEnabled ? 1 : 0; output.connect(record.getInput());
       const listeners = new Set(), modules = new Map(), nodes = new Set();
       const processorPrefix = 'loom-' + key.replace(/[^a-zA-Z0-9-]/g, '-') + '-' + (++sequence) + '-';

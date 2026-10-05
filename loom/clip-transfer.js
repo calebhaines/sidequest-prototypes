@@ -1,4 +1,4 @@
-/* Render an edited LOOM clip into a receiving instrument, before track inserts and mixing. */
+/* Render an edited GALLEY clip into a receiving instrument, before track inserts and mixing. */
 (() => {
   'use strict';
   const clamp = (value, low, high, fallback = low) => Number.isFinite(value) ? Math.max(low, Math.min(high, value)) : fallback;
@@ -47,7 +47,7 @@
       if (end < frames) await pause();
     }
     cancelled(signal);
-    return { pcm, sampleRate, name: typeof clip.name === 'string' ? clip.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 80) : 'LOOM clip' };
+    return { pcm, sampleRate, name: typeof clip.name === 'string' ? clip.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 80) : 'GALLEY clip' };
   }
   window.LoomClipTransfer = Object.freeze({ render });
 })();

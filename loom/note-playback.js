@@ -1,4 +1,4 @@
-/* LOOM note clips and instrument patterns share the DAW's Web Audio clock. */
+/* GALLEY note clips and instrument patterns share the DAW's Web Audio clock. */
 (function (global) {
   'use strict';
   const EPSILON = 1e-7, LOOKAHEAD = .12, INTERVAL = 25;
@@ -19,7 +19,7 @@
   }
   class LoomNotePlayback {
     constructor({ audio, host, getState, ensureInstrument, onStatus } = {}) {
-      if (!audio?.getTransport || !host || typeof getState !== 'function') throw TypeError('Provide LOOM audio, instrument host, and getState.');
+      if (!audio?.getTransport || !host || typeof getState !== 'function') throw TypeError('Provide GALLEY audio, instrument host, and getState.');
       this.audio = audio; this.host = host; this.getState = getState; this.ensureInstrument = ensureInstrument;
       this.onStatus = onStatus || (() => {}); this.active = false; this.disposed = false; this.generation = 0;
       this.tracks = new Map(); this.scheduled = new Map(); this.revision = -1; this.timer = null; this.refreshing = false; this.lastRefresh = 0;
@@ -39,7 +39,7 @@
         const record = this.host.records.get(track.id); if (record) await record.ready;
         if (generation !== this.generation || this.disposed) throw abortError();
         const adapter = this.host.getPatternAdapter(track.id), noteClips = track.clips.filter(clip => clip.type === 'notes');
-        if (noteClips.length && !adapter?.scheduleNote) throw Error(track.name + ' needs a Music Lab note-compatible instrument.');
+        if (noteClips.length && !adapter?.scheduleNote) throw Error(track.name + ' needs a Kilter Kitchen note-compatible instrument.');
         await adapter?.prepare?.();
         if (generation !== this.generation || this.disposed) throw abortError();
         for (const clip of noteClips) this._validateClip(adapter, clip);

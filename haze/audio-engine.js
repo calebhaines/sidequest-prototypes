@@ -1,4 +1,4 @@
-/* HAZE: the same bounded additive synthesizer in the worklet, fallback, and WAV renderer. */
+/* STEAM: the same bounded additive synthesizer in the worklet, fallback, and WAV renderer. */
 (() => {
   'use strict';
   function createDSP(){
@@ -46,7 +46,7 @@
     checkOperation(signal,isCurrent);
     if(!ArrayBuffer.isView(pcm)||Object.prototype.toString.call(pcm)!=='[object Float32Array]'||pcm.length<64||pcm.length%2)throw Error('Choose stereo audio with complete left/right sample pairs.');
     if(!Number.isFinite(sampleRate)||sampleRate<8000||sampleRate>192000)throw Error('The audio sample rate must be between 8 and 192 kHz.');
-    const frames=pcm.length/2,seconds=frames/sampleRate;if(seconds>20+.5/sampleRate)throw Error('HAZE analyzes up to 20 seconds. Trim the sample before importing.');
+    const frames=pcm.length/2,seconds=frames/sampleRate;if(seconds>20+.5/sampleRate)throw Error('STEAM analyzes up to 20 seconds. Trim the sample before importing.');
     const input=new Float32Array(pcm);let midPower=0,leftPower=0,rightPower=0;
     for(let i=0;i<frames;i++){const l=input[i*2],r=input[i*2+1];if(!Number.isFinite(l)||!Number.isFinite(r))throw Error('The sample contains invalid audio values.');const m=(l+r)*.5;midPower+=m*m;leftPower+=l*l;rightPower+=r*r;if((i&131071)===131071){await yieldTask();checkOperation(signal,isCurrent);}}
     // Keep anti-phase stereo material audible when a conventional mono
@@ -77,7 +77,7 @@
     async start(){const generation=this._generation,request=++this._startRequest;await this.init();if(generation!==this._generation||request!==this._startRequest)return false;await this.context.resume();if(generation!==this._generation||request!==this._startRequest)return false;this.isPlaying=true;this._send({type:'start'});return true;}
     stop(){this._startRequest++;this.isPlaying=false;this._send({type:'stop'});}
     panic(){this._generation++;this._startRequest++;this._recordRequest++;this._recordId++;this.isPlaying=false;this.isRecording=false;this._chunks=[];this._recordFrames=0;this._send({type:'panic'});if(this._recordStopped){this._recordStopped.resolve();this._recordStopped=null;}this._meters={peak:0,rms:0,position:this._meters.position,spectrum:Array(24).fill(0)};}
-    scheduleNote({voiceId='0',velocity=.8,when,durationSeconds=.25,source='loom'}={}){if(!this.context||!this.node)throw new Error('Prepare the instrument before scheduling notes.');const row=Number(voiceId);if(!Number.isInteger(row)||row<0||row>23)throw new Error('Choose one of HAZE’s twenty-four tuned bands.');this._send({type:'note',row,velocity,frame:Math.round(Math.max(this.context.currentTime,Number(when)||this.context.currentTime)*this.context.sampleRate),durationFrames:Math.max(1,Math.round(durationSeconds*this.context.sampleRate)),source});return true;}
+    scheduleNote({voiceId='0',velocity=.8,when,durationSeconds=.25,source='loom'}={}){if(!this.context||!this.node)throw new Error('Prepare the instrument before scheduling notes.');const row=Number(voiceId);if(!Number.isInteger(row)||row<0||row>23)throw new Error('Choose one of STEAM’s twenty-four tuned bands.');this._send({type:'note',row,velocity,frame:Math.round(Math.max(this.context.currentTime,Number(when)||this.context.currentTime)*this.context.sampleRate),durationFrames:Math.max(1,Math.round(durationSeconds*this.context.sampleRate)),source});return true;}
     stopNotes({source,when}={}){this._send({type:'stopNotes',source,frame:this.context?Math.round(Math.max(this.context.currentTime,Number.isFinite(when)?when:this.context.currentTime)*this.context.sampleRate):undefined});}
     clearClockPositions(){this._send({type:'clearPositions'});}
     seekBeat(beat,{when}={}){const beats=this.state.bars*4,p=((Number(beat)||0)%beats+beats)%beats,position=p/beats*32;if(this.context&&Number.isFinite(when)&&when>this.context.currentTime)this._send({type:'position',position,frame:Math.round(when*this.context.sampleRate)});else this.setPosition(position);}

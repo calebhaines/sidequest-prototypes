@@ -1,16 +1,16 @@
-# Music Lab audio and pattern exchange
+# Kilter Kitchen audio and pattern exchange
 
-`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and LOOM. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Music Lab packets. A companion **Patterns** dialog shares editable musical parts. Both modules have no network requests, external dependencies, or cloud storage.
+`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and GALLEY. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Kilter Kitchen packets. A companion **Patterns** dialog shares editable musical parts. Both modules have no network requests, external dependencies, or cloud storage.
 
 ## Using the dialog
 
 1. Open **Samples → Send audio**, choose an export source, and render it.
-2. Choose **Save to library**. Open another Music Lab app in the same browser and origin, then select that sound from **Samples → Library**.
+2. Choose **Save to library**. Open another Kilter Kitchen app in the same browser and origin, then select that sound from **Samples → Library**.
 3. Adjust selection start/end, preview the audio, and choose a receiving destination. Existing destination audio requires explicit replacement confirmation.
 
 The library shows names, source apps, duration, tempo, and waveform thumbnails. Search also matches stored tags. Deleting a library entry does not remove audio already imported into an app or project.
 
-**Portable packet** downloads preserve sample metadata and work between separate offline HTML files or browsers. **WAV** downloads work with other audio software; WAV export does not embed Music Lab metadata.
+**Portable packet** downloads preserve sample metadata and work between separate offline HTML files or browsers. **WAV** downloads work with other audio software; WAV export does not embed Kilter Kitchen metadata.
 
 ## Current destinations
 
@@ -18,19 +18,19 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 
 | App | Maximum selected duration | Destinations | Result |
 | --- | ---: | --- | --- |
-| FABLE | 120 seconds | New sample zone or existing string zone ID | Stereo multisample instrument, up to 64 key/velocity zones |
-| FORM | 2 seconds | 8 voices × 3 layers; string IDs such as `"0:a"` | Mono granular texture at 22,050 Hz; enables the selected layer and its granular sample engine |
-| MIRE | 10 seconds | 4 sources; numeric IDs `0`–`3` | Mono source sample for the resonator network |
-| SPOOL | 30 seconds | 4 decks; numeric IDs `0`–`3` | Stereo tape-deck source |
-| RAVEL | 20 seconds | One sample; numeric ID `0` | Stereo source for slicing |
-| HAZE | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
-| LOOM | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
+| STOCK | 120 seconds | New sample zone or existing string zone ID | Stereo multisample instrument, up to 64 key/velocity zones |
+| HOTPLATE | 2 seconds | 8 voices × 3 layers; string IDs such as `"0:a"` | Mono granular texture at 22,050 Hz; enables the selected layer and its granular sample engine |
+| REDUCE | 10 seconds | 4 sources; numeric IDs `0`–`3` | Mono source sample for the resonator network |
+| ROTISSERIE | 30 seconds | 4 decks; numeric IDs `0`–`3` | Stereo tape-deck source |
+| DICER | 20 seconds | One sample; numeric ID `0` | Stereo source for slicing |
+| STEAM | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
+| GALLEY | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
 
-GRAIN, TINE, and BOWER export audio. They do not advertise sample-import destinations. All ten apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. HAZE retains both incoming channels for analysis, including energy in anti-phase stereo material.
+SIZZLE, CLATTER, and SKEWER export audio. They do not advertise sample-import destinations. All ten apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.
 
 ## Storage and limits
 
-The persistent library uses IndexedDB database `musiclab-audio-v1`, version `1`, with a `samples` object store keyed by `id`. It is shared by apps on the same origin, within the same browser profile. It is separate from individual app projects and LOOM sessions.
+The persistent library uses IndexedDB database `musiclab-audio-v1`, version `1`, with a `samples` object store keyed by `id`. It is shared by apps on the same origin, within the same browser profile. It is separate from individual app projects and GALLEY sessions.
 
 - Maximum **32 samples** in the library.
 - Maximum **64 MiB** (`67,108,864` bytes) of stored Float32 PCM across the library. This measures decoded audio, not downloaded WAV/packet size or IndexedDB overhead.
@@ -41,7 +41,7 @@ Quota checking and persistent writes use one transaction so simultaneous tabs ca
 
 If IndexedDB cannot be opened, the module uses an in-memory library and displays a notice that it will disappear when the page closes. Download a packet to retain the sound. The `persistent` getter reports whether the module has fallen back after its first storage attempt.
 
-Browsers may isolate or deny storage for `file:` pages. Offline HTML files therefore display a reminder to use portable packets when transferring sounds between files. Private browser sessions and clearing site data can also remove stored samples. Hosted instruments delegate to `MusicLabHost.audioLibrary` so LOOM's per-instrument storage isolation does not create separate sample libraries.
+Browsers may isolate or deny storage for `file:` pages. Offline HTML files therefore display a reminder to use portable packets when transferring sounds between files. Private browser sessions and clearing site data can also remove stored samples. Hosted instruments delegate to `MusicLabHost.audioLibrary` so GALLEY's per-instrument storage isolation does not create separate sample libraries.
 
 Audio-file decoding accepts files up to 128 MiB. The decoded preview can be longer than a saved selection (up to 900 seconds), but still must fit the 64 MiB decoded-audio limit. Browser support determines available audio codecs. Decoding uses a temporary AudioContext, which is closed afterwards; its decoded sample rate may differ from the file's original sample rate.
 
@@ -159,7 +159,7 @@ The same signal is passed at both levels to support existing facades. Check it b
 
 For spectral or other analysis destinations, advertise `mode: 'analysis'` and a clear `description`; the action becomes **Analyze selection**. `channels: 1` describes the destination's mono engine and its UI notice, and does not cause the exchange module to premix input channels.
 
-For LOOM hosting, expose import/export on the existing registered instrument adapter too. See [`loom/HOSTING.md`](../loom/HOSTING.md) for the separate transport, state, and audio-routing contract.
+For GALLEY hosting, expose import/export on the existing registered instrument adapter too. See [`loom/HOSTING.md`](../loom/HOSTING.md) for the separate transport, state, and audio-routing contract.
 
 ## Public library and conversion helpers
 
@@ -182,7 +182,7 @@ For LOOM hosting, expose import/export on the existing registered instrument ada
 
 `version`, `MAX_BYTES`, `MAX_SAMPLES`, `MAX_SECONDS`, and `persistent` are also exposed. Stored metadata includes `id`, `createdAt` (Unix milliseconds), `name`, `sourceApp`, `tempo`, `bars`, `tags`, `sampleRate`, `frames`, `channels`, `duration`, `bytes`, and a 48-bin `waveform` peak summary. Tempo and bar count are provenance; importing does not automatically time-stretch audio to a destination tempo.
 
-In a host, the module delegates library operations to `MusicLabHost.audioLibrary.{list,get,save,remove}`. Its `persistent` property controls the storage notice. LOOM's bridge forwards these operations to the parent module's common library while leaving instrument-specific project storage isolated.
+In a host, the module delegates library operations to `MusicLabHost.audioLibrary.{list,get,save,remove}`. Its `persistent` property controls the storage notice. GALLEY's bridge forwards these operations to the parent module's common library while leaving instrument-specific project storage isolated.
 
 ## Portable packet version 1
 
@@ -209,11 +209,11 @@ Packets use the filename suffix `.musiclab-audio.json`. This minimal valid examp
 
 The encoder clamps samples to `[-1, 1]`, scales negative values by 32,768 and nonnegative values by 32,767, then rounds. The decoder uses the matching divisor for each sign. Packet and WAV export quantize Float32 audio to PCM16; the local library preserves Float32 PCM. Validation rejects unsupported versions/encodings, mismatched lengths, invalid rates/channel counts, and packets exceeding duration or decoded PCM limits.
 
-Packets contain rendered audio and provenance, not app patches, sequencer state, MIDI notes, or LOOM project data. App-specific project files remain separate.
+Packets contain rendered audio and provenance, not app patches, sequencer state, MIDI notes, or GALLEY project data. App-specific project files remain separate.
 
 ## Building standalone downloads
 
-`bundle_audio_exchange.py` embeds the shared module and CSS into Python-built standalone apps and supplies shared source files for archives. Add future apps to its `APPS` mapping with facade name, accent, and toolbar selector. `bundle_audio_exchange.mjs` provides the equivalent embedding helper for FORM's Node build.
+`bundle_audio_exchange.py` embeds the shared module and CSS into Python-built standalone apps and supplies shared source files for archives. Add future apps to its `APPS` mapping with facade name, accent, and toolbar selector. `bundle_audio_exchange.mjs` provides the equivalent embedding helper for HOTPLATE's Node build.
 
 The published HTML embeds the module and styles so Samples works without an adjacent JavaScript/CSS file or a server. Include these sources and the relevant helper in app source archives to keep extracted projects rebuildable.
 
@@ -224,11 +224,11 @@ The published HTML embeds the module and styles so Samples works without an adja
 1. Open **Patterns → Send pattern**, choose a source, and select **Read current pattern**.
 2. **Save to library**, or download a `.musiclab-pattern.json` file for another browser or an offline HTML file.
 3. In another instrument, open **Patterns → Library**, select the part, and review the receiving destination. Drum lanes require an explicit source-to-destination voice assignment. Replacing a destination that already contains notes requires the replacement checkbox.
-4. In LOOM, select a track and use **Load instrument voices** if the instrument is not loaded. **Receive pattern** adds an editable note clip. Existing arrangement clips remain in place.
+4. In GALLEY, select a track and use **Load instrument voices** if the instrument is not loaded. **Receive pattern** adds an editable note clip. Existing arrangement clips remain in place.
 
 Some native sequencers have a fixed grid or monophonic editor. Their pattern adapter retains the exact received part as a portable `musicLabPattern` overlay rather than silently shortening notes, dropping polyphony, or quantizing beat positions. This overlay travels with the native app project. **Use native sequence** restores the instrument's own sequence while retaining its sound. Editing the native sequence can also return the app to that sequence, as explained by the receiving adapter.
 
-The panel previews the part as a note diagram. Sharing a pattern preserves the musical part; the receiving instrument supplies its own sound. Sample assets and patches belong in native instrument projects or LOOM projects, rather than ordinary note-pattern packets.
+The panel previews the part as a note diagram. Sharing a pattern preserves the musical part; the receiving instrument supplies its own sound. Sample assets and patches belong in native instrument projects or GALLEY projects, rather than ordinary note-pattern packets.
 
 ### Pattern storage and limits
 
@@ -236,7 +236,7 @@ The local database is **`musiclab-patterns-v1`**, version `1`, with a `patterns`
 
 A portable pattern supports **4,096 notes, 64 source voices, and 256 quarter-note beats**. Each packet must fit within **1 MiB** of UTF-8 JSON. Tempo is 20–400 BPM. Notes use MIDI pitches 0–127, finite nonnegative beat positions, positive lengths fitting inside the pattern, velocity and probability 0–1, and explicit source voice IDs. IDs must be unique, and every referenced voice must exist. An optional unsigned 32-bit seed preserves deterministic probability choices.
 
-If IndexedDB is denied, the library explicitly falls back to memory. Download note-pattern files before closing the page. Offline files may have isolated storage; portable pattern files work between them. A hosted instrument delegates to `MusicLabHost.patternLibrary.{list,get,save,remove}`, so LOOM's isolated instrument storage does not create separate note libraries.
+If IndexedDB is denied, the library explicitly falls back to memory. Download note-pattern files before closing the page. Offline files may have isolated storage; portable pattern files work between them. A hosted instrument delegates to `MusicLabHost.patternLibrary.{list,get,save,remove}`, so GALLEY's isolated instrument storage does not create separate note libraries.
 
 ### Portable note format and adapter
 
@@ -266,7 +266,7 @@ MusicLabPatterns.register({
 
 The adapter exposes `patternExport.scopes`, `exportPattern({scope,signal})`, dynamic `patternImport.targets` and `.voices`, and `importPattern({pattern,options:{target,voiceMap,replace},signal})`. Target and destination voice IDs retain their native types. `voiceMap` maps source string IDs to destination IDs. The native facade repeats validation and replacement checks before committing, including after asynchronous preparation.
 
-Optional `prepareTarget({target,pattern,signal})` loads a LOOM track's instrument and makes its voices available for mapping. Optional `getImportedPattern()` and `clearImportedPattern()` enable the **Use native sequence** controls. The low-level `notes`, `prepare`, `scheduleNote`, `cancelNotes`, `renderPattern`, and `transport` APIs support LOOM's shared clock and reversible rendering; their exact contract is in [PATTERN-CONTRACT.md](PATTERN-CONTRACT.md).
+Optional `prepareTarget({target,pattern,signal})` loads a GALLEY track's instrument and makes its voices available for mapping. Optional `getImportedPattern()` and `clearImportedPattern()` enable the **Use native sequence** controls. The low-level `notes`, `prepare`, `scheduleNote`, `cancelNotes`, `renderPattern`, and `transport` APIs support GALLEY's shared clock and reversible rendering; their exact contract is in [PATTERN-CONTRACT.md](PATTERN-CONTRACT.md).
 
 `window.MusicLabPatterns` exposes `register`, `open`, `close`, `list`, `get`, `save`, `remove`, `download`, `normalizePattern`, `patternFromJSON`, and `persistent`. `list()` returns metadata including note and voice counts. `get(id)` returns a copied full pattern record; normalizing it removes library-only fields such as `id`, `createdAt`, and `bytes`.
 
@@ -275,3 +275,9 @@ Optional `prepareTarget({target,pattern,signal})` loads a LOOM track's instrumen
 The Python and Node embedding helpers include both exchange dialogs and all adapter modules. **`pattern-schema.js` is inserted at the start of `<head>`**, before native app schemas restore exact-note overlays. The pitched/drum adapter modules run after the native app scripts, followed by the pattern dialog and lazy registration. All CSS, JavaScript, contract documentation, and tests are included in source ZIPs. No adjacent files, server, or network connection is needed to use a published standalone HTML file.
 
 Run `node shared/pattern-checks.cjs` to verify portable-note boundaries, complete 4,096-note round trips, fallback-library quotas, and host delegation.
+
+## Kilter Kitchen presentation and compatibility
+
+`kilter-kitchen.css` supplies the shared dark steel, enamel, orange, yellow and typography tokens. The Roboto Condensed variable font is embedded as WOFF2; its full SIL Open Font License is included in the stylesheet and `KILTER-FONTS-LICENSE.txt`. Every standalone HTML therefore keeps its typography without network access. Native app CSS may use `--kk-heading`, `--kk-ui`, `--kk-mono`, and the `--kk-*` color tokens without altering its own signal controls or layout.
+
+Display names change; native app IDs, JavaScript facades, `musiclab-*` packet formats, IndexedDB databases, URLs and project storage keys remain stable. The mapping is GRAIN → SIZZLE, TINE → CLATTER, FORM → HOTPLATE, MIRE → REDUCE, SPOOL → ROTISSERIE, HAZE → STEAM, BOWER → SKEWER, RAVEL → DICER, FABLE → STOCK, and LOOM → GALLEY. Builder registrations include the unchanged `sourceApp` provenance as well as the display `name`. Shared library rows display the kitchen names for earlier packets while preserving their stored data.

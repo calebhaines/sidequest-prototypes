@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const music = path.join(root, 'music');
 if (!fs.existsSync(path.join(music, 'index.html'))) {
-  throw new Error('The Music Lab source page is missing: music/index.html');
+  throw new Error('The Kilter Kitchen source page is missing: music/index.html');
 }
 const grain = fs.readFileSync(path.join(root, 'grain', 'index.html'));
 const tine = fs.readFileSync(path.join(root, 'tine', 'index.html'));
@@ -21,18 +21,18 @@ const legacy = `<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#191d18">
-  <title>GRAIN has moved to Music Lab</title>
+  <meta name="theme-color" content="#111517">
+  <title>SIZZLE lives in Kilter Kitchen</title>
   <link rel="canonical" href="https://calebhaines.github.io/sidequest-prototypes/music/grain/">
   <meta http-equiv="refresh" content="0;url=../music/grain/index.html">
   <style>
-    :root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-content:center;padding:24px;box-sizing:border-box;background:#191d18;color:#edeedd;font:16px/1.7 system-ui,sans-serif}main{max-width:400px}h1{font-size:34px;letter-spacing:-1px;font-weight:500;margin:0 0 12px}p{color:#adb5a1;margin:0 0 24px}a{color:#e8aa80;text-underline-offset:5px}a:focus-visible{outline:2px solid #e8aa80;outline-offset:6px}
+    :root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-content:center;padding:24px;box-sizing:border-box;background:#111517;color:#f1ecdc;font:16px/1.7 system-ui,sans-serif}main{max-width:400px}h1{font-size:34px;letter-spacing:-1px;font-weight:500;margin:0 0 12px}p{color:#adb5a1;margin:0 0 24px}a{color:#ff8d45;text-underline-offset:5px}a:focus-visible{outline:2px solid #ff8d45;outline-offset:6px}
   </style>
   <script>
     location.replace((location.protocol === 'file:' ? '../music/grain/index.html' : '../music/grain/') + location.search + location.hash);
   </script>
 </head>
-<body><main><h1>GRAIN lives in Music Lab.</h1><p>Your drum machine has a new home alongside future music apps.</p><a href="../music/grain/index.html">Open GRAIN →</a></main></body>
+<body><main><h1>SIZZLE lives in Kilter Kitchen.</h1><p>Your drum machine has a new home alongside future music apps.</p><a href="../music/grain/index.html">Open SIZZLE →</a></main></body>
 </html>
 `;
 
@@ -61,4 +61,4 @@ for (const directory of ['public', 'docs']) {
     fs.writeFileSync(target, content);
   }
 }
-console.log('Synced Music Lab, LOOM, its instruments, and the GRAIN compatibility redirect.');
+console.log('Synced Kilter Kitchen, GALLEY, its instruments, and the legacy drum-machine redirect.');

@@ -1,4 +1,4 @@
-/* FABLE: native stereo sample voices. Live and OfflineAudioContext use this same graph. */
+/* STOCK: native stereo sample voices. Live and OfflineAudioContext use this same graph. */
 (function () {
 'use strict';
 const TAU = Math.PI * 2, SR = 48000, MAX_GRAINS = 256, MAX_TEXTURE_VOICES = 16;

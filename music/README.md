@@ -1,43 +1,43 @@
-# Music Lab
+# Kilter Kitchen
 
-A dedicated, self-contained landing page for nine music instruments and the LOOM browser studio.
+A dedicated, self-contained landing page for nine music instruments and the GALLEY browser studio.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
-LOOM studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
+GALLEY studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-GRAIN: https://calebhaines.github.io/sidequest-prototypes/music/grain/
+SIZZLE: https://calebhaines.github.io/sidequest-prototypes/music/grain/
 
-FORM: https://calebhaines.github.io/sidequest-prototypes/music/form/
+HOTPLATE: https://calebhaines.github.io/sidequest-prototypes/music/form/
 
-TINE: https://calebhaines.github.io/sidequest-prototypes/music/tine/
+CLATTER: https://calebhaines.github.io/sidequest-prototypes/music/tine/
 
-MIRE: https://calebhaines.github.io/sidequest-prototypes/music/mire/
+REDUCE: https://calebhaines.github.io/sidequest-prototypes/music/mire/
 
-SPOOL: https://calebhaines.github.io/sidequest-prototypes/music/spool/
+ROTISSERIE: https://calebhaines.github.io/sidequest-prototypes/music/spool/
 
-HAZE: https://calebhaines.github.io/sidequest-prototypes/music/haze/
+STEAM: https://calebhaines.github.io/sidequest-prototypes/music/haze/
 
-BOWER: https://calebhaines.github.io/sidequest-prototypes/music/bower/
+SKEWER: https://calebhaines.github.io/sidequest-prototypes/music/bower/
 
-RAVEL: https://calebhaines.github.io/sidequest-prototypes/music/ravel/
+DICER: https://calebhaines.github.io/sidequest-prototypes/music/ravel/
 
-FABLE: https://calebhaines.github.io/sidequest-prototypes/music/fable/
+STOCK: https://calebhaines.github.io/sidequest-prototypes/music/fable/
 
 The music page has its own design and navigation, separate from the Sidequest RPG gallery. All typography and artwork are embedded in `index.html`.
 
 ## Sharing audio
 
-Every instrument and LOOM has a **Samples** panel. In **Send audio**, render a hit, voice, pattern, deck, slice, spectral score, clip, or mix, depending on the app. Save it to the local library, then open **Samples** in another app and select the sound. Preview and trim the audio, choose a receiving destination, and explicitly confirm replacement when needed. Samples stay on this browser and site; WAV or portable Music Lab packets transfer them between devices or standalone HTML files. Downloaded apps include the complete interface and exchange code for offline use.
+Every instrument and GALLEY has a **Samples** panel. In **Send audio**, render a hit, voice, pattern, deck, slice, spectral score, clip, or mix, depending on the app. Save it to the local library, then open **Samples** in another app and select the sound. Preview and trim the audio, choose a receiving destination, and explicitly confirm replacement when needed. Samples stay on this browser and site; WAV or portable Kilter Kitchen packets transfer them between devices or standalone HTML files. Downloaded apps include the complete interface and exchange code for offline use.
 
-FABLE receives up to 120 seconds of stereo audio into a new or existing playable sample zone, with up to 64 zones and a 64 MiB decoded audio budget. FORM receives audio into any granular layer (2 seconds), MIRE into any of four source exciters (10 seconds), SPOOL into any deck (30 seconds), and RAVEL into its slicing engine (20 seconds). HAZE analyzes up to 20 seconds into an editable spectral score. LOOM appends up to 120 seconds as a clip on any track. GRAIN, TINE, and BOWER contribute synthesized sounds to the library. See [the exchange contract](../shared/README.md) for future apps and portable packet details.
+STOCK receives up to 120 seconds of stereo audio into a new or existing playable sample zone, with up to 64 zones and a 64 MiB decoded audio budget. HOTPLATE receives audio into any granular layer (2 seconds), REDUCE into any of four source exciters (10 seconds), ROTISSERIE into any deck (30 seconds), and DICER into its slicing engine (20 seconds). STEAM analyzes up to 20 seconds into an editable spectral score. GALLEY appends up to 120 seconds as a clip on any track. SIZZLE, CLATTER, and SKEWER contribute synthesized sounds to the library. See [the exchange contract](../shared/README.md) for future apps and portable packet details.
 
 ## Sharing musical parts
 
-Every instrument and LOOM also has a **Patterns** panel. Share editable notes,
+Every instrument and GALLEY also has a **Patterns** panel. Share editable notes,
 timing, durations, velocities, probability, and named voices through a separate
 browser library or portable JSON. Receivers preserve the exact musical part and
-require explicit voice mapping and replacement where needed. LOOM receives parts
+require explicit voice mapping and replacement where needed. GALLEY receives parts
 as note clips with a piano roll, plays them through native instrument synthesis,
 and exports them alongside audio. Live instruments follow the studio’s shared
 bar/beat clock. Print retains the source patch and pattern for **Edit source**,
@@ -47,28 +47,32 @@ bar/beat clock. Print retains the source patch and pattern for **Edit source**,
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
 
-LOOM 1.5 is an eight-track browser DAW with audio and note arrangement, all nine Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the nine instruments for offline use, including FABLE's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
+GALLEY 1.5 is an eight-track browser DAW with audio and note arrangement, all nine Kilter Kitchen instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the nine instruments for offline use, including STOCK's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with GALLEY. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Kilter Kitchen studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
-GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
+SIZZLE's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
-FORM 2.0.3 has maintainable React/TypeScript sources in `form/`, a standalone page in `music/form/index.html`, and a complete editable project in `music/form/FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Music Lab card opens the app or downloads its offline HTML.
+HOTPLATE 2.0.3 has maintainable React/TypeScript sources in `form/`, a standalone page in `music/form/index.html`, and a complete editable project in `music/form/FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Kilter Kitchen card opens the app or downloads its offline HTML.
 
-TINE 1.1 has nine resonator bodies, selectable striking materials, contact texture and rebound controls, and eight grooves. Its editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command. Existing TINE projects upgrade automatically with their original excitation preserved.
+CLATTER 1.1 has nine resonator bodies, selectable striking materials, contact texture and rebound controls, and eight grooves. Its editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command. Existing CLATTER projects upgrade automatically with their original excitation preserved.
 
-MIRE 1.0 is a feedback instrument with four interconnected delay/resonator pools, six processor models, eight exciter types including imported audio, and four sixteen-step lanes. Its routing matrix, two LFOs, assignable XY pad, freeze, live microphone input, and stereo recording turn short sounds into evolving loops and textures. Eight complete garden presets are included. The editable source is in `mire/`; rebuild its standalone page and `music/mire/MIRE-source.zip` with `python mire/build.py`. Music Lab opens the app at `./mire/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
+REDUCE 1.0 is a feedback instrument with four interconnected delay/resonator pools, six processor models, eight exciter types including imported audio, and four sixteen-step lanes. Its routing matrix, two LFOs, assignable XY pad, freeze, live microphone input, and stereo recording turn short sounds into evolving loops and textures. Eight complete kitchen presets are included. The editable source is in `mire/`; rebuild its standalone page and `music/mire/MIRE-source.zip` with `python mire/build.py`. Kilter Kitchen opens the app at `./mire/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
 
-SPOOL 1.0 is a tape-loop playground with four overlapping stereo decks, eight tape-study presets, thirty seconds per deck, audio import, live microphone input, built-in keys, and overdubbing. Shape speed, reverse playback, loop regions, tape wear, tone, wow, and flutter; save projects and export stereo WAV. Its editable source is in `spool/`; rebuild the standalone page and `music/spool/SPOOL-source.zip` with `python spool/build.py`. Music Lab opens the app at `./spool/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
+ROTISSERIE 1.0 is a tape-loop playground with four overlapping stereo decks, eight tape-study presets, thirty seconds per deck, audio import, live microphone input, built-in keys, and overdubbing. Shape speed, reverse playback, loop regions, tape wear, tone, wow, and flutter; save projects and export stereo WAV. Its editable source is in `spool/`; rebuild the standalone page and `music/spool/SPOOL-source.zip` with `python spool/build.py`. Kilter Kitchen opens the app at `./spool/` or downloads the same self-contained HTML for offline play. The app's Help panel includes its editable source download.
 
-HAZE 1.0 is a spectral painting instrument. Its thirty-two-column, twenty-four-band canvas turns time and pitch into forty-eight additive partials, with cloud motion, overtone shaping, and spectral freeze. Its editable source is in `haze/`; run `python haze/build.py` to rebuild the standalone page and `music/haze/HAZE-source.zip`. Music Lab opens it at `./haze/` or downloads the same self-contained HTML for offline play.
+STEAM 1.0 is a spectral painting instrument. Its thirty-two-column, twenty-four-band canvas turns time and pitch into forty-eight additive partials, with cloud motion, overtone shaping, and spectral freeze. Its editable source is in `haze/`; run `python haze/build.py` to rebuild the standalone page and `music/haze/HAZE-source.zip`. Kilter Kitchen opens it at `./haze/` or downloads the same self-contained HTML for offline play.
 
-BOWER 1.0 is a generative string instrument with four waveguide voices, sixteen-step patterns, scales, Euclidean rhythms, probability, and independent loop lengths for polyrhythms. Its editable source is in `bower/`; run `python bower/build.py` to rebuild the standalone page and `music/bower/BOWER-source.zip`. Music Lab opens it at `./bower/` or downloads the same self-contained HTML for offline play.
+SKEWER 1.0 is a generative string instrument with four waveguide voices, sixteen-step patterns, scales, Euclidean rhythms, probability, and independent loop lengths for polyrhythms. Its editable source is in `bower/`; run `python bower/build.py` to rebuild the standalone page and `music/bower/BOWER-source.zip`. Kilter Kitchen opens it at `./bower/` or downloads the same self-contained HTML for offline play.
 
-RAVEL 1.0 is a stereo sample-slicing instrument with sixteen slices, a sixteen-step sequencer, transient auto-slicing, audio import, microphone recording, ratchets, and step editing. Its editable source is in `ravel/`; run `python ravel/build.py` to rebuild the standalone page and `music/ravel/RAVEL-source.zip`. Music Lab opens it at `./ravel/` or downloads the same self-contained HTML for offline play.
+DICER 1.0 is a stereo sample-slicing instrument with sixteen slices, a sixteen-step sequencer, transient auto-slicing, audio import, microphone recording, ratchets, and step editing. Its editable source is in `ravel/`; run `python ravel/build.py` to rebuild the standalone page and `music/ravel/RAVEL-source.zip`. Kilter Kitchen opens it at `./ravel/` or downloads the same self-contained HTML for offline play.
 
-FABLE 1.0 is a full polyphonic stereo sampler with 64 sample zones, key and velocity mapping, round-robin groups, choke groups, pitch detection, classic and granular playback, crossfaded forward/ping-pong loops, amplitude and filter envelopes, two LFOs, and eight modulation routes. Play its keyboard or MIDI, use the arpeggiator, or edit four 16/32/64-step patterns. Import shared library sounds or local files, record the microphone, and save portable instruments with their sample audio. Its editable source is in `fable/`; run `python fable/build.py` to rebuild its standalone page and `music/fable/FABLE-source.zip`, then rebuild LOOM to update the bundled instrument. Music Lab opens FABLE at `./fable/` or downloads the same self-contained HTML for offline play.
+STOCK 1.0 is a full polyphonic stereo sampler with 64 sample zones, key and velocity mapping, round-robin groups, choke groups, pitch detection, classic and granular playback, crossfaded forward/ping-pong loops, amplitude and filter envelopes, two LFOs, and eight modulation routes. Play its keyboard or MIDI, use the arpeggiator, or edit four 16/32/64-step patterns. Import shared library sounds or local files, record the microphone, and save portable instruments with their sample audio. Its editable source is in `fable/`; run `python fable/build.py` to rebuild its standalone page and `music/fable/FABLE-source.zip`, then rebuild GALLEY to update the bundled instrument. Kilter Kitchen opens STOCK at `./fable/` or downloads the same self-contained HTML for offline play.
 
 The instruments include project files, stereo WAV export, and editable source ZIP downloads in their Help panels. Typography, artwork, and audio code are bundled in each standalone HTML file.
 
 Run `npm run music:sync` to copy the music page, apps, and assets to both `public/music/` and `docs/music/`. The sync also runs before `npm run dev` and `npm run build`. GitHub Pages publishes `docs/`, so commit the refreshed copies when publishing.
 
 The previous `/grain/` route redirects to `/music/grain/`, preserving query strings and hashes. Browser projects remain in the same origin-wide storage. The redirect also has a plain link for browsers without JavaScript.
+
+## Design and rollback
+
+Kilter Kitchen uses dark commercial kitchen equipment panels, enamel labels, condensed display lettering, and orange service indicators. Functional controls retain their technical names. Display brands have changed; app paths, storage, APIs, project formats, and archive filenames remain stable. See [ROLLBACK.md](ROLLBACK.md) for the checkpoint and reversible deployment instructions.

@@ -154,7 +154,7 @@ for (const name of [
 ])
   sourceFiles.push({ name, data: await readFile(resolve(root, name)) });
 await writeFile(resolve(release, "FORM-source.zip"), makeZip(sourceFiles));
-const startHere = `FORM 2.0.3 — Percussion Lab
+const startHere = `HOTPLATE 2.0.3 — Kilter Kitchen
 
 1. Extract this ZIP to a folder.
 2. Open FORM.html in a current Chrome, Edge, Firefox, or Safari browser.

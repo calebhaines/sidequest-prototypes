@@ -1,6 +1,9 @@
-# HAZE
+# STEAM
 
 An additive instrument for painting sound in time and pitch.
+
+A Kilter Kitchen instrument. The previous app identity is preserved in project
+formats, browser storage, source APIs and URLs so existing work opens unchanged.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/haze/
 
@@ -31,8 +34,8 @@ shortcuts and includes HTML and editable source downloads.
 ## Samples between instruments
 
 The shared Samples panel can publish the current score as stereo WAV or analyze
-audio from the other Music Lab apps. Imported audio becomes an editable 32-column,
-24-band spectral score using the current root, scale and harmonic stretch. HAZE
+audio from the other Kilter Kitchen apps. Imported audio becomes an editable 32-column,
+24-band spectral score using the current root, scale and harmonic stretch. STEAM
 continues to synthesize its own additive sound; analysis is a creative translation
 of the sample, rather than exact sample playback. Existing envelopes, effects,
 tempo and score length stay in place. Confirm replacement when the score already
@@ -55,7 +58,7 @@ a ScriptProcessor fallback and offline WAV rendering.
 
 Run `python3 haze/build.py` from the repository root to generate
 `haze/index.html` and `music/haze/HAZE-source.zip`. Run `npm run build`
-to refresh the Music Lab copies in `public/` and `docs/`. GitHub Pages publishes
+to refresh the Kilter Kitchen copies in `public/` and `docs/`. GitHub Pages publishes
 `docs/`.
 
 From an extracted source archive, run `python3 build.py` in its directory.

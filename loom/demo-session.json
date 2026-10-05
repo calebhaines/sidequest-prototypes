@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "name": "The orchestra has borrowed eight rooms",
+  "name": "The first service has a few questions",
   "tempo": 96,
   "lengthBars": 16,
   "loopEnabled": true,
@@ -19,8 +19,8 @@
   "tracks": [
     {
       "id": "track-1",
-      "name": "Pocket orchestra",
-      "color": "#edab7c",
+      "name": "Chopped special",
+      "color": "#ee7948",
       "level": 0.88,
       "pan": 0,
       "mute": false,
@@ -29,14 +29,14 @@
       "instrumentLive": false,
       "instrument": {
         "id": "ravel",
-        "name": "RAVEL",
+        "name": "DICER",
         "snapshot": {
           "format": "loom-instrument-state",
           "version": 1,
           "app": "ravel",
           "state": {
             "version": "1.0.0",
-            "name": "The beat has come apart politely.",
+            "name": "Chef insists the cuts are even",
             "tempo": 96,
             "swing": 0.1,
             "selectedPattern": 0,
@@ -44,7 +44,7 @@
             "seed": 28177,
             "asset": {
               "kind": "seed",
-              "name": "The pocket orchestra",
+              "name": "A questionable mise en place",
               "recipe": "kit",
               "seed": 9817,
               "tempo": 96
@@ -839,7 +839,7 @@
       "clips": [
         {
           "id": "demo-clip-0",
-          "name": "RAVEL · pocket orchestra",
+          "name": "DICER · chopped special",
           "assetId": "demo-ravel",
           "start": 0,
           "length": 64,
@@ -856,8 +856,8 @@
     },
     {
       "id": "track-2",
-      "name": "Crooked strings",
-      "color": "#b6c995",
+      "name": "Steel skewers",
+      "color": "#d7c98f",
       "level": 0.9,
       "pan": -0.1,
       "mute": false,
@@ -866,14 +866,14 @@
       "instrumentLive": false,
       "instrument": {
         "id": "bower",
-        "name": "BOWER",
+        "name": "SKEWER",
         "snapshot": {
           "format": "loom-instrument-state",
           "version": 1,
           "app": "bower",
           "state": {
             "version": "1.0.0",
-            "name": "The branches are practising backwards",
+            "name": "The skewers have requested overtime",
             "tempo": 96,
             "root": 48,
             "scale": "minor",
@@ -892,7 +892,7 @@
             },
             "lanes": [
               {
-                "name": "Root & rumour",
+                "name": "House stock",
                 "length": 16,
                 "division": "1/8",
                 "direction": "forward",
@@ -1009,7 +1009,7 @@
                 ]
               },
               {
-                "name": "The crooked trellis",
+                "name": "The crooked rack",
                 "length": 12,
                 "division": "1/8",
                 "direction": "forward",
@@ -1126,7 +1126,7 @@
                 ]
               },
               {
-                "name": "A branch of perhaps",
+                "name": "One extra skewer",
                 "length": 7,
                 "division": "1/4",
                 "direction": "forward",
@@ -1243,7 +1243,7 @@
                 ]
               },
               {
-                "name": "Leaves after midnight",
+                "name": "After service",
                 "length": 16,
                 "division": "1/16",
                 "direction": "forward",
@@ -1398,7 +1398,7 @@
       "clips": [
         {
           "id": "demo-clip-1",
-          "name": "BOWER · crooked strings",
+          "name": "SKEWER · steel rack",
           "assetId": "demo-bower",
           "start": 0,
           "length": 64,
@@ -1415,8 +1415,8 @@
     },
     {
       "id": "track-3",
-      "name": "Velvet weather",
-      "color": "#b8a7e0",
+      "name": "Low steam",
+      "color": "#aab4af",
       "level": 0.62,
       "pan": 0.12,
       "mute": false,
@@ -1425,14 +1425,14 @@
       "instrumentLive": false,
       "instrument": {
         "id": "haze",
-        "name": "HAZE",
+        "name": "STEAM",
         "snapshot": {
           "format": "loom-instrument-state",
           "version": 1,
           "app": "haze",
           "state": {
             "version": "1.0.0",
-            "name": "A velvet weather warning",
+            "name": "The hood is making suggestions",
             "tempo": 96,
             "stretch": 1,
             "color": 0.12,
@@ -2297,7 +2297,7 @@
       "clips": [
         {
           "id": "demo-clip-2",
-          "name": "HAZE · velvet weather",
+          "name": "STEAM · low simmer",
           "assetId": "demo-haze",
           "start": 8,
           "length": 56,
@@ -2314,8 +2314,8 @@
     },
     {
       "id": "track-4",
-      "name": "An empty room",
-      "color": "#87bfcc",
+      "name": "Prep station 04",
+      "color": "#90b6bd",
       "level": 0.8,
       "pan": 0,
       "mute": false,
@@ -2333,8 +2333,8 @@
     },
     {
       "id": "track-5",
-      "name": "Something percussion",
-      "color": "#dfb0c4",
+      "name": "Extra clatter",
+      "color": "#ce9a75",
       "level": 0.8,
       "pan": 0,
       "mute": false,
@@ -2352,8 +2352,8 @@
     },
     {
       "id": "track-6",
-      "name": "A useful accident",
-      "color": "#ceb581",
+      "name": "A useful spill",
+      "color": "#e0b15e",
       "level": 0.8,
       "pan": 0,
       "mute": false,
@@ -2371,8 +2371,8 @@
     },
     {
       "id": "track-7",
-      "name": "The spare staircase",
-      "color": "#96bdac",
+      "name": "Back of house",
+      "color": "#abb394",
       "level": 0.8,
       "pan": 0,
       "mute": false,
@@ -2390,8 +2390,8 @@
     },
     {
       "id": "track-8",
-      "name": "Room for tomorrow",
-      "color": "#a5b5de",
+      "name": "Tomorrow’s special",
+      "color": "#bcc6cb",
       "level": 0.8,
       "pan": 0,
       "mute": false,

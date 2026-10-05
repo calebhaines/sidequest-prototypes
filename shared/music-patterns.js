@@ -1,10 +1,12 @@
-/* Music Lab's shared editable-note library. Standalone, offline, and host-aware. */
+/* Kilter Kitchen's shared editable-note library. Standalone, offline, and host-aware. */
 (function (global) {
   'use strict';
   if (global.MusicLabPatterns) return;
   const S = global.MusicLabPatternSchema;
-  if (!S) throw new Error('Load the Music Lab pattern schema before its library.');
+  if (!S) throw new Error('Load the Kilter Kitchen pattern schema before its library.');
   const MAX_PATTERNS = 128, MAX_BYTES = 16 * 1024 * 1024;
+  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', LOOM: 'GALLEY' });
+  const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kilter Kitchen';
   const registrations = new Map(), memory = new Map();
   let databasePromise, persistent = true, dialog, active;
   const uid = () => global.crypto?.randomUUID?.() || 'pattern-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
@@ -26,7 +28,7 @@
       request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('patterns')) request.result.createObjectStore('patterns', { keyPath: 'id' }); };
       request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
       request.onerror = () => reject(request.error || new Error('Could not open the pattern library.'));
-      request.onblocked = () => reject(new Error('Close an older Music Lab tab to unlock the pattern library.'));
+      request.onblocked = () => reject(new Error('Close an older Kilter Kitchen tab to unlock the pattern library.'));
     }).catch(() => { persistent = false; return null; });
     return databasePromise;
   }
@@ -69,15 +71,15 @@
   function message(text, error) { if (!dialog) return; const line = query('.ml-pat-status'); line.textContent = text; line.classList.toggle('ml-pat-error', Boolean(error)); }
   function storageNote() {
     const keeps = hostLibrary()?.persistent ?? persistent;
-    query('.ml-pat-storage').textContent = global.location?.protocol === 'file:' ? 'Offline files may use separate libraries. Download a pattern file to move notes between them.' : keeps ? 'Saved in this browser. All Music Lab apps on this site share this library.' : 'Storage is unavailable. This library lasts until the page closes; download patterns to keep them.';
+    query('.ml-pat-storage').textContent = global.location?.protocol === 'file:' ? 'Offline files may use separate libraries. Download a pattern file to move notes between them.' : keeps ? 'Saved in this browser. All Kilter Kitchen apps on this site share this library.' : 'Storage is unavailable. This library lasts until the page closes; download patterns to keep them.';
   }
   function ensureDialog() {
     if (dialog) return;
     dialog = document.createElement('dialog'); dialog.className = 'ml-pat-dialog'; dialog.setAttribute('aria-labelledby', 'ml-pat-title');
-    dialog.innerHTML = '<div class="ml-pat-shell"><header class="ml-pat-header"><div><span class="ml-pat-eyebrow">MUSIC LAB / EDITABLE PARTS</span><h2 id="ml-pat-title">Notes with wandering feet.</h2><p>Borrow a rhythm. Keep the notes, timing, and touch.</p></div>' + button('×', 'close') + '</header><nav class="ml-pat-tabs" aria-label="Pattern exchange"><button type="button" data-tab="library" aria-selected="true">Library <span class="ml-pat-count">0</span></button><button type="button" data-tab="send" aria-selected="false">Send pattern</button><button type="button" data-tab="receive" aria-selected="false">Receive pattern</button></nav><main class="ml-pat-main">' +
+    dialog.innerHTML = '<div class="ml-pat-shell"><header class="ml-pat-header"><div><span class="ml-pat-eyebrow">KILTER KITCHEN / EDITABLE PARTS</span><h2 id="ml-pat-title">The order book.</h2><p>Notes, timing, and touch. Filed for the next peculiar service.</p></div>' + button('×', 'close') + '</header><nav class="ml-pat-tabs" aria-label="Pattern exchange"><button type="button" data-tab="library" aria-selected="true">Library <span class="ml-pat-count">0</span></button><button type="button" data-tab="send" aria-selected="false">Send pattern</button><button type="button" data-tab="receive" aria-selected="false">Receive pattern</button></nav><main class="ml-pat-main">' +
       '<section data-panel="library"><div class="ml-pat-library-head"><input type="search" name="search" aria-label="Search note patterns" placeholder="Find a phrase, app, or tag…">' + button('Refresh', 'refresh') + '</div><div class="ml-pat-library"></div><p class="ml-pat-capacity"></p></section>' +
-      '<section data-panel="send" hidden><div class="ml-pat-imported-part" hidden><p></p>' + button('Use native sequence', 'native') + '</div><div class="ml-pat-intro"><span>' + icon + '</span><div><h3>A tune escapes its teacup.</h3><p>Share editable notes rather than a recording. The receiving instrument supplies the sound.</p></div></div><div class="ml-pat-fields"><label>Source<select name="scope"></select></label><label>Pattern name<input name="export-name" maxlength="160" placeholder="A name for this phrase"></label></div><p class="ml-pat-export-hint"></p><div class="ml-pat-actions">' + button('Read current pattern', 'export', true) + '</div><div class="ml-pat-exported" hidden><div class="ml-pat-preview" data-preview="exported"></div><p class="ml-pat-export-meta"></p><div class="ml-pat-actions">' + button('Save to library', 'save-exported', true) + button('↓ Pattern file', 'download-exported') + '<button type="button" class="ml-pat-button" data-action="loom-exported" hidden>Add to LOOM</button></div></div></section>' +
-      '<section data-panel="receive" hidden><label class="ml-pat-file">＋ Choose a note-pattern file<input type="file" name="file" accept=".json,.musiclab-pattern.json,application/json"></label><p class="ml-pat-receive-empty">Choose a pattern from the Library or open a portable pattern file.</p><div class="ml-pat-incoming" hidden><div class="ml-pat-preview" data-preview="incoming"></div><p class="ml-pat-incoming-meta"></p><div class="ml-pat-destination"><label>Destination<select name="target"></select></label><p class="ml-pat-import-hint"></p><div class="ml-pat-actions"><button type="button" class="ml-pat-button" data-action="prepare-target" hidden>Load instrument voices</button></div><div class="ml-pat-mapping"></div><label class="ml-pat-replace"><input name="replace" type="checkbox"> Replace the notes currently in this destination</label><div class="ml-pat-actions">' + button('Receive pattern', 'receive', true) + button('Save to library', 'save-incoming') + button('↓ Pattern file', 'download-incoming') + '<button type="button" class="ml-pat-button" data-action="loom-incoming" hidden>Add to LOOM</button></div></div></div></section></main><footer class="ml-pat-footer"><p class="ml-pat-storage"></p><p class="ml-pat-status" role="status" aria-live="polite"></p></footer></div>';
+      '<section data-panel="send" hidden><div class="ml-pat-imported-part" hidden><p></p>' + button('Use native sequence', 'native') + '</div><div class="ml-pat-intro"><span>' + icon + '</span><div><h3>Write down the special.</h3><p>Share editable notes rather than a recording. The receiving instrument supplies the sound.</p></div></div><div class="ml-pat-fields"><label>Source<select name="scope"></select></label><label>Pattern name<input name="export-name" maxlength="160" placeholder="A name for this phrase"></label></div><p class="ml-pat-export-hint"></p><div class="ml-pat-actions">' + button('Read current pattern', 'export', true) + '</div><div class="ml-pat-exported" hidden><div class="ml-pat-preview" data-preview="exported"></div><p class="ml-pat-export-meta"></p><div class="ml-pat-actions">' + button('Save to library', 'save-exported', true) + button('↓ Pattern file', 'download-exported') + '<button type="button" class="ml-pat-button" data-action="loom-exported" hidden>Add to GALLEY</button></div></div></section>' +
+      '<section data-panel="receive" hidden><label class="ml-pat-file">＋ Choose a note-pattern file<input type="file" name="file" accept=".json,.musiclab-pattern.json,application/json"></label><p class="ml-pat-receive-empty">Choose a pattern from the Library or open a portable pattern file.</p><div class="ml-pat-incoming" hidden><div class="ml-pat-preview" data-preview="incoming"></div><p class="ml-pat-incoming-meta"></p><div class="ml-pat-destination"><label>Destination<select name="target"></select></label><p class="ml-pat-import-hint"></p><div class="ml-pat-actions"><button type="button" class="ml-pat-button" data-action="prepare-target" hidden>Load instrument voices</button></div><div class="ml-pat-mapping"></div><label class="ml-pat-replace"><input name="replace" type="checkbox"> Replace the notes currently in this destination</label><div class="ml-pat-actions">' + button('Receive pattern', 'receive', true) + button('Save to library', 'save-incoming') + button('↓ Pattern file', 'download-incoming') + '<button type="button" class="ml-pat-button" data-action="loom-incoming" hidden>Add to GALLEY</button></div></div></div></section></main><footer class="ml-pat-footer"><p class="ml-pat-storage"></p><p class="ml-pat-status" role="status" aria-live="polite"></p></footer></div>';
     document.body.append(dialog);
     query('[data-action="close"]').setAttribute('aria-label', 'Close pattern exchange');
     dialog.addEventListener('click', event => {
@@ -112,7 +114,7 @@
     if (!active) return;
     const value = spec(), destination = target(), capable = typeof active.adapter.importPattern === 'function';
     query('.ml-pat-replace').hidden = !destination?.occupied || value.mode === 'append';
-    query('.ml-pat-import-hint').textContent = capable ? value.description || (value.mode === 'append' ? 'Adds an editable note clip. Existing clips remain in the arrangement.' : 'The instrument keeps its sound and receives this musical part.') : 'This instrument does not accept editable notes. Save this part and open it in LOOM or a compatible instrument.';
+    query('.ml-pat-import-hint').textContent = capable ? value.description || (value.mode === 'append' ? 'Adds an editable note clip. Existing clips remain in the arrangement.' : 'The instrument keeps its sound and receives this musical part.') : 'This instrument does not accept editable notes. Save this part and open it in GALLEY or a compatible instrument.';
     query('[data-action="receive"]').hidden = !capable;
     const voices = destination?.voices || (typeof value.voices === 'function' ? value.voices(destination?.id) : value.voices);
     active.destinationVoices = Array.isArray(voices) ? voices.slice() : [];
@@ -136,7 +138,7 @@
     const adapter = await registration.getAdapter(); if (!adapter) throw new Error('This instrument is still opening. Try Patterns again in a moment.');
     close(); ensureDialog();
     active = { id: String(id), registration, adapter, token: {}, controller: new AbortController(), entries: [], incoming: null, exported: null, busy: false, targets: [] };
-    dialog.style.setProperty('--ml-pat-accent', registration.accent || '#a8e4c0');
+    dialog.style.setProperty('--ml-pat-accent', registration.accent || '#ff8d45');
     query('[name="search"]').value = ''; query('[name="export-name"]').value = ''; query('[name="replace"]').checked = false;
     query('.ml-pat-exported').hidden = true; query('.ml-pat-incoming').hidden = true; query('.ml-pat-receive-empty').hidden = false;
     dialog.querySelectorAll('[data-action]').forEach(element => { element.disabled = false; });
@@ -163,9 +165,9 @@
   }
   function drawLibrary() {
     if (!active) return;
-    const search = query('[name="search"]').value.trim().toLowerCase(), entries = active.entries.filter(item => [item.name, item.sourceApp, ...(item.tags || [])].join(' ').toLowerCase().includes(search));
+    const search = query('[name="search"]').value.trim().toLowerCase(), entries = active.entries.filter(item => [item.name, item.sourceApp, appName(item.sourceApp), ...(item.tags || [])].join(' ').toLowerCase().includes(search));
     query('.ml-pat-count').textContent = active.entries.length;
-    query('.ml-pat-library').innerHTML = entries.length ? entries.map(item => '<div class="ml-pat-row"><button class="ml-pat-entry" type="button" data-pattern-id="' + escape(item.id) + '"><span class="ml-pat-entry-icon">' + icon + '</span><span><strong>' + escape(item.name) + '</strong><small>' + escape(item.sourceApp || 'Music Lab') + ' · ' + item.notes + ' notes · ' + item.lengthBeats + ' beats · ' + Math.round(item.tempo) + ' BPM</small></span><b>↗</b></button><button class="ml-pat-delete" type="button" data-action="delete" data-id="' + escape(item.id) + '" aria-label="Delete ' + escape(item.name) + '">×</button></div>').join('') : '<div class="ml-pat-empty">' + icon + '<h3>' + (search ? 'No phrases by that name.' : 'The tune has yet to hatch.') + '</h3><p>' + (search ? 'Try an instrument name or another tag.' : 'Read an instrument’s current pattern, then save it here. Other apps can borrow its notes.') + '</p></div>';
+    query('.ml-pat-library').innerHTML = entries.length ? entries.map(item => '<div class="ml-pat-row"><button class="ml-pat-entry" type="button" data-pattern-id="' + escape(item.id) + '"><span class="ml-pat-entry-icon">' + icon + '</span><span><strong>' + escape(item.name) + '</strong><small>' + escape(appName(item.sourceApp)) + ' · ' + item.notes + ' notes · ' + item.lengthBeats + ' beats · ' + Math.round(item.tempo) + ' BPM</small></span><b>↗</b></button><button class="ml-pat-delete" type="button" data-action="delete" data-id="' + escape(item.id) + '" aria-label="Delete ' + escape(item.name) + '">×</button></div>').join('') : '<div class="ml-pat-empty">' + icon + '<h3>' + (search ? 'No phrases by that name.' : 'No orders on the rail.') + '</h3><p>' + (search ? 'Try an instrument name or another tag.' : 'Read an instrument’s current pattern, then save it here. Other apps can borrow its notes.') + '</p></div>';
     query('.ml-pat-capacity').textContent = active.entries.length + ' / ' + MAX_PATTERNS + ' patterns · ' + (active.entries.reduce((total, item) => total + (item.bytes || 0), 0) / 1048576).toFixed(2) + ' / 16 MiB';
   }
   async function choose(id) {
@@ -189,7 +191,7 @@
   }
   function download(pattern) {
     const value = S.normalize(pattern), blob = new Blob([S.serialize(value)], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
-    link.href = url; link.download = (value.name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100) || 'Music Lab pattern') + '.musiclab-pattern.json';
+    link.href = url; link.download = (value.name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100) || 'Kilter Kitchen pattern') + '.musiclab-pattern.json';
     document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
   async function act(action, element) {
@@ -225,7 +227,7 @@
         const pattern = action === 'download-exported' ? active.exported : active.incoming; if (!pattern) throw new Error('Choose or read a pattern first.'); download(pattern); message('Portable note pattern downloaded.');
       } else if (action.startsWith('loom-')) {
         const pattern = action === 'loom-exported' ? active.exported : active.incoming; if (!pattern) throw new Error('Choose or read a pattern first.');
-        await global.MusicLabHost.importPattern(S.normalize(pattern), { signal: active.controller.signal }); if (!still(token)) throw abortError(); message('Editable note clip added to LOOM.');
+        await global.MusicLabHost.importPattern(S.normalize(pattern), { signal: active.controller.signal }); if (!still(token)) throw abortError(); message('Editable note clip added to GALLEY.');
       } else if (action === 'receive') {
         if (!active.incoming) throw new Error('Choose a note pattern first.');
         const destination = target(), value = spec(), replace = query('[name="replace"]').checked;
@@ -248,7 +250,7 @@
     function mount() {
       let launcher = document.querySelector('[data-musiclab-patterns="' + CSS.escape(id) + '"]');
       if (!launcher) {
-        launcher = document.createElement('button'); launcher.type = 'button'; launcher.className = 'ml-pat-launcher'; launcher.dataset.musiclabPatterns = id; launcher.style.setProperty('--ml-pat-accent', options.accent || '#a8e4c0'); launcher.innerHTML = icon + ' Patterns'; launcher.setAttribute('aria-label', 'Open shared note-pattern library');
+        launcher = document.createElement('button'); launcher.type = 'button'; launcher.className = 'ml-pat-launcher'; launcher.dataset.musiclabPatterns = id; launcher.style.setProperty('--ml-pat-accent', options.accent || '#ff8d45'); launcher.innerHTML = icon + ' Patterns'; launcher.setAttribute('aria-label', 'Open shared note-pattern library');
         launcher.addEventListener('click', () => open(id).catch(error => { launcher.title = error.message; console.error(error); }));
       }
       const destination = options.mountSelector ? document.querySelector(options.mountSelector) : null;

@@ -1,4 +1,4 @@
-/* HAZE: a bounded, portable score. */
+/* STEAM: a bounded, portable score. */
 (() => {
   'use strict';
   const VERSION='1.0.0', COLS=32, ROWS=24;
@@ -13,7 +13,7 @@
   function defaultState(){
     const score=Array.from({length:ROWS},()=>Array(COLS).fill(0));
     for(let c=0;c<COLS;c++){score[(Math.floor(c/4)*2+[0,2,4,2][Math.floor(c/8)])%12][c]=c%4===0?.82:.48;if(c%8<6)score[7+Math.floor(c/8)%3][c]=.25;}
-    return {version:VERSION,name:'The sky has mislaid its notes',tempo:88,bars:2,direction:'forward',freeze:false,position:0,root:45,scale:'pentatonic',stretch:1,color:.26,drift:.15,blur:.15,attack:35,release:420,cutoff:9500,drive:.12,spread:.82,volume:.66,echo:.25,echoDivision:'3/16',feedback:.38,room:.28,score};
+    return {version:VERSION,name:'The extraction fan knows a tune',tempo:88,bars:2,direction:'forward',freeze:false,position:0,root:45,scale:'pentatonic',stretch:1,color:.26,drift:.15,blur:.15,attack:35,release:420,cutoff:9500,drive:.12,spread:.82,volume:.66,echo:.25,echoDivision:'3/16',feedback:.38,room:.28,score};
   }
   function normalizePlain(raw){
     const r=raw&&typeof raw==='object'?raw:{},d=defaultState(),s={version:VERSION,name:text(r.name,d.name)};
@@ -23,9 +23,9 @@
     return s;
   }
   function parseProject(json){
-    if(typeof json!=='string'||json.length>1024*1024)throw Error('Choose a HAZE project smaller than 1 MB.');
+    if(typeof json!=='string'||json.length>1024*1024)throw Error('Choose a STEAM project smaller than 1 MB.');
     let p;try{p=JSON.parse(json);}catch{throw Error('This file is not valid JSON.');}
-    if(!p||p.format!=='haze-project'||p.formatVersion!==1||!p.state||typeof p.state!=='object')throw Error('Choose a HAZE project (.haze.json).');
+    if(!p||p.format!=='haze-project'||p.formatVersion!==1||!p.state||typeof p.state!=='object')throw Error('Choose a STEAM project (.haze.json).');
     const s=p.state;
     if(!Array.isArray(s.score)||s.score.length!==ROWS||s.score.some(row=>!Array.isArray(row)||row.length!==COLS||row.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>1)))throw Error('The score must contain 24 rows of 32 intensities between 0 and 1.');
     for(const key of ['tempo','stretch','color','drift','blur','attack','release','cutoff','drive','spread','volume','echo','feedback','room','position','root','bars'])if(typeof s[key]!=='number'||!Number.isFinite(s[key]))throw Error('The project contains invalid controls.');

@@ -1,4 +1,4 @@
-/* Native Music Lab note adapters. Imported polyphonic phrases remain editable portable notes. */
+/* Native Kilter Kitchen note adapters. Imported polyphonic phrases remain editable portable notes. */
 (() => {
   'use strict';
   if (window.MusicLabPatternInstrument) return;
@@ -6,7 +6,7 @@
   const found = candidates.find(([, facade]) => window[facade]);
   if (!found) return;
   const [appId, facadeName, schemaName] = found, app = window[facadeName], S = window[schemaName], P = window.MusicLabPatternSchema, engine = app.engine;
-  if (!P || !engine) throw new Error('Portable pattern support needs the native instrument and Music Lab pattern validator.');
+  if (!P || !engine) throw new Error('Portable pattern support needs the native instrument and Kilter Kitchen pattern validator.');
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k), copy = v => JSON.parse(JSON.stringify(v));
   const abort = signal => { if (signal?.aborted) throw new DOMException('Pattern operation cancelled.', 'AbortError'); };
   const state = () => app.getState();
@@ -89,13 +89,13 @@
   }
   function nearestBand(pitch, s) {
     const values = Array.from({ length: 24 }, (_, row) => 69 + 12 * Math.log2(window.HazeDSP.frequencyForBand(s, row) / 440));
-    if (pitch < values[0] - .51 || pitch > values[23] + .51) throw new Error('This note is outside HAZE’s tuned bands. Change its tuning, or map the source to a specific band.');
+    if (pitch < values[0] - .51 || pitch > values[23] + .51) throw new Error('This note is outside STEAM’s tuned bands. Change its tuning, or map the source to a specific band.');
     let best = 0; for (let i = 1; i < 24; i++) if (Math.abs(values[i] - pitch) < Math.abs(values[best] - pitch)) best = i; return String(best);
   }
   function swungNote(note, packet) {const step=Math.round(note.beat*4),onGrid=Math.abs(note.beat*4-step)<1e-7,beat=Math.min(packet.lengthBeats-1/1024,note.beat+(onGrid&&step%2?packet.swing/4:0));return {...note,beat,duration:Math.max(1/1024,Math.min(note.duration,packet.lengthBeats-beat))};}
   function eventFor(note, voice, s, sampleRate = engine.context?.sampleRate || 48000) {
-    if (appId === 'bower' && (note.pitch < 24 || note.pitch > 100)) throw new Error('BOWER’s strings support MIDI notes 24–100. Transpose this pattern into that range.');
-    if (appId === 'mire' && s.sources[Number(voice)]?.kind !== 'sample') { const minPitch=16,maxPitch=Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)));if(note.pitch<minPitch||note.pitch>maxPitch)throw new Error('This MIRE exciter supports MIDI notes '+minPitch+'–'+maxPitch+' at '+Math.round(sampleRate/1000)+' kHz. Transpose the pattern, or map it to a sample source.'); }
+    if (appId === 'bower' && (note.pitch < 24 || note.pitch > 100)) throw new Error('SKEWER’s strings support MIDI notes 24–100. Transpose this pattern into that range.');
+    if (appId === 'mire' && s.sources[Number(voice)]?.kind !== 'sample') { const minPitch=16,maxPitch=Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)));if(note.pitch<minPitch||note.pitch>maxPitch)throw new Error('This REDUCE exciter supports MIDI notes '+minPitch+'–'+maxPitch+' at '+Math.round(sampleRate/1000)+' kHz. Transpose the pattern, or map it to a sample source.'); }
     if (appId === 'haze' && voice === 'auto') voice = nearestBand(note.pitch, s);
     return { note: note.pitch, velocity: note.velocity, voiceId: voice, startBeat: note.beat, durationBeats: note.duration };
   }
@@ -169,7 +169,7 @@
   let clockRevision = null;
   const adapter = {
     get patternExport() { const scopes = [{ id: 'pattern', label: state().musicLabPattern ? 'Imported performance pattern' : 'Current pattern' }]; if (appId === 'fable') for (let i = 0; i < 4; i++) scopes.push({ id: 'pattern-' + i, label: 'Native pattern ' + String.fromCharCode(65 + i) }); if (appId === 'bower') for (let i = 0; i < 4; i++) scopes.push({ id: 'voice-' + i, label: 'Native string ' + (i + 1) }); return { scopes, defaultScope: 'pattern' }; },
-    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze' ? 'bands' : 'notes', description: appId === 'bower' ? 'BOWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'MIRE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
+    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze' ? 'bands' : 'notes', description: appId === 'bower' ? 'SKEWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'REDUCE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
     get notes() {const s=state(),sampleRate=engine.context?.sampleRate||48000,voices=voicesFor(s).map(voice=>{let pitchRange=appId==='bower'?[24,100]:[0,127];if(appId==='mire'&&s.sources[Number(voice.id)]?.kind!=='sample')pitchRange=[16,Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)))];if(appId==='haze'&&voice.id==='auto')pitchRange=[Math.max(0,Math.ceil(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,0)/440)-.51)),Math.min(127,Math.floor(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,23)/440)+.51))];return{...voice,pitchRange};});return { voices, polyphonic: true, pitched: appId !== 'haze', scheduledCancel:true, ...(appId==='bower'?{minPitch:24,maxPitch:100,pitchRange:[24,100]}:{pitchRange:[0,127]}) }; },
     get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },
     getImportedPattern() { return this.importedPattern; },

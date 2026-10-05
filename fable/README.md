@@ -1,18 +1,18 @@
-# FABLE
+# STOCK
 
-**The cabinet has learned to sing.** A full polyphonic sampler for Music Lab, with playable multisamples, velocity layers, round robins, drum kits, crossfaded loops, and granular textures. FABLE works as a browser instrument, a standalone HTML download, and an instrument inside LOOM.
+**Everything labelled. Several things unidentified.** A full polyphonic sampler for Kilter Kitchen, with playable multisamples, velocity layers, round robins, drum kits, crossfaded loops, and granular textures. STOCK works as a browser instrument, a standalone HTML download, and an instrument inside GALLEY.
 
 ## Playing and collecting
 
-Open `index.html` and click a key or Play to enable audio. The eight specimen presets are complete instruments made from sampled stereo buffers: bells, felt piano, reeds, tape, choir, dust, bass, and a percussion kit. The engine creates their samples once, then treats them like imported recordings.
+Open `index.html` and click a key or Play to enable audio. The eight house presets are complete instruments made from sampled stereo buffers: bells, felt piano, reeds, tape, choir, dust, bass, and a percussion kit. The engine creates their samples once, then treats them like imported recordings.
 
 Use the screen keyboard, computer keys, or MIDI input. MIDI supports note velocity, pitch bend, modulation wheel, pressure, and sustain. Panic stops voices, sequencing, held notes, and effect tails. Four patterns offer 16, 32, or 64 steps with note, velocity, gate, probability, and ratchet controls. The arpeggiator offers ascending, descending, pendulum, random, played-order, and chord modes, with Hold and octave expansion.
 
-**Samples** opens the shared Music Lab library. Receive a sound from another app, import a local audio file or portable audio packet, or record a microphone take. Audio stays in your browser; microphone access begins only when you explicitly choose to record. Each imported sample can become a new zone or replace a selected zone with confirmation. Imported audio is included in native project downloads.
+**Samples** opens the shared Kilter Kitchen library. Receive a sound from another app, import a local audio file or portable audio packet, or record a microphone take. Audio stays in your browser; microphone access begins only when you explicitly choose to record. Each imported sample can become a new zone or replace a selected zone with confirmation. Imported audio is included in native project downloads.
 
 ## Building an instrument
 
-A sample asset is the actual audio; a zone is one way to play it. Several zones can reuse one asset with independent trim, pitch, filters, envelopes, or key ranges. FABLE supports **32 sample assets, 64 zones, and 8–64 simultaneous voices**, with 32 voices by default.
+A sample asset is the actual audio; a zone is one way to play it. Several zones can reuse one asset with independent trim, pitch, filters, envelopes, or key ranges. STOCK supports **32 sample assets, 64 zones, and 8–64 simultaneous voices**, with 32 voices by default.
 
 - **Mapping:** set a root note, key range, and velocity range for each zone. Automatic key mapping splits the keyboard at the midpoint between neighboring roots. Velocity mapping divides all 127 velocities into complete layers. Drum mapping assigns consecutive notes from C2 and disables pitch tracking. Zones with the same root retain their velocity-layer ranges during key mapping.
 - **Variation:** round-robin groups alternate matching zones; choke groups stop related voices, such as an open hat when a closed hat plays. Zone duplication reuses its sample instead of duplicating audio in memory.
@@ -24,9 +24,9 @@ A sample asset is the actual audio; a zone is one way to play it. Several zones 
 
 ## Projects and interchange
 
-Save a native FABLE project to preserve the entire instrument: assets, zones, modulation, effects, performance settings, and all four patterns. Open restores it without automatically starting audio. Undo and Redo preserve edits, while immutable sample assets are shared between history snapshots to avoid repeatedly copying long recordings.
+Save a native STOCK project to preserve the entire instrument: assets, zones, modulation, effects, performance settings, and all four patterns. Open restores it without automatically starting audio. Undo and Redo preserve edits, while immutable sample assets are shared between history snapshots to avoid repeatedly copying long recordings.
 
-The Samples panel can render the selected zone or pattern to the shared library, WAV, or a portable Music Lab audio packet. LOOM can load FABLE as an instrument, capture its output on a track, import samples into its zones, and restore the complete instrument with a session. FABLE projects are instrument files; Music Lab audio packets contain rendered sound and can be received by other compatible apps.
+The Samples panel can render the selected zone or pattern to the shared library, WAV, or a portable Kilter Kitchen audio packet. GALLEY can load STOCK as an instrument, capture its output on a track, import samples into its zones, and restore the complete instrument with a session. STOCK projects are instrument files; Kilter Kitchen audio packets contain rendered sound and can be received by other compatible apps.
 
 Export audio also offers unprocessed sample downloads. Export one source sample as WAV, or collect every sample into one ZIP with a manifest of names, root notes, rates, and durations. Imported source exports retain their sample rate; processed zone and pattern renders use 48 kHz stereo.
 
@@ -57,6 +57,10 @@ node zip-checks.cjs
 
 Those checks cover audible default mapping, all eight portable presets, stereo PCM fidelity, malformed metadata rejection before decoding, project budgets, strict control validation, immutable audio history, gap-free mappings, anti-phase and bass pitch detection, silence trim, transient detection, and ZIP interoperability with Python's standard archive reader.
 
-`node engine-checks.cjs` exercises the actual Web Audio graph in Chromium using Playwright. Install Playwright for development, or set `PLAYWRIGHT_MODULE` to its module path; `CHROMIUM_PATH` optionally selects a Chromium executable. These are testing tools and are not needed to run or build FABLE.
+`node engine-checks.cjs` exercises the actual Web Audio graph in Chromium using Playwright. Install Playwright for development, or set `PLAYWRIGHT_MODULE` to its module path; `CHROMIUM_PATH` optionally selects a Chromium executable. These are testing tools and are not needed to run or build STOCK.
 
-`window.FableApp` exposes native state, host transport, audio import/export, and the engine. `window.FableSchema` exposes project parsing, asset encoding/decoding, analysis, mapping, and limits. Sample destinations are typed zone identifiers; the `new` destination creates a new zone, and replacing an existing destination requires an explicit replacement flag. Audio receivers and exporters use interleaved stereo Float32 buffers at the Music Lab boundary.
+`window.FableApp` exposes native state, host transport, audio import/export, and the engine. `window.FableSchema` exposes project parsing, asset encoding/decoding, analysis, mapping, and limits. Sample destinations are typed zone identifiers; the `new` destination creates a new zone, and replacing an existing destination requires an explicit replacement flag. Audio receivers and exporters use interleaved stereo Float32 buffers at the Kilter Kitchen boundary.
+
+## Compatibility
+
+The Kilter Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier FABLE projects continue to open. Source archives keep their existing URL names.

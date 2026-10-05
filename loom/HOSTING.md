@@ -1,21 +1,21 @@
 # MusicLabHost v1
 
-LOOM hosts the full, original interface and audio engine of an instrument.
-Its injected bridge gives the instrument a context facade over LOOM’s shared
+GALLEY hosts the full, original interface and audio engine of an instrument.
+Its injected bridge gives the instrument a context facade over GALLEY’s shared
 AudioContext, with a destination that feeds only its assigned stereo track.
 The track’s four inserts and mixer follow that destination. OfflineAudioContext
 keeps its native behavior for an app’s own exports.
 
 ## Adding an app
 
-Choose a Music Lab instrument, refresh the hosted Music Lab list, load a
+Choose a Kilter Kitchen instrument, refresh the hosted Kilter Kitchen list, load a
 same-site app URL, or upload a self-contained HTML file. Uploaded HTML travels
-inside saved LOOM projects. GRAIN, FORM, TINE, MIRE, SPOOL, HAZE,
-BOWER, RAVEL, and FABLE are bundled into LOOM’s standalone download.
+inside saved GALLEY projects. SIZZLE, HOTPLATE, CLATTER, REDUCE, ROTISSERIE, STEAM,
+SKEWER, DICER, and STOCK are bundled into GALLEY’s standalone download.
 
 An ordinary Web Audio app can use `new AudioContext()` and connect nodes to
 `context.destination`. The bridge supplies track routing automatically.
-Without transport registration, its editor controls playback and LOOM records
+Without transport registration, its editor controls playback and GALLEY records
 the actual output into clips. Registration adds integrated transport and state.
 
 ## Registering an instrument
@@ -47,13 +47,13 @@ while retaining independent standalone behavior.
 
 `MusicLabHost` also exposes `version` (1), `trackId`, `tempo`, `context`,
 `destination`, `createAudioContext()`, `audioLibrary`, `notifyStateChange()`, and
-`status(message)`. Notify state changes after meaningful edits so LOOM can save
+`status(message)`. Notify state changes after meaningful edits so GALLEY can save
 the current patch. Use ordinary Web Audio constructors and AudioWorklet modules;
 the bridge namespaces processors to support several instances of one app.
 
 ## Lifecycle and storage
 
-LOOM keeps loaded editors alive when hidden. App storage is separate from the
+GALLEY keeps loaded editors alive when hidden. App storage is separate from the
 standalone instrument’s saved project. A child’s `close` or `suspend` affects
 its own bridge rather than closing the studio context. Unloading an instrument
 disconnects its nodes, cancels late operations, and releases microphone tracks.
@@ -64,7 +64,7 @@ integration boundary for instruments chosen by the user. Custom URLs stay on
 the studio’s site; external app assets need their usual browser access. A
 self-contained HTML app makes offline hosting straightforward.
 
-Native pattern lengths and swing are preserved against LOOM’s shared bar/beat
+Native pattern lengths and swing are preserved against GALLEY’s shared bar/beat
 clock. Registered note adapters let the host schedule discrete notes and silence
 the app’s autonomous sequencer, preventing duplicate playback. Continuous apps
 can consume transport updates with exact context timestamps. Tempo-synchronized
@@ -88,7 +88,7 @@ native state before awaiting and renders the instrument’s actual synthesis to
 stereo PCM or WAV. It runs in an isolated editor, preserving the user’s live patch
 and studio context. Apps without a native renderer may still be played and recorded.
 
-LOOM keeps complete instrument snapshots with printed clips, including sample
+GALLEY keeps complete instrument snapshots with printed clips, including sample
 assets. Track inserts are applied after source synthesis and remain editable.
 Patterns and source metadata are strictly validated when opening projects.
 See [PATTERN-CONTRACT.md](../shared/PATTERN-CONTRACT.md) for packet fields,
@@ -96,17 +96,17 @@ timestamp rules, cancellation, voice mappings, and the complete optional API.
 
 ## Receiving audio from the arrangement
 
-FABLE, FORM, MIRE, SPOOL, RAVEL, and HAZE accept edited clips directly from LOOM.
+STOCK, HOTPLATE, REDUCE, ROTISSERIE, DICER, and STEAM accept edited clips directly from GALLEY.
 The transfer renders the chosen start/end region of the selected clip, including
 trim, source offset, playback rate, reverse, looping, clip gain, and fades. Track
 volume, pan, automation, and insert effects remain on the arrangement.
 
 Choose a receiving track and native destination. Occupied audio or synthesis
-layers require an explicit replacement choice. FABLE accepts 120 seconds into
+layers require an explicit replacement choice. STOCK accepts 120 seconds into
 a new zone (`target: 'new'`) or an existing zone ID, with up to 64 zones and a
 64 MiB decoded audio budget. Its native target list includes occupied zones and
-their sample names. FORM accepts 2 seconds, MIRE 10, SPOOL 30, RAVEL 20, and
-HAZE 20. FORM and MIRE process mono audio; HAZE analyzes
+their sample names. HOTPLATE accepts 2 seconds, REDUCE 10, ROTISSERIE 30, DICER 20, and
+STEAM 20. HOTPLATE and REDUCE process mono audio; STEAM analyzes
 the original stereo energy into its score. Preserve both input channels and let
 the receiver handle conversion. Imports preserve unrelated app state and Undo.
 Long regions must be trimmed explicitly rather than silently truncated.
@@ -128,7 +128,7 @@ MusicLabHost.registerInstrument({
     // options.replace must
     // explicitly allow replacement of an occupied destination.
     // Validate before editing, retain unrelated state, and include received
-    // audio in getState() so a saved LOOM project restores it.
+    // audio in getState() so a saved GALLEY project restores it.
     await installAudio(pcm, sampleRate, name, options);
     MusicLabHost.notifyStateChange();
   }

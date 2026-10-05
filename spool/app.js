@@ -1,4 +1,4 @@
-/* SPOOL interface. Tape playback, recording and export share audio-engine.js. */
+/* ROTISSERIE interface. Tape playback, recording and export share audio-engine.js. */
 (() => {
   'use strict';
   const S = window.SpoolSchema, presets = window.SpoolPresets;
@@ -9,8 +9,10 @@
   const ms = v => v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + ' ms';
   const pan = v => Math.abs(v) < .02 ? 'Center' : Math.round(Math.abs(v) * 100) + (v < 0 ? ' L' : ' R');
   const clock = v => String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(Math.floor(v % 60)).padStart(2, '0');
-  const rateText = v => v.toFixed(2) + '×', colors = ['#d9a467', '#91aaa0', '#c99786', '#b5a27a'];
-  const descriptions = ['The clock keeps returning to the scene.', 'A warm rumour, passing round again.', 'The melody has borrowed its own coat.', 'Several small ghosts, wound neatly.'];
+  const rateText = v => v.toFixed(2) + '×', colors = ['#ff8d45', '#a6bac0', '#d7bd64', '#f1ead8'];
+  const descriptions = ['The rhythm keeps rotating through service.', 'Low heat. A substantial bass reduction.', 'A fresh chord batch, turning evenly.', 'Steam and harmonics in continuous rotation.'];
+  // Translate known factory labels for display; saved names and project data stay intact.
+  const displayDeckName = name => ({ 'The pocket clock': 'The rhythm spit', 'A warm rumour': 'Low simmer', 'Borrowed keys': 'Fresh chord batch', 'Air, wound twice': 'Recirculated steam' })[name] || name;
   const storageKey = 'spool-project-v1';
   let state = S.normalize(presets[0].state), presetId = presets[0].id, selectedDeck = 0, activeTab = 'loop';
   let engine, busy = false, playBusy = false, micBusy = false, recordBusy = false, captureBusy = false;
@@ -45,7 +47,7 @@
   function download(blob, filename) {
     const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 20000);
   }
-  function filename(suffix) { return 'SPOOL-' + state.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 48).toLowerCase() + suffix; }
+  function filename(suffix) { return 'ROTISSERIE-' + state.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 48).toLowerCase() + suffix; }
   function optionList(items, selected) { return items.map(o => { const id = typeof o === 'string' ? o : o.id; return `<option value="${esc(id)}"${id === selected ? ' selected' : ''}>${esc(typeof o === 'string' ? o : o.name)}</option>`; }).join(''); }
   function range(label, min, max, value, format, onChange, config = {}) {
     const wrapper = document.createElement('div'); wrapper.className = 'parameter';
@@ -84,7 +86,7 @@
     $('loop-duration').textContent = state.assets[selectedDeck] ? seconds(loopDuration(selectedDeck)) + ' / ' + (12 * Math.log2(Math.max(.001, actualSpeed(selectedDeck)))).toFixed(1) + ' st' : 'EMPTY DECK';
   }
   function renderTransport() {
-    $('tempo').value = state.tempo; $('preset-select').innerHTML = optionList(presets, presetId) + `<option value="custom"${presetId === 'custom' ? ' selected' : ''}>Custom collection</option>`; updatePlayback();
+    $('tempo').value = state.tempo; $('preset-select').innerHTML = optionList(presets, presetId) + `<option value="custom"${presetId === 'custom' ? ' selected' : ''}>Custom recipe</option>`; updatePlayback();
   }
   function updatePlayback() {
     const playing = !!engine.isPlaying; $('play-button').classList.toggle('playing', playing); $('play-button').querySelector('use').setAttribute('href', playing ? '#i-stop' : '#i-play');
@@ -93,7 +95,7 @@
   }
   function renderDecks() {
     waveformObserver?.disconnect();
-    $('deck-grid').innerHTML = state.decks.map((d, i) => `<article class="deck${i === selectedDeck ? ' selected' : ''}${!state.assets[i] ? ' deck-empty' : ''}" data-deck="${i}" style="--deck-color:${colors[i]}"><div class="deck-top"><button class="deck-select" aria-label="Select deck ${String.fromCharCode(65 + i)}: ${esc(d.name)}" aria-pressed="${i === selectedDeck}"><span class="deck-letter">${String.fromCharCode(65 + i)}</span><span class="deck-title"><b>${esc(d.name)}</b><small>STEREO TAPE · 0${i + 1}</small></span></button><i class="deck-light" aria-hidden="true"></i></div><div class="reel-stage" aria-hidden="true"><div class="reel left"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><div class="reel right"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><i class="tape-head"></i></div><div class="deck-waveform"><canvas width="512" height="128" role="img" aria-label="Deck ${String.fromCharCode(65 + i)} waveform. Drag region edges to trim the loop."></canvas><span class="wave-label">${state.assets[i] ? 'LOOP REGION' : 'EMPTY TAPE'}</span><span class="wave-duration">${state.assets[i] ? seconds(S.assetDuration(state.assets[i])) : '—'}</span>${state.assets[i] ? '' : '<span class="loop-empty">READY FOR A MOMENT</span>'}</div><div class="deck-meta"><strong class="deck-speed">1.00×</strong><span class="deck-mode">FREE LOOP</span><span class="deck-duration">0.00 s</span></div><div class="deck-mix"><div class="deck-level"><label>LEVEL <output>${pct(d.level)}</output></label><input type="range" min="0" max="1.5" step=".01" value="${d.level}" aria-label="Deck ${String.fromCharCode(65 + i)} level" style="--fill:${pct(d.level / 1.5)}"></div><div class="deck-mix-buttons"><button class="deck-mix-button deck-mute" aria-label="Mute deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.mute}" title="Mute">M</button><button class="deck-mix-button deck-solo" aria-label="Solo deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.solo}" title="Solo">S</button></div></div></article>`).join('');
+    $('deck-grid').innerHTML = state.decks.map((d, i) => `<article class="deck${i === selectedDeck ? ' selected' : ''}${!state.assets[i] ? ' deck-empty' : ''}" data-deck="${i}" style="--deck-color:${colors[i]}"><div class="deck-top"><button class="deck-select" aria-label="Select deck ${String.fromCharCode(65 + i)}: ${esc(displayDeckName(d.name))}" aria-pressed="${i === selectedDeck}"><span class="deck-letter">${String.fromCharCode(65 + i)}</span><span class="deck-title"><b>${esc(displayDeckName(d.name))}</b><small>STEREO TAPE · 0${i + 1}</small></span></button><i class="deck-light" aria-hidden="true"></i></div><div class="reel-stage" aria-hidden="true"><div class="reel left"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><div class="reel right"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><i class="tape-head"></i></div><div class="deck-waveform"><canvas width="512" height="128" role="img" aria-label="Deck ${String.fromCharCode(65 + i)} waveform. Drag region edges to trim the loop."></canvas><span class="wave-label">${state.assets[i] ? 'LOOP REGION' : 'EMPTY TAPE'}</span><span class="wave-duration">${state.assets[i] ? seconds(S.assetDuration(state.assets[i])) : '—'}</span>${state.assets[i] ? '' : '<span class="loop-empty">READY FOR A BATCH</span>'}</div><div class="deck-meta"><strong class="deck-speed">1.00×</strong><span class="deck-mode">FREE LOOP</span><span class="deck-duration">0.00 s</span></div><div class="deck-mix"><div class="deck-level"><label>LEVEL <output>${pct(d.level)}</output></label><input type="range" min="0" max="1.5" step=".01" value="${d.level}" aria-label="Deck ${String.fromCharCode(65 + i)} level" style="--fill:${pct(d.level / 1.5)}"></div><div class="deck-mix-buttons"><button class="deck-mix-button deck-mute" aria-label="Mute deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.mute}" title="Mute">M</button><button class="deck-mix-button deck-solo" aria-label="Solo deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.solo}" title="Solo">S</button></div></div></article>`).join('');
     document.querySelectorAll('.deck').forEach(card => {
       const i = +card.dataset.deck;
       card.querySelector('.deck-select').addEventListener('click', () => selectDeck(i)); card.querySelector('.reel-stage').addEventListener('click', () => selectDeck(i));
@@ -113,7 +115,7 @@
   function refreshWaveforms() { for (let i = 0; i < 4; i++) { try { waveforms[i] = engine.getWaveform(i); } catch (_) { waveforms[i] = null; } } }
   function renderEditor() {
     const d = state.decks[selectedDeck], asset = state.assets[selectedDeck], letter = String.fromCharCode(65 + selectedDeck), prefix = 'Deck ' + letter + ' ';
-    $('selected-deck-label').textContent = 'DECK ' + letter + ' / SELECTED'; $('selected-deck-label').style.color = colors[selectedDeck]; $('deck-editor-title').textContent = d.name;
+    $('selected-deck-label').textContent = 'DECK ' + letter + ' / SELECTED'; $('selected-deck-label').style.color = colors[selectedDeck]; $('deck-editor-title').textContent = displayDeckName(d.name);
     $('deck-name').value = d.name; $('deck-description').textContent = asset?.kind === 'pcm' ? asset.name + ' · ' + seconds(S.assetDuration(asset)) + ' · ' + asset.channels + ' channel' + (asset.channels === 1 ? '' : 's') : descriptions[selectedDeck];
     const loop = $('loop-controls'); loop.replaceChildren();
     const specs = [
@@ -135,7 +137,7 @@
       const index = selectedDeck; if (destructiveBlocked()) return;
       if (state.assets[index]?.kind === 'pcm' && !await confirmAction('Replace this loop?', 'This replaces the selected recorded or imported loop with a synthesized phrase. Undo can restore it.', 'Replace loop')) return;
       if (destructiveBlocked()) return; remember(); const a = { ...pendingRecipe, name: S.SEED_TYPES.find(t => t.id === pendingRecipe.id).name, seed: randomSeed(), tempo: state.tempo };
-      state.assets[index] = a; resetClipGeometry(index, a, true); changed(); renderDecks(); renderEditor(); toast('New loop made. The tape has remembered something else.');
+      state.assets[index] = a; resetClipGeometry(index, a, true); changed(); renderDecks(); renderEditor(); toast('New loop prepared. Another batch is ready to turn.');
     }); seed.append(generate);
     const recipeNote = document.createElement('p'); recipeNote.className = 'seed-description'; recipeNote.textContent = 'Generate a fresh phrase locally. Recorded and imported loops are replaced only when you choose Make loop.'; seed.append(recipeNote);
     $('record-source').value = state.record.input; $('record-bars').value = String(state.record.bars); $('record-quantize').checked = state.record.quantize;
@@ -199,12 +201,12 @@
     d.beats = beats || clamp(Math.round(S.assetDuration(asset) * state.tempo / 60), 1, 64);
   }
   function importAudio({ pcm, sampleRate, name = 'Audio sample', options = {} } = {}) {
-    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current SPOOL recording or action before sending audio.');
+    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current ROTISSERIE recording or action before sending audio.');
     const index = options.target ?? options.deck ?? selectedDeck;
-    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a SPOOL deck from A to D.');
+    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a ROTISSERIE deck from A to D.');
     if (state.assets[index] && options.replace !== true) throw new Error('Confirm replacing the loop on deck ' + String.fromCharCode(65 + index) + ' before sending audio.');
     if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000 || Object.prototype.toString.call(pcm) !== '[object Float32Array]' || pcm.length < 4 || pcm.length % 2) throw new Error('Provide valid interleaved stereo audio.');
-    if (pcm.length / 2 / sampleRate > 30) throw new Error('SPOOL accepts clips up to 30 seconds. Shorten the clip before sending it.');
+    if (pcm.length / 2 / sampleRate > 30) throw new Error('ROTISSERIE accepts clips up to 30 seconds. Shorten the clip before sending it.');
     for (let i = 0; i < pcm.length; i++) if (!Number.isFinite(pcm[i])) throw new Error('The incoming audio contains invalid samples.');
     const targetRate = Math.min(48000, sampleRate), frames = Math.max(2, Math.floor(pcm.length / 2 * targetRate / sampleRate));
     if (targetRate !== sampleRate) {
@@ -216,7 +218,7 @@
       pcm = resampled;
     }
     const asset = S.normalizeAsset(SpoolAudio.encodePCM(pcm, targetRate, String(name).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 100) || 'Audio sample'));
-    if (!asset) throw new Error('The incoming audio could not be stored as a SPOOL loop.');
+    if (!asset) throw new Error('The incoming audio could not be stored as a ROTISSERIE loop.');
     remember(); state.assets[index] = asset; state.decks[index].name = asset.name.slice(0, 48); resetClipGeometry(index, asset);
     changed(); renderDecks(); selectDeck(index); window.MusicLabHost?.notifyStateChange();
     toast('Audio sample received on deck ' + String.fromCharCode(65 + index) + '. Undo restores the previous loop.');
@@ -225,9 +227,9 @@
   async function exportAudio({ scope = 'mix', bars = 1, tailSeconds = 4, signal, deck, target } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
     if (!['mix', 'deck', 'source'].includes(scope)) throw new Error('Choose the deck mix, a processed deck, or its unprocessed source.');
-    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current SPOOL recording or action before sharing audio.');
+    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current ROTISSERIE recording or action before sharing audio.');
     const index = target ?? deck ?? selectedDeck, score = snapshot();
-    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a SPOOL deck from A to D.');
+    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a ROTISSERIE deck from A to D.');
     if (scope !== 'mix' && !score.assets[index]) throw new Error('This deck has no loop to share.');
     const sourceLabel = scope === 'mix' ? score.name : score.decks[index].name;
     const name = 'spool-' + String(sourceLabel).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() + '-' + scope + '.wav';
@@ -278,8 +280,8 @@
   window.addEventListener('resize', resizeCanvases);
   function drawWaveform(canvas, index, position = 0) {
     const c = canvas.getContext('2d'), w = canvas.width, h = canvas.height, d = state.decks[index], peaks = waveforms[index]; c.clearRect(0, 0, w, h);
-    c.strokeStyle = '#393329'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
-    for (let i = 0; i < 9; i++) { c.beginPath(); c.strokeStyle = '#2c2820'; c.moveTo(i * w / 8, 0); c.lineTo(i * w / 8, h); c.stroke(); }
+    c.strokeStyle = '#313435'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+    for (let i = 0; i < 9; i++) { c.beginPath(); c.strokeStyle = '#262829'; c.moveTo(i * w / 8, 0); c.lineTo(i * w / 8, h); c.stroke(); }
     if (!state.assets[index]) return;
     if (peaks?.length) {
       c.strokeStyle = colors[index] + 'aa'; c.lineWidth = 1.7;
@@ -294,7 +296,7 @@
     c.fillStyle = colors[index] + '0c'; c.fillRect(d.start * w, 0, (d.end - d.start) * w, h);
     c.strokeStyle = colors[index] + (selectedDeck === index ? 'cc' : '55'); c.lineWidth = 1.5;
     for (const edge of [d.start, d.end]) { c.beginPath(); c.moveTo(edge * (w - 3) + 1.5, 0); c.lineTo(edge * (w - 3) + 1.5, h); c.stroke(); if (selectedDeck === index) { c.fillStyle = colors[index]; c.fillRect(edge * (w - 3), h / 2 - 12, 4, 24); } }
-    if (engine.isPlaying) { const p = clamp(position), x = d.start + p * (d.end - d.start); c.strokeStyle = '#f4e6c8'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x * w, 22); c.lineTo(x * w, h - 8); c.stroke(); c.fillStyle = '#f4e6c8'; c.beginPath(); c.moveTo(x * w - 3, 22); c.lineTo(x * w + 3, 22); c.lineTo(x * w, 28); c.fill(); }
+    if (engine.isPlaying) { const p = clamp(position), x = d.start + p * (d.end - d.start); c.strokeStyle = '#f1ead8'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x * w, 22); c.lineTo(x * w, h - 8); c.stroke(); c.fillStyle = '#f1ead8'; c.beginPath(); c.moveTo(x * w - 3, 22); c.lineTo(x * w + 3, 22); c.lineTo(x * w, 28); c.fill(); }
   }
   function animate(time) {
     const dt = Math.min(.1, Math.max(0, (time - lastFrame) / 1000)); lastFrame = time; animationTime += dt;
@@ -321,7 +323,7 @@
     state.assets[result.index] = result.asset;
     if (result.mode === 'replace') resetClipGeometry(result.index, result.asset, !!result.sync, result.beats);
     engine.setState(state); changed(); renderDecks(); renderEditor(); updatePlayback();
-    toast(result.limit ? 'Recording reached its limit. The loop is saved.' : result.mode === 'overdub' ? 'Overdub recorded. Yesterday has acquired a companion.' : 'Loop recorded. One moment, safely wound.');
+    toast(result.limit ? 'Recording reached its limit. The loop is saved.' : result.mode === 'overdub' ? 'Overdub recorded. Another layer joins the batch.' : 'Loop recorded. One batch, ready for rotation.');
   };
   engine.onRecordState = info => { if (info?.status === 'recording' && lastRecordStatus !== 'recording') takeStarted = performance.now(); lastRecordStatus = info?.status || 'idle'; updateRecordUI(); updatePlayback(); };
   engine.onRecordingLimit = async () => { if (captureBusy) return; const token = operationToken; try { const blob = await engine.stopRecording(); if (token !== operationToken) return; if (blob?.size > 44) download(blob, filename('-live.wav')); updateRecordUI(); toast('Output recording reached 3 minutes and was saved.'); } catch (e) { toast(errorMessage(e)); } };
@@ -332,7 +334,7 @@
   $('preset-select').addEventListener('change', async e => {
     const id = e.target.value, preset = presets.find(p => p.id === id); if (!preset) return;
     if (destructiveBlocked()) { $('preset-select').value = presetId; return; }
-    if (dirty && !await confirmAction('Replace this collection?', 'This replaces the four loops and their settings. Save project first to keep your current work. Undo can restore it.', 'Load collection')) { $('preset-select').value = presetId; return; }
+    if (dirty && !await confirmAction('Replace this recipe?', 'This replaces the four loops and their settings. Save project first to keep your current work. Undo can restore it.', 'Load recipe')) { $('preset-select').value = presetId; return; }
     if (destructiveBlocked()) return; remember(); installState(preset.state, { presetId: id, dirty: false }); toast(preset.description);
   });
   $('new-tapes-button').addEventListener('click', () => {
@@ -342,7 +344,7 @@
   $('undo-button').addEventListener('click', undo); $('save-button').addEventListener('click', () => { try { download(new Blob([S.serializeProject(state)], { type: 'application/json' }), filename('.spool.json')); toast('Project saved with all loop audio.'); } catch (e) { toast(errorMessage(e)); } });
   $('open-button').addEventListener('click', () => { if (!destructiveBlocked()) $('project-file').click(); });
   $('project-file').addEventListener('change', async e => {
-    const file = e.target.files[0]; e.target.value = ''; if (!file || destructiveBlocked()) return; if (file.size > 32 * 1024 * 1024) return toast('Choose a SPOOL project smaller than 32 MB.');
+    const file = e.target.files[0]; e.target.value = ''; if (!file || destructiveBlocked()) return; if (file.size > 32 * 1024 * 1024) return toast('Choose a ROTISSERIE project smaller than 32 MB.');
     const oldGeneration = generation; setBusy(true);
     try { const next = S.parseProject(await file.text()); if (generation !== oldGeneration) return; remember(); installState(next); toast('Project opened.'); }
     catch (error) { toast(errorMessage(error)); } finally { setBusy(false); }

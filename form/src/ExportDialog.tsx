@@ -136,7 +136,7 @@ export default function ExportDialog({
           return { filename, samples, sound };
         });
         const manifest = {
-          application: "FORM Percussion Lab",
+          application: "HOTPLATE / Kilter Kitchen",
           version: 1,
           sampleRate: settings.sampleRate,
           bitDepth: settings.bitDepth,
@@ -161,10 +161,10 @@ export default function ExportDialog({
           { name: "form-kit.json", data: JSON.stringify(manifest, null, 2) },
           {
             name: "README.txt",
-            data: `FORM Percussion Lab\n\n${sounds.length} mono percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
+            data: `HOTPLATE / Kilter Kitchen\n\n${sounds.length} mono percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
           },
         ]);
-        downloadBlob(zip, "FORM percussion kit.zip");
+        downloadBlob(zip, "HOTPLATE percussion kit.zip");
         onNotify(`${sounds.length} samples exported as a kit`);
       } else {
         const samples =
@@ -195,7 +195,7 @@ export default function ExportDialog({
         const filename =
           mode === "sample"
             ? `${safeFilename(soundName(selected, selectedIndex))}.wav`
-            : `FORM pattern ${Math.round(bpm)} BPM.wav`;
+            : `HOTPLATE pattern ${Math.round(bpm)} BPM.wav`;
         downloadBlob(
           encodeWav(samples, settings.sampleRate, settings.bitDepth),
           filename,
@@ -236,7 +236,7 @@ export default function ExportDialog({
       >
         <div className="modal-header">
           <div>
-            <span className="eyebrow">CORK THE CLATTER</span>
+            <span className="eyebrow">PACK THE ORDER</span>
             <h2 className="modal-title" id="export-title">
               Export your sounds
             </h2>

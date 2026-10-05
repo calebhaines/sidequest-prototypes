@@ -107,7 +107,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
   return [
     patch(
       "furnace-kick",
-      "Furnace kick",
+      "Burner kick",
       "kick",
       52,
       36,
@@ -151,7 +151,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "velvet-sub",
-      "Velvet sub",
+      "Thick stock",
       "kick",
       42,
       24,
@@ -192,7 +192,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "chrome-snare",
-      "Chrome snare",
+      "Steel snare",
       "snare",
       190,
       9,
@@ -236,7 +236,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "fracture-snare",
-      "Fracture snare",
+      "Cracked plate",
       "snare",
       170,
       8,
@@ -289,7 +289,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "molecular-clap",
-      "Molecular clap",
+      "Mise clap",
       "clap",
       900,
       0,
@@ -323,7 +323,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "dust-hands",
-      "Dust hands",
+      "Flour hands",
       "clap",
       760,
       0,
@@ -358,7 +358,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "magnet-hat",
-      "Magnet hat",
+      "Induction hat",
       "hat",
       1200,
       0,
@@ -403,7 +403,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "ice-shards",
-      "Ice shards",
+      "Ice bucket",
       "hat",
       2800,
       2,
@@ -455,7 +455,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "ceramic-hybrid",
-      "Ceramic tom",
+      "Bowl tom",
       "tom",
       142,
       14,
@@ -497,7 +497,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "talking-tom",
-      "Talking tom",
+      "Talking stockpot",
       "tom",
       110,
       9,
@@ -546,7 +546,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "nail-rim",
-      "Nail rim",
+      "Tray edge",
       "rim",
       1100,
       4,
@@ -589,7 +589,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "wood-pixel",
-      "Wood pixel",
+      "Board bits",
       "rim",
       790,
       3,
@@ -634,7 +634,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "glass-droplet",
-      "Glass droplet",
+      "Sauce drop",
       "perc",
       460,
       12,
@@ -670,7 +670,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "orbit-bell",
-      "Orbit bell",
+      "Service bell",
       "perc",
       540,
       -7,
@@ -721,7 +721,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "sand-engine",
-      "Sand engine",
+      "Salt mill",
       "shaker",
       2300,
       0,
@@ -766,7 +766,7 @@ export function createHybridPresets(template: SoundParams): Preset[] {
     ),
     patch(
       "mutant-cabasa",
-      "Mutant cabasa",
+      "Pepper incident",
       "shaker",
       1800,
       2,

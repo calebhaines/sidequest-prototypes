@@ -1,4 +1,4 @@
-/* MIRE's portable project format and bounded control values. */
+/* REDUCE's portable project format and bounded control values. */
 (() => {
   'use strict';
   const VERSION = '1.0.0';
@@ -21,14 +21,14 @@
     { id: 'sample', name: 'Sample', description: 'Your imported sound, pitched from its original note at C4. Imports use the first ten seconds.' },
   ];
   const DIVISIONS = ['1/16', '1/8', '3/16', '1/4', '3/8', '1/2', '3/4', '1/1'];
-  const names = ['A · Moss', 'B · Silt', 'C · Reed', 'D · Hollow'];
+  const names = ['A · Stockpot', 'B · Bain-marie', 'C · Saucepan', 'D · Kettle'];
   const LFO_TARGETS = [{ id: 'none', name: 'Unassigned' }];
   for (let i = 0; i < 4; i++) {
     for (const [key, label] of [['time', 'Time'], ['tone', 'Tone'], ['pitch', 'Pitch'], ['pan', 'Pan'], ['decay', 'Decay']]) {
       LFO_TARGETS.push({ id: `n${i}.${key}`, name: `${String.fromCharCode(65 + i)} · ${label}` });
     }
   }
-  LFO_TARGETS.push({ id: 'circulation', name: 'Garden · Circulation' }, { id: 'drive', name: 'Master · Drive' });
+  LFO_TARGETS.push({ id: 'circulation', name: 'Feedback · Circulation' }, { id: 'drive', name: 'Master · Drive' });
   const copy = value => JSON.parse(JSON.stringify(value));
   const number = (value, min, max, fallback) => typeof value === 'number' && Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
   const integer = (value, min, max, fallback) => Math.round(number(value, min, max, fallback));
@@ -38,7 +38,7 @@
 
   function defaultState() {
     return {
-      version: VERSION, name: 'The patient puddle', tempo: 104, swing: .08,
+      version: VERSION, name: 'The patient stockpot', tempo: 104, swing: .08,
       master: { volume: .65, mix: .84, drive: .12, width: .85 },
       garden: { circulation: .70, damping: .25, freeze: false },
       nodes: [
@@ -119,12 +119,12 @@
   }
 
   function parseProject(json) {
-    if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a MIRE project smaller than 32 MB.');
+    if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a REDUCE project smaller than 32 MB.');
     let project;
     try { project = JSON.parse(json); } catch { throw new Error('This file is not valid JSON.'); }
-    if (!project || project.format !== 'mire-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a MIRE project file (.mire.json).');
+    if (!project || project.format !== 'mire-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a REDUCE project file (.mire.json).');
     const s = project.state;
-    if (!Array.isArray(s.nodes) || s.nodes.length !== 4 || !Array.isArray(s.sources) || s.sources.length !== 4 || !Array.isArray(s.routing) || s.routing.length !== 4 || !Array.isArray(s.modulators) || s.modulators.length !== 2) throw new Error('This MIRE project is incomplete.');
+    if (!Array.isArray(s.nodes) || s.nodes.length !== 4 || !Array.isArray(s.sources) || s.sources.length !== 4 || !Array.isArray(s.routing) || s.routing.length !== 4 || !Array.isArray(s.modulators) || s.modulators.length !== 2) throw new Error('This REDUCE project is incomplete.');
     if (s.sources.some(source => !Array.isArray(source?.steps) || source.steps.length !== 16) || s.routing.some(row => !Array.isArray(row) || row.length !== 4)) throw new Error('The project needs four complete 16-step lanes and a 4 × 4 routing matrix.');
     const state = normalize(s);
     if (Array.isArray(s.samples)) {

@@ -1,8 +1,10 @@
-/* Music Lab shared audio exchange. No network, dependencies, or cloud storage. */
+/* Kilter Kitchen shared audio exchange. No network, dependencies, or cloud storage. */
 (function (global) {
   'use strict';
   if (global.MusicLabExchange) return;
   const MAX_BYTES = 64 * 1024 * 1024, MAX_SAMPLES = 32, MAX_SECONDS = 120;
+  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', LOOM: 'GALLEY' });
+  const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kilter Kitchen';
   const registrations = new Map(), volatile = new Map();
   let databasePromise, persistent = true, dialog, active, previewSource, previewContext, previewOwnContext;
   const abortError = () => new DOMException('Sample exchange cancelled.', 'AbortError');
@@ -10,8 +12,8 @@
   const clean = (value, fallback = '') => String(value ?? fallback).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 160);
   const uid = () => global.crypto?.randomUUID?.() || 'sample-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   const safeName = name => {
-    const text = clean(name, 'Music Lab sample').replace(/[\\/:*?"<>|]/g, '-'), suffix = text.match(/(\.musiclab-audio\.json|\.[a-z0-9]{1,8})$/i)?.[1] || '';
-    return (suffix ? text.slice(0, -suffix.length).slice(0, 100) + suffix : text.slice(0, 100)) || 'Music Lab sample';
+    const text = clean(name, 'Kilter Kitchen sample').replace(/[\\/:*?"<>|]/g, '-'), suffix = text.match(/(\.musiclab-audio\.json|\.[a-z0-9]{1,8})$/i)?.[1] || '';
+    return (suffix ? text.slice(0, -suffix.length).slice(0, 100) + suffix : text.slice(0, 100)) || 'Kilter Kitchen sample';
   };
   const seconds = value => Number(value).toFixed(value < 10 ? 2 : 1) + ' s';
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -81,9 +83,9 @@
   function audioFromPacket(packet) {
     if (typeof packet === 'string') {
       if (packet.length > MAX_BYTES) throw new Error('This sample packet is too large.');
-      try { packet = JSON.parse(packet); } catch (_) { throw new Error('This is not a valid Music Lab sample packet.'); }
+      try { packet = JSON.parse(packet); } catch (_) { throw new Error('This is not a valid Kilter Kitchen sample packet.'); }
     }
-    if (!packet || packet.format !== 'musiclab-audio' || packet.version !== 1 || packet.encoding !== 'pcm16le') throw new Error('Use a version 1 Music Lab audio packet.');
+    if (!packet || packet.format !== 'musiclab-audio' || packet.version !== 1 || packet.encoding !== 'pcm16le') throw new Error('Use a version 1 Kilter Kitchen audio packet.');
     const rate = Number(packet.sampleRate), channels = Number(packet.channels), frames = Number(packet.frames);
     if (!Number.isInteger(rate) || rate < 8000 || rate > 192000 || ![1, 2].includes(channels) || !Number.isInteger(frames) || frames < 1 || frames / rate > MAX_SECONDS || frames * channels * 4 > MAX_BYTES) throw new Error('Invalid sample packet dimensions or length.');
     const expectedBytes = frames * channels * 2;
@@ -122,7 +124,7 @@
       request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('samples')) request.result.createObjectStore('samples', { keyPath: 'id' }); };
       request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
       request.onerror = () => reject(request.error || new Error('Browser storage unavailable.'));
-      request.onblocked = () => reject(new Error('Close another Music Lab tab to unlock the sample library.'));
+      request.onblocked = () => reject(new Error('Close another Kilter Kitchen tab to unlock the sample library.'));
     }).catch(() => { persistent = false; return null; });
     return databasePromise;
   }
@@ -181,7 +183,7 @@
       const buffer = await context.decodeAudioData(await file.arrayBuffer());
       if (buffer.numberOfChannels > 2) throw new Error('Use mono or stereo audio. Multichannel files must be mixed down first.');
       return audio({ pcm: Array.from({ length: buffer.numberOfChannels }, (_, channel) => new Float32Array(buffer.getChannelData(channel))), sampleRate: buffer.sampleRate, name: file.name.replace(/\.[^.]+$/, ''), sourceApp: 'Imported audio' }, { maxSeconds: 900 });
-    } catch (error) { if (error.message?.includes('second') || error.message?.includes('MB') || error.message?.includes('mono')) throw error; throw new Error('This browser could not decode the file. Try WAV, MP3, or a Music Lab audio packet.'); }
+    } catch (error) { if (error.message?.includes('second') || error.message?.includes('MB') || error.message?.includes('mono')) throw error; throw new Error('This browser could not decode the file. Try WAV, MP3, or a Kilter Kitchen audio packet.'); }
     finally { try { await context.close(); } catch (_) {} }
   }
   async function normalizeExport(value) {
@@ -216,11 +218,11 @@
   function shell() {
     if (dialog) return;
     dialog = document.createElement('dialog'); dialog.className = 'ml-ex-dialog'; dialog.setAttribute('aria-labelledby', 'ml-ex-title');
-    dialog.innerHTML = '<div class="ml-ex-shell"><header class="ml-ex-header"><div><span class="ml-ex-eyebrow">MUSIC LAB / SAMPLE EXCHANGE</span><h2 id="ml-ex-title">A parcel of sound.</h2><p>Render here. Play it elsewhere.</p></div>' + button('✕', 'close', 'ml-ex-close') + '</header>' +
+    dialog.innerHTML = '<div class="ml-ex-shell"><header class="ml-ex-header"><div><span class="ml-ex-eyebrow">KILTER KITCHEN / SAMPLE EXCHANGE</span><h2 id="ml-ex-title">The shared pantry.</h2><p>Every sound labelled. Several sounds unidentified.</p></div>' + button('✕', 'close', 'ml-ex-close') + '</header>' +
       '<nav class="ml-ex-tabs" aria-label="Sample exchange"><button type="button" data-tab="library" class="ml-ex-tab" aria-selected="true">Library <span class="ml-ex-count">0</span></button><button type="button" data-tab="send" class="ml-ex-tab" aria-selected="false">Send audio</button><button type="button" data-tab="receive" class="ml-ex-tab" aria-selected="false">Receive audio</button></nav>' +
       '<main class="ml-ex-main"><section data-panel="library"><div class="ml-ex-library-head"><label class="ml-ex-search">⌕ <input type="search" name="search" placeholder="Find a sound, instrument, or tag" aria-label="Search samples"></label>' + button('↻ Refresh', 'refresh', 'ml-ex-small') + '</div><div class="ml-ex-library"></div><div class="ml-ex-capacity"></div></section>' +
-      '<section data-panel="send" hidden><div class="ml-ex-intro"><span class="ml-ex-orbit">' + icon('send') + '</span><div><h3>Catch a curious noise.</h3><p>Render your instrument into a reusable sample. Your current patch stays yours.</p></div></div><div class="ml-ex-fields"><label>Audio source<select name="scope"></select></label><label>Length in bars<input name="bars" type="number" min="1" max="16" value="4" step="1"></label><label>Effect tail (seconds)<input name="tail" type="number" min="0" max="8" value="1" step="0.25"></label><label>Sample name<input name="export-name" maxlength="100" placeholder="A name for this sound"></label></div><div class="ml-ex-export-hint"></div><div class="ml-ex-actions">' + button('Render sample', 'render', 'ml-ex-primary') + '</div><div class="ml-ex-rendered" hidden><div class="ml-ex-render-wave"></div><p class="ml-ex-render-meta"></p><div class="ml-ex-actions">' + button('Save to library', 'save', 'ml-ex-primary') + button('↓ WAV', 'wav') + button('↓ Portable packet', 'packet') + '</div></div></section>' +
-      '<section data-panel="receive" hidden><div class="ml-ex-intro"><span class="ml-ex-orbit">' + icon('receive') + '</span><div><h3>Unwrap an unfamiliar sound.</h3><p>Use a library sample, audio file, or portable Music Lab packet.</p></div></div><label class="ml-ex-file"><span>＋ Choose audio or sample packet</span><input type="file" name="file" accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aiff,.json"></label><div class="ml-ex-import-empty">Pick a sound from the Library or choose a file above.</div><div class="ml-ex-import-editor" hidden><label class="ml-ex-name-label">Sample name<input name="sample-name" maxlength="100"></label><div class="ml-ex-wave-wrap"><canvas class="ml-ex-wave" height="112" aria-label="Audio waveform"></canvas><div class="ml-ex-selection"></div></div><p class="ml-ex-incoming-meta"></p><div class="ml-ex-fields ml-ex-trim"><label>Selection start (seconds)<input name="trim-start" type="number" min="0" step="0.01" value="0"></label><label>Selection end (seconds)<input name="trim-end" type="number" min="0" step="0.01"></label></div><div class="ml-ex-actions">' + button('▶ Preview selection', 'preview') + '</div><div class="ml-ex-destination"><label>Destination<select name="target"></select></label><p class="ml-ex-target-hint"></p><label class="ml-ex-replace"><input type="checkbox" name="replace"> Replace the audio currently in this destination</label><div class="ml-ex-actions">' + button('Receive sample', 'receive', 'ml-ex-primary') + '</div></div><p class="ml-ex-export-only" hidden>This instrument creates audio. Load this sample into FABLE, FORM, MIRE, SPOOL, RAVEL, HAZE, or LOOM to play it.</p><div class="ml-ex-actions">' + button('Save selection to library', 'save-incoming') + button('↓ WAV', 'incoming-wav') + button('↓ Portable packet', 'incoming-packet') + '</div></div></section></main>' +
+      '<section data-panel="send" hidden><div class="ml-ex-intro"><span class="ml-ex-orbit">' + icon('send') + '</span><div><h3>Prep a fresh batch.</h3><p>Render your instrument into a reusable sample. Your current patch stays yours.</p></div></div><div class="ml-ex-fields"><label>Audio source<select name="scope"></select></label><label>Length in bars<input name="bars" type="number" min="1" max="16" value="4" step="1"></label><label>Effect tail (seconds)<input name="tail" type="number" min="0" max="8" value="1" step="0.25"></label><label>Sample name<input name="export-name" maxlength="100" placeholder="A name for this sound"></label></div><div class="ml-ex-export-hint"></div><div class="ml-ex-actions">' + button('Render sample', 'render', 'ml-ex-primary') + '</div><div class="ml-ex-rendered" hidden><div class="ml-ex-render-wave"></div><p class="ml-ex-render-meta"></p><div class="ml-ex-actions">' + button('Save to library', 'save', 'ml-ex-primary') + button('↓ WAV', 'wav') + button('↓ Portable packet', 'packet') + '</div></div></section>' +
+      '<section data-panel="receive" hidden><div class="ml-ex-intro"><span class="ml-ex-orbit">' + icon('receive') + '</span><div><h3>Bring another ingredient.</h3><p>Use a library sample, audio file, or portable Kilter Kitchen packet.</p></div></div><label class="ml-ex-file"><span>＋ Choose audio or sample packet</span><input type="file" name="file" accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aiff,.json"></label><div class="ml-ex-import-empty">Pick a sound from the Library or choose a file above.</div><div class="ml-ex-import-editor" hidden><label class="ml-ex-name-label">Sample name<input name="sample-name" maxlength="100"></label><div class="ml-ex-wave-wrap"><canvas class="ml-ex-wave" height="112" aria-label="Audio waveform"></canvas><div class="ml-ex-selection"></div></div><p class="ml-ex-incoming-meta"></p><div class="ml-ex-fields ml-ex-trim"><label>Selection start (seconds)<input name="trim-start" type="number" min="0" step="0.01" value="0"></label><label>Selection end (seconds)<input name="trim-end" type="number" min="0" step="0.01"></label></div><div class="ml-ex-actions">' + button('▶ Preview selection', 'preview') + '</div><div class="ml-ex-destination"><label>Destination<select name="target"></select></label><p class="ml-ex-target-hint"></p><label class="ml-ex-replace"><input type="checkbox" name="replace"> Replace the audio currently in this destination</label><div class="ml-ex-actions">' + button('Receive sample', 'receive', 'ml-ex-primary') + '</div></div><p class="ml-ex-export-only" hidden>This instrument creates audio. Load this sample into STOCK, HOTPLATE, REDUCE, ROTISSERIE, DICER, STEAM, or GALLEY to play it.</p><div class="ml-ex-actions">' + button('Save selection to library', 'save-incoming') + button('↓ WAV', 'incoming-wav') + button('↓ Portable packet', 'incoming-packet') + '</div></div></section></main>' +
       '<footer class="ml-ex-footer"><p class="ml-ex-storage-note"></p><p class="ml-ex-status" role="status" aria-live="polite"></p></footer></div>';
     document.body.append(dialog);
     dialog.querySelector('.ml-ex-close').setAttribute('aria-label', 'Close sample exchange');
@@ -268,14 +270,14 @@
     dialog.querySelector('[name="bars"]').closest('label').hidden = oneShot;
   }
   async function open(id) {
-    const registration = registrations.get(String(id)); if (!registration) throw new Error('Register this app with Music Lab first.');
+    const registration = registrations.get(String(id)); if (!registration) throw new Error('Register this app with Kilter Kitchen first.');
     shell(); if (dialog.open) close();
     let adapter; try { adapter = await registration.getAdapter(); } catch (error) { throw new Error('This instrument is not ready: ' + error.message); }
     if (!adapter) throw new Error('This instrument is still loading. Try Samples again in a moment.');
     active = { id: String(id), registration, adapter, token: uid(), controller: new AbortController(), samples: [], incoming: null, rendered: null };
     const token = active.token;
-    dialog.style.setProperty('--ml-ex-accent', registration.accent || '#a8e4c0');
-    dialog.querySelector('.ml-ex-eyebrow').textContent = 'MUSIC LAB / ' + clean(registration.name || id).toUpperCase() + ' / SAMPLES';
+    dialog.style.setProperty('--ml-ex-accent', registration.accent || '#ff8d45');
+    dialog.querySelector('.ml-ex-eyebrow').textContent = 'KILTER KITCHEN / ' + clean(registration.name || id).toUpperCase() + ' / SAMPLES';
     dialog.querySelector('.ml-ex-count').textContent = '…';
     dialog.querySelector('[name="search"]').value = '';
     dialog.querySelector('[name="export-name"]').value = '';
@@ -297,7 +299,7 @@
   function close() { active?.controller.abort(); stopPreview(); if (dialog?.open) dialog.close(); }
   function storageNote() {
     const keeps = hostLibrary()?.persistent ?? persistent;
-    const own = keeps ? 'Shared locally between Music Lab apps on this site.' : 'Browser storage is unavailable. This library lasts until the page closes; download a portable packet to keep your audio.';
+    const own = keeps ? 'Shared locally between Kilter Kitchen apps on this site.' : 'Browser storage is unavailable. This library lasts until the page closes; download a portable packet to keep your audio.';
     dialog.querySelector('.ml-ex-storage-note').textContent = global.location.protocol === 'file:' ? 'Offline HTML files may keep separate libraries. Portable packets move sounds between files. ' + (keeps ? '' : own) : own;
   }
   async function refresh() {
@@ -307,9 +309,9 @@
   }
   function drawLibrary() {
     if (!active) return;
-    const query = dialog.querySelector('[name="search"]').value.trim().toLowerCase(), samples = active.samples.filter(item => [item.name, item.sourceApp, ...(item.tags || [])].join(' ').toLowerCase().includes(query));
+    const query = dialog.querySelector('[name="search"]').value.trim().toLowerCase(), samples = active.samples.filter(item => [item.name, item.sourceApp, appName(item.sourceApp), ...(item.tags || [])].join(' ').toLowerCase().includes(query));
     dialog.querySelector('.ml-ex-count').textContent = active.samples.length;
-    dialog.querySelector('.ml-ex-library').innerHTML = samples.length ? samples.map(item => '<div class="ml-ex-sample-row"><button type="button" class="ml-ex-sample" data-sample="' + escape(item.id) + '"><span class="ml-ex-sample-glyph">' + thumbnail(item) + '</span><span class="ml-ex-sample-copy"><strong>' + escape(item.name) + '</strong><span>' + escape(item.sourceApp) + ' · ' + seconds(item.duration) + (item.tempo ? ' · ' + Number(item.tempo).toFixed(0) + ' BPM' : '') + '</span></span><span class="ml-ex-sample-arrow">' + icon('send') + '</span></button><button type="button" class="ml-ex-delete" data-action="delete" data-id="' + escape(item.id) + '" aria-label="Delete ' + escape(item.name) + '">×</button></div>').join('') : '<div class="ml-ex-empty"><span>∿</span><h3>' + (query ? 'No sounds by that name.' : 'An empty pocket, for now.') + '</h3><p>' + (query ? 'Try another instrument, name, or tag.' : 'Render a sample in Send audio, or import one in Receive audio. Every instrument can borrow from this collection.') + '</p></div>';
+    dialog.querySelector('.ml-ex-library').innerHTML = samples.length ? samples.map(item => '<div class="ml-ex-sample-row"><button type="button" class="ml-ex-sample" data-sample="' + escape(item.id) + '"><span class="ml-ex-sample-glyph">' + thumbnail(item) + '</span><span class="ml-ex-sample-copy"><strong>' + escape(item.name) + '</strong><span>' + escape(appName(item.sourceApp)) + ' · ' + seconds(item.duration) + (item.tempo ? ' · ' + Number(item.tempo).toFixed(0) + ' BPM' : '') + '</span></span><span class="ml-ex-sample-arrow">' + icon('send') + '</span></button><button type="button" class="ml-ex-delete" data-action="delete" data-id="' + escape(item.id) + '" aria-label="Delete ' + escape(item.name) + '">×</button></div>').join('') : '<div class="ml-ex-empty"><span>∿</span><h3>' + (query ? 'No sounds by that name.' : 'The shelves await a delivery.') + '</h3><p>' + (query ? 'Try another instrument, name, or tag.' : 'Render a sample in Send audio, or import one in Receive audio. Every instrument can borrow from this collection.') + '</p></div>';
     const used = active.samples.reduce((total, item) => total + (item.bytes || 0), 0);
     dialog.querySelector('.ml-ex-capacity').innerHTML = '<span>' + active.samples.length + ' / ' + MAX_SAMPLES + ' samples</span><div><i style="width:' + Math.min(100, used / MAX_BYTES * 100) + '%"></i></div><span>' + (used / 1048576).toFixed(1) + ' / 64 MB</span>';
   }
@@ -353,7 +355,7 @@
     dialog.querySelector('[name="trim-start"]').value = 0;
     dialog.querySelector('[name="trim-end"]').value = data.duration.toFixed(3);
     dialog.querySelectorAll('.ml-ex-trim input').forEach(element => { element.max = data.duration; });
-    dialog.querySelector('.ml-ex-incoming-meta').textContent = data.sourceApp + ' · ' + seconds(data.duration) + ' · ' + (data.channels === 1 ? 'Mono' : 'Stereo') + ' · ' + data.sampleRate.toLocaleString() + ' Hz' + (data.tempo ? ' · ' + data.tempo + ' BPM' : '');
+    dialog.querySelector('.ml-ex-incoming-meta').textContent = appName(data.sourceApp) + ' · ' + seconds(data.duration) + ' · ' + (data.channels === 1 ? 'Mono' : 'Stereo') + ' · ' + data.sampleRate.toLocaleString() + ' Hz' + (data.tempo ? ' · ' + data.tempo + ' BPM' : '');
     fillTargets(); updateSelection(); requestAnimationFrame(() => drawWave(data, dialog.querySelector('.ml-ex-wave')));
   }
   function updateSelection() {
@@ -364,7 +366,7 @@
     dialog.querySelector('[data-action="receive"]').disabled = !valid || !!active.importing;
     const length = end - start;
     dialog.querySelector('.ml-ex-incoming-meta').classList.toggle('ml-ex-error', !valid);
-    dialog.querySelector('.ml-ex-incoming-meta').textContent = active.incoming.sourceApp + ' · ' + seconds(duration) + ' full / ' + seconds(Math.max(0, length)) + ' selected' + (!valid ? ' · Trim to ' + seconds(limit) + ' or less before receiving.' : '') + (active.incoming.tempo ? ' · ' + active.incoming.tempo + ' BPM' : '');
+    dialog.querySelector('.ml-ex-incoming-meta').textContent = appName(active.incoming.sourceApp) + ' · ' + seconds(duration) + ' full / ' + seconds(Math.max(0, length)) + ' selected' + (!valid ? ' · Trim to ' + seconds(limit) + ' or less before receiving.' : '') + (active.incoming.tempo ? ' · ' + active.incoming.tempo + ' BPM' : '');
   }
   function drawWave(data, canvas) {
     if (!canvas || !data) return;
@@ -372,7 +374,7 @@
     canvas.width = width * scale; canvas.height = height * scale;
     const ctx = canvas.getContext('2d'); ctx.scale(scale, scale); ctx.clearRect(0, 0, width, height);
     ctx.strokeStyle = 'rgba(255,255,255,.09)'; ctx.beginPath(); ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); ctx.stroke();
-    ctx.strokeStyle = active?.registration.accent || '#a8e4c0'; ctx.lineWidth = 1;
+    ctx.strokeStyle = active?.registration.accent || '#ff8d45'; ctx.lineWidth = 1;
     const pcm = data.pcm[0], step = Math.max(1, Math.floor(pcm.length / width));
     ctx.beginPath();
     for (let x = 0; x < width; x++) { let low = 0, high = 0; const start = Math.floor(x / width * pcm.length), end = Math.min(pcm.length, start + step); const stride = Math.max(1, Math.floor(step / 80));
@@ -414,7 +416,7 @@
         const value = await active.adapter.exportAudio({ scope, bars, tailSeconds, signal: active.controller.signal });
         if (!still(token)) throw abortError();
         const rendered = await normalizeExport(value); if (!still(token)) throw abortError();
-        rendered.sourceApp = clean(active.registration.name || active.id); rendered.name = clean(dialog.querySelector('[name="export-name"]').value || rendered.name);
+        rendered.sourceApp = clean(active.registration.sourceApp || active.registration.name || active.id); rendered.name = clean(dialog.querySelector('[name="export-name"]').value || rendered.name);
         active.rendered = rendered; dialog.querySelector('.ml-ex-rendered').hidden = false;
         dialog.querySelector('.ml-ex-render-wave').innerHTML = '<canvas height="112" aria-label="Rendered audio waveform"></canvas>';
         requestAnimationFrame(() => { if (still(token)) drawWave(rendered, dialog.querySelector('.ml-ex-render-wave canvas')); });
@@ -450,7 +452,7 @@
     registrations.set(String(options.id), options);
     const mount = () => {
       if (document.querySelector('[data-musiclab-exchange="' + CSS.escape(String(options.id)) + '"]')) return;
-      const launcher = document.createElement('button'); launcher.type = 'button'; launcher.className = 'ml-ex-launcher'; launcher.dataset.musiclabExchange = String(options.id); launcher.style.setProperty('--ml-ex-accent', options.accent || '#a8e4c0');
+      const launcher = document.createElement('button'); launcher.type = 'button'; launcher.className = 'ml-ex-launcher'; launcher.dataset.musiclabExchange = String(options.id); launcher.style.setProperty('--ml-ex-accent', options.accent || '#ff8d45');
       launcher.innerHTML = icon('exchange') + ' Samples'; launcher.setAttribute('aria-label', 'Open shared sample library');
       launcher.addEventListener('click', () => { open(String(options.id)).catch(error => { console.error(error); launcher.title = error.message; launcher.textContent = 'Samples · try again'; setTimeout(() => { launcher.innerHTML = icon('exchange') + ' Samples'; }, 2500); }); });
       const destination = options.mountSelector ? document.querySelector(options.mountSelector) : null;

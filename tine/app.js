@@ -7,7 +7,7 @@
   const presets = window.TINE_PRESETS;
   const engine = new window.TineEngine();
   const storageKey = 'tine-drum-machine-v1';
-  const colors = ['#efab8e', '#cdaea7', '#d4c2a0', '#aaafa4', '#b9acd0', '#b5bca7', '#98b0ba', '#cf9c8b'];
+  const colors = ['#ff8d45', '#dcc85e', '#bbc7c4', '#d5aa6b', '#88adb5', '#e4e0d1', '#bb967e', '#aab183'];
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rangeKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
   function presetState(preset, master = .78) {
@@ -26,7 +26,7 @@
   }
   function validateProject(data) {
     try { return model.upgradeProject(data); }
-    catch (_) { throw new Error('Please choose a valid TINE project. Its sound and pattern settings must be complete.'); }
+    catch (_) { throw new Error('Please choose a valid CLATTER project. Its sound and pattern settings must be complete.'); }
   }
   function restore(data) {
     const valid = validateProject(data);
@@ -290,7 +290,7 @@
         const chance = row === 2 ? step % 2 ? .28 : .85 : row === 3 ? .2 : row === 4 ? .15 : row === 5 ? .17 : row === 6 ? .16 : .1;
         return Math.random() < chance ? Math.random() < .15 ? 2 : 1 : 0;
       });
-    }); renderRows(); persist(); toast('New groove generated. The teaspoons have voted.');
+    }); renderRows(); persist(); toast('New groove generated. The dish pit approves.');
   }
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -299,7 +299,7 @@
   async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
     if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
-    if (exporting) throw new Error('Wait for the current TINE render to finish.');
+    if (exporting) throw new Error('Wait for the current CLATTER render to finish.');
     const snapshot = clone(state), voice = selected;
     if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
     if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
@@ -307,14 +307,14 @@
     exporting = true;
     try {
       const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
-      return { blob, sampleRate: 44100, name: 'tine-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
+      return { blob, sampleRate: 44100, name: 'clatter-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
     } finally { exporting = false; }
   }
   async function exportWav() {
     if (exporting) return; exporting = true; $('export-button').disabled = true;
     const oldChildren = Array.from($('export-button').childNodes, (node) => node.cloneNode(true)); $('export-button').textContent = 'Rendering…'; $('export-button').setAttribute('aria-busy', 'true');
     const snapshot = clone(state); toast('Rendering four bars and the full resonator tail…');
-    try { const blob = await engine.exportWav(snapshot); download(blob, 'tine-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Four bars rendered. The natural decay and effect tail are included.'); }
+    try { const blob = await engine.exportWav(snapshot); download(blob, 'clatter-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Four bars rendered. The natural decay and effect tail are included.'); }
     catch (error) { toast(error.message || 'Audio could not render. Please try again.'); }
     finally { exporting = false; $('export-button').disabled = false; $('export-button').replaceChildren(...oldChildren); $('export-button').removeAttribute('aria-busy'); }
   }
@@ -343,14 +343,14 @@
     const track = state.tracks[selected], modes = modesFor(track), graph = canvasContext('resonator-canvas');
     if (graph) {
       const { ctx, width: w, height: h } = graph, baseline = h - 25, maxFrequency = 16000;
-      ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1;
-      [100, 1000, 10000].forEach((frequency) => { const x = 12 + Math.log(frequency / 20) / Math.log(maxFrequency / 20) * (w - 24); ctx.beginPath(); ctx.moveTo(x, 10); ctx.lineTo(x, baseline); ctx.stroke(); ctx.fillStyle = '#8d8780'; ctx.font = '9px monospace'; ctx.fillText(frequency < 1000 ? frequency + 'Hz' : frequency / 1000 + 'k', x + 3, h - 7); });
-      ctx.strokeStyle = '#5a4b43'; ctx.beginPath(); ctx.moveTo(10, baseline); ctx.lineTo(w - 10, baseline); ctx.stroke();
+      ctx.strokeStyle = '#354044'; ctx.lineWidth = 1;
+      [100, 1000, 10000].forEach((frequency) => { const x = 12 + Math.log(frequency / 20) / Math.log(maxFrequency / 20) * (w - 24); ctx.beginPath(); ctx.moveTo(x, 10); ctx.lineTo(x, baseline); ctx.stroke(); ctx.fillStyle = '#919d99'; ctx.font = '9px monospace'; ctx.fillText(frequency < 1000 ? frequency + 'Hz' : frequency / 1000 + 'k', x + 3, h - 7); });
+      ctx.strokeStyle = '#5c686c'; ctx.beginPath(); ctx.moveTo(10, baseline); ctx.lineTo(w - 10, baseline); ctx.stroke();
       const maxGain = Math.max(.001, ...modes.map((item) => Math.abs(item.gain)));
       modes.forEach((item, index) => {
         const x = 12 + Math.log(Math.max(20, item.frequency) / 20) / Math.log(maxFrequency / 20) * (w - 24); if (x > w - 10) return;
         const strength = Math.abs(item.gain) / maxGain, y = baseline - strength * (h - 42);
-        const gradient = ctx.createLinearGradient(0, y, 0, baseline); gradient.addColorStop(0, colors[selected]); gradient.addColorStop(1, '#5c463c');
+        const gradient = ctx.createLinearGradient(0, y, 0, baseline); gradient.addColorStop(0, colors[selected]); gradient.addColorStop(1, '#394448');
         ctx.strokeStyle = gradient; ctx.lineWidth = index === 0 ? 3 : 2; ctx.beginPath(); ctx.moveTo(x, baseline); ctx.lineTo(x, y); ctx.stroke(); ctx.fillStyle = colors[selected]; ctx.beginPath(); ctx.arc(x, y, index === 0 ? 3 : 2, 0, Math.PI * 2); ctx.fill();
       });
     }
@@ -361,13 +361,13 @@
       const contacts = exciter.contacts.filter((contact) => contact.duration > 0 && contact.gain > 0);
       const contactDuration = Math.max(.003, exciter.duration * 1.13), noiseDuration = Math.max(.03, track.noiseAttack + track.noiseDecay);
       const contactBaseline = h * .46, noiseBaseline = h - 5, amplitude = h * .27;
-      const axis = (baseline) => { ctx.strokeStyle = '#3b3733'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, baseline); ctx.lineTo(w - 8, baseline); ctx.stroke(); };
+      const axis = (baseline) => { ctx.strokeStyle = '#354044'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(8, baseline); ctx.lineTo(w - 8, baseline); ctx.stroke(); };
       axis(contactBaseline); axis(noiseBaseline);
       const milliseconds = (duration) => (duration * 1000 < 10 ? (duration * 1000).toFixed(1) : Math.round(duration * 1000)) + ' ms';
       ctx.font = '8px monospace'; ctx.fillStyle = colors[selected]; ctx.fillText('CONTACT', 9, 9);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(contactDuration), w - 9, 9); ctx.textAlign = 'left';
-      ctx.fillStyle = '#9daead'; ctx.fillText('NOISE', 9, h * .55);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#918a83'; ctx.fillText(milliseconds(noiseDuration), w - 9, h * .55); ctx.textAlign = 'left';
+      ctx.textAlign = 'right'; ctx.fillStyle = '#919d99'; ctx.fillText(milliseconds(contactDuration), w - 9, 9); ctx.textAlign = 'left';
+      ctx.fillStyle = '#d3c678'; ctx.fillText('NOISE', 9, h * .55);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#919d99'; ctx.fillText(milliseconds(noiseDuration), w - 9, h * .55); ctx.textAlign = 'left';
       const strikeAt = (time) => contacts.reduce((sum, contact) => {
         const phase = (time - contact.time) / contact.duration;
         if (phase <= 0 || phase >= 1) return sum;
@@ -381,7 +381,7 @@
       const peak = Math.max(1, ...contactTimes.map(strikeAt));
       ctx.strokeStyle = colors[selected]; ctx.lineWidth = 1.5; ctx.beginPath();
       contactTimes.forEach((time, index) => { const x = 8 + time / contactDuration * (w - 16), y = contactBaseline - strikeAt(time) / peak * track.mallet * amplitude; if (!index) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke();
-      ctx.strokeStyle = '#9daead'; ctx.beginPath();
+      ctx.strokeStyle = '#d3c678'; ctx.beginPath();
       for (let x = 8; x <= w - 8; x++) {
         const time = (x - 8) / (w - 16) * noiseDuration;
         const noise = time < track.noiseAttack ? time / track.noiseAttack : Math.exp(-6.9 * (time - track.noiseAttack) / track.noiseDecay);
@@ -393,25 +393,37 @@
   let heroTime = 0, lastFrame = 0;
   function drawHero(time = 0) {
     const graph = canvasContext('hero-canvas'); if (!graph) return; const { ctx, width: w, height: h } = graph;
-    const wide = w > 210, center = w * .5, middle = h * .5;
+    const center = w * .5, middle = h * .5, wide = w > 210;
+    const panWidth = Math.min(wide ? w * .36 : w * .72, h * 1.08), panHeight = h * .44;
+    const left = center - panWidth / 2, right = center + panWidth / 2, top = middle - panHeight * .42;
+    ctx.strokeStyle = '#586367'; ctx.lineWidth = 1;
+    ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.moveTo(w * .025, middle); ctx.lineTo(w * .975, middle); ctx.stroke(); ctx.setLineDash([]);
+    // Stainless stockpot, its rim, and the separate impact/resonance traces.
+    ctx.fillStyle = '#20282b'; ctx.fillRect(left, top, panWidth, panHeight);
+    ctx.strokeStyle = '#c0c9c5'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left + panWidth * .055, top + panHeight); ctx.quadraticCurveTo(center, top + panHeight * 1.1, right - panWidth * .055, top + panHeight); ctx.lineTo(right, top); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(center, top, panWidth * .5, h * .04, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#68767a';
+    ctx.beginPath(); ctx.moveTo(left - panWidth * .12, top + panHeight * .2); ctx.lineTo(left - panWidth * .12, top + panHeight * .47); ctx.lineTo(left, top + panHeight * .47); ctx.moveTo(right + panWidth * .12, top + panHeight * .2); ctx.lineTo(right + panWidth * .12, top + panHeight * .47); ctx.lineTo(right, top + panHeight * .47); ctx.stroke();
+    for (let ring = 0; ring < 4; ring++) {
+      const phase = time + ring * .75, motion = playing && !reducedMotion ? Math.sin(phase) * 1.7 : .5;
+      ctx.strokeStyle = ring % 2 ? '#ff8d45' : '#dcc85e'; ctx.globalAlpha = .2 + ring * .12;
+      ctx.beginPath(); ctx.ellipse(center, top + panHeight * .48, panWidth * (.11 + ring * .082) + motion, panHeight * (.1 + ring * .083), 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#dcc85e';
+    ctx.beginPath(); ctx.moveTo(center + panWidth * .12, top - h * .02); ctx.lineTo(center + panWidth * .28, top - h * .18); ctx.lineTo(center + panWidth * .58, top - h * .27); ctx.stroke();
+    ctx.fillStyle = '#dcc85e'; ctx.beginPath(); ctx.arc(center + panWidth * .12, top - h * .02, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#596367'; ctx.beginPath(); ctx.moveTo(left - 7, top + panHeight + 10); ctx.lineTo(right + 7, top + panHeight + 10); ctx.stroke();
     if (wide) {
-      ctx.strokeStyle = '#55444d'; ctx.lineWidth = 1; ctx.setLineDash([2, 5]); ctx.beginPath(); ctx.moveTo(w * .015, middle); ctx.lineTo(w * .985, middle); ctx.stroke(); ctx.setLineDash([]);
       const trace = (start, end, signal, color) => {
         ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.beginPath();
-        for (let x = start; x <= end; x++) { const phase = (x - start) / (end - start), y = middle + signal(phase) * h * .23; if (x === start) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
+        for (let x = start; x <= end; x++) { const phase = (x - start) / (end - start), y = middle + signal(phase) * h * .21; if (x === start) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
       };
-      trace(w * .02, w * .29, (x) => Math.sin(x * Math.PI * 2 * 5) * Math.exp(-(((x - .42) * 7) ** 2)), '#d8aa86');
-      trace(w * .71, w * .98, (x) => Math.sin(x * Math.PI * 2 * 8 + time) * Math.exp(-x * 3.4) * Math.min(1, x * 18), '#aa92b5');
-      [w * .31, w * .69].forEach((x) => { ctx.strokeStyle = '#766173'; ctx.beginPath(); ctx.moveTo(x - 3, middle - 3); ctx.lineTo(x, middle); ctx.lineTo(x - 3, middle + 3); ctx.stroke(); });
+      trace(w * .025, w * .25, x => Math.sin(x * Math.PI * 10) * Math.exp(-(((x - .42) * 7) ** 2)), '#ff8d45');
+      trace(w * .75, w * .975, x => Math.sin(x * Math.PI * 16 + time) * Math.exp(-x * 3.4) * Math.min(1, x * 18), '#dcc85e');
+      ctx.font = '7px monospace'; ctx.fillStyle = '#929c99'; ctx.textAlign = 'center';
+      ctx.fillText('CONTACT', w * .13, h * .91); ctx.fillText('RESONANCE', w * .86, h * .91); ctx.textAlign = 'left';
     }
-    for (let ring = 0; ring < 7; ring++) {
-      const radius = Math.min(wide ? w * .33 : w, h) * (.13 + ring * .054), phase = time + ring * .5;
-      ctx.beginPath();
-      for (let i = 0; i <= 180; i++) { const angle = i / 180 * Math.PI * 2, amplitude = Math.sin(angle * (3 + ring % 3) + phase) * (playing && !reducedMotion ? 3.2 : 1.7); const r = radius + amplitude; const x = center + Math.cos(angle) * r * 1.25, y = middle + Math.sin(angle) * r; if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
-      ctx.strokeStyle = ring % 2 ? '#68554a' : '#b38268'; ctx.globalAlpha = .24 + ring * .065; ctx.lineWidth = 1; ctx.stroke();
-    }
-    ctx.globalAlpha = 1; ctx.fillStyle = '#e7a686'; ctx.beginPath(); ctx.arc(center, middle, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#524139'; ctx.beginPath(); ctx.moveTo(center, middle); ctx.lineTo(w * .62, h * .21); ctx.stroke();
   }
   function animate(timestamp) { if (playing && !reducedMotion && timestamp - lastFrame > 65) { heroTime += .075; drawHero(heroTime); lastFrame = timestamp; } requestAnimationFrame(animate); }
 
@@ -460,12 +472,12 @@
   $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((track) => [...track.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
   $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = Array(16).fill(0); }); renderRows(); persist(); toast('Pattern cleared. Your sounds are preserved.'); });
   $('random-button').addEventListener('click', randomPattern); $('undo-button').addEventListener('click', undo);
-  $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'tine-' + safeName() + '.json'); toast('Project saved. Sounds, patterns, and all four banks included.'); });
+  $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'clatter-' + safeName() + '.json'); toast('Project saved. Sounds, patterns, and all four banks included.'); });
   $('open-button').addEventListener('click', () => $('project-file').click());
   $('project-file').addEventListener('change', async (event) => {
     const file = event.target.files[0]; if (!file) return;
-    try { if (file.size > 1024 * 1024) throw new Error('That file is too large for a TINE project.'); const data = validateProject(JSON.parse(await file.text())); remember(); stop(); restore(data); renderAll(); persist(); toast('Project opened.'); }
-    catch (error) { toast(error instanceof SyntaxError ? 'That file is not a valid TINE project.' : error.message || 'Could not open that project.'); }
+    try { if (file.size > 1024 * 1024) throw new Error('That file is too large for a CLATTER project.'); const data = validateProject(JSON.parse(await file.text())); remember(); stop(); restore(data); renderAll(); persist(); toast('Project opened.'); }
+    catch (error) { toast(error instanceof SyntaxError ? 'That file is not a valid CLATTER project.' : error.message || 'Could not open that project.'); }
     finally { event.target.value = ''; }
   });
   $('export-button').addEventListener('click', exportWav);

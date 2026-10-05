@@ -1,4 +1,4 @@
-/* LOOM: one sample clock, eight stereo lanes, and the same signal path for playback and printing. */
+/* GALLEY: one sample clock, eight stereo lanes, and the same signal path for playback and printing. */
 (() => {
   'use strict';
 
@@ -373,7 +373,7 @@
       if (this._init) return this._init;
       this._init = (async () => {
         const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('This browser does not support Web Audio.');
-        if (!window.createLoomEffectsDSP) throw Error('LOOM effects have not loaded.');
+        if (!window.createLoomEffectsDSP) throw Error('GALLEY effects have not loaded.');
         try { this.context = new AC({ sampleRate: 48000, latencyHint: 'interactive' }); }
         catch { this.context = new AC({ latencyHint: 'interactive' }); }
         this.node = null; this.core = null; this._sentAssets = new Map();
@@ -456,7 +456,7 @@
       })().catch(error => { this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; throw error; });
       return this._init;
     }
-    getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize LOOM audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
+    getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
       if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (Number.isInteger(m.epoch)) {

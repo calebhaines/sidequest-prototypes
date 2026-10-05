@@ -1,16 +1,16 @@
-/* Existing and future Music Lab instruments, hosted with their real interfaces and engines. */
+/* Existing and future Kilter Kitchen instruments, hosted with their real interfaces and engines. */
 (function (global) {
   'use strict';
   const manifest = Object.freeze([
-    { id: 'grain', name: 'GRAIN', description: 'Noise drum machine', facade: 'GrainApp', storageKey: 'grain-drum-machine-v2', color: '#c6c493' },
-    { id: 'form', name: 'FORM', description: 'Layered percussion laboratory', facade: 'FormApp', storageKey: 'form-studio-v2', color: '#ed6847' },
-    { id: 'tine', name: 'TINE', description: 'Physical modeling drum machine', facade: 'TineApp', storageKey: 'tine-drum-machine-v1', color: '#efab8e' },
-    { id: 'mire', name: 'MIRE', description: 'Feedback network instrument', facade: 'MireApp', storageKey: 'mire-project-v1', color: '#adc18b' },
-    { id: 'spool', name: 'SPOOL', description: 'Four-deck tape instrument', facade: 'SpoolApp', storageKey: 'spool-project-v1', color: '#dfb66f' },
-    { id: 'haze', name: 'HAZE', description: 'Spectral sound painter', facade: 'HazeApp', storageKey: 'haze-project-v1', color: '#b7a5e7' },
-    { id: 'bower', name: 'BOWER', description: 'Generative string garden', facade: 'BowerApp', storageKey: 'musiclab-bower-score-v1', color: '#c2d49b' },
-    { id: 'ravel', name: 'RAVEL', description: 'Stereo sample slicer', facade: 'RavelApp', storageKey: 'ravel-project-v1', color: '#ed9588' },
-    { id: 'fable', name: 'FABLE', description: 'Polyphonic multisample instrument', facade: 'FableApp', storageKey: 'fable-project-v1', color: '#8bdacb' }
+    { id: 'grain', name: 'SIZZLE', description: 'Noise drum machine', facade: 'GrainApp', storageKey: 'grain-drum-machine-v2', color: '#e1c98c' },
+    { id: 'form', name: 'HOTPLATE', description: 'Layered percussion station', facade: 'FormApp', storageKey: 'form-studio-v2', color: '#ee7948' },
+    { id: 'tine', name: 'CLATTER', description: 'Physical modeling drum machine', facade: 'TineApp', storageKey: 'tine-drum-machine-v1', color: '#bfc4bd' },
+    { id: 'mire', name: 'REDUCE', description: 'Feedback network instrument', facade: 'MireApp', storageKey: 'mire-project-v1', color: '#cfad71' },
+    { id: 'spool', name: 'ROTISSERIE', description: 'Four-deck tape instrument', facade: 'SpoolApp', storageKey: 'spool-project-v1', color: '#e2ad65' },
+    { id: 'haze', name: 'STEAM', description: 'Spectral sound painter', facade: 'HazeApp', storageKey: 'haze-project-v1', color: '#9eafb3' },
+    { id: 'bower', name: 'SKEWER', description: 'Generative physical strings', facade: 'BowerApp', storageKey: 'musiclab-bower-score-v1', color: '#c9be98' },
+    { id: 'ravel', name: 'DICER', description: 'Stereo sample slicer', facade: 'RavelApp', storageKey: 'ravel-project-v1', color: '#ef9b70' },
+    { id: 'fable', name: 'STOCK', description: 'Polyphonic multisample instrument', facade: 'FableApp', storageKey: 'fable-project-v1', color: '#acb9b3' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -28,15 +28,15 @@
     const base = document.createElement('base'); base.href = baseURL; document.head.prepend(base);
     const bridge = document.createElement('script'); bridge.textContent = global.LoomHostBridge.source(key); base.after(bridge);
     if (id === 'form' && !html.includes('musiclab:app-ready')) {
-      // FORM's React reducer is exposed only in this hosted copy. The standalone bundle is untouched.
+      // HOTPLATE's React reducer is exposed only in this hosted copy. The standalone bundle is untouched.
       let integrated = false;
       document.querySelectorAll('script[type="module"]').forEach(script => {
         const signature = 'We.current={project:f,masterVolume:Te,solo:ae};';
         if (!script.textContent.includes(signature)) return;
-        const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid FORM project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
+        const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid HOTPLATE project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
         script.textContent = script.textContent.replace(signature, signature + expose); integrated = true;
       });
-      if (!integrated) throw new Error('This FORM version needs an updated host adapter.');
+      if (!integrated) throw new Error('This HOTPLATE version needs an updated host adapter.');
     }
     return '<!doctype html>\n' + document.documentElement.outerHTML;
   }
@@ -147,7 +147,7 @@
       const record = this.records.get(trackId); if (!record) throw Error('Load an instrument on this track first.');
       await record.ready;
       if (!this._current(record) || signal?.aborted) throw cancelledError();
-      const adapter = this.getPatternAdapter(trackId); if (!adapter) throw Error('This instrument does not support Music Lab patterns.');
+      const adapter = this.getPatternAdapter(trackId); if (!adapter) throw Error('This instrument does not support Kilter Kitchen patterns.');
       return { record, adapter };
     }
     async exportPattern(trackId, options = {}) {
@@ -200,7 +200,7 @@
       if(options.signal?.aborted)throw cancelledError();
       const record=this.records.get(trackId);if(!record)throw Error('Load an instrument on this track first.');await record.ready;if(!this._current(record))throw cancelledError();
       if(options.signal?.aborted)throw cancelledError();
-      const {bridge,app}=this._parts(record),exporter=bridge.adapter?.exportAudio?bridge.adapter:app?.exportAudio?app:null;if(!exporter)throw Error('Record this instrument into LOOM before sharing its sound.');
+      const {bridge,app}=this._parts(record),exporter=bridge.adapter?.exportAudio?bridge.adapter:app?.exportAudio?app:null;if(!exporter)throw Error('Record this instrument into GALLEY before sharing its sound.');
       if(record.exporting)throw Error('This instrument is already rendering audio.');record.exporting=true;
       try{const result=await exporter.exportAudio(options);if(!this._current(record)||options.signal?.aborted)throw cancelledError();return result;}finally{record.exporting=false;}
     }
@@ -219,7 +219,7 @@
       const maxSeconds = Math.min(120, Number(importer.audioImport?.maxSeconds) || 120);
       if (pcm.length / 2 / sampleRate > maxSeconds) throw new Error('This instrument accepts audio up to ' + maxSeconds + ' seconds. Shorten the clip before sending it.');
       for (let i = 0; i < pcm.length; i++) if (!Number.isFinite(pcm[i])) throw new TypeError('Audio transfers must contain finite samples.');
-      const payload = { pcm: new Float32Array(pcm), sampleRate, tempo: audio.tempo, name: typeof audio.name === 'string' ? audio.name : 'LOOM clip', signal:options.signal, options: {...(clone({...options,signal:undefined}) || {}),signal:options.signal} };
+      const payload = { pcm: new Float32Array(pcm), sampleRate, tempo: audio.tempo, name: typeof audio.name === 'string' ? audio.name : 'GALLEY clip', signal:options.signal, options: {...(clone({...options,signal:undefined}) || {}),signal:options.signal} };
       record.importing = true;
       try {
         const result = bridge.adapter?.importAudio ? await bridge.command('importAudio', payload) : await app.importAudio(payload);

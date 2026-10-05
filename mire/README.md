@@ -1,6 +1,9 @@
-# MIRE
+# REDUCE
 
 A standalone browser instrument for interconnected delays and resonators.
+
+A Kilter Kitchen instrument. The previous app identity is preserved in project
+formats, browser storage, source APIs and URLs so existing work opens unchanged.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/mire/
 
@@ -18,11 +21,11 @@ the current page origin. Importing an audio file works without microphone access
   Drift, Pan and Level shape the return. Synced delay times follow tempo.
 - The routing matrix sends from rows into columns. Diagonal cells are self
   feedback. Circulation sets the overall return amount; Damping darkens it.
-- Two LFOs and the assignable XY pad move node or garden parameters.
+- Two LFOs and the assignable XY pad move node or feedback parameters.
   Performing a Time destination on the XY pad switches that node to manual time.
 - Freeze holds the captured contents of the four nodes and blocks new input.
   Stop lets the remaining sound decay. Panic stops transport and microphone
-  input, clears the garden and releases Freeze.
+  input, clears the feedback network and releases Freeze.
 - Import a sample into the selected lane (first ten seconds, mixed to mono).
   Its original speed is C4. Save project includes all four possible sample assets.
 - Shared audio can be received directly on any source lane, with confirmation

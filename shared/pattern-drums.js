@@ -1,7 +1,8 @@
-/* Music Lab's native drum, slice and tape adapters. No alternate synthesis engine. */
+/* Kilter Kitchen's native drum, slice and tape adapters. No alternate synthesis engine. */
 (() => {
   'use strict';
   const IDS = ['grain', 'tine', 'form', 'ravel', 'spool'];
+  const NAMES = { grain:'SIZZLE', tine:'CLATTER', form:'HOTPLATE', ravel:'DICER', spool:'ROTISSERIE' };
   const FACADES = { grain:'GrainApp', tine:'TineApp', form:'FormApp', ravel:'RavelApp', spool:'SpoolApp' };
   const clone = value => JSON.parse(JSON.stringify(value));
   const abort = signal => { if (signal?.aborted) throw new DOMException('Pattern operation cancelled.', 'AbortError'); };
@@ -25,7 +26,7 @@
       if (id==='spool') return s.decks.map((deck,i)=>({id:'deck-'+i,name:'Deck '+String.fromCharCode(65+i)+' · '+deck.name,pitch:60+i}));
       return (s.tracks||s.sounds).map((voice,i)=>({id:'voice-'+i,name:voice.name||'Voice '+(i+1),pitch:36+i}));
     };
-    const indexOfVoice = (voice,s) => { const index=voicesFor(s).findIndex(v=>v.id===voice); if (index<0) throw new Error('Choose a valid '+id.toUpperCase()+' voice.'); return index; };
+    const indexOfVoice = (voice,s) => { const index=voicesFor(s).findIndex(v=>v.id===voice); if (index<0) throw new Error('Choose a valid '+NAMES[id]+' voice.'); return index; };
     let timer=null, startTime=0, cursor=0, scheduledState=null, display=null, generation=0, wrappedEngine=null;
     function clearTimer() { ++generation; if(timer!==null)clearInterval(timer);timer=null;scheduledState=null; }
     function stopPattern() { clearTimer(); }
@@ -38,15 +39,15 @@
     }
     function nativeMap(pattern,s) {
       const available=voicesFor(s), result={};
-      for(const voice of pattern.voices){const match=available.find(v=>v.id===voice.id);if(!match)throw new Error('This pattern needs explicit voice mapping for '+id.toUpperCase()+'.');Object.defineProperty(result,voice.id,{value:match.id,enumerable:true,writable:true,configurable:true});}
+      for(const voice of pattern.voices){const match=available.find(v=>v.id===voice.id);if(!match)throw new Error('This pattern needs explicit voice mapping for '+NAMES[id]+'.');Object.defineProperty(result,voice.id,{value:match.id,enumerable:true,writable:true,configurable:true});}
       return result;
     }
     function validateNotes(pattern,map,s) {
       const target=voicesFor(s);
-      for(const note of pattern.notes){const voice=target.find(v=>v.id===map[note.voice]);if(!voice)throw new Error('Missing note voice mapping.');const offset=note.pitch-voice.pitch;if(offset<-48||offset>48)throw new Error(id.toUpperCase()+' supports up to four octaves of note transposition from each voice.');}
+      for(const note of pattern.notes){const voice=target.find(v=>v.id===map[note.voice]);if(!voice)throw new Error('Missing note voice mapping.');const offset=note.pitch-voice.pitch;if(offset<-48||offset>48)throw new Error(NAMES[id]+' supports up to four octaves of note transposition from each voice.');}
       if(id==='spool'){
         const ends=new Map();
-        for(const note of [...pattern.notes].sort((a,b)=>a.beat-b.beat)) {const voice=map[note.voice],end=ends.get(voice)||0;if(note.beat<end-1e-8)throw new Error('Each SPOOL deck plays one tape at a time. Shorten overlapping notes or map them to separate decks.');ends.set(voice,note.beat+note.duration);}
+        for(const note of [...pattern.notes].sort((a,b)=>a.beat-b.beat)) {const voice=map[note.voice],end=ends.get(voice)||0;if(note.beat<end-1e-8)throw new Error('Each ROTISSERIE deck plays one tape at a time. Shorten overlapping notes or map them to separate decks.');ends.set(voice,note.beat+note.duration);}
       }
     }
     function applyOverlay(overlay) {
@@ -77,7 +78,7 @@
         lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
         s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
       }
-      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+id.toUpperCase(),sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??0x5a17c0de});
+      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+NAMES[id],sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??0x5a17c0de});
     }
     function prepareEngineWrappers() {
       const audio=engine();if(!audio||audio===wrappedEngine)return;wrappedEngine=audio;
@@ -165,6 +166,7 @@
     return adapter;
   }
   window.MusicLabPatternDrums=Object.freeze({install});
-  const found=IDS.find(id=>window[FACADES[id]])||(/\bFORM\b/.test(document.title)?'form':null);
+  const declared = document.documentElement?.dataset?.musiclabApp;
+  const found=IDS.find(id=>window[FACADES[id]])||(IDS.includes(declared)?declared:null)||(/\bFORM\b/.test(document.title)?'form':null);
   if(found)install(found);
 })();

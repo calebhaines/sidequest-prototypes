@@ -2,12 +2,12 @@
   'use strict';
   const VERSION = '1.0.0';
   const RECIPES = ['kit', 'foley', 'keys', 'bells', 'reed', 'bass', 'noise', 'percussion'];
-  const names = ['The pocket orchestra', 'A cupboard of accidents', 'Keys without doors', 'The bell committee', 'A reed in a hurry', 'Low and behold', 'Weather in envelopes', 'Sixteen small objections'];
+  const names = ['The house rhythm kit', 'Prep tray incidents', 'Cold-room keys', 'Service bells', 'Off-menu reed', 'Basement bass', 'Extractor noise', 'Utensil percussion'];
   const clamp = (v, lo, hi, d) => Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Number(v))) : d;
   const text = (v, d, max = 80) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, max) : d;
   const step = i => ({ on: i % 4 === 0, slice: i, velocity: .85, probability: 1, ratchet: 1, reverse: false, pitch: 0, micro: 0, gate: 1 });
   const pattern = (i = 0) => ({ name: String.fromCharCode(65 + i), steps: Array.from({ length: 16 }, (_, n) => step(n)) });
-  const defaultState = () => ({ version: VERSION, name: 'The beat has come apart politely.', tempo: 104, swing: .12, selectedPattern: 0, chain: false, seed: 87123, asset: { kind: 'seed', name: names[0], recipe: 'kit', seed: 81719, tempo: 104 }, boundaries: Array.from({ length: 17 }, (_, i) => i / 16), sample: { pitch: 0, reverse: false, fade: 4, trimStart: 0, trimEnd: 1, level: .9 }, master: { volume: .72, tone: 14500, highpass: 25, crush: 0, drive: .12, echo: .16, feedback: .35, space: .15, pan: 0 }, patterns: Array.from({ length: 4 }, (_, i) => pattern(i)) });
+  const defaultState = () => ({ version: VERSION, name: 'Sixteen cuts, chef insists they’re even', tempo: 104, swing: .12, selectedPattern: 0, chain: false, seed: 87123, asset: { kind: 'seed', name: names[0], recipe: 'kit', seed: 81719, tempo: 104 }, boundaries: Array.from({ length: 17 }, (_, i) => i / 16), sample: { pitch: 0, reverse: false, fade: 4, trimStart: 0, trimEnd: 1, level: .9 }, master: { volume: .72, tone: 14500, highpass: 25, crush: 0, drive: .12, echo: .16, feedback: .35, space: .15, pan: 0 }, patterns: Array.from({ length: 4 }, (_, i) => pattern(i)) });
   function normalizeAsset(a) {
     if (!a || typeof a !== 'object') return defaultState().asset;
     if (a.kind === 'seed') return { kind: 'seed', name: text(a.name, names[0]), recipe: RECIPES.includes(a.recipe) ? a.recipe : 'kit', seed: Math.round(clamp(a.seed, 1, 4294967295, 81719)), tempo: clamp(a.tempo, 48, 180, 104) };
@@ -19,7 +19,7 @@
     if (bytes < channels * 2 || bytes % (channels * 2)) throw new Error('The sample data has an invalid length.');
     const frames = bytes / (channels * 2);
     if (frames > sampleRate * 20 || a.frames !== frames || typeof a.duration !== 'number' || !Number.isFinite(a.duration) || Math.abs(a.duration - frames / sampleRate) > 1 / sampleRate || a.sampleRate !== sampleRate || a.channels !== channels) throw new Error('The sample metadata does not match its audio.');
-    return { kind: 'pcm', name: text(a.name, 'Imported ribbon'), sampleRate, channels, frames, duration: frames / sampleRate, pcm: a.pcm };
+    return { kind: 'pcm', name: text(a.name, 'Imported sample'), sampleRate, channels, frames, duration: frames / sampleRate, pcm: a.pcm };
   }
   function normalize(raw) {
     const d = defaultState(); raw = raw && typeof raw === 'object' ? raw : {};
@@ -50,7 +50,7 @@
   function parseProject(data) {
     if (typeof data !== 'string' || data.length > 16 * 1024 * 1024) throw new Error('Projects must be smaller than 16 MB.');
     const p = JSON.parse(data);
-    if (p.format !== 'ravel-project' || p.formatVersion !== 1 || !p.state || !Array.isArray(p.state.patterns) || p.state.patterns.length !== 4 || p.state.patterns.some(x => !Array.isArray(x.steps) || x.steps.length !== 16) || !Array.isArray(p.state.boundaries) || p.state.boundaries.length !== 17 || !p.state.asset) throw new Error('Choose a complete RAVEL project.');
+    if (p.format !== 'ravel-project' || p.formatVersion !== 1 || !p.state || !Array.isArray(p.state.patterns) || p.state.patterns.length !== 4 || p.state.patterns.some(x => !Array.isArray(x.steps) || x.steps.length !== 16) || !Array.isArray(p.state.boundaries) || p.state.boundaries.length !== 17 || !p.state.asset) throw new Error('Choose a complete DICER project.');
     const s = p.state, num = (x, label) => { if (typeof x !== 'number' || !Number.isFinite(x)) throw new Error('Invalid ' + label + ' in this project.'); }, bool = (x, label) => { if (typeof x !== 'boolean') throw new Error('Invalid ' + label + ' in this project.'); };
     if (typeof s.name !== 'string' || !s.sample || !s.master) throw new Error('The project is incomplete.');
     ['tempo','swing','selectedPattern','seed'].forEach(k => num(s[k], k)); bool(s.chain,'chain');
