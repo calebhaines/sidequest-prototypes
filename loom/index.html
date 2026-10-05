@@ -96,7 +96,7 @@
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.7.0">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.8.0">
 <meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play ten instruments, monitor microphone input through four effects per track, and align recordings. Nine effects include BROILER bass and guitar amps.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
@@ -520,6 +520,100 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 .mic-input-notes p { margin: 0; color: #aebdad; font-size: 10px; line-height: 1.7; }
 .mic-input-notes strong { color: #efd5ad; }
 
+/* The patch bay keeps the requested settings beside the browser's actual timing. */
+.audio-settings-launcher { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; font-family: var(--kk-mono, monospace); font-size: 9px; color: #ffd09b; border-color: #8c7456; background: #343329; }
+.audio-settings-launcher svg { width: 16px; height: 16px; }
+.mic-interface-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-bottom: 17px; margin-bottom: 17px; border-bottom: 1px dashed #566558; }
+.mic-interface-strip>span { min-width: 0; flex: 1 1 180px; font-family: var(--kk-mono, monospace); color: #c7caba; font-size: 9px; overflow-wrap: anywhere; }
+.mic-interface-strip>div { display: flex; flex-wrap: wrap; gap: 7px; }
+.mic-interface-strip button { min-height: 34px; font-size: 10px; }
+#microphonePracticeButton { color: #ffd09b; border-color: #8c7456; }
+.audio-settings-dialog { width: 820px; padding: 27px; border-color: #798171; border-top-color: #efa76c; background: repeating-linear-gradient(0deg, #ffffff02 0 1px, transparent 1px 5px), linear-gradient(140deg, #303935, #1a2528 58%); }
+.audio-settings-dialog .dialog-top { position: sticky; top: -27px; z-index: 2; margin: -27px -27px 14px; padding: 27px 27px 16px; border-bottom: 1px solid #52624c; background: linear-gradient(110deg, #303935, #253033); }
+.audio-settings-dialog .dialog-top .eyebrow { font-size: 8px; letter-spacing: .11em; color: #c1c7b5; }
+.audio-settings-dialog .dialog-top h2 { font-size: 38px; margin-top: 8px; }
+.audio-settings-dialog .dialog-intro { max-width: 630px; margin-bottom: 20px; color: #bcc7b6; font-size: 11px; }
+.interface-signal-route { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 19px; margin-bottom: 22px; border: 1px solid #586755; border-bottom: 3px solid #9e7950; background: #15201e; }
+.interface-signal-route span { min-width: 0; color: #9ca991; font-family: var(--kk-mono, monospace); font-size: 8px; line-height: 1.9; }
+.interface-signal-route strong { color: #e9d7b5; font-size: 9px; font-weight: 400; letter-spacing: .03em; }
+.interface-signal-route i { color: #e6a267; font-size: 18px; font-style: normal; }
+.interface-section { padding-bottom: 21px; margin-bottom: 21px; border-bottom: 1px dashed #61705b; }
+.interface-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.interface-section-heading h3 { color: #eadcc0; font-size: 20px; }
+.interface-section-heading .eyebrow { color: #aeb7a3; font-size: 7px; text-align: right; }
+.interface-section-heading button { min-height: 33px; font-size: 10px; background: #303b34; border-color: #65725b; }
+.interface-hint { margin: 0; color: #b2bfac; font-size: 10px; line-height: 1.7; }
+.interface-device-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 17px; margin-top: 16px; }
+.interface-output-field { grid-column: 1 / -1; }
+.interface-device-grid label, .interface-performance-grid label { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: #c5cbbb; font-family: var(--kk-mono, monospace); font-size: 8px; letter-spacing: .055em; }
+.interface-device-grid select, .interface-performance-grid select { width: 100%; min-width: 0; min-height: 40px; font-family: 'Loom Sans', sans-serif; font-size: 12px; letter-spacing: 0; border-color: #647260; background: #121d1f; }
+.interface-device-grid label>span, .interface-performance-grid label>span { font-family: 'Loom Sans', sans-serif; color: #acbaa6; font-size: 10px; line-height: 1.7; letter-spacing: 0; }
+.interface-performance-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 19px; margin-top: 16px; }
+.interface-driver-note { margin-top: 16px; padding-left: 11px; border-left: 2px solid #857151; color: #b8c0ad; font-size: 10px; line-height: 1.8; }
+.interface-diagnostics { margin-bottom: 22px; }
+.interface-engine-badge { padding: 5px 7px; border: 1px solid #6e755a; background: #26352b; color: #d7d7af; font-family: var(--kk-mono, monospace); font-size: 7px; letter-spacing: .045em; text-align: right; }
+.interface-engine-badge.fallback { border-color: #b6804f; background: #4c3627; color: #ffd7aa; }
+.interface-diagnostic-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 13px; border: 1px solid #576951; background: #111c1f; }
+.interface-diagnostic-grid>div { min-width: 0; padding: 14px; border-right: 1px solid #576951; border-bottom: 1px solid #576951; }
+.interface-diagnostic-grid>div:nth-child(3n) { border-right: 0; }
+.interface-diagnostic-grid>div:nth-last-child(-n+3) { border-bottom: 0; }
+.interface-diagnostic-grid span { display: block; color: #a8b7a4; font-family: var(--kk-mono, monospace); font-size: 7px; letter-spacing: .03em; }
+.interface-diagnostic-grid output { display: block; color: #eadabc; font-family: var(--kk-mono, monospace); font-size: 17px; line-height: 1.25; margin: 9px 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.interface-diagnostic-grid small { display: block; color: #94a58f; font-size: 9px; line-height: 1.6; }
+.interface-diagnostic-grid .interface-roundtrip { background: #57422a4a; }
+.interface-roundtrip output { color: #ffc286; font-size: 24px; }
+.interface-practice { border: 1px solid #a27b50; padding: 19px; margin-bottom: 22px; background: linear-gradient(120deg, #513a2a70, #24312c); }
+.interface-practice-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.interface-practice-heading>div { min-width: 0; }
+.interface-practice-heading .eyebrow { font-size: 7px; color: #e2b882; }
+.interface-practice-heading h3 { margin: 8px 0; font-size: 28px; color: #ffd09b; }
+.interface-practice-heading p { color: #c9c6af; font-family: var(--kk-mono, monospace); font-size: 9px; overflow-wrap: anywhere; }
+.interface-practice-heading svg { flex: none; width: 112px; height: 77px; color: #ecaf73; filter: drop-shadow(0 5px 5px #0005); }
+.interface-practice-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 13px; }
+.interface-practice-buttons button { flex: 1; min-height: 43px; color: #ffdcaa; border-color: #a28a60; background: #4d412b; font-size: 12px; }
+.interface-practice-buttons button:hover { background: #695333; border-color: #e8b774; }
+.interface-settings-bottom { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 16px; border-top: 1px dashed #627058; }
+.interface-settings-bottom p { color: #c4c9b7; font-size: 10px; line-height: 1.8; max-width: 490px; overflow-wrap: anywhere; }
+.interface-settings-bottom p.error { color: #ffc1a9; }
+.interface-settings-bottom>button { flex: none; min-height: 42px; font-size: 11px; }
+.audio-settings-dialog[aria-busy=true] .interface-settings-bottom { opacity: .8; }
+@media (max-width: 620px) {
+  .topline .audio-settings-launcher { font-size: 8px; min-height: 34px; width: 100%; padding: 7px; }
+  .topline #helpButton { align-self: center; }
+  .mic-interface-strip { gap: 10px; }
+  .mic-interface-strip>div { width: 100%; }
+  .mic-interface-strip button { flex: 1; font-size: 9px; }
+  .audio-settings-dialog { padding: 16px; max-width: calc(100vw - 16px); }
+  .audio-settings-dialog .dialog-top { top: -16px; margin: -16px -16px 14px; padding: 16px 16px 13px; }
+  .audio-settings-dialog .dialog-top h2 { font-size: 31px; }
+  .audio-settings-dialog .dialog-top .eyebrow { font-size: 6px; }
+  .audio-settings-dialog .dialog-intro { font-size: 10px; }
+  .interface-signal-route { gap: 7px; padding: 12px 10px; margin-bottom: 18px; }
+  .interface-signal-route span { font-size: 6px; }
+  .interface-signal-route strong { font-size: 6px; letter-spacing: 0; }
+  .interface-signal-route i { font-size: 13px; }
+  .interface-section-heading h3 { font-size: 18px; }
+  .interface-section-heading .eyebrow { font-size: 6px; }
+  .interface-device-grid, .interface-performance-grid { grid-template-columns: 1fr; gap: 16px; }
+  .interface-output-field { grid-column: auto; }
+  .interface-device-grid select, .interface-performance-grid select { font-size: 11px; }
+  .interface-diagnostic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .interface-diagnostic-grid>div { padding: 11px; }
+  .interface-diagnostic-grid>div:nth-child(3n) { border-right: 1px solid #576951; }
+  .interface-diagnostic-grid>div:nth-child(2n) { border-right: 0; }
+  .interface-diagnostic-grid>div:nth-last-child(-n+3) { border-bottom: 1px solid #576951; }
+  .interface-diagnostic-grid>div:nth-last-child(-n+2) { border-bottom: 0; }
+  .interface-diagnostic-grid span { font-size: 6px; }
+  .interface-diagnostic-grid output { font-size: 15px; }
+  .interface-roundtrip output { font-size: 22px; }
+  .interface-practice { padding: 14px; }
+  .interface-practice-heading h3 { font-size: 24px; }
+  .interface-practice-heading svg { width: 64px; height: 53px; }
+  .interface-practice-heading .eyebrow { font-size: 6px; }
+  .interface-practice-buttons { flex-direction: column; }
+  .interface-settings-bottom { align-items: stretch; flex-direction: column; gap: 14px; }
+}
+
 /* BROILER: a wired amp head, a speaker wall, and four clear signal stages. */
 .effect-editor.amp-editor { border-color: #b47047; }
 .amp-editor .effect-hero { background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 5px), linear-gradient(155deg, #483329, #1e2423 65%); }
@@ -772,7 +866,7 @@ body {
 </head>
 <body>
 <div class="studio-shell">
-<nav class="topline"><a id="musicHome" href="../">← KITCHEN</a><span>NO. 009 / EIGHT TRACKS. SERVICE ON.</span><button id="helpButton" class="text-button">Operating notes ↗</button></nav>
+<nav class="topline"><a id="musicHome" href="../">← KITCHEN</a><span>NO. 009 / EIGHT TRACKS. SERVICE ON.</span><button id="audioSettingsButton" class="audio-settings-launcher" aria-haspopup="dialog" aria-controls="audioSettingsDialog"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14M6 2v6m6 2v6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="5" r="2" fill="#202629" stroke="currentColor"/><circle cx="12" cy="13" r="2" fill="#202629" stroke="currentColor"/></svg>Audio settings</button><button id="helpButton" class="text-button">Operating notes ↗</button></nav>
 <header class="masthead">
 <div><span class="eyebrow">THE CENTRAL PRODUCTION STATION</span><h1>GALLEY<span class="brand-dot">.</span></h1><p>Eight tracks. One <em>increasingly specific order.</em></p></div>
 <div class="service-art" aria-hidden="true"><svg viewBox="0 0 360 126"><g fill="none" stroke="#7e8077" stroke-width="1.2"><path d="M12 17h333M12 23h333M19 17v76M338 17v76"/><path d="M37 31h68v72H37zm87 0h68v72h-68zm87 0h68v72h-68" stroke="#f1e7ce"/><path d="M42 38h58m29 0h58m29 0h58" stroke="#f36b36"/><path d="M44 52h43m-43 8h50m-50 8h31m43-16h43m-43 8h50m-50 8h31m56-16h43m-43 8h50m-50 8h31"/><path d="M43 82h47m40 0h47m40 0h47" stroke-dasharray="2 3"/><circle cx="318" cy="58" r="17" stroke="#f36b36"/><path d="M310 58h16m-8-8v16" stroke="#f36b36"/></g><g fill="#f3b54a" font-family="monospace" font-size="8"><text x="47" y="97">01 / FIRE</text><text x="134" y="97">02 / HOLD</text><text x="221" y="97">03 / AGAIN</text></g></svg><span>TICKET 008 / FOUR FINISHES PER STATION<br>THE SECOND STARTER IS APPARENTLY INTENTIONAL.</span></div>
@@ -790,8 +884,9 @@ body {
 </section>
 <section class="recording-tools" aria-label="Recording setup"><div class="recording-heading"><span class="eyebrow">RECORDING SETUP</span><span id="recordingSetupSummary">A little warning before service begins.</span></div><label>COUNT-IN<select id="countInBars"><option value="0">Off</option><option value="1">1 bar</option><option value="2">2 bars</option></select></label><button id="punchButton" aria-pressed="false" title="Record only within the chosen time range">Punch in / out</button><label>FROM BAR<input id="punchStart" type="number" min="1" max="65" step="0.25" value="1"></label><label>TO BAR<input id="punchEnd" type="number" min="1.25" max="65" step="0.25" value="5"></label><button id="punchFromLoop">Use loop range</button></section>
 <details id="micInputPanel" class="mic-input-panel">
-<summary><span class="mic-panel-name"><span class="eyebrow">INPUT / PREP STATION</span><strong>Microphone · monitoring &amp; timing</strong></span><span id="microphoneState" class="mic-state">OFF</span><span class="mic-panel-arrow" aria-hidden="true">⌄</span></summary>
+<summary><span class="mic-panel-name"><span class="eyebrow">INPUT / PREP STATION</span><strong>Microphone &amp; interface · monitoring &amp; timing</strong></span><span id="microphoneState" class="mic-state">OFF</span><span class="mic-panel-arrow" aria-hidden="true">⌄</span></summary>
 <div class="mic-input-body">
+<div class="mic-interface-strip"><span id="microphoneInterfaceSummary">System input · stereo · Live latency</span><div><button id="microphoneSettingsButton" aria-haspopup="dialog" aria-controls="audioSettingsDialog">Interface settings</button><button id="microphonePracticeButton" aria-haspopup="dialog" aria-controls="audioSettingsDialog">Play through BROILER</button></div></div>
 <div class="mic-monitor-strip"><div class="mic-routing"><span class="eyebrow">LIVE INPUT → FOUR INSERTS → MIXER</span><strong id="microphoneRouteLabel">Selected track</strong><button id="microphoneRouteButton" hidden>Move monitoring here</button></div><button id="microphoneMonitorButton" class="mic-monitor-button" aria-pressed="false">Monitor microphone</button><div class="mic-input-meter" role="meter" aria-label="Microphone input peak" aria-valuemin="-90" aria-valuemax="0" aria-valuenow="-90"><span>INPUT</span><div><i id="microphoneMeterFill"></i></div><output id="microphoneMeterValue">−∞ dB</output></div></div>
 <div class="mic-setup-controls"><label>INPUT TRIM <output id="microphoneGainValue">0.0 dB</output><input id="microphoneInputGain" type="range" min="-24" max="24" step="0.1" value="0" aria-label="Microphone input trim in decibels"></label><label>RECORDING ALIGNMENT<select id="microphoneCompensation"><option value="auto">Auto estimate + trim</option><option value="manual">Manual offset</option><option value="off">Off</option></select></label><label><span id="microphoneOffsetLabel">EXTRA TRIM (MS)</span><input id="microphoneOffset" type="number" min="-500" max="500" step="0.1" value="0" inputmode="decimal" aria-describedby="microphoneOffsetHint"></label><div class="mic-timing-readout"><span class="eyebrow">MOVE THE TAKE INTO TIME</span><strong id="microphoneTimingSummary">Auto estimate before the first take</strong><span id="microphoneLatencyDetails">Timing is estimated after audio starts.</span></div></div>
 <div class="mic-input-notes"><p><strong>Use headphones.</strong> Monitoring plays the microphone through this track’s live effects. Recordings stay dry so the rack processes them once on playback.</p><p id="microphoneOffsetHint">Positive offsets move the recording earlier; negative offsets move it later. Auto uses reported device delays, when available. Adjust by ear; alignment does not reduce live monitoring delay.</p></div>
@@ -814,9 +909,19 @@ body {
 </div>
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.7.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.8.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
+<dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
+<div class="dialog-top"><div><span class="eyebrow">PATCH BAY / THE WIRES HAVE A PLAN</span><h2 id="audioSettingsTitle">Audio interface.</h2></div><button id="closeAudioSettings" class="close-button" aria-label="Close audio settings">×</button></div>
+<p id="audioSettingsIntro" class="dialog-intro">Choose your interface, patch an input, and ask the browser for its quickest service. These settings belong to this browser; your session travels without them.</p>
+<div class="interface-signal-route" aria-hidden="true"><span>01<br><strong>INTERFACE</strong></span><i>→</i><span>02<br><strong>INPUT CHANNEL</strong></span><i>→</i><span>03<br><strong>FOUR INSERTS</strong></span><i>→</i><span>04<br><strong>HEADPHONES</strong></span></div>
+<section class="interface-section" aria-labelledby="interfaceDeviceTitle"><div class="interface-section-heading"><h3 id="interfaceDeviceTitle">01 / Connections</h3><button id="refreshAudioDevices">Refresh devices</button></div><p id="audioDeviceHint" class="interface-hint">Refresh asks for microphone access to reveal device names. Temporary access is released after the list is read.</p><div class="interface-device-grid"><label>INPUT DEVICE<select id="audioInputDevice"><option value="default">System default input</option></select></label><label>INPUT CHANNEL<select id="audioInputChannel"><option value="stereo">Stereo / both inputs</option><option value="1">Input 1 / mono</option><option value="2">Input 2 / mono</option></select></label><label class="interface-output-field">OUTPUT DEVICE<select id="audioOutputDevice"><option value="default">System default output</option></select><span id="audioOutputHint">Your browser may use the output selected in system sound settings.</span></label></div></section>
+<section class="interface-section" aria-labelledby="interfacePerformanceTitle"><div class="interface-section-heading"><h3 id="interfacePerformanceTitle">02 / Performance</h3><span class="eyebrow">THE REQUEST / THE REALITY BELOW</span></div><div class="interface-performance-grid"><label>LATENCY PROFILE<select id="audioLatencyProfile"><option value="live">Live · lowest requested latency</option><option value="balanced">Balanced · everyday sessions</option><option value="stable">Stable · heavier sessions</option></select><span id="audioProfileHint">Live requests the browser’s lowest latency (1 ms target). Your interface and browser choose the actual timing.</span></label><label>SAMPLE RATE<select id="audioSampleRate"><option value="auto">Auto / interface default</option><option value="44100">44.1 kHz</option><option value="48000">48 kHz</option><option value="96000">96 kHz</option></select><span>Auto avoids an unnecessary rate conversion when the browser can follow your interface.</span></label></div><p class="interface-driver-note">For guitar, select your interface’s instrument / Hi-Z input. Use the same interface for input and headphones. Browser settings cannot set an ASIO / Core Audio driver buffer; adjust that in your interface or system panel.</p></section>
+<section class="interface-diagnostics" aria-labelledby="interfaceDiagnosticsTitle"><div class="interface-section-heading"><h3 id="interfaceDiagnosticsTitle">03 / On the clock</h3><span id="audioEngineBadge" class="interface-engine-badge">AUDIO NOT STARTED</span></div><div class="interface-diagnostic-grid"><div class="interface-roundtrip"><span>REPORTED ROUND TRIP</span><output id="audioRoundTripValue">—</output><small id="audioRoundTripHint">Start monitoring to read the available device timings.</small></div><div><span>ACTUAL SAMPLE RATE</span><output id="audioActualSampleRate">—</output><small id="audioRateHint">Negotiated by the browser.</small></div><div><span>CAPTURE DELAY</span><output id="audioCaptureLatency">Unreported</output><small>Reported by the input device.</small></div><div><span>ENGINE BLOCK</span><output id="audioProcessingLatency">—</output><small id="audioProcessingHint">AudioWorklet uses 128-frame blocks.</small></div><div><span>BROWSER OUTPUT BUFFER</span><output id="audioBaseLatency">Unreported</output><small>Context base latency.</small></div><div><span>OUTPUT DEVICE DELAY</span><output id="audioOutputLatency">Unreported</output><small>Output latency, when exposed.</small></div></div><p id="audioDiagnosticNotes" class="interface-hint">Reported timings are estimates, not a measured cable loopback. Recording alignment moves a completed take; it does not reduce live delay.</p></section>
+<section id="ampPracticeSection" class="interface-practice" aria-labelledby="ampPracticeTitle"><div class="interface-practice-heading"><div><span class="eyebrow">PLUG IN / PLAY THROUGH THE RACK</span><h3 id="ampPracticeTitle">Play through BROILER.</h3><p id="ampPracticeTrack">Selected track / four effects / mixer</p></div><svg viewBox="0 0 128 84" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M24 6h80v23H24zM17 35h94v42H17zM24 42h80v28H24zM45 6V2h38v4M30 13h30m-30 6h30M69 13v8m13-8v8m13-8v8M25 54h78M43 42v28m24-28v28m23-28v28M10 63V45q0-7 7-7"/><circle cx="49" cy="57" r="11"/><circle cx="79" cy="57" r="11"/></g></svg></div><div class="interface-practice-buttons"><button id="guitarPracticeButton">Guitar → BROILER</button><button id="bassPracticeButton">Bass → BROILER</button></div><p class="interface-hint">Adds a clean amp to an empty slot on the selected track, or uses its existing BROILER without changing your sound. Takes stay dry. Disable your interface’s direct monitor if you hear a doubled signal.</p></section>
+<div class="interface-settings-bottom"><p id="audioInterfaceStatus" role="status" aria-live="polite">Apply stops playback and monitoring. Instrument settings, clips, and effect racks stay in your session.</p><button id="applyAudioSettings" class="play-button">Apply settings</button></div>
+</dialog>
 <dialog id="markerDialog" class="marker-dialog" aria-labelledby="markerTitle"><div class="dialog-top"><div><span class="eyebrow">LABEL THE NEXT COURSE</span><h2 id="markerTitle">Name this section.</h2></div><button id="closeMarker" class="close-button" aria-label="Close section marker">×</button></div><div class="marker-fields"><label>SECTION NAME<input id="markerName" type="text" maxlength="60" placeholder="First course, probably"></label><label>BAR<input id="markerBar" type="number" min="1" max="65" step="1" value="1"></label><label>BEAT<input id="markerBeat" type="number" min="1" max="4" step="0.001" value="1"></label><label>COLOR<input id="markerColor" type="color" value="#dce89b"></label></div><div class="marker-bottom"><button id="deleteMarker" class="delete-clip-action" hidden>Delete marker</button><button id="saveMarker" class="play-button">Save marker</button></div></dialog>
 <dialog id="transferDialog" class="transfer-dialog" aria-labelledby="transferTitle"><div class="dialog-top"><div><span class="eyebrow">INGREDIENT TRANSFER</span><h2 id="transferTitle">Send this clip.</h2></div><button id="closeTransfer" class="close-button" aria-label="Close clip transfer">×</button></div><p id="transferDescription" class="dialog-intro">Send a chosen region of the edited clip into a compatible instrument without downloading a file.</p><div class="transfer-fields"><label>INSTRUMENT<select id="transferApp"></select></label><label>DESTINATION TRACK<select id="transferTrack"></select></label><label id="transferDeckLabel">SAMPLE DESTINATION<select id="transferDeck"><option value="0">Deck A</option><option value="1">Deck B</option><option value="2">Deck C</option><option value="3">Deck D</option></select></label></div><div class="transfer-selection"><label>SELECTION IN (SEC)<input id="transferStart" type="number" min="0" step="0.001" value="0"></label><label>OUT (SEC)<input id="transferEnd" type="number" min="0.001" step="0.001" value="1"></label><button id="transferFit">Fit receiver limit</button><output id="transferSelectionSummary"></output></div><p id="transferTargetInfo" class="transfer-target-info"></p><label id="transferReplaceLabel" class="transfer-replace"><input id="transferReplace" type="checkbox"> Replace the audio already in this sample or deck</label><div class="transfer-bottom"><span id="transferStatus" class="fineprint">Clip edits are included; track effects stay in GALLEY.</span><button id="sendTransfer" class="play-button">Send clip →</button></div></dialog>
 <dialog id="clipActionsDialog" class="clip-actions-dialog" aria-labelledby="clipActionsTitle"><div class="dialog-top"><div><span class="eyebrow">ONE ITEM ON THE TICKET</span><h2 id="clipActionsTitle">Clip actions.</h2></div><button id="closeClipActions" class="close-button" aria-label="Close clip actions">×</button></div><div class="clip-menu-buttons"><button data-clip-action="edit">Edit clip controls</button><button data-clip-action="notes" hidden>Edit notes</button><button data-clip-action="print" hidden>Print audio</button><button data-clip-action="source" hidden>Edit source instrument ↗</button><button data-clip-action="update" hidden>Update printed audio</button><button data-clip-action="loop">Loop this clip</button><button data-clip-action="split">Split at playhead</button><button data-clip-action="duplicate">Duplicate clip</button><button data-clip-action="transfer">Send to another instrument ↗</button><button data-clip-action="delete" class="delete-clip-action">Delete clip</button></div><p class="fineprint">Deleting removes this recording from the arrangement. Undo brings it back.</p></dialog>
@@ -1443,7 +1548,7 @@ body {
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.7.0';
+  const VERSION = '1.8.0';
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux'];
@@ -2188,6 +2293,38 @@ body {
     }
   }
 
+  // Interface choices belong to this browser, never to a portable song.
+  const AUDIO_SETTINGS_KEY = 'kitchen.galley.audio-interface.v1';
+  const AUDIO_DEFAULTS = Object.freeze({ inputDeviceId: 'default', outputDeviceId: 'default', inputChannel: 'stereo', sampleRate: 'auto', latencyProfile: 'live' });
+  const AUDIO_PROFILES = Object.freeze({ live: { latencyHint: .001, fallbackFrames: 256 }, balanced: { latencyHint: 'interactive', fallbackFrames: 512 }, stable: { latencyHint: 'balanced', fallbackFrames: 1024 } });
+  function normalizeAudioSettings(value, previous = AUDIO_DEFAULTS, strict = false) {
+    const settings = { ...previous }, fail = message => { if (strict) throw Error(message); };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) { fail('Choose valid audio interface settings.'); return settings; }
+    for (const key of ['inputDeviceId', 'outputDeviceId']) if (value[key] !== undefined) {
+      if (typeof value[key] === 'string' && value[key].length <= 512) settings[key] = value[key] || 'default';
+      else fail('Choose a valid audio device.');
+    }
+    if (value.inputChannel !== undefined) {
+      const channel = String(value.inputChannel); if (['1', '2', 'stereo'].includes(channel)) settings.inputChannel = channel;
+      else fail('Choose Input 1, Input 2, or Stereo.');
+    }
+    if (value.sampleRate !== undefined) {
+      const rate = value.sampleRate === 'auto' ? 'auto' : Number(value.sampleRate);
+      if (rate === 'auto' || [44100, 48000, 96000].includes(rate)) settings.sampleRate = rate;
+      else fail('Choose Auto, 44.1 kHz, 48 kHz, or 96 kHz.');
+    }
+    if (value.latencyProfile !== undefined) {
+      if (Object.hasOwn(AUDIO_PROFILES, value.latencyProfile)) settings.latencyProfile = value.latencyProfile;
+      else fail('Choose Live, Balanced, or Stable audio.');
+    }
+    return settings;
+  }
+  function readAudioSettings() {
+    try { return normalizeAudioSettings(JSON.parse(window.localStorage?.getItem(AUDIO_SETTINGS_KEY) || 'null')); }
+    catch { return { ...AUDIO_DEFAULTS }; }
+  }
+  function milliseconds(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10 ? value * 1000 : null; }
+
   class LoomAudio {
     constructor(state) {
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
@@ -2196,15 +2333,117 @@ body {
       this._recordStage = 'idle'; this._recordTransportStarted = false;
       this._transportListeners = new Set(); this._clockAnchor = { beat: 0, time: 0, cycle: 0, countIn: 0 };
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
+      this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
+      this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
+      this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
+      if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
-    async init() {
+    get audioSettings() { return this.getAudioSettings(); }
+    get audioStatus() { return this.getAudioDiagnostics(); }
+    getAudioSettings() { return { ...this._audioSettings }; }
+    _outputSelectionSupported() { const AC = window.AudioContext || window.webkitAudioContext; return typeof this.context?.setSinkId === 'function' || typeof AC?.prototype?.setSinkId === 'function'; }
+    validateAudioSettings(value) {
+      const settings = normalizeAudioSettings(value, this._audioSettings, true);
+      if (settings.outputDeviceId !== 'default' && !this._outputSelectionSupported()) throw Error('This browser uses the system output. Choose Default output, or select the interface in your system audio settings.');
+      return settings;
+    }
+    _assertAudioSettingsIdle() {
+      if (this.recordingBusy) throw Error('Finish the current take before changing the audio interface.');
+      if (this._meters.playing || this._playPending) throw Error('Stop playback before changing the audio interface.');
+      if (this._exportCount) throw Error('Finish the audio export before changing the audio interface.');
+      if (this._audioApplying || this._deviceAccessPending || this._initializing || this._closingAudioGraph) throw Error('Wait for the current audio operation before changing the interface.');
+    }
+    _createAudioContext(settings) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('This browser does not support Web Audio.');
+      const options = { latencyHint: AUDIO_PROFILES[settings.latencyProfile].latencyHint, ...(settings.sampleRate !== 'auto' ? { sampleRate: settings.sampleRate } : {}) };
+      let context;
+      try { context = new AC(options); }
+      catch (firstError) {
+        // Some browsers accept only named hints or cannot run the requested rate.
+        try { context = new AC({ ...options, latencyHint: settings.latencyProfile === 'stable' ? 'balanced' : 'interactive' }); }
+        catch { context = new AC({ latencyHint: settings.latencyProfile === 'stable' ? 'balanced' : 'interactive' }); }
+      }
+      return context;
+    }
+    async _setAudioSink(context, deviceId, strict = false) {
+      if (typeof context?.setSinkId !== 'function') { if (deviceId !== 'default' && strict) throw Error('This browser uses the system output. Choose Default output.'); return deviceId !== 'default'; }
+      try { await context.setSinkId(deviceId === 'default' ? '' : deviceId); return false; }
+      catch (error) {
+        if (strict) throw Error('Could not open the selected output. Check that the interface is connected and allowed, then refresh devices. ' + (error.message || ''));
+        // A saved USB output may be disconnected on the next visit. Stay usable.
+        try { await context.setSinkId(''); } catch {}
+        return deviceId !== 'default';
+      }
+    }
+    async enumerateAudioDevices(options = {}) {
+      const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null;
+      if (!media?.enumerateDevices) return { inputs: [], outputs: [], outputSelectionSupported: this._outputSelectionSupported(), permission: 'unavailable', supportedConstraints: {} };
+      let permissionStream;
+      if (options.requestPermission === true && !this._mic) {
+        this._assertAudioSettingsIdle(); this._deviceAccessPending = true;
+        try { permissionStream = await media.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false }); this._devicePermission = 'granted'; }
+        finally { permissionStream?.getTracks().forEach(track => track.stop()); this._deviceAccessPending = false; }
+      }
+      const devices = await media.enumerateDevices(), inputs = [], outputs = [];
+      for (const device of devices) if (device.kind === 'audioinput' || device.kind === 'audiooutput') (device.kind === 'audioinput' ? inputs : outputs).push({ deviceId: device.deviceId || 'default', label: device.label || '', groupId: device.groupId || '' });
+      if (this._mic || inputs.some(device => device.label)) this._devicePermission = 'granted';
+      return { inputs, outputs, outputSelectionSupported: this._outputSelectionSupported(), permission: this._devicePermission, supportedConstraints: media.getSupportedConstraints?.() || {} };
+    }
+    async applyAudioSettings(value, options = {}) {
+      const settings = this.validateAudioSettings(value); this._assertAudioSettingsIdle();
+      const old = this.getAudioSettings(), changed = Object.keys(old).some(key => old[key] !== settings[key]), restart = Boolean(this.context && (old.sampleRate !== settings.sampleRate || old.latencyProfile !== settings.latencyProfile));
+      if (!changed) return { restarted: false, monitorTrackId: null, settings: old, diagnostics: this.getAudioDiagnostics() };
+      this._audioApplying = true; let candidate, monitorTrackId = this._micEnabled ? this.state.tracks[this._micTrack]?.id || null : null;
+      const beat = this.getTransport().beat;
+      try {
+        if (restart || !this.context) { candidate = this._createAudioContext(settings); await this._setAudioSink(candidate, settings.outputDeviceId, true); }
+        else if (old.outputDeviceId !== settings.outputDeviceId) await this._setAudioSink(this.context, settings.outputDeviceId, true);
+        // Sink selection can reject. Instruments remain attached until it succeeds.
+        if (restart) await options.beforeRestart?.();
+        this._disableMicrophoneMonitoring(true, true);
+        if (restart) {
+          await this._closeAudioGraph(); this.generation++; this._playRequest++; this._recordRequest++;
+          this._meters = silenceMeters(beat); this._clockAnchor = { beat, time: 0, cycle: 0, countIn: 0 };
+        }
+        this._audioSettings = settings; this._sampleRateFallback = false; this._sinkFallback = false;
+        if (candidate) { this._preparedContext = candidate; candidate = null; await this.init({ _audioSettings: true }); }
+        try { window.localStorage?.setItem(AUDIO_SETTINGS_KEY, JSON.stringify(settings)); } catch {}
+        const result = { restarted: restart, monitorTrackId, settings: this.getAudioSettings(), diagnostics: this.getAudioDiagnostics() };
+        this.onStatus?.({ type: 'audio-settings-changed', ...result }); return result;
+      } catch (error) {
+        if (candidate) await candidate.close().catch(() => {});
+        this._audioSettings = old;
+        if (!this.context && restart) { try { await this.init({ _audioSettings: true }); this.seek(beat); } catch {} }
+        throw error;
+      } finally { this._audioApplying = false; }
+    }
+    getAudioDiagnostics() {
+      const context = this.context, capture = this._mic?.stream.getAudioTracks?.()[0], actual = capture?.getSettings?.() || {}, settings = this.getAudioSettings();
+      const baseLatencyMs = milliseconds(context?.baseLatency), outputLatencyMs = milliseconds(context?.outputLatency), captureLatencyMs = milliseconds(actual.latency);
+      const processingFrames = context ? this._processingFrames || (this.mode === 'fallback' ? this.node?.bufferSize || AUDIO_PROFILES[settings.latencyProfile].fallbackFrames : this.mode === 'worklet' ? 128 : 0) : 0;
+      const processingMs = context ? processingFrames / context.sampleRate * 1000 : null;
+      // Reported base latency can already include a render quantum. Keep block
+      // duration separate rather than counting it twice in this rough estimate.
+      const known = [captureLatencyMs, baseLatencyMs, outputLatencyMs].filter(value => value !== null);
+      return { settings, active: Boolean(context), mode: this.mode, sampleRate: context?.sampleRate || null, requestedSampleRate: settings.sampleRate, requestedLatencyHint: AUDIO_PROFILES[settings.latencyProfile].latencyHint,
+        processingFrames, processingMs, baseLatencyMs, outputLatencyMs, captureLatencyMs, estimatedRoundTripMs: context && known.length ? known.reduce((total, value) => total + value, 0) : null,
+        roundTripComplete: Boolean(this._mic && captureLatencyMs !== null && baseLatencyMs !== null && outputLatencyMs !== null), inputChannels: Number.isInteger(actual.channelCount) ? actual.channelCount : null,
+        actualInputChannel: this._mic ? this._mic.inputChannel : null, inputLabel: capture?.label || '', inputDeviceId: actual.deviceId || null, captureSampleRate: actual.sampleRate || null,
+        echoCancellation: actual.echoCancellation ?? null, noiseSuppression: actual.noiseSuppression ?? null, autoGainControl: actual.autoGainControl ?? null,
+        outputDeviceId: typeof context?.sinkId === 'string' ? context.sinkId || 'default' : null, outputSelectionSupported: this._outputSelectionSupported(), sampleRateFallback: this._sampleRateFallback, sinkFallback: this._sinkFallback,
+        applying: this._audioApplying, deviceAccessPending: this._deviceAccessPending, exportBusy: this._exportCount > 0, monitoring: this._micEnabled, inputPeak: this._meters.microphonePeak || 0 };
+    }
+    async init(options = {}) {
+      if (this._audioApplying && options._audioSettings !== true || this._closingAudioGraph) throw Error('Finish setting up the audio interface before opening audio.');
       if (this._init) return this._init;
       this._init = (async () => {
-        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('This browser does not support Web Audio.');
         if (!window.createLoomEffectsDSP) throw Error('GALLEY effects have not loaded.');
-        try { this.context = new AC({ sampleRate: 48000, latencyHint: 'interactive' }); }
-        catch { this.context = new AC({ latencyHint: 'interactive' }); }
+        this._initializing = true;
+        const prepared = Boolean(this._preparedContext);
+        this.context = this._preparedContext || this._createAudioContext(this._audioSettings); this._preparedContext = null;
+        this._sampleRateFallback = this._audioSettings.sampleRate !== 'auto' && this.context.sampleRate !== this._audioSettings.sampleRate;
+        this._sinkFallback = prepared ? false : await this._setAudioSink(this.context, this._audioSettings.outputDeviceId);
         this.node = null; this.core = null; this._sentAssets = new Map();
         this.inputs = Array.from({ length: 8 }, () => { const node = this.context.createGain(); node.channelCount = 2; node.channelCountMode = 'explicit'; node.channelInterpretation = 'speakers'; return node; });
         this.microphoneInput = this.context.createGain(); this.microphoneInput.channelCount = 2; this.microphoneInput.channelCountMode = 'explicit'; this.microphoneInput.channelInterpretation = 'speakers';
@@ -2264,13 +2503,15 @@ body {
             for (let i = 0; i < 8; i++) this.inputs[i].connect(this.node, 0, i);
             this.microphoneInput.connect(this.node, 0, 8);
             this.mode = 'worklet';
+            this._processingFrames = 128;
           } catch (error) { for (const input of [...this.inputs, this.microphoneInput]) input.disconnect(); this.node = null; this.workletError = error.message; }
           finally { if (url) URL.revokeObjectURL(url); }
         }
         if (!this.node) {
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
           this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
-          this.node = this.context.createScriptProcessor(1024, 18, 2);
+          this.node = this.context.createScriptProcessor(AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames, 18, 2);
+          this._processingFrames = this.node.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames;
           this.merger = this.context.createChannelMerger(18); this.splitters = [];
           for (let i = 0; i < 9; i++) { const splitter = this.context.createChannelSplitter(2); (i < 8 ? this.inputs[i] : this.microphoneInput).connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
           this.merger.connect(this.node);
@@ -2285,12 +2526,12 @@ body {
           this.mode = 'fallback';
         }
         this.node.connect(this.context.destination); this._send({ type: 'state', state: dspState(this.state) }); this._send({ type: 'seek', beat: this._meters.beat }); this._updateRecordHold(); this._syncAssets(); if (this._panicLatched) this._send({ type: 'panic' });
-        this.onStatus?.({ type: 'ready', mode: this.mode, sampleRate: this.context.sampleRate });
+        this._initializing = false; this.onStatus?.({ type: 'ready', mode: this.mode, sampleRate: this.context.sampleRate, diagnostics: this.getAudioDiagnostics() });
         return this.context;
-      })().catch(error => { this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; throw error; });
+      })().catch(error => { this._initializing = false; this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; this.microphoneInput = null; throw error; });
       return this._init;
     }
-    getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
+    getTrackInput(id) { if (this._audioApplying) throw Error('Finish setting up the audio interface before opening an instrument.'); if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
       if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (Number.isInteger(m.epoch)) {
@@ -2378,9 +2619,13 @@ body {
       this._send({ type: 'assetDelta', additions, removals }); this._sentAssets = new Map(this.assets);
     }
     async play(fromBeat = this._meters.beat) {
-      const generation = this.generation, request = ++this._playRequest; await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
-      await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
-      this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before starting playback.');
+      this._playPending++;
+      try {
+        const generation = this.generation, request = ++this._playRequest; await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
+        await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
+        this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
+      } finally { this._playPending--; }
     }
     stop(options = {}) { if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
@@ -2401,6 +2646,7 @@ body {
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
     async startRecording(trackIds, options = {}) {
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
       this._recordPreparing = true; this._updateRecordHold();
       try {
@@ -2466,7 +2712,8 @@ body {
       const base = Number(c?.baseLatency), output = Number(c?.outputLatency); let outputSeconds = (Number.isFinite(base) && base >= 0 ? base : 0) + (Number.isFinite(output) && output >= 0 ? output : 0);
       let reportedOutput = Number.isFinite(base) && base >= 0 || Number.isFinite(output) && output >= 0;
       try { const stamp = c?.getOutputTimestamp?.(), age = Number.isFinite(stamp?.performanceTime) ? Math.max(0, (performance.now() - stamp.performanceTime) / 1000) : 0, gap = c.currentTime - (stamp.contextTime + age); if (Number.isFinite(gap) && gap >= .001 && gap <= 1) { outputSeconds = gap; reportedOutput = true; } } catch {}
-      const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? (this.mode === 'fallback' ? 1024 : 128) / c.sampleRate * 1000 : 0;
+      const processingFrames = this._processingFrames || (this.mode === 'fallback' ? this.node?.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames : 128);
+      const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? processingFrames / c.sampleRate * 1000 : 0;
       const offset = Math.max(-500, Math.min(500, Number(settings.micOffsetMs) || 0));
       const compensationMs = mode === 'off' ? 0 : mode === 'manual' ? offset : Math.max(-500, Math.min(1000, inputMs + outputMs + processingMs + offset));
       return { mode, compensationMs, inputMs, outputMs, processingMs, reportedInput, reportedOutput, estimated: mode === 'auto', offsetMs: offset };
@@ -2474,7 +2721,7 @@ body {
     getMicrophoneStatus() {
       return { enabled: this._micEnabled, pending: this._micPending, trackId: this._micTrack >= 0 ? this.state.tracks[this._micTrack]?.id || null : null,
         active: Boolean(this._mic), recording: Boolean(this.isRecording && this._recordMicrophone), inputGainDb: this._mic?.gainDb ?? this.state.recording?.micInputGainDb ?? 0,
-        inputPeak: this._meters.microphonePeak || 0, latency: this._recordMicrophone ? { ...this._recordMicrophone } : this.getMicrophoneLatency() };
+        inputPeak: this._meters.microphonePeak || 0, latency: this._recordMicrophone ? { ...this._recordMicrophone } : this.getMicrophoneLatency(), interface: this.getAudioDiagnostics() };
     }
     _emitMicrophoneStatus() { this.onStatus?.({ type: 'microphone-status', ...this.getMicrophoneStatus() }); }
     async _acquireMicrophone(track, gainDb, purpose, generation, request) {
@@ -2483,10 +2730,24 @@ body {
       try {
         await this.init(); if (generation !== this.generation || request !== this._micRequest) return false;
         if (!this._mic) {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: { ideal: 0 } }, video: false });
+          const device = this._audioSettings, captureLatency = device.latencyProfile === 'live' ? 0 : device.latencyProfile === 'balanced' ? .01 : .04;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+            latency: { ideal: captureLatency }, sampleRate: { ideal: this.context.sampleRate }, channelCount: { ideal: 2 },
+            ...(device.inputDeviceId !== 'default' ? { deviceId: { exact: device.inputDeviceId } } : {}) }, video: false });
           if (generation !== this.generation || request !== this._micRequest) { stream.getTracks().forEach(t => t.stop()); return false; }
-          const source = this.context.createMediaStreamSource(stream), gain = this.context.createGain(); this._mic = { source, gain, stream, track, gainDb: 0 };
-          this._send({ type: 'microphoneReset' }); source.connect(gain); gain.connect(this.microphoneInput);
+          const capture = stream.getAudioTracks?.()[0], actualChannels = capture?.getSettings?.().channelCount;
+          if (device.inputChannel === '2' && actualChannels === 1) throw Error('This input exposes one channel. Choose Input 1 or Stereo, or select an interface with a second input.');
+          const source = this.context.createMediaStreamSource(stream), gain = this.context.createGain();
+          const route = []; this._mic = { source, gain, stream, track, gainDb: 0, route, inputChannel: device.inputChannel }; this._devicePermission = 'granted';
+          this._send({ type: 'microphoneReset' });
+          if (device.inputChannel === 'stereo') source.connect(gain);
+          else {
+            // Channel selection is a zero-delay native route. A mono guitar or
+            // vocal feeds both sides, rather than one quiet half of the amp.
+            const splitter = this.context.createChannelSplitter(2), merger = this.context.createChannelMerger(2), channel = device.inputChannel === '2' ? 1 : 0;
+            splitter.channelInterpretation = 'discrete'; source.connect(splitter); splitter.connect(merger, channel, 0); splitter.connect(merger, channel, 1); merger.connect(gain); route.push(splitter, merger);
+          }
+          gain.connect(this.microphoneInput);
           for (const audioTrack of stream.getAudioTracks?.() || []) audioTrack.addEventListener?.('ended', () => this._microphoneEnded(stream), { once: true });
         }
         session = this._mic; await this.context.resume();
@@ -2497,6 +2758,7 @@ body {
     }
     async setMicrophoneMonitoring(trackId, options = {}) {
       if (options.enabled !== true) { this._disableMicrophoneMonitoring(); return true; }
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before turning on monitoring.');
       const track = this._trackIndex(trackId);
       if (this.recordingBusy && (this._micTrack !== track || this._micPending)) throw Error('Finish the current take before changing the microphone track.');
       const generation = this.generation, request = ++this._micRequest;
@@ -2512,6 +2774,7 @@ body {
       this._emitMicrophoneStatus();
     }
     async startMicrophoneRecording(trackId, options = {}) {
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
       const track = this._trackIndex(trackId); if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
       const generation = this.generation, request = ++this._micRequest;
@@ -2531,8 +2794,9 @@ body {
     }
     _releaseMic(force = false) {
       if (!this._mic || !force && this._micEnabled) return;
-      const { source, gain, stream } = this._mic; this._mic = null;
-      try { source.disconnect(); gain.disconnect(); } catch {} stream.getTracks().forEach(t => t.stop()); this._send({ type: 'microphoneReset' }); this._meters.microphonePeak = 0; this._emitMicrophoneStatus();
+      const { source, gain, stream, route = [] } = this._mic; this._mic = null;
+      for (const node of [source, gain, ...route]) try { node.disconnect(); } catch {}
+      stream.getTracks().forEach(t => t.stop()); this._send({ type: 'microphoneReset' }); this._meters.microphonePeak = 0; this._emitMicrophoneStatus();
     }
     async decodeFile(file) {
       if (!file || file.size > 32 * 1024 * 1024) throw Error('Choose an audio file smaller than 32 MiB.');
@@ -2541,6 +2805,9 @@ body {
       return { left: buffer.getChannelData(0).slice(0, frames), right: buffer.getChannelData(Math.min(1, buffer.numberOfChannels - 1)).slice(0, frames), sampleRate: buffer.sampleRate, frames };
     }
     async renderWav(state = this.state, assets = this.assets, options = {}) {
+      if (this._audioApplying) throw Error('Finish setting up the audio interface before exporting audio.');
+      this._exportCount++;
+      try {
       if (options.trackId != null) { const index = typeof options.trackId === 'number' ? Math.floor(options.trackId) : state.tracks.findIndex(t => t.id === options.trackId); if (!Number.isInteger(index) || index < 0 || index > 7) throw Error('Choose one of the eight tracks for the stem.'); }
       const sr = 48000, start = Math.max(0, Math.min(255.999, Number(options.startBeat) || 0)), end = Math.max(start + .0001, Math.min(256, Number(options.endBeat) || (state.lengthBars || 4) * 4));
       const tempo = Math.max(40, Math.min(240, state.tempo || 120)), main = Math.round((end - start) * 60 / tempo * sr), tail = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds) || 0)) * sr), total = main + tail;
@@ -2555,8 +2822,20 @@ body {
         if (++blocks % 12 === 0) { options.onProgress?.(at / total); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
+      } finally { this._exportCount--; }
     }
-    async dispose() { this.panic(); this._transportListeners.clear(); this.node?.disconnect(); for (const input of [...this.inputs, this.microphoneInput].filter(Boolean)) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this.microphoneInput = null; this._init = null; this.mode = 'idle'; }
+    async _closeAudioGraph() {
+      if (this._closingAudioGraph) return this._closingAudioGraph;
+      this._closingAudioGraph = (async () => {
+        if (this.node?.port) { this.node.port.onmessage = null; this.node.port.close?.(); }
+        if (this.node) this.node.onaudioprocess = null;
+        for (const node of [this.node, this.merger, ...(this.splitters || []), ...this.inputs, this.microphoneInput].filter(Boolean)) try { node.disconnect(); } catch {}
+        try { if (this.context && this.context.state !== 'closed') await this.context.close(); }
+        finally { this.context = null; this.node = null; this.core = null; this.recorder = null; this.inputs = []; this.microphoneInput = null; this.merger = null; this.splitters = []; this._init = null; this.mode = 'idle'; this._processingFrames = 0; }
+      })().finally(() => { this._closingAudioGraph = null; });
+      return this._closingAudioGraph;
+    }
+    async dispose() { this.panic(); this._transportListeners.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
   window.LoomAudio = LoomAudio;
@@ -4392,6 +4671,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   let assetMap = {}, waveformCache = new Map(), fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
   let automationEditor, pianoRoll, noteWorkflow;
+  let audioSettingsBusy = false, audioDeviceBusy = false, ampPracticeBusy = false, audioDeviceOperation = 0, audioSettingsOperation = 0, audioDiagnosticsTime = 0, audioDevices = null;
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -4532,17 +4812,17 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   function effectRange(p,value){const log=p.unit==='Hz'&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
   function formatParam(p,value) { if (p.key==='mix'||['depth','spread','width','size','diffusion','pan','duty','cleanLow','presence','master','sag','speakerDrive','mic','distance','air'].includes(p.key)) return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
-  function transportLocked() { return recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
+  function transportLocked() { return audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
   function renderTransport() {
     const m=engine.getMeters(), recording=!!m.recording, locked=transportLocked();
     $('playButton').disabled=transportPending||locked||!!m.playing;
     $('playButton').setAttribute('aria-pressed',String(!!m.playing));
-    $('pauseButton').disabled=recordFinishing||(!m.playing&&!recordPending&&!transportPending);
-    $('stopButton').disabled=recordFinishing;
+    $('pauseButton').disabled=audioSettingsBusy||recordFinishing||(!m.playing&&!recordPending&&!transportPending);
+    $('stopButton').disabled=audioSettingsBusy||recordFinishing;
     $('recordButton').classList.toggle('recording',recording);
     const recordMode=recording?(m.recordStage||'recording'):recordPending?'preparing':'ready';
     if($('recordButton').dataset.mode!==recordMode){$('recordButton').dataset.mode=recordMode;$('recordButton').innerHTML='<i></i><span>'+(recording?(m.recordStage==='count-in'?'Cancel count-in':m.recordStage==='waiting'?'Cancel punch':'Finish take'):recordPending?'Preparing…':'Record')+'</span>';}
-    $('recordButton').disabled=recordPending||recordFinishing;
+    $('recordButton').disabled=audioSettingsBusy||recordPending||recordFinishing;
     if(document.activeElement!==$('tempo'))$('tempo').value=state.tempo;
     $('tempo').disabled=locked;
     $('loopButton').setAttribute('aria-pressed',state.loopEnabled);
@@ -4635,7 +4915,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function togglePlayback() { return engine.getMeters().playing||transportPending||recordPending?pause():transportStart(); }
   async function restart() { if(transportLocked())return;const generation=lifecycle;await pause();if(generation!==lifecycle||transportLocked())return;if(seekTo(0))await transportStart(); }
   function panic(message='Silence. Pending recordings have been discarded.') { ++microphoneOperation;++lifecycle;++transferOperation;transferAbort?.abort();automationEditor?.disarm?.();++recordFinishOperation;++importOperation;++projectOperation;++transportOperation;for(const [id,op]of loadOperations)loadOperations.set(id,op+1);recordPending=false;transportPending=false;recordFinishing=false; noteWorkflow?.cancel(); notePlayback.panic(); notePlayback.setRecordingTracks([]); engine.panic();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'panic');for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();renderTransport();status(message); }
-  async function startRecording() { if(recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
+  async function startRecording() { if(audioSettingsBusy||recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
   async function finishRecording(limited=false){
     if(recordFinishing)return;recordFinishing=true;recordPending=false;const generation=lifecycle,operation=++recordFinishOperation;renderTransport();
     try{
@@ -4782,6 +5062,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       $('clock').textContent=positionLabel(beat);
       $('clockMode').textContent=m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE';
       renderPlayhead();renderMicrophone(m.microphone);automationEditor?.tick();pianoRoll?.tick();
+      if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       $('masterLeft').style.width=Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%';$('masterRight').style.width=Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%';$('masterDb').textContent=level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞';
       for(let i=0;i<8;i++){const el=$('meter-'+i);if(el)el.style.height=Math.min(100,Math.sqrt(m.tracks?.[i]?.rms||0)*135)+'%';}
@@ -4826,6 +5107,112 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     const peak=Math.max(0,Number(mic.inputPeak)||0),db=peak>1e-5?Math.max(-90,20*Math.log10(peak)):-90,meter=$('microphoneMeterFill').closest('.mic-input-meter');
     $('microphoneMeterFill').style.width=Math.min(100,Math.max(0,(db+60)/60*100))+'%';
     $('microphoneMeterValue').textContent=db<=-90?'−∞ dB':db.toFixed(1)+' dB';meter.setAttribute('aria-valuenow',String(Math.min(0,db)));meter.classList.toggle('clipping',peak>=.98);
+    const prefs=engine.getAudioSettings(),device=audioDevices?.inputs.find(input=>input.deviceId===prefs.inputDeviceId);
+    $('microphoneInterfaceSummary').textContent=(mic.interface?.inputLabel||device?.label||(prefs.inputDeviceId==='default'?'System input':'Selected interface'))+' · '+(prefs.inputChannel==='stereo'?'stereo':'input '+prefs.inputChannel+' / mono')+' · '+({live:'Live',balanced:'Balanced',stable:'Stable'}[prefs.latencyProfile])+' latency';
+    $('microphonePracticeButton').disabled=locked||audioDeviceBusy;
+  }
+
+  const audioFields=['audioInputDevice','audioInputChannel','audioOutputDevice','audioSampleRate','audioLatencyProfile'];
+  function readAudioSettingsForm(){return {inputDeviceId:$('audioInputDevice').value||'default',outputDeviceId:$('audioOutputDevice').value||'default',inputChannel:$('audioInputChannel').value,sampleRate:$('audioSampleRate').value==='auto'?'auto':Number($('audioSampleRate').value),latencyProfile:$('audioLatencyProfile').value};}
+  function audioSettingsDirty(){const current=engine.getAudioSettings(),draft=readAudioSettingsForm();return Object.keys(current).some(key=>current[key]!==draft[key]);}
+  function audioOperationBlocked(){
+    if(recordPending||recordFinishing||engine.recordingBusy||engine.isRecording)return 'Finish or cancel the current take before changing the interface.';
+    if(transportPending)return 'Wait for playback to finish preparing before changing the interface.';
+    if(exportAbort||transferAbort||noteWorkflow?.controller||engine.getAudioDiagnostics().exportBusy)return 'Finish or cancel the audio render or transfer before changing the interface.';
+    if(audioDeviceBusy)return 'Wait for the device list or browser permission request.';
+    return '';
+  }
+  function interfaceMessage(message,error=false){$('audioInterfaceStatus').textContent=message;$('audioInterfaceStatus').classList.toggle('error',error);}
+  function deviceOptions(id,devices,selected,label){
+    const select=$(id),seen=new Set(['default']);let html='<option value="default">System default '+label+'</option>';
+    for(const [index,device] of (devices||[]).entries()){if(seen.has(device.deviceId))continue;seen.add(device.deviceId);html+='<option value="'+escape(device.deviceId)+'">'+escape(device.label||('Audio '+label+' '+(index+1)+' / allow access to name it'))+'</option>';}
+    if(selected!=='default'&&!seen.has(selected))html+='<option value="'+escape(selected)+'">Previously selected '+label+' / not in device list</option>';
+    select.innerHTML=html;select.value=selected||'default';
+  }
+  function renderAudioDeviceChoices({restore=false}={}){
+    const prefs=restore?engine.getAudioSettings():readAudioSettingsForm(),supported=audioDevices?.outputSelectionSupported??engine.getAudioDiagnostics().outputSelectionSupported;
+    deviceOptions('audioInputDevice',audioDevices?.inputs,prefs.inputDeviceId,'input');deviceOptions('audioOutputDevice',audioDevices?.outputs,supported?prefs.outputDeviceId:'default','output');
+    $('audioInputChannel').value=prefs.inputChannel;$('audioSampleRate').value=String(prefs.sampleRate);$('audioLatencyProfile').value=prefs.latencyProfile;
+    $('audioOutputDevice').disabled=!supported||audioSettingsBusy;
+    $('audioOutputHint').textContent=supported?'Select the interface you use for headphones. System default follows your system output.':'Output selection is unavailable in this browser. Choose your interface in system sound settings.';
+    $('audioDeviceHint').textContent=audioDevices?.permission==='granted'?'Device names are available. Refresh again after connecting or unplugging an interface.':audioDevices?.permission==='unavailable'?'Device access is unavailable. Use a browser with microphone access on HTTPS or the standalone HTML.':'Refresh asks for microphone access to reveal device names. Temporary access is released after the list is read.';
+    renderAudioProfileHint();renderAudioDiagnostics();renderMicrophone();
+  }
+  function renderAudioProfileHint(){
+    $('audioProfileHint').textContent={live:'Live requests the browser’s lowest latency (1 ms target). Your interface and browser choose the actual timing.',balanced:'Balanced requests the browser’s interactive latency. A little more room for a busy session.',stable:'Stable requests balanced latency for heavier sessions. Expect more delay while playing through effects.'}[$('audioLatencyProfile').value];
+  }
+  async function refreshAudioDevices({requestPermission=false}={}){
+    if(audioDeviceBusy||audioSettingsBusy)return;const operation=++audioDeviceOperation;audioDeviceBusy=true;renderAudioDiagnostics();
+    if(requestPermission)interfaceMessage('Reading the device list. Allow microphone access if your browser asks.');
+    try{const next=await engine.enumerateAudioDevices({requestPermission});if(operation!==audioDeviceOperation)return;audioDevices=next;renderAudioDeviceChoices();if(requestPermission)interfaceMessage(next.permission==='unavailable'?'Microphone device access is unavailable in this browser.':'Devices refreshed. Choose a connection and Apply settings.');}
+    catch(e){if(operation===audioDeviceOperation)interfaceMessage(e.name==='NotAllowedError'?'Microphone access was denied. Allow it in the browser’s site settings, then refresh again.':e.message,true);}
+    finally{if(operation===audioDeviceOperation){audioDeviceBusy=false;renderAudioDiagnostics();}}
+  }
+  function openAudioSettings({practice=false}={}){
+    if(audioSettingsBusy)return;renderAudioDeviceChoices({restore:true});interfaceMessage(audioOperationBlocked()||'Apply stops playback and monitoring. Instrument settings, clips, and effect racks stay in your session.');
+    if(!$('audioSettingsDialog').open)$('audioSettingsDialog').showModal();refreshAudioDevices();
+    requestAnimationFrame(()=>{if(practice){$('ampPracticeSection').scrollIntoView({block:'nearest'});$('guitarPracticeButton').focus({preventScroll:true});}else $('audioInputDevice').focus({preventScroll:true});});
+  }
+  function renderAudioDiagnostics(){
+    const d=engine.getAudioDiagnostics(),has=value=>typeof value==='number'&&Number.isFinite(value),ms=value=>has(value)?value.toFixed(1)+' ms':'Unreported',blocked=audioOperationBlocked();
+    $('audioEngineBadge').textContent=!d.active?'AUDIO NOT STARTED':d.mode==='worklet'?'AUDIOWORKLET / 128 FRAMES':d.mode==='fallback'?'FALLBACK AUDIO ENGINE':String(d.mode||'Web Audio').toUpperCase();
+    $('audioEngineBadge').classList.toggle('fallback',d.mode==='fallback');
+    $('audioRoundTripValue').textContent=d.roundTripComplete&&has(d.estimatedRoundTripMs)?'~ '+d.estimatedRoundTripMs.toFixed(1)+' ms':d.active?'Unknown':'—';
+    $('audioRoundTripHint').textContent=!d.active?'Start monitoring to read the available device timings.':d.roundTripComplete?'Estimate from reported capture, browser buffer, and output timings.':has(d.estimatedRoundTripMs)?'Known components: '+d.estimatedRoundTripMs.toFixed(1)+' ms. Missing device timings prevent a complete estimate.':'Your browser does not expose enough timing information.';
+    $('audioActualSampleRate').textContent=has(d.sampleRate)?(d.sampleRate/1000).toFixed(d.sampleRate%1000?1:0)+' kHz':'—';
+    $('audioRateHint').textContent=d.sampleRateFallback?'Requested rate unavailable; the browser chose this rate.':d.captureSampleRate&&d.captureSampleRate!==d.sampleRate?'Capture runs at '+(d.captureSampleRate/1000).toFixed(1)+' kHz; the browser converts it.':'Negotiated by the browser.';
+    $('audioCaptureLatency').textContent=ms(d.captureLatencyMs);$('audioBaseLatency').textContent=ms(d.baseLatencyMs);$('audioOutputLatency').textContent=ms(d.outputLatencyMs);
+    $('audioProcessingLatency').textContent=has(d.processingMs)?d.processingMs.toFixed(1)+' ms / '+d.processingFrames+' frames':'—';
+    $('audioProcessingHint').textContent=d.mode==='fallback'?'ScriptProcessor fallback. AudioWorklet usually offers better live response.':'Block granularity, not an extra measured delay. AudioWorklet uses 128 frames.';
+    const notes=['Reported timings are estimates, not a measured cable loopback. Recording alignment moves a completed take; it does not reduce live delay.'];
+    if(d.sinkFallback)notes.push('The saved output is unavailable; this session is using system default output.');
+    if(d.actualInputChannel==='1'&&d.settings.inputChannel==='stereo'&&d.inputChannels===1)notes.push('This input is mono; Input 1 is feeding both sides.');
+    if(d.echoCancellation||d.noiseSuppression||d.autoGainControl)notes.push('The input reports browser voice processing. Your device may be ignoring the unprocessed-audio request.');
+    $('audioDiagnosticNotes').textContent=notes.join(' ');
+    const t=track(),slot=t.effects.findIndex(f=>f?.type==='broiler');$('ampPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(slot>=0?'existing BROILER / insert '+(slot+1):t.effects.some(f=>!f)?'empty insert ready':'four inserts occupied');
+    for(const id of ['applyAudioSettings','guitarPracticeButton','bassPracticeButton'])$(id).disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||!!blocked;
+    $('applyAudioSettings').textContent=audioSettingsBusy?'Applying…':'Apply settings';
+    $('refreshAudioDevices').disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||recordPending||recordFinishing||engine.recordingBusy;
+    $('refreshAudioDevices').textContent=audioDeviceBusy?'Reading devices…':'Refresh devices';
+    $('closeAudioSettings').disabled=audioSettingsBusy;
+    $('audioSettingsDialog').setAttribute('aria-busy',String(audioSettingsBusy));
+    for(const id of audioFields)$(id).disabled=audioSettingsBusy||(id==='audioOutputDevice'&&!d.outputSelectionSupported);
+  }
+  async function applyInterfaceSettings(){
+    const blocked=audioOperationBlocked();if(audioSettingsBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
+    let prefs;try{prefs=engine.validateAudioSettings(readAudioSettingsForm());}catch(e){interfaceMessage(e.message,true);return;}
+    const generation=lifecycle,operation=++audioSettingsOperation;audioSettingsBusy=true;renderAudioDiagnostics();renderTransport();interfaceMessage('Stopping playback and reconnecting the audio interface…');
+    try{
+      await halt();if(generation!==lifecycle||operation!==audioSettingsOperation)throw new DOMException('Interface change cancelled.','AbortError');
+      const result=await engine.applyAudioSettings(prefs,{beforeRestart:async()=>{
+        const loaded=state.tracks.filter(t=>t.instrument&&frames.has(t.id));
+        const captured=await Promise.all(loaded.map(async t=>{
+          let timer;try{const snapshot=await Promise.race([host.snapshot(t.id),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Could not preserve '+t.name+' in time. Finish its current operation before changing the interface.')),8000);})]);if(!snapshot)throw Error('Could not preserve '+t.name+'. Reopen its instrument before changing the interface.');return {id:t.id,snapshot};}finally{clearTimeout(timer);}
+        }));
+        if(generation!==lifecycle||operation!==audioSettingsOperation)throw new DOMException('Interface change cancelled.','AbortError');
+        for(const {id,snapshot}of captured){const target=state.tracks.find(t=>t.id===id);if(target?.instrument){target.instrument.snapshot=snapshot;noteWorkflow?.captureSnapshot(id,snapshot);}}
+        for(const timer of snapshotTimers.values())clearTimeout(timer);snapshotTimers.clear();clearAllFrames();notePlayback.panic();
+      }});
+      if(generation!==lifecycle||operation!==audioSettingsOperation)return;
+      host.setTempo(state.tempo);scheduleAutosave();renderAudioDeviceChoices({restore:true});renderAll();
+      const message=(result.restarted?'Audio engine restarted. ':'Audio settings applied. ')+'Your session is preserved. Monitoring is off; use Monitor microphone or Play through BROILER to reconnect.';
+      interfaceMessage(message);status(message);
+    }catch(e){if(operation===audioSettingsOperation){interfaceMessage(e.message,true);status(e.message);}}
+    finally{if(operation===audioSettingsOperation){audioSettingsBusy=false;renderAudioDiagnostics();renderTransport();}}
+  }
+  async function startAmpPractice(kind){
+    const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
+    if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Guitar or Bass.',true);return;}
+    const t=track(),generation=lifecycle,existing=t.effects.findIndex(f=>f?.type==='broiler'),slot=existing>=0?existing:t.effects.findIndex(f=>!f);
+    if(slot<0){interfaceMessage('This track has four effects already. Choose another track or free an insert before adding BROILER.',true);return;}
+    if(existing<0){const def=effectById('broiler'),preset=def.presets.find(p=>p.id===(kind==='bass'?'house-bass':'glassware'));remember();t.effects[slot]={type:'broiler',params:{...clone(preset.params),stereo:'mono'}};changed({arrangement:true,mixer:true,rack:true,automation:true});}
+    selectedSlot=slot;renderRack();renderEffectEditor();$('recordSource').value='microphone';$('micInputPanel').open=true;
+    const operation=++microphoneOperation;ampPracticeBusy=true;renderAudioDiagnostics();interfaceMessage('Connecting the selected interface to '+t.name+' and BROILER…');
+    try{const connected=await engine.setMicrophoneMonitoring(t.id,{enabled:true,gainDb:state.recording.micInputGainDb});if(generation!==lifecycle||operation!==microphoneOperation)return;
+      if(!connected||!engine.getMicrophoneStatus().enabled){interfaceMessage('Input connection cancelled. Your amp is still in the rack.',true);return;}
+      $('audioSettingsDialog').close();$('effectEditor').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+      status(t.mute?'BROILER is ready, but this track is muted. Unmute '+t.name+' to hear your input.':state.tracks.some(other=>other.solo)&&!t.solo?'BROILER is ready, but another track is soloed. Solo '+t.name+' or clear the other solo to hear your input.':'BROILER is ready on '+t.name+'. Play here or along with the arrangement; Record captures a dry take. Use headphones.');
+    }catch(e){if(operation===microphoneOperation&&generation===lifecycle){const message=e.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser to play through BROILER.':e.message;interfaceMessage(message,true);status(message);}}finally{ampPracticeBusy=false;renderAudioDiagnostics();renderMicrophone();}
   }
   async function setMicrophoneMonitor({move=false}={}) {
     const current=engine.getMicrophoneStatus(),enabled=move||!(current.enabled||current.pending),target=enabled?(current.recording?current.trackId:track().id):current.trackId||track().id;
@@ -4838,7 +5225,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       status(enabled?'Microphone monitoring → '+t.name+' → four effects → mixer. Use headphones.':'Microphone monitoring is off.'+(engine.getMicrophoneStatus().recording?' The dry take continues recording.':''));
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
   }
-  engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='error'||event.type==='microphone-disconnected')status(event.message);};
+  engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='audio-settings-changed'){renderMicrophone();if($('audioSettingsDialog').open)renderAudioDiagnostics();}else if(event.type==='audio-device-change'){if($('audioSettingsDialog').open)refreshAudioDevices();renderMicrophone();}else if(event.type==='error'||event.type==='microphone-disconnected'){status(event.message);if($('audioSettingsDialog').open)interfaceMessage(event.message,true);}};
   function renderClipActions(){const selected=clipLocation();for(const id of ['clipEditQuick','clipSplitQuick','clipDuplicateQuick','clipDeleteQuick','transferClipButton'])$(id).disabled=!selected||recordFinishing;$('clipActionSummary').textContent=selected?selected.clip.name+' · '+selected.track.name:'Select an audio or note clip to edit it.'; $('transferClipButton').hidden=selected?.clip.type==='notes'; noteWorkflow?.render();}
   function editSelectedClip(){if(!clipLocation())return;$('clipInspector').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});$('clip-name')?.focus({preventScroll:true});}
   function renderMarkers(){
@@ -4906,6 +5293,12 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     if(scope!=='mix')throw Error('Choose a clip, track instrument, or arrangement mix.');const renderState=clone(state),startBeat=state.loopEnabled?state.loopStart:0,endBeat=Math.min(state.lengthBars*4,startBeat+num(bars,1,16)*4),blob=await engine.renderWav(renderState,assetMap,{startBeat,endBeat,tailSeconds,signal});if(generation!==lifecycle)throw new DOMException('Session changed.','AbortError');return {blob,name:state.name+' · arrangement',tempo:renderState.tempo,sourceApp:'loom',bars:(endBeat-startBeat)/4};
   }
   automationEditor=new window.LoomAutomationEditor({element:$('automationEditor'),getState:()=>state,getTrack:()=>track(),getBeat:()=>engine.getMeters().beat||0,getPlaying:()=>!!engine.getMeters().playing,remember,onChange:()=>changed(),status});
+  $('audioSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphoneSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphonePracticeButton').addEventListener('click',()=>openAudioSettings({practice:true}));
+  $('closeAudioSettings').addEventListener('click',()=>{if(!audioSettingsBusy)$('audioSettingsDialog').close();});
+  $('audioSettingsDialog').addEventListener('cancel',e=>{if(audioSettingsBusy)e.preventDefault();});
+  $('audioSettingsDialog').addEventListener('close',()=>{if(ampPracticeBusy&&engine.getMicrophoneStatus().pending){++microphoneOperation;engine.setMicrophoneMonitoring(track().id,{enabled:false}).catch(e=>status(e.message));}});
+  $('refreshAudioDevices').addEventListener('click',()=>refreshAudioDevices({requestPermission:true}));$('applyAudioSettings').addEventListener('click',applyInterfaceSettings);
+  $('audioLatencyProfile').addEventListener('change',renderAudioProfileHint);$('guitarPracticeButton').addEventListener('click',()=>startAmpPractice('guitar'));$('bassPracticeButton').addEventListener('click',()=>startAmpPractice('bass'));
   $('countInBars').addEventListener('change',()=>{if(transportLocked())return;remember();state.recording.countInBars=Number($('countInBars').value);changed();renderRecordingSetup();});
   $('microphoneMonitorButton').addEventListener('click',()=>setMicrophoneMonitor());
   $('microphoneRouteButton').addEventListener('click',()=>setMicrophoneMonitor({move:true}));

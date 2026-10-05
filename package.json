@@ -14,6 +14,8 @@
     "check:loom-amp": "node loom/amp-checks.cjs",
     "check:loom-mic": "node loom/microphone-engine-checks.cjs",
     "check:loom-mic-browser": "node loom/microphone-browser-checks.cjs",
+    "check:loom-interface": "node loom/audio-interface-checks.cjs",
+    "check:loom-interface-browser": "node loom/audio-interface-browser-checks.cjs",
     "package": "node scripts/package-downloads.mjs",
     "check:fable": "node fable/checks.cjs",
     "check:fable-audio": "node fable/engine-checks.cjs",

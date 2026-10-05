@@ -87,3 +87,21 @@ git push origin main
 
 Save portable projects before reverting. The older version can retain recorded
 audio but does not implement BROILER or the new microphone settings.
+
+## GALLEY audio-interface release
+
+GALLEY 1.8 adds local interface preferences, input-channel selection, latency
+profiles, device diagnostics, and the BROILER practice shortcut. The checkpoint
+`pre-galley-audio-interface-2026-10-05` preserves commit
+`861010c58eb099141b5a6ab1f6dabd1d3e19943f`, including both published songs.
+The update is tagged `galley-audio-interface-v1`. To restore GALLEY 1.7 and its
+matching downloads while keeping both listening pages:
+
+```sh
+git revert --no-edit galley-audio-interface-v1
+git push origin main
+```
+
+Project data is unchanged by the interface release. Device preferences belong to
+the current browser and are ignored by the older version. Review conflicts if
+later releases modify the same files.

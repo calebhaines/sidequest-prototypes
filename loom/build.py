@@ -60,7 +60,7 @@ print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kitch
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
-    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
+    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     files += exchange_helpers['exchange_sources'](ROOT)
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]

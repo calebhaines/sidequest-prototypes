@@ -207,6 +207,100 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 .mic-input-notes p { margin: 0; color: #aebdad; font-size: 10px; line-height: 1.7; }
 .mic-input-notes strong { color: #efd5ad; }
 
+/* The patch bay keeps the requested settings beside the browser's actual timing. */
+.audio-settings-launcher { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; font-family: var(--kk-mono, monospace); font-size: 9px; color: #ffd09b; border-color: #8c7456; background: #343329; }
+.audio-settings-launcher svg { width: 16px; height: 16px; }
+.mic-interface-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-bottom: 17px; margin-bottom: 17px; border-bottom: 1px dashed #566558; }
+.mic-interface-strip>span { min-width: 0; flex: 1 1 180px; font-family: var(--kk-mono, monospace); color: #c7caba; font-size: 9px; overflow-wrap: anywhere; }
+.mic-interface-strip>div { display: flex; flex-wrap: wrap; gap: 7px; }
+.mic-interface-strip button { min-height: 34px; font-size: 10px; }
+#microphonePracticeButton { color: #ffd09b; border-color: #8c7456; }
+.audio-settings-dialog { width: 820px; padding: 27px; border-color: #798171; border-top-color: #efa76c; background: repeating-linear-gradient(0deg, #ffffff02 0 1px, transparent 1px 5px), linear-gradient(140deg, #303935, #1a2528 58%); }
+.audio-settings-dialog .dialog-top { position: sticky; top: -27px; z-index: 2; margin: -27px -27px 14px; padding: 27px 27px 16px; border-bottom: 1px solid #52624c; background: linear-gradient(110deg, #303935, #253033); }
+.audio-settings-dialog .dialog-top .eyebrow { font-size: 8px; letter-spacing: .11em; color: #c1c7b5; }
+.audio-settings-dialog .dialog-top h2 { font-size: 38px; margin-top: 8px; }
+.audio-settings-dialog .dialog-intro { max-width: 630px; margin-bottom: 20px; color: #bcc7b6; font-size: 11px; }
+.interface-signal-route { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 19px; margin-bottom: 22px; border: 1px solid #586755; border-bottom: 3px solid #9e7950; background: #15201e; }
+.interface-signal-route span { min-width: 0; color: #9ca991; font-family: var(--kk-mono, monospace); font-size: 8px; line-height: 1.9; }
+.interface-signal-route strong { color: #e9d7b5; font-size: 9px; font-weight: 400; letter-spacing: .03em; }
+.interface-signal-route i { color: #e6a267; font-size: 18px; font-style: normal; }
+.interface-section { padding-bottom: 21px; margin-bottom: 21px; border-bottom: 1px dashed #61705b; }
+.interface-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.interface-section-heading h3 { color: #eadcc0; font-size: 20px; }
+.interface-section-heading .eyebrow { color: #aeb7a3; font-size: 7px; text-align: right; }
+.interface-section-heading button { min-height: 33px; font-size: 10px; background: #303b34; border-color: #65725b; }
+.interface-hint { margin: 0; color: #b2bfac; font-size: 10px; line-height: 1.7; }
+.interface-device-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 17px; margin-top: 16px; }
+.interface-output-field { grid-column: 1 / -1; }
+.interface-device-grid label, .interface-performance-grid label { display: flex; flex-direction: column; gap: 8px; min-width: 0; color: #c5cbbb; font-family: var(--kk-mono, monospace); font-size: 8px; letter-spacing: .055em; }
+.interface-device-grid select, .interface-performance-grid select { width: 100%; min-width: 0; min-height: 40px; font-family: 'Loom Sans', sans-serif; font-size: 12px; letter-spacing: 0; border-color: #647260; background: #121d1f; }
+.interface-device-grid label>span, .interface-performance-grid label>span { font-family: 'Loom Sans', sans-serif; color: #acbaa6; font-size: 10px; line-height: 1.7; letter-spacing: 0; }
+.interface-performance-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 19px; margin-top: 16px; }
+.interface-driver-note { margin-top: 16px; padding-left: 11px; border-left: 2px solid #857151; color: #b8c0ad; font-size: 10px; line-height: 1.8; }
+.interface-diagnostics { margin-bottom: 22px; }
+.interface-engine-badge { padding: 5px 7px; border: 1px solid #6e755a; background: #26352b; color: #d7d7af; font-family: var(--kk-mono, monospace); font-size: 7px; letter-spacing: .045em; text-align: right; }
+.interface-engine-badge.fallback { border-color: #b6804f; background: #4c3627; color: #ffd7aa; }
+.interface-diagnostic-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 13px; border: 1px solid #576951; background: #111c1f; }
+.interface-diagnostic-grid>div { min-width: 0; padding: 14px; border-right: 1px solid #576951; border-bottom: 1px solid #576951; }
+.interface-diagnostic-grid>div:nth-child(3n) { border-right: 0; }
+.interface-diagnostic-grid>div:nth-last-child(-n+3) { border-bottom: 0; }
+.interface-diagnostic-grid span { display: block; color: #a8b7a4; font-family: var(--kk-mono, monospace); font-size: 7px; letter-spacing: .03em; }
+.interface-diagnostic-grid output { display: block; color: #eadabc; font-family: var(--kk-mono, monospace); font-size: 17px; line-height: 1.25; margin: 9px 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.interface-diagnostic-grid small { display: block; color: #94a58f; font-size: 9px; line-height: 1.6; }
+.interface-diagnostic-grid .interface-roundtrip { background: #57422a4a; }
+.interface-roundtrip output { color: #ffc286; font-size: 24px; }
+.interface-practice { border: 1px solid #a27b50; padding: 19px; margin-bottom: 22px; background: linear-gradient(120deg, #513a2a70, #24312c); }
+.interface-practice-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.interface-practice-heading>div { min-width: 0; }
+.interface-practice-heading .eyebrow { font-size: 7px; color: #e2b882; }
+.interface-practice-heading h3 { margin: 8px 0; font-size: 28px; color: #ffd09b; }
+.interface-practice-heading p { color: #c9c6af; font-family: var(--kk-mono, monospace); font-size: 9px; overflow-wrap: anywhere; }
+.interface-practice-heading svg { flex: none; width: 112px; height: 77px; color: #ecaf73; filter: drop-shadow(0 5px 5px #0005); }
+.interface-practice-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 13px; }
+.interface-practice-buttons button { flex: 1; min-height: 43px; color: #ffdcaa; border-color: #a28a60; background: #4d412b; font-size: 12px; }
+.interface-practice-buttons button:hover { background: #695333; border-color: #e8b774; }
+.interface-settings-bottom { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 16px; border-top: 1px dashed #627058; }
+.interface-settings-bottom p { color: #c4c9b7; font-size: 10px; line-height: 1.8; max-width: 490px; overflow-wrap: anywhere; }
+.interface-settings-bottom p.error { color: #ffc1a9; }
+.interface-settings-bottom>button { flex: none; min-height: 42px; font-size: 11px; }
+.audio-settings-dialog[aria-busy=true] .interface-settings-bottom { opacity: .8; }
+@media (max-width: 620px) {
+  .topline .audio-settings-launcher { font-size: 8px; min-height: 34px; width: 100%; padding: 7px; }
+  .topline #helpButton { align-self: center; }
+  .mic-interface-strip { gap: 10px; }
+  .mic-interface-strip>div { width: 100%; }
+  .mic-interface-strip button { flex: 1; font-size: 9px; }
+  .audio-settings-dialog { padding: 16px; max-width: calc(100vw - 16px); }
+  .audio-settings-dialog .dialog-top { top: -16px; margin: -16px -16px 14px; padding: 16px 16px 13px; }
+  .audio-settings-dialog .dialog-top h2 { font-size: 31px; }
+  .audio-settings-dialog .dialog-top .eyebrow { font-size: 6px; }
+  .audio-settings-dialog .dialog-intro { font-size: 10px; }
+  .interface-signal-route { gap: 7px; padding: 12px 10px; margin-bottom: 18px; }
+  .interface-signal-route span { font-size: 6px; }
+  .interface-signal-route strong { font-size: 6px; letter-spacing: 0; }
+  .interface-signal-route i { font-size: 13px; }
+  .interface-section-heading h3 { font-size: 18px; }
+  .interface-section-heading .eyebrow { font-size: 6px; }
+  .interface-device-grid, .interface-performance-grid { grid-template-columns: 1fr; gap: 16px; }
+  .interface-output-field { grid-column: auto; }
+  .interface-device-grid select, .interface-performance-grid select { font-size: 11px; }
+  .interface-diagnostic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .interface-diagnostic-grid>div { padding: 11px; }
+  .interface-diagnostic-grid>div:nth-child(3n) { border-right: 1px solid #576951; }
+  .interface-diagnostic-grid>div:nth-child(2n) { border-right: 0; }
+  .interface-diagnostic-grid>div:nth-last-child(-n+3) { border-bottom: 1px solid #576951; }
+  .interface-diagnostic-grid>div:nth-last-child(-n+2) { border-bottom: 0; }
+  .interface-diagnostic-grid span { font-size: 6px; }
+  .interface-diagnostic-grid output { font-size: 15px; }
+  .interface-roundtrip output { font-size: 22px; }
+  .interface-practice { padding: 14px; }
+  .interface-practice-heading h3 { font-size: 24px; }
+  .interface-practice-heading svg { width: 64px; height: 53px; }
+  .interface-practice-heading .eyebrow { font-size: 6px; }
+  .interface-practice-buttons { flex-direction: column; }
+  .interface-settings-bottom { align-items: stretch; flex-direction: column; gap: 14px; }
+}
+
 /* BROILER: a wired amp head, a speaker wall, and four clear signal stages. */
 .effect-editor.amp-editor { border-color: #b47047; }
 .amp-editor .effect-hero { background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 5px), linear-gradient(155deg, #483329, #1e2423 65%); }

@@ -12,6 +12,7 @@
   let assetMap = {}, waveformCache = new Map(), fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
   let automationEditor, pianoRoll, noteWorkflow;
+  let audioSettingsBusy = false, audioDeviceBusy = false, ampPracticeBusy = false, audioDeviceOperation = 0, audioSettingsOperation = 0, audioDiagnosticsTime = 0, audioDevices = null;
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -152,17 +153,17 @@
   }
   function effectRange(p,value){const log=p.unit==='Hz'&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
   function formatParam(p,value) { if (p.key==='mix'||['depth','spread','width','size','diffusion','pan','duty','cleanLow','presence','master','sag','speakerDrive','mic','distance','air'].includes(p.key)) return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
-  function transportLocked() { return recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
+  function transportLocked() { return audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
   function renderTransport() {
     const m=engine.getMeters(), recording=!!m.recording, locked=transportLocked();
     $('playButton').disabled=transportPending||locked||!!m.playing;
     $('playButton').setAttribute('aria-pressed',String(!!m.playing));
-    $('pauseButton').disabled=recordFinishing||(!m.playing&&!recordPending&&!transportPending);
-    $('stopButton').disabled=recordFinishing;
+    $('pauseButton').disabled=audioSettingsBusy||recordFinishing||(!m.playing&&!recordPending&&!transportPending);
+    $('stopButton').disabled=audioSettingsBusy||recordFinishing;
     $('recordButton').classList.toggle('recording',recording);
     const recordMode=recording?(m.recordStage||'recording'):recordPending?'preparing':'ready';
     if($('recordButton').dataset.mode!==recordMode){$('recordButton').dataset.mode=recordMode;$('recordButton').innerHTML='<i></i><span>'+(recording?(m.recordStage==='count-in'?'Cancel count-in':m.recordStage==='waiting'?'Cancel punch':'Finish take'):recordPending?'Preparing…':'Record')+'</span>';}
-    $('recordButton').disabled=recordPending||recordFinishing;
+    $('recordButton').disabled=audioSettingsBusy||recordPending||recordFinishing;
     if(document.activeElement!==$('tempo'))$('tempo').value=state.tempo;
     $('tempo').disabled=locked;
     $('loopButton').setAttribute('aria-pressed',state.loopEnabled);
@@ -255,7 +256,7 @@
   function togglePlayback() { return engine.getMeters().playing||transportPending||recordPending?pause():transportStart(); }
   async function restart() { if(transportLocked())return;const generation=lifecycle;await pause();if(generation!==lifecycle||transportLocked())return;if(seekTo(0))await transportStart(); }
   function panic(message='Silence. Pending recordings have been discarded.') { ++microphoneOperation;++lifecycle;++transferOperation;transferAbort?.abort();automationEditor?.disarm?.();++recordFinishOperation;++importOperation;++projectOperation;++transportOperation;for(const [id,op]of loadOperations)loadOperations.set(id,op+1);recordPending=false;transportPending=false;recordFinishing=false; noteWorkflow?.cancel(); notePlayback.panic(); notePlayback.setRecordingTracks([]); engine.panic();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'panic');for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();renderTransport();status(message); }
-  async function startRecording() { if(recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
+  async function startRecording() { if(audioSettingsBusy||recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
   async function finishRecording(limited=false){
     if(recordFinishing)return;recordFinishing=true;recordPending=false;const generation=lifecycle,operation=++recordFinishOperation;renderTransport();
     try{
@@ -402,6 +403,7 @@
       $('clock').textContent=positionLabel(beat);
       $('clockMode').textContent=m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE';
       renderPlayhead();renderMicrophone(m.microphone);automationEditor?.tick();pianoRoll?.tick();
+      if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       $('masterLeft').style.width=Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%';$('masterRight').style.width=Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%';$('masterDb').textContent=level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞';
       for(let i=0;i<8;i++){const el=$('meter-'+i);if(el)el.style.height=Math.min(100,Math.sqrt(m.tracks?.[i]?.rms||0)*135)+'%';}
@@ -446,6 +448,112 @@
     const peak=Math.max(0,Number(mic.inputPeak)||0),db=peak>1e-5?Math.max(-90,20*Math.log10(peak)):-90,meter=$('microphoneMeterFill').closest('.mic-input-meter');
     $('microphoneMeterFill').style.width=Math.min(100,Math.max(0,(db+60)/60*100))+'%';
     $('microphoneMeterValue').textContent=db<=-90?'−∞ dB':db.toFixed(1)+' dB';meter.setAttribute('aria-valuenow',String(Math.min(0,db)));meter.classList.toggle('clipping',peak>=.98);
+    const prefs=engine.getAudioSettings(),device=audioDevices?.inputs.find(input=>input.deviceId===prefs.inputDeviceId);
+    $('microphoneInterfaceSummary').textContent=(mic.interface?.inputLabel||device?.label||(prefs.inputDeviceId==='default'?'System input':'Selected interface'))+' · '+(prefs.inputChannel==='stereo'?'stereo':'input '+prefs.inputChannel+' / mono')+' · '+({live:'Live',balanced:'Balanced',stable:'Stable'}[prefs.latencyProfile])+' latency';
+    $('microphonePracticeButton').disabled=locked||audioDeviceBusy;
+  }
+
+  const audioFields=['audioInputDevice','audioInputChannel','audioOutputDevice','audioSampleRate','audioLatencyProfile'];
+  function readAudioSettingsForm(){return {inputDeviceId:$('audioInputDevice').value||'default',outputDeviceId:$('audioOutputDevice').value||'default',inputChannel:$('audioInputChannel').value,sampleRate:$('audioSampleRate').value==='auto'?'auto':Number($('audioSampleRate').value),latencyProfile:$('audioLatencyProfile').value};}
+  function audioSettingsDirty(){const current=engine.getAudioSettings(),draft=readAudioSettingsForm();return Object.keys(current).some(key=>current[key]!==draft[key]);}
+  function audioOperationBlocked(){
+    if(recordPending||recordFinishing||engine.recordingBusy||engine.isRecording)return 'Finish or cancel the current take before changing the interface.';
+    if(transportPending)return 'Wait for playback to finish preparing before changing the interface.';
+    if(exportAbort||transferAbort||noteWorkflow?.controller||engine.getAudioDiagnostics().exportBusy)return 'Finish or cancel the audio render or transfer before changing the interface.';
+    if(audioDeviceBusy)return 'Wait for the device list or browser permission request.';
+    return '';
+  }
+  function interfaceMessage(message,error=false){$('audioInterfaceStatus').textContent=message;$('audioInterfaceStatus').classList.toggle('error',error);}
+  function deviceOptions(id,devices,selected,label){
+    const select=$(id),seen=new Set(['default']);let html='<option value="default">System default '+label+'</option>';
+    for(const [index,device] of (devices||[]).entries()){if(seen.has(device.deviceId))continue;seen.add(device.deviceId);html+='<option value="'+escape(device.deviceId)+'">'+escape(device.label||('Audio '+label+' '+(index+1)+' / allow access to name it'))+'</option>';}
+    if(selected!=='default'&&!seen.has(selected))html+='<option value="'+escape(selected)+'">Previously selected '+label+' / not in device list</option>';
+    select.innerHTML=html;select.value=selected||'default';
+  }
+  function renderAudioDeviceChoices({restore=false}={}){
+    const prefs=restore?engine.getAudioSettings():readAudioSettingsForm(),supported=audioDevices?.outputSelectionSupported??engine.getAudioDiagnostics().outputSelectionSupported;
+    deviceOptions('audioInputDevice',audioDevices?.inputs,prefs.inputDeviceId,'input');deviceOptions('audioOutputDevice',audioDevices?.outputs,supported?prefs.outputDeviceId:'default','output');
+    $('audioInputChannel').value=prefs.inputChannel;$('audioSampleRate').value=String(prefs.sampleRate);$('audioLatencyProfile').value=prefs.latencyProfile;
+    $('audioOutputDevice').disabled=!supported||audioSettingsBusy;
+    $('audioOutputHint').textContent=supported?'Select the interface you use for headphones. System default follows your system output.':'Output selection is unavailable in this browser. Choose your interface in system sound settings.';
+    $('audioDeviceHint').textContent=audioDevices?.permission==='granted'?'Device names are available. Refresh again after connecting or unplugging an interface.':audioDevices?.permission==='unavailable'?'Device access is unavailable. Use a browser with microphone access on HTTPS or the standalone HTML.':'Refresh asks for microphone access to reveal device names. Temporary access is released after the list is read.';
+    renderAudioProfileHint();renderAudioDiagnostics();renderMicrophone();
+  }
+  function renderAudioProfileHint(){
+    $('audioProfileHint').textContent={live:'Live requests the browser’s lowest latency (1 ms target). Your interface and browser choose the actual timing.',balanced:'Balanced requests the browser’s interactive latency. A little more room for a busy session.',stable:'Stable requests balanced latency for heavier sessions. Expect more delay while playing through effects.'}[$('audioLatencyProfile').value];
+  }
+  async function refreshAudioDevices({requestPermission=false}={}){
+    if(audioDeviceBusy||audioSettingsBusy)return;const operation=++audioDeviceOperation;audioDeviceBusy=true;renderAudioDiagnostics();
+    if(requestPermission)interfaceMessage('Reading the device list. Allow microphone access if your browser asks.');
+    try{const next=await engine.enumerateAudioDevices({requestPermission});if(operation!==audioDeviceOperation)return;audioDevices=next;renderAudioDeviceChoices();if(requestPermission)interfaceMessage(next.permission==='unavailable'?'Microphone device access is unavailable in this browser.':'Devices refreshed. Choose a connection and Apply settings.');}
+    catch(e){if(operation===audioDeviceOperation)interfaceMessage(e.name==='NotAllowedError'?'Microphone access was denied. Allow it in the browser’s site settings, then refresh again.':e.message,true);}
+    finally{if(operation===audioDeviceOperation){audioDeviceBusy=false;renderAudioDiagnostics();}}
+  }
+  function openAudioSettings({practice=false}={}){
+    if(audioSettingsBusy)return;renderAudioDeviceChoices({restore:true});interfaceMessage(audioOperationBlocked()||'Apply stops playback and monitoring. Instrument settings, clips, and effect racks stay in your session.');
+    if(!$('audioSettingsDialog').open)$('audioSettingsDialog').showModal();refreshAudioDevices();
+    requestAnimationFrame(()=>{if(practice){$('ampPracticeSection').scrollIntoView({block:'nearest'});$('guitarPracticeButton').focus({preventScroll:true});}else $('audioInputDevice').focus({preventScroll:true});});
+  }
+  function renderAudioDiagnostics(){
+    const d=engine.getAudioDiagnostics(),has=value=>typeof value==='number'&&Number.isFinite(value),ms=value=>has(value)?value.toFixed(1)+' ms':'Unreported',blocked=audioOperationBlocked();
+    $('audioEngineBadge').textContent=!d.active?'AUDIO NOT STARTED':d.mode==='worklet'?'AUDIOWORKLET / 128 FRAMES':d.mode==='fallback'?'FALLBACK AUDIO ENGINE':String(d.mode||'Web Audio').toUpperCase();
+    $('audioEngineBadge').classList.toggle('fallback',d.mode==='fallback');
+    $('audioRoundTripValue').textContent=d.roundTripComplete&&has(d.estimatedRoundTripMs)?'~ '+d.estimatedRoundTripMs.toFixed(1)+' ms':d.active?'Unknown':'—';
+    $('audioRoundTripHint').textContent=!d.active?'Start monitoring to read the available device timings.':d.roundTripComplete?'Estimate from reported capture, browser buffer, and output timings.':has(d.estimatedRoundTripMs)?'Known components: '+d.estimatedRoundTripMs.toFixed(1)+' ms. Missing device timings prevent a complete estimate.':'Your browser does not expose enough timing information.';
+    $('audioActualSampleRate').textContent=has(d.sampleRate)?(d.sampleRate/1000).toFixed(d.sampleRate%1000?1:0)+' kHz':'—';
+    $('audioRateHint').textContent=d.sampleRateFallback?'Requested rate unavailable; the browser chose this rate.':d.captureSampleRate&&d.captureSampleRate!==d.sampleRate?'Capture runs at '+(d.captureSampleRate/1000).toFixed(1)+' kHz; the browser converts it.':'Negotiated by the browser.';
+    $('audioCaptureLatency').textContent=ms(d.captureLatencyMs);$('audioBaseLatency').textContent=ms(d.baseLatencyMs);$('audioOutputLatency').textContent=ms(d.outputLatencyMs);
+    $('audioProcessingLatency').textContent=has(d.processingMs)?d.processingMs.toFixed(1)+' ms / '+d.processingFrames+' frames':'—';
+    $('audioProcessingHint').textContent=d.mode==='fallback'?'ScriptProcessor fallback. AudioWorklet usually offers better live response.':'Block granularity, not an extra measured delay. AudioWorklet uses 128 frames.';
+    const notes=['Reported timings are estimates, not a measured cable loopback. Recording alignment moves a completed take; it does not reduce live delay.'];
+    if(d.sinkFallback)notes.push('The saved output is unavailable; this session is using system default output.');
+    if(d.actualInputChannel==='1'&&d.settings.inputChannel==='stereo'&&d.inputChannels===1)notes.push('This input is mono; Input 1 is feeding both sides.');
+    if(d.echoCancellation||d.noiseSuppression||d.autoGainControl)notes.push('The input reports browser voice processing. Your device may be ignoring the unprocessed-audio request.');
+    $('audioDiagnosticNotes').textContent=notes.join(' ');
+    const t=track(),slot=t.effects.findIndex(f=>f?.type==='broiler');$('ampPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(slot>=0?'existing BROILER / insert '+(slot+1):t.effects.some(f=>!f)?'empty insert ready':'four inserts occupied');
+    for(const id of ['applyAudioSettings','guitarPracticeButton','bassPracticeButton'])$(id).disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||!!blocked;
+    $('applyAudioSettings').textContent=audioSettingsBusy?'Applying…':'Apply settings';
+    $('refreshAudioDevices').disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||recordPending||recordFinishing||engine.recordingBusy;
+    $('refreshAudioDevices').textContent=audioDeviceBusy?'Reading devices…':'Refresh devices';
+    $('closeAudioSettings').disabled=audioSettingsBusy;
+    $('audioSettingsDialog').setAttribute('aria-busy',String(audioSettingsBusy));
+    for(const id of audioFields)$(id).disabled=audioSettingsBusy||(id==='audioOutputDevice'&&!d.outputSelectionSupported);
+  }
+  async function applyInterfaceSettings(){
+    const blocked=audioOperationBlocked();if(audioSettingsBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
+    let prefs;try{prefs=engine.validateAudioSettings(readAudioSettingsForm());}catch(e){interfaceMessage(e.message,true);return;}
+    const generation=lifecycle,operation=++audioSettingsOperation;audioSettingsBusy=true;renderAudioDiagnostics();renderTransport();interfaceMessage('Stopping playback and reconnecting the audio interface…');
+    try{
+      await halt();if(generation!==lifecycle||operation!==audioSettingsOperation)throw new DOMException('Interface change cancelled.','AbortError');
+      const result=await engine.applyAudioSettings(prefs,{beforeRestart:async()=>{
+        const loaded=state.tracks.filter(t=>t.instrument&&frames.has(t.id));
+        const captured=await Promise.all(loaded.map(async t=>{
+          let timer;try{const snapshot=await Promise.race([host.snapshot(t.id),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Could not preserve '+t.name+' in time. Finish its current operation before changing the interface.')),8000);})]);if(!snapshot)throw Error('Could not preserve '+t.name+'. Reopen its instrument before changing the interface.');return {id:t.id,snapshot};}finally{clearTimeout(timer);}
+        }));
+        if(generation!==lifecycle||operation!==audioSettingsOperation)throw new DOMException('Interface change cancelled.','AbortError');
+        for(const {id,snapshot}of captured){const target=state.tracks.find(t=>t.id===id);if(target?.instrument){target.instrument.snapshot=snapshot;noteWorkflow?.captureSnapshot(id,snapshot);}}
+        for(const timer of snapshotTimers.values())clearTimeout(timer);snapshotTimers.clear();clearAllFrames();notePlayback.panic();
+      }});
+      if(generation!==lifecycle||operation!==audioSettingsOperation)return;
+      host.setTempo(state.tempo);scheduleAutosave();renderAudioDeviceChoices({restore:true});renderAll();
+      const message=(result.restarted?'Audio engine restarted. ':'Audio settings applied. ')+'Your session is preserved. Monitoring is off; use Monitor microphone or Play through BROILER to reconnect.';
+      interfaceMessage(message);status(message);
+    }catch(e){if(operation===audioSettingsOperation){interfaceMessage(e.message,true);status(e.message);}}
+    finally{if(operation===audioSettingsOperation){audioSettingsBusy=false;renderAudioDiagnostics();renderTransport();}}
+  }
+  async function startAmpPractice(kind){
+    const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
+    if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Guitar or Bass.',true);return;}
+    const t=track(),generation=lifecycle,existing=t.effects.findIndex(f=>f?.type==='broiler'),slot=existing>=0?existing:t.effects.findIndex(f=>!f);
+    if(slot<0){interfaceMessage('This track has four effects already. Choose another track or free an insert before adding BROILER.',true);return;}
+    if(existing<0){const def=effectById('broiler'),preset=def.presets.find(p=>p.id===(kind==='bass'?'house-bass':'glassware'));remember();t.effects[slot]={type:'broiler',params:{...clone(preset.params),stereo:'mono'}};changed({arrangement:true,mixer:true,rack:true,automation:true});}
+    selectedSlot=slot;renderRack();renderEffectEditor();$('recordSource').value='microphone';$('micInputPanel').open=true;
+    const operation=++microphoneOperation;ampPracticeBusy=true;renderAudioDiagnostics();interfaceMessage('Connecting the selected interface to '+t.name+' and BROILER…');
+    try{const connected=await engine.setMicrophoneMonitoring(t.id,{enabled:true,gainDb:state.recording.micInputGainDb});if(generation!==lifecycle||operation!==microphoneOperation)return;
+      if(!connected||!engine.getMicrophoneStatus().enabled){interfaceMessage('Input connection cancelled. Your amp is still in the rack.',true);return;}
+      $('audioSettingsDialog').close();$('effectEditor').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+      status(t.mute?'BROILER is ready, but this track is muted. Unmute '+t.name+' to hear your input.':state.tracks.some(other=>other.solo)&&!t.solo?'BROILER is ready, but another track is soloed. Solo '+t.name+' or clear the other solo to hear your input.':'BROILER is ready on '+t.name+'. Play here or along with the arrangement; Record captures a dry take. Use headphones.');
+    }catch(e){if(operation===microphoneOperation&&generation===lifecycle){const message=e.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser to play through BROILER.':e.message;interfaceMessage(message,true);status(message);}}finally{ampPracticeBusy=false;renderAudioDiagnostics();renderMicrophone();}
   }
   async function setMicrophoneMonitor({move=false}={}) {
     const current=engine.getMicrophoneStatus(),enabled=move||!(current.enabled||current.pending),target=enabled?(current.recording?current.trackId:track().id):current.trackId||track().id;
@@ -458,7 +566,7 @@
       status(enabled?'Microphone monitoring → '+t.name+' → four effects → mixer. Use headphones.':'Microphone monitoring is off.'+(engine.getMicrophoneStatus().recording?' The dry take continues recording.':''));
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
   }
-  engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='error'||event.type==='microphone-disconnected')status(event.message);};
+  engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='audio-settings-changed'){renderMicrophone();if($('audioSettingsDialog').open)renderAudioDiagnostics();}else if(event.type==='audio-device-change'){if($('audioSettingsDialog').open)refreshAudioDevices();renderMicrophone();}else if(event.type==='error'||event.type==='microphone-disconnected'){status(event.message);if($('audioSettingsDialog').open)interfaceMessage(event.message,true);}};
   function renderClipActions(){const selected=clipLocation();for(const id of ['clipEditQuick','clipSplitQuick','clipDuplicateQuick','clipDeleteQuick','transferClipButton'])$(id).disabled=!selected||recordFinishing;$('clipActionSummary').textContent=selected?selected.clip.name+' · '+selected.track.name:'Select an audio or note clip to edit it.'; $('transferClipButton').hidden=selected?.clip.type==='notes'; noteWorkflow?.render();}
   function editSelectedClip(){if(!clipLocation())return;$('clipInspector').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});$('clip-name')?.focus({preventScroll:true});}
   function renderMarkers(){
@@ -526,6 +634,12 @@
     if(scope!=='mix')throw Error('Choose a clip, track instrument, or arrangement mix.');const renderState=clone(state),startBeat=state.loopEnabled?state.loopStart:0,endBeat=Math.min(state.lengthBars*4,startBeat+num(bars,1,16)*4),blob=await engine.renderWav(renderState,assetMap,{startBeat,endBeat,tailSeconds,signal});if(generation!==lifecycle)throw new DOMException('Session changed.','AbortError');return {blob,name:state.name+' · arrangement',tempo:renderState.tempo,sourceApp:'loom',bars:(endBeat-startBeat)/4};
   }
   automationEditor=new window.LoomAutomationEditor({element:$('automationEditor'),getState:()=>state,getTrack:()=>track(),getBeat:()=>engine.getMeters().beat||0,getPlaying:()=>!!engine.getMeters().playing,remember,onChange:()=>changed(),status});
+  $('audioSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphoneSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphonePracticeButton').addEventListener('click',()=>openAudioSettings({practice:true}));
+  $('closeAudioSettings').addEventListener('click',()=>{if(!audioSettingsBusy)$('audioSettingsDialog').close();});
+  $('audioSettingsDialog').addEventListener('cancel',e=>{if(audioSettingsBusy)e.preventDefault();});
+  $('audioSettingsDialog').addEventListener('close',()=>{if(ampPracticeBusy&&engine.getMicrophoneStatus().pending){++microphoneOperation;engine.setMicrophoneMonitoring(track().id,{enabled:false}).catch(e=>status(e.message));}});
+  $('refreshAudioDevices').addEventListener('click',()=>refreshAudioDevices({requestPermission:true}));$('applyAudioSettings').addEventListener('click',applyInterfaceSettings);
+  $('audioLatencyProfile').addEventListener('change',renderAudioProfileHint);$('guitarPracticeButton').addEventListener('click',()=>startAmpPractice('guitar'));$('bassPracticeButton').addEventListener('click',()=>startAmpPractice('bass'));
   $('countInBars').addEventListener('change',()=>{if(transportLocked())return;remember();state.recording.countInBars=Number($('countInBars').value);changed();renderRecordingSetup();});
   $('microphoneMonitorButton').addEventListener('click',()=>setMicrophoneMonitor());
   $('microphoneRouteButton').addEventListener('click',()=>setMicrophoneMonitor({move:true}));

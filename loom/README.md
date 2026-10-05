@@ -62,9 +62,39 @@ pitch. Snap and zoom make precise edits easier; the clip inspector offers
 numeric timing controls. Loop phase survives splitting and left trimming.
 Audio imports and explicitly enabled microphone input can provide material too.
 
-### Microphone input, live effects, and timing
+### Audio interface and latency
 
-Open **Microphone · monitoring & timing** below the transport. Select a track
+Open **Audio settings** to choose the input interface, Input 1, Input 2, or
+stereo input, the output device where supported, sample rate, and latency mode.
+Use **Live** for playing through effects, **Balanced** for a larger browser
+buffer request, or **Stable** when the device needs more margin. Auto sample
+rate lets the browser choose the device rate; explicit 44.1, 48, and 96 kHz
+requests are available. The panel shows the actual rate and processing path,
+along with the input and output delays reported by the browser. Unknown values
+stay unknown; the monitoring total is an estimate, not a loopback measurement.
+
+The preferred AudioWorklet path processes 128-frame blocks: about 2.7 ms at
+48 kHz. If it is unavailable, the fallback requests 256 frames in Live mode,
+512 in Balanced, or 1,024 in Stable. These are browser buffer requests, not
+controls for an ASIO/Core Audio driver. The interface's own buffer settings and
+the browser's capture/output buffers still determine achievable latency.
+Capture requests disable echo cancellation, noise suppression, and automatic
+gain control so guitar and vocal input retain their original signal.
+
+Device settings belong to this browser and are kept outside projects. Applying
+them pauses playback and monitoring; sample-rate or latency-mode changes restart
+the audio engine and reconnect hosted instruments while preserving the session.
+Changes are blocked during a take, pending microphone permission, and exports.
+Use **Refresh devices** to reveal interface names after permission.
+
+**Play through BROILER** starts monitoring on the selected track and adds an amp
+to an empty insert if needed. An existing BROILER keeps its sound; a full rack is
+left intact. Choose the correct input channel for the plugged-in guitar or mic.
+This shortcut works with the transport stopped, and recordings still stay dry.
+
+### Monitoring and recording alignment
+
+Open **Microphone & interface · monitoring & timing** below the transport. Select a track
 and press **Monitor microphone** to hear the input through its four inserts,
 level, pan, mute/solo, and master, including while playback is stopped. Input trim
 and the input meter help set the level. Use headphones to prevent speaker feedback.
@@ -256,6 +286,12 @@ microphone timing/routing checks. The extracted equivalents are
 microphone monitoring, permission cleanup, dry recording, amp exports, and
 responsive controls. Set `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` when using
 an existing installation; extracted sources include `microphone-browser-checks.cjs`.
+Run `npm run check:loom-interface` and `npm run check:loom-interface-browser`
+for device/profile negotiation, input channel routing, restart/permission
+cleanup, recording guards, the settings dialog, and BROILER practice setup.
+The extracted equivalents are `node audio-interface-checks.cjs` and
+`node audio-interface-browser-checks.cjs`. Hardware round-trip latency depends
+on the actual interface, driver and browser and is not measured by these tests.
 Run `npm run check:patterns` and `npm run check:loom-notes` for portable-pattern
 and reversible-source checks. Extracted archives include `note-checks.cjs`.
 
@@ -266,7 +302,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.7.0.
+font license notices. Version 1.8.0.
 
 ## Compatibility
 

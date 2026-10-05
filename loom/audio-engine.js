@@ -448,6 +448,38 @@
     }
   }
 
+  // Interface choices belong to this browser, never to a portable song.
+  const AUDIO_SETTINGS_KEY = 'kitchen.galley.audio-interface.v1';
+  const AUDIO_DEFAULTS = Object.freeze({ inputDeviceId: 'default', outputDeviceId: 'default', inputChannel: 'stereo', sampleRate: 'auto', latencyProfile: 'live' });
+  const AUDIO_PROFILES = Object.freeze({ live: { latencyHint: .001, fallbackFrames: 256 }, balanced: { latencyHint: 'interactive', fallbackFrames: 512 }, stable: { latencyHint: 'balanced', fallbackFrames: 1024 } });
+  function normalizeAudioSettings(value, previous = AUDIO_DEFAULTS, strict = false) {
+    const settings = { ...previous }, fail = message => { if (strict) throw Error(message); };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) { fail('Choose valid audio interface settings.'); return settings; }
+    for (const key of ['inputDeviceId', 'outputDeviceId']) if (value[key] !== undefined) {
+      if (typeof value[key] === 'string' && value[key].length <= 512) settings[key] = value[key] || 'default';
+      else fail('Choose a valid audio device.');
+    }
+    if (value.inputChannel !== undefined) {
+      const channel = String(value.inputChannel); if (['1', '2', 'stereo'].includes(channel)) settings.inputChannel = channel;
+      else fail('Choose Input 1, Input 2, or Stereo.');
+    }
+    if (value.sampleRate !== undefined) {
+      const rate = value.sampleRate === 'auto' ? 'auto' : Number(value.sampleRate);
+      if (rate === 'auto' || [44100, 48000, 96000].includes(rate)) settings.sampleRate = rate;
+      else fail('Choose Auto, 44.1 kHz, 48 kHz, or 96 kHz.');
+    }
+    if (value.latencyProfile !== undefined) {
+      if (Object.hasOwn(AUDIO_PROFILES, value.latencyProfile)) settings.latencyProfile = value.latencyProfile;
+      else fail('Choose Live, Balanced, or Stable audio.');
+    }
+    return settings;
+  }
+  function readAudioSettings() {
+    try { return normalizeAudioSettings(JSON.parse(window.localStorage?.getItem(AUDIO_SETTINGS_KEY) || 'null')); }
+    catch { return { ...AUDIO_DEFAULTS }; }
+  }
+  function milliseconds(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10 ? value * 1000 : null; }
+
   class LoomAudio {
     constructor(state) {
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
@@ -456,15 +488,117 @@
       this._recordStage = 'idle'; this._recordTransportStarted = false;
       this._transportListeners = new Set(); this._clockAnchor = { beat: 0, time: 0, cycle: 0, countIn: 0 };
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
+      this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
+      this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
+      this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
+      if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
-    async init() {
+    get audioSettings() { return this.getAudioSettings(); }
+    get audioStatus() { return this.getAudioDiagnostics(); }
+    getAudioSettings() { return { ...this._audioSettings }; }
+    _outputSelectionSupported() { const AC = window.AudioContext || window.webkitAudioContext; return typeof this.context?.setSinkId === 'function' || typeof AC?.prototype?.setSinkId === 'function'; }
+    validateAudioSettings(value) {
+      const settings = normalizeAudioSettings(value, this._audioSettings, true);
+      if (settings.outputDeviceId !== 'default' && !this._outputSelectionSupported()) throw Error('This browser uses the system output. Choose Default output, or select the interface in your system audio settings.');
+      return settings;
+    }
+    _assertAudioSettingsIdle() {
+      if (this.recordingBusy) throw Error('Finish the current take before changing the audio interface.');
+      if (this._meters.playing || this._playPending) throw Error('Stop playback before changing the audio interface.');
+      if (this._exportCount) throw Error('Finish the audio export before changing the audio interface.');
+      if (this._audioApplying || this._deviceAccessPending || this._initializing || this._closingAudioGraph) throw Error('Wait for the current audio operation before changing the interface.');
+    }
+    _createAudioContext(settings) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('This browser does not support Web Audio.');
+      const options = { latencyHint: AUDIO_PROFILES[settings.latencyProfile].latencyHint, ...(settings.sampleRate !== 'auto' ? { sampleRate: settings.sampleRate } : {}) };
+      let context;
+      try { context = new AC(options); }
+      catch (firstError) {
+        // Some browsers accept only named hints or cannot run the requested rate.
+        try { context = new AC({ ...options, latencyHint: settings.latencyProfile === 'stable' ? 'balanced' : 'interactive' }); }
+        catch { context = new AC({ latencyHint: settings.latencyProfile === 'stable' ? 'balanced' : 'interactive' }); }
+      }
+      return context;
+    }
+    async _setAudioSink(context, deviceId, strict = false) {
+      if (typeof context?.setSinkId !== 'function') { if (deviceId !== 'default' && strict) throw Error('This browser uses the system output. Choose Default output.'); return deviceId !== 'default'; }
+      try { await context.setSinkId(deviceId === 'default' ? '' : deviceId); return false; }
+      catch (error) {
+        if (strict) throw Error('Could not open the selected output. Check that the interface is connected and allowed, then refresh devices. ' + (error.message || ''));
+        // A saved USB output may be disconnected on the next visit. Stay usable.
+        try { await context.setSinkId(''); } catch {}
+        return deviceId !== 'default';
+      }
+    }
+    async enumerateAudioDevices(options = {}) {
+      const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null;
+      if (!media?.enumerateDevices) return { inputs: [], outputs: [], outputSelectionSupported: this._outputSelectionSupported(), permission: 'unavailable', supportedConstraints: {} };
+      let permissionStream;
+      if (options.requestPermission === true && !this._mic) {
+        this._assertAudioSettingsIdle(); this._deviceAccessPending = true;
+        try { permissionStream = await media.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false }); this._devicePermission = 'granted'; }
+        finally { permissionStream?.getTracks().forEach(track => track.stop()); this._deviceAccessPending = false; }
+      }
+      const devices = await media.enumerateDevices(), inputs = [], outputs = [];
+      for (const device of devices) if (device.kind === 'audioinput' || device.kind === 'audiooutput') (device.kind === 'audioinput' ? inputs : outputs).push({ deviceId: device.deviceId || 'default', label: device.label || '', groupId: device.groupId || '' });
+      if (this._mic || inputs.some(device => device.label)) this._devicePermission = 'granted';
+      return { inputs, outputs, outputSelectionSupported: this._outputSelectionSupported(), permission: this._devicePermission, supportedConstraints: media.getSupportedConstraints?.() || {} };
+    }
+    async applyAudioSettings(value, options = {}) {
+      const settings = this.validateAudioSettings(value); this._assertAudioSettingsIdle();
+      const old = this.getAudioSettings(), changed = Object.keys(old).some(key => old[key] !== settings[key]), restart = Boolean(this.context && (old.sampleRate !== settings.sampleRate || old.latencyProfile !== settings.latencyProfile));
+      if (!changed) return { restarted: false, monitorTrackId: null, settings: old, diagnostics: this.getAudioDiagnostics() };
+      this._audioApplying = true; let candidate, monitorTrackId = this._micEnabled ? this.state.tracks[this._micTrack]?.id || null : null;
+      const beat = this.getTransport().beat;
+      try {
+        if (restart || !this.context) { candidate = this._createAudioContext(settings); await this._setAudioSink(candidate, settings.outputDeviceId, true); }
+        else if (old.outputDeviceId !== settings.outputDeviceId) await this._setAudioSink(this.context, settings.outputDeviceId, true);
+        // Sink selection can reject. Instruments remain attached until it succeeds.
+        if (restart) await options.beforeRestart?.();
+        this._disableMicrophoneMonitoring(true, true);
+        if (restart) {
+          await this._closeAudioGraph(); this.generation++; this._playRequest++; this._recordRequest++;
+          this._meters = silenceMeters(beat); this._clockAnchor = { beat, time: 0, cycle: 0, countIn: 0 };
+        }
+        this._audioSettings = settings; this._sampleRateFallback = false; this._sinkFallback = false;
+        if (candidate) { this._preparedContext = candidate; candidate = null; await this.init({ _audioSettings: true }); }
+        try { window.localStorage?.setItem(AUDIO_SETTINGS_KEY, JSON.stringify(settings)); } catch {}
+        const result = { restarted: restart, monitorTrackId, settings: this.getAudioSettings(), diagnostics: this.getAudioDiagnostics() };
+        this.onStatus?.({ type: 'audio-settings-changed', ...result }); return result;
+      } catch (error) {
+        if (candidate) await candidate.close().catch(() => {});
+        this._audioSettings = old;
+        if (!this.context && restart) { try { await this.init({ _audioSettings: true }); this.seek(beat); } catch {} }
+        throw error;
+      } finally { this._audioApplying = false; }
+    }
+    getAudioDiagnostics() {
+      const context = this.context, capture = this._mic?.stream.getAudioTracks?.()[0], actual = capture?.getSettings?.() || {}, settings = this.getAudioSettings();
+      const baseLatencyMs = milliseconds(context?.baseLatency), outputLatencyMs = milliseconds(context?.outputLatency), captureLatencyMs = milliseconds(actual.latency);
+      const processingFrames = context ? this._processingFrames || (this.mode === 'fallback' ? this.node?.bufferSize || AUDIO_PROFILES[settings.latencyProfile].fallbackFrames : this.mode === 'worklet' ? 128 : 0) : 0;
+      const processingMs = context ? processingFrames / context.sampleRate * 1000 : null;
+      // Reported base latency can already include a render quantum. Keep block
+      // duration separate rather than counting it twice in this rough estimate.
+      const known = [captureLatencyMs, baseLatencyMs, outputLatencyMs].filter(value => value !== null);
+      return { settings, active: Boolean(context), mode: this.mode, sampleRate: context?.sampleRate || null, requestedSampleRate: settings.sampleRate, requestedLatencyHint: AUDIO_PROFILES[settings.latencyProfile].latencyHint,
+        processingFrames, processingMs, baseLatencyMs, outputLatencyMs, captureLatencyMs, estimatedRoundTripMs: context && known.length ? known.reduce((total, value) => total + value, 0) : null,
+        roundTripComplete: Boolean(this._mic && captureLatencyMs !== null && baseLatencyMs !== null && outputLatencyMs !== null), inputChannels: Number.isInteger(actual.channelCount) ? actual.channelCount : null,
+        actualInputChannel: this._mic ? this._mic.inputChannel : null, inputLabel: capture?.label || '', inputDeviceId: actual.deviceId || null, captureSampleRate: actual.sampleRate || null,
+        echoCancellation: actual.echoCancellation ?? null, noiseSuppression: actual.noiseSuppression ?? null, autoGainControl: actual.autoGainControl ?? null,
+        outputDeviceId: typeof context?.sinkId === 'string' ? context.sinkId || 'default' : null, outputSelectionSupported: this._outputSelectionSupported(), sampleRateFallback: this._sampleRateFallback, sinkFallback: this._sinkFallback,
+        applying: this._audioApplying, deviceAccessPending: this._deviceAccessPending, exportBusy: this._exportCount > 0, monitoring: this._micEnabled, inputPeak: this._meters.microphonePeak || 0 };
+    }
+    async init(options = {}) {
+      if (this._audioApplying && options._audioSettings !== true || this._closingAudioGraph) throw Error('Finish setting up the audio interface before opening audio.');
       if (this._init) return this._init;
       this._init = (async () => {
-        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw Error('This browser does not support Web Audio.');
         if (!window.createLoomEffectsDSP) throw Error('GALLEY effects have not loaded.');
-        try { this.context = new AC({ sampleRate: 48000, latencyHint: 'interactive' }); }
-        catch { this.context = new AC({ latencyHint: 'interactive' }); }
+        this._initializing = true;
+        const prepared = Boolean(this._preparedContext);
+        this.context = this._preparedContext || this._createAudioContext(this._audioSettings); this._preparedContext = null;
+        this._sampleRateFallback = this._audioSettings.sampleRate !== 'auto' && this.context.sampleRate !== this._audioSettings.sampleRate;
+        this._sinkFallback = prepared ? false : await this._setAudioSink(this.context, this._audioSettings.outputDeviceId);
         this.node = null; this.core = null; this._sentAssets = new Map();
         this.inputs = Array.from({ length: 8 }, () => { const node = this.context.createGain(); node.channelCount = 2; node.channelCountMode = 'explicit'; node.channelInterpretation = 'speakers'; return node; });
         this.microphoneInput = this.context.createGain(); this.microphoneInput.channelCount = 2; this.microphoneInput.channelCountMode = 'explicit'; this.microphoneInput.channelInterpretation = 'speakers';
@@ -524,13 +658,15 @@
             for (let i = 0; i < 8; i++) this.inputs[i].connect(this.node, 0, i);
             this.microphoneInput.connect(this.node, 0, 8);
             this.mode = 'worklet';
+            this._processingFrames = 128;
           } catch (error) { for (const input of [...this.inputs, this.microphoneInput]) input.disconnect(); this.node = null; this.workletError = error.message; }
           finally { if (url) URL.revokeObjectURL(url); }
         }
         if (!this.node) {
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
           this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
-          this.node = this.context.createScriptProcessor(1024, 18, 2);
+          this.node = this.context.createScriptProcessor(AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames, 18, 2);
+          this._processingFrames = this.node.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames;
           this.merger = this.context.createChannelMerger(18); this.splitters = [];
           for (let i = 0; i < 9; i++) { const splitter = this.context.createChannelSplitter(2); (i < 8 ? this.inputs[i] : this.microphoneInput).connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
           this.merger.connect(this.node);
@@ -545,12 +681,12 @@
           this.mode = 'fallback';
         }
         this.node.connect(this.context.destination); this._send({ type: 'state', state: dspState(this.state) }); this._send({ type: 'seek', beat: this._meters.beat }); this._updateRecordHold(); this._syncAssets(); if (this._panicLatched) this._send({ type: 'panic' });
-        this.onStatus?.({ type: 'ready', mode: this.mode, sampleRate: this.context.sampleRate });
+        this._initializing = false; this.onStatus?.({ type: 'ready', mode: this.mode, sampleRate: this.context.sampleRate, diagnostics: this.getAudioDiagnostics() });
         return this.context;
-      })().catch(error => { this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; throw error; });
+      })().catch(error => { this._initializing = false; this._init = null; if (this.context) this.context.close().catch(() => {}); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = []; this.microphoneInput = null; throw error; });
       return this._init;
     }
-    getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
+    getTrackInput(id) { if (this._audioApplying) throw Error('Finish setting up the audio interface before opening an instrument.'); if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
       if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (Number.isInteger(m.epoch)) {
@@ -638,9 +774,13 @@
       this._send({ type: 'assetDelta', additions, removals }); this._sentAssets = new Map(this.assets);
     }
     async play(fromBeat = this._meters.beat) {
-      const generation = this.generation, request = ++this._playRequest; await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
-      await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
-      this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before starting playback.');
+      this._playPending++;
+      try {
+        const generation = this.generation, request = ++this._playRequest; await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
+        await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
+        this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
+      } finally { this._playPending--; }
     }
     stop(options = {}) { if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
@@ -661,6 +801,7 @@
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
     async startRecording(trackIds, options = {}) {
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
       this._recordPreparing = true; this._updateRecordHold();
       try {
@@ -726,7 +867,8 @@
       const base = Number(c?.baseLatency), output = Number(c?.outputLatency); let outputSeconds = (Number.isFinite(base) && base >= 0 ? base : 0) + (Number.isFinite(output) && output >= 0 ? output : 0);
       let reportedOutput = Number.isFinite(base) && base >= 0 || Number.isFinite(output) && output >= 0;
       try { const stamp = c?.getOutputTimestamp?.(), age = Number.isFinite(stamp?.performanceTime) ? Math.max(0, (performance.now() - stamp.performanceTime) / 1000) : 0, gap = c.currentTime - (stamp.contextTime + age); if (Number.isFinite(gap) && gap >= .001 && gap <= 1) { outputSeconds = gap; reportedOutput = true; } } catch {}
-      const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? (this.mode === 'fallback' ? 1024 : 128) / c.sampleRate * 1000 : 0;
+      const processingFrames = this._processingFrames || (this.mode === 'fallback' ? this.node?.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames : 128);
+      const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? processingFrames / c.sampleRate * 1000 : 0;
       const offset = Math.max(-500, Math.min(500, Number(settings.micOffsetMs) || 0));
       const compensationMs = mode === 'off' ? 0 : mode === 'manual' ? offset : Math.max(-500, Math.min(1000, inputMs + outputMs + processingMs + offset));
       return { mode, compensationMs, inputMs, outputMs, processingMs, reportedInput, reportedOutput, estimated: mode === 'auto', offsetMs: offset };
@@ -734,7 +876,7 @@
     getMicrophoneStatus() {
       return { enabled: this._micEnabled, pending: this._micPending, trackId: this._micTrack >= 0 ? this.state.tracks[this._micTrack]?.id || null : null,
         active: Boolean(this._mic), recording: Boolean(this.isRecording && this._recordMicrophone), inputGainDb: this._mic?.gainDb ?? this.state.recording?.micInputGainDb ?? 0,
-        inputPeak: this._meters.microphonePeak || 0, latency: this._recordMicrophone ? { ...this._recordMicrophone } : this.getMicrophoneLatency() };
+        inputPeak: this._meters.microphonePeak || 0, latency: this._recordMicrophone ? { ...this._recordMicrophone } : this.getMicrophoneLatency(), interface: this.getAudioDiagnostics() };
     }
     _emitMicrophoneStatus() { this.onStatus?.({ type: 'microphone-status', ...this.getMicrophoneStatus() }); }
     async _acquireMicrophone(track, gainDb, purpose, generation, request) {
@@ -743,10 +885,24 @@
       try {
         await this.init(); if (generation !== this.generation || request !== this._micRequest) return false;
         if (!this._mic) {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: { ideal: 0 } }, video: false });
+          const device = this._audioSettings, captureLatency = device.latencyProfile === 'live' ? 0 : device.latencyProfile === 'balanced' ? .01 : .04;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+            latency: { ideal: captureLatency }, sampleRate: { ideal: this.context.sampleRate }, channelCount: { ideal: 2 },
+            ...(device.inputDeviceId !== 'default' ? { deviceId: { exact: device.inputDeviceId } } : {}) }, video: false });
           if (generation !== this.generation || request !== this._micRequest) { stream.getTracks().forEach(t => t.stop()); return false; }
-          const source = this.context.createMediaStreamSource(stream), gain = this.context.createGain(); this._mic = { source, gain, stream, track, gainDb: 0 };
-          this._send({ type: 'microphoneReset' }); source.connect(gain); gain.connect(this.microphoneInput);
+          const capture = stream.getAudioTracks?.()[0], actualChannels = capture?.getSettings?.().channelCount;
+          if (device.inputChannel === '2' && actualChannels === 1) throw Error('This input exposes one channel. Choose Input 1 or Stereo, or select an interface with a second input.');
+          const source = this.context.createMediaStreamSource(stream), gain = this.context.createGain();
+          const route = []; this._mic = { source, gain, stream, track, gainDb: 0, route, inputChannel: device.inputChannel }; this._devicePermission = 'granted';
+          this._send({ type: 'microphoneReset' });
+          if (device.inputChannel === 'stereo') source.connect(gain);
+          else {
+            // Channel selection is a zero-delay native route. A mono guitar or
+            // vocal feeds both sides, rather than one quiet half of the amp.
+            const splitter = this.context.createChannelSplitter(2), merger = this.context.createChannelMerger(2), channel = device.inputChannel === '2' ? 1 : 0;
+            splitter.channelInterpretation = 'discrete'; source.connect(splitter); splitter.connect(merger, channel, 0); splitter.connect(merger, channel, 1); merger.connect(gain); route.push(splitter, merger);
+          }
+          gain.connect(this.microphoneInput);
           for (const audioTrack of stream.getAudioTracks?.() || []) audioTrack.addEventListener?.('ended', () => this._microphoneEnded(stream), { once: true });
         }
         session = this._mic; await this.context.resume();
@@ -757,6 +913,7 @@
     }
     async setMicrophoneMonitoring(trackId, options = {}) {
       if (options.enabled !== true) { this._disableMicrophoneMonitoring(); return true; }
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before turning on monitoring.');
       const track = this._trackIndex(trackId);
       if (this.recordingBusy && (this._micTrack !== track || this._micPending)) throw Error('Finish the current take before changing the microphone track.');
       const generation = this.generation, request = ++this._micRequest;
@@ -772,6 +929,7 @@
       this._emitMicrophoneStatus();
     }
     async startMicrophoneRecording(trackId, options = {}) {
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
       const track = this._trackIndex(trackId); if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
       const generation = this.generation, request = ++this._micRequest;
@@ -791,8 +949,9 @@
     }
     _releaseMic(force = false) {
       if (!this._mic || !force && this._micEnabled) return;
-      const { source, gain, stream } = this._mic; this._mic = null;
-      try { source.disconnect(); gain.disconnect(); } catch {} stream.getTracks().forEach(t => t.stop()); this._send({ type: 'microphoneReset' }); this._meters.microphonePeak = 0; this._emitMicrophoneStatus();
+      const { source, gain, stream, route = [] } = this._mic; this._mic = null;
+      for (const node of [source, gain, ...route]) try { node.disconnect(); } catch {}
+      stream.getTracks().forEach(t => t.stop()); this._send({ type: 'microphoneReset' }); this._meters.microphonePeak = 0; this._emitMicrophoneStatus();
     }
     async decodeFile(file) {
       if (!file || file.size > 32 * 1024 * 1024) throw Error('Choose an audio file smaller than 32 MiB.');
@@ -801,6 +960,9 @@
       return { left: buffer.getChannelData(0).slice(0, frames), right: buffer.getChannelData(Math.min(1, buffer.numberOfChannels - 1)).slice(0, frames), sampleRate: buffer.sampleRate, frames };
     }
     async renderWav(state = this.state, assets = this.assets, options = {}) {
+      if (this._audioApplying) throw Error('Finish setting up the audio interface before exporting audio.');
+      this._exportCount++;
+      try {
       if (options.trackId != null) { const index = typeof options.trackId === 'number' ? Math.floor(options.trackId) : state.tracks.findIndex(t => t.id === options.trackId); if (!Number.isInteger(index) || index < 0 || index > 7) throw Error('Choose one of the eight tracks for the stem.'); }
       const sr = 48000, start = Math.max(0, Math.min(255.999, Number(options.startBeat) || 0)), end = Math.max(start + .0001, Math.min(256, Number(options.endBeat) || (state.lengthBars || 4) * 4));
       const tempo = Math.max(40, Math.min(240, state.tempo || 120)), main = Math.round((end - start) * 60 / tempo * sr), tail = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds) || 0)) * sr), total = main + tail;
@@ -815,8 +977,20 @@
         if (++blocks % 12 === 0) { options.onProgress?.(at / total); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
+      } finally { this._exportCount--; }
     }
-    async dispose() { this.panic(); this._transportListeners.clear(); this.node?.disconnect(); for (const input of [...this.inputs, this.microphoneInput].filter(Boolean)) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this.microphoneInput = null; this._init = null; this.mode = 'idle'; }
+    async _closeAudioGraph() {
+      if (this._closingAudioGraph) return this._closingAudioGraph;
+      this._closingAudioGraph = (async () => {
+        if (this.node?.port) { this.node.port.onmessage = null; this.node.port.close?.(); }
+        if (this.node) this.node.onaudioprocess = null;
+        for (const node of [this.node, this.merger, ...(this.splitters || []), ...this.inputs, this.microphoneInput].filter(Boolean)) try { node.disconnect(); } catch {}
+        try { if (this.context && this.context.state !== 'closed') await this.context.close(); }
+        finally { this.context = null; this.node = null; this.core = null; this.recorder = null; this.inputs = []; this.microphoneInput = null; this.merger = null; this.splitters = []; this._init = null; this.mode = 'idle'; this._processingFrames = 0; }
+      })().finally(() => { this._closingAudioGraph = null; });
+      return this._closingAudioGraph;
+    }
+    async dispose() { this.panic(); this._transportListeners.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
   window.LoomAudio = LoomAudio;
