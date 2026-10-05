@@ -168,3 +168,101 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
   .instrument-card>.eyebrow { font-size: 6px; }
 }
 @media (max-width: 370px) { .masthead h1 { font-size: 69px; }.masthead p { max-width: 250px; line-height: 1.7; }.topline>span { font-size: 6px; }.instrument-card h3 { font-size: 20px; letter-spacing: -.01em; } }
+
+/* Microphone prep: monitoring belongs to an explicit channel, timing to the take. */
+.mic-input-panel { margin: -8px 0 20px; border: 1px solid #58675e; border-radius: 3px; background: linear-gradient(130deg, #2b3535, #1b2527); }
+.mic-input-panel summary { display: flex; align-items: center; gap: 15px; padding: 13px 17px; cursor: pointer; list-style: none; }
+.mic-input-panel summary::-webkit-details-marker { display: none; }
+.mic-input-panel summary:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
+.mic-panel-name { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin-right: auto; }
+.mic-panel-name .eyebrow { color: #a8b6a6; font-size: 8px; }
+.mic-panel-name strong { font-family: var(--kk-heading, sans-serif); font-size: 19px; font-weight: 650; letter-spacing: .01em; }
+.mic-state { border: 1px solid #53665a; border-radius: 2px; padding: 5px 8px; color: #b6c4b1; font-family: var(--kk-mono, monospace); font-size: 9px; flex: none; }
+.mic-state.active { border-color: #c69553; background: #604628; color: #ffe4b8; }
+.mic-panel-arrow { color: var(--acid); font-size: 18px; }
+.mic-input-panel[open] .mic-panel-arrow { transform: rotate(180deg); }
+.mic-input-body { padding: 17px; border-top: 1px dashed #54645b; }
+.mic-monitor-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(170px, .75fr); gap: 20px; align-items: center; padding-bottom: 19px; border-bottom: 1px solid #5061537a; }
+.mic-routing { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.mic-routing .eyebrow { color: #a5b5a6; font-size: 8px; letter-spacing: .06em; }
+.mic-routing strong { font-family: var(--kk-mono, monospace); color: #e8dbc3; font-weight: 400; font-size: 12px; overflow-wrap: anywhere; }
+.mic-routing button { font-size: 10px; min-height: 35px; padding: 6px 10px; }
+.mic-monitor-button { min-height: 42px; border-color: #9c7f51; background: #3e372b; color: #f8d59c; font-size: 12px; white-space: nowrap; }
+.mic-monitor-button[aria-pressed=true] { background: #dba254; border-color: #ffc67a; color: #172124; }
+.mic-input-meter { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; font-family: var(--kk-mono, monospace); font-size: 8px; color: #b8c4ae; }
+.mic-input-meter>div { grid-column: 1 / -1; grid-row: 2; height: 12px; border: 1px solid #53615b; background: #101819; overflow: hidden; }
+.mic-input-meter i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #aeb985, #f6ba65 75%, #ef7350); transition: width 45ms linear; }
+.mic-input-meter output { color: #e9ce9a; }
+.mic-input-meter.clipping output { color: #ff8969; }
+.mic-setup-controls { display: grid; grid-template-columns: minmax(130px, .9fr) minmax(160px, 1fr) minmax(105px, .6fr) minmax(210px, 1.3fr); gap: 20px; align-items: start; padding-top: 20px; }
+.mic-setup-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: var(--kk-mono, monospace); font-size: 8px; color: #bbc7b4; letter-spacing: .04em; min-width: 0; }
+.mic-setup-controls label>output { margin-left: auto; color: #f7c58b; font-size: 9px; }
+.mic-setup-controls label>select, .mic-setup-controls label>input { width: 100%; min-width: 0; min-height: 37px; font-size: 12px; letter-spacing: 0; }
+.mic-setup-controls label>input[type=range] { height: 37px; padding: 0; }
+.mic-timing-readout { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px 12px; border-left: 2px solid #c59453; background: #161e20; }
+.mic-timing-readout .eyebrow { color: #b4bbad; font-size: 7px; letter-spacing: .03em; }
+.mic-timing-readout strong { font-family: var(--kk-mono, monospace); font-weight: 400; color: #efc484; font-size: 11px; overflow-wrap: anywhere; }
+.mic-timing-readout>span:last-child { font-size: 9px; color: #a9b6aa; line-height: 1.7; }
+.mic-input-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 15px; }
+.mic-input-notes p { margin: 0; color: #aebdad; font-size: 10px; line-height: 1.7; }
+.mic-input-notes strong { color: #efd5ad; }
+
+/* BROILER: a wired amp head, a speaker wall, and four clear signal stages. */
+.effect-editor.amp-editor { border-color: #b47047; }
+.amp-editor .effect-hero { background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 5px), linear-gradient(155deg, #483329, #1e2423 65%); }
+.amp-editor .effect-hero h2 { font-size: 45px; letter-spacing: .025em; color: #ffbe7d; }
+.amp-editor .effect-art { margin-top: 24px; height: 190px; filter: drop-shadow(0 7px 7px #0006); }
+.amp-signal-route { margin-top: 19px; padding: 12px 0; border-top: 1px dashed #bc795564; border-bottom: 1px dashed #bc795564; color: #d5ac8e; font-family: var(--kk-mono, monospace); font-size: 8px; line-height: 2; letter-spacing: .04em; }
+.amp-editor .effect-right { background: linear-gradient(140deg, #2d3533, #202a2c); }
+.amp-presets { margin: 0 0 22px; padding-bottom: 20px; border-bottom: 1px solid #9a754f55; }
+.amp-presets-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 11px; }
+.amp-presets-heading .eyebrow { color: #e0ac77; font-size: 8px; }
+.amp-presets-heading>span:last-child { font-size: 10px; color: #aebdad; }
+.amp-preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.amp-preset { text-align: left; white-space: normal; min-height: 46px; padding: 8px 10px; color: #e8d3b5; border-color: #687264; background: #273029; line-height: 1.5; font-size: 10px; }
+.amp-preset[aria-pressed=true] { background: #6a452a; border-color: #e6a867; color: #ffe2ad; }
+.amp-control-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.amp-control-group { margin: 0; min-width: 0; padding: 15px; border: 1px solid #576354; background: #17212060; }
+.amp-control-group legend { padding: 0 7px; color: #e9bc88; font-family: var(--kk-heading, sans-serif); font-size: 17px; letter-spacing: .02em; }
+.amp-control-group .effect-controls { grid-template-columns: 1fr 1fr; gap: 20px 16px; }
+.amp-control-group .control { min-width: 0; }
+.amp-control-group .control select { min-width: 0; width: 100%; min-height: 38px; font-size: 10px; }
+.amp-control-group .control input[type=range] { min-height: 32px; }
+.amp-control-group .control label { white-space: normal; gap: 7px; font-size: 9px; }
+.amp-control-group .control output { white-space: nowrap; }
+.amp-control-group .control:has(select) { grid-column: 1 / -1; }
+@media (min-width: 901px) { .amp-editor { scroll-margin-top: 153px; } }
+@media (max-width: 1050px) {
+  .mic-setup-controls { grid-template-columns: 1fr 1fr; gap: 17px 24px; }
+  .amp-control-groups { grid-template-columns: 1fr; }
+  .amp-control-group .effect-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .amp-control-group .control:has(select) { grid-column: span 2; }
+}
+@media (max-width: 620px) {
+  .mic-input-panel { margin-bottom: 15px; }
+  .mic-input-panel summary { padding: 12px; gap: 9px; }
+  .mic-panel-name .eyebrow { font-size: 6px; }
+  .mic-panel-name strong { font-size: 15px; line-height: 1.2; }
+  .mic-state { font-size: 7px; padding: 5px; max-width: 95px; text-align: center; }
+  .mic-input-body { padding: 13px; }
+  .mic-monitor-strip { grid-template-columns: 1fr; gap: 14px; padding-bottom: 16px; }
+  .mic-routing strong { font-size: 11px; }
+  .mic-routing .eyebrow { font-size: 6px; letter-spacing: .025em; }
+  .mic-monitor-button { width: 100%; min-height: 42px; }
+  .mic-setup-controls { gap: 17px 14px; padding-top: 17px; }
+  .mic-setup-controls label { font-size: 7px; letter-spacing: 0; }
+  .mic-setup-controls label>output { font-size: 8px; }
+  .mic-setup-controls label>select, .mic-setup-controls label>input { font-size: 10px; }
+  .mic-timing-readout { grid-column: 1 / -1; padding: 11px; }
+  .mic-input-notes { grid-template-columns: 1fr; gap: 11px; }
+  .mic-input-notes p { font-size: 9px; }
+  .amp-editor .effect-hero h2 { font-size: 34px; }
+  .amp-editor .effect-art { height: 112px; margin: 0; }
+  .amp-signal-route { grid-column: 1 / -1; margin-top: 12px; font-size: 7px; padding: 8px 0; }
+  .amp-preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .amp-preset { font-size: 9px; min-height: 45px; padding: 8px; }
+  .amp-control-group { padding: 12px; }
+  .amp-control-group .effect-controls { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
+  .amp-control-group .control label { font-size: 8px; }
+  .amp-control-group .control:has(select) { grid-column: 1 / -1; }
+}

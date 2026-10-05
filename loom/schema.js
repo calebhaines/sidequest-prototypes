@@ -1,7 +1,7 @@
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.6.0';
+  const VERSION = '1.7.0';
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux'];
@@ -28,7 +28,7 @@
     return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], automation: [], clips: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16, micCompensation: 'auto', micOffsetMs: 0, micInputGainDb: 0 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
   }
   function automationTargets(t) {
     const result = [
@@ -161,7 +161,7 @@
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
-    s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)) };
+    s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)), micCompensation: ['auto', 'manual', 'off'].includes(raw.recording?.micCompensation) ? raw.recording.micCompensation : 'auto', micOffsetMs: number(raw.recording?.micOffsetMs, -500, 500, 0), micInputGainDb: number(raw.recording?.micInputGainDb, -24, 24, 0) };
     if (s.recording.punchEnd <= s.recording.punchStart) s.recording.punchEnd = Math.min(totalBeats, s.recording.punchStart + .25);
     const markerIds = new Set();
     s.markers = (Array.isArray(raw.markers) ? raw.markers : []).slice(0, LIMITS.markers).filter(plain).map(m => { let id = text(m.id, uid('marker')); if (markerIds.has(id)) id = uid('marker'); markerIds.add(id); return { id, name: text(m.name, 'Section', 60), beat: number(m.beat, 0, totalBeats, 0), color: /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : COLORS[0] }; }).sort((a, b) => a.beat - b.beat);
@@ -212,6 +212,8 @@
       if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
       strictNumbers(s.recording, ['punchStart', 'punchEnd'], 'The project contains invalid punch timing.');
       if (s.recording.punchStart < 0 || s.recording.punchEnd > s.lengthBars * 4 || s.recording.punchEnd - s.recording.punchStart < .25 - 1e-8) throw Error('The project contains an invalid punch range.');
+      if (s.recording.micCompensation !== undefined && !['auto', 'manual', 'off'].includes(s.recording.micCompensation)) throw Error('The project contains an invalid microphone compensation mode.');
+      for (const [key, min, max] of [['micOffsetMs', -500, 500], ['micInputGainDb', -24, 24]]) if (s.recording[key] !== undefined && (typeof s.recording[key] !== 'number' || !Number.isFinite(s.recording[key]) || s.recording[key] < min || s.recording[key] > max)) throw Error('The project contains an invalid microphone timing or gain setting.');
     }
     if (s.markers !== undefined) {
       if (!Array.isArray(s.markers) || s.markers.length > LIMITS.markers) throw Error('The project contains too many section markers.');

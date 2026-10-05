@@ -71,3 +71,19 @@ git push origin main
 ROUX projects and patterns use their own stable instrument identity; save portable
 files before reverting if you want to keep them for a later reinstallation.
 The previous nine instruments and their storage formats are unchanged.
+
+## GALLEY microphone and amplifier release
+
+GALLEY 1.7 adds microphone timing compensation, optional live monitoring, and the
+BROILER amp and cabinet effect. The previous working site is preserved at
+`pre-galley-mic-amp-2026-10-05`, commit
+`2d1a25a97465f744b4f8bf05c2fe0d1255a4b091`. The update is tagged
+`galley-mic-amp-v1`. To restore GALLEY 1.6 and its matching downloads:
+
+```sh
+git revert --no-edit galley-mic-amp-v1
+git push origin main
+```
+
+Save portable projects before reverting. The older version can retain recorded
+audio but does not implement BROILER or the new microphone settings.

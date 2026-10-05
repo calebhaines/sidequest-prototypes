@@ -62,6 +62,34 @@ pitch. Snap and zoom make precise edits easier; the clip inspector offers
 numeric timing controls. Loop phase survives splitting and left trimming.
 Audio imports and explicitly enabled microphone input can provide material too.
 
+### Microphone input, live effects, and timing
+
+Open **Microphone · monitoring & timing** below the transport. Select a track
+and press **Monitor microphone** to hear the input through its four inserts,
+level, pan, mute/solo, and master, including while playback is stopped. Input trim
+and the input meter help set the level. Use headphones to prevent speaker feedback.
+Monitoring starts off and is never saved as enabled in a project.
+
+The monitor route stays on its displayed track when you select another channel.
+**Move monitoring to track…** moves it explicitly. Select **Microphone → selected
+track** under Record from, then Record. A monitored take must use that same
+track. Recordings capture the input after its trim and before the DAW effects;
+the inserts process it once when played back. **Finish take** retains monitoring
+if you enabled it. Pause, Stop, Panic, switching Record from back to instruments,
+opening a project, and leaving the page turn it off and release the microphone.
+Turning monitoring off during a take leaves the dry recording running.
+
+**Recording alignment** has three modes. Auto estimates input, output, and
+processing delay using the timing available from the browser, plus your extra
+trim. Unreported device delays are clearly identified. Manual uses only your
+signed offset; Off leaves timing unchanged. Positive milliseconds move the take
+earlier; negative milliseconds move it later. The range is −500 to +500 ms for
+manual offset and extra trim. Settings lock while a take is preparing, recording,
+or finishing, so its gain and timing remain consistent. Delay compensation keeps
+the intended length, count-in, and punch boundaries, including a short finishing
+capture when needed. Auto is an estimate: fine-tune the offset by ear for your
+interface. Recording alignment does not remove live monitoring delay.
+
 Each of the eight tracks has level, pan, mute, solo, and exactly four serial
 effects slots. Effects can be edited, bypassed, reordered, reset, or removed.
 Recordings capture live track input before the DAW inserts. Play existing clips
@@ -155,7 +183,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Eight effects
+## Nine effects
 
 | Effect | Processing |
 | --- | --- |
@@ -167,6 +195,20 @@ is unavailable, keep a WAV or packet for the next session.
 | HOOD | Eight-line algorithmic reverb |
 | PROOF | Windowed, phase-aligned pitch shifting |
 | WHISK | Tempo-locked rhythmic gating and auto-pan |
+| BROILER | Bass and guitar amp heads, power-stage dynamics, speaker cabinets, microphone position, and protected clean lows |
+
+BROILER contains five bass models (clean solid-state, flip-top valves, valve stack,
+modern grind, and doom fuzz) plus American clean, British crunch, and high-gain
+guitar models. Its four control groups follow the signal: input/preamp, low end
+and tone, power/dynamics, then cabinet/output. Clean low blend protects the
+fundamental under heavy drive; its crossover sets the clean band's edge. Tone,
+presence, depth, power drive, sag, gate threshold/release, speaker breakup,
+microphone position/distance, cabinet air, and output are independently adjustable.
+Eight cabinet choices include three bass cabs, three guitar cabs, DI, and an
+unlikely steel cupboard. DI disables the cabinet-only controls. Stereo/mono
+input options, nine complete recipe presets, dry/wet, bypass, and automation
+work on clips, instruments, and monitored microphone input. No impulse-response
+downloads or network audio are needed.
 
 ## Projects, recording, and export
 
@@ -207,6 +249,13 @@ Run `npm run check:loom` for the dependency-free Node engine checks. These verif
 project compatibility, automation in playback and export, sample-exact
 count-in/punch recording, and cropped stereo transfers with clip edits and limits.
 From an extracted archive, run `node checks.cjs`.
+Run `npm run check:loom-amp` and `npm run check:loom-mic` for BROILER audio and
+microphone timing/routing checks. The extracted equivalents are
+`node amp-checks.cjs` and `node microphone-engine-checks.cjs`.
+`npm run check:loom-mic-browser` uses Playwright and Chromium to verify actual
+microphone monitoring, permission cleanup, dry recording, amp exports, and
+responsive controls. Set `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` when using
+an existing installation; extracted sources include `microphone-browser-checks.cjs`.
 Run `npm run check:patterns` and `npm run check:loom-notes` for portable-pattern
 and reversible-source checks. Extracted archives include `note-checks.cjs`.
 
@@ -217,7 +266,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.6.0.
+font license notices. Version 1.7.0.
 
 ## Compatibility
 

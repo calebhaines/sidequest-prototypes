@@ -96,8 +96,8 @@
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.6.0">
-<meta name="description" content="GALLEY is an eight-track browser studio. Arrange audio, play Kitchen instruments, and shape each track through four slots of eight original effects.">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.7.0">
+<meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play ten instruments, monitor microphone input through four effects per track, and align recordings. Nine effects include BROILER bass and guitar amps.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
 <style>
@@ -482,6 +482,104 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 }
 @media (max-width: 370px) { .masthead h1 { font-size: 69px; }.masthead p { max-width: 250px; line-height: 1.7; }.topline>span { font-size: 6px; }.instrument-card h3 { font-size: 20px; letter-spacing: -.01em; } }
 
+/* Microphone prep: monitoring belongs to an explicit channel, timing to the take. */
+.mic-input-panel { margin: -8px 0 20px; border: 1px solid #58675e; border-radius: 3px; background: linear-gradient(130deg, #2b3535, #1b2527); }
+.mic-input-panel summary { display: flex; align-items: center; gap: 15px; padding: 13px 17px; cursor: pointer; list-style: none; }
+.mic-input-panel summary::-webkit-details-marker { display: none; }
+.mic-input-panel summary:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
+.mic-panel-name { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin-right: auto; }
+.mic-panel-name .eyebrow { color: #a8b6a6; font-size: 8px; }
+.mic-panel-name strong { font-family: var(--kk-heading, sans-serif); font-size: 19px; font-weight: 650; letter-spacing: .01em; }
+.mic-state { border: 1px solid #53665a; border-radius: 2px; padding: 5px 8px; color: #b6c4b1; font-family: var(--kk-mono, monospace); font-size: 9px; flex: none; }
+.mic-state.active { border-color: #c69553; background: #604628; color: #ffe4b8; }
+.mic-panel-arrow { color: var(--acid); font-size: 18px; }
+.mic-input-panel[open] .mic-panel-arrow { transform: rotate(180deg); }
+.mic-input-body { padding: 17px; border-top: 1px dashed #54645b; }
+.mic-monitor-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(170px, .75fr); gap: 20px; align-items: center; padding-bottom: 19px; border-bottom: 1px solid #5061537a; }
+.mic-routing { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.mic-routing .eyebrow { color: #a5b5a6; font-size: 8px; letter-spacing: .06em; }
+.mic-routing strong { font-family: var(--kk-mono, monospace); color: #e8dbc3; font-weight: 400; font-size: 12px; overflow-wrap: anywhere; }
+.mic-routing button { font-size: 10px; min-height: 35px; padding: 6px 10px; }
+.mic-monitor-button { min-height: 42px; border-color: #9c7f51; background: #3e372b; color: #f8d59c; font-size: 12px; white-space: nowrap; }
+.mic-monitor-button[aria-pressed=true] { background: #dba254; border-color: #ffc67a; color: #172124; }
+.mic-input-meter { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; font-family: var(--kk-mono, monospace); font-size: 8px; color: #b8c4ae; }
+.mic-input-meter>div { grid-column: 1 / -1; grid-row: 2; height: 12px; border: 1px solid #53615b; background: #101819; overflow: hidden; }
+.mic-input-meter i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #aeb985, #f6ba65 75%, #ef7350); transition: width 45ms linear; }
+.mic-input-meter output { color: #e9ce9a; }
+.mic-input-meter.clipping output { color: #ff8969; }
+.mic-setup-controls { display: grid; grid-template-columns: minmax(130px, .9fr) minmax(160px, 1fr) minmax(105px, .6fr) minmax(210px, 1.3fr); gap: 20px; align-items: start; padding-top: 20px; }
+.mic-setup-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: var(--kk-mono, monospace); font-size: 8px; color: #bbc7b4; letter-spacing: .04em; min-width: 0; }
+.mic-setup-controls label>output { margin-left: auto; color: #f7c58b; font-size: 9px; }
+.mic-setup-controls label>select, .mic-setup-controls label>input { width: 100%; min-width: 0; min-height: 37px; font-size: 12px; letter-spacing: 0; }
+.mic-setup-controls label>input[type=range] { height: 37px; padding: 0; }
+.mic-timing-readout { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px 12px; border-left: 2px solid #c59453; background: #161e20; }
+.mic-timing-readout .eyebrow { color: #b4bbad; font-size: 7px; letter-spacing: .03em; }
+.mic-timing-readout strong { font-family: var(--kk-mono, monospace); font-weight: 400; color: #efc484; font-size: 11px; overflow-wrap: anywhere; }
+.mic-timing-readout>span:last-child { font-size: 9px; color: #a9b6aa; line-height: 1.7; }
+.mic-input-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 15px; }
+.mic-input-notes p { margin: 0; color: #aebdad; font-size: 10px; line-height: 1.7; }
+.mic-input-notes strong { color: #efd5ad; }
+
+/* BROILER: a wired amp head, a speaker wall, and four clear signal stages. */
+.effect-editor.amp-editor { border-color: #b47047; }
+.amp-editor .effect-hero { background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 5px), linear-gradient(155deg, #483329, #1e2423 65%); }
+.amp-editor .effect-hero h2 { font-size: 45px; letter-spacing: .025em; color: #ffbe7d; }
+.amp-editor .effect-art { margin-top: 24px; height: 190px; filter: drop-shadow(0 7px 7px #0006); }
+.amp-signal-route { margin-top: 19px; padding: 12px 0; border-top: 1px dashed #bc795564; border-bottom: 1px dashed #bc795564; color: #d5ac8e; font-family: var(--kk-mono, monospace); font-size: 8px; line-height: 2; letter-spacing: .04em; }
+.amp-editor .effect-right { background: linear-gradient(140deg, #2d3533, #202a2c); }
+.amp-presets { margin: 0 0 22px; padding-bottom: 20px; border-bottom: 1px solid #9a754f55; }
+.amp-presets-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 11px; }
+.amp-presets-heading .eyebrow { color: #e0ac77; font-size: 8px; }
+.amp-presets-heading>span:last-child { font-size: 10px; color: #aebdad; }
+.amp-preset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.amp-preset { text-align: left; white-space: normal; min-height: 46px; padding: 8px 10px; color: #e8d3b5; border-color: #687264; background: #273029; line-height: 1.5; font-size: 10px; }
+.amp-preset[aria-pressed=true] { background: #6a452a; border-color: #e6a867; color: #ffe2ad; }
+.amp-control-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.amp-control-group { margin: 0; min-width: 0; padding: 15px; border: 1px solid #576354; background: #17212060; }
+.amp-control-group legend { padding: 0 7px; color: #e9bc88; font-family: var(--kk-heading, sans-serif); font-size: 17px; letter-spacing: .02em; }
+.amp-control-group .effect-controls { grid-template-columns: 1fr 1fr; gap: 20px 16px; }
+.amp-control-group .control { min-width: 0; }
+.amp-control-group .control select { min-width: 0; width: 100%; min-height: 38px; font-size: 10px; }
+.amp-control-group .control input[type=range] { min-height: 32px; }
+.amp-control-group .control label { white-space: normal; gap: 7px; font-size: 9px; }
+.amp-control-group .control output { white-space: nowrap; }
+.amp-control-group .control:has(select) { grid-column: 1 / -1; }
+@media (min-width: 901px) { .amp-editor { scroll-margin-top: 153px; } }
+@media (max-width: 1050px) {
+  .mic-setup-controls { grid-template-columns: 1fr 1fr; gap: 17px 24px; }
+  .amp-control-groups { grid-template-columns: 1fr; }
+  .amp-control-group .effect-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .amp-control-group .control:has(select) { grid-column: span 2; }
+}
+@media (max-width: 620px) {
+  .mic-input-panel { margin-bottom: 15px; }
+  .mic-input-panel summary { padding: 12px; gap: 9px; }
+  .mic-panel-name .eyebrow { font-size: 6px; }
+  .mic-panel-name strong { font-size: 15px; line-height: 1.2; }
+  .mic-state { font-size: 7px; padding: 5px; max-width: 95px; text-align: center; }
+  .mic-input-body { padding: 13px; }
+  .mic-monitor-strip { grid-template-columns: 1fr; gap: 14px; padding-bottom: 16px; }
+  .mic-routing strong { font-size: 11px; }
+  .mic-routing .eyebrow { font-size: 6px; letter-spacing: .025em; }
+  .mic-monitor-button { width: 100%; min-height: 42px; }
+  .mic-setup-controls { gap: 17px 14px; padding-top: 17px; }
+  .mic-setup-controls label { font-size: 7px; letter-spacing: 0; }
+  .mic-setup-controls label>output { font-size: 8px; }
+  .mic-setup-controls label>select, .mic-setup-controls label>input { font-size: 10px; }
+  .mic-timing-readout { grid-column: 1 / -1; padding: 11px; }
+  .mic-input-notes { grid-template-columns: 1fr; gap: 11px; }
+  .mic-input-notes p { font-size: 9px; }
+  .amp-editor .effect-hero h2 { font-size: 34px; }
+  .amp-editor .effect-art { height: 112px; margin: 0; }
+  .amp-signal-route { grid-column: 1 / -1; margin-top: 12px; font-size: 7px; padding: 8px 0; }
+  .amp-preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .amp-preset { font-size: 9px; min-height: 45px; padding: 8px; }
+  .amp-control-group { padding: 12px; }
+  .amp-control-group .effect-controls { grid-template-columns: 1fr 1fr; gap: 20px 14px; }
+  .amp-control-group .control label { font-size: 8px; }
+  .amp-control-group .control:has(select) { grid-column: 1 / -1; }
+}
+
 </style>
 
 <style>
@@ -691,6 +789,14 @@ body {
 <div class="transport-navigation" aria-label="Playback position controls"><div class="navigation-group"><button id="returnStartButton" class="navigation-button" aria-label="Move playhead to the beginning" title="Move playhead to the beginning (Home)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3v10M13 4 6 8l7 4Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span>Start</span></button><button id="previousBarButton" class="navigation-button icon-only" aria-label="Move playhead back one bar" title="Back one bar (Alt + Left)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m8 4-5 4 5 4m5-8-5 4 5 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button id="nextBarButton" class="navigation-button icon-only" aria-label="Move playhead forward one bar" title="Forward one bar (Alt + Right)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 4 5 4-5 4m5-8 5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button id="goEndButton" class="navigation-button" aria-label="Move playhead to the end of the session" title="Move playhead to the end (End)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3v10M3 4l7 4-7 4Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span>End</span></button></div><div class="navigation-group loop-navigation"><button id="loopStartButton" class="navigation-button" aria-label="Move playhead to the loop start" title="Move playhead to the loop start ([)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 3H5v10h6M8 8h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span>Loop start</span></button><button id="loopEndButton" class="navigation-button" aria-label="Move playhead to the loop end" title="Move playhead to the loop end (])"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3h6v10H5M3 8h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span>Loop end</span></button><button id="restartButton" class="navigation-button restart-button" aria-label="Restart playback from the beginning" title="Play from the beginning (Shift + Space)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3v10m3-9 6 4-6 4Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg><span>Restart</span></button></div><span class="navigation-note">BAR · BEAT · TICK <span aria-hidden="true">/</span> CLICK THE CLOCK TO GO SOMEWHERE.</span></div>
 </section>
 <section class="recording-tools" aria-label="Recording setup"><div class="recording-heading"><span class="eyebrow">RECORDING SETUP</span><span id="recordingSetupSummary">A little warning before service begins.</span></div><label>COUNT-IN<select id="countInBars"><option value="0">Off</option><option value="1">1 bar</option><option value="2">2 bars</option></select></label><button id="punchButton" aria-pressed="false" title="Record only within the chosen time range">Punch in / out</button><label>FROM BAR<input id="punchStart" type="number" min="1" max="65" step="0.25" value="1"></label><label>TO BAR<input id="punchEnd" type="number" min="1.25" max="65" step="0.25" value="5"></label><button id="punchFromLoop">Use loop range</button></section>
+<details id="micInputPanel" class="mic-input-panel">
+<summary><span class="mic-panel-name"><span class="eyebrow">INPUT / PREP STATION</span><strong>Microphone · monitoring &amp; timing</strong></span><span id="microphoneState" class="mic-state">OFF</span><span class="mic-panel-arrow" aria-hidden="true">⌄</span></summary>
+<div class="mic-input-body">
+<div class="mic-monitor-strip"><div class="mic-routing"><span class="eyebrow">LIVE INPUT → FOUR INSERTS → MIXER</span><strong id="microphoneRouteLabel">Selected track</strong><button id="microphoneRouteButton" hidden>Move monitoring here</button></div><button id="microphoneMonitorButton" class="mic-monitor-button" aria-pressed="false">Monitor microphone</button><div class="mic-input-meter" role="meter" aria-label="Microphone input peak" aria-valuemin="-90" aria-valuemax="0" aria-valuenow="-90"><span>INPUT</span><div><i id="microphoneMeterFill"></i></div><output id="microphoneMeterValue">−∞ dB</output></div></div>
+<div class="mic-setup-controls"><label>INPUT TRIM <output id="microphoneGainValue">0.0 dB</output><input id="microphoneInputGain" type="range" min="-24" max="24" step="0.1" value="0" aria-label="Microphone input trim in decibels"></label><label>RECORDING ALIGNMENT<select id="microphoneCompensation"><option value="auto">Auto estimate + trim</option><option value="manual">Manual offset</option><option value="off">Off</option></select></label><label><span id="microphoneOffsetLabel">EXTRA TRIM (MS)</span><input id="microphoneOffset" type="number" min="-500" max="500" step="0.1" value="0" inputmode="decimal" aria-describedby="microphoneOffsetHint"></label><div class="mic-timing-readout"><span class="eyebrow">MOVE THE TAKE INTO TIME</span><strong id="microphoneTimingSummary">Auto estimate before the first take</strong><span id="microphoneLatencyDetails">Timing is estimated after audio starts.</span></div></div>
+<div class="mic-input-notes"><p><strong>Use headphones.</strong> Monitoring plays the microphone through this track’s live effects. Recordings stay dry so the rack processes them once on playback.</p><p id="microphoneOffsetHint">Positive offsets move the recording earlier; negative offsets move it later. Auto uses reported device delays, when available. Adjust by ear; alignment does not reduce live monitoring delay.</p></div>
+</div>
+</details>
 <main>
 <section class="panel arrangement-panel" aria-labelledby="arrangeTitle">
 <div class="panel-heading"><h2 id="arrangeTitle"><span class="section-number">01</span> Arrangement / ticket rail</h2><div class="arrange-tools"><button id="createNoteClipButton">+ Note clip</button><button id="importButton">Import audio</button><label>SNAP<select id="snap"><option value="0">Off</option><option value="0.125">⅛ beat</option><option value="0.25" selected>¼ beat</option><option value="0.5">½ beat</option><option value="1">Beat</option><option value="4">Bar</option></select></label><label class="zoom-control">ZOOM<input id="zoom" type="range" min="5" max="100" step="1" value="48"></label><button id="followButton" aria-pressed="true" title="Keep the playing needle in view (F)">Follow</button><button id="fitButton">Fit</button></div></div>
@@ -708,7 +814,7 @@ body {
 </div>
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.6.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.7.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="markerDialog" class="marker-dialog" aria-labelledby="markerTitle"><div class="dialog-top"><div><span class="eyebrow">LABEL THE NEXT COURSE</span><h2 id="markerTitle">Name this section.</h2></div><button id="closeMarker" class="close-button" aria-label="Close section marker">×</button></div><div class="marker-fields"><label>SECTION NAME<input id="markerName" type="text" maxlength="60" placeholder="First course, probably"></label><label>BAR<input id="markerBar" type="number" min="1" max="65" step="1" value="1"></label><label>BEAT<input id="markerBeat" type="number" min="1" max="4" step="0.001" value="1"></label><label>COLOR<input id="markerColor" type="color" value="#dce89b"></label></div><div class="marker-bottom"><button id="deleteMarker" class="delete-clip-action" hidden>Delete marker</button><button id="saveMarker" class="play-button">Save marker</button></div></dialog>
@@ -716,12 +822,12 @@ body {
 <dialog id="clipActionsDialog" class="clip-actions-dialog" aria-labelledby="clipActionsTitle"><div class="dialog-top"><div><span class="eyebrow">ONE ITEM ON THE TICKET</span><h2 id="clipActionsTitle">Clip actions.</h2></div><button id="closeClipActions" class="close-button" aria-label="Close clip actions">×</button></div><div class="clip-menu-buttons"><button data-clip-action="edit">Edit clip controls</button><button data-clip-action="notes" hidden>Edit notes</button><button data-clip-action="print" hidden>Print audio</button><button data-clip-action="source" hidden>Edit source instrument ↗</button><button data-clip-action="update" hidden>Update printed audio</button><button data-clip-action="loop">Loop this clip</button><button data-clip-action="split">Split at playhead</button><button data-clip-action="duplicate">Duplicate clip</button><button data-clip-action="transfer">Send to another instrument ↗</button><button data-clip-action="delete" class="delete-clip-action">Delete clip</button></div><p class="fineprint">Deleting removes this recording from the arrangement. Undo brings it back.</p></dialog>
 <dialog id="positionDialog" class="position-dialog" aria-labelledby="positionTitle"><div class="dialog-top"><div><span class="eyebrow">CHECK THE SERVICE CLOCK</span><h2 id="positionTitle">Go to a position.</h2></div><button id="closePosition" class="close-button" aria-label="Close playback position">×</button></div><p class="dialog-intro">Choose a bar, beat, and tick. A thousand ticks make one beat.</p><div class="position-fields"><label>BAR<input id="positionBar" type="number" min="1" max="65" step="1" value="1" inputmode="numeric"></label><label>BEAT<input id="positionBeat" type="number" min="1" max="4" step="1" value="1" inputmode="numeric"></label><label>TICK<input id="positionTick" type="number" min="0" max="999" step="1" value="0" inputmode="numeric"></label></div><div class="position-bottom"><span>SESSION TIME <output id="positionTime">0.000 s</output></span><button id="positionApply" class="play-button">Move the needle →</button></div><p class="fineprint position-hint">Seeking moves the playing audio too. Position controls wait while a take is being recorded or finalized.</p></dialog>
 <dialog id="instrumentDialog" class="instrument-dialog"><div class="dialog-top"><div><span class="eyebrow">THE EQUIPMENT ROSTER</span><h2 id="instrumentDialogTitle">Choose a voice for track 01.</h2></div><button id="closeInstrument" class="close-button" aria-label="Close instrument editor">×</button></div><div id="instrumentBrowser"><p class="dialog-intro">The complete Kitchen instruments, with their original controls. Choose one, arm its track, and Record a take into your arrangement.</p><div id="instrumentGrid" class="instrument-grid"></div><div class="custom-instrument"><div><h3>Bring the next peculiar invention.</h3><p>Upload a self-contained HTML instrument, or use a same-origin URL. Audio must use Web Audio.</p></div><div><button id="uploadAppButton">Upload instrument HTML</button><label><input id="customAppUrl" type="url" placeholder="https://this-site/music/your-app/" aria-label="Same-origin instrument URL"><button id="loadAppUrlButton">Load URL</button></label></div></div></div><div id="instrumentEditorBar" class="instrument-editor-bar" hidden><strong id="instrumentEditorName">INSTRUMENT</strong><span id="instrumentHostStatus">Preparing the audio bridge…</span><button id="instrumentBackButton">Other instruments</button><button id="unloadInstrumentButton">Unload</button></div><div id="instrumentFrames" class="instrument-frames" hidden></div></dialog>
-<dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">EIGHT FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
+<dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">NINE FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
 <dialog id="exportDialog" class="export-dialog"><div class="dialog-top"><div><span class="eyebrow">PACK THE FINISHED ORDER</span><h2>Export / ready to go.</h2></div><button id="closeExport" class="close-button" aria-label="Close export">×</button></div><p>Render audio and note clips through their complete effect chains. Note clips use the track’s saved instrument; live performances can be recorded into audio clips.</p><div class="export-fields"><label>EXPORT<select id="exportMode"><option value="mix">Stereo master mix</option><option value="stem">Selected track stem</option><option value="all">All eight track stems</option></select></label><label>RANGE<select id="exportRange"><option value="session">Whole session</option><option value="loop">Loop region</option></select></label><label>EFFECT TAIL<select id="exportTail"><option value="0">None</option><option value="2" selected>2 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option></select></label></div><progress id="exportProgress" max="1" value="0" hidden></progress><div class="export-bottom"><span id="exportSummary">Stereo PCM WAV · 48 kHz · 16 bit</span><button id="cancelExport" hidden>Cancel render</button><button id="renderButton" class="play-button">Render WAV ↗</button></div></dialog>
-<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of ten bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track without monitoring your microphone through the speakers. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, or STEAM spectral score. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the eight effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight tracks and four insert slots per track. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
+<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of ten bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone · monitoring &amp; timing</strong> to enable live input through that track’s four effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto estimates the input, output, and processing delay reported by your browser, then applies the extra trim. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move the take earlier and negative offsets move it later. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> is the bass-first amp rack: five bass amp models, three guitar amp models, clean low-end blending, tone shaping, power-stage sag, speaker drive, eight cabinet choices including direct, microphone position, and a gate. Choose a recipe preset or shape each stage yourself. Use it on recorded clips, instrument tracks, or the monitored microphone.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, or STEAM spectral score. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the nine effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight tracks and four insert slots per track. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
 <input id="audioFile" type="file" accept="audio/*" hidden><input id="projectFile" type="file" accept=".json,.loom.json,application/json" hidden><input id="appFile" type="file" accept=".html,text/html" hidden>
 <script>
-/* GALLEY effects · clear controls, eight finishing tools. No external assets. */
+/* GALLEY effects · clear controls, nine finishing tools. No external assets. */
 (function (scope) {
   'use strict';
   const range = (key, label, min, max, step, value, unit) => ({ key, label, type: 'range', min, max, step, default: value, unit: unit || '' });
@@ -775,9 +881,43 @@ body {
       description: 'Tempo-locked amplitude motion, rhythmic gates, and stereo auto-pan.',
       params: [select('division', 'Cycle', '1/8', rhythmic), select('shape', 'Shape', 'sine', [['sine', 'Sine'], ['triangle', 'Triangle'], ['gate', 'Gate'], ['pulse', 'Rounded pulse']]), range('depth', 'Gate depth', 0, 1, 0.01, 0.65, ''), range('pan', 'Auto-pan', 0, 1, 0.01, 0.5, ''), range('duty', 'Open length', 0.05, 0.95, 0.01, 0.5, ''), range('phase', 'Phase', 0, 360, 1, 0, '°'), range('smooth', 'Smoothing', 0, 80, 0.1, 4, 'ms')],
       defaults: { division: '1/8', shape: 'sine', depth: 0.65, pan: 0.5, duty: 0.5, phase: 0, smooth: 4, mix: 1, bypass: false }
+    },
+    {
+      id: 'broiler', name: 'BROILER', subtitle: 'The low end is having a very hot service.', color: '#ef8b4f', accent: '#ffd39b', visual: 'broiler', panel: 'amp',
+      description: 'Five bass and three guitar amp characters, oversampled preamp and power stages, protected clean lows, and eight cabinet choices. Hear the head, move the mic, feed the speaker.',
+      params: [
+        select('model', 'Amplifier', 'clean-bass', [['clean-bass', 'Bass · solid-state clean'], ['flip-top', 'Bass · warm flip-top'], ['valve-stack', 'Bass · valve stack'], ['modern-grind', 'Bass · modern grind'], ['doom-fuzz', 'Bass · doom fuzz'], ['american-clean', 'Guitar · American clean'], ['british-crunch', 'Guitar · British crunch'], ['high-gain', 'Guitar · high gain']]),
+        range('input', 'Input gain', -18, 24, 0.1, 0, 'dB'), range('drive', 'Preamp drive', 0, 36, 0.1, 6, 'dB'),
+        range('cleanLow', 'Clean low blend', 0, 1, 0.01, 0.35, ''), range('crossover', 'Low crossover', 50, 500, 1, 150, 'Hz'),
+        range('bass', 'Bass', -15, 15, 0.1, 2, 'dB'), range('mid', 'Middle', -18, 18, 0.1, -1, 'dB'), range('midFreq', 'Middle frequency', 80, 2500, 1, 550, 'Hz'), range('treble', 'Treble', -15, 15, 0.1, 0, 'dB'),
+        range('presence', 'Presence', 0, 1, 0.01, 0.35, ''), range('depth', 'Low depth', 0, 1, 0.01, 0.4, ''),
+        range('master', 'Power drive', 0, 1, 0.01, 0.45, ''), range('sag', 'Power sag', 0, 1, 0.01, 0.3, ''),
+        range('gate', 'Gate threshold', -90, -20, 1, -75, 'dB'), range('gateRelease', 'Gate release', 20, 800, 1, 160, 'ms'),
+        select('cabinet', 'Speaker cabinet', 'bass410', [['di', 'DI · cabinet off'], ['bass15', 'Bass · 1 × 15 round'], ['bass410', 'Bass · 4 × 10 tight'], ['bass810', 'Bass · 8 × 10 stack'], ['guitar112open', 'Guitar · 1 × 12 open'], ['guitar212', 'Guitar · 2 × 12 combo'], ['guitar412', 'Guitar · 4 × 12 closed'], ['metalbox', 'Oddity · steel cupboard']]),
+        range('speakerDrive', 'Speaker breakup', 0, 1, 0.01, 0.2, ''), range('mic', 'Mic position', 0, 1, 0.01, 0.45, ''), range('distance', 'Mic distance', 0, 1, 0.01, 0.15, ''), range('air', 'Cabinet air', 0, 1, 0.01, 0.3, ''),
+        select('stereo', 'Input channels', 'stereo', [['stereo', 'Preserve stereo'], ['mono', 'Mono amp input']]), range('output', 'Output gain', -24, 12, 0.1, -4, 'dB')
+      ],
+      groups: [
+        { label: '01 · Input & amplifier', keys: ['model', 'input', 'drive', 'stereo'] },
+        { label: '02 · Low end & tone', keys: ['cleanLow', 'crossover', 'bass', 'mid', 'midFreq', 'treble', 'presence', 'depth'] },
+        { label: '03 · Power & dynamics', keys: ['master', 'sag', 'gate', 'gateRelease'] },
+        { label: '04 · Cabinet & output', keys: ['cabinet', 'speakerDrive', 'mic', 'distance', 'air', 'output', 'mix'] }
+      ],
+      defaults: { model: 'clean-bass', input: 0, drive: 6, cleanLow: 0.35, crossover: 150, bass: 2, mid: -1, midFreq: 550, treble: 0, presence: 0.35, depth: 0.4, master: 0.45, sag: 0.3, gate: -75, gateRelease: 160, cabinet: 'bass410', speakerDrive: 0.2, mic: 0.45, distance: 0.15, air: 0.3, stereo: 'stereo', output: -4, mix: 1, bypass: false },
+      presets: [
+        { id: 'house-bass', name: 'House bass', description: 'Clean, firm lows. The station is open.', params: { model: 'clean-bass', drive: 3, cabinet: 'bass410', cleanLow: 0.5, bass: 2, depth: 0.3, presence: 0.4, master: 0.3, sag: 0.15 } },
+        { id: 'sunday-stock', name: 'Sunday stock', description: 'Soft valves and a broad fifteen-inch pot.', params: { model: 'flip-top', drive: 9, cabinet: 'bass15', cleanLow: 0.25, bass: 3, mid: 1.5, midFreq: 350, treble: -3, depth: 0.55, presence: 0.15, master: 0.5, sag: 0.65, air: 0.2 } },
+        { id: 'full-stack', name: 'Full stack service', description: 'Eight tens, warm grind, plenty of floor.', params: { model: 'valve-stack', drive: 14, cabinet: 'bass810', cleanLow: 0.45, mid: 3, midFreq: 750, presence: 0.45, depth: 0.5, master: 0.55, sag: 0.35, speakerDrive: 0.3, output: -5 } },
+        { id: 'knife-edge', name: 'Knife edge', description: 'Tight modern attack over a clean foundation.', params: { model: 'modern-grind', drive: 18, cabinet: 'bass410', cleanLow: 0.7, crossover: 190, bass: 1, mid: -2, midFreq: 450, treble: 2, presence: 0.65, master: 0.4, sag: 0.1, mic: 0.75, output: -6 } },
+        { id: 'burnt-bottom', name: 'Burnt at the bottom', description: 'Doom fuzz with enough clean bass to stand on.', params: { model: 'doom-fuzz', drive: 24, cabinet: 'bass810', cleanLow: 0.65, crossover: 180, bass: 4, mid: 2, midFreq: 300, treble: -3, presence: 0.2, depth: 0.7, master: 0.7, sag: 0.6, speakerDrive: 0.6, output: -7 } },
+        { id: 'glassware', name: 'Good glassware', description: 'American clean, open back, a little cabinet air.', params: { model: 'american-clean', drive: 2, cabinet: 'guitar112open', cleanLow: 0, bass: 0, mid: -2, midFreq: 650, treble: 3, presence: 0.5, depth: 0.1, master: 0.3, sag: 0.2, mic: 0.65, air: 0.65, output: -3 } },
+        { id: 'hot-pass', name: 'The hot pass', description: 'British crunch through a barking two-by-twelve.', params: { model: 'british-crunch', drive: 15, cabinet: 'guitar212', cleanLow: 0, bass: 1, mid: 4, midFreq: 900, treble: 1, presence: 0.5, depth: 0.25, master: 0.6, sag: 0.4, speakerDrive: 0.35, output: -5 } },
+        { id: 'after-hours', name: 'After-hours alarm', description: 'High gain, a closed stack, and a sensible gate.', params: { model: 'high-gain', drive: 23, cabinet: 'guitar412', cleanLow: 0, bass: 2, mid: -3, midFreq: 650, treble: 2, presence: 0.65, depth: 0.4, master: 0.5, sag: 0.2, gate: -55, gateRelease: 100, speakerDrive: 0.35, mic: 0.65, output: -7 } },
+        { id: 'steel-cupboard', name: 'Inside the steel cupboard', description: 'A resonant little accident, with protected low end.', params: { model: 'modern-grind', drive: 13, cabinet: 'metalbox', cleanLow: 0.55, crossover: 120, bass: 1, mid: 2, midFreq: 1100, treble: -1, presence: 0.25, depth: 0.3, master: 0.4, sag: 0.25, speakerDrive: 0.45, mic: 0.35, distance: 0.8, air: 0.2, output: -6 } }
+      ]
     }
   ];
-  catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); });
+  catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);
 
@@ -796,7 +936,8 @@ body {
       parallax: { clock: ['sync', 'free'], division: ['1/8.', '1/32', '1/16', '1/8', '1/4', '1/4.', '1/2', '1'], time: [20, 2000, 375], feedback: [0, 0.92, 0.42], damping: [500, 18000, 6000], spread: [0, 1, 1], mix: [0, 1, 0.3] },
       vestige: { size: [0, 1, 0.55], decay: [0.2, 12, 2.8], damping: [800, 18000, 6500], predelay: [0, 180, 22], diffusion: [0, 1, 0.75], width: [0, 1, 0.9], mix: [0, 1, 0.25] },
       halo: { semitones: [-24, 24, 7], fine: [-50, 50, 0], window: [20, 120, 60], feedback: [0, 0.65, 0.12], tone: [1000, 20000, 12000], spread: [0, 1, 0.65], mix: [0, 1, 0.35] },
-      tremor: { division: ['1/8', '1/32', '1/16', '1/8.', '1/4', '1/4.', '1/2', '1', '2'], shape: ['sine', 'triangle', 'gate', 'pulse'], depth: [0, 1, 0.65], pan: [0, 1, 0.5], duty: [0.05, 0.95, 0.5], phase: [0, 360, 0], smooth: [0, 80, 4], mix: [0, 1, 1] }
+      tremor: { division: ['1/8', '1/32', '1/16', '1/8.', '1/4', '1/4.', '1/2', '1', '2'], shape: ['sine', 'triangle', 'gate', 'pulse'], depth: [0, 1, 0.65], pan: [0, 1, 0.5], duty: [0.05, 0.95, 0.5], phase: [0, 360, 0], smooth: [0, 80, 4], mix: [0, 1, 1] },
+      broiler: { model: ['clean-bass', 'flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz', 'american-clean', 'british-crunch', 'high-gain'], input: [-18, 24, 0], drive: [0, 36, 6], cleanLow: [0, 1, 0.35], crossover: [50, 500, 150], bass: [-15, 15, 2], mid: [-18, 18, -1], midFreq: [80, 2500, 550], treble: [-15, 15, 0], presence: [0, 1, 0.35], depth: [0, 1, 0.4], master: [0, 1, 0.45], sag: [0, 1, 0.3], gate: [-90, -20, -75], gateRelease: [20, 800, 160], cabinet: ['bass410', 'di', 'bass15', 'bass810', 'guitar112open', 'guitar212', 'guitar412', 'metalbox'], speakerDrive: [0, 1, 0.2], mic: [0, 1, 0.45], distance: [0, 1, 0.15], air: [0, 1, 0.3], stereo: ['stereo', 'mono'], output: [-24, 12, -4], mix: [0, 1, 1] }
     };
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -865,7 +1006,7 @@ body {
     function create(type, sampleRate, params) {
       let p = normalize(type, params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
-      let update, run, reset, tail = () => 0;
+      let update, run, reset, fastSet, tail = () => 0;
       const meter = { reductionDb: 0 };
 
       if (type === 'prism') {
@@ -928,6 +1069,177 @@ body {
         };
         reset = () => { prevL = prevR = toneL = toneR = dcL = dcR = outL = outR = 0; };
         tail = () => 0.1;
+      } else if (type === 'broiler') {
+        // Character models, rather than claims of circuit-exact brand emulation.
+        // Nonlinear preamp, power and speaker stages all run at 4x the host rate.
+        // Each channel has its own state; stereo input never leaks across channels.
+        const models = {
+          'clean-bass': { stages: 1, gain: 0.85, next: 1, bias: 0, cut: 18, inter: 11500, coupling: 8, shape: 'soft', level: 1.15, power: 0.8, powerBias: 0, bass: 0, mid: 0, midFreq: 650, treble: 0 },
+          'flip-top': { stages: 2, gain: 1.05, next: 1.35, bias: 0.15, cut: 24, inter: 6200, coupling: 16, shape: 'valve', level: 0.95, power: 1.05, powerBias: 0.08, bass: 2, mid: 1.5, midFreq: 360, treble: -2 },
+          'valve-stack': { stages: 3, gain: 1.1, next: 1.2, bias: 0.1, cut: 22, inter: 7900, coupling: 22, shape: 'valve', level: 0.83, power: 1.2, powerBias: 0.05, bass: 1, mid: 1.5, midFreq: 720, treble: 0 },
+          'modern-grind': { stages: 3, gain: 1.45, next: 1.35, bias: -0.04, cut: 38, inter: 10200, coupling: 38, shape: 'diode', level: 0.77, power: 0.95, powerBias: 0, bass: -1, mid: -2.5, midFreq: 470, treble: 2 },
+          'doom-fuzz': { stages: 2, gain: 1.8, next: 1.5, bias: 0.22, cut: 20, inter: 5300, coupling: 12, shape: 'fuzz', level: 0.67, power: 1.4, powerBias: 0.12, bass: 3, mid: 2, midFreq: 300, treble: -3 },
+          'american-clean': { stages: 1, gain: 0.9, next: 1, bias: 0.04, cut: 50, inter: 12200, coupling: 25, shape: 'valve', level: 1.18, power: 0.8, powerBias: 0.02, bass: 0, mid: -3, midFreq: 650, treble: 3 },
+          'british-crunch': { stages: 3, gain: 1.35, next: 1.2, bias: 0.13, cut: 60, inter: 8800, coupling: 48, shape: 'valve', level: 0.84, power: 1.2, powerBias: 0.1, bass: -1, mid: 3.5, midFreq: 980, treble: 1 },
+          'high-gain': { stages: 4, gain: 1.65, next: 1.5, bias: -0.025, cut: 85, inter: 9600, coupling: 70, shape: 'diode', level: 0.7, power: 1.05, powerBias: 0.01, bass: 0, mid: -2.5, midFreq: 620, treble: 2 }
+        };
+        const cabinets = {
+          di: null,
+          bass15: { cut: 30, resonance: 72, bump: 4.5, notch: 640, scoop: -2, upper: 1850, bite: 1, roll: 4300, reflection: 1.35, polarity: -1, damping: 0.25 },
+          bass410: { cut: 38, resonance: 94, bump: 3, notch: 380, scoop: -2.5, upper: 2350, bite: 2.5, roll: 6800, reflection: 0.75, polarity: 1, damping: 0.13 },
+          bass810: { cut: 33, resonance: 85, bump: 4, notch: 460, scoop: -1.5, upper: 1900, bite: 2.2, roll: 5600, reflection: 1.65, polarity: -1, damping: 0.2 },
+          guitar112open: { cut: 74, resonance: 125, bump: 2, notch: 500, scoop: -3.5, upper: 2450, bite: 3.5, roll: 6200, reflection: 0.63, polarity: 1, damping: 0.13 },
+          guitar212: { cut: 67, resonance: 118, bump: 3, notch: 650, scoop: -2, upper: 2800, bite: 4, roll: 5500, reflection: 1.1, polarity: -1, damping: 0.18 },
+          guitar412: { cut: 63, resonance: 104, bump: 4.5, notch: 530, scoop: -3, upper: 2400, bite: 4.5, roll: 4900, reflection: 1.55, polarity: -1, damping: 0.21 },
+          metalbox: { cut: 80, resonance: 180, bump: 5, notch: 750, scoop: -5, upper: 1450, bite: 6.5, roll: 3800, reflection: 2.35, polarity: 1, damping: 0.45 }
+        };
+        const states = Array.from({ length: 15 }, () => new Float64Array(4));
+        const previous = new Float64Array(2), interLP = new Float64Array(8), couplingPrevious = new Float64Array(8), couplingOut = new Float64Array(8), antiAlias = new Float64Array(8);
+        const sagEnvelope = new Float64Array(2), gateEnvelope = new Float64Array(2), gateGain = new Float64Array(2), dcPrevious = new Float64Array(2), dcOut = new Float64Array(2);
+        const reflectionLength = Math.ceil(sr * 0.009) + 4, reflections = [new Float32Array(reflectionLength), new Float32Array(reflectionLength)];
+        // Fourth-order Butterworth low-pass before decimation. The oversampled
+        // Nyquist is four times higher; remove those newly generated harmonics
+        // before returning to host rate rather than relying on cabinet roll-off.
+        const decimationFilters = [biquad('lowpass', sr * 0.37, 0.5411961, 0, sr * 4), biquad('lowpass', sr * 0.37, 1.306563, 0, sr * 4)];
+        const decimated = new Float64Array(2), dcCoefficient = Math.exp(-TAU * 12 / sr), sagAttack = Math.exp(-1 / (sr * 0.004)), gateSmooth = 1 - Math.exp(-1 / (sr * 0.00035));
+        let model, cabinet, coefficients = [], crossoverCoefficient, cabCoefficients = [], modelKey = '', toneKey = '', cabKey = '', crossKey = -1;
+        let lastInput, lastDrive, driveModel = '', lastMaster, powerModel = '', lastSpeaker, speakerCabinet, lastOutput, lastSag, lastGate, lastRelease, wasMono = false, quietFrames = Infinity;
+        let trim = 1, preGain = 1, preNormalization = 1, interCoefficient = 1, couplingCoefficient = 1, powerGain = 1, powerNormalization = 1, powerZero = 0, level = 1, sagRelease = 1, gateRelease = 1, gateThreshold = 0, reflectionDelay = 1, reflectionAmount = 0, reflectionPosition = 0, speakerGain = 1, speakerNormalization = 1;
+        const biasZeros = new Float64Array(4);
+        function ampBound(value) { return value > 8 ? 8 : value < -8 ? -8 : value === value ? value : 0; }
+        function ampFilter(value, coefficients, state, offset) {
+          const result = ampBound(coefficients[0] * value + state[offset]);
+          state[offset] = ampBound(coefficients[1] * value - coefficients[3] * result + state[offset + 1]);
+          state[offset + 1] = ampBound(coefficients[2] * value - coefficients[4] * result);
+          return result;
+        }
+        // A bounded, smooth rational valve curve avoids dozens of transcendental
+        // calls per sample when many tracks use the amp at the same time.
+        function saturate(value) { if (value >= 3) return 1; if (value <= -3) return -1; const square = value * value; return value * (27 + square) / (27 + 9 * square); }
+        function nonlinear(value, bias, stage) {
+          if (model.shape === 'fuzz') return value / (0.14 + Math.abs(value));
+          if (model.shape === 'diode') return value >= 0 ? saturate(value) : saturate(value * 1.35) / 1.35;
+          return saturate(value + bias) - biasZeros[stage];
+        }
+        update = () => {
+          model = models[p.model]; cabinet = cabinets[p.cabinet];
+          if (lastInput !== p.input) { lastInput = p.input; trim = db(p.input); }
+          if (lastDrive !== p.drive || driveModel !== p.model) { lastDrive = p.drive; driveModel = p.model; preGain = db(p.drive * (p.model === 'clean-bass' || p.model === 'american-clean' ? 0.7 : 0.85)) * model.gain; preNormalization = model.level * Math.pow(preGain, -0.19); }
+          if (lastMaster !== p.master || powerModel !== p.model) { lastMaster = p.master; powerModel = p.model; powerGain = model.power * (1 + 3.5 * p.master); powerNormalization = 1 / Math.pow(powerGain, 0.55); powerZero = saturate(model.powerBias); }
+          if (lastSpeaker !== p.speakerDrive || speakerCabinet !== !!cabinet) { lastSpeaker = p.speakerDrive; speakerCabinet = !!cabinet; speakerGain = cabinet ? 1 + p.speakerDrive * 1.8 : 1; speakerNormalization = 1 / Math.pow(speakerGain, 0.7); }
+          if (lastOutput !== p.output) { lastOutput = p.output; level = db(p.output); }
+          if (lastSag !== p.sag) { lastSag = p.sag; sagRelease = Math.exp(-1 / (sr * (0.06 + p.sag * 0.24))); }
+          if (lastRelease !== p.gateRelease) { lastRelease = p.gateRelease; gateRelease = Math.exp(-1 / (sr * p.gateRelease * 0.001)); }
+          if (lastGate !== p.gate) { lastGate = p.gate; gateThreshold = db(p.gate); }
+          if (modelKey !== p.model) { modelKey = p.model; coefficients[0] = biquad('highpass', model.cut, 0.707, 0, sr); interCoefficient = lowpass(model.inter, sr * 4); couplingCoefficient = Math.exp(-TAU * model.coupling / (sr * 4)); for (let stage = 0; stage < 4; stage++) biasZeros[stage] = saturate(model.bias * (stage & 1 ? -0.7 : 1)); }
+          const nextTone = [p.model, p.bass, p.mid, p.midFreq, p.treble, p.presence, p.depth].join('|');
+          if (nextTone !== toneKey) {
+            toneKey = nextTone;
+            coefficients[1] = biquad('low', 110, 0.707, p.bass + model.bass, sr);
+            coefficients[2] = biquad('peak', model.midFreq, 0.7, model.mid, sr);
+            coefficients[3] = biquad('peak', p.midFreq, 0.8, p.mid, sr);
+            coefficients[4] = biquad('high', 2800, 0.707, p.treble + model.treble, sr);
+            coefficients[5] = biquad('high', 3400, 0.707, -2 + p.presence * 9, sr);
+            coefficients[6] = biquad('low', 65, 0.707, p.depth * 7, sr);
+          }
+          if (crossKey !== p.crossover) { crossKey = p.crossover; crossoverCoefficient = biquad('lowpass', p.crossover, 0.707, 0, sr); }
+          const nextCab = [p.cabinet, p.mic, p.distance, p.air].join('|');
+          if (nextCab !== cabKey) {
+            cabKey = nextCab;
+            if (cabinet) {
+              const roll = cabinet.roll * (0.65 + p.mic * 0.5) * (1 - p.distance * 0.22);
+              cabCoefficients = [biquad('highpass', cabinet.cut, 0.707, 0, sr), biquad('peak', cabinet.resonance, 1.1, cabinet.bump, sr), biquad('peak', cabinet.notch, 0.85, cabinet.scoop, sr), biquad('peak', cabinet.upper, 0.9, cabinet.bite * (0.35 + p.mic * 0.65), sr), biquad('lowpass', roll, 0.62, 0, sr), biquad('high', 5000, 0.707, -3 + p.air * 9, sr)];
+              reflectionDelay = clamp(sr * (cabinet.reflection + p.distance * 3.5) * 0.001, 1, reflectionLength - 3);
+              reflectionAmount = cabinet.damping * (0.35 + p.distance * 0.65) * cabinet.polarity;
+            }
+          }
+        };
+        fastSet = next => {
+          if (!next || typeof next !== 'object') return;
+          let changed = false;
+          for (const key of Object.keys(next)) {
+            if (key !== 'bypass' && !Object.prototype.hasOwnProperty.call(specifications.broiler, key)) continue;
+            const rule = specifications.broiler[key]; let value;
+            if (key === 'bypass') value = next.bypass === true;
+            else if (!rule) continue;
+            else if (typeof rule[0] === 'number') { value = typeof next[key] === 'number' && Number.isFinite(next[key]) ? next[key] : rule[2]; value = value < rule[0] ? rule[0] : value > rule[1] ? rule[1] : value; }
+            else value = rule.includes(next[key]) ? next[key] : rule[0];
+            if (p[key] !== value) { p[key] = value; changed = true; }
+          }
+          if (changed) update();
+        };
+        function channelSample(dry, channel) {
+          const offset = channel * 4, stateOffset = channel * 2, trimmed = ampBound(dry * trim), peak = Math.abs(trimmed);
+          gateEnvelope[channel] = peak > gateEnvelope[channel] ? peak : gateEnvelope[channel] * gateRelease;
+          const open = clamp((gateEnvelope[channel] / gateThreshold - 0.5), 0, 1);
+          gateGain[channel] += gateSmooth * (open - gateGain[channel]);
+          const envelopeCoefficient = peak > sagEnvelope[channel] ? sagAttack : sagRelease;
+          sagEnvelope[channel] = envelopeCoefficient * sagEnvelope[channel] + (1 - envelopeCoefficient) * peak;
+          const supply = 1 / (1 + p.sag * sagEnvelope[channel] * 1.8);
+          const head = ampFilter(trimmed, coefficients[0], states[0], stateOffset), prior = previous[channel];
+          for (let sub = 1; sub <= 4; sub++) {
+            let value = (prior + (head - prior) * sub * 0.25) * preGain;
+            for (let stage = 0; stage < model.stages; stage++) {
+              const index = offset + stage, gain = stage ? model.next : 1;
+              value = nonlinear(value * gain, model.bias * (stage & 1 ? -0.7 : 1), stage);
+              interLP[index] += interCoefficient * (value - interLP[index]); value = interLP[index];
+              couplingOut[index] = value - couplingPrevious[index] + couplingCoefficient * couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
+            }
+            value *= preNormalization;
+            value = (saturate(value * powerGain * supply + model.powerBias) - powerZero) * powerNormalization;
+            if (cabinet && p.speakerDrive > 0) value = saturate(value * speakerGain) * speakerNormalization;
+            value = ampFilter(value, decimationFilters[0], antiAlias, offset);
+            value = ampFilter(value, decimationFilters[1], antiAlias, offset + 2);
+            decimated[channel] = value;
+          }
+          previous[channel] = head;
+          let wet = decimated[channel];
+          if (cabinet) {
+            for (let b = 0; b < cabCoefficients.length; b++) wet = ampFilter(wet, cabCoefficients[b], states[7 + b], stateOffset);
+            reflections[channel][reflectionPosition] = wet;
+            wet = (wet + read(reflections[channel], reflectionPosition, reflectionDelay) * reflectionAmount + read(reflections[channel], reflectionPosition, reflectionDelay * 0.53) * reflectionAmount * 0.37) / (1 + Math.abs(reflectionAmount) * 0.3);
+          }
+          // Replace only the amp's low band, so blending clean lows never reduces
+          // upper-band drive and a bass cabinet cannot swallow the fundamental.
+          const cleanBand = ampFilter(trimmed, crossoverCoefficient, states[13], stateOffset);
+          const ampBand = ampFilter(wet, crossoverCoefficient, states[14], stateOffset);
+          wet += p.cleanLow * (cleanBand - ampBand);
+          for (let b = 1; b < coefficients.length; b++) wet = ampFilter(wet, coefficients[b], states[b], stateOffset);
+          const dc = ampBound(wet - dcPrevious[channel] + dcCoefficient * dcOut[channel]); dcPrevious[channel] = wet; dcOut[channel] = dc;
+          // The safety ceiling stays perfectly linear at normal musical levels,
+          // so it does not introduce new host-rate distortion after oversampling.
+          const magnitude = Math.abs(dc), ceiling = magnitude <= 2.5 ? dc : (dc < 0 ? -1 : 1) * (2.5 + 0.75 * saturate((magnitude - 2.5) / 0.75));
+          return ampBound(ceiling * level * gateGain[channel]);
+        }
+        function synchronizeMonoState() {
+          for (const state of states) { state[2] = state[0]; state[3] = state[1]; }
+          for (const state of [interLP, couplingPrevious, couplingOut, antiAlias]) for (let i = 0; i < 4; i++) state[4 + i] = state[i];
+          for (const state of [previous, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut]) state[1] = state[0];
+          reflections[1].set(reflections[0]);
+        }
+        run = (left, right) => {
+          const mix = p.mix;
+          const monoInput = p.stereo === 'mono';
+          if (wasMono && !monoInput) synchronizeMonoState();
+          wasMono = monoInput;
+          // An empty, settled amp has no oscillator or independent modulation.
+          // Skip genuinely silent racks after a conservative one-second decay.
+          let silent = true;
+          for (let i = 0; i < left.length; i++) if (left[i] !== 0 || right[i] !== 0) { silent = false; break; }
+          if (silent && quietFrames === Infinity) { left.fill(0); right.fill(0); return; }
+          for (let i = 0; i < left.length; i++) {
+            const dryL = input(left[i]), dryR = input(right[i]), mono = (dryL + dryR) * 0.5;
+            quietFrames = dryL === 0 && dryR === 0 ? quietFrames + 1 : 0;
+            if (quietFrames >= sr) { if (quietFrames !== Infinity) reset(); left[i] = dryL; right[i] = dryR; continue; }
+            const wetL = channelSample(monoInput ? mono : dryL, 0), wetR = monoInput ? wetL : channelSample(dryR, 1);
+            left[i] = output(dryL, wetL, mix); right[i] = output(dryR, wetR, mix);
+            if (++reflectionPosition === reflectionLength) reflectionPosition = 0;
+          }
+          wasMono = monoInput;
+          meter.reductionDb = 20 * Math.log10(1 + p.sag * Math.max(sagEnvelope[0], monoInput ? sagEnvelope[0] : sagEnvelope[1]) * 1.8);
+        };
+        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; };
+        tail = () => 0.35;
       } else if (type === 'undertow') {
         const length = Math.ceil(sr * 0.08) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);
         let write = 0, phase = 0, delay = 0, depth = 0, increment = 0;
@@ -1112,7 +1424,7 @@ body {
       }
       update();
       return {
-        setParams(next) { p = normalize(type, Object.assign({}, p, next && typeof next === 'object' ? next : {})); update(); },
+        setParams(next) { if (fastSet) return fastSet(next); p = normalize(type, Object.assign({}, p, next && typeof next === 'object' ? next : {})); update(); },
         process(left, right, context) {
           if (!left || !right || left.length !== right.length) throw new Error('LOOM effects require equal stereo blocks.');
           if (p.bypass) { for (let i = 0; i < left.length; i++) { left[i] = input(left[i]); right[i] = input(right[i]); } return; }
@@ -1131,7 +1443,7 @@ body {
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.6.0';
+  const VERSION = '1.7.0';
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux'];
@@ -1158,7 +1470,7 @@ body {
     return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], automation: [], clips: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16, micCompensation: 'auto', micOffsetMs: 0, micInputGainDb: 0 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
   }
   function automationTargets(t) {
     const result = [
@@ -1291,7 +1603,7 @@ body {
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
-    s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)) };
+    s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)), micCompensation: ['auto', 'manual', 'off'].includes(raw.recording?.micCompensation) ? raw.recording.micCompensation : 'auto', micOffsetMs: number(raw.recording?.micOffsetMs, -500, 500, 0), micInputGainDb: number(raw.recording?.micInputGainDb, -24, 24, 0) };
     if (s.recording.punchEnd <= s.recording.punchStart) s.recording.punchEnd = Math.min(totalBeats, s.recording.punchStart + .25);
     const markerIds = new Set();
     s.markers = (Array.isArray(raw.markers) ? raw.markers : []).slice(0, LIMITS.markers).filter(plain).map(m => { let id = text(m.id, uid('marker')); if (markerIds.has(id)) id = uid('marker'); markerIds.add(id); return { id, name: text(m.name, 'Section', 60), beat: number(m.beat, 0, totalBeats, 0), color: /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : COLORS[0] }; }).sort((a, b) => a.beat - b.beat);
@@ -1342,6 +1654,8 @@ body {
       if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
       strictNumbers(s.recording, ['punchStart', 'punchEnd'], 'The project contains invalid punch timing.');
       if (s.recording.punchStart < 0 || s.recording.punchEnd > s.lengthBars * 4 || s.recording.punchEnd - s.recording.punchStart < .25 - 1e-8) throw Error('The project contains an invalid punch range.');
+      if (s.recording.micCompensation !== undefined && !['auto', 'manual', 'off'].includes(s.recording.micCompensation)) throw Error('The project contains an invalid microphone compensation mode.');
+      for (const [key, min, max] of [['micOffsetMs', -500, 500], ['micInputGainDb', -24, 24]]) if (s.recording[key] !== undefined && (typeof s.recording[key] !== 'number' || !Number.isFinite(s.recording[key]) || s.recording[key] < min || s.recording[key] > max)) throw Error('The project contains an invalid microphone timing or gain setting.');
     }
     if (s.markers !== undefined) {
       if (!Array.isArray(s.markers) || s.markers.length > LIMITS.markers) throw Error('The project contains too many section markers.');
@@ -1462,6 +1776,8 @@ body {
         this.seekFadeRemaining = 0;
         this.recordOnly = new Set();
         this.auditionTracks = new Set();
+        this.microphoneMonitor = { track: -1, enabled: false };
+        this.microphonePeak = 0;
         this.slots = Array.from({ length: 8 }, () => Array(4).fill(null));
         this.buffers = [];
         this.gains = Array.from({ length: 8 }, () => [0, 0]);
@@ -1550,6 +1866,7 @@ body {
       }
       endRecording() { this.countInRemaining = 0; this.recordingPunch = false; }
       setRecordOnly(index, value) { if (value) this.recordOnly.add(index); else this.recordOnly.delete(index); }
+      setMicrophoneMonitor(track, enabled) { this.microphoneMonitor = { track: Number.isInteger(track) && track >= 0 && track < 8 ? track : -1, enabled: enabled === true }; if (enabled) this.silent = false; }
       resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
@@ -1572,6 +1889,8 @@ body {
       processBlock(left, right, inputs = []) {
         const n = Math.min(left.length, right.length), sr = this.sampleRate;
         left.fill(0); right.fill(0);
+        const microphone = inputs[8]; this.microphonePeak = 0;
+        if (microphone?.[0]) for (let f = 0; f < n; f++) this.microphonePeak = Math.max(this.microphonePeak, Math.abs(microphone[0][f] || 0), Math.abs((microphone[1] || microphone[0])[f] || 0));
         if (this.silent) { this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() }; return this.meters; }
         if (!this.buffers.length || this.buffers[0][0].length !== n) this.buffers = Array.from({ length: 8 }, () => [new Float32Array(n), new Float32Array(n)]);
         if (!this.timelineBeats || this.timelineBeats.length !== n) { this.timelineBeats = new Float64Array(n); this.timelinePlaying = new Uint8Array(n); this.timelineCountIn = new Uint8Array(n); this.timelineClickBeats = new Float64Array(n); }
@@ -1640,6 +1959,13 @@ body {
             else if (stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame + 1; }
           }
         }
+        // The dry microphone has its own input. Monitoring is mixed into one
+        // lane before its rack, independent of native-instrument live controls,
+        // and remains available during count-in or stopped practice.
+        if (this.microphoneMonitor.enabled && microphone?.[0]) {
+          const pair = this.buffers[this.microphoneMonitor.track];
+          if (pair) for (let f = 0; f < n; f++) { pair[0][f] += Number.isFinite(microphone[0][f]) ? microphone[0][f] : 0; const v = (microphone[1] || microphone[0])[f]; pair[1][f] += Number.isFinite(v) ? v : 0; }
+        }
         const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
         for (let t = 0; t < 8; t++) {
           const [l, r] = this.buffers[t], track = this.tracks[t];
@@ -1696,19 +2022,90 @@ body {
           left[f] = a; right[f] = b; peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
         this.sampleClock += n;
-        this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
+        this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
         return this.meters;
       }
     }
 
     class Recorder {
-      constructor(sampleRate, onChunk, onLimit) { this.sampleRate = sampleRate; this.onChunk = onChunk; this.onLimit = onLimit; this.active = false; this.frames = 0; this.tracks = []; }
+      constructor(sampleRate, onChunk, onLimit) {
+        this.sampleRate = sampleRate; this.onChunk = onChunk; this.onLimit = onLimit; this.active = false; this.frames = 0; this.tracks = [];
+        // Half a second of dry history supports signed manual compensation and
+        // retains attacks played immediately before a punch/count-in boundary.
+        this.microphoneClock = 0; this.historyFrames = Math.max(1, Math.ceil(sampleRate * .5));
+        this.microphoneHistory = [new Float32Array(this.historyFrames), new Float32Array(this.historyFrames)];
+      }
       start(id, tracks, startBeat, maxFrames, schedule = {}) {
         this.id = id; this.tracks = tracks.slice(); this.startBeat = startBeat; this.maxFrames = Math.max(1, Math.round(maxFrames)); this.frames = 0; this.used = 0; this.active = true;
-        this.schedule = schedule; this.started = false; this.stage = schedule.countInBeats > 0 ? 'count-in' : schedule.punchEnabled && startBeat < schedule.punchStart ? 'waiting' : 'recording';
+        this.schedule = schedule; this.microphone = schedule.microphone || null; this.started = false;
+        this.microphoneStart = null; this.microphoneEnd = Infinity; this.microphoneEndReason = null; this.stopId = undefined;
+        this.compensationFrames = this.microphone ? Math.round(clamp(this.microphone.compensationFrames, -this.historyFrames, this.sampleRate, 0)) : 0;
+        this.stage = schedule.countInBeats > 0 ? 'count-in' : schedule.punchEnabled && startBeat < schedule.punchStart ? 'waiting' : 'recording';
         this.buffers = this.tracks.map(() => [new Float32Array(4096), new Float32Array(4096)]);
       }
       capture(inputs, n, timing) {
+        const mic = inputs[8];
+        if (this.active && this.microphone) this._captureMicrophone(inputs, n, timing);
+        else {
+          this._rememberMicrophone(mic, n);
+          if (this.active) this._captureTracks(inputs, n, timing);
+        }
+      }
+      clearMicrophoneHistory() { for (const channel of this.microphoneHistory) channel.fill(0); }
+      _rememberMicrophone(input, n) {
+        for (let f = 0; f < n; f++, this.microphoneClock++) {
+          const at = this.microphoneClock % this.historyFrames, a = input?.[0]?.[f], b = (input?.[1] || input?.[0])?.[f];
+          this.microphoneHistory[0][at] = Number.isFinite(a) ? a : 0; this.microphoneHistory[1][at] = Number.isFinite(b) ? b : 0;
+        }
+      }
+      _appendMicrophone(a, b) {
+        if (!this.active || this.frames >= this.maxFrames) return;
+        const pair = this.buffers[0]; pair[0][this.used] = Number.isFinite(a) ? a : 0; pair[1][this.used] = Number.isFinite(b) ? b : 0;
+        this.used++; this.frames++; if (this.used === 4096) this.flush();
+        if (this.frames >= this.maxFrames) this._limit(this.microphoneEndReason || undefined);
+      }
+      _endMicrophone(clock, reason, stopId) {
+        if (!Number.isFinite(this.microphoneEnd)) {
+          this.microphoneEnd = clock + Math.max(0, this.compensationFrames); this.microphoneEndReason = reason;
+          if (stopId !== undefined) this.stopId = stopId;
+        }
+        if (this.microphoneEnd <= this.microphoneClock) this._limit(this.microphoneEndReason);
+        else this.stage = 'finishing';
+      }
+      _captureMicrophone(inputs, n, timing) {
+        const input = inputs[this.microphone.inputIndex ?? 8];
+        for (let f = 0; f < n; f++, this.microphoneClock++) {
+          const clock = this.microphoneClock, a = input?.[0]?.[f], b = (input?.[1] || input?.[0])?.[f], beat = timing?.timelineBeats?.[f] ?? this.startBeat;
+          const counting = timing?.timelineCountIn?.[f], running = !this.schedule.requireTransport || !timing || timing.timelinePlaying?.[f];
+          if (this.active && !this.started) {
+            if (counting) this.stage = 'count-in';
+            else if (this.schedule.punchEnabled && beat >= this.schedule.punchEnd - 1e-10) this._limit('punch');
+            else if (!running || this.schedule.punchEnabled && beat < this.schedule.punchStart - 1e-10) this.stage = 'waiting';
+            else {
+              this.started = true; this.stage = 'recording'; this.startBeat = this.schedule.punchEnabled ? Math.max(this.schedule.punchStart, beat) : beat;
+              this.microphoneStart = clock + this.compensationFrames;
+              // Negative offsets read the rolling history at each logical
+              // frame. Unavailable samples before the first capture are silent;
+              // the actual attack remains in the resulting take.
+            }
+          }
+          if (this.active && this.started) {
+            if (!Number.isFinite(this.microphoneEnd) && this.schedule.punchEnabled && beat >= this.schedule.punchEnd - 1e-10) this._endMicrophone(clock, 'punch');
+            else if (!Number.isFinite(this.microphoneEnd) && !running) this._endMicrophone(clock, 'stop');
+            if (this.active && clock >= this.microphoneEnd) this._limit(this.microphoneEndReason);
+            else if (this.active && clock >= this.microphoneStart) {
+              if (this.compensationFrames < 0) {
+                const previous = clock + this.compensationFrames, available = previous >= 0 && previous >= clock - this.historyFrames, at = (previous + this.historyFrames) % this.historyFrames;
+                this._appendMicrophone(available ? this.microphoneHistory[0][at] : 0, available ? this.microphoneHistory[1][at] : 0);
+              } else this._appendMicrophone(a, b);
+            }
+          }
+          const at = clock % this.historyFrames;
+          this.microphoneHistory[0][at] = Number.isFinite(a) ? a : 0; this.microphoneHistory[1][at] = Number.isFinite(b) ? b : 0;
+        }
+        if (this.active && this.started && this.microphoneClock >= this.microphoneEnd) this._limit(this.microphoneEndReason);
+      }
+      _captureTracks(inputs, n, timing) {
         if (!this.active) return;
         let at = 0;
         while (at < n && this.active) {
@@ -1741,13 +2138,19 @@ body {
         }
         if (this.active && this.schedule.punchEnabled && timing?.beat >= this.schedule.punchEnd - 1e-10 && !timing.countInRemaining) this._limit('punch');
       }
-      _limit(reason) { this.flush(); this.active = false; this.stage = 'idle'; this.onLimit?.({ id: this.id, frames: this.frames, startBeat: this.startBeat, reason }); }
+      _limit(reason) { this.flush(); this.active = false; this.stage = 'idle'; this.onLimit?.({ id: this.id, frames: this.frames, startBeat: this.startBeat, reason, ...(this.stopId === undefined ? {} : { stopId: this.stopId }) }); }
       flush() {
         if (!this.used) return;
         for (let k = 0; k < this.tracks.length; k++) this.onChunk({ id: this.id, trackIndex: this.tracks[k], startBeat: this.startBeat, left: this.buffers[k][0].slice(0, this.used), right: this.buffers[k][1].slice(0, this.used) });
         this.used = 0;
       }
-      stop() { this.flush(); this.active = false; this.stage = 'idle'; return { id: this.id, frames: this.frames, startBeat: this.startBeat }; }
+      stop(stopId = 0) {
+        if (this.active && this.microphone && this.started && this.compensationFrames > 0) {
+          this.stopId = stopId; this._endMicrophone(this.microphoneClock, this.microphoneEndReason || 'stop', stopId);
+          if (this.active) return { pending: true };
+        }
+        this.flush(); this.active = false; this.stage = 'idle'; return { id: this.id, frames: this.frames, startBeat: this.startBeat };
+      }
       cancel() { this.active = false; this.stage = 'idle'; this.frames = 0; this.used = 0; this.buffers = []; }
     }
     return { Core, Recorder };
@@ -1789,7 +2192,7 @@ body {
     constructor(state) {
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
       this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
-      this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null;
+      this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null; this.microphoneInput = null; this._micRequest = 0; this._micEnabled = false; this._micTrack = -1; this._micPending = false; this._micPurpose = null; this._recordMicrophone = null;
       this._recordStage = 'idle'; this._recordTransportStarted = false;
       this._transportListeners = new Set(); this._clockAnchor = { beat: 0, time: 0, cycle: 0, countIn: 0 };
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
@@ -1804,6 +2207,7 @@ body {
         catch { this.context = new AC({ latencyHint: 'interactive' }); }
         this.node = null; this.core = null; this._sentAssets = new Map();
         this.inputs = Array.from({ length: 8 }, () => { const node = this.context.createGain(); node.channelCount = 2; node.channelCountMode = 'explicit'; node.channelInterpretation = 'speakers'; return node; });
+        this.microphoneInput = this.context.createGain(); this.microphoneInput.channelCount = 2; this.microphoneInput.channelCountMode = 'explicit'; this.microphoneInput.channelInterpretation = 'speakers';
         const DSP = createLoomEngineDSP(window.createLoomEffectsDSP);
         if (this.context.audioWorklet && window.AudioWorkletNode) {
           let url;
@@ -1815,7 +2219,7 @@ body {
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
-                  this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:'limit',...m}));
+                  this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
                     const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
                     if(m.type==='state')this.core.setState(m.state);
@@ -1827,13 +2231,16 @@ body {
                     else if(m.type==='recordHold')this.core.setRecordingHold(m.value);
                     else if(m.type==='audition')this.core.resumeAudition(m.track);
                     else if(m.type==='clearAudition')this.core.clearAudition(m.track);
+                    else if(m.type==='microphoneMonitor')this.core.setMicrophoneMonitor(m.track,m.enabled);
+                    else if(m.type==='microphoneReset')this.recorder.clearMicrophoneHistory();
+                    else if(m.type==='microphoneEnded'){this.core.setMicrophoneMonitor(-1,false);if(this.recorder.active&&this.recorder.microphone)this.recorder._limit('device');}
                     else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}
                     else if(m.type==='recordStart'){
                       this.core.beginRecording(m.schedule);
                       this.recorder.start(m.id,m.tracks,this.core.beat,m.maxFrames,m.schedule);
                       this.port.postMessage({type:'recordStarted',id:m.id,startBeat:this.core.beat});
                     }
-                    else if(m.type==='recordStop'){const meta=this.recorder.stop();this.core.endRecording();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}
+                    else if(m.type==='recordStop'){const meta=this.recorder.stop(m.stopId);this.core.endRecording();if(!meta.pending)this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}
                     else if(m.type==='recordCancel'){this.recorder.cancel();this.core.endRecording();}
                     else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}
                     if(Number.isInteger(m.epoch))this.port.postMessage({type:'clock',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});
@@ -1852,22 +2259,23 @@ body {
               }
               registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
-            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 8, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch } });
+            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 9, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch } });
             this.node.port.onmessage = e => this._message(e.data);
             for (let i = 0; i < 8; i++) this.inputs[i].connect(this.node, 0, i);
+            this.microphoneInput.connect(this.node, 0, 8);
             this.mode = 'worklet';
-          } catch (error) { for (const input of this.inputs) input.disconnect(); this.node = null; this.workletError = error.message; }
+          } catch (error) { for (const input of [...this.inputs, this.microphoneInput]) input.disconnect(); this.node = null; this.workletError = error.message; }
           finally { if (url) URL.revokeObjectURL(url); }
         }
         if (!this.node) {
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
-          this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: 'limit', ...m }));
-          this.node = this.context.createScriptProcessor(1024, 16, 2);
-          this.merger = this.context.createChannelMerger(16); this.splitters = [];
-          for (let i = 0; i < 8; i++) { const splitter = this.context.createChannelSplitter(2); this.inputs[i].connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
+          this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
+          this.node = this.context.createScriptProcessor(1024, 18, 2);
+          this.merger = this.context.createChannelMerger(18); this.splitters = [];
+          for (let i = 0; i < 9; i++) { const splitter = this.context.createChannelSplitter(2); (i < 8 ? this.inputs[i] : this.microphoneInput).connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
           this.merger.connect(this.node);
           this.node.onaudioprocess = e => {
-            const inputs = Array.from({ length: 8 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
+            const inputs = Array.from({ length: 9 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
             const meters = this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
             this.recorder.capture(inputs, e.outputBuffer.length, this.core);
@@ -1901,9 +2309,12 @@ body {
       else if (m.type === 'recordHold') this.core.setRecordingHold(m.value);
       else if (m.type === 'audition') this.core.resumeAudition(m.track);
       else if (m.type === 'clearAudition') this.core.clearAudition(m.track);
+      else if (m.type === 'microphoneMonitor') this.core.setMicrophoneMonitor(m.track, m.enabled);
+      else if (m.type === 'microphoneReset') this.recorder.clearMicrophoneHistory();
+      else if (m.type === 'microphoneEnded') { this.core.setMicrophoneMonitor(-1, false); if (this.recorder.active && this.recorder.microphone) this.recorder._limit('device'); }
       else if (m.type === 'panic') { this.core.panic(); this.recorder.cancel(); }
       else if (m.type === 'recordStart') { this.core.beginRecording(m.schedule); this.recorder.start(m.id, m.tracks, this.core.beat, m.maxFrames, m.schedule); this._message({ type: 'recordStarted', id: m.id, startBeat: this.core.beat }); }
-      else if (m.type === 'recordStop') { const meta = this.recorder.stop(); this.core.endRecording(); this._message({ type: 'recordStopped', ...meta, stopId: m.stopId }); }
+      else if (m.type === 'recordStop') { const meta = this.recorder.stop(m.stopId); this.core.endRecording(); if (!meta.pending) this._message({ type: 'recordStopped', ...meta, stopId: m.stopId }); }
       else if (m.type === 'recordCancel') { this.recorder.cancel(); this.core.endRecording(); }
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
       if (Number.isInteger(m.epoch)) this._acceptMeters(this.core.getMeters(), m.epoch, this.context?.currentTime || 0);
@@ -1955,7 +2366,7 @@ body {
       const old = this._clockConfiguration, changedClock = ['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].some(key => old?.[key] !== state?.[key]);
       if (changedClock) this._meters = { ...this._meters, beat: this.getTransport().beat };
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
-      this.state = state; this._send({ type: 'state', state: dspState(state), ...(changedClock ? { epoch: ++this._transportEpoch } : {}) });
+      this.state = state; if (this._mic && !this._recordMicrophone) this._setMicrophoneGain(state.recording?.micInputGainDb); this._send({ type: 'state', state: dspState(state), ...(changedClock ? { epoch: ++this._transportEpoch } : {}) });
     }
     setAssets(assets) { this.assets = assets instanceof Map ? new Map(assets) : new Map(Object.entries(assets || {})); this._syncAssets(); }
     _syncAssets() {
@@ -1971,7 +2382,7 @@ body {
       await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
       this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
     }
-    stop() { this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
+    stop(options = {}) { if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
       if (this.recordingBusy) throw Error('Finish or cancel the current take before moving the playhead.');
       this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
@@ -1979,10 +2390,10 @@ body {
     resumeAudition(id) { this._panicLatched = false; this._send({ type: 'audition', track: id == null ? undefined : this._trackIndex(id) }); }
     clearAudition(id) { this._send({ type: 'clearAudition', track: id == null ? undefined : this._trackIndex(id) }); }
     panic() {
-      this.generation++; this._panicLatched = true; this._playRequest++; this.cancelRecording(); this._send({ type: 'panic' }); this._meters = silenceMeters(this._meters.beat);
+      this.generation++; this._disableMicrophoneMonitoring(true); this._panicLatched = true; this._playRequest++; this.cancelRecording(); this._send({ type: 'panic' }); this._meters = silenceMeters(this._meters.beat);
       for (const resolve of this._gates.values()) resolve(); this._gates.clear();
     }
-    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordingPending: this.recordingBusy && !this.isRecording, recordStage: this.isRecording ? this._recordStage : 'idle', countInBeatsRemaining: this.isRecording ? this._meters.countInBeatsRemaining || 0 : 0, recordSeconds: this.context ? frames / this.context.sampleRate : 0 }; }
+    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordingPending: this.recordingBusy && !this.isRecording, recordStage: this.isRecording ? this._recordStage : 'idle', countInBeatsRemaining: this.isRecording ? this._meters.countInBeatsRemaining || 0 : 0, recordSeconds: this.context ? frames / this.context.sampleRate : 0, microphone: this.getMicrophoneStatus() }; }
     _recordTransportStart() {
       if (this._recordTransportStarted || !this.isRecording) return;
       this._recordTransportStarted = true;
@@ -1999,7 +2410,7 @@ body {
         const settings = { ...this.state.recording, ...options }, countInBars = !this._meters.playing && settings.startTransport !== false && [0, 1, 2].includes(settings.countInBars) ? settings.countInBars : 0;
         const punchEnabled = settings.punchEnabled === true, punchStart = this._clampBeat(settings.punchStart), punchEnd = this._clampBeat(settings.punchEnd);
         if (punchEnabled && (punchEnd - punchStart < .25 - 1e-8 || this._meters.beat >= punchEnd - 1e-10 || settings.startTransport === false)) throw Error('Set a punch range ahead of the playhead before recording.');
-        const schedule = { countInBeats: countInBars * 4, punchEnabled, punchStart, punchEnd, startTransport: settings.startTransport !== false, requireTransport: settings.startTransport !== false };
+        const schedule = { countInBeats: countInBars * 4, punchEnabled, punchStart, punchEnd, startTransport: settings.startTransport !== false, requireTransport: settings.startTransport !== false, ...(options._microphone ? { microphone: { inputIndex: 8, compensationFrames: this._recordMicrophone?.compensationFrames || 0 } } : {}) };
         const maxSeconds = Math.min(120, Math.max(.01, Number(options.maxSeconds) || 120));
         const budget = Math.min(64 * 1024 * 1024, options.budgetBytes == null ? 32 * 1024 * 1024 : Math.max(0, Number(options.budgetBytes) || 0));
         const durationFrames = Math.floor(this.context.sampleRate * maxSeconds), budgetFrames = Math.floor(budget / (tracks.length * 4)), maxFrames = Math.min(durationFrames, budgetFrames);
@@ -2021,7 +2432,7 @@ body {
     }
     async _finishRecording() {
       const generation = this.generation; this._recordRequest++; this.isRecording = false; this._recordStage = 'idle'; this._meters.countInBeatsRemaining = 0;
-      if (!this.node || !this._chunks.size) { this._releaseMic(); return []; }
+      if (!this.node || !this._chunks.size) { this._recordMicrophone = null; this._releaseMic(); return []; }
       await new Promise(resolve => { const id = ++this._recordStopId; this._recordStop = { id, resolve }; this._send({ type: 'recordStop', stopId: id }); });
       this._releaseMic(); if (generation !== this.generation) return [];
       const result = [];
@@ -2029,12 +2440,12 @@ body {
         const frames = chunks.reduce((n, c) => n + c.left.length, 0); if (!frames) continue;
         const left = new Float32Array(frames), right = new Float32Array(frames); let at = 0;
         for (const c of chunks) { left.set(c.left, at); right.set(c.right, at); at += c.left.length; }
-        result.push({ trackId: this.state.tracks[track].id, left, right, frames, sampleRate: this.context.sampleRate, startBeat: this._recordStartBeat });
+        result.push({ trackId: this.state.tracks[track].id, left, right, frames, sampleRate: this.context.sampleRate, startBeat: this._recordStartBeat, ...(this._recordMicrophone ? { microphone: true, compensationMs: this._recordMicrophone.compensationMs, compensationMode: this._recordMicrophone.mode } : {}) });
       }
-      this._chunks.clear(); this._recordFrames = 0; this.onStatus?.({ type: 'recording-stopped', takes: result.length }); return result;
+      this._chunks.clear(); this._recordFrames = 0; this._recordMicrophone = null; if (this._mic) this._setMicrophoneGain(this.state.recording?.micInputGainDb); this._emitMicrophoneStatus(); this.onStatus?.({ type: 'recording-stopped', takes: result.length }); return result;
     }
     cancelRecording() {
-      this._recordRequest++; this._recordId++; this.isRecording = false; this._recordStage = 'idle'; this._meters.countInBeatsRemaining = 0; this._chunks.clear(); this._recordFrames = 0; this._send({ type: 'recordCancel' }); this._releaseMic();
+      this._recordRequest++; if (this._micPurpose === 'record') { this._micRequest++; this._micPending = false; this._micPurpose = null; } this._recordId++; this.isRecording = false; this._recordStage = 'idle'; this._meters.countInBeatsRemaining = 0; this._chunks.clear(); this._recordFrames = 0; this._send({ type: 'recordCancel' }); this._recordMicrophone = null; this._releaseMic(); if (this._mic) this._setMicrophoneGain(this.state.recording?.micInputGainDb);
       if (this._recordStop) { this._recordStop.resolve(); this._recordStop = null; }
       this._updateRecordHold();
     }
@@ -2042,23 +2453,86 @@ body {
       if (this.mode === 'fallback') { this.core.setRecordOnly(track, value); return; }
       await new Promise(resolve => { const id = ++this._gateId; this._gates.set(id, resolve); this._send({ type: 'gate', id, track, value }); });
     }
+    _setMicrophoneGain(gainDb = 0) {
+      if (!this._mic) return;
+      const gain = Math.max(-24, Math.min(24, Number(gainDb) || 0)); this._mic.gainDb = gain;
+      // This frontend trim is printed once; the track rack is only monitored.
+      this._mic.gain.gain.setValueAtTime(Math.pow(10, gain / 20), this.context.currentTime);
+    }
+    getMicrophoneLatency() {
+      const c = this.context, settings = this.state.recording || {}, mode = ['auto', 'manual', 'off'].includes(settings.micCompensation) ? settings.micCompensation : 'auto';
+      const input = this._mic?.stream.getAudioTracks?.()[0]?.getSettings?.().latency;
+      const reportedInput = Number.isFinite(input) && input >= 0 && input <= 1;
+      const base = Number(c?.baseLatency), output = Number(c?.outputLatency); let outputSeconds = (Number.isFinite(base) && base >= 0 ? base : 0) + (Number.isFinite(output) && output >= 0 ? output : 0);
+      let reportedOutput = Number.isFinite(base) && base >= 0 || Number.isFinite(output) && output >= 0;
+      try { const stamp = c?.getOutputTimestamp?.(), age = Number.isFinite(stamp?.performanceTime) ? Math.max(0, (performance.now() - stamp.performanceTime) / 1000) : 0, gap = c.currentTime - (stamp.contextTime + age); if (Number.isFinite(gap) && gap >= .001 && gap <= 1) { outputSeconds = gap; reportedOutput = true; } } catch {}
+      const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? (this.mode === 'fallback' ? 1024 : 128) / c.sampleRate * 1000 : 0;
+      const offset = Math.max(-500, Math.min(500, Number(settings.micOffsetMs) || 0));
+      const compensationMs = mode === 'off' ? 0 : mode === 'manual' ? offset : Math.max(-500, Math.min(1000, inputMs + outputMs + processingMs + offset));
+      return { mode, compensationMs, inputMs, outputMs, processingMs, reportedInput, reportedOutput, estimated: mode === 'auto', offsetMs: offset };
+    }
+    getMicrophoneStatus() {
+      return { enabled: this._micEnabled, pending: this._micPending, trackId: this._micTrack >= 0 ? this.state.tracks[this._micTrack]?.id || null : null,
+        active: Boolean(this._mic), recording: Boolean(this.isRecording && this._recordMicrophone), inputGainDb: this._mic?.gainDb ?? this.state.recording?.micInputGainDb ?? 0,
+        inputPeak: this._meters.microphonePeak || 0, latency: this._recordMicrophone ? { ...this._recordMicrophone } : this.getMicrophoneLatency() };
+    }
+    _emitMicrophoneStatus() { this.onStatus?.({ type: 'microphone-status', ...this.getMicrophoneStatus() }); }
+    async _acquireMicrophone(track, gainDb, purpose, generation, request) {
+      if (!navigator.mediaDevices?.getUserMedia) throw Error('Microphone input needs HTTPS or localhost in a browser with microphone access.');
+      this._micPending = true; this._micPurpose = purpose; this._micTrack = track; this._updateRecordHold(); this._emitMicrophoneStatus(); let stream, session;
+      try {
+        await this.init(); if (generation !== this.generation || request !== this._micRequest) return false;
+        if (!this._mic) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: { ideal: 0 } }, video: false });
+          if (generation !== this.generation || request !== this._micRequest) { stream.getTracks().forEach(t => t.stop()); return false; }
+          const source = this.context.createMediaStreamSource(stream), gain = this.context.createGain(); this._mic = { source, gain, stream, track, gainDb: 0 };
+          this._send({ type: 'microphoneReset' }); source.connect(gain); gain.connect(this.microphoneInput);
+          for (const audioTrack of stream.getAudioTracks?.() || []) audioTrack.addEventListener?.('ended', () => this._microphoneEnded(stream), { once: true });
+        }
+        session = this._mic; await this.context.resume();
+        if (generation !== this.generation || request !== this._micRequest) { if (this._mic === session && !this._micEnabled) this._releaseMic(true); return false; }
+        this._mic.track = track; this._setMicrophoneGain(gainDb); return true;
+      } catch (error) { stream?.getTracks().forEach(t => t.stop()); if (generation === this.generation && request === this._micRequest) this._releaseMic(true); throw error; }
+      finally { if (generation === this.generation && request === this._micRequest) { this._micPending = false; this._micPurpose = null; this._updateRecordHold(); this._emitMicrophoneStatus(); } }
+    }
+    async setMicrophoneMonitoring(trackId, options = {}) {
+      if (options.enabled !== true) { this._disableMicrophoneMonitoring(); return true; }
+      const track = this._trackIndex(trackId);
+      if (this.recordingBusy && (this._micTrack !== track || this._micPending)) throw Error('Finish the current take before changing the microphone track.');
+      const generation = this.generation, request = ++this._micRequest;
+      if (!await this._acquireMicrophone(track, this._recordMicrophone ? this._mic?.gainDb : options.gainDb ?? this.state.recording?.micInputGainDb ?? 0, 'monitor', generation, request)) return false;
+      if (generation !== this.generation || request !== this._micRequest) return false;
+      this._micEnabled = true; this._panicLatched = false; this._send({ type: 'microphoneMonitor', track, enabled: true }); this._emitMicrophoneStatus(); return true;
+    }
+    _disableMicrophoneMonitoring(force = false, cancelPending = false) {
+      this._micEnabled = false;
+      if (force || cancelPending || this._micPurpose !== 'record') { this._micRequest++; this._micPending = false; this._micPurpose = null; this._updateRecordHold(); }
+      this._send({ type: 'microphoneMonitor', track: this._micTrack, enabled: false });
+      if (force || !this.isRecording && !this._stopPromise && !this._chunks.size) this._releaseMic(true);
+      this._emitMicrophoneStatus();
+    }
     async startMicrophoneRecording(trackId, options = {}) {
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
-      if (!navigator.mediaDevices?.getUserMedia) throw Error('Microphone recording needs HTTPS or localhost in a browser with microphone access.');
-      const generation = this.generation, request = ++this._recordRequest; this._micPending = true; let stream, track;
-      this._updateRecordHold();
+      const track = this._trackIndex(trackId); if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
+      const generation = this.generation, request = ++this._micRequest;
       try {
-        await this.init(); track = this._trackIndex(trackId); stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
-        if (generation !== this.generation || request !== this._recordRequest) { stream.getTracks().forEach(t => t.stop()); return false; }
-        await this.context.resume(); await this._recordGate(track, true);
-        if (generation !== this.generation || request !== this._recordRequest) { stream.getTracks().forEach(t => t.stop()); this._send({ type: 'gate', id: 0, track, value: false }); return false; }
-        const source = this.context.createMediaStreamSource(stream); this._mic = { stream, source, track }; source.connect(this.inputs[track]);
-        const started = await this.startRecording([track], { ...options, _microphone: true }); if (!started) this._releaseMic(); return started;
-      } catch (error) { this._releaseMic(); stream?.getTracks().forEach(t => t.stop()); if (track != null) this._send({ type: 'gate', id: 0, track, value: false }); throw error; }
-      finally { this._micPending = false; this._updateRecordHold(); }
+        if (!await this._acquireMicrophone(track, options.micInputGainDb ?? this.state.recording?.micInputGainDb ?? 0, 'record', generation, request)) return false;
+        if (generation !== this.generation || request !== this._micRequest) return false;
+        if (this._micEnabled) this._send({ type: 'microphoneMonitor', track, enabled: true });
+        const latency = this.getMicrophoneLatency(); this._recordMicrophone = { ...latency, compensationFrames: Math.round(latency.compensationMs * this.context.sampleRate / 1000) };
+        const started = await this.startRecording([track], { ...options, _microphone: true });
+        if (!started) { this._recordMicrophone = null; this._releaseMic(); } this._emitMicrophoneStatus(); return started;
+      } catch (error) { if (generation === this.generation && request === this._micRequest) { this._recordMicrophone = null; this._releaseMic(); } throw error; }
     }
-    _releaseMic() {
-      if (!this._mic) return; const { source, stream, track } = this._mic; this._mic = null; try { source.disconnect(); } catch {} stream.getTracks().forEach(t => t.stop()); this._send({ type: 'gate', id: 0, track, value: false });
+    _microphoneEnded(stream) {
+      if (this._mic?.stream !== stream) return;
+      this._micEnabled = false; this._micRequest++; this._send({ type: 'microphoneMonitor', track: this._micTrack, enabled: false }); this._releaseMic(true);
+      this._send({ type: 'microphoneEnded' }); this.onStatus?.({ type: 'microphone-disconnected', message: 'The microphone disconnected. Any captured audio has been retained.' });
+    }
+    _releaseMic(force = false) {
+      if (!this._mic || !force && this._micEnabled) return;
+      const { source, gain, stream } = this._mic; this._mic = null;
+      try { source.disconnect(); gain.disconnect(); } catch {} stream.getTracks().forEach(t => t.stop()); this._send({ type: 'microphoneReset' }); this._meters.microphonePeak = 0; this._emitMicrophoneStatus();
     }
     async decodeFile(file) {
       if (!file || file.size > 32 * 1024 * 1024) throw Error('Choose an audio file smaller than 32 MiB.');
@@ -2082,7 +2556,7 @@ body {
       }
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
     }
-    async dispose() { this.panic(); this._transportListeners.clear(); this.node?.disconnect(); for (const input of this.inputs) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this._init = null; this.mode = 'idle'; }
+    async dispose() { this.panic(); this._transportListeners.clear(); this.node?.disconnect(); for (const input of [...this.inputs, this.microphoneInput].filter(Boolean)) input.disconnect(); await this.context?.close(); this.context = null; this.node = null; this.core = null; this.inputs = []; this.microphoneInput = null; this._init = null; this.mode = 'idle'; }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
   window.LoomAudio = LoomAudio;
@@ -3916,7 +4390,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   let state, selectedClip = null, selectedSlot = null, history = [], future = [], lifecycle = 0, transportOperation = 0, recordPending = false, recordFinishing = false, transportPending = false, importOperation = 0, projectOperation = 0, loadOperations = new Map(), exportAbort = null, autosaveTimer, recovery = true;
   let recoveryWarned=false,recoveryUnavailable=false;
   let assetMap = {}, waveformCache = new Map(), fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
-  let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null;
+  let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
   let automationEditor, pianoRoll, noteWorkflow;
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
@@ -3999,7 +4473,8 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       parallax: `<path d="M20 25h161l-9 26H29zM41 58h161l-9 26H50zM62 91h161l-7 20H69z"/><path d="M35 35h60m-55 5h43m17 28h64m-57 7h48m-48 22h64m-57 7h48" stroke="${a}"/><path d="M207 19v17m-8-8h16"/><path d="m187 45 15 9m-61 33 13 4" stroke-dasharray="2 3"/>`,
       vestige: `<path d="M81 12h88v25H81zM81 37 27 72h196l-54-35M27 72v13h196V72M53 85v11m144-11v11"/><path d="M59 65h132M75 58h100M89 51h72" stroke="${a}"/><path d="M63 117q-9-9 0-17m33 17q9-9 0-17m32 17q-9-9 0-17m32 17q9-9 0-17m32 17q-9-9 0-17" stroke="${a}"/>`,
       halo: `<path d="M22 95h208v15H22zM32 95V29h188v66M45 36h162M53 95c0-17 23-30 42-25s25 10 28 25m4 0c-2-27 13-38 37-37s31 15 30 37"/><path d="m68 80 10-8m8 17 12-12m43 0 13-11m10 19 12-14M125 46V8m-10 12 10-12 10 12" stroke="${a}"/><path d="M14 118h223" opacity=".3"/>`,
-      tremor: `<path d="m31 21 63 42m-55-54 63 43M31 21l8-12m55 54c15 54 93 52 117 15s-11-47-45-32l-64 6M94 63c26 28 71 42 96 31m-88-42c27 5 58 21 88 42m-24-48c-10 17-34 40-49 42M72 40l8-11"/><path d="M22 112h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15" stroke="${a}"/>`
+      tremor: `<path d="m31 21 63 42m-55-54 63 43M31 21l8-12m55 54c15 54 93 52 117 15s-11-47-45-32l-64 6M94 63c26 28 71 42 96 31m-88-42c27 5 58 21 88 42m-24-48c-10 17-34 40-49 42M72 40l8-11"/><path d="M22 112h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15v-8h16v8h15" stroke="${a}"/>`,
+      broiler: `<path d="M50 8h150v33H50zM57 15h136v19H57zM85 8V4h80v4M57 41v5m136-5v5M44 47h162v70H44zM51 54h148v56H51z"/><path d="M96 18h52v12H96zM102 22h40M63 19v11m116-11v11m6-11v11M58 70h134m-134 24h134M68 54v56m38-56v56m38-56v56m38-56v56" opacity=".4"/><circle cx="80" cy="24" r="4"/><circle cx="161" cy="24" r="4"/><circle cx="86" cy="82" r="20"/><circle cx="86" cy="82" r="12"/><circle cx="164" cy="82" r="20"/><circle cx="164" cy="82" r="12"/><path d="M25 101V74q0-10 8-10h11m-19 37H15v10h13M210 105l14-11m-14 11v12m-9-5 9-7 6 10M50 121h152" stroke="${a}"/><path d="m112 21 4 8 4-8 4 8 4-8 4 8 4-8" stroke="${a}"/>`
     };
     return `<svg viewBox="0 0 250 125" aria-hidden="true"><g fill="none" stroke="${c}" stroke-width="${compact ? 4 : 1.7}" stroke-linecap="round" stroke-linejoin="round">${drawings[def.id] || ''}</g></svg>`;
   }
@@ -4037,9 +4512,26 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     $('clipInspector').querySelector('.fineprint').textContent = notes ? 'Time rate changes note timing; Transpose changes pitch. Use note velocities and the track mixer for dynamics. Print audio for clip level and fades.' : 'Drag a clip to move it. Pull either edge to trim. Rate changes audio speed and pitch. Overlapping clips are mixed together.';
     noteWorkflow?.render();
   }
-  function renderEffectEditor() { const slot=selectedSlot!==null&&track().effects[selectedSlot]; $('effectEditor').hidden=!slot; if(!slot)return; const def=effectById(slot.type); $('effectEditor').style.setProperty('--effect-color',def.color); $('effectEditor').innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / TRACK ${String(state.selectedTrack+1).padStart(2,'0')}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div><div class="effect-info">${escape(def.description)}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div><div class="effect-controls">${effectParams(def).map(p=>p.type==='select'?`<div class="control"><label for="fx-${p.key}">${p.label}</label><select id="fx-${p.key}" data-effect-param="${p.key}">${p.options.map(o=>`<option value="${escape(o.value)}" ${o.value===slot.params[p.key]?'selected':''}>${escape(o.label)}</option>`).join('')}</select></div>`:`<div class="control"><label for="fx-${p.key}">${p.label}<output>${formatParam(p,slot.params[p.key])}</output></label>${effectRange(p,slot.params[p.key])}</div>`).join('')}</div></div></div>`; }
+  function effectControl(p, params) {
+    if(p.type==='select')return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}</label><select id="fx-${p.key}" data-effect-param="${p.key}">${p.options.map(o=>`<option value="${escape(o.value)}" ${o.value===params[p.key]?'selected':''}>${escape(o.label)}</option>`).join('')}</select></div>`;
+    return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}<output>${formatParam(p,params[p.key])}</output></label>${effectRange(p,params[p.key])}</div>`;
+  }
+  function renderEffectEditor() {
+    const slot=selectedSlot!==null&&track().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
+    const def=effectById(slot.type),amp=def.id==='broiler';editor.classList.toggle('amp-editor',amp);editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?`<div class="amp-presets"><div class="amp-presets-heading"><span class="eyebrow">HOUSE RECIPES / BASS FIRST</span><span>Choose a starting point. Then turn up the peculiar.</span></div><div class="amp-preset-grid">${def.presets.map(p=>`<button class="amp-preset" data-amp-preset="${escape(p.id)}" title="${escape(p.description)}" aria-pressed="false">${escape(p.name)}</button>`).join('')}</div></div><div class="amp-control-groups">${def.groups.map(g=>`<fieldset class="amp-control-group"><legend>${escape(g.label)}</legend><div class="effect-controls">${g.keys.map(key=>effectParams(def).find(p=>p.key===key)).filter(Boolean).map(p=>effectControl(p,slot.params)).join('')}</div></fieldset>`).join('')}</div>`:`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / TRACK ${String(state.selectedTrack+1).padStart(2,'0')}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${amp?'<div class="amp-signal-route">INPUT → PREAMP → TONE → POWER<br>↳ CLEAN LOWS → SPEAKER → MIC → OUT</div>':''}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();
+  }
+  function renderAmpState() {
+    const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='broiler')return;
+    $('effectEditor').querySelector('.effect-toolbar>span').textContent=slot.params.bypass?'BYPASSED':'AMP / CABINET / '+(slot.params.stereo==='mono'?'MONO':'STEREO');
+    for(const button of $('effectEditor').querySelectorAll('[data-amp-preset]')){const preset=def.presets.find(p=>p.id===button.dataset.ampPreset);button.setAttribute('aria-pressed',String(Object.keys(preset.params).every(key=>preset.params[key]===slot.params[key])));}
+    const direct=slot.params.cabinet==='di';for(const key of ['speakerDrive','mic','distance','air']){const input=$('fx-'+key);if(input){input.disabled=direct;input.closest('.control').style.opacity=direct?'.4':'';}}
+    $('ampCabinetHint').textContent=direct?'Direct head output. Speaker drive, mic position, distance, and air are bypassed.':'Mic position: edge → center. Distance: close → distant. Cabinet controls include speaker breakup and room air.';
+  }
   function effectRange(p,value){const log=p.unit==='Hz'&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
-  function formatParam(p,value) { if (p.key==='mix'||['depth','spread','width','size','diffusion','pan','duty'].includes(p.key)) return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
+  function formatParam(p,value) { if (p.key==='mix'||['depth','spread','width','size','diffusion','pan','duty','cleanLow','presence','master','sag','speakerDrive','mic','distance','air'].includes(p.key)) return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
   function transportLocked() { return recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
   function renderTransport() {
     const m=engine.getMeters(), recording=!!m.recording, locked=transportLocked();
@@ -4060,7 +4552,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     $('loopSelectionButton').disabled=locked||!clipLocation();
     $('ruler').setAttribute('aria-disabled',String(locked));
     $('playhead').setAttribute('aria-disabled',String(locked));
-    renderRecordingSetup();renderMarkers();renderClipActions();
+    renderRecordingSetup();renderMicrophone();renderMarkers();renderClipActions();
     renderPlayhead();
   }
   function renderPlayhead() {
@@ -4125,10 +4617,10 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function clearAllFrames() { for(const id of frames.keys()){host.unload(id);frames.get(id).remove();engine.clearAudition(id);}frames.clear();openedApps.clear();loadOperations.clear();frameTrack=null; }
   function fireCommand(id,command,payload){const generation=lifecycle;return host.command(id,command,payload).catch(e=>{if(generation===lifecycle)status('Instrument '+command+': '+e.message);return false;});}
   async function transportStart() { if(transportPending||transportLocked()||engine.getMeters().playing)return;if((engine.getMeters().beat||0)>=state.lengthBars*4)seekTo(0);const operation=++transportOperation,generation=lifecycle;transportPending=true;renderTransport();try{await engine.init();const live=state.tracks.filter(t=>t.instrument&&t.instrumentLive);await Promise.all(live.map(async t=>{const ready=await ensureInstrument(t);if(ready)await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo); await notePlayback.prepare(); if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.play();if(!started||operation!==transportOperation||generation!==lifecycle)return; notePlayback.start(); for(const t of live)fireCommand(t.id,'start');status('Service has started. The specials are behaving, for now.');}catch(e){if(operation===transportOperation)status(e.message);}finally{if(operation===transportOperation){transportPending=false;renderTransport();}} }
-  async function halt({rewind=false}={}) {
+  async function halt({rewind=false,keepMicrophone=false}={}) {
     if(recordFinishing)return;
     const operation=++transportOperation,generation=lifecycle,recording=engine.isRecording;
-    transportPending=false; notePlayback.stop(); notePlayback.setRecordingTracks([]); engine.stop();
+    transportPending=false; notePlayback.stop(); notePlayback.setRecordingTracks([]); engine.stop({preserveMicrophoneMonitoring:keepMicrophone});
     if(recordPending&&!recording)engine.cancelRecording();
     recordPending=false;
     for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'stop');
@@ -4142,8 +4634,8 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function stop() { return halt({rewind:true}); }
   function togglePlayback() { return engine.getMeters().playing||transportPending||recordPending?pause():transportStart(); }
   async function restart() { if(transportLocked())return;const generation=lifecycle;await pause();if(generation!==lifecycle||transportLocked())return;if(seekTo(0))await transportStart(); }
-  function panic(message='Silence. Pending recordings have been discarded.') { ++lifecycle;++transferOperation;transferAbort?.abort();automationEditor?.disarm?.();++recordFinishOperation;++importOperation;++projectOperation;++transportOperation;for(const [id,op]of loadOperations)loadOperations.set(id,op+1);recordPending=false;transportPending=false;recordFinishing=false; noteWorkflow?.cancel(); notePlayback.panic(); notePlayback.setRecordingTracks([]); engine.panic();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'panic');for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();renderTransport();status(message); }
-  async function startRecording() { if(recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await pause();return;}const source=$('recordSource').value,operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){if(track().clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(track().id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording your microphone without monitoring it. Stop finishes the take; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
+  function panic(message='Silence. Pending recordings have been discarded.') { ++microphoneOperation;++lifecycle;++transferOperation;transferAbort?.abort();automationEditor?.disarm?.();++recordFinishOperation;++importOperation;++projectOperation;++transportOperation;for(const [id,op]of loadOperations)loadOperations.set(id,op+1);recordPending=false;transportPending=false;recordFinishing=false; noteWorkflow?.cancel(); notePlayback.panic(); notePlayback.setRecordingTracks([]); engine.panic();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'panic');for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();renderTransport();status(message); }
+  async function startRecording() { if(recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>t.armed&&t.instrument);if(!armed.length&&track().instrument){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,(256-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
   async function finishRecording(limited=false){
     if(recordFinishing)return;recordFinishing=true;recordPending=false;const generation=lifecycle,operation=++recordFinishOperation;renderTransport();
     try{
@@ -4216,10 +4708,11 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     const slot=e.target.closest('[data-slot]');if(slot){selectEffect(Number(slot.dataset.slot));return;}
     const add=e.target.closest('[data-add-effect]');if(add){remember();clearEffectAutomation(track(),selectedSlot);track().effects[selectedSlot]={type:add.dataset.addEffect,params:clone(effectById(add.dataset.addEffect).defaults)};$('effectDialog').close();changed({arrangement:true,mixer:true,rack:true});renderEffectEditor();automationEditor?.render();$('effectEditor').scrollIntoView({block:'nearest',behavior:'smooth'});return;}
     const app=e.target.closest('[data-app]');if(app){const descriptor=instrumentOptions()[Number(app.dataset.app)],index=browserTrack??state.selectedTrack;selectedTrack(index);ensureInstrument(track(),{open:true,replace:true,descriptor:{id:descriptor.id,name:descriptor.name,url:descriptor.url}}).catch(e=>status(e.message));return;}
+    const presetButton=e.target.closest('[data-amp-preset]');if(presetButton){const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===presetButton.dataset.ampPreset);if(preset){remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();status(preset.name+' loaded. '+preset.description);}return;}
     const effectActions={effectBypass:'bypass',effectReset:'reset',effectUp:'up',effectDown:'down',effectRemove:'remove'};if(effectActions[e.target.id]){changeEffect(effectActions[e.target.id]);return;}if(e.target.id==='effectReplace')openEffects(selectedSlot);
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;} });
-  document.addEventListener('change',e=>{if(e.target.dataset.effectParam&&e.target.tagName==='SELECT'){remember();track().effects[selectedSlot].params[e.target.dataset.effectParam]=e.target.value;changed();}});
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();} });
+  document.addEventListener('change',e=>{if(e.target.dataset.effectParam&&e.target.tagName==='SELECT'){remember();track().effects[selectedSlot].params[e.target.dataset.effectParam]=e.target.value;changed();renderAmpState();}});
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
   $('playButton').addEventListener('click',transportStart);$('pauseButton').addEventListener('click',pause);$('stopButton').addEventListener('click',stop);$('panicButton').addEventListener('click',()=>panic());$('recordButton').addEventListener('click',startRecording);
@@ -4288,7 +4781,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       $('clock').textContent=positionLabel(beat);
       $('clockMode').textContent=m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE';
-      renderPlayhead();automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);automationEditor?.tick();pianoRoll?.tick();
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       $('masterLeft').style.width=Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%';$('masterRight').style.width=Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%';$('masterDb').textContent=level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞';
       for(let i=0;i<8;i++){const el=$('meter-'+i);if(el)el.style.height=Math.min(100,Math.sqrt(m.tracks?.[i]?.rms||0)*135)+'%';}
@@ -4311,6 +4804,41 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     for(const id of ['countInBars','punchButton','punchFromLoop'])$(id).disabled=locked;
     $('recordingSetupSummary').textContent=r.punchEnabled?'One pass · record bars '+(r.punchStart/4+1).toFixed(2).replace(/\.00$/,'')+'–'+(r.punchEnd/4+1).toFixed(2).replace(/\.00$/,''):r.countInBars?r.countInBars+' bar'+(r.countInBars===1?'':'s')+' of clicks before a new take.':'A little warning before service begins.';
   }
+  function renderMicrophone(current) {
+    const mic=current||engine.getMicrophoneStatus(),r=state.recording,locked=transportLocked(),monitored=state.tracks.find(t=>t.id===mic.trackId),target=(mic.enabled||mic.pending||mic.recording)&&monitored?monitored:track();
+    const live=mic.enabled,pending=mic.pending;
+    $('microphoneState').textContent=pending?'CONNECTING':mic.recording?'RECORDING':live?'MONITOR ON':mic.active?'INPUT ON':'OFF';
+    $('microphoneState').classList.toggle('active',live||mic.recording);
+    $('microphoneMonitorButton').textContent=pending&&!recordPending?'Cancel connection':live?'Monitoring off':'Monitor microphone';
+    $('microphoneMonitorButton').setAttribute('aria-pressed',String(live));
+    $('microphoneMonitorButton').disabled=(recordPending||recordFinishing)&&!live;
+    $('microphoneRouteLabel').textContent='TRACK '+String(state.tracks.indexOf(target)+1).padStart(2,'0')+' · '+target.name;
+    $('microphoneRouteButton').hidden=!live||mic.trackId===track().id;
+    $('microphoneRouteButton').textContent='Move monitoring to track '+String(state.selectedTrack+1).padStart(2,'0');
+    $('microphoneRouteButton').disabled=locked||pending;
+    for(const [id,value]of [['microphoneInputGain',r.micInputGainDb],['microphoneCompensation',r.micCompensation],['microphoneOffset',r.micOffsetMs]]){const input=$(id);if(document.activeElement!==input)input.value=value;input.disabled=locked||(id==='microphoneOffset'&&r.micCompensation==='off');}
+    $('recordSource').disabled=locked;
+    $('microphoneGainValue').textContent=(r.micInputGainDb>0?'+':'')+r.micInputGainDb.toFixed(1)+' dB';
+    $('microphoneOffsetLabel').textContent=r.micCompensation==='manual'?'OFFSET (MS)':'EXTRA TRIM (MS)';
+    const latency=mic.latency||engine.getMicrophoneLatency(),compensation=Number(latency.compensationMs)||0;
+    $('microphoneTimingSummary').textContent=latency.mode==='off'?'Off · timing unchanged':!engine.context&&latency.mode==='auto'?'Auto · estimate after audio starts':(latency.mode==='auto'?'Estimated · ':'Manual · ')+(Math.abs(compensation)<.05?'no shift':Math.abs(compensation).toFixed(1)+' ms '+(compensation>0?'earlier':'later'));
+    $('microphoneLatencyDetails').textContent=!engine.context?'Device timing appears after audio starts.':(latency.reportedInput?(latency.inputMs||0).toFixed(1)+' ms input':'Input delay unreported')+' · '+(latency.reportedOutput?(latency.outputMs||0).toFixed(1)+' ms output':'output delay unreported')+' · '+(latency.processingMs||0).toFixed(1)+' ms processing';
+    const peak=Math.max(0,Number(mic.inputPeak)||0),db=peak>1e-5?Math.max(-90,20*Math.log10(peak)):-90,meter=$('microphoneMeterFill').closest('.mic-input-meter');
+    $('microphoneMeterFill').style.width=Math.min(100,Math.max(0,(db+60)/60*100))+'%';
+    $('microphoneMeterValue').textContent=db<=-90?'−∞ dB':db.toFixed(1)+' dB';meter.setAttribute('aria-valuenow',String(Math.min(0,db)));meter.classList.toggle('clipping',peak>=.98);
+  }
+  async function setMicrophoneMonitor({move=false}={}) {
+    const current=engine.getMicrophoneStatus(),enabled=move||!(current.enabled||current.pending),target=enabled?(current.recording?current.trackId:track().id):current.trackId||track().id;
+    const operation=++microphoneOperation,generation=lifecycle;
+    try {
+      const connected=await engine.setMicrophoneMonitoring(target,{enabled,gainDb:state.recording.micInputGainDb});
+      if(operation!==microphoneOperation||generation!==lifecycle)return;
+      renderMicrophone();if(!connected)return;
+      const t=state.tracks.find(t=>t.id===target);
+      status(enabled?'Microphone monitoring → '+t.name+' → four effects → mixer. Use headphones.':'Microphone monitoring is off.'+(engine.getMicrophoneStatus().recording?' The dry take continues recording.':''));
+    }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
+  }
+  engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='error'||event.type==='microphone-disconnected')status(event.message);};
   function renderClipActions(){const selected=clipLocation();for(const id of ['clipEditQuick','clipSplitQuick','clipDuplicateQuick','clipDeleteQuick','transferClipButton'])$(id).disabled=!selected||recordFinishing;$('clipActionSummary').textContent=selected?selected.clip.name+' · '+selected.track.name:'Select an audio or note clip to edit it.'; $('transferClipButton').hidden=selected?.clip.type==='notes'; noteWorkflow?.render();}
   function editSelectedClip(){if(!clipLocation())return;$('clipInspector').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});$('clip-name')?.focus({preventScroll:true});}
   function renderMarkers(){
@@ -4379,6 +4907,12 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   automationEditor=new window.LoomAutomationEditor({element:$('automationEditor'),getState:()=>state,getTrack:()=>track(),getBeat:()=>engine.getMeters().beat||0,getPlaying:()=>!!engine.getMeters().playing,remember,onChange:()=>changed(),status});
   $('countInBars').addEventListener('change',()=>{if(transportLocked())return;remember();state.recording.countInBars=Number($('countInBars').value);changed();renderRecordingSetup();});
+  $('microphoneMonitorButton').addEventListener('click',()=>setMicrophoneMonitor());
+  $('microphoneRouteButton').addEventListener('click',()=>setMicrophoneMonitor({move:true}));
+  $('microphoneInputGain').addEventListener('input',()=>{if(transportLocked())return;if(!activeRanges.has($('microphoneInputGain'))){remember();activeRanges.add($('microphoneInputGain'));}state.recording.micInputGainDb=num($('microphoneInputGain').value,-24,24);changed();renderMicrophone();});
+  $('microphoneCompensation').addEventListener('change',()=>{if(transportLocked())return;remember();state.recording.micCompensation=$('microphoneCompensation').value;changed();renderMicrophone();});
+  $('microphoneOffset').addEventListener('change',()=>{if(transportLocked())return;const value=Number($('microphoneOffset').value);if(!Number.isFinite(value)){renderMicrophone();return;}remember();state.recording.micOffsetMs=num(value,-500,500);$('microphoneOffset').value=state.recording.micOffsetMs;changed();renderMicrophone();});
+  $('recordSource').addEventListener('change',()=>{if($('recordSource').value==='microphone'){$('micInputPanel').open=true;renderMicrophone();}else if(!transportLocked()){++microphoneOperation;engine.setMicrophoneMonitoring(track().id,{enabled:false}).then(()=>renderMicrophone()).catch(e=>status(e.message));}});
   $('punchButton').addEventListener('click',()=>{if(transportLocked())return;remember();state.recording.punchEnabled=!state.recording.punchEnabled;changed({arrangement:true});renderRecordingSetup();});
   $('punchFromLoop').addEventListener('click',()=>{if(transportLocked())return;remember();Object.assign(state.recording,{punchEnabled:true,punchStart:state.loopStart,punchEnd:state.loopEnd});changed({arrangement:true});renderRecordingSetup();});
   for(const id of ['punchStart','punchEnd'])$(id).addEventListener('change',()=>{if(transportLocked())return;remember();const r=state.recording;if(id==='punchStart')r.punchStart=num((Number($(id).value)-1)*4,0,r.punchEnd-.25);else r.punchEnd=num((Number($(id).value)-1)*4,r.punchStart+.25,state.lengthBars*4);changed({arrangement:true});renderRecordingSetup();});
@@ -4396,8 +4930,9 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   noteWorkflow.piano = pianoRoll;
   window.MusicLabPatternInstrument = { get patternImport(){return noteWorkflow.patternImport;}, patternExport:{scopes:[{id:'clip',label:'Selected note or source pattern'},{id:'instrument',label:'Selected track instrument pattern'}],defaultScope:'clip'}, prepareTarget:request=>noteWorkflow.prepareTarget(request), importPattern:request=>noteWorkflow.importPattern(request), exportPattern:request=>noteWorkflow.exportPattern(request) };
   host.setTempo(state.tempo);decodeAssets();renderAll();if(recoveryUnavailable)recoveryInfo('Browser recovery is unavailable. Save a project to keep this session.');requestAnimationFrame(()=>{fitTimeline();requestAnimationFrame(animate);});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(fitInitial)fitTimeline();else renderArrangement();},100);});
+  const releaseInputOnExit=()=>{++microphoneOperation;engine.panic();};window.addEventListener('beforeunload',releaseInputOnExit);
   if(location.protocol==='file:'){const home='https://calebhaines.github.io/sidequest-prototypes/music/';$('musicHome').href=home;$('downloadHtml').href=home+'loom/index.html';$('downloadSource').href=home+'loom/LOOM-source.zip';$('downloadApi').href='https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md';}
-  window.addEventListener('pagehide',()=>{notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
+  window.addEventListener('pagehide',()=>{++microphoneOperation;notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
   window.LoomApp=Object.freeze({get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>replaceState(next,{message:'Session loaded.'}),get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();
 
