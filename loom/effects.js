@@ -1,11 +1,13 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
     const vocal = makeVocal ? makeVocal() : null;
+    const makeUtility = typeof utilityFactory === 'function' ? utilityFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomUtilityDSP === 'function' ? globalThis.createLoomUtilityDSP : null;
+    const utility = makeUtility ? makeUtility() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -20,6 +22,7 @@
       broiler: { model: ['clean-bass', 'flip-top', 'valve-stack', 'modern-grind', 'doom-fuzz', 'american-clean', 'british-crunch', 'high-gain', 'portaflex-64', 'svt-69', 'v4b-71', 'svt-pro'], input: [-18, 24, 0], drive: [0, 36, 6], cleanLow: [0, 1, 0.35], crossover: [50, 500, 150], bass: [-15, 15, 2], mid: [-18, 18, -1], midFreq: [80, 2500, 550], treble: [-15, 15, 0], presence: [0, 1, 0.35], depth: [0, 1, 0.4], master: [0, 1, 0.45], sag: [0, 1, 0.3], gate: [-90, -20, -75], gateRelease: [20, 800, 160], cabinet: ['bass410', 'di', 'bass15', 'bass810', 'guitar112open', 'guitar212', 'guitar412', 'metalbox', 'portaflex115', 'sealed810', 'ported410'], speakerDrive: [0, 1, 0.2], mic: [0, 1, 0.45], distance: [0, 1, 0.15], air: [0, 1, 0.3], stereo: ['stereo', 'mono'], output: [-24, 12, -4], mix: [0, 1, 1] }
     };
     if (vocal) specifications.glaze = vocal.specifications;
+    if (utility) specifications.scales = utility.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -32,6 +35,7 @@
 
     function normalize(type, params) {
       if (type === 'glaze' && vocal) return vocal.normalize(params);
+      if (type === 'scales' && utility) return utility.normalize(params);
       const spec = specifications[type];
       if (!spec) throw new Error('Unknown LOOM effect: ' + type);
       const source = params && typeof params === 'object' ? params : {};
@@ -87,6 +91,7 @@
 
     function create(type, sampleRate, params) {
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
+      if (type === 'scales' && utility) return utility.create(sampleRate, params);
       let p = normalize(type, params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
       let update, run, reset, fastSet, tail = () => 0;
@@ -541,7 +546,7 @@
         getMeters() { return { reductionDb: meter.reductionDb }; }
       };
     }
-    return { create, normalize };
+    return { create, normalize, specifications };
   }
   scope.createLoomEffectsDSP = createLoomEffectsDSP;
 })(typeof window === 'undefined' ? globalThis : window);

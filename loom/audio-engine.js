@@ -142,6 +142,14 @@
       getMeters() {
         return { ...this.meters, effects: this.slots.map((row, track) => row.map((slot, insert) => slot ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || this.tracks[track].effects[insert].params?.bypass === true } : null)) };
       }
+      resetEffectMeters(track, insert) {
+        const index = indexFor(track, this.tracks);
+        if (!Number.isInteger(index) || index < 0 || index >= 8 || !Number.isInteger(insert) || insert < 0 || insert >= 4) return false;
+        const slot = this.slots[index][insert];
+        if (!slot || slot.type !== 'scales' || typeof slot.dsp.resetMeters !== 'function') return false;
+        slot.dsp.resetMeters();
+        return true;
+      }
       _sample(asset, position, channel) {
         const data = channel ? (asset.right || asset.left) : asset.left;
         if (!data || position < 0 || position >= data.length) return 0;
@@ -610,9 +618,10 @@
           try {
             const source = `
               const createVocal=${window.createLoomVocalDSP ? window.createLoomVocalDSP.toString() : 'null'};
+              const createUtility=${window.createLoomUtilityDSP ? window.createLoomUtilityDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -630,6 +639,7 @@
                     else if(m.type==='clearAudition')this.core.clearAudition(m.track);
                     else if(m.type==='microphoneMonitor')this.core.setMicrophoneMonitor(m.track,m.enabled);
                     else if(m.type==='microphoneReset')this.recorder.clearMicrophoneHistory();
+                    else if(m.type==='resetEffectMeters'){this.core.resetEffectMeters(m.track,m.slot);this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});}
                     else if(m.type==='microphoneEnded'){this.core.setMicrophoneMonitor(-1,false);if(this.recorder.active&&this.recorder.microphone)this.recorder._limit('device');}
                     else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}
                     else if(m.type==='recordStart'){
@@ -710,6 +720,7 @@
       else if (m.type === 'clearAudition') this.core.clearAudition(m.track);
       else if (m.type === 'microphoneMonitor') this.core.setMicrophoneMonitor(m.track, m.enabled);
       else if (m.type === 'microphoneReset') this.recorder.clearMicrophoneHistory();
+      else if (m.type === 'resetEffectMeters') { this.core.resetEffectMeters(m.track, m.slot); this._acceptMeters(this.core.getMeters(), this._transportEpoch, this.context?.currentTime || 0); }
       else if (m.type === 'microphoneEnded') { this.core.setMicrophoneMonitor(-1, false); if (this.recorder.active && this.recorder.microphone) this.recorder._limit('device'); }
       else if (m.type === 'panic') { this.core.panic(); this.recorder.cancel(); }
       else if (m.type === 'recordStart') { this.core.beginRecording(m.schedule); this.recorder.start(m.id, m.tracks, this.core.beat, m.maxFrames, m.schedule); this._message({ type: 'recordStarted', id: m.id, startBeat: this.core.beat }); }
@@ -792,6 +803,13 @@
     }
     resumeAudition(id) { this._panicLatched = false; this._send({ type: 'audition', track: id == null ? undefined : this._trackIndex(id) }); }
     clearAudition(id) { this._send({ type: 'clearAudition', track: id == null ? undefined : this._trackIndex(id) }); }
+    resetEffectMeters(trackId, slot) {
+      const track = typeof trackId === 'number' ? Math.floor(trackId) : this.state.tracks.findIndex(item => item.id === trackId);
+      if (!Number.isInteger(track) || track < 0 || track >= 8 || !Number.isInteger(slot) || slot < 0 || slot >= 4 || this.state.tracks[track].effects?.[slot]?.type !== 'scales') return false;
+      // Analysis holds are runtime state: never resend the project or reset DSP.
+      this._send({ type: 'resetEffectMeters', track, slot });
+      return true;
+    }
     panic() {
       this.generation++; this._disableMicrophoneMonitoring(true); this._panicLatched = true; this._playRequest++; this.cancelRecording(); this._send({ type: 'panic' }); this._meters = silenceMeters(this._meters.beat);
       for (const resolve of this._gates.values()) resolve(); this._gates.clear();

@@ -223,7 +223,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Ten effects
+## Eleven effects
 
 | Effect | Processing |
 | --- | --- |
@@ -237,6 +237,7 @@ is unavailable, keep a WAV or packet for the next session.
 | WHISK | Tempo-locked rhythmic gating and auto-pan |
 | BROILER | Bass and guitar amp heads, power-stage dynamics, speaker cabinets, microphone position, and protected clean lows |
 | GLAZE | Vocal cleanup, de-essing, compression, tone, saturation, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, echo, reverb, and rhythmic chopping |
+| SCALES | Chromatic tuner, calibration, stereo meters, gain trim, channel routing, width, mono bass, polarity, DC removal, filters, clip guard, and mute |
 
 BROILER contains nine bass models: the original clean solid-state, flip-top,
 valve stack, modern grind, and doom fuzz, plus four characters inspired by the
@@ -273,6 +274,32 @@ scale, speed, and window for the source; it is not a polyphonic note editor.
 Vowel controls use resonant filters to change vocal colour. The vocoder uses a
 multiband envelope detector and synthesized carrier, not a recorded voice.
 GLAZE runs through the same DSP in live monitoring and offline WAV exports.
+
+SCALES is a utility station for tuning and preparing signals. Its chromatic tuner
+shows note, octave, frequency and cents, with an adjustable 430–450 Hz concert-A
+reference. Guitar, Drop D, four- and five-string bass, and ukulele guides offer
+clickable string targets. Auto follows the nearest note or string; a manual target
+lets you tune against one fixed note. Play one note at a time. The detector covers
+approximately 25–2000 Hz, including the low B of a five-string bass. Auto input
+listens to the stronger channel so opposite stereo polarity cannot cancel the
+signal being tuned; Left, Right and Mid are available explicitly.
+
+Input/output trim, balance, stereo/mono/left/right/swap/mid/side routing, width,
+polarity reversal and optional bass mono prepare the signal. Optional DC removal
+and high/low cuts clean it; clip guard limits the final mixed output, and Mute
+silences it while the tuner still listens. The defaults pass audio unchanged.
+Peak/RMS channel levels, held peaks, clipping indicators, correlation, DC and
+crest factor show what the signal is doing. Reset meters clears holds and clipping
+without changing sound or adding a project edit. Tuning analysis runs alongside
+the signal and adds no audio buffer delay; low bass needs a longer observation
+than high notes. These tools are available in every track's normal four-slot rack.
+
+For live tuning, select a track, add SCALES, and choose **Input → SCALES**.
+The Audio settings panel uses your selected interface and input channel; its
+**Input → SCALES** shortcut starts monitoring while stopped. It reuses an
+existing SCALES insert or an empty slot and never replaces an occupied effect.
+Enable SCALES Mute for silent tuning; the input meters and tuner keep listening.
+Recording captures the dry input so utility settings can be revised afterward.
 
 ## Projects, recording, and export
 
@@ -319,6 +346,12 @@ microphone timing/routing checks. The extracted equivalents are
 `npm run check:loom-vocal-browser` verifies real GLAZE monitoring, dry takes,
 exports, actual insert meters, presets, and responsive vocal controls with
 Playwright and Chromium; the extracted command is `node vocal-browser-checks.cjs`.
+Run `npm run check:loom-utility` and `npm run check:loom-utility-integration` for
+SCALES pitch detection, transparent audio, routing, meters, live/offline processing,
+automation, and microphone recording. `npm run check:loom-utility-browser` verifies
+the actual Worklet tuner, interface practice, controls, project restoration, and
+phone/desktop layouts. Extracted commands are `node utility-checks.cjs`,
+`node utility-integration-checks.cjs`, and `node utility-browser-checks.cjs`.
 `npm run check:loom-mic-browser` uses Playwright and Chromium to verify actual
 microphone monitoring, permission cleanup, dry recording, amp exports, and
 responsive controls. Set `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` when using
@@ -343,7 +376,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.10.0.
+font license notices. Version 1.11.0.
 
 ## Compatibility
 

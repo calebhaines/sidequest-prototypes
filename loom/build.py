@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter']
-SCRIPTS = ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
+SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -60,7 +60,7 @@ print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kitch
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
-    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'vocal-checks.cjs', 'vocal-browser-checks.cjs', 'batter-integration-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
+    sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'vocal-checks.cjs', 'vocal-browser-checks.cjs', 'utility-checks.cjs', 'utility-integration-checks.cjs', 'utility-browser-checks.cjs', 'batter-integration-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     files += exchange_helpers['exchange_sources'](ROOT)
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]

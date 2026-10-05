@@ -93,6 +93,7 @@
     }
   ];
   if (scope.LoomVocalCatalog) catalog.push(...(Array.isArray(scope.LoomVocalCatalog) ? scope.LoomVocalCatalog : [scope.LoomVocalCatalog]));
+  if (scope.LoomUtilityCatalog) catalog.push(...(Array.isArray(scope.LoomUtilityCatalog) ? scope.LoomUtilityCatalog : [scope.LoomUtilityCatalog]));
   catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);

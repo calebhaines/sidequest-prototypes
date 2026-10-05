@@ -142,3 +142,23 @@ Save portable projects before reverting. Earlier BATTER versions cannot reproduc
 B-layer blends or LFO motion. Existing sample IDs, twelve musical voices, eight
 GALLEY tracks, four insert slots, shared libraries, and both published songs are
 preserved. Review conflicts if later updates touch these files.
+
+## SCALES tuner and utility release
+
+GALLEY 1.11 adds SCALES, a utility insert with a chromatic tuner, stereo meters,
+gain and routing tools, bass mono, DC removal, filters, clip guard and mute.
+The working BATTER 1.1 and GLAZE guide release is preserved at
+`pre-galley-scales-2026-10-05`, commit
+`ea26055e1f1f222f0699662bfe975f4871126143`. This update is tagged
+`galley-scales-v1`. To restore the previous GALLEY and matching downloads:
+
+```sh
+git revert --no-edit galley-scales-v1
+git push origin main
+```
+
+Save portable projects before reverting. Earlier GALLEY versions do not implement
+SCALES; they cannot reproduce its processing or tuner settings. Eleven instruments,
+BATTER's embedded samples, the other ten inserts, shared libraries, eight tracks,
+four slots per track, and both published songs are retained. Review conflicts if
+later releases modify the same files.
