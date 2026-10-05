@@ -1,9 +1,12 @@
 """Build MIRE as one portable HTML instrument, without external requests."""
 from pathlib import Path
 import base64
+import runpy
 import zipfile
 
 root = Path(__file__).resolve().parent
+exchange_dir = root / 'shared' if (root / 'shared' / 'bundle_audio_exchange.py').exists() else root.parent / 'shared'
+exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 css = (root / 'styles.css').read_text()
 faces = []
 for family, weight, style, file in [
@@ -21,6 +24,7 @@ scripts = '\n'.join((root / name).read_text() for name in ['schema.js', 'presets
 scripts = scripts.replace('</script', '<\\/script')
 html = (root / 'app.html').read_text().replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
+html = exchange_helpers['embed_exchange'](html, 'mire', root)
 (root / 'index.html').write_text(html)
 print(f'Built MIRE: {len(html.encode()):,} bytes, all assets embedded.')
 
@@ -39,4 +43,9 @@ if (repository_music / 'README.md').exists():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             z.writestr(info, path.read_bytes())
+        for name, data in exchange_helpers['exchange_sources'](root):
+            info = zipfile.ZipInfo('MIRE-source/' + name, (2026, 10, 5, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            z.writestr(info, data)
     print(f'Packaged MIRE source: {archive.stat().st_size:,} bytes.')

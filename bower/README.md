@@ -28,6 +28,12 @@ Capture mix records a live performance, including manual gestures; live
 recording is limited to three minutes. Field notes explain the controls and keyboard
 shortcuts and includes HTML and editable source downloads.
 
+## Sharing samples
+
+The Samples panel shares all string patterns or the selected string pattern with other Music Lab apps. Render one to sixteen bars with a configurable effect tail. The selected string can be shared even if it is muted in the mix. The offline render preserves the current score, random seed, and sound settings; live playback continues unchanged. Finish a live capture before sharing a render.
+
+`BowerApp.exportAudio({scope, bars, tailSeconds, signal})` returns an audio payload without starting a download. `BowerApp.audioExport` describes the available scopes. BOWER's strings remain physically modeled rather than sample-based.
+
 ## Source and build
 
 `app.html`, `styles.css` and `app.js` define the interface. `schema.js` bounds

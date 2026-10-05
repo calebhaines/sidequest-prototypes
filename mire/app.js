@@ -167,6 +167,38 @@
   function renderAll() { closePopover(); renderTransport(); renderNodeButtons(); renderNodeEditor(); renderSources(); renderSourceEditor(); renderRouting(); renderModulation(); renderPerformance(); renderMaster(); }
   function loadState(newState, name = 'custom', keepUndo = true) { if (keepUndo) remember(); state = S.normalize(newState); presetId = name; engine.setState(state); renderAll(); clearTimeout(autosaveTimer); autosaveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, S.serializeProject(state)); } catch (_) { /* Save project remains available. */ } }, 650); }
 
+  function installSample(index, asset) {
+    remember(); state.samples[index] = asset; state.sources[index].kind = 'sample';
+    state.sources[index].decay = Math.max(15, asset.duration * 1000);
+    state.sources[index].name = asset.name.replace(/\.[^.]+$/, '').slice(0, 30);
+    selectedSource = index; markChanged(); renderSources(); renderSourceEditor();
+    window.MusicLabHost?.notifyStateChange();
+  }
+  function importAudio({ pcm, sampleRate, name = 'Shared sample', options = {} } = {}) {
+    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current MIRE recording or render before importing audio.');
+    const target = options.deck ?? options.target ?? selectedSource;
+    const index = typeof target === 'string' && /^[0-3]$/.test(target) ? Number(target) : target;
+    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a MIRE source from 1 to 4.');
+    if (state.samples[index] && options.replace !== true) throw new Error('Confirm replacing the sample on source ' + (index + 1) + ' before importing audio.');
+    const asset = engine.createSample(pcm, sampleRate, name);
+    installSample(index, asset);
+    toast('Sample received on source ' + (index + 1) + '. Undo restores the previous sample.');
+    return { deck: index, name: asset.name, duration: asset.duration, sampleRate: asset.sampleRate, channels: 1 };
+  }
+  async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds = 0, signal } = {}) {
+    if (busy || recordBusy || engine.isRecording) throw new Error('Finish the current MIRE recording or render before sharing audio.');
+    if (scope !== 'pattern') throw new Error('Choose the current MIRE network pattern to export.');
+    if (signal?.aborted) throw new DOMException('Render canceled.', 'AbortError');
+    if (!Number.isInteger(bars) || bars < 1 || bars > 16 || !Number.isFinite(tailSeconds) || tailSeconds < 0 || tailSeconds > 30) throw new Error('Choose 1–16 bars and an effect tail from 0 to 30 seconds.');
+    const tempo = state.tempo, name = state.name;
+    busy = true; $('render-button').disabled = true;
+    try {
+      const blob = await engine.renderWav(bars, tailSeconds, { signal });
+      if (signal?.aborted) throw new DOMException('Render canceled.', 'AbortError');
+      return { blob, name: name + ' · ' + bars + (bars === 1 ? ' bar' : ' bars'), sampleRate: 48000, channels: 2, duration: bars * 240 / tempo + tailSeconds, tempo, bars, sourceApp: 'mire', sourceLabel: 'Current network pattern' };
+    } finally { busy = false; $('render-button').disabled = false; }
+  }
+
   engine.onStatus = message => { $('audio-status').textContent = String(message).toUpperCase(); updatePlayback(); };
   engine.onStep = (step, audioTime) => {
     const delay = engine.context ? Math.max(0, (audioTime - engine.context.currentTime) * 1000) : 0;
@@ -208,7 +240,7 @@
   $('open-button').addEventListener('click', () => $('project-file').click());
   $('project-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; try { if (file.size > 32 * 1024 * 1024) throw new Error('Choose a MIRE project smaller than 32 MB.'); const imported = S.parseProject(await file.text()); engine.panic(); clearStep(); loadState(imported); toast('Project opened.'); } catch (error) { toast(errorMessage(error)); } finally { e.target.value = ''; } });
   $('import-sample-button').addEventListener('click', () => $('sample-file').click());
-  $('sample-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; const sourceIndex = selectedSource; const button = $('import-sample-button'); button.disabled = true; try { if (file.size > 20 * 1024 * 1024) throw new Error('Choose an audio file smaller than 20 MB.'); const asset = await engine.decodeSample(file); remember(); state.samples[sourceIndex] = asset; state.sources[sourceIndex].kind = 'sample'; state.sources[sourceIndex].decay = Math.max(15, asset.duration * 1000); state.sources[sourceIndex].name = asset.name.replace(/\.[^.]+$/, '').slice(0, 30); markChanged(); renderSources(); renderSourceEditor(); toast('Sample loaded. Imports use the first 10 seconds.'); } catch (error) { toast(errorMessage(error)); } finally { button.disabled = false; e.target.value = ''; } });
+  $('sample-file').addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; const sourceIndex = selectedSource; const button = $('import-sample-button'); button.disabled = true; try { if (file.size > 20 * 1024 * 1024) throw new Error('Choose an audio file smaller than 20 MB.'); const asset = await engine.decodeSample(file); installSample(sourceIndex, asset); toast('Sample loaded. Imports use the first 10 seconds.'); } catch (error) { toast(errorMessage(error)); } finally { button.disabled = false; e.target.value = ''; } });
   const micSelect = document.createElement('select'); micSelect.className = 'mic-destination'; micSelect.setAttribute('aria-label', 'Microphone destination'); micSelect.title = 'Live microphone input destination'; micSelect.innerHTML = state.nodes.map((_, i) => `<option value="${i}">Mic → ${String.fromCharCode(65 + i)}</option>`).join(''); $('mic-button').after(micSelect);
   $('mic-button').title = 'Enable live microphone input into the selected microphone destination';
   $('mic-button').addEventListener('click', async () => { const button = $('mic-button'); button.disabled = true; try { const enabled = !engine.micEnabled; await engine.setMic(enabled, micDestination); button.classList.toggle('mic-active', !!engine.micEnabled); button.setAttribute('aria-pressed', String(!!engine.micEnabled)); button.querySelector('span').textContent = engine.micEnabled ? 'Mic live' : 'Microphone'; updatePlayback(); toast(engine.micEnabled ? 'Live microphone enabled. Use headphones to avoid acoustic feedback.' : 'Microphone disabled.'); } catch (error) { toast(errorMessage(error)); } finally { button.disabled = false; } });
@@ -283,5 +315,8 @@
     requestAnimationFrame(drawGarden);
   }
   renderAll(); resizeCanvas(); requestAnimationFrame(drawGarden);
-  Object.defineProperty(window, 'MireApp', { value: Object.freeze({ get state() { return state; }, get engine() { return engine; }, getState: () => snapshot(), loadState: newState => loadState(newState), selectNode: i => { selectedNode = clamp(Math.round(i), 0, 3); renderNodeButtons(); renderNodeEditor(); }, selectSource: i => { selectedSource = clamp(Math.round(i), 0, 3); renderSources(); renderSourceEditor(); } }), writable: false });
+  Object.defineProperty(window, 'MireApp', { value: Object.freeze({ get state() { return state; }, get engine() { return engine; }, getState: () => snapshot(), loadState: newState => loadState(newState), importAudio, exportAudio,
+    get audioImport() { return { maxSeconds: 10, decks: 4, channels: 1, targets: state.sources.map((source, id) => ({ id, name: 'Source ' + (id + 1), occupied: !!state.samples[id], assetName: state.samples[id]?.name || '' })) }; },
+    get audioExport() { return { scopes: [{ id: 'pattern', label: 'Current network pattern' }], defaultBars: 1, maxBars: 16 }; },
+    selectNode: i => { selectedNode = clamp(Math.round(i), 0, 3); renderNodeButtons(); renderNodeEditor(); }, selectSource: i => { selectedSource = clamp(Math.round(i), 0, 3); renderSources(); renderSourceEditor(); } }), writable: false });
 })();

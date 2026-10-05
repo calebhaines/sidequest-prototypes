@@ -42,7 +42,11 @@ and depends on the browser's permissions and support for the current origin.
   loop. Offline mix renders use 48 kHz, 16-bit stereo WAV. They do not include
   live microphone input or unfinished recordings.
 
-LOOM can send an edited arrangement clip directly into a chosen deck.
+LOOM can send an edited arrangement clip directly into a chosen deck. The Samples panel also imports samples made by other Music Lab apps into decks A–D. Replacing an occupied deck requires explicit confirmation; Undo restores its previous loop. Shared audio is limited to thirty seconds per deck.
+
+The same panel can share the full deck mix with master effects, one complete selected deck loop with its tape processing, or the selected deck's unprocessed source audio. These choices keep processed loops and original recordings distinct. Rendering snapshots the tapes and settings without stopping playback; finish a take or capture before sharing.
+
+`SpoolApp.exportAudio({scope, bars, tailSeconds, signal})` returns audio without downloading it. `SpoolApp.audioExport` describes the scopes. `SpoolApp.importAudio({pcm, sampleRate, name, options})` accepts interleaved stereo PCM; `options.target` and `options.deck` both select a deck, and `options.replace` authorizes replacement. Import preserves Undo and project saving.
 Receiving audio preserves the other decks and current instrument/effect controls.
 Replacement is explicit, and the received tape is included in Undo and projects.
 

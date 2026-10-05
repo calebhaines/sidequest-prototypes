@@ -1,8 +1,11 @@
 """Build TINE as a standalone browser instrument with all assets embedded."""
 from pathlib import Path
 import base64
+import runpy
 
 root = Path(__file__).resolve().parent
+exchange_dir = root / 'shared' if (root / 'shared' / 'bundle_audio_exchange.py').exists() else root.parent / 'shared'
+exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 css = (root / 'styles.css').read_text()
 faces = []
 for weight, name in [(400, 'Regular'), (500, 'Medium'), (600, 'Semibold'), (700, 'Bold')]:
@@ -18,5 +21,6 @@ scripts = scripts.replace('</script', '<\\/script')
 html = (root / 'app.html').read_text().replace(
     '<!-- STYLES -->', '<style>\n' + css + '\n</style>'
 ).replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
+html = exchange_helpers['embed_exchange'](html, 'tine', root)
 (root / 'index.html').write_text(html)
 print(f'Built TINE: {len(html.encode()):,} bytes, all assets embedded.')

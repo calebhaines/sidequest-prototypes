@@ -298,14 +298,16 @@
     async preview(track, bpm = 120) { const generation = this.generation; await this.init(); if (generation !== this.generation || !this.environment || this.context.state === 'closed') return; synthesize(this.environment, track, this.context.currentTime + .005, false); }
     setMasterVolume(value) { this.values.master = clamp(value, 0, 1); if (this.context && this.graph) this.graph.master.gain.setTargetAtTime(this.values.master, this.context.currentTime, .015); }
     setEffects(values) { values = values || {}; if (values.drive !== undefined) this.values.drive = clamp(values.drive, 0, 1); if (values.space !== undefined) this.values.space = clamp(values.space, 0, 1); if (this.context && this.graph) updateGraph(this.context, this.graph, this.values, false); }
-    async exportWav(state) {
+    async exportWav(state, options = {}) {
+      const checkCancelled = () => { if (options.signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError'); };
+      checkCancelled();
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
-      const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, duration = 16 * 60 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
+      const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4))), duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
       tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
-      const tail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
+      const naturalTail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0)), tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail, context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
-      let time = .015; for (let i = 0; i < 64; i++) { const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
-      graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - .12); graph.master.gain.linearRampToValueAtTime(0, duration + tail); const rendered = await context.startRendering(); return encodeWav(rendered);
+      let time = .015; for (let i = 0; i < (hit ? 1 : bars * 16); i++) { if (i % 16 === 0) { checkCancelled(); if (options.signal) await new Promise(resolve => setTimeout(resolve, 0)); checkCancelled(); } const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
+      graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - .12); graph.master.gain.linearRampToValueAtTime(0, duration + tail); const rendered = await context.startRendering(); checkCancelled(); return encodeWav(rendered);
     }
     async dispose() {
       if (this._disposingPromise) return this._disposingPromise; this.stop(); const context = this.context;

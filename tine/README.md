@@ -14,6 +14,12 @@ Four pattern banks, accents, swing, mute/solo, eight curated grooves, voice muta
 
 Projects save as version 2. Version 1 projects are strictly validated before migration: the original six resonators receive the neutral striker with texture and rebound at zero, preserving their previous synthesis settings. Migration keeps every bank, pattern, mix setting, and voice parameter. The original six factory grooves retain their original contact response as well.
 
+## Sharing samples
+
+The Samples panel shares the pattern mix, selected voice pattern, or a single selected voice strike with the other Music Lab apps. Pattern renders can cover one to sixteen bars. A single strike preserves its resonator and exciter decay, with an optional effect tail. Muted voices can still be shared individually. Rendering snapshots the current project without stopping playback or changing any settings. TINE generates samples; imported recordings do not replace its physical models.
+
+`TineApp.exportAudio({scope, bars, tailSeconds, signal})` returns an audio payload without downloading it; `TineApp.audioExport` lists the supported scopes. Existing Export WAV retains its four-bar render and natural resonator tail.
+
 Live: https://calebhaines.github.io/sidequest-prototypes/music/tine/
 
 Rebuild and publish the static files from the repository root:

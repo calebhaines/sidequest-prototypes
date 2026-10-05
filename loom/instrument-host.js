@@ -20,7 +20,7 @@
     document.querySelectorAll('base,meta[http-equiv="Content-Security-Policy"],meta[http-equiv="refresh"]').forEach(node => node.remove());
     const base = document.createElement('base'); base.href = baseURL; document.head.prepend(base);
     const bridge = document.createElement('script'); bridge.textContent = global.LoomHostBridge.source(key); base.after(bridge);
-    if (id === 'form') {
+    if (id === 'form' && !html.includes('musiclab:app-ready')) {
       // FORM's React reducer is exposed only in this hosted copy. The standalone bundle is untouched.
       let integrated = false;
       document.querySelectorAll('script[type="module"]').forEach(script => {
@@ -122,13 +122,22 @@
       const { bridge, app } = this._parts(record), adapter = bridge?.adapter;
       const importer = adapter?.importAudio ? adapter : app?.importAudio ? app : null;
       return { ready: true, transport: !!(adapter?.start || app), state: !!(adapter?.getState || app?.getState || bridge), tempo: !!(adapter?.tempo || app), custom: !record.definition,
-        importAudio: !!importer, audioImport: importer?.audioImport ? clone(importer.audioImport) : null };
+        importAudio: !!importer, audioImport: importer?.audioImport ? clone(importer.audioImport) : null, exportAudio: !!(adapter?.exportAudio || app?.exportAudio), audioExport: clone(adapter?.audioExport || app?.audioExport || null) };
+    }
+    async exportAudio(trackId, options = {}) {
+      if(options.signal?.aborted)throw cancelledError();
+      const record=this.records.get(trackId);if(!record)throw Error('Load an instrument on this track first.');await record.ready;if(!this._current(record))throw cancelledError();
+      if(options.signal?.aborted)throw cancelledError();
+      const {bridge,app}=this._parts(record),exporter=bridge.adapter?.exportAudio?bridge.adapter:app?.exportAudio?app:null;if(!exporter)throw Error('Record this instrument into LOOM before sharing its sound.');
+      if(record.exporting)throw Error('This instrument is already rendering audio.');record.exporting=true;
+      try{const result=await exporter.exportAudio(options);if(!this._current(record)||options.signal?.aborted)throw cancelledError();return result;}finally{record.exporting=false;}
     }
     async importAudio(trackId, audio, options = {}) {
+      if (options.signal?.aborted) throw cancelledError();
       const record = this.records.get(trackId);
       if (!record) throw new Error('Load an instrument on the destination track first.');
       await record.ready;
-      if (!this._current(record)) throw cancelledError();
+      if (!this._current(record) || options.signal?.aborted) throw cancelledError();
       if (record.importing) throw new Error('An audio transfer is already in progress on this track.');
       const { bridge, app } = this._parts(record);
       const importer = bridge.adapter?.importAudio ? bridge.adapter : app?.importAudio ? app : null;
@@ -138,11 +147,12 @@
       const maxSeconds = Math.min(120, Number(importer.audioImport?.maxSeconds) || 120);
       if (pcm.length / 2 / sampleRate > maxSeconds) throw new Error('This instrument accepts audio up to ' + maxSeconds + ' seconds. Shorten the clip before sending it.');
       for (let i = 0; i < pcm.length; i++) if (!Number.isFinite(pcm[i])) throw new TypeError('Audio transfers must contain finite samples.');
-      const payload = { pcm: new Float32Array(pcm), sampleRate, name: typeof audio.name === 'string' ? audio.name : 'LOOM clip', options: clone(options) || {} };
+      const payload = { pcm: new Float32Array(pcm), sampleRate, tempo: audio.tempo, name: typeof audio.name === 'string' ? audio.name : 'LOOM clip', signal:options.signal, options: {...(clone({...options,signal:undefined}) || {}),signal:options.signal} };
       record.importing = true;
       try {
         const result = bridge.adapter?.importAudio ? await bridge.command('importAudio', payload) : await app.importAudio(payload);
-        if (!this._current(record)) throw cancelledError();
+        if (!this._current(record) || options.signal?.aborted) throw cancelledError();
+        if (result === false) throw new Error('The receiving instrument declined this audio.');
         this._notify(record, 'change', null);
         return result === undefined ? true : result;
       } finally { record.importing = false; }

@@ -25,12 +25,38 @@ the current page origin. Importing an audio file works without microphone access
   input, clears the garden and releases Freeze.
 - Import a sample into the selected lane (first ten seconds, mixed to mono).
   Its original speed is C4. Save project includes all four possible sample assets.
+- Shared audio can be received directly on any source lane, with confirmation
+  before replacing a sample and Undo to restore it. Cross-app imports reject
+  samples longer than ten seconds; trim them in the sample library first.
+  Stereo is mixed to mono, while routing, node settings and source patterns stay
+  intact. Shared samples are included in saved projects.
 - Record output captures the live stereo performance, up to three minutes.
   Export WAV renders a fresh performance of the current patch with a chosen tail;
   it does not copy the live delay buffers or include microphone input. A frozen
   export first feeds one bar into the network, then captures the held texture.
   Offline renders are 48 kHz, 16-bit stereo WAVs, with up to sixteen bars and a
   thirty-second tail. Live recordings use the audio context's sample rate.
+
+## Audio exchange
+
+`window.MireApp.importAudio({pcm, sampleRate, name, options})` accepts copied
+interleaved stereo `Float32Array` audio at 8–192 kHz, up to ten seconds. Set
+`options.deck` or `options.target` (0–3) to select a source and
+`options.replace: true` only after
+confirming replacement. The dynamic `audioImport` capability describes the four
+targets and their current samples. Imports are downmixed to mono, resampled to
+at most 96 kHz, DC-corrected and given a short edge fade. They do not require
+starting audio or microphone permission.
+
+`window.MireApp.exportAudio({scope: 'pattern', bars: 1, tailSeconds: 0, signal})`
+renders the current patch and returns `{blob, name, sampleRate, channels,
+duration, tempo, bars, sourceApp, sourceLabel}`. The
+`blob` is a 48 kHz, 16-bit stereo WAV; 1–16 bars and a 0–30-second tail are
+supported. Rendering follows the same frozen-network behavior as Export WAV
+and excludes microphone input. No live playback buffers are changed.
+The `audioExport` capability describes this pattern scope. An optional
+`AbortSignal` cancels a render between processing chunks, including frozen-network
+warmup, without changing the live patch.
 
 ## Source and build
 

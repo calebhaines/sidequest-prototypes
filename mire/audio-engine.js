@@ -501,6 +501,24 @@ class MireProcessor extends AudioWorkletProcessor {
       for(let i=0;i<count;i++)pcm[i]*=scale*Math.min(1,i/fade,(count-1-i)/fade);
       return {name:file.name||'Imported sample',sampleRate,pcm:toBase64(pcm),duration:count/sampleRate};
     }
+    createSample(pcm,sampleRate,name='Shared sample') {
+      if(!Number.isInteger(sampleRate)||sampleRate<8000||sampleRate>192000||Object.prototype.toString.call(pcm)!=='[object Float32Array]'||pcm.length<4||pcm.length%2)throw new Error('Provide valid interleaved stereo audio.');
+      const sourceFrames=pcm.length/2;
+      if(sourceFrames/sampleRate>10)throw new Error('MIRE accepts samples up to ten seconds. Trim the sample before importing it.');
+      for(let i=0;i<pcm.length;i++)if(!Number.isFinite(pcm[i]))throw new Error('The incoming audio contains invalid samples.');
+      const targetRate=Math.min(96000,sampleRate),frames=Math.max(1,Math.floor(sourceFrames*targetRate/sampleRate)),mono=new Float32Array(frames);
+      let mean=0,peak=0;
+      for(let i=0;i<frames;i++) {
+        const position=i*sampleRate/targetRate,index=Math.floor(position),blend=position-index,next=Math.min(sourceFrames-1,index+1);
+        const left=pcm[index*2]*(1-blend)+pcm[next*2]*blend,right=pcm[index*2+1]*(1-blend)+pcm[next*2+1]*blend;
+        mono[i]=left*.5+right*.5;mean+=mono[i];
+      }
+      mean/=frames;
+      for(let i=0;i<frames;i++)peak=Math.max(peak,Math.abs(mono[i]-mean));
+      const scale=peak>.95?.95/peak:1,fade=Math.max(1,Math.round(targetRate*.003));
+      for(let i=0;i<frames;i++)mono[i]=(mono[i]-mean)*scale*Math.min(1,i/fade,(frames-1-i)/fade);
+      return {name:String(name).replace(/[\u0000-\u001f\u007f]/g,'').slice(0,100)||'Shared sample',sampleRate:targetRate,pcm:toBase64(mono),duration:frames/targetRate};
+    }
     startRecording() {
       if(this.isRecording)return;this.isRecording=true;this._recordChunks=[];this._recordFrames=0;this._recordStarting=true;
       this._recordStartPromise=this.init().then(()=>this.context.resume()).then(()=>{this._recordStarting=false;if(this.isRecording&&this.mode==='worklet')this.node.port.postMessage({type:'recordStart'});}).catch(error=>{this.isRecording=false;this._recordStarting=false;this.onStatus?.(error.message);});
@@ -513,8 +531,9 @@ class MireProcessor extends AudioWorkletProcessor {
       }
       this.isRecording=false;const blob=wavBlob(this._recordChunks,this._recordFrames,this.context?.sampleRate||48000);this._recordChunks=[];this._recordFrames=0;return blob;
     }
-    async renderWav(bars=4,tailSeconds=4) {
-      await this.init();const sampleRate=48000,source=JSON.parse(JSON.stringify(stateForDSP(this.state)));
+    async renderWav(bars=4,tailSeconds=4,{signal}={}) {
+      const checkAbort=()=>{if(signal?.aborted)throw new DOMException('Render canceled.','AbortError');};
+      checkAbort();await this.init();checkAbort();const sampleRate=48000,source=JSON.parse(JSON.stringify(stateForDSP(this.state)));
       const lengthBars=Math.max(1,Math.min(16,Math.round(bars))),barSeconds=240/source.tempo,totalSeconds=lengthBars*barSeconds+Math.max(0,Math.min(30,Number.isFinite(+tailSeconds)?+tailSeconds:4));
       const frozen=!!source.garden.freeze;if(frozen)source.garden.freeze=false;
       const core=new DSP(sampleRate,source,0x504f4e44);this._samples.forEach((sample,i)=>{if(sample)core.setSample(i,sample.pcm,sample.sampleRate);});
@@ -522,17 +541,18 @@ class MireProcessor extends AudioWorkletProcessor {
         const cell=step%16,interval=60/source.tempo/4*(cell%2?1-source.swing:1+source.swing);
         source.sources.forEach((track,index)=>{const hit=track.steps[cell];if(!hit.on||track.mute||core.random()>=(hit.probability??1))return;const ratchets=Math.max(1,Math.min(4,hit.ratchet||1));for(let r=0;r<ratchets;r++)core.trigger({index,velocity:hit.velocity*(r?.88:1),frame:Math.round((time+interval*r/ratchets)*sampleRate)});});time+=interval;
       }};
-      if(frozen){schedule(0,1);const frames=Math.round(barSeconds*sampleRate);let done=0;while(done<frames){const count=Math.min(128,frames-done);core.processBlock(new Float32Array(count),new Float32Array(count));done+=count;if(done%32768===0)await new Promise(resolve=>setTimeout(resolve,0));}source.garden.freeze=true;core.setState(source);}
+      if(frozen){schedule(0,1);const frames=Math.round(barSeconds*sampleRate);let done=0;while(done<frames){checkAbort();const count=Math.min(128,frames-done);core.processBlock(new Float32Array(count),new Float32Array(count));done+=count;if(done%32768===0)await new Promise(resolve=>setTimeout(resolve,0));}source.garden.freeze=true;core.setState(source);}
       else schedule(0,lengthBars);
       const totalFrames=Math.round(totalSeconds*sampleRate),chunks=[];let rendered=0;
       this.onStatus?.('Rendering the feedback network…');
       while(rendered<totalFrames) {
+        checkAbort();
         const length=Math.min(8192,totalFrames-rendered),pcm=new Float32Array(length*2);
         for(let at=0;at<length;at+=128){const count=Math.min(128,length-at),l=new Float32Array(count),r=new Float32Array(count);core.processBlock(l,r);for(let i=0;i<count;i++){pcm[(at+i)*2]=l[i];pcm[(at+i)*2+1]=r[i];}}
         const fade=Math.round(sampleRate*.02);for(let i=0;i<length;i++){const gain=Math.min(1,(rendered+i)/fade,(totalFrames-rendered-i-1)/fade);pcm[i*2]*=gain;pcm[i*2+1]*=gain;}
         chunks.push(pcm);rendered+=length;await new Promise(resolve=>setTimeout(resolve,0));
       }
-      return wavBlob(chunks,totalFrames,sampleRate);
+      checkAbort();return wavBlob(chunks,totalFrames,sampleRate);
     }
     dispose() {
       this._panicGeneration=(this._panicGeneration||0)+1;this.stop();this._disposed=true;this.isRecording=false;this._stream?.getTracks().forEach(track=>track.stop());this._micNode?.disconnect();this.node?.disconnect();this._output?.disconnect();this.context?.close().catch(()=>{});

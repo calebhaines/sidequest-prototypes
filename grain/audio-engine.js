@@ -666,13 +666,16 @@
       if (this.context && this.graph) updateGraph(this.context, this.graph, this.values, false);
     }
 
-    async exportWav(state) {
+    async exportWav(state, options = {}) {
+      const checkCancelled = () => { if (options.signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError'); };
+      checkCancelled();
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       // Snapshot the instrument so changes during rendering cannot alter the file.
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] }));
       const sampleRate = 44100;
-      const duration = 16 * 60 / clamp(snapshot.bpm || 120, 30, 300);
+      const hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4)));
+      const duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 30, 300);
       const tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks : [];
       const hasSolo = tracks.some(track => track.solo);
       let longest = 0;
@@ -683,7 +686,9 @@
         const settings = readSynth(data, track);
         longest = Math.max(longest, settings.body.level > 0 ? envelopeLength(settings.body) : 0, settings.noise.level > 0 ? noiseLength(settings.noise) : 0);
       });
-      const tail = Math.max(0.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
+      const naturalTail = Math.max(0.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
+      const extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0));
+      const tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail;
       const context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, {
         master: snapshot.master === undefined ? this.values.master : snapshot.master,
@@ -692,7 +697,12 @@
       });
       const environment = createRenderEnvironment(context, graph, 0x5A17C0DE);
       let time = 0.015;
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < (hit ? 1 : bars * 16); i++) {
+        if (i % 16 === 0) {
+          checkCancelled();
+          if (options.signal) await new Promise(resolve => setTimeout(resolve, 0));
+          checkCancelled();
+        }
         const step = i % 16;
         playStep(environment, snapshot, step, time);
         time += stepLength(snapshot, step);
@@ -701,6 +711,7 @@
       graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - 0.12);
       graph.master.gain.linearRampToValueAtTime(0, duration + tail);
       const rendered = await context.startRendering();
+      checkCancelled();
       return encodeWav(rendered);
     }
 

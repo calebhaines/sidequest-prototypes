@@ -33,7 +33,11 @@ Microphone capture is optional and requires browser permission; browser support
 for a local HTML file may differ from the hosted version. Panic releases live
 microphone tracks and discards an unfinished sample capture.
 
-LOOM can send an edited arrangement clip directly into the sample source.
+LOOM can send an edited arrangement clip directly into the sample source. The Samples panel also imports audio shared by the other Music Lab apps. A replacement requires explicit confirmation, creates sixteen fresh slices, and remains reversible with Undo. Shared audio is limited to twenty seconds.
+
+Share the current slice pattern with its effects, one selected slice with its current trim, pitch, reverse, fade, and processing, or the complete unprocessed source sample. Pattern renders cover one to sixteen bars with a configurable effect tail. Offline renders preserve the project and leave live playback running; finish a microphone take or capture before sharing.
+
+`RavelApp.exportAudio({scope, bars, tailSeconds, signal})` returns an audio payload without downloading it; `RavelApp.audioExport` describes the scopes. `RavelApp.importAudio({pcm, sampleRate, name, options})` accepts interleaved stereo PCM with explicit `options.replace` for replacement. `options.target` and `options.deck` both address its single sample slot (`0`).
 Receiving audio creates sixteen even slices while preserving patterns and effects.
 Replacement is explicit, and the received sample is included in Undo and projects.
 

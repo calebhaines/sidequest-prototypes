@@ -313,6 +313,20 @@
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
   function safeName(name = state.name) { return String(name || 'my-groove').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-groove'; }
+  async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
+    if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
+    if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
+    if (exporting) throw new Error('Wait for the current GRAIN render to finish.');
+    const snapshot = clone(state), voice = selected;
+    if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
+    if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
+    const sourceLabel = scope === 'pattern' ? snapshot.name : snapshot.tracks[0].name || 'Voice ' + (voice + 1);
+    exporting = true;
+    try {
+      const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
+      return { blob, sampleRate: 44100, name: 'grain-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'grain', sourceLabel, scope };
+    } finally { exporting = false; }
+  }
   async function exportWav() {
     if (exporting) return;
     exporting = true; $('export-button').disabled = true; $('export-button').innerHTML = icon('download') + '<span>Rendering…</span>';
@@ -431,5 +445,6 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
   voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); persist(); }, audition: () => audition(state.tracks[selected]) });
   renderAll(); drawHero(0); requestAnimationFrame(animate);
-  window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine };
+  window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+    audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
 }());

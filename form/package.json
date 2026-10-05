@@ -1,0 +1,27 @@
+{
+  "name": "form-percussion-lab",
+  "private": true,
+  "version": "2.0.3",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "package": "npm run build && node scripts/package.mjs",
+    "test": "node scripts/test-audio.mjs && node scripts/test-modular.mjs",
+    "test:playback": "node scripts/test-playback.mjs",
+    "test:exchange": "node scripts/test-exchange.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.3",
+    "vite": "^6.0.5"
+  }
+}

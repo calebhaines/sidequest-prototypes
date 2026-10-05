@@ -18,6 +18,12 @@ A self-contained, noise-powered drum machine with an analog-inspired dark interf
 
 Click a step to toggle it. Shift + click adds an accent; on touchscreens, press and hold. Select a voice to blend its BODY and NOISE levels, then click Synthesis to open Drum body, Noise shaper, and Modulation. Each section edits that voice independently; Hear voice auditions the result. Body can also be added to hats, claps, and textures by raising BODY. Modulation restarts on each hit. Older saved projects load into the new synthesis controls automatically. Drag a knob vertically, or focus it and use arrow keys. Hold Shift for fine adjustments. Press Space to play or pause, 1–8 to audition voices, and Ctrl / Cmd + Z to undo. The question-mark button has the full guide.
 
+## Sharing samples
+
+The Samples panel shares a rendered pattern mix, selected voice pattern, or selected voice one-shot with the other Music Lab apps. Pattern renders can cover one to sixteen bars; one-shots include the voice's natural envelope and an optional effect tail. Rendering snapshots the current sound and pattern without changing the project or stopping playback. A selected voice can be shared even when it is muted in the mix. GRAIN generates samples; it does not replace its noise synthesis with imported recordings.
+
+Integrations can call `GrainApp.exportAudio({scope, bars, tailSeconds, signal})` for an audio payload without starting a download. `GrainApp.audioExport` describes the supported scopes. Existing Export WAV still downloads four bars with the natural effect tail.
+
 The deliverable is `index.html`; all of its assets are embedded. The other root files are editable sources. To rebuild after editing, run `python build.py`. It embeds the locally available font files when present and falls back to system sans-serif otherwise.
 
 Browser verification covers playback, step editing, sound controls, envelope displays, modulation sync, section reset, keyboard focus, version 1 migration, version 2 save/import, invalid-settings rejection, undo, WAV export, persistence, and all synthesis tabs at 320/390 px. The audio engine was also checked at maximum levels with every noise source and effect.

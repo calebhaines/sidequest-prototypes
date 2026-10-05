@@ -41,7 +41,7 @@ for (const directory of ['public', 'docs']) {
   // Future apps can live in music/<app-name>/ and are copied with their assets.
   fs.cpSync(music, path.join(root, directory, 'music'), {
     recursive: true,
-    filter: source => !['README.md', '.DS_Store'].includes(path.basename(source)),
+    filter: source => !['README.md', '.DS_Store', 'source', 'node_modules'].includes(path.basename(source)),
   });
   for (const [relative, content] of [
     ['music/grain/index.html', grain],

@@ -198,9 +198,9 @@
     const d = state.decks[index]; d.start = 0; d.end = 1; d.rate = 1; d.reverse = false; d.phase = 0; d.sync = sync;
     d.beats = beats || clamp(Math.round(S.assetDuration(asset) * state.tempo / 60), 1, 64);
   }
-  function importAudio({ pcm, sampleRate, name = 'LOOM clip', options = {} } = {}) {
-    if (busy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current SPOOL recording or action before sending audio.');
-    const index = options.deck ?? selectedDeck;
+  function importAudio({ pcm, sampleRate, name = 'Audio sample', options = {} } = {}) {
+    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current SPOOL recording or action before sending audio.');
+    const index = options.target ?? options.deck ?? selectedDeck;
     if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a SPOOL deck from A to D.');
     if (state.assets[index] && options.replace !== true) throw new Error('Confirm replacing the loop on deck ' + String.fromCharCode(65 + index) + ' before sending audio.');
     if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000 || Object.prototype.toString.call(pcm) !== '[object Float32Array]' || pcm.length < 4 || pcm.length % 2) throw new Error('Provide valid interleaved stereo audio.');
@@ -215,12 +215,32 @@
       }
       pcm = resampled;
     }
-    const asset = S.normalizeAsset(SpoolAudio.encodePCM(pcm, targetRate, String(name).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 100) || 'LOOM clip'));
+    const asset = S.normalizeAsset(SpoolAudio.encodePCM(pcm, targetRate, String(name).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 100) || 'Audio sample'));
     if (!asset) throw new Error('The incoming audio could not be stored as a SPOOL loop.');
     remember(); state.assets[index] = asset; state.decks[index].name = asset.name.slice(0, 48); resetClipGeometry(index, asset);
     changed(); renderDecks(); selectDeck(index); window.MusicLabHost?.notifyStateChange();
-    toast('LOOM clip received on deck ' + String.fromCharCode(65 + index) + '. Undo restores the previous loop.');
+    toast('Audio sample received on deck ' + String.fromCharCode(65 + index) + '. Undo restores the previous loop.');
     return { deck: index, name: asset.name, duration: asset.duration, sampleRate: asset.sampleRate };
+  }
+  async function exportAudio({ scope = 'mix', bars = 1, tailSeconds = 4, signal, deck, target } = {}) {
+    if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
+    if (!['mix', 'deck', 'source'].includes(scope)) throw new Error('Choose the deck mix, a processed deck, or its unprocessed source.');
+    if (busy || micBusy || recordBusy || engine.deckRecording || captureBusy || engine.isRecording) throw new Error('Finish the current SPOOL recording or action before sharing audio.');
+    const index = target ?? deck ?? selectedDeck, score = snapshot();
+    if (!Number.isInteger(index) || index < 0 || index > 3) throw new Error('Choose a SPOOL deck from A to D.');
+    if (scope !== 'mix' && !score.assets[index]) throw new Error('This deck has no loop to share.');
+    const sourceLabel = scope === 'mix' ? score.name : score.decks[index].name;
+    const name = 'spool-' + String(sourceLabel).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() + '-' + scope + '.wav';
+    setBusy(true);
+    try {
+      if (scope === 'source') {
+        const audio = SpoolAudio.decodePCM(score.assets[index]);
+        if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
+        return { pcm: audio.pcm, sampleRate: audio.sampleRate, name, tempo: score.assets[index].tempo || score.tempo, sourceApp: 'spool', sourceLabel, scope };
+      }
+      const blob = scope === 'mix' ? await engine.renderWav(bars, tailSeconds, { signal }) : await engine.renderDeckWav(index, { signal });
+      return { blob, sampleRate: 48000, name, tempo: score.tempo, sourceApp: 'spool', sourceLabel, scope };
+    } finally { setBusy(false); }
   }
   function confirmAction(title, message, action) {
     if (pendingConfirm) pendingConfirm(false); $('confirm-title').textContent = title; $('confirm-message').textContent = message; $('confirm-accept').textContent = action; $('confirm-dialog').showModal();
@@ -403,7 +423,8 @@
   document.addEventListener('keyup', e => { const id = 'k' + e.key.toLowerCase(), note = heldNotes.get(id); if (note != null) releaseNote(note, id); });
   window.addEventListener('blur', () => { releaseNotes(); releaseBrake(); releaseReverse(); gestureEnd(); }); document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseNotes(); releaseBrake(); releaseReverse(); } });
   if (location.protocol === 'file:') { $('music-home').href = 'https://calebhaines.github.io/sidequest-prototypes/music/'; $('download-html').href = 'https://calebhaines.github.io/sidequest-prototypes/music/spool/index.html'; $('download-source').href = 'https://calebhaines.github.io/sidequest-prototypes/music/spool/SPOOL-source.zip'; }
-  window.SpoolApp = Object.freeze({ get state() { return snapshot(); }, get engine() { return engine; }, getState: snapshot, loadState(next) { installState(next); }, selectDeck, importAudio,
+  window.SpoolApp = Object.freeze({ get state() { return snapshot(); }, get engine() { return engine; }, getState: snapshot, loadState(next) { installState(next); }, selectDeck, importAudio, exportAudio,
+    audioExport: { scopes: [{ id: 'mix', label: 'All decks / with master effects' }, { id: 'deck', label: 'Selected deck / tape processing', usesBars: false }, { id: 'source', label: 'Selected deck source / unprocessed', usesBars: false }], defaultBars: 1, maxBars: 16 },
     get audioImport() { return { maxSeconds: 30, decks: 4, targets: state.decks.map((deck, id) => ({ id, name: 'Deck ' + String.fromCharCode(65 + id), occupied: !!state.assets[id], assetName: state.assets[id]?.name || '' })) }; }
   });
   renderAll(); requestAnimationFrame(animate);

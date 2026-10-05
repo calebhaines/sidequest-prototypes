@@ -1,9 +1,12 @@
 """Build HAZE's standalone HTML and reproducible editable source download."""
 from pathlib import Path
 import base64
+import runpy
 import zipfile
 
 root = Path(__file__).resolve().parent
+exchange_dir = root / 'shared' if (root / 'shared' / 'bundle_audio_exchange.py').exists() else root.parent / 'shared'
+exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 faces = []
 for family, weight, style, file in [
     ('Haze Sans', 400, 'normal', 'noto-sans-regular.woff2'),
@@ -25,6 +28,7 @@ if any(template.count(slot) != 1 for slot in ['<!-- STYLES -->', '<!-- SCRIPTS -
     raise ValueError('app.html needs exactly one STYLES and SCRIPTS slot.')
 html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
+html = exchange_helpers['embed_exchange'](html, 'haze', root)
 (root / 'index.html').write_text(html)
 print(f'Built HAZE: {len(html.encode()):,} bytes, all assets embedded.')
 
@@ -39,4 +43,9 @@ if (root.parent / 'music' / 'README.md').exists():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             z.writestr(info, path.read_bytes())
+        for name, data in exchange_helpers['exchange_sources'](root):
+            info = zipfile.ZipInfo('HAZE-source/' + name, (2026, 10, 5, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            z.writestr(info, data)
     print(f'Packaged HAZE source: {archive.stat().st_size:,} bytes.')

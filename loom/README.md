@@ -86,16 +86,34 @@ range must be ahead of the playhead before recording.
 
 Select a recording to reveal the direct clip actions below the timeline, including
 Delete clip. Right-clicking a clip opens an actions dialog; Undo restores deletion.
-Send to instrument renders just that clip's edits—source trim/offset, speed,
-reverse, repetitions, level, and fades—and sends it into a chosen SPOOL deck or
-RAVEL sample. Track mixer settings and insert effects stay in LOOM. Existing
-receiving audio requires the replacement checkbox. Empty tracks load the chosen
-instrument and replace its starter audio. SPOOL accepts up to 30 seconds per deck;
-RAVEL accepts up to 20 seconds. Shorten longer clips before sending them.
+Send to instrument renders a selected region of that clip, including source
+trim/offset, speed, reverse, repetitions, level, and fades. Choose selection start
+and end in seconds; **Fit receiver limit** explicitly shortens the region. Track
+mixer settings and insert effects stay in LOOM. Existing receiving audio or
+synthesis layers require the replacement checkbox. Empty tracks load the chosen
+instrument and replace its chosen starter destination.
 
-The original clip remains in the arrangement. The receiving instrument keeps its
-other decks, patterns, mixer, and effects. Imported audio is saved in its native
-snapshot, and transfer Undo/Redo restores the previous instrument audio.
+| Destination | Limit | Interpretation |
+| --- | --- | --- |
+| FORM | 2 seconds | One of 24 mono granular layers |
+| MIRE | 10 seconds | One of four mono source exciters |
+| SPOOL | 30 seconds | One of four stereo tape decks |
+| RAVEL | 20 seconds | Stereo sample and sixteen slices |
+| HAZE | 20 seconds | Audio analysis into an editable spectral score |
+
+Loaded future instruments with `audioImport` are included automatically; their
+number or string destination IDs and declared limits are preserved. The original
+clip remains in the arrangement. The receiving instrument keeps unrelated
+sounds, patterns, mixer, and effects. Imports persist in its native snapshot;
+transfer Undo/Redo restores the previous instrument audio.
+
+The **Samples** panel shares the same local library as all standalone Music Lab
+apps and hosted editors. Render the selected clip, arranged mix, or track
+instrument; save audio to the library or download WAV/portable packets. Receive a
+sample as a new clip on any of the eight tracks. Hosted instrument project storage
+stays isolated, while its sample library is deliberately shared with the studio.
+Downloaded HTML includes all exchange code and works offline. If browser storage
+is unavailable, keep a WAV or packet for the next session.
 
 ## Eight effects
 
@@ -142,8 +160,9 @@ and `music/loom/LOOM-source.zip`. Run `npm run music:sync` to refresh the copies
 `public/music/` and `docs/music/`. GitHub Pages publishes `docs/`.
 
 Run `npm run check:loom` for the dependency-free Node engine checks. These verify
-project compatibility, automation in playback and export, and sample-exact
-count-in/punch recording. From an extracted archive, run `node checks.cjs`.
+project compatibility, automation in playback and export, sample-exact
+count-in/punch recording, and cropped stereo transfers with clip edits and limits.
+From an extracted archive, run `node checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes the eight original standalone instrument pages in

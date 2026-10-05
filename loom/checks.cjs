@@ -16,7 +16,7 @@ const scope = {
 };
 scope.window = scope;
 vm.createContext(scope);
-for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js']) {
+for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 }
 const S = scope.LoomSchema;
@@ -158,6 +158,22 @@ check('Stopping during count-in returns no empty or contaminated take', () => {
 });
 
 (async () => {
+  const sourceRate=48000,sourceFrames=sourceRate*3;
+  const source={sampleRate:sourceRate,left:Float32Array.from({length:sourceFrames},(_,i)=>Math.sin(i*.023)*.3),right:Float32Array.from({length:sourceFrames},(_,i)=>Math.cos(i*.017)*.2)};
+  for(const edits of [{rate:1},{rate:.5,reverse:true},{rate:2,loop:true}]){
+    const clip={name:'Exchange region',start:4,length:4,sourceStart:.2,sourceEnd:2.8,sourceOffset:.1,gain:.7,fadeIn:.01,fadeOut:.03,...edits};
+    const full=await scope.LoomClipTransfer.render(clip,source,120);
+    const region=await scope.LoomClipTransfer.render(clip,source,120,{startSeconds:.4,endSeconds:1.4,maxSeconds:1});
+    assert.equal(region.pcm.length,sourceRate*2);
+    assert(Math.abs(region.pcm[0])<1e-12,'A newly cut edge must start without a click');
+    let error=0;
+    for(let i=150;i<sourceRate-150;i++)for(let ch=0;ch<2;ch++)error=Math.max(error,Math.abs(region.pcm[i*2+ch]-full.pcm[(i+sourceRate*.4)*2+ch]));
+    assert(error<.00001,'Selected region changed clip source offset, rate, reverse, loop, or gain');
+  }
+  passed.push('Selected audio regions preserve stereo clip edits and fade newly cut edges');
+  await assert.rejects(scope.LoomClipTransfer.render({length:4},source,120,{maxSeconds:.5}),/destination accepts/);
+  await assert.rejects(scope.LoomClipTransfer.render({length:4},source,120,{signal:{aborted:true}}),error=>error.name==='AbortError');
+  passed.push('Over-limit and canceled transfers produce no received audio');
   const engine = new scope.LoomAudio(state);
   const wav = await engine.renderWav(state, assets, { startBeat: 0, endBeat: 4 });
   const view = new DataView(await wav.arrayBuffer());

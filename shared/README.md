@@ -1,0 +1,217 @@
+# Music Lab audio exchange
+
+`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and LOOM. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Music Lab packets. The module has no network requests, external dependencies, or cloud storage.
+
+## Using the dialog
+
+1. Open **Samples → Send audio**, choose an export source, and render it.
+2. Choose **Save to library**. Open another Music Lab app in the same browser and origin, then select that sound from **Samples → Library**.
+3. Adjust selection start/end, preview the audio, and choose a receiving destination. Existing destination audio requires explicit replacement confirmation.
+
+The library shows names, source apps, duration, tempo, and waveform thumbnails. Search also matches stored tags. Deleting a library entry does not remove audio already imported into an app or project.
+
+**Portable packet** downloads preserve sample metadata and work between separate offline HTML files or browsers. **WAV** downloads work with other audio software; WAV export does not embed Music Lab metadata.
+
+## Current destinations
+
+All native import methods receive interleaved stereo PCM. Each destination performs its own conversion or analysis.
+
+| App | Maximum selected duration | Destinations | Result |
+| --- | ---: | --- | --- |
+| FORM | 2 seconds | 8 voices × 3 layers; string IDs such as `"0:a"` | Mono granular texture at 22,050 Hz; enables the selected layer and its granular sample engine |
+| MIRE | 10 seconds | 4 sources; numeric IDs `0`–`3` | Mono source sample for the resonator network |
+| SPOOL | 30 seconds | 4 decks; numeric IDs `0`–`3` | Stereo tape-deck source |
+| RAVEL | 20 seconds | One sample; numeric ID `0` | Stereo source for slicing |
+| HAZE | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
+| LOOM | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
+
+GRAIN, TINE, and BOWER export audio. They do not advertise sample-import destinations. All nine apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. HAZE retains both incoming channels for analysis, including energy in anti-phase stereo material.
+
+## Storage and limits
+
+The persistent library uses IndexedDB database `musiclab-audio-v1`, version `1`, with a `samples` object store keyed by `id`. It is shared by apps on the same origin, within the same browser profile. It is separate from individual app projects and LOOM sessions.
+
+- Maximum **32 samples** in the library.
+- Maximum **64 MiB** (`67,108,864` bytes) of stored Float32 PCM across the library. This measures decoded audio, not downloaded WAV/packet size or IndexedDB overhead.
+- Maximum **120 seconds** per saved sample or portable packet, subject to the PCM byte limit.
+- Mono or stereo audio with an integer sample rate from **8,000 to 192,000 Hz** and finite samples.
+
+Quota checking and persistent writes use one transaction so simultaneous tabs cannot bypass the library limit. Samples are not evicted automatically. A full library or failed persistent write produces an error; download a packet or delete an entry before trying again.
+
+If IndexedDB cannot be opened, the module uses an in-memory library and displays a notice that it will disappear when the page closes. Download a packet to retain the sound. The `persistent` getter reports whether the module has fallen back after its first storage attempt.
+
+Browsers may isolate or deny storage for `file:` pages. Offline HTML files therefore display a reminder to use portable packets when transferring sounds between files. Private browser sessions and clearing site data can also remove stored samples. Hosted instruments delegate to `MusicLabHost.audioLibrary` so LOOM's per-instrument storage isolation does not create separate sample libraries.
+
+Audio-file decoding accepts files up to 128 MiB. The decoded preview can be longer than a saved selection (up to 900 seconds), but still must fit the 64 MiB decoded-audio limit. Browser support determines available audio codecs. Decoding uses a temporary AudioContext, which is closed afterwards; its decoded sample rate may differ from the file's original sample rate.
+
+## Registering a future app
+
+Load or embed the shared CSS and JavaScript, then register a lazy adapter lookup:
+
+```js
+MusicLabExchange.register({
+  id: 'future',
+  name: 'FUTURE',
+  accent: '#a8e4c0',
+  mountSelector: '.toolbar-actions',
+  getAdapter: () => window.FutureApp,
+});
+```
+
+`mountSelector` chooses where the Samples button lives. A missing mount uses a floating button. Apps with delayed UI rendering can dispatch `document.dispatchEvent(new CustomEvent('musiclab:app-ready', { bubbles: true }))` after the facade and toolbar exist; the launcher then moves into the toolbar. `getAdapter` may return a promise. Its result is read whenever the dialog opens, so registration can precede facade initialization.
+
+The registration returns `{ open, dispose }`. `MusicLabExchange.open('future')` also opens it programmatically. Keep one stable app ID and an adapter that exposes the capabilities it actually supports.
+
+```js
+window.FutureApp = {
+  audioExport: {
+    scopes: [
+      { id: 'pattern', label: 'Current pattern' },
+      { id: 'hit', label: 'Selected hit', usesBars: false },
+    ],
+    defaultBars: 1,
+    maxBars: 16,
+  },
+
+  async exportAudio({ scope, bars, tailSeconds, signal }) {
+    signal?.throwIfAborted();
+    const rendered = await renderCurrentSound({ scope, bars, tailSeconds });
+    signal?.throwIfAborted();
+    return {
+      pcm: rendered.interleavedStereo, // Float32Array: L0, R0, L1, R1, …
+      channels: 2,
+      sampleRate: rendered.sampleRate,
+      name: 'Future phrase',
+      sourceApp: 'FUTURE',
+      tempo: currentTempo,
+      bars,
+      tags: ['phrase'],
+    };
+  },
+
+  get audioImport() {
+    return {
+      maxSeconds: 20,
+      channels: 2,
+      description: 'Load audio into a sample voice.',
+      targets: voices.map((voice, index) => ({
+        id: index,
+        name: `Voice ${index + 1}`,
+        occupied: Boolean(voice.sample),
+        assetName: voice.sample?.name || '',
+      })),
+    };
+  },
+
+  async importAudio({ pcm, sampleRate, name, options = {}, signal }) {
+    const cancellation = signal || options.signal;
+    cancellation?.throwIfAborted();
+    const target = voices.find((_, index) => index === options.target);
+    if (!target) throw new Error('Choose a valid voice.');
+    if (target.sample && !options.replace) throw new Error('Confirm replacement.');
+    validateAudio(pcm, sampleRate); // Validate channel count, values, and app limits.
+    const prepared = await prepareSample(pcm, sampleRate, name);
+    cancellation?.throwIfAborted();
+    // Recheck replacement after async work if another edit could change the target.
+    if (target.sample && !options.replace) throw new Error('Confirm replacement.');
+    commitSample(target, prepared);
+    return { name, target: options.target };
+  },
+};
+```
+
+The rendering/conversion functions in this example belong to the new app. The shared module supplies the dialog and exchange boundary; it does not implement synthesis.
+
+### Export contract
+
+`exportAudio({ scope, bars, tailSeconds, signal })` may return:
+
+- A PCM object as above, using interleaved `Float32Array` or planar `pcm: [left, right]` / `pcm: [mono]`.
+- `{ blob: wavBlob, name, sourceApp, tempo, bars }`.
+- A WAV `Blob` directly, with generic metadata.
+
+Interleaved PCM defaults to two channels unless `channels` or `channelCount` explicitly says `1`. `audioExport.scopes` lists stable scope IDs and readable labels. Set `usesBars: false` for sources whose duration is intrinsic, such as a single hit or complete deck loop; the dialog hides bar count for those scopes. `maxBars` bounds the input, up to the shared UI maximum of 16. Export-only apps omit `importAudio` and `audioImport`.
+
+Rendering should use a snapshot, preserve the live patch/transport, and honor cancellation before returning. The dialog discards a render that finishes after it closes. It does not automatically publish rendered audio; the user chooses Save or Download.
+
+### Import contract
+
+`importAudio` receives a finite interleaved stereo `Float32Array`, even for a mono sample engine. Mono library samples are duplicated into left/right. The receiving app owns downmixing, resampling, and destination-specific processing. Cross-window typed arrays should be validated using `Object.prototype.toString.call(pcm) === '[object Float32Array]'`, rather than relying on realm-specific `instanceof`.
+
+The payload includes `sampleRate`, `name`, available sample metadata, and:
+
+```js
+{
+  signal: abortSignal,
+  options: {
+    target: targetId,
+    deck: targetId,
+    replace: false,
+    signal: abortSignal,
+  },
+}
+```
+
+The same signal is passed at both levels to support existing facades. Check it before and after async conversion, before changing state. Revalidate limits and replacement inside the facade as well as in the UI.
+
+`audioImport` can be a property getter or a function returning current capabilities. Its `targets` array, or a function returning that array, contains `{ id, name, occupied, assetName }`. **IDs retain their original number or string type** when passed to the native facade. Numeric `0` and string `"0:a"` are distinct destination contracts; do not coerce arbitrary string IDs into deck numbers. The legacy `decks` field may provide an array or a numeric deck count, but explicit named targets are preferred.
+
+For spectral or other analysis destinations, advertise `mode: 'analysis'` and a clear `description`; the action becomes **Analyze selection**. `channels: 1` describes the destination's mono engine and its UI notice, and does not cause the exchange module to premix input channels.
+
+For LOOM hosting, expose import/export on the existing registered instrument adapter too. See [`loom/HOSTING.md`](../loom/HOSTING.md) for the separate transport, state, and audio-routing contract.
+
+## Public library and conversion helpers
+
+`window.MusicLabExchange` exposes:
+
+| Method | Result |
+| --- | --- |
+| `save(audio)` | Promise resolving to new saved metadata, including generated ID, timestamp, and peak waveform |
+| `list()` | Promise resolving to metadata, newest first; excludes PCM |
+| `get(id)` | Promise resolving to the stored record, including planar PCM, or `undefined` |
+| `remove(id)` | Promise removing the library entry |
+| `normalizeAudio(audio)` | Validated normalized object with planar Float32 PCM and calculated frames/duration/bytes |
+| `normalizeExport(result)` | Promise normalizing a PCM or WAV-Blob render result |
+| `decodeFile(file)` | Promise decoding a browser-supported audio file or packet |
+| `packetFromAudio(audio)` | Version 1 packet object |
+| `audioFromPacket(objectOrJSON)` | Validated normalized audio object |
+| `encodeWav(audio)` | PCM16 WAV Blob |
+| `register(options)`, `open(id)`, `close()` | Dialog registration and lifecycle |
+| `stopPreview()` | Promise stopping preview audio and closing a preview-owned context |
+
+`version`, `MAX_BYTES`, `MAX_SAMPLES`, `MAX_SECONDS`, and `persistent` are also exposed. Stored metadata includes `id`, `createdAt` (Unix milliseconds), `name`, `sourceApp`, `tempo`, `bars`, `tags`, `sampleRate`, `frames`, `channels`, `duration`, `bytes`, and a 48-bin `waveform` peak summary. Tempo and bar count are provenance; importing does not automatically time-stretch audio to a destination tempo.
+
+In a host, the module delegates library operations to `MusicLabHost.audioLibrary.{list,get,save,remove}`. Its `persistent` property controls the storage notice. LOOM's bridge forwards these operations to the parent module's common library while leaving instrument-specific project storage isolated.
+
+## Portable packet version 1
+
+Packets use the filename suffix `.musiclab-audio.json`. This minimal valid example encodes one silent stereo frame:
+
+```json
+{
+  "format": "musiclab-audio",
+  "version": 1,
+  "name": "Silent frame",
+  "sourceApp": "FUTURE",
+  "tempo": 120,
+  "bars": null,
+  "tags": [],
+  "sampleRate": 8000,
+  "channels": 2,
+  "frames": 1,
+  "encoding": "pcm16le",
+  "data": "AAAAAA=="
+}
+```
+
+`data` is base64 of signed 16-bit little-endian PCM, interleaved frame first and channel second. Its decoded length must equal `frames × channels × 2`; frame count is per channel. Mono uses `channels: 1`. `tempo` and `bars` can be positive numbers or `null`, and tags are short strings.
+
+The encoder clamps samples to `[-1, 1]`, scales negative values by 32,768 and nonnegative values by 32,767, then rounds. The decoder uses the matching divisor for each sign. Packet and WAV export quantize Float32 audio to PCM16; the local library preserves Float32 PCM. Validation rejects unsupported versions/encodings, mismatched lengths, invalid rates/channel counts, and packets exceeding duration or decoded PCM limits.
+
+Packets contain rendered audio and provenance, not app patches, sequencer state, MIDI notes, or LOOM project data. App-specific project files remain separate.
+
+## Building standalone downloads
+
+`bundle_audio_exchange.py` embeds the shared module and CSS into Python-built standalone apps and supplies shared source files for archives. Add future apps to its `APPS` mapping with facade name, accent, and toolbar selector. `bundle_audio_exchange.mjs` provides the equivalent embedding helper for FORM's Node build.
+
+The published HTML embeds the module and styles so Samples works without an adjacent JavaScript/CSS file or a server. Include these sources and the relevant helper in app source archives to keep extracted projects rebuildable.

@@ -28,6 +28,24 @@ Record output captures a live performance, including manual gestures; live
 recording is limited to three minutes. Help explains the controls and keyboard
 shortcuts and includes HTML and editable source downloads.
 
+## Samples between instruments
+
+The shared Samples panel can publish the current score as stereo WAV or analyze
+audio from the other Music Lab apps. Imported audio becomes an editable 32-column,
+24-band spectral score using the current root, scale and harmonic stretch. HAZE
+continues to synthesize its own additive sound; analysis is a creative translation
+of the sample, rather than exact sample playback. Existing envelopes, effects,
+tempo and score length stay in place. Confirm replacement when the score already
+contains notes; Undo restores the previous score, and project files save the new
+painted notes normally.
+
+Analysis accepts complete stereo Float32 PCM up to 20 seconds and uses mono
+spectral energy, with an anti-phase fallback for stereo material that would cancel
+when mixed. Trim longer recordings before import. Changes to the score or tuning,
+project loads, Panic and cancellation discard an unfinished analysis. Shared
+exports use a stable snapshot of the current sound, default to one bar without a
+tail, and support cancellation without affecting playback.
+
 ## Source and build
 
 `app.html`, `styles.css` and `app.js` define the interface. `schema.js` bounds

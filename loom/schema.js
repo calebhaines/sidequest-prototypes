@@ -1,7 +1,7 @@
 /* LOOM projects. Eight rooms, with rather firm walls. */
 (() => {
   'use strict';
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
   const COLORS = ['#edab7c', '#b6c995', '#b8a7e0', '#87bfcc', '#dfb0c4', '#ceb581', '#96bdac', '#a5b5de'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel'];
