@@ -21,26 +21,147 @@
     switcher('reverb', 'off'), range('reverbSize', 'Room size', 0, 1, .01, .45, '%'), range('reverbDecay', 'Decay', .2, 10, .1, 2.4, 's'), range('predelay', 'Pre-delay', 0, 150, 1, 18, 'ms'), range('reverbTone', 'Reverb tone', 800, 14000, 1, 6500, 'Hz'), range('reverbWidth', 'Reverb width', 0, 1, .01, .8, '%'), range('reverbMix', 'Reverb blend', 0, 1, .01, .18, '%'), range('reverbDuck', 'Reverb ducking', 0, 1, .01, .5, '%'),
     switcher('guard', 'on'), range('ceiling', 'Peak ceiling', -12, 0, .1, -.5, 'dB'), range('output', 'Output trim', -24, 12, .1, 0, 'dB')
   ];
-  const group = (id, label, shortLabel, enableKey, description, keys, basicKeys) => ({ id, label, shortLabel, enableKey, description, keys, basicKeys });
+  const guides = {
+    clean: {
+      use: 'Use low cut for microphone rumble or boomy plosives, and the gate for noise between phrases. Keep the threshold low enough to retain quiet words and breaths.',
+      controls: [
+        ['Input trim', 'Sets the level entering the processed path, including how strongly later effects react. It still works with Cleanup off; global Bypass or 0% Dry / wet leaves the original signal unchanged.'],
+        ['Low cut', 'Removes frequencies below its cutoff. Raise it to reduce rumble; lower it if the voice loses body.'],
+        ['Gate threshold & reduction', 'Threshold is the quiet level below which the gate turns the voice down. Reduction is the maximum amount it can turn down, rather than a second threshold.'],
+        ['Gate release', 'Controls how gradually the gate closes as a phrase fades. Longer releases retain word endings; shorter releases suppress gaps more quickly. The gate does not separate noise from a word while both are sounding.']
+      ]
+    },
+    deess: {
+      use: 'Use this when S, SH, and similar consonants are much brighter than the rest of the voice. Too much reduction can make speech sound lispy.',
+      controls: [
+        ['Sibilance frequency', 'Chooses the high-frequency region to detect and soften. Listen for the harsh area rather than treating this as a pitch control.'],
+        ['De-ess threshold', 'Sets how loud that high-frequency energy must become before reduction starts. A lower threshold catches more sounds.'],
+        ['De-ess strength', 'Sets the amount of high-shelf reduction when triggered. The lower part of the voice stays present; the whole signal is not simply turned down.']
+      ]
+    },
+    compressor: {
+      use: 'Use compression to bring loud and quiet phrases closer together, keep a lead vocal steady, or make an aggressive delivery feel more controlled.',
+      controls: [
+        ['Threshold & ratio', 'Threshold decides when loud phrases are reduced. Ratio sets how strongly they are reduced: a higher ratio gives firmer control.'],
+        ['Attack & release', 'Attack controls how quickly reduction begins; a slower attack preserves more initial consonant punch. Release controls how quickly the level recovers after a loud phrase.'],
+        ['Makeup gain', 'Raises the compressed signal afterwards. Match its loudness to the bypassed sound so you can judge the compression fairly.']
+      ]
+    },
+    eq: {
+      use: 'Use EQ to fit a voice into the mix: cut excess boxiness, restore warmth, bring words forward, or soften a bright microphone.',
+      controls: [
+        ['Body & Body frequency', 'A bell-shaped band for low-middle warmth. Body sets the boost or cut; its frequency chooses the centre of that band.'],
+        ['Low-middle & Low-middle frequency', 'Another bell band for boxy or muddy tones. Negative gain can clear space without removing all the bass.'],
+        ['Presence & Presence frequency', 'A bell band for upper-middle articulation. A small boost can clarify words; a cut can soften a nasal or biting sound.'],
+        ['Air', 'A high shelf fixed at 8.5 kHz. Positive gain adds top-end brightness; negative gain darkens it. For sharp consonants that occur only occasionally, try De-ess first.']
+      ]
+    },
+    saturation: {
+      use: 'Use a little saturation for density and texture, or push the drive for a deliberately distorted vocal. Compare levels when judging the result.',
+      controls: [
+        ['Warm glaze', 'Rounded, symmetrical soft clipping adds harmonics and gentle density. A useful starting point for subtle warmth.'],
+        ['Hard caramel', 'Asymmetrical clipping treats the two sides of the waveform differently, giving a more pointed, gritty character.'],
+        ['Folded sugar', 'Wavefolding folds strong waveform peaks back on themselves. Higher drive creates dense, buzzy, sometimes metallic tones.'],
+        ['Drive & Colour blend', 'Drive pushes the signal harder into the chosen distortion. Colour blend mixes that result with the signal entering this stage.']
+      ]
+    },
+    pitch: {
+      use: 'Use Transpose for octave or character changes. Use Scale correction on one clear sung line for subtle tuning or a deliberate hard-tuned effect.',
+      controls: [
+        ['Transpose & Fine tune', 'Move the voice up or down in semitones and cents while preserving its duration. These offsets also apply after scale correction. The grain shifter can audibly change the voice’s texture.'],
+        ['Scale correction · Root note & Scale', 'Detects one pitch at a time and pulls it towards the nearest allowed note. Choose the song’s root and scale; Chromatic allows every semitone. It is intended for a single pitched voice, not chords or several singers together.'],
+        ['Correction strength', 'Higher values pull farther and more quickly towards the allowed note. Lower values leave more of the original pitch movement.'],
+        ['Pitch window & Pitch blend', 'Window sets the grain-shifting window shared with Harmony. Shorter windows generally respond faster; longer windows can sound smoother. Pitch blend mixes the shifted voice with the signal entering this stage.'],
+        ['Live timing', 'Pitch and harmony use delayed copies: the nominal wet window is about 4 ms to the chosen window plus 4 ms. Scale correction also needs roughly 60–80 ms to track a new note. Keep Pitch and Harmony off for the quickest direct response.']
+      ]
+    },
+    harmony: {
+      use: 'Use these extra voices for octave reinforcement, parallel fifths, a synthetic choir, or unusual intervals around a lead.',
+      controls: [
+        ['Harmony A & B intervals', 'Set each copy’s fixed distance from the voice entering the pitch stage. +12 is an octave up; −12 is an octave down; +7 is a fifth. The copies use the source before the main Transpose or Scale correction.'],
+        ['Harmony blend & width', 'Blend sets the added voices’ level. Width spreads the two copies left and right. These are fixed intervals; they do not choose chords or adapt their intervals to the selected key and scale.'],
+        ['Shared pitch window', 'Harmony uses the Pitch window even when the main Pitch mode is off. Shorter windows favour live response; longer windows favour smoother shifts. The delayed harmony copies leave the direct voice available.']
+      ]
+    },
+    doubler: {
+      use: 'Use a light double to widen a lead, or more for a chorus-like texture. It creates copies of this take rather than replacing a separately recorded performance.',
+      controls: [
+        ['Double blend & width', 'Blend sets the amount of two short delayed copies. Width spreads their differences across the stereo image.'],
+        ['Double time & drift', 'Time sets their short delay. Drift adds slow, opposing delay motion, creating small pitch variations. More drift sounds less like a stable unison and more like a chorus.']
+      ]
+    },
+    vowel: {
+      use: 'Use vowel shaping for nasal, hollow, talking-filter, or creature-like colours on a voice or another sound.',
+      controls: [
+        ['Vowel shape', 'Ah, Eh, Ee, Oh, and Oo select three resonant filter peaks that suggest different vowel colours. They do not analyse or reconstruct a real mouth.'],
+        ['Vowel shift', 'Moves those filter peaks together: upward generally sounds brighter or smaller; downward sounds darker or larger. This changes filter colour rather than transparently preserving formants during pitch shifting.'],
+        ['Vowel blend', 'Mixes the resonant-filter result with the signal entering this stage. Start low to keep the words recognisable.']
+      ]
+    },
+    robot: {
+      use: 'Use Ring modulation for tremulous or metallic voices, and Vocoder for speech-shaped synth notes or chords.',
+      controls: [
+        ['Ring modulation · Ring frequency', 'Multiplies the voice by a sine wave, creating new sum and difference frequencies. Low rates sound tremulous; higher rates sound metallic or deliberately out of tune. Ring frequency sets that sine wave’s rate.'],
+        ['Twelve-band vocoder', 'Measures the voice’s energy in twelve frequency bands and uses it to shape an internal synthesizer. The singer supplies articulation; the synthesizer supplies the pitched carrier.'],
+        ['Carrier, MIDI note & chord', 'Choose Saw, Square, or Narrow pulse for the synth tone. The carrier note sets its pitch; Single, Fifth, Minor, or Major chooses its note combination. These controls apply to Vocoder, not Ring modulation.'],
+        ['Robot blend', 'Mixes the chosen robot sound with the incoming voice. Some original voice can help keep consonants and words clear.']
+      ]
+    },
+    chop: {
+      use: 'Use rhythmic chopping to turn a held word into a pulse, create stuttering phrases, or make a vocal move with a busy drum pattern.',
+      controls: [
+        ['Chop cycle', 'Sets the repeating musical subdivision. It follows GALLEY’s tempo and follows the arrangement’s beat while the transport plays.'],
+        ['Chop depth & Open length', 'Depth decides how far the quiet part of the cycle turns down. Open length is the fraction of each cycle that lets the voice through.'],
+        ['Chop smoothing', 'Softens the transitions between open and closed. Short values give sharp cuts; longer values give rounded pulses.']
+      ]
+    },
+    delay: {
+      use: 'Use short repeats for a slapback or added thickness, tempo repeats for rhythmic answers, and higher feedback for long echo trails.',
+      controls: [
+        ['Delay clock, division & time', 'Follow session tempo uses a musical division, including dotted values. Milliseconds uses Delay time directly. Changing the time can bend the repeats as the delay moves.'],
+        ['Feedback & Repeat tone', 'Feedback sends echoes back into the delay: more gives longer trails. Repeat tone rolls off high frequencies as they circulate, making later repeats darker.'],
+        ['Repeat width & Delay blend', 'Width sends feedback between the left and right channels for a ping-pong feel. Delay blend sets the returned echoes’ level while keeping the current voice present.'],
+        ['Delay ducking', 'Turns the returned echoes down while the processed voice is active, then lets them rise into the gaps. Increase it when repeats obscure new words.']
+      ]
+    },
+    reverb: {
+      use: 'Use a short, quiet tail to place a vocal in a room, or longer, louder settings for halls, washes, and distant voices.',
+      controls: [
+        ['Room size & Decay', 'Size changes the spacing of the simulated reflections. Decay sets how long their tail lasts. They shape the room separately.'],
+        ['Pre-delay & Reverb tone', 'Pre-delay waits before the room reflections begin, helping the lead stay distinct. Tone darkens the high-frequency content of the tail.'],
+        ['Reverb width & blend', 'Width spreads the room across stereo. Blend sets the room’s added level; the direct voice remains present.'],
+        ['Reverb ducking', 'Lowers the room return while the processed voice is active and lets it recover between phrases, keeping a long tail out of the way of the words.']
+      ]
+    },
+    output: {
+      use: 'Use Output trim to match levels, the peak guard to cap excessive processed peaks, and Dry / wet to mix the complete strip with the original sound.',
+      controls: [
+        ['Output trim', 'Sets the processed path’s level after its effects, before the peak guard. It still works when Peak guard is off.'],
+        ['Peak ceiling', 'The guard hard-caps processed samples at this level without a lookahead buffer. Repeated heavy clipping can distort; lower Output trim if the guard is working too hard.'],
+        ['Dry / wet', 'Mixes the complete processed path with the original input after the guard. 0% is original audio; 100% is processed audio. A louder dry signal can exceed the processed peak ceiling in the final blend. Global Bypass skips the whole strip.']
+      ]
+    }
+  };
+  const group = (id, label, shortLabel, enableKey, description, keys, basicKeys) => ({ id, label, shortLabel, enableKey, description, keys, basicKeys, help: guides[id] });
   scope.LoomVocalCatalog = {
     id: 'glaze', name: 'GLAZE', subtitle: 'A finishing station for every voice in the room.', color: '#d4a0bd', accent: '#ffdccd', visual: 'glaze', panel: 'vocal',
     description: 'Clean, contain, tune, thicken, distort, chop, and send a voice into a room it has no business occupying. One insert. Every stage has its own switch.',
     params, defaults: Object.assign(Object.fromEntries(params.map(p => [p.key, p.default])), { mix: 1, bypass: false }),
     groups: [
-      group('clean', '01 · Prep & cleanup', 'Cleanup', 'clean', 'Input trim is always active. Low cut and the gentle gate belong to this stage.', ['input', 'highpass', 'gate', 'gateRange', 'gateRelease'], ['input', 'highpass', 'gate']),
-      group('deess', '02 · Tame the hiss', 'De-ess', 'deess', 'Reduce sharp sibilance without lowering the whole word.', ['deessFreq', 'deessThreshold', 'deessAmount'], ['deessAmount']),
-      group('compressor', '03 · Hold the voice', 'Dynamics', 'compressor', 'Control uneven phrases. Attack and release decide how firmly.', ['threshold', 'ratio', 'attack', 'release', 'makeup'], ['threshold', 'ratio']),
-      group('eq', '04 · Tone & air', 'Tone', 'eq', 'Body below, clarity above, and somewhere to put the boxiness.', ['body', 'bodyFreq', 'mud', 'mudFreq', 'presence', 'presenceFreq', 'air'], ['body', 'presence', 'air']),
-      group('saturation', '05 · Caramelisation', 'Colour', 'saturation', 'A little warmth, a pointed edge, or thoroughly folded sugar.', ['drive', 'satMix'], ['drive', 'satMix']),
-      group('pitch', '06 · Tune & transpose', 'Pitch', 'pitch', 'Scale correction suits one pitched voice. Transpose is a creative grain shifter; pitch windows add audible delay.', ['semitones', 'fine', 'key', 'scale', 'speed', 'pitchWindow', 'pitchMix'], ['semitones', 'key', 'scale', 'speed', 'pitchWindow']),
-      group('harmony', '07 · Extra mouths', 'Harmony', 'harmony', 'Two fixed-interval voices, spread to either side. They use the shared pitch window.', ['harmonyA', 'harmonyB', 'harmonyMix', 'harmonyWidth'], ['harmonyA', 'harmonyB', 'harmonyMix']),
-      group('doubler', '08 · Double service', 'Double', 'doubler', 'Short drifting copies widen a lead without another take.', ['doubleAmount', 'doubleSpread', 'doubleTime', 'doubleDetune'], ['doubleAmount', 'doubleSpread']),
-      group('vowel', '09 · Shape the mouth', 'Vowel', 'vowel', 'Three resonators colour vowels. Vowel shift moves their resonances; it is an expressive filter.', ['formant', 'vowelMix'], ['formant', 'vowelMix']),
-      group('robot', '10 · Kitchen intercom', 'Robot', 'robot', 'A ringing carrier or a voice-shaped synthesizer. The carrier can sing a chord.', ['carrier', 'carrierNote', 'carrierChord', 'robotMix', 'robotFreq'], ['carrierNote', 'robotFreq', 'robotMix']),
-      group('chop', '11 · Cut the phrase', 'Chop', 'chop', 'Tempo-locked cuts. Soften their edges or leave the knife marks.', ['chopDivision', 'chopDepth', 'chopDuty', 'chopSmooth'], ['chopDivision', 'chopDepth']),
-      group('delay', '12 · Repeat the order', 'Delay', 'delay', 'Stereo repeats duck behind your words. Follow the clock or pick a time.', ['delayClock', 'delayDivision', 'delayTime', 'delayFeedback', 'delayTone', 'delayWidth', 'delayMix', 'delayDuck'], ['delayClock', 'delayDivision', 'delayTime', 'delayFeedback', 'delayMix']),
-      group('reverb', '13 · Room for dessert', 'Reverb', 'reverb', 'A room, a hall, or a suspiciously long corridor. Ducking keeps the lead clear.', ['reverbSize', 'reverbDecay', 'predelay', 'reverbTone', 'reverbWidth', 'reverbMix', 'reverbDuck'], ['reverbDecay', 'reverbMix']),
-      group('output', '14 · Plate & pass', 'Peak guard', 'guard', 'Peak guard catches excess level. Output trim and dry / wet are always active.', ['ceiling', 'output', 'mix'], ['output', 'mix'])
+      group('clean', '01 · Prep & cleanup', 'Cleanup', 'clean', 'Low cut removes bass rumble. The gate reduces quiet input between phrases; input trim sets the level feeding the processed strip.', ['input', 'highpass', 'gate', 'gateRange', 'gateRelease'], ['input', 'highpass', 'gate']),
+      group('deess', '02 · Tame the hiss', 'De-ess', 'deess', 'De-essing softens harsh S and SH sounds only when high-frequency energy crosses the threshold, preserving the lower part of the voice.', ['deessFreq', 'deessThreshold', 'deessAmount'], ['deessAmount']),
+      group('compressor', '03 · Hold the voice', 'Dynamics', 'compressor', 'Compression turns louder phrases down so the performance stays more even. Threshold and ratio set the amount of control.', ['threshold', 'ratio', 'attack', 'release', 'makeup'], ['threshold', 'ratio']),
+      group('eq', '04 · Tone & air', 'Tone', 'eq', 'EQ boosts or cuts warmth, boxiness, clarity, and top-end brightness. Shape the voice to sit more clearly in the mix.', ['body', 'bodyFreq', 'mud', 'mudFreq', 'presence', 'presenceFreq', 'air'], ['body', 'presence', 'air']),
+      group('saturation', '05 · Caramelisation', 'Colour', 'saturation', 'Saturation adds harmonics and distortion: rounded Warm glaze, gritty Hard caramel, or buzzy Folded sugar. Drive sets the intensity.', ['drive', 'satMix'], ['drive', 'satMix']),
+      group('pitch', '06 · Tune & transpose', 'Pitch', 'pitch', 'Transpose shifts pitch; Scale correction pulls one sung voice towards notes in a chosen scale. Both use a pitch window that adds delay.', ['semitones', 'fine', 'key', 'scale', 'speed', 'pitchWindow', 'pitchMix'], ['semitones', 'key', 'scale', 'speed', 'pitchWindow']),
+      group('harmony', '07 · Extra mouths', 'Harmony', 'harmony', 'Harmony adds two pitch-shifted copies at fixed intervals from the incoming voice. Blend and width turn them into subtle support or a synthetic choir.', ['harmonyA', 'harmonyB', 'harmonyMix', 'harmonyWidth'], ['harmonyA', 'harmonyB', 'harmonyMix']),
+      group('doubler', '08 · Double service', 'Double', 'doubler', 'Doubling adds two short, slowly drifting copies to thicken and widen a voice without another recorded take.', ['doubleAmount', 'doubleSpread', 'doubleTime', 'doubleDetune'], ['doubleAmount', 'doubleSpread']),
+      group('vowel', '09 · Shape the mouth', 'Vowel', 'vowel', 'Three resonant filter peaks suggest Ah, Eh, Ee, Oh, or Oo colours. Vowel shift moves the peaks without changing the note being sung.', ['formant', 'vowelMix'], ['formant', 'vowelMix']),
+      group('robot', '10 · Kitchen intercom', 'Robot', 'robot', 'Ring modulation makes tremulous or metallic tones. The twelve-band Vocoder lets the voice’s articulation shape an internal synth note or chord.', ['carrier', 'carrierNote', 'carrierChord', 'robotMix', 'robotFreq'], ['carrierNote', 'robotFreq', 'robotMix']),
+      group('chop', '11 · Cut the phrase', 'Chop', 'chop', 'Chopping repeatedly opens and closes the voice in time with the tempo. Depth sets the cuts; smoothing rounds their edges.', ['chopDivision', 'chopDepth', 'chopDuty', 'chopSmooth'], ['chopDivision', 'chopDepth']),
+      group('delay', '12 · Repeat the order', 'Delay', 'delay', 'Delay adds stereo echoes. Feedback extends the trail, and ducking lowers repeats during new words so they rise into the gaps.', ['delayClock', 'delayDivision', 'delayTime', 'delayFeedback', 'delayTone', 'delayWidth', 'delayMix', 'delayDuck'], ['delayClock', 'delayDivision', 'delayTime', 'delayFeedback', 'delayMix']),
+      group('reverb', '13 · Room for dessert', 'Reverb', 'reverb', 'Reverb adds simulated room reflections and a fading tail. Decay sets its length; ducking keeps the room behind the words.', ['reverbSize', 'reverbDecay', 'predelay', 'reverbTone', 'reverbWidth', 'reverbMix', 'reverbDuck'], ['reverbDecay', 'reverbMix']),
+      group('output', '14 · Plate & pass', 'Peak guard', 'guard', 'Output trim sets the processed level; the peak guard caps its peaks. Dry / wet blends the complete strip with the original input.', ['ceiling', 'output', 'mix'], ['output', 'mix'])
     ],
     presets: [
       { id: 'first-service', name: 'First service · clean lead', description: 'A practical lead strip: low cut, light de-essing, even phrases, and a breath of air. Pitch processing stays off.', params: {} },

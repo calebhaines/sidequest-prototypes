@@ -73,6 +73,16 @@ for kid,name,origin,filename,starter_layers in CONFIG:
   s=dict(id=f'{kid}-{midi}-{num:02d}',name=f'{pretty} · V{num:02d}',type=typ,kit=kid,articulation=art,velocity=round(mid,6),velocityRange=[round(lo/127,6),round(hi/127,6)],originalVelocityRange=[lo,hi],roundRobin=1,sampleRate=h['rate'],channels=channels,frames=h['end']-h['start'],duration=round((h['end']-h['start'])/h['rate'],4),base64=base64.b64encode(wb).decode(),mime='audio/wav',license=LICENSE,licenseUrl=LICENSE_URL,source=BASE+filename,originalPath=original,attribution=AVL_ATTRIBUTION,musicLicenseException=True,modifications='Extracted original PCM sample from SF2 into a WAV container; sample rate and audio samples unchanged.',sha256=hashlib.sha256(wb).hexdigest())
   samples.append(s)
  selected=[s for s in samples if s['originalPath'].rsplit('-',1)[0].lower() in {p.lower() for _,p,_ in LANES} and int(s['originalPath'].rsplit('-',1)[1]) in starter_layers]
+ if kid=='pantry-percussion':
+  # Embed five real dynamics for short percussion, three for extra articulations,
+  # and one full-tail mid-dynamic cymbal/bell. This keeps the starter under 29 MiB.
+  pantry_short={35,36,38,39,41,42,44,45,47,51}
+  pantry_extra={37,48,52,53}
+  selected=[]
+  for sample in samples:
+   midi,layer=map(int,sample['id'].split('-')[-2:])
+   if (midi in pantry_short and layer in {1,3,5,7,10}) or (midi in {49,50} and layer==5) or (midi in pantry_extra and layer in {3,7,10}):selected.append(sample)
+  assert len(selected)==64
  if selected:
   starter['samples']+=selected
   starter['kits'].append(kit_definition(kid,name,origin,filename,selected))
@@ -88,6 +98,8 @@ for kid,name,origin,filename,starter_layers in CONFIG:
   if len(groups)>1:bundle['requires']=['pantry-percussion-hands','pantry-percussion-metal']
   starter['bundles'].append(bundle);summary.append(dict(id=bundle_id,samples=len(group),bytes=size,decodedBytes=sum(s['frames']*s['channels']*4 for s in group),uniqueAudio=len({s['sha256'] for s in group})))
   print(bundle_id,len(group),size,flush=True)
+assert len(starter['samples'])==148 and len(starter['kits'])==4
+assert len((json.dumps(starter,separators=(',',':'),ensure_ascii=False,sort_keys=True)+'\n').encode())<=29*1024*1024
 write_manifest(ROOT/'factory-samples.json',starter)
 (OUT/'AVL-Drumkits-original-README.txt').write_text((ACQ/'AVL-README.txt').read_text())
 (ACQ/'library-summary.json').write_text(json.dumps(dict(starterSamples=len(starter['samples']),starterBytes=(ROOT/'factory-samples.json').stat().st_size,bundles=summary),indent=2)+'\n')

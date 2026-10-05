@@ -20,6 +20,10 @@ are available inside GALLEY alongside the other ten instruments.
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
 can be loaded on the site or imported as downloaded bundles. The same editor,
 sample editing, shared audio, and drum-note voices are available inside GALLEY.
+BATTER 1.1 embeds 148 samples in four recorded starter kits, with two-source A/B
+blending and a per-lane tempo-synced or free LFO. Both sources, modulation, and
+per-hit blend edits survive project saves and revisable printed clips. Its
+Clear pattern action empties only the selected bank and can be undone.
 
 ## Making a piece
 
@@ -203,7 +207,7 @@ instrument and replace its chosen starter destination.
 | ROTISSERIE | 30 seconds | One of four stereo tape decks |
 | DICER | 20 seconds | Stereo sample and sixteen slices |
 | STEAM | 20 seconds | Audio analysis into an editable spectral score |
-| BATTER | 120 seconds | One of twelve stereo drum sample lanes |
+| BATTER | 120 seconds | A or B source in one of twelve stereo drum sample lanes |
 
 Loaded future instruments with `audioImport` are included automatically; their
 number or string destination IDs and declared limits are preserved. The original
@@ -251,7 +255,7 @@ input options, thirteen complete recipe presets, dry/wet, bypass, and automation
 work on clips, instruments, and monitored microphone input. No impulse-response
 downloads or network audio are needed.
 
-GLAZE is a complete vocal channel strip occupying one insert. Start with a
+GLAZE is a complete vocal channel strip occupying one insert. Each stage has a plain-language description visible even when switched off, plus an expandable guide explaining its controls and modes. Start with a
 recipe and the Essentials view; Full pantry exposes every stage. The signal
 passes through input/high-pass/gate, split-band de-essing, compression, tonal EQ,
 saturation, optional pitch processing and harmonies, doubling, resonant vowel
@@ -339,7 +343,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.9.0.
+font license notices. Version 1.10.0.
 
 ## Compatibility
 

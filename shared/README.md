@@ -24,7 +24,7 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 | ROTISSERIE | 30 seconds | 4 decks; numeric IDs `0`–`3` | Stereo tape-deck source |
 | DICER | 20 seconds | One sample; numeric ID `0` | Stereo source for slicing |
 | STEAM | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
-| BATTER | 120 seconds | 12 drum lanes; canonical string voice IDs | Stereo acoustic drum sampler with editable layers |
+| BATTER | 120 seconds | A/B sources in 12 drum lanes; A uses the canonical lane ID, B adds `:b` | Stereo acoustic drum sampler with blendable velocity/alternate layers |
 | GALLEY | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
 
 SIZZLE, CLATTER, SKEWER, and ROUX export audio. They do not advertise sample-import destinations. All twelve apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.

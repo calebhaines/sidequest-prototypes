@@ -123,3 +123,22 @@ git push origin main
 Save portable projects before reverting. Older GALLEY versions cannot restore
 GLAZE inserts or BATTER instruments. Both published songs remain available.
 Review conflicts if later work changes these files.
+
+## BATTER blending, modulation, and expanded starter release
+
+BATTER 1.1 adds 148 embedded samples, a fourth recorded starter kit, two-source
+A/B blending, a per-lane LFO, and an undoable Clear pattern action. GALLEY 1.10
+includes the updated instrument and clear GLAZE stage/control explanations.
+The checkpoint `pre-batter-blend-lfo-2026-10-05` preserves commit
+`992ecf47ecabb414583f1c250bb46451c797f987`. The update is tagged
+`batter-blend-lfo-v1`. To restore the previous apps and matching downloads:
+
+```sh
+git revert --no-edit batter-blend-lfo-v1
+git push origin main
+```
+
+Save portable projects before reverting. Earlier BATTER versions cannot reproduce
+B-layer blends or LFO motion. Existing sample IDs, twelve musical voices, eight
+GALLEY tracks, four insert slots, shared libraries, and both published songs are
+preserved. Review conflicts if later updates touch these files.

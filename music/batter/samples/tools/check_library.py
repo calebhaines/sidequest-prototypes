@@ -28,8 +28,9 @@ for path in paths:
   if s['kit']=='rope-tension':assert s['musicLicenseException'] is False and s['channels']==2
   else:assert s['musicLicenseException'] is True
  if path.name=='factory-samples.json':
-  assert len(ids)==84 and all(s['kit']!='rope-tension' for s in m['samples'])
-  assert len(m['kits'])==3
+  assert path.stat().st_size<=29*1024*1024
+  assert len(ids)==148 and all(s['kit']!='rope-tension' for s in m['samples'])
+  assert len(m['kits'])==4
   for kit in m['kits']:
    assert len(kit['lanes'])==12 and kit['musicLicenseException'] is True
    for lane in kit['lanes']:assert lane['sampleId'] in lane['sampleIds'] and set(lane['sampleIds'])<=ids
@@ -47,4 +48,4 @@ for b in factory['bundles']:
  assert (ROOT/b['url']).stat().st_size==b['bytes']
  assert len(json.loads((ROOT/b['url']).read_text())['samples'])==b['sampleCount']
 assert len(all_samples)==641
-print(json.dumps({'passed':True,'recordedEntries':len(all_samples),'byteDistinctWavEntries':len({s['sha256'] for s in all_samples.values()}),'kits':dict(origin_counts),'collections':summary},indent=2))
+print(json.dumps({'passed':True,'embeddedEntries':len(factory['samples']),'embeddedByteDistinctWavEntries':len({s['sha256'] for s in factory['samples']}),'recordedEntries':len(all_samples),'byteDistinctWavEntries':len({s['sha256'] for s in all_samples.values()}),'kits':dict(origin_counts),'collections':summary},indent=2))

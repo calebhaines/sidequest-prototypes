@@ -231,6 +231,96 @@ async function transferAndPortable(page) {
   return { project: project.project, sampleId: transferred.sampleId, frames: fixture.frames };
 }
 
+async function blendAndModulation(page) {
+  const fixture = await page.evaluate(async () => {
+    const state = window.LoomSchema.defaultState(); state.name = 'A second ingredient on the drum station'; state.tempo = 120; state.lengthBars = 2; state.loopEnabled = false; state.loopEnd = 4;
+    const left = new Float32Array(8820), right = new Float32Array(8820);
+    for (let i = 0; i < left.length; i++) { const envelope = Math.min(1, i / 100) * (1 - i / left.length); left[i] = envelope * (.22 * Math.sin(2 * Math.PI * 277 * i / 22050) + .06 * Math.sin(2 * Math.PI * 833 * i / 22050)); right[i] = envelope * .17 * Math.sin(2 * Math.PI * 431 * i / 22050); }
+    const asset = window.LoomSchema.encodeAsset({ left, right, sampleRate: 22050, name: 'Stereo B seasoning', id: 'blend-transfer-source' }); state.assets = [asset];
+    state.tracks[0].clips = [{ id: 'blend-transfer-clip', name: 'Stereo B seasoning', assetId: asset.id, start: 0, length: .8, sourceStart: 0, sourceEnd: .4, sourceOffset: 0, rate: 1, gain: 1, reverse: false, loop: false, fadeIn: 0, fadeOut: 0 }];
+    await window.LoomApp.loadState(state); window.LoomApp.selectClip('blend-transfer-clip');
+    return { sourcePCM: asset.pcm };
+  });
+  await openInstrument(page, 1);
+  const initial = await page.evaluate(() => { const state = window.qaBatterState(1), child = window.qaChild(1), caps = window.LoomApp.host.capabilities('track-2'); return { a: state.lanes[1].sampleId, b: state.lanes[1].blend.sampleId, targets: caps.audioImport.targets, voices: caps.notes.voices.map(voice => voice.id), starters: child.BatterLibrary.samples.length, kits: child.BatterLibrary.kits.length }; });
+  assert.equal(initial.starters, 148); assert(initial.kits >= 4); assert.deepEqual(initial.voices, voices); assert.equal(initial.targets.length, 24);
+  assert.deepEqual(initial.targets.map(target => target.id).sort(), [...voices, ...voices.map(voice => voice + ':b')].sort());
+  assert.equal(initial.b, ''); assert.equal(initial.targets.find(target => target.id === 'snare:b').occupied, false);
+  await closeInstrument(page); await page.evaluate(() => window.LoomApp.selectClip('blend-transfer-clip'));
+  const openBTransfer = async () => {
+    await page.locator('#transferClipButton').click(); await page.locator('#transferApp').selectOption('batter'); await page.locator('#transferTrack').selectOption('1');
+    await page.waitForFunction(() => document.querySelector('#transferTrack').dataset.checking === 'false'); await page.locator('#transferDeck').selectOption('snare:b');
+  };
+  const finishTransfer = async () => {
+    await page.locator('#sendTransfer').click();
+    await page.waitForFunction(() => !document.querySelector('#transferDialog').open || !document.querySelector('#sendTransfer').disabled && !document.querySelector('#closeTransfer').disabled, null, { timeout: 25000 });
+    assert.equal(await page.locator('#transferDialog').isVisible(), false, 'Sample B transfer completes: ' + await page.locator('#transferStatus').textContent());
+  };
+  await openBTransfer(); assert.equal(await page.locator('#transferReplaceLabel').isVisible(), false); await finishTransfer();
+  const firstB = await page.evaluate(() => { const lane = window.qaBatterState(1).lanes[1]; return { a: lane.sampleId, b: lane.blend.sampleId }; });
+  assert.equal(firstB.a, initial.a); assert(firstB.b);
+  await closeInstrument(page); await page.locator('#undoButton').click(); await openInstrument(page, 1); await page.waitForFunction(() => window.qaBatterState(1).lanes[1].blend.sampleId === '');
+  assert.equal(await page.evaluate(() => window.qaBatterState(1).lanes[1].sampleId), initial.a);
+  await closeInstrument(page); await page.locator('#redoButton').click(); await openInstrument(page, 1); await page.waitForFunction(id => window.qaBatterState(1).lanes[1].blend.sampleId === id, firstB.b);
+  passed.push('Four embedded kits / 148 starter recordings / twelve note voices / twenty-four audio targets / clip into empty B / A remains intact / Undo and Redo');
+
+  await closeInstrument(page); await page.evaluate(() => window.LoomApp.selectClip('blend-transfer-clip')); await openBTransfer(); assert(await page.locator('#transferReplaceLabel').isVisible(), 'Occupied B confirmation: ' + JSON.stringify(await page.evaluate(() => ({ selected: document.querySelector('#transferDeck').value, status: document.querySelector('#transferTargetInfo').textContent, target: window.LoomApp.host.capabilities('track-2').audioImport.targets.find(target => target.id === 'snare:b'), lane: window.qaBatterState(1).lanes[1].blend }))));
+  await page.locator('#sendTransfer').click(); await page.waitForFunction(() => !document.querySelector('#sendTransfer').disabled);
+  assert(await page.locator('#transferDialog').isVisible()); assert.match(await page.locator('#transferStatus').textContent(), /replace|already|contains|occupied/i);
+  assert.equal(await page.evaluate(() => window.qaBatterState(1).lanes[1].blend.sampleId), firstB.b);
+  await page.locator('#transferReplace').check(); await finishTransfer();
+  const secondB = await page.evaluate(async () => { const state = window.qaBatterState(1), lane = state.lanes[1], audio = window.qaChild(1).BatterUI.engine.getSampleAudio(lane.blend.sampleId); return { a: lane.sampleId, b: lane.blend.sampleId, pcm: state.assets.find(asset => asset.id === lane.blend.sampleId).pcm, frames: audio.left.length, rate: audio.sampleRate, stereo: audio.left.some((x, i) => Math.abs(x - audio.right[i]) > .02), source: window.LoomApp.getState().assets.find(asset => asset.id === 'blend-transfer-source').pcm }; });
+  assert.notEqual(secondB.b, firstB.b); assert.equal(secondB.a, initial.a); assert(secondB.stereo); assert.equal(secondB.frames, 19200); assert.equal(secondB.rate, 48000); assert.equal(secondB.source, fixture.sourcePCM);
+  await closeInstrument(page); await page.locator('#undoButton').click(); await openInstrument(page, 1); await page.waitForFunction(id => window.qaBatterState(1).lanes[1].blend.sampleId === id, firstB.b);
+  await closeInstrument(page); await page.locator('#redoButton').click(); await openInstrument(page, 1); await page.waitForFunction(id => window.qaBatterState(1).lanes[1].blend.sampleId === id, secondB.b);
+  passed.push('Occupied B replacement requires confirmation / imported stereo PCM and original GALLEY source retained / independent B Undo and Redo');
+
+  const rendered = await page.evaluate(async () => {
+    const child = window.qaChild(1), engine = child.BatterUI.engine, state = engine.getState(); state.name = 'Portable two-ingredient drum'; state.tempo = 120; state.humanize = 0; state.velocityHumanize = 0;
+    for (const lane of state.lanes) { lane.room = 0; lane.delay = 0; }
+    const lane = state.lanes[1]; lane.layerMode = 'single'; lane.blend = { ...lane.blend, enabled: true, amount: .65, sampleId: lane.blend.sampleId, sampleIds: [lane.blend.sampleId], layerMode: 'single', tune: -3, fine: 22, level: .9, offset: .006, reverse: false };
+    lane.lfo = { enabled: true, shape: 'triangle', sync: '1/8', rate: 3.7, depth: .9, phase: .25, reset: 'continuous', target: 'blend' };
+    engine.setState(state); child.BatterUI.refresh();
+    const pattern = window.MusicLabPatternSchema.normalize({ format: 'musiclab-pattern', version: 1, name: 'Blended off-grid snare', sourceApp: 'loom', kind: 'drums', tempo: 120, lengthBeats: 4, swing: 0, meter: [4, 4], seed: 78123, voices: [{ id: 'snare', name: 'Snare', pitch: 37 }], notes: [ { id: 'blend-first', voice: 'snare', pitch: 37, beat: .09375, duration: .8, velocity: .9 }, { id: 'blend-second', voice: 'snare', pitch: 37, beat: 1.3125, duration: .8, velocity: .7 } ] });
+    window.qaBlendedBatterPattern = pattern;
+    const snapshot = await window.LoomApp.host.snapshot('track-2'); window.qaBlendedSnapshot = snapshot;
+    const audio = async patch => { const result = await window.LoomApp.host.renderPattern('track-2', { pattern, state: patch, tempo: 120, tailSeconds: .1, voiceMap: { snare: 'snare' } }); const buffer = await window.LoomApp.engine.context.decodeAudioData(await result.blob.arrayBuffer()); return { left: new Float32Array(buffer.getChannelData(0)), stats: await window.qaWav(result.blob) }; };
+    const baseline = structuredClone(snapshot.state); baseline.lanes[1].blend.enabled = false; baseline.lanes[1].lfo.enabled = false;
+    const blended = structuredClone(snapshot.state); blended.lanes[1].lfo.enabled = false;
+    const a = await audio(baseline), b = await audio(blended), c = await audio(snapshot.state);
+    const difference = (a, b) => Math.sqrt(a.reduce((sum, x, i) => sum + (x - b[i]) ** 2, 0) / a.length);
+    return { blendDifference: difference(a.left, b.left), lfoDifference: difference(b.left, c.left), a: a.stats, b: b.stats, c: c.stats, snapshot: { blend: snapshot.state.lanes[1].blend, lfo: snapshot.state.lanes[1].lfo, pcm: snapshot.state.assets.find(asset => asset.id === snapshot.state.lanes[1].blend.sampleId).pcm } };
+  });
+  assert(rendered.blendDifference > .001 && rendered.lfoDifference > .001, 'Layer B and its LFO produce audible waveform changes: ' + JSON.stringify({ blend: rendered.blendDifference, lfo: rendered.lfoDifference }));
+  assert(rendered.a.rms > .001 && rendered.b.rms > .001 && rendered.c.rms > .001); assert.equal(rendered.snapshot.pcm, secondB.pcm); assert.equal(rendered.snapshot.blend.sampleId, secondB.b); assert.equal(rendered.snapshot.lfo.target, 'blend');
+  observations.push({ layerBlendDifferenceRms: rendered.blendDifference, blendLfoDifferenceRms: rendered.lfoDifference, modulatedWav: rendered.c });
+  passed.push('Captured native patch embeds custom B PCM / blend and synchronized continuous LFO each change actual rendered audio');
+
+  await closeInstrument(page);
+  const noteClipId = await page.evaluate(async () => { const result = await window.LoomApp.importPattern({ pattern: window.qaBlendedBatterPattern, options: { target: 'track-2', voiceMap: { snare: 'snare' } } }); window.LoomApp.selectClip(result.clipId); return result.clipId; });
+  await page.locator('#printNoteClipButton').click(); await page.waitForFunction(id => window.LoomApp.getState().tracks[1].clips.find(clip => clip.id === id)?.origin, noteClipId, { timeout: 40000 });
+  const printed = await page.evaluate(id => { const clip = window.LoomApp.getState().tracks[1].clips.find(clip => clip.id === id); window.qaBlendedPrintedPCM = new Float32Array(window.LoomApp.assets[clip.assetId].left); return clip; }, noteClipId);
+  assert.deepEqual(printed.origin.instrument.snapshot.state.lanes[1].blend, rendered.snapshot.blend); assert.deepEqual(printed.origin.instrument.snapshot.state.lanes[1].lfo, rendered.snapshot.lfo); assert.equal(printed.origin.instrument.snapshot.state.assets.find(asset => asset.id === secondB.b).pcm, secondB.pcm);
+  await page.locator('#editSourceButton').click(); await page.waitForFunction(() => !!window.qaChild(1)?.BatterApp);
+  const revised = await page.evaluate(() => { const child = window.qaChild(1), engine = child.BatterUI.engine, state = engine.getState(); state.lanes[1].blend.amount = .22; state.lanes[1].lfo = { ...state.lanes[1].lfo, target: 'pitch', shape: 'square', sync: '1/16', depth: .5, rate: 4.4 }; engine.setState(state); child.BatterUI.refresh(); return { blend: engine.state.lanes[1].blend, lfo: engine.state.lanes[1].lfo }; });
+  await closeInstrument(page); await page.locator('#updateAudioButton').click(); await page.waitForFunction(({ id, assetId }) => { const clip = window.LoomApp.getState().tracks[1].clips.find(clip => clip.id === id); return clip?.assetId !== assetId && !window.LoomApp.noteWorkflow.controller; }, { id: noteClipId, assetId: printed.assetId }, { timeout: 40000 });
+  const updated = await page.evaluate(id => { const clip = window.LoomApp.getState().tracks[1].clips.find(clip => clip.id === id), audio = window.LoomApp.assets[clip.assetId].left, previous = window.qaBlendedPrintedPCM; return { clip, difference: Math.sqrt(audio.reduce((sum, x, i) => sum + (x - (previous[i] || 0)) ** 2, 0) / audio.length) }; }, noteClipId);
+  for (const key of ['id', 'name', 'start', 'length', 'sourceOffset', 'rate', 'gain', 'fadeIn', 'fadeOut']) assert.equal(updated.clip[key], printed[key]);
+  assert.deepEqual(updated.clip.origin.instrument.snapshot.state.lanes[1].blend, revised.blend); assert.deepEqual(updated.clip.origin.instrument.snapshot.state.lanes[1].lfo, revised.lfo); assert.equal(updated.clip.origin.instrument.snapshot.state.assets.find(asset => asset.id === secondB.b).pcm, secondB.pcm); assert(updated.difference > .001);
+  observations.push({ revisedPrintDifferenceRms: updated.difference });
+  passed.push('Native blended note clip prints with custom B and LFO attached / Edit source and Update change the audio while preserving musical placement and sample PCM');
+
+  await page.evaluate(() => { window.qaContextBefore = window.LoomApp.engine.context; });
+  await page.locator('#audioSettingsButton').click(); await page.locator('#audioSampleRate').selectOption('44100'); await page.locator('#audioLatencyProfile').selectOption('balanced'); await page.locator('#applyAudioSettings').click();
+  await page.waitForFunction(() => !window.LoomApp.engine.getAudioDiagnostics().applying && window.LoomApp.engine.context?.sampleRate === 44100, null, { timeout: 25000 });
+  if (await page.locator('#audioSettingsDialog').isVisible()) await page.locator('#closeAudioSettings').click();
+  assert.equal(await page.evaluate(() => window.qaContextBefore.state), 'closed'); await openInstrument(page, 1);
+  const restored = await page.evaluate(async () => { const child = window.qaChild(1), state = child.BatterUI.engine.getState(), lane = state.lanes[1], audio = child.BatterUI.engine.getSampleAudio(lane.sampleId), stateCopy = window.LoomApp.getState(); stateCopy.tracks[1].instrument.snapshot = await window.LoomApp.host.snapshot('track-2'); return { name: state.name, a: lane.sampleId, frames: audio.left.length, pitch: lane.tune, blend: lane.blend, lfo: lane.lfo, pcm: state.assets.find(asset => asset.id === lane.blend.sampleId).pcm, project: window.LoomSchema.serializeProject(stateCopy) }; });
+  assert.equal(restored.name, 'Portable two-ingredient drum'); assert.equal(restored.a, initial.a); assert.deepEqual(restored.blend, revised.blend); assert.deepEqual(restored.lfo, revised.lfo); assert.equal(restored.pcm, secondB.pcm);
+  passed.push('Interface sample-rate/profile restart preserves custom B PCM, independent blend shaping and complete synchronized LFO settings');
+  return { project: restored.project, sampleId: restored.a, frames: restored.frames, pitch: restored.pitch, blend: revised.blend, lfo: revised.lfo, blendPCM: secondB.pcm, blendFrames: secondB.frames };
+}
+
 async function offlineProject(browser, portable, serverURL) {
   const context = await browser.newContext(), page = await context.newPage(); const errors = [], httpRequests = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -255,8 +345,9 @@ async function offlineProject(browser, portable, serverURL) {
     await page.waitForFunction(() => !!window.LoomApp);
     await page.evaluate(async project => { await window.LoomApp.loadState(window.LoomSchema.parseProject(project)); }, portable.project);
     await openInstrument(page, 1);
-    const actual = await page.evaluate(async () => { const child = document.querySelector('iframe[data-host-track="track-2"]').contentWindow, engine = child.BatterUI.engine, state = engine.getState(); await engine.init(); const audio = await engine.getSampleAudio(state.lanes[1].sampleId); return { id: state.lanes[1].sampleId, pitch: state.lanes[1].tune, frames: audio.left.length, rate: audio.sampleRate, catalog: engine.getCatalog().samples.length, voices: window.LoomApp.host.capabilities('track-2').notes.voices.length }; });
-    assert.equal(actual.id, portable.sampleId); assert.equal(actual.pitch, -7); assert.equal(actual.frames, portable.frames); assert.equal(actual.voices, 12); assert(actual.catalog >= 85); assert.deepEqual(httpRequests, [], 'A downloaded GALLEY plus portable BATTER project plays its samples without URL fetches.'); assert.deepEqual(errors, []);
+    const actual = await page.evaluate(async () => { const child = document.querySelector('iframe[data-host-track="track-2"]').contentWindow, engine = child.BatterUI.engine, state = engine.getState(); await engine.init(); const audio = await engine.getSampleAudio(state.lanes[1].sampleId), b = state.lanes[1].blend, blendAudio = b?.sampleId ? await engine.getSampleAudio(b.sampleId) : null; return { id: state.lanes[1].sampleId, pitch: state.lanes[1].tune, frames: audio.left.length, rate: audio.sampleRate, catalog: engine.getCatalog().samples.length, voices: window.LoomApp.host.capabilities('track-2').notes.voices.length, blend: b, lfo: state.lanes[1].lfo, blendFrames: blendAudio?.left.length, blendPCM: state.assets.find(asset => asset.id === b?.sampleId)?.pcm }; });
+    assert.equal(actual.id, portable.sampleId); assert.equal(actual.pitch, portable.pitch ?? -7); assert.equal(actual.frames, portable.frames); assert.equal(actual.voices, 12); assert(actual.catalog >= 149); assert.deepEqual(httpRequests, [], 'A downloaded GALLEY plus portable BATTER project plays its samples without URL fetches.'); assert.deepEqual(errors, []);
+    if (portable.blend) { assert.deepEqual(actual.blend, portable.blend); assert.deepEqual(actual.lfo, portable.lfo); assert.equal(actual.blendPCM, portable.blendPCM); assert.equal(actual.blendFrames, portable.blendFrames); }
     observations.push({ offlineMode });
     passed.push('Downloaded GALLEY restores imported acoustic sampler PCM / native twelve voices / no HTTP sample or app fetch');
   } finally { await context.close(); }
@@ -268,8 +359,10 @@ async function offlineProject(browser, portable, serverURL) {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--allow-file-access-from-files'] });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
     const events = await install(page, server.url);
-    if (process.env.LOOM_BATTER_QA_FOCUS !== 'transfer') { await nativeAndClock(page); await notesAndRender(page); }
-    const portable = await transferAndPortable(page);
+    const focus = process.env.LOOM_BATTER_QA_FOCUS;
+    if (!['transfer', 'blend'].includes(focus)) { await nativeAndClock(page); await notesAndRender(page); }
+    let portable = focus === 'blend' ? await blendAndModulation(page) : await transferAndPortable(page);
+    if (!focus) portable = await blendAndModulation(page);
     const recovery = await page.evaluate(async () => ({ actual: await window.qaBatterRecovery(), expected: window.qaBatterRecoverySentinel })); assert.equal(recovery.actual.local, recovery.expected); assert.equal(recovery.actual.durable, recovery.expected);
     passed.push('Hosted sampler edits, imports and context restarts preserve standalone localStorage and durable IndexedDB recovery');
     assert.deepEqual(events.errors, []); assert.deepEqual(events.requests, [], 'The host remains independent of sibling app/sample URLs.'); await page.close();

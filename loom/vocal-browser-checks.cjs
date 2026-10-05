@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const { createHash } = require('node:crypto');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(__dirname, '..');
 const shared = fs.existsSync(path.join(__dirname, 'shared')) ? path.join(__dirname, 'shared') : path.join(root, 'shared');
@@ -123,6 +124,49 @@ async function dynamicsChecks(browser, url, fallback) {
   } finally { await page.close(); }
 }
 
+async function helpUiChecks(browser, url) {
+  const stages = ['clean', 'deess', 'compressor', 'eq', 'saturation', 'pitch', 'harmony', 'doubler', 'vowel', 'robot', 'chop', 'delay', 'reverb', 'output'];
+  // This is the released 1.9 control/recipe contract, independent of help copy.
+  const contractHash = '06a5ddb84c4cd0366f962ad6ae3e2b964ff8add0ece5b79d1d8c2ab2a3342c9e';
+  const concepts = {
+    clean: [/input.*trim|trim.*input/i, /low.cut|high.pass/i, /gate/i], deess: [/sibilan/i, /threshold/i, /frequenc/i],
+    compressor: [/threshold/i, /ratio/i, /attack/i, /release/i, /makeup/i], eq: [/body/i, /low.middle/i, /presence/i, /air/i],
+    saturation: [/warm glaze/i, /hard caramel/i, /folded sugar/i, /drive/i, /blend/i],
+    pitch: [/transpose/i, /scale correction/i, /single|monophonic/i, /key|root/i, /strength/i, /window/i, /delay/i],
+    harmony: [/interval/i, /window/i, /width|spread/i], doubler: [/short|delay/i, /drift|detune/i, /width/i],
+    vowel: [/resonan|filter/i, /vowel/i, /shift/i], robot: [/ring/i, /vocoder/i, /twelve|12/i, /carrier/i, /note/i, /chord/i],
+    chop: [/tempo/i, /depth/i, /smooth/i], delay: [/clock|sync/i, /milliseconds/i, /feedback/i, /tone/i, /duck/i],
+    reverb: [/size/i, /decay/i, /pre.delay/i, /tone/i, /width/i, /duck/i], output: [/ceiling/i, /output/i, /dry.*wet/i]
+  };
+  for (const width of [320, 390, 768, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 1000 } }); const errors = []; page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.goto(url + '/loom/index.html'); await page.waitForFunction(() => !!window.LoomApp); await install(page, { ui: true, channel: '2' });
+      await page.locator('#audioSettingsButton').click(); await page.locator('#vocalPracticeButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().enabled); await wait(600); await page.locator('[data-vocal-view="basic"]').click();
+      const before = await page.evaluate(() => { const definition = window.LoomEffectsCatalog.find(f => f.id === 'glaze'); return { contract: { params: definition.params, defaults: definition.defaults, presets: definition.presets }, params: window.LoomApp.getState().tracks[0].effects[0].params, playing: window.LoomApp.engine.getTransport().playing, mode: window.LoomApp.engine.mode, meter: window.LoomApp.engine.getMeters().effects?.[0]?.[0] }; });
+      assert.equal(createHash('sha256').update(JSON.stringify(before.contract)).digest('hex'), contractHash, 'Adding explanations must preserve every released parameter, range, default, and recipe.'); assert.equal(before.mode, 'worklet'); assert.equal(before.playing, false); assert.equal(before.meter?.type, 'glaze'); assert(Number.isFinite(before.meter.inputDb) && before.meter.inputDb > -60);
+      assert.equal(await page.locator('#effectEditor [data-effect-param]').count(), 25); assert.equal(await page.locator('[data-vocal-group]').count(), 14);
+      const helpNames = await page.locator('.vocal-stage-help > summary').evaluateAll(elements => elements.map(el => el.getAttribute('aria-label'))); assert(helpNames.every(name => /how.*works:/i.test(name || ''))); assert.equal(new Set(helpNames).size, 14, 'Each help disclosure has a distinct accessible name.');
+      for (const id of stages) {
+        const group = page.locator('[data-vocal-group="' + id + '"]'), overview = group.locator('.vocal-group-note'), disclosure = group.locator('details'), summary = disclosure.locator('summary');
+        assert.equal(await overview.isVisible(), true, id + ' overview remains visible when its stage is off.'); assert((await overview.textContent()).trim().length > 45, id + ' has an explanatory overview, not just an instruction to enable it.'); assert.equal(await disclosure.count(), 1); assert.match(await summary.textContent(), /how.*work|how.*use/i);
+        assert.equal(await summary.evaluate(el => el.tabIndex >= 0), true, 'Help is available in the keyboard tab order.'); assert.equal(await disclosure.evaluate(el => el.open), false); await summary.focus(); await page.keyboard.press('Enter'); assert.equal(await disclosure.evaluate(el => el.open), true, id + ' help opens with Enter.'); await page.keyboard.press('Space'); assert.equal(await disclosure.evaluate(el => el.open), false, id + ' help closes with Space.'); await page.keyboard.press('Enter'); assert.equal(await disclosure.evaluate(el => el.open), true);
+        const text = await disclosure.textContent(); for (const concept of concepts[id]) assert.match(text, concept, id + ' explains ' + concept);
+        assert.equal(await disclosure.locator('input,select').count(), 0, 'Reading help is independent of changing audio settings.');
+      }
+      const after = await page.evaluate(() => ({ params: window.LoomApp.getState().tracks[0].effects[0].params, playing: window.LoomApp.engine.getTransport().playing, mic: window.LoomApp.engine.getMicrophoneStatus(), layout: (() => { const editor = document.getElementById('effectEditor'); return { document: document.documentElement.scrollWidth, width: innerWidth, editorClient: editor.clientWidth, editorScroll: editor.scrollWidth, overflow: [...editor.querySelectorAll('details,.vocal-group-note')].filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.closest('[data-vocal-group]').dataset.vocalGroup) }; })() }));
+      assert.deepEqual(after.params, before.params, 'Opening and closing every explanation leaves the vocal recipe untouched.'); assert.equal(after.playing, false, 'Help keyboard actions must not start or stop transport.'); assert.equal(after.mic.enabled, true); assert.equal(after.mic.interface.settings.inputChannel, '2'); assert(after.layout.document <= width + 1 && after.layout.editorScroll <= after.layout.editorClient + 1, 'Expanded help fits ' + width + ' px.'); assert.deepEqual(after.layout.overflow, []);
+      if (process.env.LOOM_VOCAL_QA_SCREENSHOTS) { await page.locator('[data-vocal-group="pitch"]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(process.env.LOOM_VOCAL_QA_SCREENSHOTS, 'galley-glaze-help-pitch-' + width + '.png') }); await page.locator('[data-vocal-group="robot"]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(process.env.LOOM_VOCAL_QA_SCREENSHOTS, 'galley-glaze-help-robot-' + width + '.png') }); }
+      for (const id of stages) { await page.selectOption('#fx-' + (id === 'output' ? 'guard' : id), 'off'); const group = page.locator('[data-vocal-group="' + id + '"]'); assert.equal(await group.locator('.vocal-group-note').isVisible(), true, id + ' explanation is readable with its processing disabled.'); assert.equal(await group.locator('details > summary').isVisible(), true, id + ' help remains reachable while off.'); }
+      await page.locator('#effectReset').click();
+      await page.locator('[data-vocal-view="advanced"]').click(); const parameters = await page.evaluate(() => [...document.querySelectorAll('#effectEditor [data-effect-param]')].map(el => el.dataset.effectParam).sort()); assert.deepEqual(parameters, before.contract.params.map(p => p.key).sort());
+      const missingDescriptions = await page.evaluate(() => [...document.querySelectorAll('#effectEditor [data-effect-param]')].filter(el => { const id = el.getAttribute('aria-describedby'); return !id || !document.getElementById(id)?.matches('.vocal-group-note'); }).map(el => el.dataset.effectParam)); assert.deepEqual(missingDescriptions, [], 'All eighty controls expose the stage explanation to assistive technology.');
+      if (width === 1440) for (const recipe of before.contract.presets) { await page.selectOption('#vocalPreset', recipe.id); assert.deepEqual(await page.evaluate(() => window.LoomApp.getState().tracks[0].effects[0].params), recipe.params); }
+      assert.deepEqual(errors, []); await page.evaluate(() => window.LoomApp.engine.dispose()); passed.push(width + ' px fourteen always-visible explanations / off-stage help / Enter + Space without transport changes / complete mode guidance / expanded layout / unchanged 80 controls and 14 recipes / real Worklet practice meters');
+    } finally { await page.close(); }
+  }
+}
+
 async function uiChecks(browser, url) {
   for (const width of [320, 390, 768, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } }); const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -180,10 +224,11 @@ async function ampUiChecks(browser, url) {
   try {
     if (process.env.LOOM_VOCAL_QA_SCREENSHOTS) fs.mkdirSync(process.env.LOOM_VOCAL_QA_SCREENSHOTS, { recursive: true });
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-    if (process.env.LOOM_VOCAL_QA_DYNAMICS_ONLY) for (const fallback of [false, true]) await dynamicsChecks(browser, server.url, fallback);
+    if (process.env.LOOM_VOCAL_QA_HELP_ONLY) await helpUiChecks(browser, server.url);
+    else if (process.env.LOOM_VOCAL_QA_DYNAMICS_ONLY) for (const fallback of [false, true]) await dynamicsChecks(browser, server.url, fallback);
     else {
       if (!process.env.LOOM_VOCAL_QA_UI_ONLY) { if (!process.env.LOOM_VOCAL_QA_FALLBACK_ONLY) await cpuChecks(browser, server.url); if (!process.env.LOOM_VOCAL_QA_CPU_ONLY) { for (const [fallback, rate] of (process.env.LOOM_VOCAL_QA_FALLBACK_ONLY ? [[true, 48000]] : [[false, 44100], [false, 48000], [false, 96000], [true, 48000]])) await engineChecks(browser, server.url, fallback, rate); if (!process.env.LOOM_VOCAL_QA_FALLBACK_ONLY) for (const fallback of [false, true]) await dynamicsChecks(browser, server.url, fallback); } }
-      if (!process.env.LOOM_VOCAL_QA_ENGINE_ONLY && !process.env.LOOM_VOCAL_QA_CPU_ONLY) { await uiChecks(browser, server.url); await ampUiChecks(browser, server.url); }
+      if (!process.env.LOOM_VOCAL_QA_ENGINE_ONLY && !process.env.LOOM_VOCAL_QA_CPU_ONLY) { await uiChecks(browser, server.url); await helpUiChecks(browser, server.url); await ampUiChecks(browser, server.url); }
     }
     console.log(JSON.stringify({ passed: passed.length, checks: passed, cpuMeasurements: measurements }, null, 2));
   } finally { await browser?.close(); await server.close(); }

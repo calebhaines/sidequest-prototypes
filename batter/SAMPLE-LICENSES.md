@@ -10,14 +10,14 @@ Recordings by **Glen MacArthur (2015)**, originally published as AVL-Drumkits. S
 
 Original names and BATTER collection names:
 
-| BATTER collection | Original recorded library | Factory WAVs |
+| BATTER collection | Original recorded library | Full collection WAVs |
 | --- | --- | ---: |
 | Iron service | Black Pearl 4 | 118 |
 | Red service | Red Zeppelin 4 | 118 |
 | Late lunch | Blonde Bop | 135 |
 | Pantry percussion | Buskman's Holiday | 200 |
 
-There are 571 recorded WAV entries in the full AVL collections. Some accessory recordings are shared between the original drum kits; this count describes library entries, not 571 guaranteed unique audio recordings. The offline starter contains 84 entries from Iron service, Red service and Late lunch, with two or three real dynamic layers per instrument. The full drum collections provide five real dynamic layers. Most hand percussion provides ten real dynamic layers; the stereo bell trees provide five. AVL records one strike per dynamic layer, so those samples are not labelled as round-robin recordings.
+There are 571 recorded WAV entries in the full AVL collections. Some accessory recordings are shared between the original drum kits; this count describes library entries, not 571 guaranteed unique audio recordings. The offline starter contains **148 entries across four complete kits**: 36 from Iron service, 24 from Red service, 24 from Late lunch and 64 from Pantry percussion. The first three kits retain two or three real dynamic layers per instrument. The embedded Pantry percussion kit includes five real dynamic layers for cajon thump/slap, stick clicks, hand claps, congas, shakers, shaken tambourine and cowbell; three each for finger snaps, claves, foot stomps and bucket; and one mid-dynamic, full-tail cymbal and cymbal bell recording. All four kit presets reference samples already embedded in the standalone HTML. The full drum collections provide five real dynamic layers. Most hand percussion provides ten real dynamic layers; the stereo bell trees provide five. AVL records one strike per dynamic layer, so those samples are not labelled as round-robin recordings.
 
 **License: [Creative Commons Attribution-ShareAlike 3.0](https://creativecommons.org/licenses/by-sa/3.0/), with the original author's explicit music exception.** The original notice says:
 
@@ -78,8 +78,8 @@ Unlike the AVL collections, Salamander's original notice contains **no separate 
 
 ## Offline and optional collections
 
-The standalone HTML embeds the 84-entry AVL starter plus credits and library metadata. The full AVL collections and Rope tension remain explicit optional downloads. Library JSONs contain all their selected WAV bytes and can also be downloaded and imported from disk for offline use. The two Pantry percussion parts together provide its complete kit preset.
+The standalone HTML embeds the 148-entry AVL starter plus credits and library metadata. The full AVL collections and Rope tension remain explicit optional downloads. Library JSONs contain all their selected WAV bytes and can also be downloaded and imported from disk for offline use. The embedded Pantry percussion selection is playable immediately offline. Loading both optional Pantry percussion parts expands that same kit with its full recorded dynamics and additional articulations.
 
-There are **641 recorded WAV entries across the five full source kits**, with the starter's 84 entries already included in that total. Every distributed library JSON is below 50 MB. The original 510 MB source downloads are not bundled with the application.
+There are **641 recorded WAV entries across the five full source kits**, with the starter's 148 entries already included in that total. Every distributed library JSON is below 50 MB. The original 510 MB source downloads are not bundled with the application.
 
 The reproducible acquisition and conversion scripts are in [samples/tools/](samples/tools/README.md). They pin the AVL source revision, verify original source hashes and decode only selected audio streams; they do not extract arbitrary archive paths.
