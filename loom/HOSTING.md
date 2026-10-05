@@ -68,3 +68,46 @@ Native app clocks may have their own pattern lengths and swing. Record parts
 into LOOM clips to place and edit them precisely on the arrangement clock.
 Tempo-synchronized effects use LOOM’s clock; exported clips and inserts use the
 same deterministic DSP as arrangement playback.
+
+## Receiving audio from the arrangement
+
+SPOOL and RAVEL accept edited clips directly from LOOM. The transfer renders
+only the selected clip, including trim, source offset, playback rate, reverse,
+loop repetitions, clip gain and fades. It preserves the clip's full duration,
+including silence after a non-looping source ends. Track volume, pan, automation
+and insert effects are not baked into the received sample.
+
+Choose the receiving track and, for SPOOL, deck A–D. Replacing an occupied
+sample requires an explicit replacement choice. SPOOL keeps its other decks,
+source instrument, mixer and effects. RAVEL keeps its patterns and effects;
+its new sample receives sixteen even slices. Each app's Undo restores the
+previous sample. SPOOL accepts at most 30 seconds and RAVEL 20 seconds; longer
+clips must be shortened rather than silently truncated.
+
+Future instruments can add these optional adapter fields:
+
+```js
+MusicLabHost.registerInstrument({
+  // Existing transport and state methods…
+  audioImport: {
+    maxSeconds: 30,
+    decks: 1,
+    targets: [{ id: 0, name: 'Sample', occupied: false, assetName: '' }]
+  },
+  async importAudio({ pcm, sampleRate, name, options }) {
+    // pcm: interleaved stereo Float32Array; sampleRate: samples/second.
+    // options.deck identifies the chosen destination; options.replace must
+    // explicitly allow replacement of an occupied destination.
+    // Validate before editing, retain unrelated state, and include received
+    // audio in getState() so a saved LOOM project restores it.
+    await installAudio(pcm, sampleRate, name, options);
+    MusicLabHost.notifyStateChange();
+  }
+});
+```
+
+The host exposes `importAudio(trackId, audio, options)` and
+`capabilities(trackId).audioImport`. Make `audioImport` a getter if destination
+names or occupancy change. Importing copies the caller's PCM, requires a ready
+active instrument, and does not start its sequencer. Imported sample state is
+isolated from the app's standalone browser project.

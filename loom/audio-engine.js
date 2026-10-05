@@ -5,6 +5,15 @@
   function createLoomEngineDSP(effectsFactory) {
     const clamp = (v, lo, hi, fallback = lo) => Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
     const effects = effectsFactory();
+    const automationValue = (lane, beat, fallback) => {
+      const points = lane?.points;
+      if (!lane || lane.enabled === false || !points?.length) return fallback;
+      if (beat <= points[0].beat) return points[0].value;
+      let lo = 0, hi = points.length - 1;
+      while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (points[mid].beat <= beat) lo = mid; else hi = mid - 1; }
+      const a = points[lo], b = points[lo + 1];
+      return !b || lane.interpolation === 'hold' ? a.value : a.value + (b.value - a.value) * ((beat - a.beat) / Math.max(1e-12, b.beat - a.beat));
+    };
     const emptyMeter = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
     class Core {
@@ -15,6 +24,10 @@
         this.playing = false;
         this.ended = false;
         this.recordingHold = false;
+        this.countInRemaining = 0;
+        this.countInTotal = 0;
+        this.recordingPunch = false;
+        this.sampleClock = 0;
         this.silent = false;
         this.lastOutput = [0, 0];
         this.seekOrigin = [0, 0];
@@ -57,11 +70,25 @@
         this.tempo = clamp(this.state.tempo, 40, 240, 120);
         this.tracks = Array.from({ length: 8 }, (_, i) => this.state.tracks?.[i] || { id: `track-${i + 1}`, clips: [], effects: [] });
         this._compileClips();
+        this.automation = this.tracks.map(track => {
+          const result = { level: null, pan: null, effects: Array.from({ length: 4 }, () => []) };
+          for (const lane of track.automation || []) {
+            if (lane.enabled === false || !lane.points?.length) continue;
+            const compiled = { ...lane, points: lane.points.filter(p => Number.isFinite(p.beat) && Number.isFinite(p.value)).slice().sort((a, b) => a.beat - b.beat) };
+            if (!compiled.points.length) continue;
+            if (lane.target === 'level' || lane.target === 'pan') result[lane.target] = compiled;
+            else {
+              const match = /^fx:([0-3]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(lane.target || ''), spec = match && track.effects?.[Number(match[1])];
+              if (spec && (!lane.effectType || lane.effectType === spec.type) && typeof spec.params?.[match[2]] === 'number') result.effects[Number(match[1])].push({ key: match[2], lane: compiled });
+            }
+          }
+          return result;
+        });
         for (let t = 0; t < 8; t++) for (let s = 0; s < 4; s++) {
           const spec = this.tracks[t].effects?.[s];
           const old = this.slots[t][s];
           if (!spec || typeof spec.type !== 'string') { if (old) old.dsp.reset(); this.slots[t][s] = null; continue; }
-          if (old && old.type === spec.type) { old.dsp.setParams(spec.params || {}); old.bypass = spec.bypass === true; }
+          if (old && old.type === spec.type) { old.dsp.setParams(spec.params || {}); old.bypass = spec.bypass === true; old.automationValues = null; }
           else {
             if (old) old.dsp.reset();
             const dsp = effects.create(spec.type, this.sampleRate, spec.params || {});
@@ -71,9 +98,10 @@
       }
       get endBeat() { return clamp(this.state.lengthBars, 1, 64, 4) * 4; }
       start(beat = this.beat) { this.seek(beat); this.playing = true; this.silent = false; this.meters = { ...this.meters, beat: this.beat, playing: true, ended: false }; }
-      stop() { this.playing = false; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended }; }
+      stop() { this.playing = false; this.countInRemaining = 0; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended, countInBeatsRemaining: 0 }; }
       seek(beat) {
         this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
+        this.sampleClock = 0;
         if (!this.options.linear) {
           // Discard audio from the previous timeline position, then crossfade the
           // last audible sample into the new position over six milliseconds.
@@ -85,11 +113,19 @@
         return this.beat;
       }
       setRecordingHold(value) { this.recordingHold = value === true; }
+      beginRecording(schedule = {}) {
+        this.recordingPunch = schedule.punchEnabled === true;
+        if (schedule.startTransport !== false && !this.playing) this.start(this.beat);
+        this.countInTotal = this.countInRemaining = Math.max(0, Math.round(clamp(schedule.countInBeats, 0, 8, 0) * 60 / this.tempo * this.sampleRate));
+        this.previousClickBeat = -1; this.clickRemaining = 0;
+      }
+      endRecording() { this.countInRemaining = 0; this.recordingPunch = false; }
       setRecordOnly(index, value) { if (value) this.recordOnly.add(index); else this.recordOnly.delete(index); }
       resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
         this.playing = false; this.ended = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
+        this.countInRemaining = 0; this.recordingPunch = false;
         this.lastOutput.fill(0); this.seekOrigin.fill(0); this.seekFadeRemaining = 0;
         this.masterGain = 0;
         for (const pair of this.gains) pair.fill(0);
@@ -109,11 +145,13 @@
         left.fill(0); right.fill(0);
         if (this.silent) { this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() }; return this.meters; }
         if (!this.buffers.length || this.buffers[0][0].length !== n) this.buffers = Array.from({ length: 8 }, () => [new Float32Array(n), new Float32Array(n)]);
+        if (!this.timelineBeats || this.timelineBeats.length !== n) { this.timelineBeats = new Float64Array(n); this.timelinePlaying = new Uint8Array(n); this.timelineCountIn = new Uint8Array(n); this.timelineClickBeats = new Float64Array(n); }
+        this.countInEnded = false;
         const blockBeat = this.beat, advance = this.tempo / (60 * sr), secondsPerBeat = 60 / this.tempo;
         const anySolo = this.tracks.some(t => t.solo === true), selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks);
         const audible = this.tracks.map((t, i) => !t.mute && (!anySolo || t.solo) && (selected < 0 || i === selected));
         const loopStart = clamp(this.state.loopStart, 0, 255, 0), loopEnd = clamp(this.state.loopEnd, loopStart + .25, 256, 16);
-        const loop = !this.options.linear && this.state.loopEnabled === true;
+        const loop = !this.options.linear && !this.recordingPunch && this.state.loopEnabled === true;
         const stopAtEnd = !this.options.linear && !loop && !this.recordingHold;
         const sessionEnd = this.endBeat, blockPlaying = this.playing;
         let playingFrames = this.playing ? n : 0;
@@ -139,6 +177,16 @@
           else { l.fill(0); r.fill(0); }
         }
         for (let frame = 0; frame < n; frame++) {
+          const countingIn = this.countInRemaining > 0;
+          this.timelineBeats[frame] = this.beat;
+          this.timelinePlaying[frame] = this.playing ? 1 : 0;
+          this.timelineCountIn[frame] = countingIn ? 1 : 0;
+          this.timelineClickBeats[frame] = countingIn ? (this.countInTotal - this.countInRemaining) * advance : this.beat;
+          if (countingIn) {
+            for (let t = 0; t < 8; t++) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
+            if (--this.countInRemaining === 0) this.countInEnded = true;
+            continue;
+          }
           if (this.playing && stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame; }
           const beat = this.beat;
           if (this.ended) for (let t = 0; t < 8; t++) if (!this.auditionTracks.has(t)) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
@@ -166,11 +214,29 @@
         const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
         for (let t = 0; t < 8; t++) {
           const [l, r] = this.buffers[t], track = this.tracks[t];
-          for (const slot of this.slots[t]) if (slot && !slot.bypass) slot.dsp.process(l, r, { tempo: this.tempo, beat: blockBeat, playing: this.playing });
-          const pan = clamp(track.pan, -1, 1, 0), level = audible[t] ? clamp(track.level, 0, 2, .8) : 0;
-          const goalL = level * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, goalR = level * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+          for (let slotIndex = 0; slotIndex < 4; slotIndex++) {
+            const slot = this.slots[t][slotIndex];
+            if (!slot || slot.bypass) continue;
+            const lanes = this.automation[t].effects[slotIndex];
+            if (!lanes.length) slot.dsp.process(l, r, { tempo: this.tempo, beat: blockBeat, playing: blockPlaying });
+            else for (let start = 0; start < n;) {
+              // One fixed 32-sample control clock is shared by live and offline
+              // blocks, so exports retain the same automation and DSP history.
+              const length = Math.min(n - start, 32 - ((this.sampleClock + start) % 32)), beat = this.timelineBeats[start];
+              if ((this.sampleClock + start) % 32 === 0) {
+                let changed = !slot.automationValues;
+                const values = {};
+                for (const { key, lane } of lanes) { values[key] = automationValue(lane, beat, track.effects[slotIndex].params[key]); if (!slot.automationValues || values[key] !== slot.automationValues[key]) changed = true; }
+                if (changed) { slot.dsp.setParams({ ...track.effects[slotIndex].params, ...values }); slot.automationValues = values; }
+              }
+              slot.dsp.process(l.subarray(start, start + length), r.subarray(start, start + length), { tempo: this.tempo, beat, playing: this.timelinePlaying[start] === 1 && this.timelineCountIn[start] === 0 });
+              start += length;
+            }
+          }
           const gain = this.gains[t]; let peak = 0, powerL = 0, powerR = 0;
           for (let f = 0; f < n; f++) {
+            const beat = this.timelineBeats[f], pan = clamp(automationValue(this.automation[t].pan, beat, track.pan), -1, 1, 0), level = audible[t] ? clamp(automationValue(this.automation[t].level, beat, track.level), 0, 1.5, .8) : 0;
+            const goalL = level * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, goalR = level * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
             gain[0] += (goalL - gain[0]) * slew; gain[1] += (goalR - gain[1]) * slew;
             let a = l[f] * gain[0], b = r[f] * gain[1];
             if (!Number.isFinite(a)) a = 0; if (!Number.isFinite(b)) b = 0;
@@ -180,15 +246,15 @@
           trackMeters.push({ peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) });
         }
         const masterLevel = clamp(this.state.master?.level, 0, 1.5, .8), metronome = this.options.includeMetronome && this.state.master?.metronome && blockPlaying;
-        let peak = 0, powerL = 0, powerR = 0, clickBeat = blockBeat;
+        let peak = 0, powerL = 0, powerR = 0;
         for (let f = 0; f < n; f++) {
           this.masterGain += (masterLevel - this.masterGain) * slew;
           let a = left[f] * this.masterGain, b = right[f] * this.masterGain;
-          if (metronome && f < playingFrames) {
+          if (this.timelineCountIn[f] || (metronome && this.timelinePlaying[f])) {
+            const clickBeat = this.timelineClickBeats[f];
             const integerBeat = Math.floor(clickBeat + 1e-9);
             if (integerBeat !== this.previousClickBeat) { this.previousClickBeat = integerBeat; this.clickRemaining = Math.round(sr * .028); this.clickPhase = 0; this.clickFrequency = integerBeat % 4 === 0 ? 1500 : 1000; }
             if (this.clickRemaining > 0) { const env = this.clickRemaining / (sr * .028), sample = Math.sin(this.clickPhase) * env * env * .12; this.clickPhase += Math.PI * 2 * this.clickFrequency / sr; this.clickRemaining--; a += sample; b += sample; }
-            clickBeat += advance; if (loop && clickBeat >= loopEnd - 1e-10) clickBeat = loopStart + Math.max(0, clickBeat - loopEnd) % (loopEnd - loopStart);
           }
           const maximum = Math.max(Math.abs(a), Math.abs(b)), target = maximum > .98 ? .98 / maximum : 1;
           this.limitGain = target < this.limitGain ? target : this.limitGain + (target - this.limitGain) * (1 - Math.exp(-1 / (.08 * sr)));
@@ -200,22 +266,39 @@
           this.lastOutput[0] = a; this.lastOutput[1] = b;
           left[f] = a; right[f] = b; peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
-        this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
+        this.sampleClock += n;
+        this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
         return this.meters;
       }
     }
 
     class Recorder {
       constructor(sampleRate, onChunk, onLimit) { this.sampleRate = sampleRate; this.onChunk = onChunk; this.onLimit = onLimit; this.active = false; this.frames = 0; this.tracks = []; }
-      start(id, tracks, startBeat, maxFrames) {
+      start(id, tracks, startBeat, maxFrames, schedule = {}) {
         this.id = id; this.tracks = tracks.slice(); this.startBeat = startBeat; this.maxFrames = Math.max(1, Math.round(maxFrames)); this.frames = 0; this.used = 0; this.active = true;
+        this.schedule = schedule; this.started = false; this.stage = schedule.countInBeats > 0 ? 'count-in' : schedule.punchEnabled && startBeat < schedule.punchStart ? 'waiting' : 'recording';
         this.buffers = this.tracks.map(() => [new Float32Array(4096), new Float32Array(4096)]);
       }
-      capture(inputs, n) {
+      capture(inputs, n, timing) {
         if (!this.active) return;
-        let at = 0, count = Math.min(n, this.maxFrames - this.frames);
-        while (at < count) {
-          const take = Math.min(count - at, 4096 - this.used);
+        let at = 0;
+        while (at < n && this.active) {
+          const beat = timing?.timelineBeats?.[at] ?? this.startBeat;
+          if (timing?.timelineCountIn?.[at]) { this.stage = 'count-in'; at++; continue; }
+          if (this.schedule.punchEnabled && beat >= this.schedule.punchEnd - 1e-10) { this._limit('punch'); break; }
+          if (timing && this.schedule.requireTransport && !timing.timelinePlaying?.[at]) { at++; continue; }
+          if (this.schedule.punchEnabled && beat < this.schedule.punchStart - 1e-10) { this.stage = 'waiting'; at++; continue; }
+          this.stage = 'recording';
+          if (!this.started) { this.started = true; this.startBeat = this.schedule.punchEnabled ? Math.max(this.schedule.punchStart, beat) : beat; }
+          let take = Math.min(n - at, 4096 - this.used, this.maxFrames - this.frames);
+          if (timing && this.schedule.punchEnabled) {
+            let last = at; while (last < at + take && timing.timelineBeats[last] < this.schedule.punchEnd - 1e-10 && (!this.schedule.requireTransport || timing.timelinePlaying[last])) last++;
+            take = last - at;
+          } else if (timing && this.schedule.requireTransport) {
+            let last = at; while (last < at + take && timing.timelinePlaying[last] && !timing.timelineCountIn[last]) last++;
+            take = last - at;
+          }
+          if (take < 1) { at++; continue; }
           for (let k = 0; k < this.tracks.length; k++) {
             const input = inputs[this.tracks[k]], pair = this.buffers[k];
             for (let f = 0; f < take; f++) {
@@ -225,16 +308,18 @@
           }
           this.used += take; this.frames += take; at += take;
           if (this.used === 4096) this.flush();
+          if (this.frames >= this.maxFrames) this._limit();
         }
-        if (this.frames >= this.maxFrames) { this.flush(); this.active = false; this.onLimit?.({ id: this.id, frames: this.frames, startBeat: this.startBeat }); }
+        if (this.active && this.schedule.punchEnabled && timing?.beat >= this.schedule.punchEnd - 1e-10 && !timing.countInRemaining) this._limit('punch');
       }
+      _limit(reason) { this.flush(); this.active = false; this.stage = 'idle'; this.onLimit?.({ id: this.id, frames: this.frames, startBeat: this.startBeat, reason }); }
       flush() {
         if (!this.used) return;
         for (let k = 0; k < this.tracks.length; k++) this.onChunk({ id: this.id, trackIndex: this.tracks[k], startBeat: this.startBeat, left: this.buffers[k][0].slice(0, this.used), right: this.buffers[k][1].slice(0, this.used) });
         this.used = 0;
       }
-      stop() { this.flush(); this.active = false; return { id: this.id, frames: this.frames, startBeat: this.startBeat }; }
-      cancel() { this.active = false; this.frames = 0; this.used = 0; this.buffers = []; }
+      stop() { this.flush(); this.active = false; this.stage = 'idle'; return { id: this.id, frames: this.frames, startBeat: this.startBeat }; }
+      cancel() { this.active = false; this.stage = 'idle'; this.frames = 0; this.used = 0; this.buffers = []; }
     }
     return { Core, Recorder };
   }
@@ -250,6 +335,7 @@
       tracks: Array.from({ length: 8 }, (_, index) => {
         const track = state.tracks?.[index] || {};
         return { id: track.id, level: track.level, pan: track.pan, mute: track.mute, solo: track.solo, instrumentLive: track.instrumentLive,
+          automation: (track.automation || []).map(lane => ({ target: lane.target, effectType: lane.effectType, enabled: lane.enabled, interpolation: lane.interpolation, points: (lane.points || []).map(p => ({ beat: p.beat, value: p.value })) })),
           effects: Array.from({ length: 4 }, (_, slot) => { const effect = track.effects?.[slot]; return effect ? { type: effect.type, bypass: effect.bypass, params: { ...effect.params } } : null; }),
           clips: (track.clips || []).map(clip => ({ assetId: clip.assetId, start: clip.start, length: clip.length, sourceStart: clip.sourceStart, sourceEnd: clip.sourceEnd,
             sourceOffset: clip.sourceOffset, rate: clip.rate, reverse: clip.reverse, loop: clip.loop, gain: clip.gain, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut })) };
@@ -275,6 +361,7 @@
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
       this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null;
+      this._recordStage = 'idle'; this._recordTransportStarted = false;
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
     async init() {
@@ -290,7 +377,48 @@
         if (this.context.audioWorklet && window.AudioWorkletNode) {
           let url;
           try {
-            const source = `const createEffects=${window.createLoomEffectsDSP.toString()};const createEngine=${createLoomEngineDSP.toString()};const DSP=createEngine(createEffects);class LoomProcessor extends AudioWorkletProcessor{constructor(options){super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:'limit',...m}));this.port.onmessage=e=>{const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;if(m.type==='state')this.core.setState(m.state);else if(m.type==='assets')this.core.setAssets(m.assets);else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);else if(m.type==='play')this.core.start(m.beat);else if(m.type==='stop')this.core.stop();else if(m.type==='seek')this.core.seek(m.beat);else if(m.type==='recordHold')this.core.setRecordingHold(m.value);else if(m.type==='audition')this.core.resumeAudition(m.track);else if(m.type==='clearAudition')this.core.clearAudition(m.track);else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}else if(m.type==='recordStart'){this.recorder.start(m.id,m.tracks,this.core.beat,m.maxFrames);this.port.postMessage({type:'recordStarted',id:m.id,startBeat:this.core.beat});}else if(m.type==='recordStop'){const meta=this.recorder.stop();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}else if(m.type==='recordCancel')this.recorder.cancel();else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}};}process(inputs,outputs){const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;this.recorder.capture(inputs,n);this.core.processBlock(out[0],out[1]||out[0],inputs);if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,meters:this.core.getMeters()});}else if(!this.core.ended)this.endedSent=false;if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active});return true;}}registerProcessor('loom-eight-track',LoomProcessor);`;
+            const source = `
+              const createEffects=${window.createLoomEffectsDSP.toString()};
+              const createEngine=${createLoomEngineDSP.toString()};
+              const DSP=createEngine(createEffects);
+              class LoomProcessor extends AudioWorkletProcessor {
+                constructor(options) {
+                  super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
+                  this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:'limit',...m}));
+                  this.port.onmessage=e=>{
+                    const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
+                    if(m.type==='state')this.core.setState(m.state);
+                    else if(m.type==='assets')this.core.setAssets(m.assets);
+                    else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);
+                    else if(m.type==='play')this.core.start(m.beat);
+                    else if(m.type==='stop')this.core.stop();
+                    else if(m.type==='seek')this.core.seek(m.beat);
+                    else if(m.type==='recordHold')this.core.setRecordingHold(m.value);
+                    else if(m.type==='audition')this.core.resumeAudition(m.track);
+                    else if(m.type==='clearAudition')this.core.clearAudition(m.track);
+                    else if(m.type==='panic'){this.core.panic();this.recorder.cancel();}
+                    else if(m.type==='recordStart'){
+                      this.core.beginRecording(m.schedule);
+                      this.recorder.start(m.id,m.tracks,this.core.beat,m.maxFrames,m.schedule);
+                      this.port.postMessage({type:'recordStarted',id:m.id,startBeat:this.core.beat});
+                    }
+                    else if(m.type==='recordStop'){const meta=this.recorder.stop();this.core.endRecording();this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}
+                    else if(m.type==='recordCancel'){this.recorder.cancel();this.core.endRecording();}
+                    else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}
+                  };
+                }
+                process(inputs,outputs) {
+                  const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;
+                  this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
+                  this.recorder.capture(inputs,n,this.core);
+                  if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,meters:this.core.getMeters()});}
+                  else if(!this.core.ended)this.endedSent=false;
+                  if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active,recordStage:this.recorder.stage});
+                  return true;
+                }
+              }
+              registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
             this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 8, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch } });
             this.node.port.onmessage = e => this._message(e.data);
@@ -308,8 +436,11 @@
           this.merger.connect(this.node);
           this.node.onaudioprocess = e => {
             const inputs = Array.from({ length: 8 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
-            this.recorder.capture(inputs, e.outputBuffer.length);
-            this._acceptMeters(this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs), this._transportEpoch);
+            const meters = this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
+            this.recorder.capture(inputs, e.outputBuffer.length, this.core);
+            this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
+            this._acceptMeters(meters, this._transportEpoch);
           };
           this.mode = 'fallback';
         }
@@ -321,7 +452,7 @@
     }
     getTrackInput(id) { if (!this.inputs.length) throw Error('Initialize LOOM audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
-      if (['play', 'stop', 'seek', 'panic'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
+      if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (this.mode === 'worklet') { this.node.port.postMessage(m); return; }
       if (!this.core) return;
       if (m.type === 'state') this.core.setState(m.state);
@@ -334,16 +465,17 @@
       else if (m.type === 'audition') this.core.resumeAudition(m.track);
       else if (m.type === 'clearAudition') this.core.clearAudition(m.track);
       else if (m.type === 'panic') { this.core.panic(); this.recorder.cancel(); }
-      else if (m.type === 'recordStart') { this.recorder.start(m.id, m.tracks, this.core.beat, m.maxFrames); this._message({ type: 'recordStarted', id: m.id, startBeat: this.core.beat }); }
-      else if (m.type === 'recordStop') this._message({ type: 'recordStopped', ...this.recorder.stop(), stopId: m.stopId });
-      else if (m.type === 'recordCancel') this.recorder.cancel();
+      else if (m.type === 'recordStart') { this.core.beginRecording(m.schedule); this.recorder.start(m.id, m.tracks, this.core.beat, m.maxFrames, m.schedule); this._message({ type: 'recordStarted', id: m.id, startBeat: this.core.beat }); }
+      else if (m.type === 'recordStop') { const meta = this.recorder.stop(); this.core.endRecording(); this._message({ type: 'recordStopped', ...meta, stopId: m.stopId }); }
+      else if (m.type === 'recordCancel') { this.recorder.cancel(); this.core.endRecording(); }
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
     }
     _message(m) {
-      if ((m.type === 'meters' || m.type === 'transportEnded') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch); if (this.isRecording && m.recordId === this._recordId) this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); }
+      if ((m.type === 'meters' || m.type === 'transportEnded') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch); if (this.isRecording && m.recordId === this._recordId) { this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); this._recordStage = m.recordStage || this._recordStage; } }
       else if (m.type === 'chunk' && m.id === this._recordId) { if (!this._chunks.has(m.trackIndex)) this._chunks.set(m.trackIndex, []); this._chunks.get(m.trackIndex).push({ left: m.left, right: m.right }); this._recordStartBeat = m.startBeat; }
       else if (m.type === 'recordStarted' && m.id === this._recordId) this._recordStartBeat = m.startBeat;
-      else if (m.type === 'limit' && m.id === this._recordId) { this.isRecording = false; this._recordFrames = m.frames; this._recordStartBeat = m.startBeat; this._releaseMic(); const info = { reason: this._recordCapReason, seconds: m.frames / this.context.sampleRate, frames: m.frames, trackIds: [...this._chunks.keys()].map(i => this.state.tracks[i].id) }; this.onRecordingLimit?.(info); this.onStatus?.({ type: 'recording-limit', ...info }); }
+      else if (m.type === 'countInEnd' && m.id === this._recordId && this.isRecording) this._recordTransportStart();
+      else if (m.type === 'limit' && m.id === this._recordId) { this.isRecording = false; this._recordStage = 'idle'; this._recordFrames = m.frames; this._recordStartBeat = m.startBeat; this._releaseMic(); const info = { reason: m.reason || this._recordCapReason, seconds: m.frames / this.context.sampleRate, frames: m.frames, trackIds: [...this._chunks.keys()].map(i => this.state.tracks[i].id) }; this.onRecordingLimit?.(info); this.onStatus?.({ type: 'recording-limit', ...info }); }
       else if (m.type === 'recordStopped' && this._recordStop?.id === m.stopId) { this._recordFrames = m.frames || 0; this._recordStartBeat = Number.isFinite(m.startBeat) ? m.startBeat : this._recordStartBeat; this._recordStop.resolve(); this._recordStop = null; }
       else if (m.type === 'gateAck') { this._gates.get(m.id)?.(); this._gates.delete(m.id); }
     }
@@ -384,7 +516,13 @@
       this.generation++; this._panicLatched = true; this._playRequest++; this.cancelRecording(); this._send({ type: 'panic' }); this._meters = silenceMeters(this._meters.beat);
       for (const resolve of this._gates.values()) resolve(); this._gates.clear();
     }
-    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordingPending: this.recordingBusy && !this.isRecording, recordSeconds: this.context ? frames / this.context.sampleRate : 0 }; }
+    getMeters() { const frames = this.mode === 'fallback' && (this.isRecording || this._chunks.size) ? this.recorder?.frames || 0 : this._recordFrames; return { ...this._meters, mode: this.mode, recording: this.isRecording, recordingPending: this.recordingBusy && !this.isRecording, recordStage: this.isRecording ? this._recordStage : 'idle', countInBeatsRemaining: this.isRecording ? this._meters.countInBeatsRemaining || 0 : 0, recordSeconds: this.context ? frames / this.context.sampleRate : 0 }; }
+    _recordTransportStart() {
+      if (this._recordTransportStarted || !this.isRecording) return;
+      this._recordTransportStarted = true;
+      this._recordStage = this._recordSchedule.punchEnabled && this._recordTimelineStartBeat < this._recordSchedule.punchStart ? 'waiting' : 'recording';
+      this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
+    }
     async startRecording(trackIds, options = {}) {
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
       this._recordPreparing = true; this._updateRecordHold();
@@ -392,14 +530,23 @@
         const generation = this.generation, request = ++this._recordRequest; await this.init(); if (generation !== this.generation || request !== this._recordRequest) return false;
         const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._trackIndex(id)))]; if (!tracks.length) throw Error('Arm a track before recording.');
         await this.context.resume(); if (generation !== this.generation || request !== this._recordRequest) return false;
+        const settings = { ...this.state.recording, ...options }, countInBars = !this._meters.playing && settings.startTransport !== false && [0, 1, 2].includes(settings.countInBars) ? settings.countInBars : 0;
+        const punchEnabled = settings.punchEnabled === true, punchStart = this._clampBeat(settings.punchStart), punchEnd = this._clampBeat(settings.punchEnd);
+        if (punchEnabled && (punchEnd - punchStart < .25 - 1e-8 || this._meters.beat >= punchEnd - 1e-10 || settings.startTransport === false)) throw Error('Set a punch range ahead of the playhead before recording.');
+        const schedule = { countInBeats: countInBars * 4, punchEnabled, punchStart, punchEnd, startTransport: settings.startTransport !== false, requireTransport: settings.startTransport !== false };
         const maxSeconds = Math.min(120, Math.max(.01, Number(options.maxSeconds) || 120));
         const budget = Math.min(64 * 1024 * 1024, options.budgetBytes == null ? 32 * 1024 * 1024 : Math.max(0, Number(options.budgetBytes) || 0));
         const durationFrames = Math.floor(this.context.sampleRate * maxSeconds), budgetFrames = Math.floor(budget / (tracks.length * 4)), maxFrames = Math.min(durationFrames, budgetFrames);
         if (maxFrames < 1) throw Error('The project audio budget is full. Remove unused audio before recording.');
         this._recordCapReason = budgetFrames < durationFrames ? 'budget' : 'duration';
         this._chunks = new Map(tracks.map(t => [t, []])); this._recordFrames = 0; this._recordStartBeat = this._meters.beat; this._recordId++; this.isRecording = true;
-        if (options.startTransport !== false && !this._meters.playing) { this._meters.playing = true; this._meters.ended = false; this._send({ type: 'play', beat: this._meters.beat }); }
-        this._panicLatched = false; this._send({ type: 'audition' }); this._send({ type: 'recordStart', id: this._recordId, tracks, maxFrames }); this.onStatus?.({ type: 'recording-started', trackIds: tracks.map(i => this.state.tracks[i].id) }); return true;
+        this._recordTimelineStartBeat = this._meters.beat; this._recordSchedule = schedule; this._recordTrackIds = tracks.map(i => this.state.tracks[i].id); this._recordTransportStarted = false;
+        this._recordStage = countInBars ? 'count-in' : punchEnabled && this._meters.beat < punchStart ? 'waiting' : 'recording';
+        this._meters.countInBeatsRemaining = countInBars * 4;
+        if (schedule.startTransport) { this._meters.playing = true; this._meters.ended = false; }
+        this._panicLatched = false; this._send({ type: 'audition' }); this._send({ type: 'recordStart', id: this._recordId, tracks, maxFrames, schedule });
+        if (!countInBars) this._recordTransportStart();
+        this.onStatus?.({ type: 'recording-started', trackIds: this._recordTrackIds.slice(), countInBars, punchEnabled }); return true;
       } finally { this._recordPreparing = false; this._updateRecordHold(); }
     }
     stopRecording() {
@@ -407,7 +554,7 @@
       this._stopPromise = this._finishRecording().finally(() => { this._stopPromise = null; this._updateRecordHold(); }); return this._stopPromise;
     }
     async _finishRecording() {
-      const generation = this.generation; this._recordRequest++; this.isRecording = false;
+      const generation = this.generation; this._recordRequest++; this.isRecording = false; this._recordStage = 'idle'; this._meters.countInBeatsRemaining = 0;
       if (!this.node || !this._chunks.size) { this._releaseMic(); return []; }
       await new Promise(resolve => { const id = ++this._recordStopId; this._recordStop = { id, resolve }; this._send({ type: 'recordStop', stopId: id }); });
       this._releaseMic(); if (generation !== this.generation) return [];
@@ -421,7 +568,7 @@
       this._chunks.clear(); this._recordFrames = 0; this.onStatus?.({ type: 'recording-stopped', takes: result.length }); return result;
     }
     cancelRecording() {
-      this._recordRequest++; this._recordId++; this.isRecording = false; this._chunks.clear(); this._recordFrames = 0; this._send({ type: 'recordCancel' }); this._releaseMic();
+      this._recordRequest++; this._recordId++; this.isRecording = false; this._recordStage = 'idle'; this._meters.countInBeatsRemaining = 0; this._chunks.clear(); this._recordFrames = 0; this._send({ type: 'recordCancel' }); this._releaseMic();
       if (this._recordStop) { this._recordStop.resolve(); this._recordStop = null; }
       this._updateRecordHold();
     }

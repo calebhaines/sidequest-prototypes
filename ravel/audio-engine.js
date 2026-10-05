@@ -146,5 +146,6 @@ function buildRavelDSP() {
 
   }
   function boundInt(x,a,b){return Math.round(Math.min(b,Math.max(a,Number(x)||a)));}
+  RavelAudio.encodePCM=encodePCM;
   window.RavelAudio=RavelAudio;
 })();

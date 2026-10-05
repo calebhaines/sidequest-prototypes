@@ -33,6 +33,10 @@ Microphone capture is optional and requires browser permission; browser support
 for a local HTML file may differ from the hosted version. Panic releases live
 microphone tracks and discards an unfinished sample capture.
 
+LOOM can send an edited arrangement clip directly into the sample source.
+Receiving audio creates sixteen even slices while preserving patterns and effects.
+Replacement is explicit, and the received sample is included in Undo and projects.
+
 ## Source and build
 
 `app.html`, `styles.css` and `app.js` define the interface. `schema.js` bounds

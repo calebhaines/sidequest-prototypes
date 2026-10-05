@@ -1,9 +1,9 @@
 /* LOOM projects. Eight rooms, with rather firm walls. */
 (() => {
   'use strict';
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const COLORS = ['#edab7c', '#b6c995', '#b8a7e0', '#87bfcc', '#dfb0c4', '#ceb581', '#96bdac', '#a5b5de'];
-  const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel'];
   const number = (v, lo, hi, d) => typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d;
   const integer = (v, lo, hi, d) => Math.round(number(v, lo, hi, d));
@@ -22,10 +22,46 @@
   }
   const uid = (prefix = 'clip') => prefix + '-' + (globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 11));
   function track(index) {
-    return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], clips: [] };
+    return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], automation: [], clips: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Eight rooms for a very odd orchestra', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Eight rooms for a very odd orchestra', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+  }
+  function automationTargets(t) {
+    const result = [
+      { target: 'level', label: 'Track volume', min: 0, max: 1.5, step: .01, default: .8, value: number(t?.level, 0, 1.5, .8), unit: '' },
+      { target: 'pan', label: 'Track pan', min: -1, max: 1, step: .01, default: 0, value: number(t?.pan, -1, 1, 0), unit: '' }
+    ];
+    for (let slot = 0; slot < 4; slot++) {
+      const effect = t?.effects?.[slot], definition = (window.LoomEffectsCatalog || []).find(e => e.id === effect?.type);
+      if (!definition) continue;
+      for (const p of definition.params) if (p.type === 'range') result.push({ target: 'fx:' + slot + ':' + p.key, label: (slot + 1) + ' · ' + definition.name + ' · ' + p.label, min: p.min, max: p.max, step: p.step, default: p.default, value: number(effect.params?.[p.key], p.min, p.max, p.default), unit: p.unit || '', effectType: definition.id });
+    }
+    return result;
+  }
+  function automationValue(lane, beat, fallback = 0) {
+    if (!lane || lane.enabled === false || !lane.points?.length || !Number.isFinite(beat)) return fallback;
+    const p = lane.points;
+    if (beat <= p[0].beat) return p[0].value;
+    let lo = 0, hi = p.length - 1;
+    while (lo < hi) { const mid = Math.ceil((lo + hi) / 2); if (p[mid].beat <= beat) lo = mid; else hi = mid - 1; }
+    if (lo === p.length - 1 || lane.interpolation === 'hold') return p[lo].value;
+    const a = p[lo], b = p[lo + 1], f = (beat - a.beat) / Math.max(1e-12, b.beat - a.beat);
+    return a.value + (b.value - a.value) * f;
+  }
+  function automation(raw, t, totalBeats) {
+    const descriptors = new Map(automationTargets(t).map(p => [p.target, p])), seen = new Set(), lanes = [];
+    for (const lane of (Array.isArray(raw) ? raw : []).slice(0, LIMITS.automationLanes)) {
+      const d = descriptors.get(lane?.target);
+      if (!d || seen.has(d.target) || (d.effectType && lane.effectType && lane.effectType !== d.effectType)) continue;
+      seen.add(d.target);
+      const unique = new Map();
+      for (const p of (Array.isArray(lane.points) ? lane.points : []).slice(0, LIMITS.automationPoints)) if (plain(p) && Number.isFinite(p.beat) && Number.isFinite(p.value)) { const beat = number(p.beat, 0, totalBeats, 0); unique.set(beat, { beat, value: number(p.value, d.min, d.max, d.default) }); }
+      const normalized = { target: d.target, enabled: bool(lane.enabled, true), interpolation: lane.interpolation === 'hold' ? 'hold' : 'linear', points: [...unique.values()].sort((a, b) => a.beat - b.beat) };
+      if (d.effectType) normalized.effectType = d.effectType;
+      lanes.push(normalized);
+    }
+    return lanes;
   }
   function effect(value, strict = false) {
     if (value == null) return null;
@@ -88,10 +124,15 @@
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
+    s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)) };
+    if (s.recording.punchEnd <= s.recording.punchStart) s.recording.punchEnd = Math.min(totalBeats, s.recording.punchStart + .25);
+    const markerIds = new Set();
+    s.markers = (Array.isArray(raw.markers) ? raw.markers : []).slice(0, LIMITS.markers).filter(plain).map(m => { let id = text(m.id, uid('marker')); if (markerIds.has(id)) id = uid('marker'); markerIds.add(id); return { id, name: text(m.name, 'Section', 60), beat: number(m.beat, 0, totalBeats, 0), color: /^#[0-9a-f]{6}$/i.test(m.color || '') ? m.color : COLORS[0] }; }).sort((a, b) => a.beat - b.beat);
     const clipIds = new Set(); let snapshotBytes = 0;
     for (let i = 0; i < 8; i++) {
       const r = raw.tracks?.[i] || {}, base = track(i);
       const t = { ...base, name: text(r.name, base.name), color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : base.color, level: number(r.level, 0, 1.5, 0.8), pan: number(r.pan, -1, 1, 0), mute: bool(r.mute), solo: bool(r.solo), armed: bool(r.armed), instrumentLive: bool(r.instrumentLive), instrument: instrument(r.instrument), effects: Array.from({ length: 4 }, (_, j) => effect(r.effects?.[j])), clips: [] };
+      t.automation = automation(r.automation, t, totalBeats);
       if (t.instrument?.snapshot) snapshotBytes += JSON.stringify(t.instrument.snapshot).length;
       for (const c of (Array.isArray(r.clips) ? r.clips : []).slice(0, LIMITS.clipsPerTrack)) {
         const asset = assetMap.get(c?.assetId);
@@ -121,6 +162,16 @@
     strictNumbers(s.view, ['zoom', 'snap'], 'The project contains invalid view settings.');
     if (typeof s.master.metronome !== 'boolean' || !['arrange', 'mixer'].includes(s.view.tab) || ![0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(s.view.snap)) throw Error('The project contains invalid options.');
     if(s.view.follow !== undefined && typeof s.view.follow !== 'boolean') throw Error('The project contains an invalid playhead follow setting.');
+    if (s.recording !== undefined) {
+      if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
+      strictNumbers(s.recording, ['punchStart', 'punchEnd'], 'The project contains invalid punch timing.');
+      if (s.recording.punchStart < 0 || s.recording.punchEnd > s.lengthBars * 4 || s.recording.punchEnd - s.recording.punchStart < .25 - 1e-8) throw Error('The project contains an invalid punch range.');
+    }
+    if (s.markers !== undefined) {
+      if (!Array.isArray(s.markers) || s.markers.length > LIMITS.markers) throw Error('The project contains too many section markers.');
+      const markerIds = new Set();
+      for (const m of s.markers) { if (!plain(m) || typeof m.id !== 'string' || !m.id || markerIds.has(m.id) || typeof m.name !== 'string' || !Number.isFinite(m.beat) || m.beat < 0 || m.beat > s.lengthBars * 4 || !/^#[0-9a-f]{6}$/i.test(m.color || '')) throw Error('The project contains an invalid section marker.'); markerIds.add(m.id); }
+    }
     const ids = new Set(), clipIds = new Set();
     for (const a of s.assets) { validateAsset(a); if (ids.has(a.id)) throw Error('Audio asset IDs must be unique.'); ids.add(a.id); }
     for (let i = 0; i < 8; i++) {
@@ -130,6 +181,16 @@
       for (const key of ['mute', 'solo', 'armed', 'instrumentLive']) if (typeof t[key] !== 'boolean') throw Error('A track contains invalid options.');
       instrument(t.instrument);
       t.effects.forEach(e => effect(e, true));
+      if (t.automation !== undefined) {
+        if (!Array.isArray(t.automation) || t.automation.length > LIMITS.automationLanes) throw Error('A track contains too many automation lanes.');
+        const descriptors = new Map(automationTargets(t).map(p => [p.target, p])), targets = new Set();
+        for (const lane of t.automation) {
+          const descriptor = descriptors.get(lane?.target);
+          if (!plain(lane) || !descriptor || targets.has(lane.target) || typeof lane.enabled !== 'boolean' || !['linear', 'hold'].includes(lane.interpolation) || !Array.isArray(lane.points) || lane.points.length > LIMITS.automationPoints || (descriptor.effectType && lane.effectType !== descriptor.effectType)) throw Error('A track contains an invalid automation lane.');
+          targets.add(lane.target);
+          for (const p of lane.points) if (!plain(p) || !Number.isFinite(p.beat) || p.beat < 0 || p.beat > s.lengthBars * 4 || !Number.isFinite(p.value) || p.value < descriptor.min || p.value > descriptor.max) throw Error('An automation point is outside its valid range.');
+        }
+      }
       for (const c of t.clips) {
         if (!plain(c) || typeof c.id !== 'string' || !c.id || clipIds.has(c.id) || typeof c.name !== 'string' || !ids.has(c.assetId)) throw Error('A clip contains an invalid or missing audio reference.');
         clipIds.add(c.id);
@@ -181,5 +242,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, copy, uid, defaultState, demoState, normalize, effect, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset });
 })();

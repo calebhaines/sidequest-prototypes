@@ -42,6 +42,10 @@ and depends on the browser's permissions and support for the current origin.
   loop. Offline mix renders use 48 kHz, 16-bit stereo WAV. They do not include
   live microphone input or unfinished recordings.
 
+LOOM can send an edited arrangement clip directly into a chosen deck.
+Receiving audio preserves the other decks and current instrument/effect controls.
+Replacement is explicit, and the received tape is included in Undo and projects.
+
 ## Source and build
 
 `app.html`, `styles.css` and `app.js` define the interface and editing workflow.

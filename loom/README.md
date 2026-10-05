@@ -51,6 +51,52 @@ the session boundaries, Alt + Left/Right steps by bars, and Shift + Space restar
 G opens Go To, [ and ] jump to loop edges, F toggles Follow, L toggles looping, and
 Shift + L loops the selected clip. Inputs and dialogs keep their normal keys.
 
+## Automation and sections
+
+Each track can automate its level, pan, and numeric insert-effect controls,
+including dry/wet mix. Choose a parameter and add a lane, click to add points,
+and drag them or use the numeric beat/value editor. Linear interpolation draws
+ramps; Hold draws steps. Read enables or disables each lane without deleting it.
+The editor has its own snap, zoom, and Fit controls. Arm Write during playback
+and move the selected track's mixer or effect controls to capture a gesture.
+Write disarms on track changes and Panic. Moving an insert also moves its lanes;
+removing or replacing an insert removes its previous automation.
+
+The playback and export engines evaluate the same automation, including seeks,
+loop wraps, and partial-range renders. Instrument editor parameters are controlled
+inside each app; automation currently covers the LOOM mixer and insert effects.
+Automation and section markers persist in projects, recovery, and Undo/Redo.
+
+Add named, colored section markers at the playhead with + Marker or M. Clicking a
+marker jumps to its position; the pencil edits its name, time, or color. Previous
+and next section buttons help navigate a longer arrangement.
+
+## Recording setup and clip transfers
+
+Count-in adds one or two bars of clicks before a fresh recording starts. The
+timeline holds during the countdown; the clicks and countdown are excluded from
+captured audio. Finishing or cancelling before capture leaves no empty clip.
+When playback is already running, recording starts without another count-in.
+
+Punch in/out captures only its chosen time range. Start playback/recording before
+the punch boundary for pre-roll; the recorder starts at punch-in and automatically
+prints the take at punch-out. Punch makes a single pass, temporarily suspending
+transport looping. Use loop range copies the current loop boundaries. A punch
+range must be ahead of the playhead before recording.
+
+Select a recording to reveal the direct clip actions below the timeline, including
+Delete clip. Right-clicking a clip opens an actions dialog; Undo restores deletion.
+Send to instrument renders just that clip's edits—source trim/offset, speed,
+reverse, repetitions, level, and fades—and sends it into a chosen SPOOL deck or
+RAVEL sample. Track mixer settings and insert effects stay in LOOM. Existing
+receiving audio requires the replacement checkbox. Empty tracks load the chosen
+instrument and replace its starter audio. SPOOL accepts up to 30 seconds per deck;
+RAVEL accepts up to 20 seconds. Shorten longer clips before sending them.
+
+The original clip remains in the arrangement. The receiving instrument keeps its
+other decks, patterns, mixer, and effects. Imported audio is saved in its native
+snapshot, and transfer Undo/Redo restores the previous instrument audio.
+
 ## Eight effects
 
 | Effect | Processing |
@@ -87,13 +133,17 @@ buffers, discards unfinished takes, and releases microphone tracks.
 ## Hosting and source
 
 [HOSTING.md](HOSTING.md) documents the MusicLabHost v1 bridge for future apps.
-Existing app builds remain unchanged. Their live AudioContexts share LOOM’s
+Hosted apps keep their original interfaces. Their live AudioContexts share LOOM’s
 clock and route into their assigned track; offline app renderers keep their own
 OfflineAudioContexts. App storage is isolated from standalone saved projects.
 
 Run `python3 loom/build.py` from the repository root to build `loom/index.html`
 and `music/loom/LOOM-source.zip`. Run `npm run music:sync` to refresh the copies in
 `public/music/` and `docs/music/`. GitHub Pages publishes `docs/`.
+
+Run `npm run check:loom` for the dependency-free Node engine checks. These verify
+project compatibility, automation in playback and export, and sample-exact
+count-in/punch recording. From an extracted archive, run `node checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes the eight original standalone instrument pages in
@@ -102,4 +152,4 @@ source projects are available from Music Lab.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.1.0.
+font license notices. Version 1.2.0.

@@ -120,7 +120,32 @@
     capabilities(trackId) {
       const record = this.records.get(trackId); if (!record?.loaded) return { ready: false };
       const { bridge, app } = this._parts(record), adapter = bridge?.adapter;
-      return { ready: true, transport: !!(adapter?.start || app), state: !!(adapter?.getState || app?.getState || bridge), tempo: !!(adapter?.tempo || app), custom: !record.definition };
+      const importer = adapter?.importAudio ? adapter : app?.importAudio ? app : null;
+      return { ready: true, transport: !!(adapter?.start || app), state: !!(adapter?.getState || app?.getState || bridge), tempo: !!(adapter?.tempo || app), custom: !record.definition,
+        importAudio: !!importer, audioImport: importer?.audioImport ? clone(importer.audioImport) : null };
+    }
+    async importAudio(trackId, audio, options = {}) {
+      const record = this.records.get(trackId);
+      if (!record) throw new Error('Load an instrument on the destination track first.');
+      await record.ready;
+      if (!this._current(record)) throw cancelledError();
+      if (record.importing) throw new Error('An audio transfer is already in progress on this track.');
+      const { bridge, app } = this._parts(record);
+      const importer = bridge.adapter?.importAudio ? bridge.adapter : app?.importAudio ? app : null;
+      if (!importer) throw new Error('This instrument does not accept audio transfers.');
+      const sampleRate = Number(audio?.sampleRate), pcm = audio?.pcm;
+      if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000 || Object.prototype.toString.call(pcm) !== '[object Float32Array]' || pcm.length < 4 || pcm.length % 2) throw new TypeError('Provide interleaved stereo Float32 audio and a valid sample rate.');
+      const maxSeconds = Math.min(120, Number(importer.audioImport?.maxSeconds) || 120);
+      if (pcm.length / 2 / sampleRate > maxSeconds) throw new Error('This instrument accepts audio up to ' + maxSeconds + ' seconds. Shorten the clip before sending it.');
+      for (let i = 0; i < pcm.length; i++) if (!Number.isFinite(pcm[i])) throw new TypeError('Audio transfers must contain finite samples.');
+      const payload = { pcm: new Float32Array(pcm), sampleRate, name: typeof audio.name === 'string' ? audio.name : 'LOOM clip', options: clone(options) || {} };
+      record.importing = true;
+      try {
+        const result = bridge.adapter?.importAudio ? await bridge.command('importAudio', payload) : await app.importAudio(payload);
+        if (!this._current(record)) throw cancelledError();
+        this._notify(record, 'change', null);
+        return result === undefined ? true : result;
+      } finally { record.importing = false; }
     }
     async command(trackId, command, payload) {
       const record = this.records.get(trackId); if (!record) return false;
