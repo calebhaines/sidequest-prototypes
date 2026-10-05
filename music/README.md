@@ -13,6 +13,15 @@ studio. The listening page includes a browser player and the unchanged stereo
 48 kHz / 16-bit WAV master. Its source page and recording live in `music/listen/`;
 `npm run music:sync` copies them into the published site.
 
+Three-minute industrial session: https://calebhaines.github.io/sidequest-prototypes/music/listen/the-walk-in-doesnt-sleep/
+
+**The Walk-In Doesn’t Sleep** uses GALLEY 1.7's native mixer, automation and WAV
+exporter, with eight tracks and seven Kitchen instruments. BROILER shapes both
+the ROUX bass and SKEWER string parts. The song has a 128 BPM pulse, arranged on
+a 64 BPM half-time clock across 48 studio bars for exactly three minutes. Its
+listening page includes the stereo 48 kHz / 16-bit WAV and a portable project ZIP
+with every source sample embedded and the editable instrument patches.
+
 SIZZLE: https://calebhaines.github.io/sidequest-prototypes/music/grain/
 
 HOTPLATE: https://calebhaines.github.io/sidequest-prototypes/music/form/
