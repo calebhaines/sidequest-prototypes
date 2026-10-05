@@ -1,6 +1,6 @@
 # Music Lab
 
-A dedicated, self-contained landing page for Caleb Haines's eight music instruments and LOOM browser studio.
+A dedicated, self-contained landing page for eight music instruments and the LOOM browser studio.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
