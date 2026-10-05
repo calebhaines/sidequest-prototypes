@@ -1,0 +1,224 @@
+/* Existing and future Music Lab instruments, hosted with their real interfaces and engines. */
+(function (global) {
+  'use strict';
+  const manifest = Object.freeze([
+    { id: 'grain', name: 'GRAIN', description: 'Noise drum machine', facade: 'GrainApp', storageKey: 'grain-drum-machine-v2', color: '#c6c493' },
+    { id: 'form', name: 'FORM', description: 'Layered percussion laboratory', facade: 'FormApp', storageKey: 'form-studio-v2', color: '#ed6847' },
+    { id: 'tine', name: 'TINE', description: 'Physical modeling drum machine', facade: 'TineApp', storageKey: 'tine-drum-machine-v1', color: '#efab8e' },
+    { id: 'mire', name: 'MIRE', description: 'Feedback network instrument', facade: 'MireApp', storageKey: 'mire-project-v1', color: '#adc18b' },
+    { id: 'spool', name: 'SPOOL', description: 'Four-deck tape instrument', facade: 'SpoolApp', storageKey: 'spool-project-v1', color: '#dfb66f' },
+    { id: 'haze', name: 'HAZE', description: 'Spectral sound painter', facade: 'HazeApp', storageKey: 'haze-project-v1', color: '#b7a5e7' },
+    { id: 'bower', name: 'BOWER', description: 'Generative string garden', facade: 'BowerApp', storageKey: 'musiclab-bower-score-v1', color: '#c2d49b' },
+    { id: 'ravel', name: 'RAVEL', description: 'Stereo sample slicer', facade: 'RavelApp', storageKey: 'ravel-project-v1', color: '#ed9588' }
+  ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
+  const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
+  const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+  const cancelledError = () => new DOMException('This instrument operation was cancelled.', 'AbortError');
+
+  function instrumentHTML(html, key, baseURL, id) {
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    document.querySelectorAll('base,meta[http-equiv="Content-Security-Policy"],meta[http-equiv="refresh"]').forEach(node => node.remove());
+    const base = document.createElement('base'); base.href = baseURL; document.head.prepend(base);
+    const bridge = document.createElement('script'); bridge.textContent = global.LoomHostBridge.source(key); base.after(bridge);
+    if (id === 'form') {
+      // FORM's React reducer is exposed only in this hosted copy. The standalone bundle is untouched.
+      let integrated = false;
+      document.querySelectorAll('script[type="module"]').forEach(script => {
+        const signature = 'We.current={project:f,masterVolume:Te,solo:ae};';
+        if (!script.textContent.includes(signature)) return;
+        const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid FORM project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
+        script.textContent = script.textContent.replace(signature, signature + expose); integrated = true;
+      });
+      if (!integrated) throw new Error('This FORM version needs an updated host adapter.');
+    }
+    return '<!doctype html>\n' + document.documentElement.outerHTML;
+  }
+
+  class LoomInstrumentHost {
+    constructor({ context, getTrackInput, onStatus, onStateChange, baseURL, embedded } = {}) {
+      if (typeof getTrackInput !== 'function') throw new TypeError('Provide getTrackInput(trackId).');
+      this.context = context; this.getTrackInput = getTrackInput; this.onStatus = onStatus || (() => {}); this.onStateChange = onStateChange || (() => {});
+      this.baseURL = baseURL || new URL('../', document.baseURI).href;
+      this.embedded = embedded || global.LoomEmbeddedInstruments || {};
+      this.records = new Map(); this.generation = 0; this.tempo = 120; this.disposed = false;
+      global.__LoomHostRegistry ||= Object.create(null);
+    }
+    get manifest() { return manifest; }
+    _context() { return typeof this.context === 'function' ? this.context() : this.context; }
+    _current(record) { return record.active && this.records.get(record.trackId) === record && !this.disposed; }
+    _notify(record, type, value) {
+      if (!this._current(record)) return;
+      if (type === 'change') {
+        clearTimeout(record.changeTimer); record.changeTimer = setTimeout(() => { if (this._current(record)) this.onStateChange(record.trackId); }, 300);
+      } else if (type === 'error') this.onStatus(record.trackId, value, 'error');
+      else if (type === 'status') this.onStatus(record.trackId, value, 'info');
+    }
+    async load(trackId, descriptor, iframe) {
+      if (this.disposed) throw new Error('This instrument host has been disposed.');
+      if (!(iframe instanceof HTMLIFrameElement)) throw new TypeError('Provide an instrument iframe.');
+      this.unload(trackId);
+      const definition = manifest.find(item => item.id === descriptor?.id);
+      const id = definition?.id || descriptor?.id || 'custom';
+      const supplied = descriptor?.snapshot || descriptor?.state;
+      const snapshot = supplied?.format === 'loom-instrument-state' ? supplied : null;
+      if (snapshot && snapshot.app !== id) throw new Error('This saved instrument state belongs to another app.');
+      const state = snapshot ? snapshot.state : supplied;
+      const storage = Object.assign(Object.create(null), snapshot?.storage || {});
+      if (state && definition?.storageKey) {
+        const primed = id === 'form' ? state.project || state : state;
+        storage[definition.storageKey] = JSON.stringify(primed);
+      }
+      const key = 'loom-' + Date.now().toString(36) + '-' + (++this.generation) + '-' + Math.random().toString(36).slice(2);
+      const record = { key, trackId, id, definition, iframe, descriptor: { ...descriptor }, storage, active: true, loaded: false, soundEnabled: false, tempo: this.tempo, abortController: new AbortController(), operation: 0 };
+      record.getContext = () => { if (!this._current(record)) throw cancelledError(); return this._context(); };
+      record.getInput = () => { if (!this._current(record)) throw cancelledError(); return this.getTrackInput(trackId); };
+      record.notify = (type, value) => this._notify(record, type, value);
+      this.records.set(trackId, record); global.__LoomHostRegistry[key] = record;
+      const ready = this._load(record, descriptor || {}, state);
+      record.ready = ready; ready.catch(() => {}); return ready;
+    }
+    async _load(record, descriptor, state) {
+      const { id, iframe, definition } = record;
+      this.onStatus(record.trackId, 'Opening ' + (definition?.name || descriptor.name || 'instrument') + '…', 'loading');
+      try {
+        let html = descriptor.html || this.embedded[id];
+        let baseURL = new URL(id + '/index.html', this.baseURL).href;
+        if (!html) {
+          const url = new URL(descriptor.url || definition?.url || '', descriptor.url ? document.baseURI : new URL('loom/', this.baseURL));
+          if (!['http:', 'https:'].includes(url.protocol) || url.origin !== location.origin) throw new Error('Use a same-site instrument URL or upload a self-contained HTML file.');
+          baseURL = url.href;
+          const response = await fetch(url.href, { signal: record.abortController.signal });
+          if (!response.ok) throw new Error('The instrument page could not be loaded (' + response.status + ').');
+          html = await response.text();
+        }
+        if (typeof html !== 'string' || !html.trim() || html.length > 32 * 1024 * 1024) throw new Error('Choose an instrument HTML file smaller than 32 MB.');
+        if (!this._current(record)) throw cancelledError();
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads allow-modals');
+        iframe.setAttribute('allow', 'autoplay; microphone');
+        iframe.setAttribute('title', (definition?.name || descriptor.name || 'Custom instrument') + ' instrument editor');
+        iframe.srcdoc = instrumentHTML(html, record.key, baseURL, id);
+        const deadline = performance.now() + 15000;
+        while (performance.now() < deadline) {
+          if (!this._current(record)) throw cancelledError();
+          const child = iframe.contentWindow;
+          if (child?.__LoomBridge && (child.__LoomBridge.adapter || (definition && child[definition.facade]) || (!definition && child.document.readyState === 'complete'))) break;
+          await delay(35);
+        }
+        if (!this._current(record)) throw cancelledError();
+        if (!iframe.contentWindow?.__LoomBridge || (definition && !iframe.contentWindow[definition.facade] && !iframe.contentWindow.__LoomBridge.adapter)) throw new Error('The instrument did not become ready.');
+        record.loaded = true;
+        if (state) await this._restore(record, state);
+        await this._tempo(record, this.tempo);
+        this.onStatus(record.trackId, (definition?.name || descriptor.name || 'Instrument') + ' ready', 'ready');
+        return { id, name: definition?.name || descriptor.name || 'Custom instrument', ready: true, capabilities: this.capabilities(record.trackId) };
+      } catch (error) {
+        if (this._current(record)) { this.onStatus(record.trackId, error.message || 'Instrument could not open.', 'error'); this.unload(record.trackId); }
+        throw error;
+      }
+    }
+    _parts(record) { const child = record.iframe.contentWindow; return { child, bridge: child?.__LoomBridge, app: record.definition ? child?.[record.definition.facade] : null }; }
+    capabilities(trackId) {
+      const record = this.records.get(trackId); if (!record?.loaded) return { ready: false };
+      const { bridge, app } = this._parts(record), adapter = bridge?.adapter;
+      return { ready: true, transport: !!(adapter?.start || app), state: !!(adapter?.getState || app?.getState || bridge), tempo: !!(adapter?.tempo || app), custom: !record.definition };
+    }
+    async command(trackId, command, payload) {
+      const record = this.records.get(trackId); if (!record) return false;
+      const operation = ++record.operation;
+      if (command !== 'stop' && command !== 'panic') await record.ready;
+      if (!this._current(record) || !record.loaded || operation !== record.operation) return false;
+      const { child, bridge, app } = this._parts(record);
+      if (command === 'tempo') return this._tempo(record, typeof payload === 'number' ? payload : payload?.tempo);
+      if (command === 'prepare') {
+        if (bridge.adapter?.prepare) await bridge.command('prepare', payload);
+        else if (app?.prepare) await app.prepare();
+        else await app?.engine?.init?.();
+        return this._current(record) && operation === record.operation;
+      }
+      if (command === 'panic') { bridge.mute(true); bridge.releaseMedia(); }
+      if (bridge.adapter?.[command] || (command === 'start' && bridge.adapter?.play)) {
+        if (command === 'start') bridge.mute(false);
+        return bridge.command(command === 'start' && !bridge.adapter.start ? 'play' : command, payload);
+      }
+      if (!app) {
+        if (command === 'panic' || command === 'stop') { bridge.mute(true); return true; }
+        this.onStatus(trackId, 'Use this instrument’s editor to play. Add MusicLabHost.registerInstrument for DAW transport control.', 'info'); return false;
+      }
+      const playing = () => { const current = record.definition ? child[record.definition.facade] : app; return typeof current?.isPlaying === 'function' ? current.isPlaying() : !!current?.engine?.isPlaying; };
+      const playButton = child.document.getElementById(record.id === 'bower' || record.id === 'ravel' ? 'playButton' : 'play-button') || child.document.querySelector('.transport-play');
+      if (command === 'start') {
+        bridge.mute(false); if (playing()) return true;
+        if (app.play) await app.play(); else if (playButton) playButton.click(); else await app.engine?.start?.();
+        const deadline = performance.now() + 12000;
+        while (!playing() && performance.now() < deadline && this._current(record) && operation === record.operation) await delay(20);
+        return this._current(record) && operation === record.operation && playing();
+      }
+      if (command === 'stop' || command === 'panic') {
+        if (app.stop) app.stop();
+        else if (playing() && playButton) playButton.click();
+        app.engine?.stop?.();
+        if (command === 'panic') {
+          if (app.panic) app.panic(); else app.engine?.panic?.();
+          if (!app.engine?.panic && !app.panic) { bridge.mute(true); await app.engine?.dispose?.(); }
+        }
+        return true;
+      }
+      throw new Error('Unknown instrument command: ' + command);
+    }
+    async _tempo(record, value) {
+      if (!Number.isFinite(Number(value))) return false;
+      const tempo = Math.max(40, Math.min(240, Number(value))); record.tempo = tempo;
+      const { child, bridge, app } = this._parts(record); bridge?.setTempo(tempo);
+      if (bridge?.adapter?.tempo) { await bridge.command('tempo', tempo); return true; }
+      if (app?.setTempo) { app.setTempo(tempo); await delay(0); return true; }
+      const input = child?.document.getElementById('tempo') || child?.document.querySelector('input[aria-label="Tempo BPM"]');
+      if (!input) return false;
+      const actual = Math.max(Number(input.min) || 40, Math.min(Number(input.max) || 240, tempo));
+      Object.getOwnPropertyDescriptor(child.HTMLInputElement.prototype, 'value').set.call(input, String(actual));
+      input.dispatchEvent(new child.Event('input', { bubbles: true })); input.dispatchEvent(new child.Event('change', { bubbles: true }));
+      return true;
+    }
+    setTempo(value) { this.tempo = Math.max(40, Math.min(240, Number(value) || 120)); return Promise.allSettled([...this.records.values()].filter(record => record.loaded).map(record => this._tempo(record, this.tempo))); }
+    async snapshot(trackId) {
+      const record = this.records.get(trackId); if (!record) return null; await record.ready;
+      if (!this._current(record)) return null;
+      const { bridge, app } = this._parts(record);
+      const state = bridge.adapter?.getState ? await bridge.command('getState') : app?.getProject ? app.getProject() : app?.getState ? app.getState() : null;
+      return { format: 'loom-instrument-state', version: 1, app: record.id, state: clone(state), storage: clone(bridge.storage) };
+    }
+    async restore(trackId, value) {
+      const record = this.records.get(trackId); if (!record) return false; await record.ready;
+      if (!this._current(record)) return false;
+      const envelope = value?.format === 'loom-instrument-state' ? value : null;
+      if (envelope && envelope.app !== record.id) throw new Error('This instrument state belongs to another app.');
+      return this._restore(record, envelope ? envelope.state : value);
+    }
+    async _restore(record, state) {
+      if (state === undefined || state === null) return true;
+      const { child, bridge, app } = this._parts(record);
+      if (bridge.adapter?.setState) { await bridge.command('setState', clone(state)); return true; }
+      if (app?.loadState) { app.loadState(clone(state)); await delay(0); return true; }
+      if (record.id === 'grain' || record.id === 'tine') {
+        const input = child.document.getElementById('project-file');
+        if (!input) throw new Error('The instrument project loader is unavailable.');
+        const transfer = new child.DataTransfer(); transfer.items.add(new child.File([JSON.stringify(state)], record.id + '-host-project.json', { type: 'application/json' }));
+        input.files = transfer.files; input.dispatchEvent(new child.Event('change', { bubbles: true }));
+        await delay(80); if (!this._current(record)) throw cancelledError(); return true;
+      }
+      return false;
+    }
+    unload(trackId) {
+      const record = this.records.get(trackId); if (!record) return;
+      const { bridge, app } = this._parts(record);
+      try { app?.stop?.(); app?.engine?.panic?.(); Promise.resolve(bridge?.adapter?.panic?.()).catch(() => {}); } catch (_) {}
+      record.active = false; record.operation++; record.abortController.abort(); clearTimeout(record.changeTimer);
+      // Closing a child facade only disconnects that child's nodes, never the DAW context.
+      bridge?.dispose().catch(() => {});
+      this.records.delete(trackId); delete global.__LoomHostRegistry[record.key];
+      record.iframe.removeAttribute('src'); record.iframe.srcdoc = '';
+    }
+    dispose() { if (this.disposed) return; [...this.records.keys()].forEach(id => this.unload(id)); this.disposed = true; }
+  }
+  global.LoomInstrumentManifest = manifest;
+  global.LoomInstrumentHost = LoomInstrumentHost;
+})(window);

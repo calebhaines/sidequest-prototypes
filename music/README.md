@@ -1,8 +1,10 @@
 # Music Lab
 
-A dedicated, self-contained landing page for Caleb Haines's music apps.
+A dedicated, self-contained landing page for Caleb Haines's eight music instruments and LOOM browser studio.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
+
+LOOM studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
 GRAIN: https://calebhaines.github.io/sidequest-prototypes/music/grain/
 
@@ -25,6 +27,8 @@ The music page has its own design and navigation, separate from the Sidequest RP
 ## Editing and adding apps
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
+
+LOOM 1.0 is an eight-track browser DAW with audio arrangement, the eight Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the eight instruments for offline use. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
 GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 

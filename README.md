@@ -6,7 +6,9 @@
 
 ## Music Lab
 
-[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features GRAIN, FORM, TINE, MIRE, SPOOL, HAZE, BOWER, and RAVEL.
+[**Open Music Lab**](https://calebhaines.github.io/sidequest-prototypes/music/) for Caleb Haines's music apps. This dedicated page is separate from the Sidequest RPG gallery and features the LOOM studio alongside GRAIN, FORM, TINE, MIRE, SPOOL, HAZE, BOWER, and RAVEL.
+
+[**Open LOOM**](https://calebhaines.github.io/sidequest-prototypes/music/loom/) for an eight-track browser DAW that brings all eight Music Lab instruments inside one studio. Arrange audio clips, import and record sounds, use four effects slots per track and eight native effects, save projects, undo edits, and export stereo WAV. The standalone `loom/index.html` includes all eight instruments for offline use. Add future apps through an HTML file or same-site URL; [`loom/README.md`](loom/README.md) documents the MusicLabHost v1 integration bridge. Editable sources are in [`loom/`](loom/), with a [source ZIP](https://calebhaines.github.io/sidequest-prototypes/music/loom/LOOM-source.zip). Rebuild both with `python loom/build.py`.
 
 [**Play GRAIN**](https://calebhaines.github.io/sidequest-prototypes/music/grain/) on its own page, or open `grain/index.html` locally. Eight voices, twelve noise sources, a sixteen-step sequencer, sound-design controls, and WAV export. No installation or network connection is needed to play the downloaded HTML.
 
