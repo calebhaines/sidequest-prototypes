@@ -14,6 +14,7 @@ const spool = fs.readFileSync(path.join(root, 'spool', 'index.html'));
 const haze = fs.readFileSync(path.join(root, 'haze', 'index.html'));
 const bower = fs.readFileSync(path.join(root, 'bower', 'index.html'));
 const ravel = fs.readFileSync(path.join(root, 'ravel', 'index.html'));
+const fable = fs.readFileSync(path.join(root, 'fable', 'index.html'));
 const loom = fs.readFileSync(path.join(root, 'loom', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
@@ -51,6 +52,7 @@ for (const directory of ['public', 'docs']) {
     ['music/haze/index.html', haze],
     ['music/bower/index.html', bower],
     ['music/ravel/index.html', ravel],
+    ['music/fable/index.html', fable],
     ['music/loom/index.html', loom],
     ['grain/index.html', legacy],
   ]) {

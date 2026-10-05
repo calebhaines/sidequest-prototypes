@@ -11,7 +11,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "music:sync": "node scripts/sync-music.mjs",
     "check:loom": "node loom/checks.cjs",
-    "package": "node scripts/package-downloads.mjs"
+    "package": "node scripts/package-downloads.mjs",
+    "check:fable": "node fable/checks.cjs",
+    "check:fable-audio": "node fable/engine-checks.cjs",
+    "check:fable-zip": "node fable/zip-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

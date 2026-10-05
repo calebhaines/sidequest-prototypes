@@ -1,6 +1,6 @@
 # Music Lab
 
-A dedicated, self-contained landing page for eight music instruments and the LOOM browser studio.
+A dedicated, self-contained landing page for nine music instruments and the LOOM browser studio.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
@@ -22,19 +22,21 @@ BOWER: https://calebhaines.github.io/sidequest-prototypes/music/bower/
 
 RAVEL: https://calebhaines.github.io/sidequest-prototypes/music/ravel/
 
+FABLE: https://calebhaines.github.io/sidequest-prototypes/music/fable/
+
 The music page has its own design and navigation, separate from the Sidequest RPG gallery. All typography and artwork are embedded in `index.html`.
 
 ## Sharing audio
 
 Every instrument and LOOM has a **Samples** panel. In **Send audio**, render a hit, voice, pattern, deck, slice, spectral score, clip, or mix, depending on the app. Save it to the local library, then open **Samples** in another app and select the sound. Preview and trim the audio, choose a receiving destination, and explicitly confirm replacement when needed. Samples stay on this browser and site; WAV or portable Music Lab packets transfer them between devices or standalone HTML files. Downloaded apps include the complete interface and exchange code for offline use.
 
-FORM receives audio into any granular layer (2 seconds), MIRE into any of four source exciters (10 seconds), SPOOL into any deck (30 seconds), and RAVEL into its slicing engine (20 seconds). HAZE analyzes up to 20 seconds into an editable spectral score. LOOM appends up to 120 seconds as a clip on any track. GRAIN, TINE, and BOWER contribute synthesized sounds to the library. See [the exchange contract](../shared/README.md) for future apps and portable packet details.
+FABLE receives up to 120 seconds of stereo audio into a new or existing playable sample zone, with up to 64 zones and a 64 MiB decoded audio budget. FORM receives audio into any granular layer (2 seconds), MIRE into any of four source exciters (10 seconds), SPOOL into any deck (30 seconds), and RAVEL into its slicing engine (20 seconds). HAZE analyzes up to 20 seconds into an editable spectral score. LOOM appends up to 120 seconds as a clip on any track. GRAIN, TINE, and BOWER contribute synthesized sounds to the library. See [the exchange contract](../shared/README.md) for future apps and portable packet details.
 
 ## Editing and adding apps
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
 
-LOOM 1.3 is an eight-track browser DAW with audio arrangement, the eight Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the eight instruments for offline use. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
+LOOM 1.4 is an eight-track browser DAW with audio arrangement, all nine Music Lab instruments inside the studio, four effects slots per track, and eight native effects. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the nine instruments for offline use, including FABLE's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with LOOM. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Music Lab studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
 GRAIN's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
@@ -51,6 +53,8 @@ HAZE 1.0 is a spectral painting instrument. Its thirty-two-column, twenty-four-b
 BOWER 1.0 is a generative string instrument with four waveguide voices, sixteen-step patterns, scales, Euclidean rhythms, probability, and independent loop lengths for polyrhythms. Its editable source is in `bower/`; run `python bower/build.py` to rebuild the standalone page and `music/bower/BOWER-source.zip`. Music Lab opens it at `./bower/` or downloads the same self-contained HTML for offline play.
 
 RAVEL 1.0 is a stereo sample-slicing instrument with sixteen slices, a sixteen-step sequencer, transient auto-slicing, audio import, microphone recording, ratchets, and step editing. Its editable source is in `ravel/`; run `python ravel/build.py` to rebuild the standalone page and `music/ravel/RAVEL-source.zip`. Music Lab opens it at `./ravel/` or downloads the same self-contained HTML for offline play.
+
+FABLE 1.0 is a full polyphonic stereo sampler with 64 sample zones, key and velocity mapping, round-robin groups, choke groups, pitch detection, classic and granular playback, crossfaded forward/ping-pong loops, amplitude and filter envelopes, two LFOs, and eight modulation routes. Play its keyboard or MIDI, use the arpeggiator, or edit four 16/32/64-step patterns. Import shared library sounds or local files, record the microphone, and save portable instruments with their sample audio. Its editable source is in `fable/`; run `python fable/build.py` to rebuild its standalone page and `music/fable/FABLE-source.zip`, then rebuild LOOM to update the bundled instrument. Music Lab opens FABLE at `./fable/` or downloads the same self-contained HTML for offline play.
 
 The instruments include project files, stereo WAV export, and editable source ZIP downloads in their Help panels. Typography, artwork, and audio code are bundled in each standalone HTML file.
 

@@ -11,6 +11,7 @@ APPS = {
     'haze': ('HazeApp', '#b7a5e7', '.masthead nav'),
     'bower': ('BowerApp', '#c2d49b', '.masthead'),
     'ravel': ('RavelApp', '#ed9588', '.topline'),
+    'fable': ('FableApp', '#8bdacb', '.masthead-actions'),
     'loom': ('LoomApp', '#dce89b', '.topline'),
 }
 

@@ -10,8 +10,8 @@ keeps its native behavior for an app’s own exports.
 
 Choose a Music Lab instrument, refresh the hosted Music Lab list, load a
 same-site app URL, or upload a self-contained HTML file. Uploaded HTML travels
-inside saved LOOM projects. Existing GRAIN, FORM, TINE, MIRE, SPOOL, HAZE,
-BOWER, and RAVEL are bundled into LOOM’s standalone download.
+inside saved LOOM projects. GRAIN, FORM, TINE, MIRE, SPOOL, HAZE,
+BOWER, RAVEL, and FABLE are bundled into LOOM’s standalone download.
 
 An ordinary Web Audio app can use `new AudioContext()` and connect nodes to
 `context.destination`. The bridge supplies track routing automatically.
@@ -71,14 +71,17 @@ same deterministic DSP as arrangement playback.
 
 ## Receiving audio from the arrangement
 
-FORM, MIRE, SPOOL, RAVEL, and HAZE accept edited clips directly from LOOM.
+FABLE, FORM, MIRE, SPOOL, RAVEL, and HAZE accept edited clips directly from LOOM.
 The transfer renders the chosen start/end region of the selected clip, including
 trim, source offset, playback rate, reverse, looping, clip gain, and fades. Track
 volume, pan, automation, and insert effects remain on the arrangement.
 
 Choose a receiving track and native destination. Occupied audio or synthesis
-layers require an explicit replacement choice. FORM accepts 2 seconds, MIRE 10,
-SPOOL 30, RAVEL 20, and HAZE 20. FORM and MIRE process mono audio; HAZE analyzes
+layers require an explicit replacement choice. FABLE accepts 120 seconds into
+a new zone (`target: 'new'`) or an existing zone ID, with up to 64 zones and a
+64 MiB decoded audio budget. Its native target list includes occupied zones and
+their sample names. FORM accepts 2 seconds, MIRE 10, SPOOL 30, RAVEL 20, and
+HAZE 20. FORM and MIRE process mono audio; HAZE analyzes
 the original stereo energy into its score. Preserve both input channels and let
 the receiver handle conversion. Imports preserve unrelated app state and Undo.
 Long regions must be trimmed explicitly rather than silently truncated.

@@ -18,6 +18,7 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 
 | App | Maximum selected duration | Destinations | Result |
 | --- | ---: | --- | --- |
+| FABLE | 120 seconds | New sample zone or existing string zone ID | Stereo multisample instrument, up to 64 key/velocity zones |
 | FORM | 2 seconds | 8 voices × 3 layers; string IDs such as `"0:a"` | Mono granular texture at 22,050 Hz; enables the selected layer and its granular sample engine |
 | MIRE | 10 seconds | 4 sources; numeric IDs `0`–`3` | Mono source sample for the resonator network |
 | SPOOL | 30 seconds | 4 decks; numeric IDs `0`–`3` | Stereo tape-deck source |
@@ -25,7 +26,7 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 | HAZE | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
 | LOOM | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
 
-GRAIN, TINE, and BOWER export audio. They do not advertise sample-import destinations. All nine apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. HAZE retains both incoming channels for analysis, including energy in anti-phase stereo material.
+GRAIN, TINE, and BOWER export audio. They do not advertise sample-import destinations. All ten apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. HAZE retains both incoming channels for analysis, including energy in anti-phase stereo material.
 
 ## Storage and limits
 

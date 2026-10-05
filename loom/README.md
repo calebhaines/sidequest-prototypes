@@ -4,7 +4,7 @@ An eight-track browser studio for Music Lab’s very odd orchestra.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all eight existing Music Lab instruments,
+The standalone `index.html` bundles all nine Music Lab instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Music Lab.
@@ -95,6 +95,7 @@ instrument and replace its chosen starter destination.
 
 | Destination | Limit | Interpretation |
 | --- | --- | --- |
+| FABLE | 120 seconds | New or existing stereo sample zone; up to 64 zones |
 | FORM | 2 seconds | One of 24 mono granular layers |
 | MIRE | 10 seconds | One of four mono source exciters |
 | SPOOL | 30 seconds | One of four stereo tape decks |
@@ -165,10 +166,10 @@ count-in/punch recording, and cropped stereo transfers with clip edits and limit
 From an extracted archive, run `node checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes the eight original standalone instrument pages in
+archive includes all nine standalone instrument pages in
 `instruments/`, complete LOOM sources, fonts, and demo audio. Individual app
 source projects are available from Music Lab.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.2.0.
+font license notices. Version 1.4.0.

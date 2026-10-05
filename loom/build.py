@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable']
 SCRIPTS = ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'app.js']
 
 bundled = {}
@@ -55,7 +55,7 @@ html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').rep
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
 html = exchange_helpers['embed_exchange'](html, 'loom', ROOT)
 (ROOT / 'index.html').write_text(html)
-print(f'Built LOOM: {len(html.encode()):,} bytes; all eight original instruments and all assets embedded.')
+print(f'Built LOOM: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Music Lab instruments and all assets embedded.')
 
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
