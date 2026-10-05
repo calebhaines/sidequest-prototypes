@@ -31,6 +31,12 @@ npm run music:sync
 
 The editable sources remain in `tine/`; the standalone app is copied to `public/music/tine/index.html` and `docs/music/tine/index.html`.
 
+Run `npm run check:tine-export` with Playwright installed to exercise the actual
+Export WAV button and the three shared-sample export scopes. The check validates
+stereo WAV audio, the four-bar duration and natural tail, unchanged project state,
+and cancellation. `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` can select an existing
+Playwright/Chromium installation; `TINE_QA_URL` can check the published page.
+
 ## Display identity
 
 The kitchen name is a presentation change. Existing URL routes, JavaScript integration APIs, storage keys, and portable project identifiers remain unchanged so earlier sessions and shared projects still open.

@@ -17,7 +17,8 @@
     "check:fable-zip": "node fable/zip-checks.cjs",
     "check:patterns": "node shared/pattern-checks.cjs",
     "check:patterns-drums": "node shared/pattern-drums-checks.cjs",
-    "check:loom-notes": "node loom/note-checks.cjs"
+    "check:loom-notes": "node loom/note-checks.cjs",
+    "check:tine-export": "node tine/export-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
