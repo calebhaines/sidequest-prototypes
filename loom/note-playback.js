@@ -39,7 +39,7 @@
         const record = this.host.records.get(track.id); if (record) await record.ready;
         if (generation !== this.generation || this.disposed) throw abortError();
         const adapter = this.host.getPatternAdapter(track.id), noteClips = track.clips.filter(clip => clip.type === 'notes');
-        if (noteClips.length && !adapter?.scheduleNote) throw Error(track.name + ' needs a Kilter Kitchen note-compatible instrument.');
+        if (noteClips.length && !adapter?.scheduleNote) throw Error(track.name + ' needs a Kitchen note-compatible instrument.');
         await adapter?.prepare?.();
         if (generation !== this.generation || this.disposed) throw abortError();
         for (const clip of noteClips) this._validateClip(adapter, clip);

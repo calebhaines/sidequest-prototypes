@@ -15,10 +15,10 @@ input[type=range]:disabled{opacity:.42;cursor:default}.round-trigger svg{width:1
 /* Keep canvas layout independent of its backing-store aspect ratio on resize. */
 #garden-canvas{flex:none}.garden-bottom{margin-top:auto}
 
-/* REDUCE / Kilter Kitchen — four-vessel feedback reduction station. */
+/* REDUCE / Kitchen — four-vessel feedback reduction station. */
 :root{--serif:var(--font);--kk-accent:#ff8d45}
 body{background:radial-gradient(ellipse at 76% 0,#ff8d4509,transparent 38%),#151718}
-.masthead{position:relative;border-bottom-color:#565e61}.masthead::after{content:'KK / 004';position:absolute;bottom:-5px;right:0;background:#151718;padding-left:12px;font:8px var(--mono);color:#798487;letter-spacing:2px}
+.masthead{position:relative;border-bottom-color:#565e61}.masthead::after{content:'K / 004';position:absolute;bottom:-5px;right:0;background:#151718;padding-left:12px;font:8px var(--mono);color:#798487;letter-spacing:2px}
 .brand{font-weight:800;letter-spacing:-.8px}.brand-glyph{transform:none}.brand-glyph i{border-radius:3px;height:18px;width:25px;top:2px}.brand-glyph i:last-child{height:5px;top:23px;left:0;background:#ff8d45;opacity:1}.brand-description{font-family:var(--mono);line-height:1.6;color:#afb7b8}
 .hero h1{font-family:var(--kk-heading,var(--font));font-size:clamp(32px,4.7vw,58px);font-weight:750;letter-spacing:-2.4px;line-height:1.05}.hero h1 em{font-style:normal;color:#ff8d45}.hero p{font-family:var(--mono);font-size:10px;line-height:1.6}.eyebrow{color:#b0b8b8}.hero-specimen{width:330px;height:170px;margin-right:0;border-left:1px solid #43494b;padding-left:14px}.hero-specimen>svg.reduction-diagram{width:268px;height:150px;stroke-width:1.2;opacity:.9;color:#ff8d45}.specimen-label{left:13px;top:0;color:#9ca8ab}.specimen-note{right:0;bottom:-9px;color:#c1c8c6;font-size:7px;line-height:1.5}
 .transport,.garden-visual,.node-editor,.source-editor,.lower-grid>div,.master-section,dialog{border-radius:4px;box-shadow:inset 0 1px #ffffff09,0 10px 25px #0002}.transport{border-top:2px solid #7a8487;background:linear-gradient(105deg,#2c3234,#202426 65%)}.play-button{color:#21180f;background:#ff8d45;border-radius:3px}.play-button:hover{background:#ffad73;box-shadow:0 0 18px #ff8d451d}.play-button.playing{background:#d6c05b;color:#201e12}.freeze-button.active{background:#d6c05b18;color:#eadb94;border-color:#d6c05b}

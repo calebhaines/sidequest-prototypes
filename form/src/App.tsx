@@ -358,7 +358,7 @@ function Modal({
       >
         <div className="modal-header">
           <div>
-            <span className="eyebrow">KILTER KITCHEN / HOTPLATE</span>
+            <span className="eyebrow">KITCHEN / HOTPLATE</span>
             <h2>{title}</h2>
             {subtitle && <p>{subtitle}</p>}
           </div>
@@ -1411,7 +1411,7 @@ export default function App() {
           <div>
             <div className="eyebrow">
               <span className="eyebrow-line" />
-              KILTER KITCHEN / UNIT 03
+              KITCHEN / UNIT 03
             </div>
             <h1>
               Apply heat<span className="title-dot">.</span>
@@ -2368,7 +2368,7 @@ export default function App() {
         <footer className="workspace-footer">
           <span>
             Chef requests more transients.<span className="footer-dot">✳</span> HOTPLATE
-            / KILTER KITCHEN
+            / KITCHEN
           </span>
           <div>
             <Volume2 size={13} />

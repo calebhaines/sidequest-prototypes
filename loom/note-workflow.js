@@ -3,6 +3,10 @@
   'use strict';
   const S = window.LoomSchema, P = window.MusicLabPatternSchema;
   const copy = value => S.copy(value);
+  const sourceInstrument = sourceApp => {
+    const id = typeof sourceApp === 'string' ? sourceApp.trim().toLowerCase() : '';
+    return S.BUILT_INS.includes(id) ? id : 'fable';
+  };
   const abortError = () => new DOMException('Source rendering canceled.', 'AbortError');
   const clipSignature = clip => {
     const value = copy(clip), snapshot = value.origin?.instrument?.snapshot;
@@ -71,7 +75,7 @@
       const current = this.getState(), t = current.tracks.find(track => track.id === String(target || current.tracks[current.selectedTrack].id));
       if (!t) throw Error('Choose one of the eight tracks.');
       if (!t.instrument) {
-        const id = S.BUILT_INS.includes(pattern?.sourceApp) ? pattern.sourceApp : 'fable', candidate = copy(current);
+        const id = sourceInstrument(pattern?.sourceApp), candidate = copy(current);
         candidate.tracks[current.tracks.indexOf(t)].instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() };
         this.commit(S.normalize(candidate), { trackIndex: current.tracks.indexOf(t) });
       }
@@ -88,7 +92,7 @@
       const current = this.getState(), candidate = copy(current), index = candidate.tracks.findIndex(t => t.id === String(options.target || current.tracks[current.selectedTrack].id));
       if (index < 0) throw Error('Choose one of the eight tracks.'); const t = candidate.tracks[index];
       if (t.clips.length >= 128) throw Error('This track has reached its 128-clip limit.');
-      if (!t.instrument) { const id = S.BUILT_INS.includes(packet.sourceApp) ? packet.sourceApp : 'fable'; t.instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() }; }
+      if (!t.instrument) { const id = sourceInstrument(packet.sourceApp); t.instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() }; }
       const start = Math.max(0, Math.min(candidate.lengthBars * 4 - .25, this.snap(this.engine.getMeters().beat || 0))), id = S.uid('notes');
       const clip = { id, name: packet.name, type: 'notes', pattern: packet, voiceMap: S.voiceMap(options.voiceMap || {}, packet), start, length: Math.min(packet.lengthBeats, candidate.lengthBars * 4 - start), sourceOffset: 0, rate: 1, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 };
       t.clips.push(clip); const normalized = S.normalize(candidate);

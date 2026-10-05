@@ -2,7 +2,7 @@
 
 A standalone browser instrument for interconnected delays and resonators.
 
-A Kilter Kitchen instrument. The previous app identity is preserved in project
+A Kitchen instrument. The previous app identity is preserved in project
 formats, browser storage, source APIs and URLs so existing work opens unchanged.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/mire/

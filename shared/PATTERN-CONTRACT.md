@@ -1,4 +1,4 @@
-# Kilter Kitchen patterns and GALLEY 1.5 contract
+# Kitchen patterns and GALLEY 1.6 contract
 
 All existing apps and future compatible apps retain standalone offline HTML operation. GALLEY keeps exactly eight tracks and four inserts per track.
 
@@ -53,3 +53,8 @@ Root uses `LoomNoteRenderer` (agent exposes exact constructor/functions promptly
 ## Piano roll integration
 
 HTML IDs: `createNoteClipButton`, `editNotesButton`, `printNoteClipButton`, `editSourceButton`, `updateAudioButton`, `pianoRollEditor`. Module controller accepts `{element,getState,getClip,remember,onChange,status,onAudition}`. `getClip()` returns `{trackIndex,clip}` or null. Controller exposes `render/open/close/tick` and optional selection APIs. Root owns app.js hooks and all builds. Schema/UI agent owns schema.js, piano-roll.js/css, app.html and checks.cjs.
+
+
+## Monophonic bass adapter
+
+ROUX uses `pattern-bass.js`, source app `ROUX`, and one target voice `bass` with MIDI pitch range 12–108. It declares `polyphonic:false`, `pitched:true`, and `scheduledCancel:true`. Imported notes are stored intact in the native `musicLabPattern` overlay. Simultaneous audible onsets are rejected before import/render; overlapping consecutive notes are valid monophonic legato, with the latest onset taking the voice. Patch `synth.legato` and `synth.glide` govern this overlap behavior. Native recipe slides are represented by overlap durations and accents by velocity, without extending portable packet version 1. Probability traversal uses beat/ID ordering and xorshift32 with `pattern.seed ?? 1`, including after native packet swing is applied once. The default native recipe export uses `compileRecipe(state,{cycles:4})`; the explicit `turn` scope exports one circuit. Four circuits fit the 256-beat packet budget even at the longest native traversal. Native recipe export resolves seeded probability and bakes native swing, so exported notes have probability 1 and packet swing 0.

@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux']
 SCRIPTS = ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
 
 bundled = {}
@@ -55,7 +55,7 @@ html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').rep
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
 html = exchange_helpers['embed_exchange'](html, 'loom', ROOT)
 (ROOT / 'index.html').write_text(html)
-print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kilter Kitchen instruments and all assets embedded.')
+print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kitchen instruments and all assets embedded.')
 
 if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'

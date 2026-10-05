@@ -136,7 +136,7 @@ export default function ExportDialog({
           return { filename, samples, sound };
         });
         const manifest = {
-          application: "HOTPLATE / Kilter Kitchen",
+          application: "HOTPLATE / Kitchen",
           version: 1,
           sampleRate: settings.sampleRate,
           bitDepth: settings.bitDepth,
@@ -161,7 +161,7 @@ export default function ExportDialog({
           { name: "form-kit.json", data: JSON.stringify(manifest, null, 2) },
           {
             name: "README.txt",
-            data: `HOTPLATE / Kilter Kitchen\n\n${sounds.length} mono percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
+            data: `HOTPLATE / Kitchen\n\n${sounds.length} mono percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
           },
         ]);
         downloadBlob(zip, "HOTPLATE percussion kit.zip");

@@ -1,16 +1,16 @@
-# Kilter Kitchen audio and pattern exchange
+# Kitchen audio and pattern exchange
 
-`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and GALLEY. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Kilter Kitchen packets. A companion **Patterns** dialog shares editable musical parts. Both modules have no network requests, external dependencies, or cloud storage.
+`music-audio-exchange.js` and its scoped stylesheet provide the **Samples** dialog used by the instruments and GALLEY. Apps render samples into a shared browser library, receive selections into named destinations, or move audio through WAV files and portable Kitchen packets. A companion **Patterns** dialog shares editable musical parts. Both modules have no network requests, external dependencies, or cloud storage.
 
 ## Using the dialog
 
 1. Open **Samples → Send audio**, choose an export source, and render it.
-2. Choose **Save to library**. Open another Kilter Kitchen app in the same browser and origin, then select that sound from **Samples → Library**.
+2. Choose **Save to library**. Open another Kitchen app in the same browser and origin, then select that sound from **Samples → Library**.
 3. Adjust selection start/end, preview the audio, and choose a receiving destination. Existing destination audio requires explicit replacement confirmation.
 
 The library shows names, source apps, duration, tempo, and waveform thumbnails. Search also matches stored tags. Deleting a library entry does not remove audio already imported into an app or project.
 
-**Portable packet** downloads preserve sample metadata and work between separate offline HTML files or browsers. **WAV** downloads work with other audio software; WAV export does not embed Kilter Kitchen metadata.
+**Portable packet** downloads preserve sample metadata and work between separate offline HTML files or browsers. **WAV** downloads work with other audio software; WAV export does not embed Kitchen metadata.
 
 ## Current destinations
 
@@ -26,7 +26,7 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 | STEAM | 20 seconds | Spectral score; string ID `"score"` | Editable score produced by spectral analysis, rather than direct sample playback |
 | GALLEY | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
 
-SIZZLE, CLATTER, and SKEWER export audio. They do not advertise sample-import destinations. All ten apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.
+SIZZLE, CLATTER, SKEWER, and ROUX export audio. They do not advertise sample-import destinations. All eleven apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.
 
 ## Storage and limits
 
@@ -272,12 +272,21 @@ Optional `prepareTarget({target,pattern,signal})` loads a GALLEY track's instrum
 
 ### Standalone build order
 
-The Python and Node embedding helpers include both exchange dialogs and all adapter modules. **`pattern-schema.js` is inserted at the start of `<head>`**, before native app schemas restore exact-note overlays. The pitched/drum adapter modules run after the native app scripts, followed by the pattern dialog and lazy registration. All CSS, JavaScript, contract documentation, and tests are included in source ZIPs. No adjacent files, server, or network connection is needed to use a published standalone HTML file.
+The Python and Node embedding helpers include both exchange dialogs and all adapter modules. **`pattern-schema.js` is inserted at the start of `<head>`**, before native app schemas restore exact-note overlays. The pitched/drum/bass adapter modules run after the native app scripts, followed by the pattern dialog and lazy registration. All CSS, JavaScript, contract documentation, and tests are included in source ZIPs. No adjacent files, server, or network connection is needed to use a published standalone HTML file.
 
 Run `node shared/pattern-checks.cjs` to verify portable-note boundaries, complete 4,096-note round trips, fallback-library quotas, and host delegation.
 
-## Kilter Kitchen presentation and compatibility
+## Kitchen presentation and compatibility
 
 `kilter-kitchen.css` supplies the shared dark steel, enamel, orange, yellow and typography tokens. The Roboto Condensed variable font is embedded as WOFF2; its full SIL Open Font License is included in the stylesheet and `KILTER-FONTS-LICENSE.txt`. Every standalone HTML therefore keeps its typography without network access. Native app CSS may use `--kk-heading`, `--kk-ui`, `--kk-mono`, and the `--kk-*` color tokens without altering its own signal controls or layout.
 
-Display names change; native app IDs, JavaScript facades, `musiclab-*` packet formats, IndexedDB databases, URLs and project storage keys remain stable. The mapping is GRAIN → SIZZLE, TINE → CLATTER, FORM → HOTPLATE, MIRE → REDUCE, SPOOL → ROTISSERIE, HAZE → STEAM, BOWER → SKEWER, RAVEL → DICER, FABLE → STOCK, and LOOM → GALLEY. Builder registrations include the unchanged `sourceApp` provenance as well as the display `name`. Shared library rows display the kitchen names for earlier packets while preserving their stored data.
+Display names change; native app IDs, JavaScript facades, `musiclab-*` packet formats, IndexedDB databases, URLs and project storage keys remain stable. The mapping is GRAIN → SIZZLE, TINE → CLATTER, FORM → HOTPLATE, MIRE → REDUCE, SPOOL → ROTISSERIE, HAZE → STEAM, BOWER → SKEWER, RAVEL → DICER, FABLE → STOCK, ROUX → ROUX, and LOOM → GALLEY. Builder registrations include the unchanged `sourceApp` provenance as well as the display `name`. Shared library rows display the kitchen names for earlier packets while preserving their stored data.
+
+
+### ROUX bass parts
+
+ROUX is deliberately monophonic: one fundamental, one resonant body, and one note onset at a time. Its recipe compiles scale-relative movement, traversal, independent accent and slide rings, rests, and holds into concrete notes. The default export carries four recipe turns (32 beats at the default length and rate), letting the independent accent and slide rings move across the phrase. A one-turn scope is also available. Export bakes the current deterministic probability and swing into those notes. Imported off-grid notes retain their complete portable packet in `musicLabPattern`, including durations, probabilities, seed, and voice mapping. Native project files retain that overlay.
+
+Map every source lane to the `bass` voice. ROUX accepts MIDI notes 12–108 and rejects simultaneous audible onsets, with an explanation, before changing the project. Successive overlapping notes provide legato and glide when enabled in the sound patch; turning legato off retriggers them. Chords are better assigned to a polyphonic instrument. Portable patterns carry overlap durations and velocity rather than ROUX-specific slide or accent controls; the receiving patch determines their tone.
+
+Recipe edits return to the circular sequence; synthesis, master, tempo, and name edits preserve the received part. **Use native sequence** also restores the recipe. ROUX exports actual bass audio to Samples, WAV, or GALLEY and uses the same native engine for scheduled note clips and reversible printing. It does not advertise sample-import destinations.

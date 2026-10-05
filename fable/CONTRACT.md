@@ -1,6 +1,6 @@
 # STOCK implementation contract
 
-STOCK is Kilter Kitchen's full polyphonic sampler. A dark commercial kitchen instrument rack with stainless panels, enamel cream, orange signals, and receipt typography; playful kitchen copy with clear practical controls. No external runtime dependency or network request. `schema.js`, `presets.js`, `audio-engine.js`, `zip.js`, `app.js` are inline in a standalone HTML. The common Samples module is embedded at build time.
+STOCK is Kitchen's full polyphonic sampler. A dark commercial kitchen instrument rack with stainless panels, enamel cream, orange signals, and receipt typography; playful kitchen copy with clear practical controls. No external runtime dependency or network request. `schema.js`, `presets.js`, `audio-engine.js`, `zip.js`, `app.js` are inline in a standalone HTML. The common Samples module is embedded at build time.
 
 ## Schema (window.FableSchema)
 

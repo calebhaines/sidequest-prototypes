@@ -1,12 +1,12 @@
-/* Kilter Kitchen's shared editable-note library. Standalone, offline, and host-aware. */
+/* Kitchen's shared editable-note library. Standalone, offline, and host-aware. */
 (function (global) {
   'use strict';
   if (global.MusicLabPatterns) return;
   const S = global.MusicLabPatternSchema;
-  if (!S) throw new Error('Load the Kilter Kitchen pattern schema before its library.');
+  if (!S) throw new Error('Load the Kitchen pattern schema before its library.');
   const MAX_PATTERNS = 128, MAX_BYTES = 16 * 1024 * 1024;
-  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', LOOM: 'GALLEY' });
-  const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kilter Kitchen';
+  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', ROUX: 'ROUX', LOOM: 'GALLEY' });
+  const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kitchen';
   const registrations = new Map(), memory = new Map();
   let databasePromise, persistent = true, dialog, active;
   const uid = () => global.crypto?.randomUUID?.() || 'pattern-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
@@ -28,7 +28,7 @@
       request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('patterns')) request.result.createObjectStore('patterns', { keyPath: 'id' }); };
       request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
       request.onerror = () => reject(request.error || new Error('Could not open the pattern library.'));
-      request.onblocked = () => reject(new Error('Close an older Kilter Kitchen tab to unlock the pattern library.'));
+      request.onblocked = () => reject(new Error('Close an older Kitchen tab to unlock the pattern library.'));
     }).catch(() => { persistent = false; return null; });
     return databasePromise;
   }
@@ -71,12 +71,12 @@
   function message(text, error) { if (!dialog) return; const line = query('.ml-pat-status'); line.textContent = text; line.classList.toggle('ml-pat-error', Boolean(error)); }
   function storageNote() {
     const keeps = hostLibrary()?.persistent ?? persistent;
-    query('.ml-pat-storage').textContent = global.location?.protocol === 'file:' ? 'Offline files may use separate libraries. Download a pattern file to move notes between them.' : keeps ? 'Saved in this browser. All Kilter Kitchen apps on this site share this library.' : 'Storage is unavailable. This library lasts until the page closes; download patterns to keep them.';
+    query('.ml-pat-storage').textContent = global.location?.protocol === 'file:' ? 'Offline files may use separate libraries. Download a pattern file to move notes between them.' : keeps ? 'Saved in this browser. All Kitchen apps on this site share this library.' : 'Storage is unavailable. This library lasts until the page closes; download patterns to keep them.';
   }
   function ensureDialog() {
     if (dialog) return;
     dialog = document.createElement('dialog'); dialog.className = 'ml-pat-dialog'; dialog.setAttribute('aria-labelledby', 'ml-pat-title');
-    dialog.innerHTML = '<div class="ml-pat-shell"><header class="ml-pat-header"><div><span class="ml-pat-eyebrow">KILTER KITCHEN / EDITABLE PARTS</span><h2 id="ml-pat-title">The order book.</h2><p>Notes, timing, and touch. Filed for the next peculiar service.</p></div>' + button('×', 'close') + '</header><nav class="ml-pat-tabs" aria-label="Pattern exchange"><button type="button" data-tab="library" aria-selected="true">Library <span class="ml-pat-count">0</span></button><button type="button" data-tab="send" aria-selected="false">Send pattern</button><button type="button" data-tab="receive" aria-selected="false">Receive pattern</button></nav><main class="ml-pat-main">' +
+    dialog.innerHTML = '<div class="ml-pat-shell"><header class="ml-pat-header"><div><span class="ml-pat-eyebrow">KITCHEN / EDITABLE PARTS</span><h2 id="ml-pat-title">The order book.</h2><p>Notes, timing, and touch. Filed for the next peculiar service.</p></div>' + button('×', 'close') + '</header><nav class="ml-pat-tabs" aria-label="Pattern exchange"><button type="button" data-tab="library" aria-selected="true">Library <span class="ml-pat-count">0</span></button><button type="button" data-tab="send" aria-selected="false">Send pattern</button><button type="button" data-tab="receive" aria-selected="false">Receive pattern</button></nav><main class="ml-pat-main">' +
       '<section data-panel="library"><div class="ml-pat-library-head"><input type="search" name="search" aria-label="Search note patterns" placeholder="Find a phrase, app, or tag…">' + button('Refresh', 'refresh') + '</div><div class="ml-pat-library"></div><p class="ml-pat-capacity"></p></section>' +
       '<section data-panel="send" hidden><div class="ml-pat-imported-part" hidden><p></p>' + button('Use native sequence', 'native') + '</div><div class="ml-pat-intro"><span>' + icon + '</span><div><h3>Write down the special.</h3><p>Share editable notes rather than a recording. The receiving instrument supplies the sound.</p></div></div><div class="ml-pat-fields"><label>Source<select name="scope"></select></label><label>Pattern name<input name="export-name" maxlength="160" placeholder="A name for this phrase"></label></div><p class="ml-pat-export-hint"></p><div class="ml-pat-actions">' + button('Read current pattern', 'export', true) + '</div><div class="ml-pat-exported" hidden><div class="ml-pat-preview" data-preview="exported"></div><p class="ml-pat-export-meta"></p><div class="ml-pat-actions">' + button('Save to library', 'save-exported', true) + button('↓ Pattern file', 'download-exported') + '<button type="button" class="ml-pat-button" data-action="loom-exported" hidden>Add to GALLEY</button></div></div></section>' +
       '<section data-panel="receive" hidden><label class="ml-pat-file">＋ Choose a note-pattern file<input type="file" name="file" accept=".json,.musiclab-pattern.json,application/json"></label><p class="ml-pat-receive-empty">Choose a pattern from the Library or open a portable pattern file.</p><div class="ml-pat-incoming" hidden><div class="ml-pat-preview" data-preview="incoming"></div><p class="ml-pat-incoming-meta"></p><div class="ml-pat-destination"><label>Destination<select name="target"></select></label><p class="ml-pat-import-hint"></p><div class="ml-pat-actions"><button type="button" class="ml-pat-button" data-action="prepare-target" hidden>Load instrument voices</button></div><div class="ml-pat-mapping"></div><label class="ml-pat-replace"><input name="replace" type="checkbox"> Replace the notes currently in this destination</label><div class="ml-pat-actions">' + button('Receive pattern', 'receive', true) + button('Save to library', 'save-incoming') + button('↓ Pattern file', 'download-incoming') + '<button type="button" class="ml-pat-button" data-action="loom-incoming" hidden>Add to GALLEY</button></div></div></div></section></main><footer class="ml-pat-footer"><p class="ml-pat-storage"></p><p class="ml-pat-status" role="status" aria-live="polite"></p></footer></div>';
@@ -191,7 +191,7 @@
   }
   function download(pattern) {
     const value = S.normalize(pattern), blob = new Blob([S.serialize(value)], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
-    link.href = url; link.download = (value.name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100) || 'Kilter Kitchen pattern') + '.musiclab-pattern.json';
+    link.href = url; link.download = (value.name.replace(/[\\/:*?"<>|]/g, '-').slice(0, 100) || 'Kitchen pattern') + '.musiclab-pattern.json';
     document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
   async function act(action, element) {

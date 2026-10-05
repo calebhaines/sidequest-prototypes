@@ -3,7 +3,7 @@
 A standalone stereo tape-loop playground. Four decks, eight locally generated
 tape studies, and a small playable instrument for making your own phrases.
 
-A Kilter Kitchen instrument. The previous app identity is preserved in project
+A Kitchen instrument. The previous app identity is preserved in project
 formats, browser storage, source APIs and URLs so existing work opens unchanged.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/spool/
@@ -45,7 +45,7 @@ and depends on the browser's permissions and support for the current origin.
   loop. Offline mix renders use 48 kHz, 16-bit stereo WAV. They do not include
   live microphone input or unfinished recordings.
 
-LOOM can send an edited arrangement clip directly into a chosen deck. The Samples panel also imports samples made by other Kilter Kitchen apps into decks A–D. Replacing an occupied deck requires explicit confirmation; Undo restores its previous loop. Shared audio is limited to thirty seconds per deck.
+LOOM can send an edited arrangement clip directly into a chosen deck. The Samples panel also imports samples made by other Kitchen apps into decks A–D. Replacing an occupied deck requires explicit confirmation; Undo restores its previous loop. Shared audio is limited to thirty seconds per deck.
 
 The same panel can share the full deck mix with master effects, one complete selected deck loop with its tape processing, or the selected deck's unprocessed source audio. These choices keep processed loops and original recordings distinct. Rendering snapshots the tapes and settings without stopping playback; finish a take or capture before sharing.
 

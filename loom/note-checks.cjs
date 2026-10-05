@@ -26,14 +26,14 @@ class FixtureHost {
   }
   dispose() { this.disposed = true; }
 }
-const document = { createElement() { const frame = { style: {}, setAttribute() {}, remove() { frames.delete(this); } }; return frame; }, body: { append(frame) { frames.add(frame); } } };
+const document = { querySelector() { return null; }, querySelectorAll() { return []; }, getElementById() { return null; }, createElement() { const frame = { style: {}, setAttribute() {}, remove() { frames.delete(this); } }; return frame; }, body: { append(frame) { frames.add(frame); } } };
 const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, Float32Array, setTimeout, crypto: webcrypto, document,
   btoa: value => Buffer.from(value, 'binary').toString('base64'), atob: value => Buffer.from(value, 'base64').toString('binary'), LoomInstrumentHost: FixtureHost };
 scope.window = scope;
 vm.createContext(scope);
 const patternSchemaPath = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInContext(fs.readFileSync(patternSchemaPath, 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const file of ['effects-catalog.js', 'schema.js', 'note-renderer.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+for (const file of ['effects-catalog.js', 'schema.js', 'note-renderer.js', 'note-workflow.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
 const S = scope.LoomSchema, Renderer = scope.LoomNoteRenderer;
 function packet() { return { format: 'musiclab-pattern', version: 1, name: 'A little staircase', sourceApp: 'fixture', tempo: 120, swing: 0, meter: [4, 4], lengthBeats: 4, voices: [{ id: 'melody', name: 'Melody' }], notes: [{ id: 'one', beat: 0, duration: 1, pitch: 60, velocity: .8, voice: 'melody', probability: 1 }], seed: 7, tags: [] }; }
 function instrument() { return { id: 'fable', name: 'FABLE', snapshot: { format: 'loom-instrument-state', version: 1, app: 'fable', state: { gain: .2 }, storage: {} } }; }
@@ -43,6 +43,36 @@ function renderer(options) { return new Renderer({ context: () => parentContext,
 const passed = [];
 async function check(name, run) { await run(); assert.equal(frames.size, 0, name + ' leaked an instrument frame'); passed.push(name); }
 (async () => {
+  await check('Native pattern provenance selects its original instrument on empty tracks without replacing assigned instruments', async () => {
+    const fixture = (assigned = null) => {
+      let current = S.defaultState(); current.tracks[0].instrument = assigned;
+      const workflow = new scope.LoomNoteWorkflow({
+        getState: () => current, getLocation: () => null, getGeneration: () => 0,
+        commit: next => { current = next; }, ensureInstrument: async () => true,
+        host: { getPatternAdapter: () => ({ notes: { voices: [{ id: 'bass', name: 'Bass' }] } }), command: async () => true },
+        engine: { getMeters: () => ({ beat: 0 }) }, snap: value => value,
+        changed() {}, remember() {}, status() {}
+      });
+      return { workflow, state: () => current };
+    };
+    for (const [sourceApp, expected] of [['ROUX', 'roux'], ['roux', 'roux'], [' GRAIN ', 'grain'], ['grain', 'grain']]) {
+      const ready = fixture(); await ready.workflow.prepareTarget({ target: 'track-1', pattern: { sourceApp } });
+      assert.equal(ready.state().tracks[0].instrument.id, expected);
+      const received = fixture(), part = { ...packet(), sourceApp };
+      await received.workflow.importPattern({ pattern: part, options: { target: 'track-1', voiceMap: { melody: 'bass' } } });
+      assert.equal(received.state().tracks[0].instrument.id, expected);
+      assert.equal(received.state().tracks[0].clips[0].pattern.sourceApp, sourceApp);
+      assert.equal(received.state().tracks.length, 8); assert(received.state().tracks.every(track => track.effects.length === 4));
+    }
+    const assigned = fixture({ id: 'roux', name: 'ROUX' });
+    await assigned.workflow.prepareTarget({ target: 'track-1', pattern: { sourceApp: 'GRAIN' } });
+    await assigned.workflow.importPattern({ pattern: { ...packet(), sourceApp: 'GRAIN' }, options: { target: 'track-1', voiceMap: { melody: 'bass' } } });
+    assert.equal(assigned.state().tracks[0].instrument.id, 'roux');
+    for (const sourceApp of [null, {}, 'unknown-app']) {
+      const unknown = fixture(); await unknown.workflow.prepareTarget({ target: 'track-1', pattern: { sourceApp } });
+      assert.equal(unknown.state().tracks[0].instrument.id, 'fable');
+    }
+  });
   await check('Identical pattern sources render once and retain eight tracks / four inserts', async () => {
     const state = session(), before = JSON.stringify(state), next = note('second'); next.start = 4; state.tracks[0].clips.push(next);
     const source = JSON.stringify(state), r = renderer(), previous = calls.length, result = await r.prepareNotes(state, {});

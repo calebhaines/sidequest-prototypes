@@ -33,7 +33,7 @@ Microphone capture is optional and requires browser permission; browser support
 for a local HTML file may differ from the hosted version. Panic releases live
 microphone tracks and discards an unfinished sample capture.
 
-GALLEY can send an edited arrangement clip directly into the sample source. The Samples panel also imports audio shared by the other Kilter Kitchen apps. A replacement requires explicit confirmation, creates sixteen fresh slices, and remains reversible with Undo. Shared audio is limited to twenty seconds.
+GALLEY can send an edited arrangement clip directly into the sample source. The Samples panel also imports audio shared by the other Kitchen apps. A replacement requires explicit confirmation, creates sixteen fresh slices, and remains reversible with Undo. Shared audio is limited to twenty seconds.
 
 Share the current slice pattern with its effects, one selected slice with its current trim, pitch, reverse, fade, and processing, or the complete unprocessed source sample. Pattern renders cover one to sixteen bars with a configurable effect tail. Offline renders preserve the project and leave live playback running; finish a microphone take or capture before sharing.
 
@@ -50,7 +50,7 @@ a ScriptProcessor fallback and offline WAV rendering.
 
 Run `python3 ravel/build.py` from the repository root to generate
 `ravel/index.html` and `music/ravel/RAVEL-source.zip`. Run `npm run build`
-to refresh the Kilter Kitchen copies in `public/` and `docs/`. GitHub Pages publishes
+to refresh the Kitchen copies in `public/` and `docs/`. GitHub Pages publishes
 `docs/`.
 
 From an extracted source archive, run `python3 build.py` in its directory.
@@ -64,4 +64,4 @@ Version 1.0.0.
 
 ## Compatibility
 
-The Kilter Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier RAVEL projects continue to open. Source archives keep their existing URL names.
+The Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier RAVEL projects continue to open. Source archives keep their existing URL names.

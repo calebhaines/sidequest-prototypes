@@ -20,7 +20,7 @@ Click a step to toggle it. Shift + click adds an accent; on touchscreens, press 
 
 ## Sharing samples
 
-The Samples panel shares a rendered pattern mix, selected voice pattern, or selected voice one-shot with the other Kilter Kitchen apps. Pattern renders can cover one to sixteen bars; one-shots include the voice's natural envelope and an optional effect tail. Rendering snapshots the current sound and pattern without changing the project or stopping playback. A selected voice can be shared even when it is muted in the mix. SIZZLE generates samples; it does not replace its noise synthesis with imported recordings.
+The Samples panel shares a rendered pattern mix, selected voice pattern, or selected voice one-shot with the other Kitchen apps. Pattern renders can cover one to sixteen bars; one-shots include the voice's natural envelope and an optional effect tail. Rendering snapshots the current sound and pattern without changing the project or stopping playback. A selected voice can be shared even when it is muted in the mix. SIZZLE generates samples; it does not replace its noise synthesis with imported recordings.
 
 Integrations can call `GrainApp.exportAudio({scope, bars, tailSeconds, signal})` for an audio payload without starting a download. `GrainApp.audioExport` describes the supported scopes. Existing Export WAV still downloads four bars with the natural effect tail.
 
@@ -40,7 +40,7 @@ python grain/build.py
 npm run music:sync
 ```
 
-Kilter Kitchen links to SIZZLE. Old `/grain/` URLs redirect to the new music route. The Sidequest RPG gallery has no music promotion. Existing RPG downloads retain their published version.
+Kitchen links to SIZZLE. Old `/grain/` URLs redirect to the new music route. The Sidequest RPG gallery has no music promotion. Existing RPG downloads retain their published version.
 
 ## Display identity
 

@@ -1,4 +1,4 @@
-/* Native Kilter Kitchen note adapters. Imported polyphonic phrases remain editable portable notes. */
+/* Native Kitchen note adapters. Imported polyphonic phrases remain editable portable notes. */
 (() => {
   'use strict';
   if (window.MusicLabPatternInstrument) return;
@@ -6,7 +6,7 @@
   const found = candidates.find(([, facade]) => window[facade]);
   if (!found) return;
   const [appId, facadeName, schemaName] = found, app = window[facadeName], S = window[schemaName], P = window.MusicLabPatternSchema, engine = app.engine;
-  if (!P || !engine) throw new Error('Portable pattern support needs the native instrument and Kilter Kitchen pattern validator.');
+  if (!P || !engine) throw new Error('Portable pattern support needs the native instrument and Kitchen pattern validator.');
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k), copy = v => JSON.parse(JSON.stringify(v));
   const abort = signal => { if (signal?.aborted) throw new DOMException('Pattern operation cancelled.', 'AbortError'); };
   const state = () => app.getState();

@@ -54,3 +54,20 @@ The published app URLs intentionally keep their original paths:
 | GALLEY | `music/loom/` |
 
 Legacy source archive names and downloaded project extensions also remain compatible.
+
+## Kitchen and ROUX release
+
+The shorter display name and ROUX addition have a separate checkpoint,
+`pre-kitchen-roux-2026-10-05`, at the working CLATTER export fix
+`786baa8bfbd77bfefcd74949b14525bec853e4fd`. The new release is tagged
+`kitchen-roux-v1`. To undo this release while preserving the export fix and
+original Kilter Kitchen design, revert only that tag:
+
+```sh
+git revert --no-edit kitchen-roux-v1
+git push origin main
+```
+
+ROUX projects and patterns use their own stable instrument identity; save portable
+files before reverting if you want to keep them for a later reinstallation.
+The previous nine instruments and their storage formats are unchanged.

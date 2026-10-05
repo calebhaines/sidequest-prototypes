@@ -1,6 +1,6 @@
-# HOTPLATE — Kilter Kitchen
+# HOTPLATE — Kitchen
 
-HOTPLATE is Kilter Kitchen’s three-layer hybrid percussion instrument. Shared Kilter Kitchen samples can enter any voice’s granular layer, while selected voices and complete grooves can leave as stereo audio.
+HOTPLATE is Kitchen’s three-layer hybrid percussion instrument. Shared Kitchen samples can enter any voice’s granular layer, while selected voices and complete grooves can leave as stereo audio.
 
 A browser instrument for designing percussion and exporting samples for your sampler or drum machine. Audio synthesis, playback, and export run locally through the Web Audio API. No backend, paid audio service, or account is required to use the app.
 
@@ -75,7 +75,7 @@ npm run test:exchange
 
 Set `CHROMIUM_PATH` to use an existing Chromium executable, `PLAYWRIGHT_MODULE` to use a separate Playwright installation, or `FORM_URL` to test a running development server.
 
-## Kilter Kitchen integration
+## Kitchen integration
 
 The native `window.FormApp` facade provides `getState`, `getProject`, `loadState`, `prepare`, `play`, `stop`, `panic`, and `setTempo`. Host integration uses this public API rather than editing compiled React internals.
 
@@ -91,4 +91,4 @@ Built with React, TypeScript, Vite, and browser audio APIs. Browser audio and do
 
 ## Branding and compatibility
 
-HOTPLATE retains FORM’s internal app identifier, `window.FormApp`, storage keys, project format, `.form.json` imports, and `FORM` release filenames so existing sessions, native hosting, and downloads continue to work. The Kilter Kitchen presentation changes names, copy, illustrations, and styles only; synthesis settings and preset IDs are unchanged.
+HOTPLATE retains FORM’s internal app identifier, `window.FormApp`, storage keys, project format, `.form.json` imports, and `FORM` release filenames so existing sessions, native hosting, and downloads continue to work. The Kitchen presentation changes names, copy, illustrations, and styles only; synthesis settings and preset IDs are unchanged.

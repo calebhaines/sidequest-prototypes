@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const music = path.join(root, 'music');
 if (!fs.existsSync(path.join(music, 'index.html'))) {
-  throw new Error('The Kilter Kitchen source page is missing: music/index.html');
+  throw new Error('The Kitchen source page is missing: music/index.html');
 }
 const grain = fs.readFileSync(path.join(root, 'grain', 'index.html'));
 const tine = fs.readFileSync(path.join(root, 'tine', 'index.html'));
@@ -15,6 +15,7 @@ const haze = fs.readFileSync(path.join(root, 'haze', 'index.html'));
 const bower = fs.readFileSync(path.join(root, 'bower', 'index.html'));
 const ravel = fs.readFileSync(path.join(root, 'ravel', 'index.html'));
 const fable = fs.readFileSync(path.join(root, 'fable', 'index.html'));
+const roux = fs.readFileSync(path.join(root, 'roux', 'index.html'));
 const loom = fs.readFileSync(path.join(root, 'loom', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
@@ -22,7 +23,7 @@ const legacy = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111517">
-  <title>SIZZLE lives in Kilter Kitchen</title>
+  <title>SIZZLE lives in Kitchen</title>
   <link rel="canonical" href="https://calebhaines.github.io/sidequest-prototypes/music/grain/">
   <meta http-equiv="refresh" content="0;url=../music/grain/index.html">
   <style>
@@ -32,7 +33,7 @@ const legacy = `<!doctype html>
     location.replace((location.protocol === 'file:' ? '../music/grain/index.html' : '../music/grain/') + location.search + location.hash);
   </script>
 </head>
-<body><main><h1>SIZZLE lives in Kilter Kitchen.</h1><p>Your drum machine has a new home alongside future music apps.</p><a href="../music/grain/index.html">Open SIZZLE →</a></main></body>
+<body><main><h1>SIZZLE lives in Kitchen.</h1><p>Your drum machine has a new home alongside future music apps.</p><a href="../music/grain/index.html">Open SIZZLE →</a></main></body>
 </html>
 `;
 
@@ -53,6 +54,7 @@ for (const directory of ['public', 'docs']) {
     ['music/bower/index.html', bower],
     ['music/ravel/index.html', ravel],
     ['music/fable/index.html', fable],
+    ['music/roux/index.html', roux],
     ['music/loom/index.html', loom],
     ['grain/index.html', legacy],
   ]) {
@@ -61,4 +63,4 @@ for (const directory of ['public', 'docs']) {
     fs.writeFileSync(target, content);
   }
 }
-console.log('Synced Kilter Kitchen, GALLEY, its instruments, and the legacy drum-machine redirect.');
+console.log('Synced Kitchen, GALLEY, its instruments, and the legacy drum-machine redirect.');

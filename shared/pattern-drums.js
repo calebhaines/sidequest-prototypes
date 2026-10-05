@@ -1,4 +1,4 @@
-/* Kilter Kitchen's native drum, slice and tape adapters. No alternate synthesis engine. */
+/* Kitchen's native drum, slice and tape adapters. No alternate synthesis engine. */
 (() => {
   'use strict';
   const IDS = ['grain', 'tine', 'form', 'ravel', 'spool'];

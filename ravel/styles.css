@@ -5,7 +5,7 @@
 
 .play-icon{width:10px;height:12px;vertical-align:-1px;margin-right:4px}
 
-/* Kilter Kitchen — DICER / a precision prep station with questionable portions. */
+/* Kitchen — DICER / a precision prep station with questionable portions. */
 :root{--blue:#f0e6d1;--coral:var(--kk-accent,#ff8d45)}
 body{background:radial-gradient(ellipse at 85% 5%,#5c42332a,transparent 43%),#151617}.topline{border-color:#545b60;font-family:var(--kk-mono,monospace);font-size:9px}.brand h1{font-family:var(--kk-heading,"Arial Narrow",Impact,sans-serif);font-weight:800;font-stretch:condensed;letter-spacing:-4px;font-size:clamp(65px,9vw,116px)}.title-cut{font-weight:700}.brand p{font:500 20px/1.5 var(--sans);color:#ece4d5}.brand em{font-style:normal;color:#ffad72}.eyebrow,.micro,.study-select label,.tempo,.swing,.meter-title,#meterLabel,.pad-no,.pad-footer,.step-num,.trim-readout,.recipe-row>label,.wave-note,footer,.fineprint,.status{font-family:var(--kk-mono,monospace)}
 .masthead-art{width:350px;height:180px;margin-right:0}.dicer-diagram{width:100%;height:100%;fill:none;stroke:#b4bfc5;stroke-width:1.2}.dicer-diagram .cut-lines{stroke:#626f76}.dicer-diagram .knife-blade{fill:#efe6d40a;stroke:#efe6d4;stroke-width:1.8}.dicer-diagram .knife-handle{fill:#ff8d4522;stroke:var(--coral);stroke-width:1.8}.dicer-diagram circle{stroke:var(--coral)}.prep-tag{position:absolute;left:10px;top:0;background:var(--coral);color:#211b17;font:700 9px var(--kk-mono,monospace);letter-spacing:1.8px;padding:6px 10px;transform:rotate(-7deg)}.masthead-art small{bottom:18px;right:25px;font:6px/1.8 var(--kk-mono,monospace);letter-spacing:.8px;background:#151617b8;padding:4px}

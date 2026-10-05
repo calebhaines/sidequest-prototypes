@@ -10,7 +10,7 @@
 .button svg{vertical-align:-1px;margin-right:3px}
 @media(max-width:360px){.hero{grid-template-columns:minmax(0,1fr)}.hero-seal{display:none}.hero .eyebrow{white-space:normal}.hero-copy{font-size:20px}.hero h1{font-size:68px}}
 
-/* Kilter Kitchen — SKEWER / charcoal station and four tensioned lines. */
+/* Kitchen — SKEWER / charcoal station and four tensioned lines. */
 :root{--lime:var(--kk-accent,#ff8d45);--gold:#f3cb4f;--blue:#b8c4cb}
 body{background:radial-gradient(ellipse at 78% 0,#37302a55,transparent 42%),#151617;color:var(--text)}
 .masthead{border-bottom-color:#545a5e}.logo-mark{font-family:var(--kk-mono,monospace);font-size:26px}.lab-link,.mast-note,.tiny-label,.eyebrow,.hero-seal span,.garden-top,.garden-bottom,.lane-summary,.preset-field span,footer{font-family:var(--kk-mono,monospace)}

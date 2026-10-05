@@ -320,7 +320,7 @@ dialog>.inspiration-note { margin-bottom: 0; font-size: 9px; color: #737677; lin
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; }*,*::before,*::after { animation-duration: .01ms!important; transition-duration: .01ms!important; } }
 
-/* Kilter Kitchen · CLATTER / resonant cookware station. */
+/* Kitchen · CLATTER / resonant cookware station. */
 body[data-kitchen-app="clatter"] { --bg:#111517; --panel:#202629; --panel-deep:#182023; --line:#3b4447; --text:#f1ecdc; --muted:#929c99; --soft:#c4cdc7; --accent:#dcc85e; --accent-rgb:220,200,94; --lilac:#ff8d45; --sage:#c1cdc5; --font:'Tine Sans',Arial,sans-serif; --mono:var(--kk-mono,'Courier New',monospace); background:radial-gradient(ellipse at 70% 0%,#dcc85e08,transparent 40%),#111517; }
 body[data-kitchen-app="clatter"]::before { background-image:repeating-linear-gradient(0deg,transparent 0,transparent 3px,#cbd4ce12 4px);opacity:.09;z-index:0; }
 body[data-kitchen-app="clatter"] .app-shell { position:relative;z-index:1; }
@@ -335,7 +335,7 @@ body[data-kitchen-app="clatter"] .eyebrow { font-family:var(--mono);letter-spaci
 body[data-kitchen-app="clatter"] .intro { padding:35px 0; }
 body[data-kitchen-app="clatter"] .intro p { color:#aab3ae; }
 body[data-kitchen-app="clatter"] .intro-art { padding:16px 18px 12px;border:1px solid #536165;background:linear-gradient(145deg,#293236,#182023);transform:rotate(-.6deg);box-shadow:5px 5px 0 #0a0e10; }
-body[data-kitchen-app="clatter"] .intro-art::before { content:'KK / 02';position:absolute;top:-7px;left:13px;background:#dcc85e;color:#1b2326;padding:3px 7px;font:7px var(--mono);letter-spacing:1px;transform:rotate(1.8deg); }
+body[data-kitchen-app="clatter"] .intro-art::before { content:'K / 02';position:absolute;top:-7px;left:13px;background:#dcc85e;color:#1b2326;padding:3px 7px;font:7px var(--mono);letter-spacing:1px;transform:rotate(1.8deg); }
 body[data-kitchen-app="clatter"] .art-top { font-size:7px;color:#b6c1ba;letter-spacing:.9px; }
 body[data-kitchen-app="clatter"] .art-index { color:#ff8d45; }
 body[data-kitchen-app="clatter"] .art-bottom { font-size:6px;color:#929c99;letter-spacing:.5px; }

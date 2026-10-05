@@ -1,4 +1,4 @@
-/* Kilter Kitchen portable, beat-based note patterns. No synthesis or browser dependencies. */
+/* Kitchen portable, beat-based note patterns. No synthesis or browser dependencies. */
 (function (global) {
   'use strict';
   if (global.MusicLabPatternSchema) return;
@@ -20,8 +20,8 @@
     return id;
   }
   function normalize(input) {
-    if (!object(input)) throw new Error('Choose a Kilter Kitchen note-pattern object.');
-    if (input.format !== 'musiclab-pattern' || input.version !== VERSION) throw new Error('This is not a supported Kilter Kitchen note pattern (version 1).');
+    if (!object(input)) throw new Error('Choose a Kitchen note-pattern object.');
+    if (input.format !== 'musiclab-pattern' || input.version !== VERSION) throw new Error('This is not a supported Kitchen note pattern (version 1).');
     const lengthBeats = number(input.lengthBeats, 'Pattern length', .25, MAX_BEATS);
     const meter = input.meter === undefined ? [4, 4] : input.meter;
     if (!Array.isArray(meter) || meter.length !== 2 || !Number.isInteger(meter[0]) || meter[0] < 1 || meter[0] > 16 || ![1, 2, 4, 8, 16].includes(meter[1])) throw new Error('Pattern meter must be a supported time signature.');

@@ -1,15 +1,20 @@
 # GALLEY
 
-Kilter Kitchen’s central production station.
+Kitchen’s central production station.
 
-An eight-track browser studio for Kilter Kitchen. Eight tracks. One increasingly specific order.
+An eight-track browser studio for Kitchen. Eight tracks. One increasingly specific order.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all nine Kilter Kitchen instruments,
+The standalone `index.html` bundles all ten Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
-the hosted version can discover and load new instruments from Kilter Kitchen.
+the hosted version can discover and load new instruments from Kitchen.
+
+**ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
+relative note movement, rests, accents, and slides with a deep fundamental and
+a driven resonant waveguide. Its editor, shared patterns, and native synthesis
+are available inside GALLEY alongside the other nine instruments.
 
 ## Making a piece
 
@@ -142,7 +147,7 @@ clip remains in the arrangement. The receiving instrument keeps unrelated
 sounds, patterns, mixer, and effects. Imports persist in its native snapshot;
 transfer Undo/Redo restores the previous instrument audio.
 
-The **Samples** panel shares the same local library as all standalone Kilter Kitchen
+The **Samples** panel shares the same local library as all standalone Kitchen
 apps and hosted editors. Render the selected clip, arranged mix, or track
 instrument; save audio to the library or download WAV/portable packets. Receive a
 sample as a new clip on any of the eight tracks. Hosted instrument project storage
@@ -206,14 +211,14 @@ Run `npm run check:patterns` and `npm run check:loom-notes` for portable-pattern
 and reversible-source checks. Extracted archives include `note-checks.cjs`.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all nine standalone instrument pages in
+archive includes all ten standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
-source projects are available from Kilter Kitchen.
+source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.5.0.
+font license notices. Version 1.6.0.
 
 ## Compatibility
 
-The Kilter Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and four effects slots per track.
+The Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and four effects slots per track.

@@ -18,7 +18,7 @@ scope.window = scope;
 vm.createContext(scope);
 const patternSchemaPath = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInContext(fs.readFileSync(patternSchemaPath, 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js']) {
+for (const name of ['effects-catalog.js', 'effects.js', 'schema.js', 'audio-engine.js', 'clip-transfer.js', 'instrument-host.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 }
 const S = scope.LoomSchema;
@@ -38,6 +38,26 @@ function lane(target, points, interpolation = 'linear', effectType) {
   return { target, enabled: true, interpolation, points: points.map(([beat, value]) => ({ beat, value })), ...(effectType ? { effectType } : {}) };
 }
 const state = session();
+check('ROUX is a bundled instrument with portable native state and unchanged track capacity', () => {
+  const host = Object.create(scope.LoomInstrumentHost.prototype);
+  const definition = host.manifest.find(item => item.id === 'roux');
+  assert.equal(definition.name, 'ROUX');
+  assert.equal(definition.facade, 'RouxApp');
+  assert.equal(definition.storageKey, 'roux-project-v1');
+  assert.equal(definition.url, '../roux/index.html');
+  assert.deepEqual(Array.from(host.manifest, item => item.id), Array.from(S.BUILT_INS));
+  const bass = session();
+  bass.tracks[7].instrument = {
+    id: 'roux', name: 'ROUX',
+    snapshot: { format: 'loom-instrument-state', version: 1, app: 'roux', state: { name: 'The low pan', seed: 42, notes: [{ pitch: 36, slide: true }] }, storage: {} }
+  };
+  const portable = S.serializeProject(bass), restored = S.parseProject(portable);
+  assert.equal(S.serializeProject(restored), portable);
+  assert.equal(S.instrumentName(restored.tracks[7].instrument), 'ROUX');
+  assert.equal(restored.tracks[7].instrument.snapshot.state.notes[0].slide, true);
+  assert.equal(restored.tracks.length, 8);
+  assert(restored.tracks.every(track => track.effects.length === 4));
+});
 state.tracks[0].effects[0] = S.effect({ type: 'cinder', params: scope.LoomEffectsCatalog.find(e => e.id === 'cinder').defaults });
 state.tracks[0].automation = [
   lane('level', [[0, 0], [2, 1]]),
