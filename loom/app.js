@@ -115,6 +115,7 @@
       ravel: `<path d="M12 15h139v61H12zM22 25h119v41H22zM35 25v41m23-41v41m23-41v41m23-41v41m23-41v41M22 45h119M171 8v39h29V8m-30 6h29M174 47v28h23V47m-40 30h62"/>`,
       roux: `<ellipse cx="97" cy="37" rx="49" ry="15"/><path d="M48 37v15c0 26 98 26 98 0V37M145 45l66-12 3 8-68 16M59 64h73M111 38l22-28m-20 4 17 12M19 74h191"/><path d="m65 37 7-5 8 9 8-12 8 15 8-11 8 6m-63 41 6-10 6 10m12 0 6-10 6 10m12 0 6-10 6 10"/>`,
       batter: `<ellipse cx="81" cy="25" rx="44" ry="15"/><path d="M37 25v23c0 21 88 21 88 0V25M37 42c0 21 88 21 88 0M50 37v17m22-12v18m22-19v18m21-25v18M49 62v10m63-10v10M81 70v7M136 23l36-14 4 9-40 15M140 66l57-30 5 8-57 30M19 76h184"/><path d="M155 16l6 8M179 55l7 9M11 31h17m-9-8v16M203 16h15m-7-7v15"/>`,
+      proof: `<path d="M28 9h174v66H28zM39 21h111v43H39zM44 39h100M44 57h100M57 33q13-18 26 0m14 0q13-18 26 0M57 51q13-18 26 0m14 0q13-18 26 0M161 20h29v12h-29zM28 68h174M40 75v5m147-5v5"/><circle cx="175" cy="48" r="8"/><path d="M169 62h12m-6-19v5M9 80h213"/>`,
       fable: `<path d="M19 25h45v46H19zm6-11h33v11H25zm3 24h27v18H28zM86 25h45v46H86zm6-11h33v11H92zm3 24h27v18H95zM153 25h45v46h-45zm6-11h33v11h-33zm3 24h27v18h-27zM8 76h211"/><path d="M35 43h13m-10 7h7m54-7h13m-10 7h7m54-7h13m-10 7h7"/>`
     };
     return `<svg viewBox="0 0 230 82" aria-hidden="true"><g fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${pots[id] || pots.fable}</g></svg>`;

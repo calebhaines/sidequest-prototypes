@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof']
 SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
 
 bundled = {}

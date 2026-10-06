@@ -210,3 +210,22 @@ git push origin main
 ```
 
 Review conflicts if subsequent commits alter the same files. The preserved previous SIZZLE page remains available independently of this CLATTER correction.
+
+## LEAVEN arpeggiator instrument
+
+The previous complete Kitchen release, including CLATTER’s restored open interface,
+is preserved at `pre-proof-instrument-2026-10-06`, commit
+`bc7424d819a7a9e7934ce2a73d0f46a1c6485e46`. The LEAVEN addition is tagged `proof-v1`.
+It adds a new instrument and matching GALLEY bundle, landing-page links and downloads;
+the existing instruments, their standalone files, sample libraries and songs are retained.
+
+To remove this addition and restore the matching published release:
+
+```sh
+git revert --no-edit proof-v1
+git push origin main
+```
+
+Save portable LEAVEN projects before reverting; the earlier GALLEY does not contain
+LEAVEN. Shared samples and patterns remain in browser storage. Review conflicts if
+later releases modify these files.

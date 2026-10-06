@@ -27,7 +27,7 @@ All native import methods receive interleaved stereo PCM. Each destination perfo
 | BATTER | 120 seconds | A/B sources in 12 drum lanes; A uses the canonical lane ID, B adds `:b` | Stereo acoustic drum sampler with blendable velocity/alternate layers |
 | GALLEY | 120 seconds | 8 tracks; string track IDs | Appends an audio clip at the playhead; existing clips remain available |
 
-SIZZLE, CLATTER, SKEWER, and ROUX export audio. They do not advertise sample-import destinations. All twelve apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.
+SIZZLE, CLATTER, SKEWER, ROUX, and LEAVEN export audio. They do not advertise sample-import destinations. All thirteen apps can use the library and file exchange. Selection length must satisfy both the shared limit and the receiving app's limit; the dialog does not silently shorten it. STEAM retains both incoming channels for analysis, including energy in anti-phase stereo material.
 
 ## Storage and limits
 
@@ -281,7 +281,7 @@ Run `node shared/pattern-checks.cjs` to verify portable-note boundaries, complet
 
 `kilter-kitchen.css` supplies the shared dark steel, enamel, orange, yellow and typography tokens. The Roboto Condensed variable font is embedded as WOFF2; its full SIL Open Font License is included in the stylesheet and `KILTER-FONTS-LICENSE.txt`. Every standalone HTML therefore keeps its typography without network access. Native app CSS may use `--kk-heading`, `--kk-ui`, `--kk-mono`, and the `--kk-*` color tokens without altering its own signal controls or layout.
 
-Display names change; native app IDs, JavaScript facades, `musiclab-*` packet formats, IndexedDB databases, URLs and project storage keys remain stable. The mapping is GRAIN → SIZZLE, TINE → CLATTER, FORM → HOTPLATE, MIRE → REDUCE, SPOOL → ROTISSERIE, HAZE → STEAM, BOWER → SKEWER, RAVEL → DICER, FABLE → STOCK, ROUX → ROUX, and LOOM → GALLEY. Builder registrations include the unchanged `sourceApp` provenance as well as the display `name`. Shared library rows display the kitchen names for earlier packets while preserving their stored data.
+Display names change; native app IDs, JavaScript facades, `musiclab-*` packet formats, IndexedDB databases, URLs and project storage keys remain stable. The mapping is GRAIN → SIZZLE, TINE → CLATTER, FORM → HOTPLATE, MIRE → REDUCE, SPOOL → ROTISSERIE, HAZE → STEAM, BOWER → SKEWER, RAVEL → DICER, FABLE → STOCK, ROUX → ROUX, BATTER → BATTER, PROOF → LEAVEN, and LOOM → GALLEY. Builder registrations include the unchanged `sourceApp` provenance as well as the display `name`. Shared library rows display the kitchen names for earlier packets while preserving their stored data.
 
 
 ### ROUX bass parts
@@ -291,3 +291,7 @@ ROUX is deliberately monophonic: one fundamental, one resonant body, and one not
 Map every source lane to the `bass` voice. ROUX accepts MIDI notes 12–108 and rejects simultaneous audible onsets, with an explanation, before changing the project. Successive overlapping notes provide legato and glide when enabled in the sound patch; turning legato off retriggers them. Chords are better assigned to a polyphonic instrument. Portable patterns carry overlap durations and velocity rather than ROUX-specific slide or accent controls; the receiving patch determines their tone.
 
 Recipe edits return to the circular sequence; synthesis, master, tempo, and name edits preserve the received part. **Use native sequence** also restores the recipe. ROUX exports actual bass audio to Samples, WAV, or GALLEY and uses the same native engine for scheduled note clips and reversible printing. It does not advertise sample-import destinations.
+
+### LEAVEN arpeggiated and direct-note parts
+
+LEAVEN uses native app ID `proof` and one pitched voice, `synth`. Its Patterns export realizes the current chord progression, traversal, swing, folds, ties, ratchets and seeded probability into concrete notes. Received parts are preserved as exact notes in `musicLabPattern` rather than arpeggiated again. Map source voices to `synth`; the polyphonic engine accepts chords. Synthesis edits preserve received notes, and **Use native arp** returns to the internal recipe. Live notes, WAV exports and GALLEY prints use the same five-model engine. LEAVEN contributes audio to Samples and receives editable notes through Patterns; it does not advertise a sample-import destination.

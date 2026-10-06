@@ -6,7 +6,7 @@ An eight-track browser studio for Kitchen. Eight tracks. One increasingly specif
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all eleven Kitchen instruments,
+The standalone `index.html` bundles all twelve Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -14,7 +14,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other ten instruments.
+are available inside GALLEY alongside the other eleven instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -24,6 +24,14 @@ BATTER 1.1 embeds 148 samples in four recorded starter kits, with two-source A/B
 blending and a per-lane tempo-synced or free LFO. Both sources, modulation, and
 per-hit blend edits survive project saves and revisable printed clips. Its
 Clear pattern action empties only the selected bank and can be undone.
+
+**LEAVEN** is Kitchen’s arpeggiator and five-model 80s-inspired polyphonic synth.
+Its eight-chord progression and four sixteen-step banks create evolving phrases;
+all sound controls stay visible. DCO, twin VCO, hard sync, four-operator FM and
+spectral vector synthesis are available in the same editor. LEAVEN shares realized
+notes through Patterns, plays incoming piano-roll notes directly through its synth,
+and uses that same engine for live audio and revisable prints. The complete app is
+embedded for offline use; the studio retains eight tracks and four inserts per track.
 
 ## Making a piece
 
@@ -370,7 +378,7 @@ exports through the actual embedded BATTER editor. The extracted equivalent is
 `node batter-integration-checks.cjs`, with Playwright and Chromium available.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all eleven standalone instrument pages in
+archive includes all twelve standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 

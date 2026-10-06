@@ -3,7 +3,7 @@
   'use strict';
   if (global.MusicLabExchange) return;
   const MAX_BYTES = 64 * 1024 * 1024, MAX_SAMPLES = 32, MAX_SECONDS = 120;
-  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', ROUX: 'ROUX', LOOM: 'GALLEY' });
+  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', ROUX: 'ROUX', PROOF: 'LEAVEN', LOOM: 'GALLEY' });
   const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kitchen';
   const registrations = new Map(), volatile = new Map();
   let databasePromise, persistent = true, dialog, active, previewSource, previewContext, previewOwnContext;

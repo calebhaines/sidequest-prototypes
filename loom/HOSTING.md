@@ -11,7 +11,7 @@ keeps its native behavior for an app’s own exports.
 Choose a Kitchen instrument, refresh the hosted Kitchen list, load a
 same-site app URL, or upload a self-contained HTML file. Uploaded HTML travels
 inside saved GALLEY projects. SIZZLE, HOTPLATE, CLATTER, REDUCE, ROTISSERIE, STEAM,
-SKEWER, DICER, STOCK, and ROUX are bundled into GALLEY’s standalone download.
+SKEWER, DICER, STOCK, ROUX, BATTER, and LEAVEN are bundled into GALLEY’s standalone download.
 
 An ordinary Web Audio app can use `new AudioContext()` and connect nodes to
 `context.destination`. The bridge supplies track routing automatically.
