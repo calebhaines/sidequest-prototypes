@@ -196,3 +196,17 @@ git push origin main
 ```
 
 The release does not change the other instruments’ sound engines, preset data, recorded libraries or project schemas. HOTPLATE, GALLEY effects and both songs remain intact. Download projects for portable backups, and review conflicts if later commits modify the same files.
+
+## CLATTER’s open interface restored
+
+The follow-up tagged `clatter-open-interface-v1` restores CLATTER’s previous complete sound-design workspace, original control organization and presentation source from `pre-kitchen-interface-refresh-2026-10-06`. It removes the refresh’s extra quick-control row and expandable editor. Synthesis, presets, projects and current shared libraries stay compatible. GALLEY and the offline download include the restored interface; other instruments retain their refreshed interfaces.
+
+To restore the entire pre-refresh release after this follow-up, revert the two releases in reverse order together, then publish the resulting restoration:
+
+```sh
+git revert --no-commit clatter-open-interface-v1 kitchen-interface-refresh-v1
+git commit -m "Restore the pre-interface-refresh Kitchen release"
+git push origin main
+```
+
+Review conflicts if subsequent commits alter the same files. The preserved previous SIZZLE page remains available independently of this CLATTER correction.

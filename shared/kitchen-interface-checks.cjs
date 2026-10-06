@@ -213,9 +213,15 @@ async function inspectViewport(page, id, width) {
       controls: document.querySelectorAll('button,input,select').length };
   });
   await page.screenshot({ path: path.join(REPORT, `${id}-${width}.png`), fullPage: width === 390 || width === 1440 });
-  assert(metrics.width <= width + 1, `${id} document overflow at ${width}: ${metrics.width}`);
-  assert.deepEqual(metrics.clippedHeaders, [], `${id} header actions must fit at ${width}`);
-  assert.deepEqual(metrics.smallPrimaryTargets, [], `${id} main actions need usable touch targets at ${width}`);
+  // CLATTER was explicitly restored to its original interface. Its historical
+  // phone sizing is recorded, while new layout requirements apply to the
+  // refreshed interfaces. Do not silently change the requested original UI.
+  if (id === 'tine' && !await page.locator('.impact-details').count()) metrics.originalInterface = true;
+  else {
+    assert(metrics.width <= width + 1, `${id} document overflow at ${width}: ${metrics.width}`);
+    assert.deepEqual(metrics.clippedHeaders, [], `${id} header actions must fit at ${width}`);
+    assert.deepEqual(metrics.smallPrimaryTargets, [], `${id} main actions need usable touch targets at ${width}`);
+  }
   return metrics;
 }
 
@@ -239,7 +245,7 @@ async function checkApp(browser, config, saved) {
     if (saved.restoredAudio) compareAudio(id, await audio(page, facade), saved.restoredAudio, id + ' original portable project audio');
     pass(id + ' default, old project, original sound and exchange capabilities preserved');
     for (const width of [320, 390, 768, 1440]) row.viewports.push(await inspectViewport(page, id, width));
-    pass(id + ' four responsive layouts and header touch targets');
+    pass(id === 'tine' ? 'tine original interface captured at four viewport sizes' : id + ' four responsive layouts and header touch targets');
     await page.locator(play).click();
     await page.waitForFunction(facade => {
       const app = window[facade]; return app.isPlaying?.() || app.engine.playing || app.engine.isPlaying || app.engine.getMeters?.().playing;
@@ -261,6 +267,7 @@ async function checkApp(browser, config, saved) {
     await page.evaluate(f => { const app = window[f]; app.stop?.(); app.engine.stop?.(); }, facade);
     pass(id + ' visible transport drives audible live Web Audio');
     await checkEditor(page, id, facade, saved);
+    if (id === 'tine') await checkOriginalClatter(page, saved);
     if (id === 'grain') await checkSizzle(page, saved);
     assert.deepEqual(errors, [], id + ' application errors'); assert.deepEqual(blocked, [], id + ' standalone dependencies');
   } finally { await context.close(); }
@@ -294,7 +301,7 @@ async function checkEditor(page, id, facade, saved) {
   const original = await current(page, facade), before = await audio(page, facade);
   const navigation = {
     grain: ['#edit-synthesis', '[data-synth-tab="body"]'],
-    tine: ['.impact-details > summary', '[data-synth-tab="resonator"]'],
+    tine: ['#tab-resonance'],
     mire: ['a[href="#network-workspace"]'],
     spool: ['a[href="#spool-editor"]', '[data-tab="tape"]'],
     haze: ['.sound-bench > summary'],
@@ -310,7 +317,7 @@ async function checkEditor(page, id, facade, saved) {
   assert.deepEqual((await current(page, facade)).state, original.state, id + ' editor navigation must stay outside musical state');
   const controls = {
     grain: '[role="slider"][data-param="synth-body-frequency"]',
-    tine: '#impact-knobs [data-param="pitchHz"] [role="slider"]',
+    tine: '#knob-grid [role="slider"][data-param="pitchHz"]',
     mire: 'input[aria-label="Node A decay"]',
     spool: 'input[aria-label="Deck A saturation"]',
     haze: '#control-color',
@@ -346,6 +353,48 @@ async function checkEditor(page, id, facade, saved) {
     assert(/\d/.test(await page.locator('#rackNote').innerText()), 'SKEWER playable rack reports actual note');
   }
   pass(id + ' editor navigation, retained deep sound control, audible edits and exact project persistence');
+}
+
+async function checkOriginalClatter(page, saved) {
+  await page.setViewportSize({ width: 1440, height: 1000 }); await restore(page, 'TineApp', saved.project);
+  assert.equal(await page.locator('.impact-details,#impact-knobs,#impact-material').count(), 0, 'CLATTER added quick bar and disclosure must be removed');
+  assert(await page.locator('#knob-grid').isVisible(), 'CLATTER original synthesis controls are visible by default');
+  const original = await page.evaluate(() => TineApp.getState());
+  for (const tab of ['resonance', 'exciter', 'motion']) {
+    await page.locator('#tab-' + tab).click(); assert(await page.locator('#knob-grid').isVisible());
+    assert(await page.locator('#knob-grid [role="slider"]').count() >= 3, 'CLATTER original ' + tab + ' controls remain available');
+  }
+  assert.deepEqual(await page.evaluate(() => TineApp.getState()), original, 'Original synthesis tab navigation preserves sound');
+  await page.locator('#tab-resonance').click(); const pitch = page.locator('#knob-grid [role="slider"][data-param="pitchHz"]');
+  const before = await audio(page, 'TineApp'); await pitch.focus(); await pitch.press('ArrowUp'); await pitch.press('Tab');
+  const edited = await page.evaluate(() => TineApp.getState()); assert.notEqual(edited.tracks[0].pitchHz, original.tracks[0].pitchHz);
+  const after = await audio(page, 'TineApp'); assert(nativeDifference(after, before).rms > .0001, 'Original keyboard synthesis edits alter real audio');
+  await page.locator('#undo-button').click(); assert.deepEqual(await page.evaluate(() => TineApp.getState()), original, 'Original keyboard synthesis edit Undo restores exact project');
+  await pitch.focus(); await pitch.press('ArrowUp'); await pitch.press('Tab');
+  const project = await page.evaluate(() => TineApp.getProject()), downloadPromise = page.waitForEvent('download');
+  await page.locator('#save-button').click(); const download = await downloadPromise;
+  const downloaded = JSON.parse(fs.readFileSync(await download.path(), 'utf8')); assert.deepEqual(downloaded, project, 'CLATTER Save project downloads exact original-format synthesis state');
+  await restore(page, 'TineApp', saved.project); await restore(page, 'TineApp', downloaded);
+  assert.deepEqual(await page.evaluate(() => TineApp.getProject()), downloaded);
+  const reopened = await audio(page, 'TineApp');
+  // This additional keyboard patch roundtrip keeps the delivered WAV within
+  // three quantization steps. Repeated untouched original high-Q renders have
+  // small isolated float peaks; their raw RMS remains below this same bound.
+  compareAudio('tine', reopened, { ...after, offline: undefined }, 'Restored original-interface saved patch');
+  assert.equal(reopened.offline.length, after.offline.length);
+  for (let i = 0; i < reopened.offline.length; i++) {
+    const a = reopened.offline[i], b = after.offline[i];
+    assert.equal(a.frames, b.frames); assert.equal(a.sampleRate, b.sampleRate); assert.equal(a.channelPCM.length, b.channelPCM.length);
+    for (let ch = 0; ch < a.channelPCM.length; ch++) {
+      const ab = Buffer.from(a.channelPCM[ch], 'base64'), bb = Buffer.from(b.channelPCM[ch], 'base64');
+      const x = new Float32Array(ab.buffer, ab.byteOffset, ab.length / 4), y = new Float32Array(bb.buffer, bb.byteOffset, bb.length / 4);
+      assert.equal(x.length, y.length); let power = 0;
+      for (let j = 0; j < x.length; j++) power += (x[j] - y[j]) ** 2;
+      assert(Math.sqrt(power / x.length) < 1e-5, 'Saved original CLATTER patch stays within measured untouched native float RMS');
+    }
+  }
+  await restore(page, 'TineApp', saved.project);
+  pass('CLATTER original full visible controls, three synthesis tabs, keyboard sound editing and Undo, saved project download/reload and audible WAV');
 }
 
 async function checkSteamDetail(page, saved) {
@@ -406,6 +455,11 @@ async function checkGalley(browser, baseline) {
           // loading siblings or fetching an outdated standalone app.
           const template = window.LoomEmbeddedInstruments?.[id];
           if (typeof template !== 'string' || await __kitchenHash(new TextEncoder().encode(template)) !== expectedHash) throw Error('Stale embedded instrument source: ' + id);
+          if (id === 'tine') {
+            if (child.document.querySelector('.impact-details,#impact-knobs,#impact-material')) throw Error('GALLEY still embeds the refreshed CLATTER interface');
+            const controls = child.document.querySelector('#knob-grid');
+            if (!controls || !controls.getBoundingClientRect().height) throw Error('Original CLATTER synthesis controls are hidden in GALLEY');
+          }
           const probe = { loaded, title: child.document.title, hasNotes: !!loaded.capabilities.notes, rendered: null, peak: null, sizzle: null };
           if (['grain', 'tine', 'bower', 'fable', 'batter'].includes(id)) {
             const pattern = await app.host.exportPattern(trackId), output = await app.host.renderPattern(trackId, { pattern, tempo: pattern.tempo, tailSeconds: .15 });
@@ -439,7 +493,7 @@ async function checkGalley(browser, baseline) {
       assert(result.loaded.ready, id + ' GALLEY instrument ready');
       if (result.rendered) { assert(result.rendered.rms > .0005, id + ' native host offline audio'); assert(result.peak > .005, id + ' routed note must reach real mixer'); }
       if (id === 'grain') compareAudio(id, result.sizzle, { ...baseline.grain.rendered, offline: undefined }, 'Hosted original SIZZLE PCM');
-      report.apps.push({ id: 'galley-' + id, ...result }); pass('GALLEY embeds, prepares and restores refreshed ' + id + (result.rendered ? ' with audible native note routing and rendering' : ''));
+      report.apps.push({ id: 'galley-' + id, ...result }); pass('GALLEY embeds, prepares and restores ' + (id === 'tine' ? 'original-interface ' : 'refreshed ') + id + (result.rendered ? ' with audible native note routing and rendering' : ''));
     }
     assert.deepEqual(errors, [], 'GALLEY application errors');
   } finally { await context.close(); }

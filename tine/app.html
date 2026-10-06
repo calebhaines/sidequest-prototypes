@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141719">
-  <meta name="tine-version" content="1.1.3">
+  <meta name="tine-version" content="1.1.2">
   <meta name="description" content="CLATTER — a physical modeling drum machine from Kitchen. Eight voices, sixteen steps, and cookware with unexpected sustain.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23111517'/%3E%3Cg fill='none' stroke='%23dcc85e' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
   <title>CLATTER — Kitchen</title>
@@ -41,8 +41,8 @@
 
     <main>
       <section class="intro" aria-labelledby="intro-title">
-        <div class="intro-copy"><div class="eyebrow"><span></span> KITCHEN / IMPACT STATION</div><h1 id="intro-title">Strike. Ring. Repeat.</h1><p>Eight physical voices · sixteen steps · nine resonating bodies</p></div>
-        <div class="intro-art" aria-hidden="true"><canvas id="hero-canvas" width="900" height="330"></canvas></div>
+        <div class="intro-copy"><div class="eyebrow"><span></span> KITCHEN / IMPACT STATION</div><h1 id="intro-title">Give the pans<br><em>a talking-to.</em></h1><p>Eight voices. Sixteen steps.<br class="mobile-break"> Cookware with unexpected sustain.</p></div>
+        <div class="intro-art" aria-hidden="true"><div class="art-top"><span>COOKWARE / RESONANCE ASSEMBLY</span><span class="art-index">SPEC. 02</span></div><canvas id="hero-canvas" width="900" height="330"></canvas><div class="art-bottom"><span class="art-source">STRIKE IN</span><span class="art-rule"></span><span>PAN DEVELOPS OPINION</span><span class="art-rule"></span><span class="art-result">RESONANCE OUT</span></div></div>
       </section>
 
       <section class="transport panel" aria-label="Playback and pattern controls">
@@ -58,11 +58,11 @@
       <section class="sequencer panel" aria-labelledby="sequencer-title">
         <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">THE SEQUENCE</h2><span class="tag">16 STEPS</span></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>New groove</span></button></div></div>
         <div class="sequencer-scroll" tabindex="0" aria-label="Sequencer grid. Scroll horizontally on small screens."><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>SELECT TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">M / S</div></div><div id="track-rows" class="track-rows"></div></div></div>
-        <p class="grid-scroll-hint">Swipe the steps to reach the rest of the bar.</p><div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Tap for a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
+        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Click for a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
       </section>
 
       <section class="instrument panel" aria-labelledby="instrument-title">
-        <div class="section-heading instrument-heading"><div class="heading-label"><span class="section-number">02</span><h2 id="instrument-title">THE IMPACT BENCH</h2><span class="instrument-subtitle">EXCITER → BODY</span></div><div class="voice-actions"><button id="voice-reset" class="text-button" title="Restore this voice to its model defaults"><svg><use href="#i-reset"/></svg><span>Reset voice</span></button><button id="voice-mutate" class="text-button" title="Explore a related sound"><svg><use href="#i-spark"/></svg><span>Mutate</span></button><button id="audition-button" class="button audition"><svg><use href="#i-speaker"/></svg><span>Hear voice</span></button></div></div>
+        <div class="section-heading instrument-heading"><div class="heading-label"><span class="section-number">02</span><h2 id="instrument-title">THE INSTRUMENT</h2><span class="instrument-subtitle">POTS HAVE EXCELLENT PROJECTION</span></div><div class="voice-actions"><button id="voice-reset" class="text-button" title="Restore this voice to its model defaults"><svg><use href="#i-reset"/></svg><span>Reset voice</span></button><button id="voice-mutate" class="text-button" title="Explore a related sound"><svg><use href="#i-spark"/></svg><span>Mutate</span></button><button id="audition-button" class="button audition"><svg><use href="#i-speaker"/></svg><span>Hear voice</span></button></div></div>
         <div class="instrument-layout">
           <aside class="body-panel">
             <div class="voice-identity"><span id="voice-index" class="selected-voice-label">VOICE 01</span><h3 id="voice-name">Membrane kick</h3><p id="voice-description">A flexible resonating surface for deep kicks and bending low percussion.</p></div>
@@ -73,8 +73,6 @@
           </aside>
 
           <div class="voice-design">
-            <div class="impact-primary"><div class="impact-material"><label for="impact-material">STRIKING MATERIAL</label><select id="impact-material" aria-label="Quick striking material"></select><p id="impact-material-hint"></p></div><div id="impact-knobs" class="impact-knobs" aria-label="Quick resonator controls"></div></div>
-            <details class="impact-details"><summary>Detailed sound design <span>Resonator · exciter · motion & mix</span></summary><div class="impact-detail-content">
             <div class="topology" aria-label="Synthesis topology: mallet plus noise excites a vibrating body, then goes to the mix"><span class="topology-node"><span class="topology-dot exciter-dot"></span>Mallet + noise</span><span class="topology-arrow">→</span><span class="topology-node"><span class="topology-dot resonator-dot"></span>Vibrating body</span><span class="topology-arrow">→</span><span class="topology-node">Mix</span></div>
             <div class="editor-tabbar"><div class="editor-tabs" role="tablist" aria-label="Sound design section"><button id="tab-resonance" data-tab="resonance" role="tab" aria-selected="true" aria-controls="knob-grid" class="editor-tab active"><span class="tab-number">01</span>Resonator</button><button id="tab-exciter" data-tab="exciter" role="tab" aria-selected="false" aria-controls="knob-grid" tabindex="-1" class="editor-tab"><span class="tab-number">02</span>Exciter</button><button id="tab-motion" data-tab="motion" role="tab" aria-selected="false" aria-controls="knob-grid" tabindex="-1" class="editor-tab"><span class="tab-number">03</span>Motion + mix</button></div></div>
             <div class="editor-content">
@@ -83,7 +81,6 @@
               <div class="exciter-preview"><div class="preview-heading"><span class="control-label">THE SHAPE OF A STRIKE</span><span class="preview-label">EXCITATION ENVELOPE</span></div><canvas id="exciter-canvas" width="1000" height="250" role="img" aria-label="Material contact, rebound, and noise excitation preview"></canvas><div class="preview-caption"><span><span class="legend-dot mallet-dot"></span> CONTACT</span><span><span class="legend-dot noise-dot"></span> NOISE</span><span class="preview-time">TWO TIME SCALES</span></div></div>
               <p class="editor-note">Choose a striker. The cookware handles the encore.</p>
             </div>
-            </div></details>
           </div>
         </div>
       </section>
@@ -91,7 +88,7 @@
       <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>The dish pit has remarkable acoustics.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">CHECK THE<br>RING TIME.</span></section>
     </main>
 
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.3</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.2</span></span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
