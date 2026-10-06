@@ -57,6 +57,31 @@
       document.dispatchEvent(new CustomEvent('musiclab:state-change',{bubbles:true,detail:{app:id,kind:'pattern'}}));
     }
     function random(seed) {let value=seed>>>0;return()=>{value+=0x6D2B79F5;let x=Math.imul(value^value>>>15,1|value);x^=x+Math.imul(x^x>>>7,61|x);return((x^x>>>14)>>>0)/4294967296;};}
+    // HOTPLATE's exact received part uses the same per-note choice when played
+    // and exported, including repeated loops. Native step probability remains
+    // one decision per parent step in FORM's production sequencing helper.
+    const formOverlayRoll = (packet, cycle, index, count) =>
+      random((packet.seed ?? 0x5a17c0de) ^ cycle ^ (cycle * count + index + 1))();
+    function formOverlayEvents(s, tempo, repetitions = 1, respectMute = true) {
+      if (id !== 'form' || !s.musicLabPattern) throw new Error('HOTPLATE has no received pattern to render.');
+      const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s);
+      validateNotes(packet,map,s);
+      const bpm=tempo??tempoOf(s);
+      if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isInteger(repetitions)||repetitions<1||repetitions>4)
+        throw new Error('Choose a valid received-pattern tempo and one to four repetitions.');
+      const available=voicesFor(s),seconds=60/bpm,events=[];
+      const notes=[...packet.notes].sort((a,b)=>eventBeat(packet,a)-eventBeat(packet,b));
+      for(let cycle=0;cycle<repetitions;cycle++)notes.forEach((note,index)=>{
+        if(formOverlayRoll(packet,cycle,index,notes.length)>=(note.probability??1))return;
+        const voice=available.find(item=>item.id===map[note.voice]);
+        const voiceIndex=available.indexOf(voice);
+        if(respectMute&&(s.muted?.[voiceIndex]||s.solo!==undefined&&s.solo!==null&&s.solo!==voiceIndex))return;
+        events.push({voice:voiceIndex,at:(cycle*packet.lengthBeats+eventBeat(packet,note))*seconds,
+          duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*seconds,
+          velocity:note.velocity,pitch:note.pitch-voice.pitch});
+      });
+      return{events,durationSeconds:packet.lengthBeats*repetitions*seconds,lengthBeats:packet.lengthBeats,name:packet.name,tempo:bpm};
+    }
     function packetFromNative(s,options={}) {
       if(s.musicLabPattern){
         const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
@@ -70,7 +95,25 @@
         s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,4-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
       } else if(id==='form') {
         lengthBeats=s.steps[0].length/4;
-        s.steps.forEach((steps,index)=>{if(s.muted[index]||scope==='voice'&&index!==selected)return;steps.forEach((on,step)=>{if(on){const beat=step/4+(step%2?s.swing/400:0);add(all[index],beat,Math.min(.25,lengthBeats-beat),step%4===0?1:.86,all[index].pitch);}});});
+        const finite=(value,fallback)=>typeof value==='number'&&Number.isFinite(value)?value:fallback;
+        const bound=(value,min,max)=>Math.max(min,Math.min(max,value));
+        const swing=bound(finite(s.swing,0),0,75)/100;
+        s.steps.forEach((steps,index)=>{
+          if(s.muted[index]||s.solo!==undefined&&s.solo!==null&&s.solo!==index||scope==='voice'&&index!==selected)return;
+          steps.forEach((on,step)=>{
+            if(!on)return;
+            const detail=s.stepDetails?.[index]?.[step]||{},velocity=bound(finite(detail.velocity,step%4===0?1:.86),0,1);
+            const probability=bound(finite(detail.probability,1),0,1),ratchet=Math.round(bound(finite(detail.ratchet,1),1,4));
+            const timing=bound(finite(detail.timing,0),-.45,.45),pitch=Math.round(bound(finite(detail.pitch,0),-24,24));
+            const delay=step%2?swing:0,gap=step%2?1-swing:1+swing,next=delay+gap;
+            let onset=Math.min(delay+timing,next-.001);if(step===0)onset=Math.max(0,onset);
+            const spacing=(next-onset)/ratchet;
+            for(let repeat=0;repeat<ratchet;repeat++){
+              const beat=(step+onset+spacing*repeat)/4;
+              add(all[index],beat,Math.min(.25,spacing/4,lengthBeats-beat),velocity,all[index].pitch+pitch,probability);
+            }
+          });
+        });
       } else if(id==='ravel') {
         const steps=s.patterns[s.selectedPattern].steps;
         steps.forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<4)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),4-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
@@ -78,7 +121,7 @@
         lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
         s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
       }
-      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+NAMES[id],sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??0x5a17c0de});
+      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+NAMES[id],sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??(id==='form'?0x48504c54:0x5a17c0de)});
     }
     function prepareEngineWrappers() {
       const audio=engine();if(!audio||audio===wrappedEngine)return;wrappedEngine=audio;
@@ -110,12 +153,13 @@
           const cycle=Math.floor(cursor/Math.max(1,pattern.notes.length)),note=pattern.notes[cursor%Math.max(1,pattern.notes.length)];if(!note)break;
           const when=startTime+cycle*length+eventBeat(pattern,note)*seconds;if(when>current+.13)break;cursor++;
           if(when<current-.03)continue;
-          const rng=random((pattern.seed||0)^cycle^cursor);if(rng()>= (note.probability??1))continue;
+          const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
+          if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
           adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
         }
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%16);
       };
-      pattern.notes.sort((a,b)=>a.beat-b.beat);draw();timer=setInterval(draw,25);
+      pattern.notes.sort((a,b)=>id==='form'?eventBeat(pattern,a)-eventBeat(pattern,b):a.beat-b.beat);draw();timer=setInterval(draw,25);
     }
     const adapter={
       app:id,
@@ -149,7 +193,7 @@
         if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
         const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
         const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
-        const events=packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
         if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
         const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
         if(id==='form'){
@@ -161,6 +205,7 @@
       startPattern,stopPattern,
       transport(clock){if(id==='spool')engine().followTransport(clock);},
     };
+    if(id==='form')adapter.getImportedPatternEvents=(options={})=>formOverlayEvents(clone(unwrap(options.state)||viewState()),options.tempo,options.repetitions??1);
     window.MusicLabPatternInstrument=adapter;
     const ready=()=>{try{prepareEngineWrappers();}catch(_){}};ready();document.addEventListener('musiclab:app-ready',ready);
     return adapter;

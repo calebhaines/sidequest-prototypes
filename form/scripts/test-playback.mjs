@@ -82,7 +82,7 @@ async function exactValue(label, value, commit = true) {
 
 async function audition(buttonName = "Audition sound") {
   const count = await page.evaluate(() => window.__formPlayback.length);
-  await page.getByRole("button", { name: buttonName, exact: true }).click();
+  await page.locator(".hotplate-deep-recipe").getByRole("button", { name: buttonName, exact: true }).click();
   await page.waitForFunction(
     (count) => window.__formPlayback.length > count,
     count,
@@ -130,13 +130,14 @@ try {
       waitUntil: "load",
     });
   }
+  await page.getByRole("button", { name: /^Open recipe/ }).click();
   await page.locator(".layer-lab").waitFor();
   assert.equal(await page.locator(".drum-pad").count(), 8);
   assert.equal(
     await page
       .getByRole("slider", { name: "Layer A level", exact: true })
       .inputValue(),
-    "0.72",
+    "0.91",
   );
   assert.equal(
     await page
@@ -215,6 +216,7 @@ try {
   // masked by the kick body. Compare the whole sound with a layer-only preview.
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: "load" });
+  await page.getByRole("button", { name: /^Open recipe/ }).click();
   await page.locator(".layer-lab").waitFor();
   await page.getByRole("button", { name: /^Edit layer C / }).click();
   assert.equal(

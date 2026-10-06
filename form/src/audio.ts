@@ -15,6 +15,9 @@ import {
   sanitizeArchitecture,
 } from "./modular";
 import { createHybridPresets } from "./hybrid-presets";
+import { createFactoryPresets, FACTORY_KITS } from "./factory-sounds";
+import { eventsForStep, normalizeStepDetail } from "./sequencing";
+export { FACTORY_KITS } from "./factory-sounds";
 export {
   createDefaultArchitecture,
   createLayer,
@@ -118,7 +121,7 @@ function preset(
 }
 
 /** The bank is intentionally made from editable synthesis parameters, not samples. */
-export const PRESETS: Preset[] = [
+export const ARCHIVE_PRESETS: Preset[] = [
   preset("sub-foundation", "Stockpot sub", "Analog", "kick"),
   preset("warehouse", "Walk-in kick", "Analog", "kick", {
     tone: { frequency: 57, pitchAmount: 31, pitchDecay: 30, decay: 255 },
@@ -363,22 +366,21 @@ export const PRESETS: Preset[] = [
     mix: { volume: 0.65, pan: -0.1 },
   }),
   ...createHybridPresets(base),
-];
+].map(recipe => ({ ...recipe, archive: true }));
+
+export const CURRENT_PRESETS: Preset[] = createFactoryPresets(base);
+export const PRESETS: Preset[] = [...CURRENT_PRESETS, ...ARCHIVE_PRESETS];
 
 export const presetBank = PRESETS;
 
 export function buildDefaultKit(): SoundParams[] {
-  const ids = [
-    "furnace-kick",
-    "chrome-snare",
-    "molecular-clap",
-    "magnet-hat",
-    "ceramic-hybrid",
-    "wood-pixel",
-    "glass-droplet",
-    "sand-engine",
-  ];
-  return ids.map((id) => cloneParams(PRESETS.find((p) => p.id === id)!.params));
+  return buildFactoryKit(FACTORY_KITS[0].id);
+}
+
+export function buildFactoryKit(id: string): SoundParams[] {
+  const kit = FACTORY_KITS.find(kit => kit.id === id);
+  if (!kit) throw new Error("Choose a HOTPLATE factory kit.");
+  return kit.presetIds.map(id => cloneParams(CURRENT_PRESETS.find(preset => preset.id === id)!.params));
 }
 
 /** Imported patches are bounded here as well as in the controls. */
@@ -871,35 +873,49 @@ export function renderPattern(
     16,
     ...tracks.map((track) => track.steps.length),
   );
-  const rendered = tracks
-    .filter((track) => !track.muted)
-    .map((track) => ({
+  const rendered = tracks.map((track) => ({
       track,
       samples: renderSound(track.params, sampleRate),
       variations: new Map<number, Float32Array>(),
+      hits: 0,
     }));
+  const sequence = tracks.map(track => Array.from({ length: stepsPerBar }, (_, step) =>
+    !track.muted && !!track.steps[step % Math.max(1, track.steps.length)]));
+  const details = tracks.map(track => Array.from({ length: stepsPerBar }, (_, step) => {
+    const position = step % Math.max(1, track.steps.length);
+    // The public render API historically defaults to unity. Legacy app
+    // callers explicitly supply their 1/.86 accents; new grids save details.
+    return normalizeStepDetail(track.stepDetails?.[position] ?? {
+      velocity: track.velocities?.[position] ?? 1,
+    }, position);
+  }));
   const tail =
     options.tail === false
       ? 0
       : Math.max(
           0,
-          ...rendered.map((track) => track.samples.length / sampleRate),
+          ...rendered.map(({ track, samples }, voice) => {
+            if (track.muted) return 0;
+            const lowestPitch = Math.min(0, ...details[voice].filter((detail, step) =>
+              sequence[voice][step] && detail.velocity > 0 && detail.probability > 0).map(detail => detail.pitch));
+            return samples.length / sampleRate / 2 ** (lowestPitch / 12);
+          }),
         );
   const length = Math.ceil((stepsPerBar * bars * stepTime + tail) * sampleRate);
   const left = new Float32Array(length),
     right = new Float32Array(length);
-  for (const { track, samples, variations } of rendered) {
-    const pan = clamp(finite(track.params.mix.pan, 0), -1, 1);
-    const leftGain = Math.cos(((pan + 1) * Math.PI) / 4);
-    const rightGain = Math.sin(((pan + 1) * Math.PI) / 4);
-    let hit = 0;
-    const randomRoute = hasHitRandom(track.params);
-    for (let step = 0; step < stepsPerBar * bars; step++) {
-      const position = step % Math.max(1, track.steps.length);
-      if (!track.steps[position]) continue;
+  for (let step = 0; step < stepsPerBar * bars; step++) {
+    const position = step % stepsPerBar;
+    const events = eventsForStep(sequence, details, position, Math.floor(step / stepsPerBar), bpm, swing * 100);
+    for (const event of events) {
+      const renderedVoice = rendered[event.voice];
+      const { track, samples, variations } = renderedVoice;
+      const pan = clamp(finite(track.params.mix.pan, 0), -1, 1);
+      const leftGain = Math.cos(((pan + 1) * Math.PI) / 4);
+      const rightGain = Math.sin(((pan + 1) * Math.PI) / 4);
       let hitSamples = samples;
-      if (randomRoute) {
-        const variation = hit++ % RANDOM_VARIATIONS;
+      if (hasHitRandom(track.params)) {
+        const variation = renderedVoice.hits++ % RANDOM_VARIATIONS;
         if (variation > 0) {
           if (!variations.has(variation))
             variations.set(
@@ -909,17 +925,14 @@ export function renderPattern(
           hitSamples = variations.get(variation)!;
         }
       }
-      const velocity = clamp(
-        finite(track.velocities?.[position] ?? 1, 1),
-        0,
-        1,
-      );
-      const offset = Math.round(
-        (step + (step % 2 ? swing : 0)) * stepTime * sampleRate,
-      );
-      for (let i = 0; i < hitSamples.length && offset + i < length; i++) {
-        left[offset + i] += hitSamples[i] * leftGain * velocity;
-        right[offset + i] += hitSamples[i] * rightGain * velocity;
+      const offset = Math.max(0, Math.round((step * stepTime + event.offset) * sampleRate));
+      const rate = 2 ** (event.pitch / 12);
+      const frames = Math.min(length - offset, Math.ceil(hitSamples.length / rate));
+      for (let i = 0; i < frames; i++) {
+        const source = i * rate, at = Math.floor(source), blend = source - at;
+        const sample = (hitSamples[at] ?? 0) * (1 - blend) + (hitSamples[at + 1] ?? 0) * blend;
+        left[offset + i] += sample * leftGain * event.velocity;
+        right[offset + i] += sample * rightGain * event.velocity;
       }
     }
   }
@@ -935,6 +948,59 @@ export function renderPattern(
 }
 
 export type NativePatternEvent = { voice: number; at: number; velocity: number; pitch?: number; duration?: number };
+/** Exact imported note clips use the same sound renderer as native sequencer hits. */
+export function renderExactPatternEvents(
+  sounds: SoundParams[],
+  events: NativePatternEvent[],
+  options: { durationSeconds: number; sampleRate?: number; tailSeconds?: number; master?: number },
+): Float32Array[] {
+  const seconds = options.durationSeconds;
+  const tail = options.tailSeconds ?? 0;
+  const sampleRate = options.sampleRate ?? 48000;
+  const master = options.master ?? .72;
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 600 ||
+      !Number.isFinite(tail) || tail < 0 || tail > 15 ||
+      !Number.isFinite(sampleRate) || !Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000 ||
+      !Number.isFinite(master) || master < 0 || master > 1 ||
+      !Array.isArray(events) || events.length > 8192)
+    throw new Error("Invalid HOTPLATE exact pattern render bounds.");
+  const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
+  const left = new Float32Array(frames), right = new Float32Array(frames);
+  const cache = new Map<string, Float32Array>();
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index], sound = sounds[event.voice];
+    if (!Number.isInteger(event.voice) || !sound || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds ||
+        !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1 ||
+        (event.pitch !== undefined && !Number.isFinite(event.pitch)))
+      throw new Error("Invalid HOTPLATE exact scheduled note.");
+    const variation = hasHitRandom(sound) ? index % RANDOM_VARIATIONS : 0;
+    const key = `${event.voice}:${variation}`;
+    let samples = cache.get(key);
+    if (!samples) {
+      samples = renderSound(hitVariation(sound, variation), sampleRate);
+      cache.set(key, samples);
+    }
+    const rate = 2 ** (clamp(event.pitch ?? 0, -48, 48) / 12);
+    const offset = Math.round(event.at * sampleRate);
+    const pan = clamp(finite(sound.mix.pan, 0), -1, 1);
+    const gain = event.velocity * master;
+    const leftGain = Math.cos((pan + 1) * Math.PI / 4) * gain;
+    const rightGain = Math.sin((pan + 1) * Math.PI / 4) * gain;
+    for (let frame = 0, count = Math.min(frames - offset, Math.ceil(samples.length / rate)); frame < count; frame++) {
+      const position = frame * rate, at = Math.floor(position), blend = position - at;
+      const value = (samples[at] ?? 0) * (1 - blend) + (samples[at + 1] ?? 0) * blend;
+      left[offset + frame] += value * leftGain;
+      right[offset + frame] += value * rightGain;
+    }
+  }
+  let peak = 1;
+  for (let i = 0; i < frames; i++) peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+  if (peak > 1) for (let i = 0; i < frames; i++) {
+    left[i] *= .98 / peak;
+    right[i] *= .98 / peak;
+  }
+  return [left, right];
+}
 /** Arbitrary beat clips use FORM's native synthesis and pan/effect processing. */
 export async function renderNativeEvents(
   sounds: SoundParams[], events: NativePatternEvent[],

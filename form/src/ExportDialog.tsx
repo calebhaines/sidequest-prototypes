@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { encodeWav, renderPattern, renderSound } from "./audio";
 import type { SoundParams } from "./types";
+import type { StepDetail } from "./sequencing";
 import {
   createZip,
   downloadBlob,
@@ -28,6 +29,9 @@ interface ExportDialogProps {
   sounds: SoundParams[];
   selectedIndex: number;
   steps: boolean[][];
+  stepDetails?: StepDetail[][];
+  musicLabPattern?: { pattern: unknown; voiceMap: Record<string, string> };
+  renderPatternAudio?: (sampleRate: number) => Float32Array[];
   bpm: number;
   swing?: number;
   muted: boolean[];
@@ -43,6 +47,9 @@ export default function ExportDialog({
   sounds,
   selectedIndex,
   steps,
+  stepDetails,
+  musicLabPattern,
+  renderPatternAudio,
   bpm,
   swing = 0,
   muted,
@@ -137,7 +144,7 @@ export default function ExportDialog({
         });
         const manifest = {
           application: "HOTPLATE / Kitchen",
-          version: 1,
+          version: 2,
           sampleRate: settings.sampleRate,
           bitDepth: settings.bitDepth,
           channels: 1,
@@ -146,6 +153,8 @@ export default function ExportDialog({
           bpm,
           swing,
           steps,
+          stepDetails,
+          musicLabPattern,
           muted,
           sounds: entries.map(({ filename, samples, sound }) => ({
             filename,
@@ -174,11 +183,12 @@ export default function ExportDialog({
                 settings,
               )
             : prepareStereo(
-                renderPattern(
+                renderPatternAudio ? renderPatternAudio(settings.sampleRate) : renderPattern(
                   sounds.map((params, index) => ({
                     params,
                     steps: steps[index] || [],
                     muted: muted[index],
+                    stepDetails: stepDetails?.[index],
                     velocities: (steps[index] || []).map((_, step) =>
                       step % 4 === 0 ? 1 : 0.86,
                     ),
@@ -209,9 +219,7 @@ export default function ExportDialog({
       onClose();
     } catch (cause) {
       console.error("Audio export failed", cause);
-      setError(
-        "The export could not be created. Try a lower sample rate or export one sound.",
-      );
+      setError(cause instanceof Error && cause.message ? cause.message : "The export could not be created. Try a lower sample rate or export one sound.");
     } finally {
       setBusy(false);
     }
@@ -278,7 +286,7 @@ export default function ExportDialog({
               {
                 value: "pattern" as const,
                 title: "Pattern",
-                description: `${stepCount} steps · ${bpm} BPM`,
+                description: musicLabPattern ? `Shared pattern · ${bpm} BPM` : `${stepCount} steps · ${bpm} BPM`,
                 Icon: AudioLines,
               },
             ].map(({ value, title, description, Icon }) => (
@@ -393,13 +401,13 @@ export default function ExportDialog({
               {settings.sampleRate.toLocaleString()} Hz · {settings.bitDepth}
               -bit
               {mode === "pattern"
-                ? ` · ${activeHits} hits`
+                ? musicLabPattern ? " · exact shared notes" : ` · ${activeHits} active steps`
                 : mode === "sample"
                   ? ` · ${sampleDuration.toFixed(2)} s before trim`
                   : ""}
             </span>
           </div>
-          {mode === "pattern" && activeHits === 0 && (
+          {mode === "pattern" && !musicLabPattern && activeHits === 0 && (
             <p className="export-warning">
               Your pattern has no active hits. Add a few steps to hear something
               in the export.
@@ -425,7 +433,7 @@ export default function ExportDialog({
             className="primary-button"
             onClick={exportAudio}
             disabled={
-              busy || !selected || (mode === "pattern" && activeHits === 0)
+              busy || !selected || (mode === "pattern" && !musicLabPattern && activeHits === 0)
             }
           >
             {busy ? (

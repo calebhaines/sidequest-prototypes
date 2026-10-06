@@ -162,3 +162,22 @@ SCALES; they cannot reproduce its processing or tuner settings. Eleven instrumen
 BATTER's embedded samples, the other ten inserts, shared libraries, eight tracks,
 four slots per track, and both published songs are retained. Review conflicts if
 later releases modify the same files.
+
+## HOTPLATE 3 groovebox overhaul
+
+The prior HOTPLATE and the working GALLEY 1.11/SCALES release are preserved at
+`pre-hotplate-overhaul-2026-10-05`, commit
+`29ba6af6604682e3652317334a03dcaed73cc9f0`. The overhaul release is tagged
+`hotplate-overhaul-v1`. To restore the earlier app and matching downloads:
+
+```sh
+git revert --no-edit hotplate-overhaul-v1
+git push origin main
+```
+
+Save portable projects before reverting. HOTPLATE 2 can open the underlying
+sounds and boolean grid but cannot reproduce HOTPLATE 3 step details. The new
+version keeps FORM's app ID, project format, storage keys, sample exchange, and
+old sounds so existing sessions remain usable. GALLEY embeds the updated app;
+the other instruments, effects, sample libraries, and published songs remain
+unchanged. Review conflicts if later releases touch the same files.

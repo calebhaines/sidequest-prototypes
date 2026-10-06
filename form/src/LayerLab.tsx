@@ -443,8 +443,8 @@ export default function LayerLab({
           <div className="ll-eyebrow">
             <Layers3 size={13} /> THREE-LAYER SYNTHESIS
           </div>
-          <h2>Three burners. Your recipe.</h2>
-          <p>Choose the engines. Set the layers. The third burner has opinions.</p>
+          <h2>Three ingredients. One voice.</h2>
+          <p>Build the body, snap, and air. Each layer can take a different utensil.</p>
         </div>
         <span className="ll-engine-count">
           <span />

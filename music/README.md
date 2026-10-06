@@ -71,7 +71,7 @@ GALLEY 1.11 is an eight-track browser DAW with audio and note arrangement, all e
 
 SIZZLE's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
-HOTPLATE 2.0.3 has maintainable React/TypeScript sources in `form/`, a standalone page in `music/form/index.html`, and a complete editable project in `music/form/FORM-source.zip`. Its three layers combine subtractive, four-operator FM, wavetable, granular, and percussion synthesis. See `music/form/README.md` for update instructions. The Kitchen card opens the app or downloads its offline HTML.
+HOTPLATE 3.0 is an eight-burner electronic drum groovebox with four curated kits, 32 new sounds, twelve authored grooves, fast sound shaping, and detailed step sequencing. Optional deeper recipes retain its five synthesis engines, three layers, modulation, imported grains, and WAV exports. Its maintainable React/TypeScript sources are in `form/`, standalone page in `music/form/index.html`, and complete editable project in `music/form/FORM-source.zip`. See `music/form/README.md` for update instructions. The Kitchen card opens the app or downloads its offline HTML.
 
 CLATTER 1.1.2 has nine resonator bodies, selectable striking materials, contact texture and rebound controls, and eight grooves. Its editable source is in `tine/`. Rebuild it with `python tine/build.py`; its single-file page is copied to the music section by the same sync command. Existing CLATTER projects upgrade automatically with their original excitation preserved.
 

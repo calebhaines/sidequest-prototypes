@@ -154,7 +154,7 @@ for (const name of [
 ])
   sourceFiles.push({ name, data: await readFile(resolve(root, name)) });
 await writeFile(resolve(release, "FORM-source.zip"), makeZip(sourceFiles));
-const startHere = `HOTPLATE 2.0.3 — Kitchen
+const startHere = `HOTPLATE 3.0 — Kitchen
 
 1. Extract this ZIP to a folder.
 2. Open FORM.html in a current Chrome, Edge, Firefox, or Safari browser.
@@ -163,14 +163,17 @@ const startHere = `HOTPLATE 2.0.3 — Kitchen
 No installation, account, or internet connection is needed to use the app.
 Your sounds and imported recordings are processed in your browser.
 
-Sound engines opens the three synthesis layers. Click A, B, or C to edit a
-layer; choose Subtractive, 4-op FM, Wavetable, Granular, or Percussion.
-Connect layers adds FM, ring, or amplitude modulation. Modulation opens
-the two LFOs and eight-route matrix. Export sample downloads WAVs or kits.
+Start with a kit and a groove. Press Play to start the sixteen-step grid.
+Kit recipes change the drums; groove recipes change the rhythm. The fast
+burner controls shape Pitch, Length, Body, Snap, Air, and Heat. Open recipe
+reveals the three synthesis layers, modulation, and deeper sound design.
 
-Use Audition layer A/B/C to hear the engine you are editing on its own.
-The waveform play button plays the complete sound. A quiet layer may be
-masked by other layers; its separate audition leaves your saved mix intact.
+Select Details to edit a hit's velocity, probability, repeats, timing, and
+pitch. Use bank A/B for a two-bar pattern. Stop resets playback, and Restart
+returns to the first step. Export downloads samples, complete kits, or WAVs.
+
+Audition layer A/B/C hears one engine without changing your saved mix.
+Use Undo to restore cleared patterns, recipe changes, and edited steps.
 
 Granular imports use the first two seconds, converted to mono at 22.05 kHz.
 Use Project options > Download project to back up patches and recordings.

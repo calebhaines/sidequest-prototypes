@@ -1,4 +1,22 @@
-# FORM 2.0.3 verification
+# HOTPLATE 3.0 verification
+
+Verified on 6 October 2026. HOTPLATE becomes an eight-burner electronic drum groovebox while retaining FORM’s app identifier, project/import formats, shared audio targets, and native GALLEY facade.
+
+## Production compatibility checks
+
+`scripts/test-overhaul-compat.mjs` passed against the maintained TypeScript DSP and shared pattern adapter. It verifies:
+
+- Exact pre-overhaul PCM hashes for archived percussion, subtractive, FM, wavetable, and granular recipes, preserving saved preset IDs.
+- Legacy boolean grids without optional details, including beat accents, swing, stable voice IDs, mute, and solo.
+- Portable exports of 32-step detail arrays, matching production timing for early/late hits, swung repeat spacing, velocity, and pitch. Portable repeat notes preserve their individual probabilities; the shared format does not represent native parent-step probability grouping.
+- Embedded granular PCM and full optional step details through JSON and sound sanitization, with identical rendered sound.
+- Exact received pattern preservation, explicit native-grid restoration, and note-probability/timestamp parity between standalone received playback and four-loop audio exports. Muting or soloing one voice keeps the stored received notes and other voices’ probability choices.
+- Native GALLEY note scheduling, semitone transposition, independent-source cancellation, actual snapshot-based audio rendering, finite audible stereo output, requested sample rates, and exact tail duration.
+- Invalid mappings, unconfirmed replacement, invalid bounds, and cancellation leave the current project intact.
+
+The production sound/recipe and sequencing checks live in `scripts/test-burners.mjs` and `scripts/test-sequencing.mjs`. The focused browser regression is `scripts/test-overhaul-browser.mjs`; it complements the existing playback and sample-exchange checks with the new workflow, actual audio capture, mobile layout, project restoration, and GALLEY embedding.
+
+## FORM 2.0.3 verification record
 
 Verified on 5 October 2026. The native host and sample-exchange facade preserves the original React instrument and DSP.
 

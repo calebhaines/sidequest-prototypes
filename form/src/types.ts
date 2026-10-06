@@ -145,6 +145,10 @@ export interface Preset {
   category: string;
   type: VoiceType;
   params: SoundParams;
+  /** Previous banks remain addressable for saved favourites and old projects. */
+  archive?: boolean;
+  description?: string;
+  kitId?: string;
 }
 
 export interface PatternTrack {
@@ -152,6 +156,7 @@ export interface PatternTrack {
   steps: boolean[];
   muted?: boolean;
   velocities?: number[];
+  stepDetails?: import("./sequencing").StepDetail[];
 }
 
 export interface PatternRenderOptions {

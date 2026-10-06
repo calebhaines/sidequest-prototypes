@@ -3,7 +3,7 @@
   'use strict';
   const manifest = Object.freeze([
     { id: 'grain', name: 'SIZZLE', description: 'Noise drum machine', facade: 'GrainApp', storageKey: 'grain-drum-machine-v2', color: '#e1c98c' },
-    { id: 'form', name: 'HOTPLATE', description: 'Layered percussion station', facade: 'FormApp', storageKey: 'form-studio-v2', color: '#ee7948' },
+    { id: 'form', name: 'HOTPLATE', description: 'Electronic drum groovebox', facade: 'FormApp', storageKey: 'form-studio-v2', color: '#ee7948' },
     { id: 'tine', name: 'CLATTER', description: 'Physical modeling drum machine', facade: 'TineApp', storageKey: 'tine-drum-machine-v1', color: '#bfc4bd' },
     { id: 'mire', name: 'REDUCE', description: 'Feedback network instrument', facade: 'MireApp', storageKey: 'mire-project-v1', color: '#cfad71' },
     { id: 'spool', name: 'ROTISSERIE', description: 'Four-deck tape instrument', facade: 'SpoolApp', storageKey: 'spool-project-v1', color: '#e2ad65' },

@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles.css";
 import "./dark-theme.css";
 import "./kitchen-theme.css";
+import "./hotplate-3.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
