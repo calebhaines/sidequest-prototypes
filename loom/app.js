@@ -6,10 +6,17 @@
   const icons = {play:'<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M2 1 11 7 2 13Z" fill="currentColor"/></svg>',pause:'<svg viewBox="0 0 12 14" aria-hidden="true"><path d="M2 1h3v12H2zm5 0h3v12H7z" fill="currentColor"/></svg>'};
   const escape = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num = (value, min, max) => Math.max(min, Math.min(max, Number(value) || 0));
+  // Presentation-only updates: leave the audio graph and scheduling untouched.
+  // Avoid replacing text nodes and restyling controls when their value is unchanged.
+  function updateText(element, value) { const text = String(value); if (element.textContent !== text) element.textContent = text; }
+  function updateAttribute(element, name, value) { const text = String(value); if (element.getAttribute(name) !== text) element.setAttribute(name, text); }
+  function updateProperty(element, name, value) { const next = name === 'value' ? String(value) : value; if (element[name] !== next) element[name] = next; }
+  function updateStyle(element, name, value) { if (element.style[name] !== value) element.style[name] = value; }
+  function updateClass(element, name, active) { const enabled = !!active; if (element.classList.contains(name) !== enabled) element.classList.toggle(name, enabled); }
   let recordFinishOperation = 0;
   let state, selectedClip = null, selectedSlot = null, history = [], future = [], lifecycle = 0, transportOperation = 0, recordPending = false, recordFinishing = false, transportPending = false, importOperation = 0, projectOperation = 0, loadOperations = new Map(), exportAbort = null, autosaveTimer, recovery = true;
   let recoveryWarned=false,recoveryUnavailable=false;
-  let assetMap = {}, waveformCache = new Map(), fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
+  let assetMap = {}, waveformFrame = 0, fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
   let automationEditor, pianoRoll, noteWorkflow;
   let audioSettingsBusy = false, audioDeviceBusy = false, ampPracticeBusy = false, audioDeviceOperation = 0, audioSettingsOperation = 0, audioDiagnosticsTime = 0, audioDevices = null;
@@ -124,7 +131,8 @@
   function renderTrackHeaders() { $('trackHeaders').innerHTML = state.tracks.map((t,i)=>`<div class="track-header ${i===state.selectedTrack?'selected':''}" data-track="${i}" style="--track:${escape(t.color)}"><div class="track-name-row"><span class="track-number">${String(i+1).padStart(2,'0')}</span><span class="track-name">${escape(t.name)}</span><button class="track-arm" data-arm="${i}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1} for recording"><i></i></button></div><div class="track-lower-row"><button class="instrument-chip" data-instrument="${i}" title="Choose or open this track's instrument">${escape(t.instrument ? S.instrumentName(t.instrument) : '+ Load')}</button><button class="track-ms ${t.mute?'active':''}" data-mute="${i}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button class="track-ms ${t.solo?'active':''}" data-solo="${i}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><span class="track-fx-dots">${t.effects.map(f=>`<i style="${f?'background:'+effectById(f.type).color:''}"></i>`).join('')}</span></div></div>`).join(''); }
   function timelineWidth() { return Math.max($('timelineScroll').clientWidth, state.lengthBars * 4 * state.view.zoom); }
   function renderArrangement() { renderTrackHeaders(); $('zoom').value = state.view.zoom; $('snap').value = state.view.snap; $('lengthBars').value = state.lengthBars; $('loopStart').value = state.loopStart / 4 + 1; $('loopEnd').value = state.loopEnd / 4 + 1; const width = timelineWidth(); $('timeline').style.width = width + 'px'; $('timeline').style.setProperty('--bar-width', state.view.zoom*4 + 'px'); $('timeline').style.setProperty('--beat-width', state.view.zoom + 'px'); $('ruler').innerHTML = Array.from({length:state.lengthBars},(_,i)=>`<span class="ruler-label" style="left:${i*4*state.view.zoom}px">${String(i+1).padStart(2,'0')}</span>`).join(''); renderMarkers(); $('loopStrip').innerHTML = state.loopEnabled ? `<div class="loop-region" style="left:${state.loopStart*state.view.zoom}px;width:${(state.loopEnd-state.loopStart)*state.view.zoom}px"></div>` : ''; if(state.recording.punchEnabled)$('loopStrip').insertAdjacentHTML('beforeend',`<div class="punch-region" style="left:${state.recording.punchStart*state.view.zoom}px;width:${(state.recording.punchEnd-state.recording.punchStart)*state.view.zoom}px"></div>`); renderLanes(); renderPlayhead(); automationEditor?.render(); }
-  function renderLanes() { $('trackLanes').innerHTML = state.tracks.map((t,i)=>`<div class="track-lane ${i===state.selectedTrack?'selected':''}" data-lane="${i}" style="--track:${escape(t.color)}">${!t.clips.length?'<span class="lane-empty">IMPORT AUDIO OR RECORD A TAKE</span>':''}${t.clips.map(c=>`<div class="clip ${c.id===selectedClip?'selected':''} ${c.type==='notes'?'clip-notes':c.origin?'clip-printed':''}" data-clip="${escape(c.id)}" data-track="${i}" role="button" tabindex="0" aria-label="${escape(c.name)} on track ${i+1}, starts at beat ${c.start+1}, length ${c.length} beats. Arrow keys move; Shift arrows trim." style="left:${c.start*state.view.zoom}px;width:${Math.max(5,c.length*state.view.zoom)}px"><span class="clip-label">${c.type==='notes'?'♪ ':c.origin?'↪ ':''}${escape(c.name)}${c.reverse?' ↶':''}${c.loop?' ⟳':''}</span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i></div>`).join('')}</div>`).join(''); requestAnimationFrame(drawWaveforms); }
+  function renderLanes() { $('trackLanes').innerHTML = state.tracks.map((t,i)=>`<div class="track-lane ${i===state.selectedTrack?'selected':''}" data-lane="${i}" style="--track:${escape(t.color)}">${!t.clips.length?'<span class="lane-empty">IMPORT AUDIO OR RECORD A TAKE</span>':''}${t.clips.map(c=>`<div class="clip ${c.id===selectedClip?'selected':''} ${c.type==='notes'?'clip-notes':c.origin?'clip-printed':''}" data-clip="${escape(c.id)}" data-track="${i}" role="button" tabindex="0" aria-label="${escape(c.name)} on track ${i+1}, starts at beat ${c.start+1}, length ${c.length} beats. Arrow keys move; Shift arrows trim." style="left:${c.start*state.view.zoom}px;width:${Math.max(5,c.length*state.view.zoom)}px"><span class="clip-label">${c.type==='notes'?'♪ ':c.origin?'↪ ':''}${escape(c.name)}${c.reverse?' ↶':''}${c.loop?' ⟳':''}</span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i></div>`).join('')}</div>`).join(''); queueWaveforms(); }
+  function queueWaveforms() { if (waveformFrame) return; waveformFrame = requestAnimationFrame(() => { waveformFrame = 0; drawWaveforms(); }); }
   function drawWaveforms() { for (const el of $('trackLanes').querySelectorAll('.clip')) { const found = state.tracks[Number(el.dataset.track)].clips.find(c=>c.id===el.dataset.clip), pcm = found && assetMap[found.assetId]; if (found?.type === 'notes') { drawNotePreview(el, found); continue; } if (!found || !pcm) continue; const canvas = el.querySelector('canvas'), width = Math.max(1,Math.min(2400,Math.floor(el.clientWidth))), height = 32, dpr = Math.min(2,devicePixelRatio || 1); canvas.width = Math.min(8192,width*dpr); canvas.height = height*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.strokeStyle = state.tracks[Number(el.dataset.track)].color; ctx.lineWidth = 1; const duration = pcm.left.length / pcm.sampleRate, sourceSpan = Math.max(.0001,found.sourceEnd-found.sourceStart), secondsPerBeat = 60/state.tempo; ctx.beginPath(); const step = Math.max(1,Math.ceil(width/1200)); for (let x=0;x<width;x+=step) { let seconds = x/width * found.length * secondsPerBeat * found.rate; seconds += found.sourceOffset || 0; if (!found.loop && seconds >= sourceSpan) continue; seconds = found.loop ? seconds % sourceSpan : seconds; const position = found.reverse ? found.sourceEnd-seconds : found.sourceStart+seconds; const index = Math.max(0,Math.min(pcm.left.length-1,Math.floor(position*pcm.sampleRate))); const samples = Math.max(1,Math.ceil(pcm.sampleRate*found.length*secondsPerBeat*found.rate/width)); let peak = 0; for (let k=0;k<Math.min(96,samples);k++) { const n = Math.min(pcm.left.length-1,index+Math.floor(k*samples/Math.min(96,samples))); peak = Math.max(peak,Math.abs(pcm.left[n]),Math.abs(pcm.right[n])); } const fade = Math.min(1,(x/width*found.length)/Math.max(.0001,found.fadeIn),((1-x/width)*found.length)/Math.max(.0001,found.fadeOut)), amp = Math.min(1,peak*found.gain)*13*fade; ctx.moveTo(x,16-amp); ctx.lineTo(x,16+amp); } ctx.stroke(); } }
   function renderMixer() { $('mixer').innerHTML = state.tracks.map((t,i)=>`<div class="mixer-channel ${i===state.selectedTrack?'selected':''}" data-channel="${i}" style="--track:${escape(t.color)}"><span class="channel-number">${String(i+1).padStart(2,'0')}</span><div class="channel-name">${escape(t.name)}</div><div class="channel-pan"><label for="pan-${i}">PAN</label><input id="pan-${i}" data-mix="pan" data-track="${i}" type="range" min="-1" max="1" step="0.01" value="${t.pan}"><output>${panLabel(t.pan)}</output></div><div class="fader-wrap"><input class="channel-fader" id="level-${i}" data-mix="level" data-track="${i}" type="range" min="0" max="1.5" step="0.01" value="${t.level}" aria-label="Track ${i+1} level"><div class="channel-meter"><i id="meter-${i}"></i></div></div><output class="channel-db">${levelLabel(t.level)}</output><div class="channel-ms"><button data-mute="${i}" class="${t.mute?'active':''}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button data-solo="${i}" class="${t.solo?'active':''}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><button data-arm="${i}" class="${t.armed?'active':''}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1}">R</button></div><div class="channel-slots">${t.effects.map((f,s)=>`<button data-effect-track="${i}" data-effect-slot="${s}" title="Track ${i+1}, effect slot ${s+1}${f?': '+effectById(f.type).name:''}" style="${f?'--effect-color:'+effectById(f.type).color:''}">${f?effectById(f.type).name.slice(0,3):'+'}</button>`).join('')}</div></div>`).join(''); $('masterLevel').value=state.master.level; $('masterLevelValue').textContent=Math.round(state.master.level*100)+'%'; }
   function renderRack() { const t=track(); $('trackName').value=t.name;$('trackColor').value=t.color; $('rackTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0'); $('rack').innerHTML=t.effects.map((f,i)=>{const def=f&&effectById(f.type);return `<button class="rack-slot ${f?'':'empty'} ${selectedSlot===i?'selected':''}" data-slot="${i}" style="${def?'--effect-color:'+def.color:''}"><span class="slot-index">${i+1}</span>${def?`<span class="slot-tiny-art">${effectArt(def,true)}</span><span class="slot-name"><strong>${def.name}</strong><small>${escape(def.description)}</small></span>${f.params.bypass?'<span class="slot-bypass">BYPASSED</span>':'<span class="slot-arrow">↗</span>'}`:'<span class="slot-name">Add an effect</span><span class="slot-arrow">+</span>'}</button>`;}).join(''); $('trackInstrumentName').textContent=t.instrument ? S.instrumentName(t.instrument) : 'No instrument loaded'; $('openInstrumentButton').hidden=!t.instrument; const browseLabel=t.instrument?'Replace instrument':'Choose instrument';if($('browseInstrumentButton').textContent!==browseLabel)$('browseInstrumentButton').textContent=browseLabel; $('instrumentLive').checked=t.instrumentLive; $('instrumentLive').disabled=!t.instrument; }
@@ -213,7 +221,7 @@
   function renderVocalMeters(meters=engine.getMeters()) {
     const slot=track().effects[selectedSlot];if(slot?.type!=='glaze'||$('effectEditor').hidden)return;
     const m=meters.effects?.[state.selectedTrack]?.[selectedSlot],valid=m?.type==='glaze'&&!m.bypass,finite=value=>typeof value==='number'&&Number.isFinite(value);
-    for(const output of $('effectEditor').querySelectorAll('[data-vocal-meter]')){const key=output.dataset.vocalMeter,value=m?.[key];let text='—';if(valid&&finite(value)){if(key==='detectedHz'){if(value>0&&(m.confidence||0)>.35){const midi=69+12*Math.log2(value/440),rounded=Math.round(midi),notes=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];text=notes[((rounded%12)+12)%12]+(Math.floor(rounded/12)-1)+' / '+Math.round(value)+' Hz';}else text='Unvoiced';}else if(key==='pitchLatencyMs')text=value.toFixed(1)+' ms';else if(key==='inputDb'||key==='outputDb')text=value<=-90?'−∞ dB':value.toFixed(1)+' dB';else text=Math.abs(value).toFixed(1)+' dB';}output.textContent=text;}
+    for(const output of $('effectEditor').querySelectorAll('[data-vocal-meter]')){const key=output.dataset.vocalMeter,value=m?.[key];let text='—';if(valid&&finite(value)){if(key==='detectedHz'){if(value>0&&(m.confidence||0)>.35){const midi=69+12*Math.log2(value/440),rounded=Math.round(midi),notes=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];text=notes[((rounded%12)+12)%12]+(Math.floor(rounded/12)-1)+' / '+Math.round(value)+' Hz';}else text='Unvoiced';}else if(key==='pitchLatencyMs')text=value.toFixed(1)+' ms';else if(key==='inputDb'||key==='outputDb')text=value<=-90?'−∞ dB':value.toFixed(1)+' dB';else text=Math.abs(value).toFixed(1)+' dB';}updateText(output,text);}
   }
   function renderUtilityState() {
     const slot = track().effects[selectedSlot], def = slot && effectById(slot.type);
@@ -249,23 +257,24 @@
       const key = output.dataset.utilityMeter, value = m?.[key];
       if (key.startsWith('clip')) {
         const clipped = valid && !!value;
-        output.textContent = !valid ? '—' : clipped ? 'CLIP' : 'CLEAR';
-        output.classList.toggle('clipped', clipped);
-      } else if (!valid || !finite(value)) output.textContent = '—';
-      else if (key === 'correlation') output.textContent = m.outputDb <= -90 ? '— / no output' : (value >= 0 ? '+' : '') + value.toFixed(2);
-      else if (key.startsWith('dc')) output.textContent = (value > 0 ? '+' : '') + (value * 100).toFixed(2) + '%';
-      else if (key === 'crestDb') output.textContent = value.toFixed(1) + ' dB';
-      else output.textContent = db(value);
+        updateText(output,!valid ? '—' : clipped ? 'CLIP' : 'CLEAR');
+        updateClass(output,'clipped', clipped);
+      } else if (!valid || !finite(value)) updateText(output,'—');
+      else if (key === 'correlation') updateText(output,m.outputDb <= -90 ? '— / no output' : (value >= 0 ? '+' : '') + value.toFixed(2));
+      else if (key.startsWith('dc')) updateText(output,(value > 0 ? '+' : '') + (value * 100).toFixed(2) + '%');
+      else if (key === 'crestDb') updateText(output,value.toFixed(1) + ' dB');
+      else updateText(output,db(value));
     }
     for (const side of ['Left', 'Right']) {
       const bar = $('effectEditor').querySelector('[data-utility-level="' + side + '"]'), peak = valid && finite(m['peak' + side + 'Db']) ? m['peak' + side + 'Db'] : -120, hold = valid && finite(m['hold' + side + 'Db']) ? m['hold' + side + 'Db'] : -120;
-      bar.style.setProperty('--utility-level', num((peak + 60) / 66 * 100, 0, 100) + '%');
-      bar.querySelector('b').style.left = num((hold + 60) / 66 * 100, 0, 100) + '%';
-      bar.querySelector('b').hidden = hold <= -100;
-      bar.setAttribute('aria-valuenow', String(num(peak, -60, 6)));
-      bar.setAttribute('aria-valuetext', valid ? db(peak) : 'No reading');
+      const level = num((peak + 60) / 66 * 100, 0, 100) + '%', marker = bar.querySelector('b');
+      if (bar.style.getPropertyValue('--utility-level') !== level) bar.style.setProperty('--utility-level', level);
+      updateStyle(marker, 'left', num((hold + 60) / 66 * 100, 0, 100) + '%');
+      updateProperty(marker, 'hidden', hold <= -100);
+      updateAttribute(bar,'aria-valuenow', String(num(peak, -60, 6)));
+      updateAttribute(bar,'aria-valuetext', valid ? db(peak) : 'No reading');
     }
-    $('utilityCorrelationMarker').style.left = (valid && finite(m.correlation) ? (num(m.correlation, -1, 1) + 1) * 50 : 50) + '%';
+    updateStyle($('utilityCorrelationMarker'),'left',(valid && finite(m.correlation) ? (num(m.correlation, -1, 1) + 1) * 50 : 50) + '%');
     // Calibration values can be automated. The audio thread reports their
     // current normalized values; before audio starts, show the saved settings.
     const reference = valid && finite(m.reference) ? num(m.reference, 430, 450) : p.reference;
@@ -275,23 +284,23 @@
     const midi = hz ? 69 + 12 * Math.log2(hz / reference) : null, note = midi === null ? null : Math.round(midi), strings = effectById('scales').tunings[p.tuning] || [];
     const target = p.target === 'manual' ? targetNote : midi === null ? null : strings.length ? strings.reduce((nearest, string) => Math.abs(string - midi) < Math.abs(nearest - midi) ? string : nearest, strings[0]) : note;
     const targetHz = target === null ? 0 : reference * Math.pow(2, (target - 69) / 12), cents = hz && targetHz ? 1200 * Math.log2(hz / targetHz) : null;
-    for (const button of $('utilityGuideButtons').querySelectorAll('[data-utility-target]')) button.setAttribute('aria-pressed', String(p.target === 'manual' && Number(button.dataset.utilityTarget) === targetNote));
-    $('utilityNote').textContent = note === null ? '—' : utilityNoteName(note).replace(/-?\d+$/, '');
-    $('utilityOctave').textContent = note === null ? '' : String(Math.floor(note / 12) - 1);
-    $('utilityCents').textContent = cents === null ? '—' : (cents > .05 ? '+' : cents < -.05 ? '−' : '') + Math.abs(cents).toFixed(1);
-    $('utilityHz').textContent = hz ? hz.toFixed(2) + ' Hz' : '— Hz';
-    $('utilityTargetHz').textContent = targetHz ? utilityNoteName(target) + ' / ' + targetHz.toFixed(2) + ' Hz' : '— Hz';
+    for (const button of $('utilityGuideButtons').querySelectorAll('[data-utility-target]')) updateAttribute(button, 'aria-pressed', String(p.target === 'manual' && Number(button.dataset.utilityTarget) === targetNote));
+    updateText($('utilityNote'),note === null ? '—' : utilityNoteName(note).replace(/-?\d+$/, ''));
+    updateText($('utilityOctave'),note === null ? '' : String(Math.floor(note / 12) - 1));
+    updateText($('utilityCents'),cents === null ? '—' : (cents > .05 ? '+' : cents < -.05 ? '−' : '') + Math.abs(cents).toFixed(1));
+    updateText($('utilityHz'),hz ? hz.toFixed(2) + ' Hz' : '— Hz');
+    updateText($('utilityTargetHz'),targetHz ? utilityNoteName(target) + ' / ' + targetHz.toFixed(2) + ' Hz' : '— Hz');
     const confidence = hz ? num(m.confidence, 0, 1) : 0;
-    $('utilityConfidence').textContent = hz ? Math.round(confidence * 100) + '%' : '—';
-    $('utilityConfidenceBar').style.width = confidence * 100 + '%';
+    updateText($('utilityConfidence'),hz ? Math.round(confidence * 100) + '%' : '—');
+    updateStyle($('utilityConfidenceBar'),'width',confidence * 100 + '%');
     const tuner = $('utilityTuner'), inTune = cents !== null && Math.abs(cents) <= tolerance;
-    tuner.classList.toggle('in-tune', inTune);
-    tuner.classList.toggle('has-note', !!hz);
-    $('utilityNeedle').setAttribute('transform', 'rotate(' + (cents === null ? 0 : num(cents / 50 * 65, -65, 65)) + ' 160 158)');
+    updateClass(tuner,'in-tune', inTune);
+    updateClass(tuner,'has-note', !!hz);
+    updateAttribute($('utilityNeedle'),'transform', 'rotate(' + (cents === null ? 0 : num(cents / 50 * 65, -65, 65)) + ' 160 158)');
     const statusText = p.bypass ? 'Bypassed. Original audio passes through; analysis is off.' : p.tuner !== 'on' ? 'Tuner is off. Meters and utility processing remain active.' : !valid ? 'Play or monitor input to start analysis.' : !hz ? 'No clear note. Play one string and let it settle.' : inTune ? 'In tune · within ±' + Number(tolerance.toFixed(1)) + ' cents.' : cents < 0 ? 'Flat · raise the pitch' + (Math.abs(cents) > 50 ? ' towards ' + utilityNoteName(target) : '') + '.' : 'Sharp · lower the pitch' + (Math.abs(cents) > 50 ? ' towards ' + utilityNoteName(target) : '') + '.';
     const status = $('utilityTunerStatus');
-    if (status.textContent !== statusText) status.textContent = statusText;
-    tuner.dataset.state = p.bypass ? 'bypassed' : p.tuner !== 'on' ? 'off' : !valid ? 'waiting' : !hz ? 'no-signal' : inTune ? 'in-tune' : cents < 0 ? 'flat' : 'sharp';
+    updateText(status,statusText);
+    updateProperty(tuner.dataset, 'state', p.bypass ? 'bypassed' : p.tuner !== 'on' ? 'off' : !valid ? 'waiting' : !hz ? 'no-signal' : inTune ? 'in-tune' : cents < 0 ? 'flat' : 'sharp');
   }
   function renderAmpState() {
     const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='broiler')return;
@@ -327,10 +336,10 @@
   }
   function renderPlayhead() {
     const beat=engine.getMeters().beat||0;
-    $('playhead').style.left=beat*state.view.zoom+'px';
-    $('playhead').setAttribute('aria-valuenow',String(beat));
-    $('playhead').setAttribute('aria-valuemax',String(state.lengthBars*4));
-    $('playhead').setAttribute('aria-valuetext',positionLabel(beat));
+    updateStyle($('playhead'),'left',beat*state.view.zoom+'px');
+    updateAttribute($('playhead'),'aria-valuenow',String(beat));
+    updateAttribute($('playhead'),'aria-valuemax',String(state.lengthBars*4));
+    updateAttribute($('playhead'),'aria-valuetext',positionLabel(beat));
   }
   function positionParts(beat) {
     const ticks=Math.round(num(beat,0,state.lengthBars*4)*1000);
@@ -556,13 +565,13 @@
   function animate(now) {
     if(now-meterTime>45){
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
-      $('clock').textContent=positionLabel(beat);
-      $('clockMode').textContent=m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE';
+      updateText($('clock'),positionLabel(beat));
+      updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
       renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderUtilityMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
-      $('masterLeft').style.width=Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%';$('masterRight').style.width=Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%';$('masterDb').textContent=level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞';
-      for(let i=0;i<8;i++){const el=$('meter-'+i);if(el)el.style.height=Math.min(100,Math.sqrt(m.tracks?.[i]?.rms||0)*135)+'%';}
+      updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');
+      for(let i=0;i<8;i++){const el=$('meter-'+i);if(el)updateStyle(el,'height',Math.min(100,Math.sqrt(m.tracks?.[i]?.rms||0)*135)+'%');}
       const mode=String(m.playing)+'/'+String(m.recording)+'/'+String(m.ended)+'/'+String(m.recordStage);
       if($('playButton').dataset.transportMode!==mode){$('playButton').dataset.transportMode=mode;renderTransport();}
       if(state.view.follow&&m.playing&&!seekDrag&&!drag&&now>=followUntil){
@@ -585,31 +594,31 @@
   function renderMicrophone(current) {
     const mic=current||engine.getMicrophoneStatus(),r=state.recording,locked=transportLocked(),monitored=state.tracks.find(t=>t.id===mic.trackId),target=(mic.enabled||mic.pending||mic.recording)&&monitored?monitored:track();
     const live=mic.enabled,pending=mic.pending;
-    $('microphoneState').textContent=pending?'CONNECTING':mic.recording?'RECORDING':live?'MONITOR ON':mic.active?'INPUT ON':'OFF';
-    $('microphoneState').classList.toggle('active',live||mic.recording);
-    $('microphoneMonitorButton').textContent=pending&&!recordPending?'Cancel connection':live?'Monitoring off':'Monitor microphone';
-    $('microphoneMonitorButton').setAttribute('aria-pressed',String(live));
-    $('microphoneMonitorButton').disabled=(recordPending||recordFinishing)&&!live;
-    $('microphoneRouteLabel').textContent='TRACK '+String(state.tracks.indexOf(target)+1).padStart(2,'0')+' · '+target.name;
-    $('microphoneRouteButton').hidden=!live||mic.trackId===track().id;
-    $('microphoneRouteButton').textContent='Move monitoring to track '+String(state.selectedTrack+1).padStart(2,'0');
-    $('microphoneRouteButton').disabled=locked||pending;
-    for(const [id,value]of [['microphoneInputGain',r.micInputGainDb],['microphoneCompensation',r.micCompensation],['microphoneOffset',r.micOffsetMs]]){const input=$(id);if(document.activeElement!==input)input.value=value;input.disabled=locked||(id==='microphoneOffset'&&r.micCompensation==='off');}
-    $('microphoneLaterButton').disabled=locked||r.micCompensation==='off'||r.micOffsetMs<=-500;
-    $('microphoneEarlierButton').disabled=locked||r.micCompensation==='off'||r.micOffsetMs>=500;
-    $('recordSource').disabled=locked;
-    $('microphoneCorrectionLabel').textContent=mic.recording?'CORRECTION APPLIED TO THIS TAKE':'CORRECTION FOR NEW TAKES';
-    $('microphoneGainValue').textContent=(r.micInputGainDb>0?'+':'')+r.micInputGainDb.toFixed(1)+' dB';
-    $('microphoneOffsetLabel').textContent=r.micCompensation==='manual'?'OFFSET (MS)':'EXTRA TRIM (MS)';
+    updateText($('microphoneState'),pending?'CONNECTING':mic.recording?'RECORDING':live?'MONITOR ON':mic.active?'INPUT ON':'OFF');
+    updateClass($('microphoneState'),'active',live||mic.recording);
+    updateText($('microphoneMonitorButton'),pending&&!recordPending?'Cancel connection':live?'Monitoring off':'Monitor microphone');
+    updateAttribute($('microphoneMonitorButton'),'aria-pressed',String(live));
+    updateProperty($('microphoneMonitorButton'),'disabled',(recordPending||recordFinishing)&&!live);
+    updateText($('microphoneRouteLabel'),'TRACK '+String(state.tracks.indexOf(target)+1).padStart(2,'0')+' · '+target.name);
+    updateProperty($('microphoneRouteButton'),'hidden',!live||mic.trackId===track().id);
+    updateText($('microphoneRouteButton'),'Move monitoring to track '+String(state.selectedTrack+1).padStart(2,'0'));
+    updateProperty($('microphoneRouteButton'),'disabled',locked||pending);
+    for(const [id,value]of [['microphoneInputGain',r.micInputGainDb],['microphoneCompensation',r.micCompensation],['microphoneOffset',r.micOffsetMs]]){const input=$(id);if(document.activeElement!==input)updateProperty(input,'value',value);updateProperty(input,'disabled',locked||(id==='microphoneOffset'&&r.micCompensation==='off'));}
+    updateProperty($('microphoneLaterButton'),'disabled',locked||r.micCompensation==='off'||r.micOffsetMs<=-500);
+    updateProperty($('microphoneEarlierButton'),'disabled',locked||r.micCompensation==='off'||r.micOffsetMs>=500);
+    updateProperty($('recordSource'),'disabled',locked);
+    updateText($('microphoneCorrectionLabel'),mic.recording?'CORRECTION APPLIED TO THIS TAKE':'CORRECTION FOR NEW TAKES');
+    updateText($('microphoneGainValue'),(r.micInputGainDb>0?'+':'')+r.micInputGainDb.toFixed(1)+' dB');
+    updateText($('microphoneOffsetLabel'),r.micCompensation==='manual'?'OFFSET (MS)':'EXTRA TRIM (MS)');
     const latency=mic.latency||engine.getMicrophoneLatency(),compensation=Number(latency.compensationMs)||0;
-    $('microphoneTimingSummary').textContent=latency.mode==='off'?'Off · timing unchanged':!engine.context&&latency.mode==='auto'?'Auto · estimate after audio starts':(latency.mode==='auto'?(latency.estimateComplete?'Estimated · ':'Partial estimate · '):'Manual · ')+(Math.abs(compensation)<.05?'no shift':Math.abs(compensation).toFixed(1)+' ms '+(compensation>0?'earlier':'later'));
-    $('microphoneLatencyDetails').textContent=!engine.context?'Device timing appears after audio starts.':(latency.reportedInput?(latency.inputMs||0).toFixed(1)+' ms input':'Input delay unreported')+' · '+(latency.reportedOutput?(latency.outputMs||0).toFixed(1)+' ms '+(latency.outputComplete===false?'partial output':'output'):'Output delay unreported')+' · '+(latency.processingMs||0).toFixed(1)+' ms engine block (not added)';
+    updateText($('microphoneTimingSummary'),latency.mode==='off'?'Off · timing unchanged':!engine.context&&latency.mode==='auto'?'Auto · estimate after audio starts':(latency.mode==='auto'?(latency.estimateComplete?'Estimated · ':'Partial estimate · '):'Manual · ')+(Math.abs(compensation)<.05?'no shift':Math.abs(compensation).toFixed(1)+' ms '+(compensation>0?'earlier':'later')));
+    updateText($('microphoneLatencyDetails'),!engine.context?'Device timing appears after audio starts.':(latency.reportedInput?(latency.inputMs||0).toFixed(1)+' ms input':'Input delay unreported')+' · '+(latency.reportedOutput?(latency.outputMs||0).toFixed(1)+' ms '+(latency.outputComplete===false?'partial output':'output'):'Output delay unreported')+' · '+(latency.processingMs||0).toFixed(1)+' ms engine block (not added)');
     const peak=Math.max(0,Number(mic.inputPeak)||0),db=peak>1e-5?Math.max(-90,20*Math.log10(peak)):-90,meter=$('microphoneMeterFill').closest('.mic-input-meter');
-    $('microphoneMeterFill').style.width=Math.min(100,Math.max(0,(db+60)/60*100))+'%';
-    $('microphoneMeterValue').textContent=db<=-90?'−∞ dB':db.toFixed(1)+' dB';meter.setAttribute('aria-valuenow',String(Math.min(0,db)));meter.classList.toggle('clipping',peak>=.98);
+    updateStyle($('microphoneMeterFill'),'width',Math.min(100,Math.max(0,(db+60)/60*100))+'%');
+    updateText($('microphoneMeterValue'),db<=-90?'−∞ dB':db.toFixed(1)+' dB');updateAttribute(meter,'aria-valuenow',String(Math.min(0,db)));updateClass(meter,'clipping',peak>=.98);
     const prefs=engine.getAudioSettings(),device=audioDevices?.inputs.find(input=>input.deviceId===prefs.inputDeviceId);
-    $('microphoneInterfaceSummary').textContent=(mic.interface?.inputLabel||device?.label||(prefs.inputDeviceId==='default'?'System input':'Selected interface'))+' · '+(prefs.inputChannel==='stereo'?'stereo':'input '+prefs.inputChannel+' / mono')+' · '+({live:'Live',balanced:'Balanced',stable:'Stable'}[prefs.latencyProfile])+' latency';
-    $('microphonePracticeButton').disabled=locked||audioDeviceBusy;$('microphoneVocalPracticeButton').disabled=locked||audioDeviceBusy;
+    updateText($('microphoneInterfaceSummary'),(mic.interface?.inputLabel||device?.label||(prefs.inputDeviceId==='default'?'System input':'Selected interface'))+' · '+(prefs.inputChannel==='stereo'?'stereo':'input '+prefs.inputChannel+' / mono')+' · '+({live:'Live',balanced:'Balanced',stable:'Stable'}[prefs.latencyProfile])+' latency');
+    updateProperty($('microphonePracticeButton'),'disabled',locked||audioDeviceBusy);updateProperty($('microphoneVocalPracticeButton'),'disabled',locked||audioDeviceBusy);
   }
 
   const audioFields=['audioInputDevice','audioInputChannel','audioOutputDevice','audioSampleRate','audioLatencyProfile'];

@@ -115,9 +115,9 @@
       if (!this.element.isConnected) return;
       const track = this.track(); if (track && track.id !== this.trackId) { this.render(); return; }
       const beat = clamp(this.getBeat() || 0, 0, this.beats()), m = this.metrics(), line = this.element.querySelector('[data-auto-playhead]');
-      if (line) { const x = m.left + beat*m.ppb; line.setAttribute('x1', x); line.setAttribute('x2', x); }
-      const d = this.definition(), out = this.element.querySelector('[data-auto-live-value]'); if (out && d) out.textContent = this.label(d, window.LoomSchema.automationValue(this.lane(), beat, this.value(d)));
-      const playing = !!this.getPlaying(); this.element.classList.toggle('is-writing', this.write && playing);
+      if (line) { const x = String(m.left + beat*m.ppb); if (line.getAttribute('x1') !== x) line.setAttribute('x1', x); if (line.getAttribute('x2') !== x) line.setAttribute('x2', x); }
+      const d = this.definition(), out = this.element.querySelector('[data-auto-live-value]'); if (out && d) { const value = this.label(d, window.LoomSchema.automationValue(this.lane(), beat, this.value(d))); if (out.textContent !== value) out.textContent = value; }
+      const playing = !!this.getPlaying(), writing = this.write && playing; if (this.element.classList.contains('is-writing') !== writing) this.element.classList.toggle('is-writing', writing);
       if (playing !== this.lastPlaying) { this.lastPlaying = playing; if (!playing) this.captures.clear(); const hint = this.element.querySelector('[data-auto-write-hint]'); if (hint) hint.textContent = this.write ? playing ? 'Writing mixer and effect movements during playback.' : 'Write armed. Press Play, then move a mixer or effect control.' : 'Draw points, or arm Write and move controls during playback.'; }
     }
     click(e) {

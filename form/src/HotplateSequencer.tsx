@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Copy, Dices, Play, RotateCcw, Redo2, SkipBack, Square, Trash2, Undo2, Volume2, VolumeX } from "lucide-react";
 import type { SoundParams } from "./types";
 import { createStepDetails, normalizeStepDetail, normalizeStepDetails, type StepDetail } from "./sequencing";
@@ -20,7 +20,7 @@ export default function HotplateSequencer({ project, selected, solo, playing, cu
   const [pulses, setPulses] = useState(4);
   const [rotation, setRotation] = useState(0);
   const length = project.steps[0].length;
-  const details = normalizeStepDetails(project.steps, project.stepDetails);
+  const details = useMemo(() => normalizeStepDetails(project.steps, project.stepDetails), [project.steps, project.stepDetails]);
   const start = page * 16;
   useEffect(() => { if (project.grooveId && project.grooveId !== "custom") setPage(0); }, [project.grooveId]);
   useEffect(() => { if (start >= length) setPage(0); if (inspector && inspector.step >= length) setInspector(null); }, [length, start, inspector]);

@@ -105,7 +105,7 @@
       const clip = this.clip(), line = this.element.querySelector('[data-piano-playhead]'); if (!clip || !line) return;
       const m = this.metrics(), relative = (this.getBeat() - clip.start) * clip.rate + clip.sourceOffset, within = this.getBeat() >= clip.start && this.getBeat() <= clip.start + clip.length;
       const beat = clip.loop ? ((relative % clip.pattern.lengthBeats) + clip.pattern.lengthBeats) % clip.pattern.lengthBeats : relative;
-      line.style.display = within && beat >= 0 && beat <= clip.pattern.lengthBeats ? '' : 'none'; line.setAttribute('x1', m.left + beat * m.ppb); line.setAttribute('x2', m.left + beat * m.ppb);
+      const display = within && beat >= 0 && beat <= clip.pattern.lengthBeats ? '' : 'none', x = String(m.left + beat * m.ppb); if (line.style.display !== display) line.style.display = display; if (line.getAttribute('x1') !== x) line.setAttribute('x1', x); if (line.getAttribute('x2') !== x) line.setAttribute('x2', x);
     }
     point(event) {
       const svg = this.element.querySelector('.piano-canvas'), rect = svg.getBoundingClientRect(), m = this.metrics(), x = event.clientX - rect.left, y = event.clientY - rect.top;

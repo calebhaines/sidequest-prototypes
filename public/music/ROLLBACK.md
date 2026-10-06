@@ -279,3 +279,26 @@ git push origin main
 This restores the previous GALLEY sources, standalone HTML, and source archive
 together. Recordings already printed into a project retain their existing timing
 in either version. Review conflicts if later releases touch the same files.
+
+## Kitchen performance audit
+
+The checkpoint `pre-kitchen-performance-2026-10-06` preserves commit
+`e7c2b8f499e81e6c949efae5454977f3911b57a8`, including the corrected GALLEY
+recording compensation. The performance release is tagged `kitchen-performance-v1`.
+
+This release optimizes interface rendering across all thirteen instruments and
+GALLEY. Synthesis, effects, samples, presets, audio timing, buffers, polyphony, and
+project formats retain their previous implementation. The audit and verification
+method are documented in [PERFORMANCE.md](./PERFORMANCE.md).
+
+To restore the previous interfaces and their matching standalone downloads from
+a clean checkout, preserving repository history:
+
+```sh
+git revert --no-edit kitchen-performance-v1
+git push origin main
+```
+
+The revert restores source, generated HTML, downloadable archives, and published
+copies together. Saved projects and existing recorded audio remain compatible.
+Review conflicts if later releases touch the same files.

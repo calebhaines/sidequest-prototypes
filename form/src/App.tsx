@@ -956,7 +956,7 @@ export default function App() {
     [allPresets],
   );
   const currentPreset = presetSignatures.get(soundSignature);
-  const currentFavoriteId = currentPreset?.id || customId(sound);
+  const currentFavoriteId = useMemo(() => currentPreset?.id || customId(sound), [currentPreset, sound]);
   const favoriteCurrent = () => {
     if (
       !currentPreset &&
@@ -1042,7 +1042,7 @@ export default function App() {
     if (importRef.current) importRef.current.value = "";
   };
   const kitSignatures = useMemo(() => new Map(FACTORY_KITS.map(kit => [JSON.stringify(buildFactoryKit(kit.id).map(migrateSound)), kit.id])), []);
-  const kitId = kitSignatures.get(JSON.stringify(project.sounds)) ?? "custom";
+  const kitId = useMemo(() => kitSignatures.get(JSON.stringify(project.sounds)) ?? "custom", [kitSignatures, project.sounds]);
   const activeGroove = FACTORY_GROOVES.find(groove => groove.id === project.grooveId);
   const loadGroove = (id: string) => {
     const groove = FACTORY_GROOVES.find(item => item.id === id); if (!groove) return;

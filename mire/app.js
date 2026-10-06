@@ -277,31 +277,40 @@
 
   /* The station diagram is a live view of routes and actual node energy. */
   const canvas = $('garden-canvas'), ctx = canvas.getContext('2d');
-  let cw = 600, ch = 350, gardenPoints = [], lastMeters = { nodes: [0, 0, 0, 0], peak: 0, rms: 0 }, lastMeterTime = 0;
+  let cw = 600, ch = 350, gardenPoints = [], gardenRoutes = [], lastMeters = { nodes: [0, 0, 0, 0], peak: 0, rms: 0 }, lastMeterTime = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function resizeCanvas() { const rect = canvas.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cw = rect.width; ch = rect.height; canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); gardenPoints = [{ x: cw * .26, y: ch * .29 }, { x: cw * .74, y: ch * .29 }, { x: cw * .28, y: ch * .74 }, { x: cw * .72, y: ch * .74 }]; }
+  function resizeCanvas() { const rect = canvas.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cw = rect.width; ch = rect.height; canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); gardenPoints = [{ x: cw * .26, y: ch * .29 }, { x: cw * .74, y: ch * .29 }, { x: cw * .28, y: ch * .74 }, { x: cw * .72, y: ch * .74 }]; cacheGardenRoutes(); }
   if (window.ResizeObserver) new ResizeObserver(resizeCanvas).observe(canvas); else window.addEventListener('resize', resizeCanvas);
   canvas.addEventListener('click', e => { const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top; let closest = -1, distance = 60; gardenPoints.forEach((p, i) => { const d = Math.hypot(x - p.x, y - p.y); if (d < distance) { closest = i; distance = d; } }); if (closest >= 0) { selectedNode = closest; renderNodeButtons(); renderNodeEditor(); } });
   function bezierPoint(a, b, c, d, t) { const u = 1 - t; return { x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x, y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y }; }
+  // Route geometry depends only on the canvas size; live energy and routing levels still draw every frame.
+  function cacheGardenRoutes() {
+    gardenRoutes = gardenPoints.map((a, i) => gardenPoints.map((d, j) => {
+      let b, c;
+      if (i === j) { const dx = i % 2 ? 1 : -1, dy = i < 2 ? -1 : 1; b = { x: a.x + dx * 71, y: a.y + dy * 64 }; c = { x: a.x - dx * 35, y: a.y + dy * 77 }; }
+      else { const dx = d.x - a.x, dy = d.y - a.y, bend = (i < j ? 1 : -1) * Math.min(cw, ch) * .13; b = { x: a.x + dx * .26 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .26 + dx / (Math.hypot(dx, dy) || 1) * bend }; c = { x: a.x + dx * .72 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .72 + dx / (Math.hypot(dx, dy) || 1) * bend }; }
+      const tip = bezierPoint(a, b, c, d, .72), ahead = bezierPoint(a, b, c, d, .75), angle = Math.atan2(ahead.y - tip.y, ahead.x - tip.x);
+      return { b, c, arrow: [tip.x + Math.cos(angle) * 5, tip.y + Math.sin(angle) * 5, tip.x + Math.cos(angle + 2.45) * 4, tip.y + Math.sin(angle + 2.45) * 4, tip.x + Math.cos(angle - 2.45) * 4, tip.y + Math.sin(angle - 2.45) * 4] };
+    }));
+  }
+  function displayText(id,value) { const element = $(id); if (element.textContent !== value) element.textContent = value; }
   function drawGarden(now) {
     if (!cw || !ch) { requestAnimationFrame(drawGarden); return; }
     if (now - lastMeterTime > 70) {
       try { lastMeters = engine.getMeters() || lastMeters; } catch (_) {} lastMeterTime = now;
-      const rms = Math.max(0, lastMeters.rms || 0), peak = Math.max(0, lastMeters.peak || 0); $('master-meter').style.width = pct(clamp(Math.sqrt(rms) * 1.6)); $('master-meter').style.background = lastMeters.clipped ? '#ef7357' : '#ff8d45'; $('meter-value').textContent = rms > .0001 ? Math.max(-80, 20 * Math.log10(rms)).toFixed(1) + ' dB' : '−∞ dB'; $('network-status-dot').classList.toggle('active', peak > .0001 || engine.isPlaying || state.garden.freeze);
-      const routes = state.routing.reduce((n, row) => n + row.filter(v => v > .005).length, 0); $('route-summary').textContent = routes + ' OPEN PATHS';
-      if (recordStarted) { const seconds = Math.floor((Date.now() - recordStarted) / 1000); $('record-time').textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); }
+      const rms = Math.max(0, lastMeters.rms || 0), peak = Math.max(0, lastMeters.peak || 0); $('master-meter').style.width = pct(clamp(Math.sqrt(rms) * 1.6)); $('master-meter').style.background = lastMeters.clipped ? '#ef7357' : '#ff8d45'; displayText('meter-value',rms > .0001 ? Math.max(-80, 20 * Math.log10(rms)).toFixed(1) + ' dB' : '−∞ dB'); $('network-status-dot').classList.toggle('active', peak > .0001 || engine.isPlaying || state.garden.freeze);
+      let routes = 0; for (const row of state.routing) for (const value of row) if (value > .005) routes++; displayText('route-summary',routes + ' OPEN PATHS');
+      if (recordStarted) { const seconds = Math.floor((Date.now() - recordStarted) / 1000); displayText('record-time',String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')); }
     }
     ctx.clearRect(0, 0, cw, ch); const time = reducedMotion ? 0 : now / 1000;
     for (let x = 18; x < cw; x += 22) for (let y = 13; y < ch; y += 22) { ctx.fillStyle = 'rgba(163,177,183,.10)'; ctx.fillRect(x, y, 1, 1); }
     ctx.strokeStyle = '#a2abaf10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cw / 2, ch * .515, cw * .39, ch * .39, -.1, 0, Math.PI * 2); ctx.stroke();
     gardenPoints.forEach((a, i) => gardenPoints.forEach((d, j) => {
       const amount = state.routing[i][j]; if (amount < .005) return;
-      const activity = clamp((lastMeters.nodes?.[i] || 0) * 3 + (now - sourceFlashes[i] < 450 ? .25 : 0)); let b, c;
-      if (i === j) { const dx = i % 2 ? 1 : -1, dy = i < 2 ? -1 : 1; b = { x: a.x + dx * 71, y: a.y + dy * 64 }; c = { x: a.x - dx * 35, y: a.y + dy * 77 }; }
-      else { const dx = d.x - a.x, dy = d.y - a.y, bend = (i < j ? 1 : -1) * Math.min(cw, ch) * .13; b = { x: a.x + dx * .26 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .26 + dx / (Math.hypot(dx, dy) || 1) * bend }; c = { x: a.x + dx * .72 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .72 + dx / (Math.hypot(dx, dy) || 1) * bend }; }
+      const activity = clamp((lastMeters.nodes?.[i] || 0) * 3 + (now - sourceFlashes[i] < 450 ? .25 : 0)), { b, c, arrow } = gardenRoutes[i][j];
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.bezierCurveTo(b.x, b.y, c.x, c.y, d.x, d.y); ctx.strokeStyle = colors[i]; ctx.globalAlpha = .10 + amount * .19 + activity * .23; ctx.lineWidth = .8 + amount * 1.2; ctx.stroke();
       if (activity > .005 || engine.isPlaying || state.garden.freeze) for (let k = 0; k < 3; k++) { const progress = (time * (.12 + amount * .08) + k / 3 + i * .11 + j * .17) % 1, point = bezierPoint(a, b, c, d, progress); ctx.globalAlpha = .35 + activity * .6; ctx.shadowColor = colors[i]; ctx.shadowBlur = 9; ctx.fillStyle = colors[i]; ctx.beginPath(); ctx.arc(point.x, point.y, 1 + amount, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
-      const tip=bezierPoint(a,b,c,d,.72), ahead=bezierPoint(a,b,c,d,.75),angle=Math.atan2(ahead.y-tip.y,ahead.x-tip.x);ctx.globalAlpha=.48+amount*.32;ctx.fillStyle=colors[i];ctx.beginPath();ctx.moveTo(tip.x+Math.cos(angle)*5,tip.y+Math.sin(angle)*5);ctx.lineTo(tip.x+Math.cos(angle+2.45)*4,tip.y+Math.sin(angle+2.45)*4);ctx.lineTo(tip.x+Math.cos(angle-2.45)*4,tip.y+Math.sin(angle-2.45)*4);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=.48+amount*.32;ctx.fillStyle=colors[i];ctx.beginPath();ctx.moveTo(arrow[0],arrow[1]);ctx.lineTo(arrow[2],arrow[3]);ctx.lineTo(arrow[4],arrow[5]);ctx.closePath();ctx.fill();
       ctx.globalAlpha = 1;
     }));
     gardenPoints.forEach((p, i) => {

@@ -131,3 +131,17 @@ The check uses Playwright and Chromium; set `PLAYWRIGHT_MODULE` and `CHROMIUM_PA
 Audio checks compare actual renders against the previous release. Deterministic renderers must match exactly. Native Web Audio comparisons allow only the small numerical variation measured by repeatedly rendering the untouched previous app; projects, parameter values and synthesis source still match exactly.
 
 CLATTER’s interface was restored to its pre-refresh layout at the user’s request. Its complete sound-design workspace is visible again, with the original control organization and no additional quick-control row or disclosure. GALLEY and the standalone download include this restoration; the remaining refreshed instruments are unchanged.
+
+## Performance audit
+
+All thirteen instruments and GALLEY received presentation-only performance
+optimizations on 6 October 2026. Waveforms, canvas bitmaps, derived controls, and
+unchanged meter/step updates now reuse their original results. The sound engines,
+samples, presets, sequencing, audio settings, and project formats retain their
+previous implementation. The checkpoint includes the latest GALLEY microphone
+alignment fix.
+
+See [PERFORMANCE.md](./PERFORMANCE.md) for the per-app audit, measured workloads,
+sound-preservation checks, deliberately retained costs, and reproducible tests.
+The full previous site is preserved by `pre-kitchen-performance-2026-10-06`;
+[ROLLBACK.md](./ROLLBACK.md) explains how to revert `kitchen-performance-v1`.

@@ -26,6 +26,8 @@
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
   let bank = 0, selected = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let history = [], toastTimer, saveTimer, exporting = false;
+  // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
+  let playheadColumns = Array.from({ length: 16 }, () => []);
   const storageKey = 'grain-drum-machine-v2';
   const icon = (name) => '<svg aria-hidden="true"><use href="#i-' + name + '"/></svg>';
   const pretty = (str) => str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -112,6 +114,7 @@
       });
       if (generation !== playGeneration || !engine.running) return;
       playing = true;
+      startHeroAnimation();
       syncEffects(); audioReady();
       $('play-button').innerHTML = icon('pause') + '<span>Pause</span>';
       $('play-button').setAttribute('aria-label', 'Pause sequencer');
@@ -124,6 +127,7 @@
   function stop() {
     playGeneration++; busy = false;
     playing = false; engine.stop(); setPlayhead(-1);
+    stopHeroAnimation();
     $('play-button').innerHTML = icon('play') + '<span>Play</span>';
     $('play-button').setAttribute('aria-label', 'Play sequencer');
     $('play-button').classList.remove('playing');
@@ -132,8 +136,8 @@
     $('beat-position').textContent = '1 . 1 . 1';
   }
   function setPlayhead(step) {
-    document.querySelectorAll('.current').forEach((el) => el.classList.remove('current'));
-    if (step >= 0) document.querySelectorAll('[data-step="' + step + '"]').forEach((el) => el.classList.add('current'));
+    if (currentStep >= 0) playheadColumns[currentStep].forEach((el) => el.classList.remove('current'));
+    if (step >= 0) playheadColumns[step].forEach((el) => el.classList.add('current'));
     currentStep = step;
   }
 
@@ -210,6 +214,8 @@
       });
       row.append(mix); container.append(row);
     });
+    playheadColumns = Array.from({ length: 16 }, () => []);
+    document.querySelectorAll('[data-step]').forEach((el) => playheadColumns[Number(el.dataset.step)].push(el));
     if (focused) { const replacement = container.querySelector('[data-focus-key="' + focused + '"]'); if (replacement) replacement.focus({ preventScroll: true }); }
   }
   function updateStep(button, row, step) {
@@ -226,9 +232,10 @@
     const control = document.createElement('div'); control.className = 'knob-control';
     const knob = document.createElement('div'); knob.className = 'knob'; knob.setAttribute('role', 'slider'); knob.tabIndex = 0; knob.setAttribute('aria-label', label); knob.setAttribute('aria-valuemin', '0'); knob.setAttribute('aria-valuemax', '100'); knob.dataset.param = param;
     knob.innerHTML = '<svg viewBox="0 0 56 56" aria-hidden="true"><circle class="knob-track" cx="28" cy="28" r="23"/><circle class="knob-progress" cx="28" cy="28" r="23"/></svg><span class="knob-disc"></span>';
+    const progress = knob.querySelector('.knob-progress');
     const name = document.createElement('span'); name.className = 'knob-label'; name.textContent = label;
     const number = document.createElement('span'); number.className = 'knob-value';
-    const draw = (val) => { value = val; knob.style.setProperty('--rotation', (-135 + val * 270) + 'deg'); knob.querySelector('.knob-progress').style.strokeDasharray = (val * 108.4) + ' 144.5'; number.textContent = formatter(val); knob.setAttribute('aria-valuenow', Math.round(val * 100)); knob.setAttribute('aria-valuetext', formatter(val)); };
+    const draw = (val) => { value = val; knob.style.setProperty('--rotation', (-135 + val * 270) + 'deg'); progress.style.strokeDasharray = (val * 108.4) + ' 144.5'; number.textContent = formatter(val); knob.setAttribute('aria-valuenow', Math.round(val * 100)); knob.setAttribute('aria-valuetext', formatter(val)); };
     draw(value);
     let startY = 0, startX = 0, startValue = value, dragging = false;
     knob.addEventListener('pointerdown', (event) => {
@@ -365,7 +372,7 @@
   }
 
   // The displays are drawn locally so the entire instrument travels in one file.
-  let heroTime = 0, lastFrame = 0;
+  let heroTime = 0, lastFrame = 0, heroFrame = null;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function drawHero(time) {
     const canvas = $('hero-wave'), ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
@@ -406,8 +413,18 @@
     ctx.stroke();
   }
   function animate(timestamp) {
+    heroFrame = null;
+    if (!playing || reducedMotion || document.hidden) return;
     if (playing && !reducedMotion && timestamp - lastFrame > 60) { heroTime += .065; drawHero(heroTime); lastFrame = timestamp; }
-    requestAnimationFrame(animate);
+    heroFrame = requestAnimationFrame(animate);
+  }
+  function startHeroAnimation() {
+    // This loop animates decoration only. Parameter diagrams still draw immediately.
+    if (heroFrame === null && playing && !reducedMotion && !document.hidden) heroFrame = requestAnimationFrame(animate);
+  }
+  function stopHeroAnimation() {
+    if (heroFrame !== null) cancelAnimationFrame(heroFrame);
+    heroFrame = null;
   }
 
   window.NOISE_PRESETS.forEach((preset, i) => { const option = document.createElement('option'); option.value = i; option.textContent = preset.name; $('preset-select').append(option); });
@@ -494,8 +511,9 @@
   });
   window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
-  renderAll(); drawHero(0); requestAnimationFrame(animate);
+  renderAll(); drawHero(0);
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;

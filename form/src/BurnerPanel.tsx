@@ -1,4 +1,5 @@
 import { ArrowDownToLine, ChevronDown, Dices, Library, Play } from "lucide-react";
+import { useMemo } from "react";
 import type { SoundParams } from "./types";
 import { getBurnerControls, setBurnerControl } from "./burner-controls";
 import { Knob } from "./Visuals";
@@ -17,7 +18,7 @@ export default function BurnerPanel({ sound, index, typeLabel, accent, onChange,
   onChange: (sound: SoundParams) => void; onAudition: () => void; onLibrary: () => void;
   onVariation: () => void; onExport: () => void; deepOpen: boolean; onToggleDeep: () => void;
 }) {
-  const values = getBurnerControls(sound);
+  const values = useMemo(() => getBurnerControls(sound), [sound]);
   return <section className="burner-panel hotplate-sound-panel panel" style={{ "--voice-accent": accent } as React.CSSProperties} aria-label="Selected burner sound controls">
     <div className="burner-heading">
       <div><span className="eyebrow">BURNER {String(index + 1).padStart(2, "0")} / {typeLabel.toUpperCase()}</span>

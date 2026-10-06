@@ -278,8 +278,14 @@
   function sizeCanvas(canvas) { const dpr = window.devicePixelRatio || 1, width = Math.max(1, Math.round(canvas.clientWidth * dpr)), height = Math.max(1, Math.round(canvas.clientHeight * dpr)); if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; } }
   function resizeCanvases() { document.querySelectorAll('.deck-waveform canvas').forEach(sizeCanvas); }
   window.addEventListener('resize', resizeCanvases);
+  // Repaint only when the exact visual inputs change. Reel animation remains independent.
+  const waveformPaints = new WeakMap();
   function drawWaveform(canvas, index, position = 0) {
-    const c = canvas.getContext('2d'), w = canvas.width, h = canvas.height, d = state.decks[index], peaks = waveforms[index]; c.clearRect(0, 0, w, h);
+    const w = canvas.width, h = canvas.height, d = state.decks[index], peaks = waveforms[index], hasAsset = !!state.assets[index], selected = selectedDeck === index, playing = !!engine.isPlaying, cursor = playing ? clamp(position) : 0;
+    const previous = waveformPaints.get(canvas);
+    if (previous && previous.index === index && previous.width === w && previous.height === h && previous.peaks === peaks && previous.hasAsset === hasAsset && previous.start === d.start && previous.end === d.end && previous.selected === selected && previous.playing === playing && previous.cursor === cursor) return;
+    waveformPaints.set(canvas, { index, width: w, height: h, peaks, hasAsset, start: d.start, end: d.end, selected, playing, cursor });
+    const c = canvas.getContext('2d'); c.clearRect(0, 0, w, h);
     c.strokeStyle = '#313435'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
     for (let i = 0; i < 9; i++) { c.beginPath(); c.strokeStyle = '#262829'; c.moveTo(i * w / 8, 0); c.lineTo(i * w / 8, h); c.stroke(); }
     if (!state.assets[index]) return;

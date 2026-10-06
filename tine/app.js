@@ -18,6 +18,8 @@
   let bank = 0, selected = 0, tab = 'resonance';
   let playing = false, loading = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let exporting = false, history = [], saveTimer, toastTimer;
+  // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
+  let playheadColumns = Array.from({ length: 16 }, () => []);
   function emptyBank() { return Array.from({ length: 8 }, () => Array(16).fill(0)); }
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
@@ -92,17 +94,18 @@
         $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step / 4) + 1) + ' . ' + (step % 4 + 1);
       });
       if (generation !== playGeneration || !engine.running) return;
-      playing = true; syncEffects(); audioReady(); playButton(true);
+      playing = true; startHeroAnimation(); syncEffects(); audioReady(); playButton(true);
     } catch (error) { if (generation === playGeneration) { stop(); toast(error.message || 'Your browser could not start audio.'); } }
     finally { if (generation === playGeneration) { loading = false; $('play-button').removeAttribute('aria-busy'); } }
   }
   function stop() {
     ++playGeneration; loading = false; playing = false; engine.stop(); setPlayhead(-1); playButton(false);
+    stopHeroAnimation();
     $('play-button').removeAttribute('aria-busy'); $('beat-position').textContent = '1 . 1 . 1';
   }
   function setPlayhead(step) {
-    document.querySelectorAll('.current').forEach((item) => item.classList.remove('current'));
-    if (step >= 0) document.querySelectorAll('[data-step="' + step + '"]').forEach((item) => item.classList.add('current'));
+    if (currentStep >= 0) playheadColumns[currentStep].forEach((item) => item.classList.remove('current'));
+    if (step >= 0) playheadColumns[step].forEach((item) => item.classList.add('current'));
     currentStep = step;
   }
   function updateStep(button, row, step) {
@@ -166,7 +169,10 @@
         button.setAttribute('aria-label', (key === 'mute' ? 'Mute ' : 'Solo ') + track.name); button.setAttribute('aria-pressed', track[key]);
         button.addEventListener('click', () => { remember(); track[key] = !track[key]; renderRows(); persist(); }); actions.append(button);
       }); row.append(actions); container.append(row);
-    }); restoreFocus(focus);
+    });
+    playheadColumns = Array.from({ length: 16 }, () => []);
+    document.querySelectorAll('[data-step]').forEach((item) => playheadColumns[Number(item.dataset.step)].push(item));
+    restoreFocus(focus);
   }
   function renderBanks() { document.querySelectorAll('[data-bank]').forEach((button) => { const active = Number(button.dataset.bank) === bank; button.classList.toggle('active', active); button.setAttribute('aria-pressed', active); }); }
   function normalized(descriptor, value) {
@@ -182,13 +188,14 @@
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 56 56'); svg.setAttribute('aria-hidden', 'true');
     ['knob-track', 'knob-progress'].forEach((className) => { const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); circle.setAttribute('class', className); circle.setAttribute('cx', '28'); circle.setAttribute('cy', '28'); circle.setAttribute('r', '23'); svg.append(circle); });
     const disk = document.createElement('span'); disk.className = 'knob-dial'; control.append(svg, disk);
+    const progress = control.querySelector('.knob-progress');
     const title = document.createElement('span'); title.className = 'knob-label'; title.textContent = label;
     const output = document.createElement('span'); output.className = 'knob-value';
     let value = initial, dragging = false, originY = 0, originX = 0, originValue = 0;
     const format = (number) => descriptor.format ? descriptor.format(number) : model.format(descriptor, number);
     const draw = (number) => {
       value = clamp(number, descriptor.min, descriptor.max); const position = normalized(descriptor, value);
-      control.style.setProperty('--rotation', (-135 + position * 270) + 'deg'); control.querySelector('.knob-progress').style.strokeDasharray = (position * 108.4) + ' 144.5';
+      control.style.setProperty('--rotation', (-135 + position * 270) + 'deg'); progress.style.strokeDasharray = (position * 108.4) + ' 144.5';
       output.textContent = format(value); control.setAttribute('aria-valuenow', Number(value.toFixed(6))); control.setAttribute('aria-valuetext', format(value));
     };
     const update = (position) => { const next = physical(descriptor, clamp(position, 0, 1)); draw(next); change(value); persist(); };
@@ -390,7 +397,7 @@
       $('exciter-canvas').setAttribute('aria-label', (exciter.material.label || track.strikeMaterial) + ' contact envelope, ' + contacts.length + ' impact' + (contacts.length === 1 ? '' : 's') + ', and ' + track.noiseColor + ' noise envelope. Contact scale ' + milliseconds(contactDuration) + '; noise scale ' + milliseconds(noiseDuration) + '.');
     }
   }
-  let heroTime = 0, lastFrame = 0;
+  let heroTime = 0, lastFrame = 0, heroFrame = null;
   function drawHero(time = 0) {
     const graph = canvasContext('hero-canvas'); if (!graph) return; const { ctx, width: w, height: h } = graph;
     const center = w * .5, middle = h * .5, wide = w > 210;
@@ -425,7 +432,20 @@
       ctx.fillText('CONTACT', w * .13, h * .91); ctx.fillText('RESONANCE', w * .86, h * .91); ctx.textAlign = 'left';
     }
   }
-  function animate(timestamp) { if (playing && !reducedMotion && timestamp - lastFrame > 65) { heroTime += .075; drawHero(heroTime); lastFrame = timestamp; } requestAnimationFrame(animate); }
+  function animate(timestamp) {
+    heroFrame = null;
+    if (!playing || reducedMotion || document.hidden) return;
+    if (timestamp - lastFrame > 65) { heroTime += .075; drawHero(heroTime); lastFrame = timestamp; }
+    heroFrame = requestAnimationFrame(animate);
+  }
+  function startHeroAnimation() {
+    // This loop animates decoration only. Parameter diagrams still draw immediately.
+    if (heroFrame === null && playing && !reducedMotion && !document.hidden) heroFrame = requestAnimationFrame(animate);
+  }
+  function stopHeroAnimation() {
+    if (heroFrame !== null) cancelAnimationFrame(heroFrame);
+    heroFrame = null;
+  }
 
   presets.forEach((preset, index) => { const option = document.createElement('option'); option.value = index; option.textContent = preset.name; $('preset-select').append(option); });
   const custom = document.createElement('option'); custom.value = 'custom'; custom.textContent = 'Custom groove'; custom.hidden = true; $('preset-select').append(custom);
@@ -495,7 +515,8 @@
   window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press Play to continue.'); } });
   let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawVoice(); drawHero(heroTime); }, 80); });
-  renderAll(); drawHero(); requestAnimationFrame(animate);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
+  renderAll(); drawHero();
   window.TineApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
