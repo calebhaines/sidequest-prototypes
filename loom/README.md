@@ -6,7 +6,7 @@ An eight-track browser studio for Kitchen. Eight tracks. One increasingly specif
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all twelve Kitchen instruments,
+The standalone `index.html` bundles all thirteen Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -14,7 +14,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other eleven instruments.
+are available inside GALLEY alongside the other twelve instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -32,6 +32,8 @@ spectral vector synthesis are available in the same editor. LEAVEN shares realiz
 notes through Patterns, plays incoming piano-roll notes directly through its synth,
 and uses that same engine for live audio and revisable prints. The complete app is
 embedded for offline use; the studio retains eight tracks and four inserts per track.
+
+**MARINADE** combines two recorded ingredients into a polyphonic spectral morphing instrument. Its full native editor, two sample-import bays, editable note patterns and isolated native renderer are available inside the studio. Printed parts retain the source audio, patch and original notes for Edit source, Update audio or Restore notes.
 
 ## Making a piece
 
@@ -216,6 +218,7 @@ instrument and replace its chosen starter destination.
 | DICER | 20 seconds | Stereo sample and sixteen slices |
 | STEAM | 20 seconds | Audio analysis into an editable spectral score |
 | BATTER | 120 seconds | A or B source in one of twelve stereo drum sample lanes |
+| MARINADE | 20 seconds | A or B source for spectral analysis and morphing |
 
 Loaded future instruments with `audioImport` are included automatically; their
 number or string destination IDs and declared limits are preserved. The original
@@ -378,7 +381,7 @@ exports through the actual embedded BATTER editor. The extracted equivalent is
 `node batter-integration-checks.cjs`, with Playwright and Chromium available.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all twelve standalone instrument pages in
+archive includes all thirteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 

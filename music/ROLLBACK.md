@@ -229,3 +229,32 @@ git push origin main
 Save portable LEAVEN projects before reverting; the earlier GALLEY does not contain
 LEAVEN. Shared samples and patterns remain in browser storage. Review conflicts if
 later releases modify these files.
+
+## MARINADE spectral instrument
+
+MARINADE is an additive release. Its checkpoint is the annotated tag
+`pre-marinade-instrument-2026-10-06`, at commit
+`d17b92a899e64a0039a1131f6e3f91b2990643b5`. The release tag is `marinade-v1`.
+The other twelve instrument HTML files and source archives, plus published songs,
+retain their exact prior bytes. GALLEY gains MARINADE in its catalog and standalone
+bundle; its eight tracks and four effects slots per track are unchanged.
+
+To remove this release while preserving repository history, from a clean checkout:
+
+```sh
+git switch main
+git pull --ff-only
+git revert --no-edit marinade-v1
+git push origin main
+```
+
+This reverses the new instrument, catalog/gallery registrations, downloadable
+archives, and published files together. Review conflicts if subsequent releases
+touch the same files. To inspect the checkpoint separately:
+
+```sh
+git worktree add ../kitchen-before-marinade pre-marinade-instrument-2026-10-06
+```
+
+Save any MARINADE projects and WAVs before reverting; the prior site cannot load
+the new instrument. Existing instruments and projects remain compatible.

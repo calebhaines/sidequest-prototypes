@@ -39,7 +39,10 @@
     "check:hotplate-browser": "npm --prefix form run test:overhaul",
     "check:interfaces": "GALLEY_FILE=loom/index.html node shared/kitchen-interface-checks.cjs",
     "check:proof": "node proof/engine-checks.cjs",
-    "check:proof-browser": "node proof/browser-checks.cjs"
+    "check:proof-browser": "node proof/browser-checks.cjs",
+    "check:marinade": "node marinade/engine-checks.cjs",
+    "check:marinade-browser": "node marinade/browser-checks.cjs",
+    "check:marinade-integration": "node marinade/integration-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

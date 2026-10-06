@@ -5,7 +5,7 @@
   const S = global.MusicLabPatternSchema;
   if (!S) throw new Error('Load the Kitchen pattern schema before its library.');
   const MAX_PATTERNS = 128, MAX_BYTES = 16 * 1024 * 1024;
-  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', ROUX: 'ROUX', PROOF: 'LEAVEN', LOOM: 'GALLEY' });
+  const appNames = Object.freeze({ GRAIN: 'SIZZLE', TINE: 'CLATTER', FORM: 'HOTPLATE', MIRE: 'REDUCE', SPOOL: 'ROTISSERIE', HAZE: 'STEAM', BOWER: 'SKEWER', RAVEL: 'DICER', FABLE: 'STOCK', ROUX: 'ROUX', PROOF: 'LEAVEN', MARINADE: 'MARINADE', LOOM: 'GALLEY' });
   const appName = value => appNames[String(value || '').toUpperCase()] || value || 'Kitchen';
   const registrations = new Map(), memory = new Map();
   let databasePromise, persistent = true, dialog, active;

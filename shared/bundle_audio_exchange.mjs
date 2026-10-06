@@ -15,7 +15,7 @@ export function exchangeDirectory(root) {
   return path;
 }
 export async function embedExchange(html, root, app = 'form') {
-  if (!['form', 'proof'].includes(app)) throw Error('Choose a registered Kitchen app.');
+  if (!['form', 'proof', 'marinade'].includes(app)) throw Error('Choose a registered Kitchen app.');
   const directory = exchangeDirectory(root);
   const read = name => readFile(resolve(directory, name), 'utf8');
   const [audioCss, patternCss, kitchenCss, schema, audio, pitched, drums, bass, patterns] = await Promise.all([
@@ -25,10 +25,14 @@ export async function embedExchange(html, root, app = 'form') {
   if (html.includes('<!-- MUSIC_LAB_EXCHANGE -->')) throw Error('Kitchen exchange was already embedded.');
   if (!/<head(?:\s[^>]*)?>/i.test(html)) throw Error('Standalone HTML needs a head for shared pattern validation.');
   const safe = js => js.replace(/<\/script/gi, '<\\/script');
-  const audioRegistration = app === 'proof'
+  const audioRegistration = app === 'marinade'
+    ? "MusicLabExchange.register({id:'marinade',name:'MARINADE',sourceApp:'MARINADE',accent:'#dda775',mountSelector:'.masthead-actions',getAdapter:()=>window.MarinadeApp});"
+    : app === 'proof'
     ? "MusicLabExchange.register({id:'proof',name:'LEAVEN',sourceApp:'PROOF',accent:'#e6b86e',mountSelector:'.masthead-actions',getAdapter:()=>window.ProofApp});"
     : "MusicLabExchange.register({id:'form',name:'HOTPLATE',sourceApp:'FORM',accent:'#ff8d45',mountSelector:'.topbar-actions',getAdapter:()=>window.FormApp});";
-  const patternRegistration = app === 'proof'
+  const patternRegistration = app === 'marinade'
+    ? "MusicLabPatterns.register({id:'marinade',name:'MARINADE',sourceApp:'MARINADE',accent:'#dda775',mountSelector:'.masthead-actions',getAdapter:()=>window.MusicLabPatternInstrument});"
+    : app === 'proof'
     ? "MusicLabPatterns.register({id:'proof',name:'LEAVEN',sourceApp:'PROOF',accent:'#e6b86e',mountSelector:'.masthead-actions',getAdapter:()=>window.MusicLabPatternInstrument});"
     : "MusicLabPatterns.register({id:'form',name:'HOTPLATE',sourceApp:'FORM',accent:'#ff8d45',mountSelector:'.topbar-actions',getAdapter:()=>window.MusicLabPatternInstrument});";
   return html.replace(/<html(?=\s|>)/i, '<html data-musiclab-app="' + app + '"')

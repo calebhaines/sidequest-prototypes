@@ -58,3 +58,10 @@ HTML IDs: `createNoteClipButton`, `editNotesButton`, `printNoteClipButton`, `edi
 ## Monophonic bass adapter
 
 ROUX uses `pattern-bass.js`, source app `ROUX`, and one target voice `bass` with MIDI pitch range 12–108. It declares `polyphonic:false`, `pitched:true`, and `scheduledCancel:true`. Imported notes are stored intact in the native `musicLabPattern` overlay. Simultaneous audible onsets are rejected before import/render; overlapping consecutive notes are valid monophonic legato, with the latest onset taking the voice. Patch `synth.legato` and `synth.glide` govern this overlap behavior. Native recipe slides are represented by overlap durations and accents by velocity, without extending portable packet version 1. Probability traversal uses beat/ID ordering and xorshift32 with `pattern.seed ?? 1`, including after native packet swing is applied once. The default native recipe export uses `compileRecipe(state,{cycles:4})`; the explicit `turn` scope exports one circuit. Four circuits fit the 256-beat packet budget even at the longest native traversal. Native recipe export resolves seeded probability and bakes native swing, so exported notes have probability 1 and packet swing 0.
+
+
+## MARINADE spectral instrument adapter
+
+MARINADE (`marinade`) advertises one pitched polyphonic voice, `synth`, MIDI 0–127, with `scheduledCancel:true` and zero added adapter latency. Native sequence exports resolve seeded probability and bake swing into exact note timing. Received parts are stored intact in `musicLabPattern` with a complete explicit voice map and are not resequenced. Synthesis and source edits preserve received notes; Use native sequence restores the internal recipe.
+
+Its custom adapter supports prepare, scheduled note-on and source-specific timestamped cancellation, shared clock following, complete native state, and `renderPattern` returning native-rate interleaved Float32 PCM. Rendering captures the full spectral source and patch snapshot before awaiting, honors cancellation, and leaves the live instrument untouched. GALLEY therefore retains embedded source audio and editable notes for Print, Edit source, Update audio and Restore notes.
