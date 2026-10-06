@@ -121,14 +121,101 @@ check('Count-in keeps live microphone effects audible, and mixer mute/solo remai
   const solo = session(); solo.tracks[0].solo = true; const soloCore = new DSP.Core(solo, {}, rate); soloCore.setMicrophoneMonitor(3, true); assert(renderCore(soloCore, source)[0].every(value => value === 0));
 });
 
-check('Automatic latency uses input plus elapsed-time-corrected output timestamp; manual/off remain exact', () => {
-  const state = session(); state.recording = { micCompensation: 'auto', micOffsetMs: 5 };
-  const engine = new scope.LoomAudio(state); engine.mode = 'worklet'; engine.context = { currentTime: 10.2, sampleRate: 48000, baseLatency: .01, outputLatency: .02, getOutputTimestamp: () => ({ contextTime: 10, performanceTime: 9950 }) };
-  engine._mic = { stream: { getAudioTracks: () => [{ getSettings: () => ({ latency: .04 }) }] } };
-  const estimate = engine.getMicrophoneLatency(); assert(Math.abs(estimate.outputMs - 150) < 1e-8); assert(Math.abs(estimate.compensationMs - (40 + 150 + 128 / 48 + 5)) < 1e-8);
-  state.recording.micCompensation = 'manual'; state.recording.micOffsetMs = -80; assert.equal(engine.getMicrophoneLatency().compensationMs, -80);
-  state.recording.micCompensation = 'off'; assert.equal(engine.getMicrophoneLatency().compensationMs, 0);
-  state.recording.micCompensation = 'auto'; engine.context.getOutputTimestamp = () => ({ contextTime: NaN }); assert(Math.abs(engine.getMicrophoneLatency().outputMs - 30) < 1e-8);
+function latencyFixture(options = {}) {
+  scope.performance.now = () => 10000;
+  const state = session(); state.recording = { micCompensation: 'auto', micOffsetMs: 0, ...options.recording };
+  const engine = new scope.LoomAudio(state); engine.mode = options.mode || 'worklet'; engine._processingFrames = options.processingFrames || 128;
+  engine.context = { state: 'running', currentTime: 10.2, sampleRate: 48000, baseLatency: .01, outputLatency: .02, ...options.context };
+  engine._mic = { stream: { getAudioTracks: () => [{ getSettings: () => ({ latency: .04, ...options.input }) }] } };
+  return engine;
+}
+function near(actual, expected) { assert(Math.abs(actual - expected) < 1e-8, `${actual} should equal ${expected}`); }
+
+check('An output timestamp replaces reported output delays and includes render buffering exactly once', () => {
+  const engine = latencyFixture({ recording: { micOffsetMs: 5 }, context: { getOutputTimestamp: () => ({ contextTime: 10, performanceTime: 9950 }) } });
+  const estimate = engine.getMicrophoneLatency(); near(estimate.outputMs, 150); near(estimate.compensationMs, 195);
+  near(estimate.processingMs, 128 / 48); assert.equal(estimate.outputSource, 'timestamp'); assert.equal(estimate.estimateComplete, true);
+});
+
+check('Reported output fallback never adds the Worklet or ScriptProcessor block a second time', () => {
+  for (const [mode, frames] of [['worklet', 128], ['fallback', 256], ['fallback', 512], ['fallback', 1024]]) {
+    const engine = latencyFixture({ mode, processingFrames: frames, recording: { micOffsetMs: 5 } }), estimate = engine.getMicrophoneLatency();
+    near(estimate.outputMs, 30); near(estimate.compensationMs, 75); near(estimate.processingMs, frames / 48);
+    assert.equal(estimate.outputSource, 'reported'); assert.equal(estimate.estimateComplete, true);
+  }
+});
+
+check('Malformed, unstarted, stale, future and suspended output timestamps fall back safely', () => {
+  const invalid = [
+    { contextTime: 10.1 }, { contextTime: 10.1, performanceTime: NaN }, { contextTime: NaN, performanceTime: 10000 },
+    { contextTime: 0, performanceTime: 10000 }, { contextTime: 10.1, performanceTime: 0 },
+    { contextTime: 9.5, performanceTime: 9600 }, { contextTime: 10.1, performanceTime: 10001 },
+    { contextTime: 10.3, performanceTime: 10000 }, { contextTime: 8, performanceTime: 10000 }
+  ];
+  for (const stamp of invalid) {
+    const estimate = latencyFixture({ context: { getOutputTimestamp: () => stamp } }).getMicrophoneLatency();
+    near(estimate.compensationMs, 70); assert.equal(estimate.outputSource, 'reported');
+  }
+  for (const state of ['suspended', 'closed', 'interrupted']) {
+    const estimate = latencyFixture({ context: { state, getOutputTimestamp: () => ({ contextTime: 10.1, performanceTime: 10000 }) } }).getMicrophoneLatency();
+    near(estimate.compensationMs, 70); assert.equal(estimate.outputSource, 'reported');
+  }
+  const thrown = latencyFixture({ context: { getOutputTimestamp() { throw Error('Unavailable'); } } }).getMicrophoneLatency();
+  near(thrown.compensationMs, 70);
+});
+
+check('Nonmonotonic output mappings are rejected, while a new AudioContext resets the timestamp history', () => {
+  let stamp = { contextTime: 10, performanceTime: 9950 };
+  const engine = latencyFixture({ context: { getOutputTimestamp: () => stamp } }); assert.equal(engine.getMicrophoneLatency().outputSource, 'timestamp');
+  stamp = { contextTime: 9.99, performanceTime: 9970 }; assert.equal(engine.getMicrophoneLatency().outputSource, 'reported');
+  stamp = { contextTime: 10.05, performanceTime: 9940 }; assert.equal(engine.getMicrophoneLatency().outputSource, 'reported');
+  engine.context = { ...engine.context }; assert.equal(engine.getMicrophoneLatency().outputSource, 'timestamp');
+});
+
+check('Initialized near-zero timestamp gaps and reported zero delays remain valid without fabricated latency', () => {
+  const engine = latencyFixture({ input: { latency: 0 }, context: { getOutputTimestamp: () => ({ contextTime: 10.15, performanceTime: 9950 }) } });
+  const estimate = engine.getMicrophoneLatency(); near(estimate.outputMs, 0); near(estimate.compensationMs, 0); assert.equal(estimate.outputSource, 'timestamp');
+  const zero = latencyFixture({ input: { latency: 0 }, context: { baseLatency: 0, outputLatency: 0 } }).getMicrophoneLatency();
+  near(zero.compensationMs, 0); assert.equal(zero.estimateComplete, true); assert.equal(zero.reportedInput, true);
+});
+
+check('Unknown and invalid device delays stay partial and contribute no guessed processing block', () => {
+  for (const missing of [undefined, null, NaN, Infinity, -1, '0.02', 1.01]) {
+    const estimate = latencyFixture({ input: { latency: missing }, context: { baseLatency: missing, outputLatency: missing } }).getMicrophoneLatency();
+    near(estimate.compensationMs, 0); assert.equal(estimate.reportedInput, false); assert.equal(estimate.reportedOutput, false); assert.equal(estimate.outputSource, 'unreported'); assert.equal(estimate.estimateComplete, false);
+  }
+  const partial = latencyFixture({ context: { outputLatency: undefined } }).getMicrophoneLatency();
+  near(partial.compensationMs, 50); assert.equal(partial.reportedOutput, true); assert.equal(partial.outputComplete, false); assert.equal(partial.estimateComplete, false);
+});
+
+check('Manual and Off alignment ignore all automatic terms and preserve signed offsets exactly', () => {
+  const engine = latencyFixture({ context: { getOutputTimestamp: () => ({ contextTime: 10, performanceTime: 9950 }) } });
+  for (const offset of [-500, -80, 0, 123.5, 500]) {
+    engine.state.recording.micCompensation = 'manual'; engine.state.recording.micOffsetMs = offset; assert.equal(engine.getMicrophoneLatency().compensationMs, offset);
+    engine.state.recording.micCompensation = 'off'; assert.equal(engine.getMicrophoneLatency().compensationMs, 0);
+  }
+  engine.state.recording.micCompensation = 'auto'; engine.state.recording.micOffsetMs = -200; near(engine.getMicrophoneLatency().compensationMs, -10);
+});
+
+check('Known round-trip impulses align to the exact performance frames in both recording modes', () => {
+  const sampleRate = 48000, logicalStart = 500, length = 2000, physicalDelay = 1440;
+  for (const [mode, block] of [['worklet', 128], ['fallback', 512]]) {
+    const engine = latencyFixture({ mode, processingFrames: block, input: { latency: .01 }, context: { currentTime: 10, getOutputTimestamp: () => ({ contextTime: 9.98, performanceTime: 10000 }) } });
+    const compensationFrames = Math.round(engine.getMicrophoneLatency().compensationMs * sampleRate / 1000); assert.equal(compensationFrames, physicalDelay);
+    const chunks = [], recorder = new DSP.Recorder(sampleRate, chunk => chunks.push(chunk));
+    recorder.start(20, [3], 0, sampleRate, { requireTransport: true, countInBeats: 1, microphone: { inputIndex: 8, compensationFrames } });
+    function feed(start, count) {
+      for (let at = start; at < start + count; at += block) {
+        const n = Math.min(block, start + count - at), list = Array.from({ length: 9 }, () => [new Float32Array(n), new Float32Array(n)]);
+        for (let f = 0; f < n; f++) for (const hit of [137, 1709]) if (at + f === logicalStart + physicalDelay + hit) { list[8][0][f] = .7; list[8][1][f] = -.3; }
+        recorder.capture(list, n, { timelineBeats: Float64Array.from({ length: n }, (_, f) => Math.max(0, at + f - logicalStart) / 24000), timelineCountIn: Uint8Array.from({ length: n }, (_, f) => at + f < logicalStart ? 1 : 0), timelinePlaying: new Uint8Array(n).fill(1) });
+      }
+    }
+    feed(0, logicalStart + length); assert.equal(recorder.stop(41).pending, true); feed(logicalStart + length, physicalDelay);
+    const left = flattened(chunks), right = flattened(chunks, 'right'); assert.equal(left.length, length);
+    assert.deepEqual(Array.from(left.keys()).filter(index => left[index]), [137, 1709]);
+    for (const hit of [137, 1709]) { near(left[hit], Math.fround(.7)); near(right[hit], Math.fround(-.3)); }
+  }
 });
 
 for (const name of passed) console.log('PASS', name);

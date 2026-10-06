@@ -258,3 +258,24 @@ git worktree add ../kitchen-before-marinade pre-marinade-instrument-2026-10-06
 
 Save any MARINADE projects and WAVs before reverting; the prior site cannot load
 the new instrument. Existing instruments and projects remain compatible.
+
+## GALLEY recording alignment correction
+
+GALLEY 1.11.1 removes duplicated processing-block latency from automatic microphone
+compensation, checks output-clock timestamps before using them, and adds explicit
+earlier/later adjustment buttons for future takes. Existing recorded audio, clip
+positions, saved signed offsets, project formats, and live monitoring stay compatible.
+
+The checkpoint `pre-galley-recording-timing-2026-10-06` preserves commit
+`3b914456f261c1da49889606deada529f3813e9c`, including MARINADE and the Kitchen
+headline removal. The release tag is `galley-recording-timing-v1`. To restore the
+previous recording calculation and its matching standalone downloads:
+
+```sh
+git revert --no-edit galley-recording-timing-v1
+git push origin main
+```
+
+This restores the previous GALLEY sources, standalone HTML, and source archive
+together. Recordings already printed into a project retain their existing timing
+in either version. Review conflicts if later releases touch the same files.

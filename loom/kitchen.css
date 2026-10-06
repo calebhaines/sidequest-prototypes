@@ -203,6 +203,12 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 .mic-timing-readout .eyebrow { color: #b4bbad; font-size: 7px; letter-spacing: .03em; }
 .mic-timing-readout strong { font-family: var(--kk-mono, monospace); font-weight: 400; color: #efc484; font-size: 11px; overflow-wrap: anywhere; }
 .mic-timing-readout>span:last-child { font-size: 9px; color: #a9b6aa; line-height: 1.7; }
+.mic-alignment-adjustments { display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 16px; }
+.mic-alignment-adjustments button { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 50px; padding: 10px 14px; text-align: left; border-color: #64745c; background: #303a30; }
+.mic-alignment-adjustments button>span { color: #c2cbb6; font-size: 9px; }
+.mic-alignment-adjustments button>strong { color: #e2e8b2; font-size: 11px; font-weight: 600; }
+.mic-alignment-adjustments button:disabled { opacity: .45; }
+.mic-alignment-adjustments p { margin: 0 0 0 6px; color: #aebdad; font-size: 10px; line-height: 1.7; }
 .mic-input-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 15px; }
 .mic-input-notes p { margin: 0; color: #aebdad; font-size: 10px; line-height: 1.7; }
 .mic-input-notes strong { color: #efd5ad; }
@@ -604,6 +610,9 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
   .mic-setup-controls label>output { font-size: 8px; }
   .mic-setup-controls label>select, .mic-setup-controls label>input { font-size: 10px; }
   .mic-timing-readout { grid-column: 1 / -1; padding: 11px; }
+  .mic-alignment-adjustments { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mic-alignment-adjustments button { padding: 10px; min-width: 0; }
+  .mic-alignment-adjustments p { grid-column: 1 / -1; margin: 0; font-size: 9px; }
   .mic-input-notes { grid-template-columns: 1fr; gap: 11px; }
   .mic-input-notes p { font-size: 9px; }
   .amp-editor .effect-hero h2 { font-size: 34px; }

@@ -883,16 +883,37 @@
     }
     getMicrophoneLatency() {
       const c = this.context, settings = this.state.recording || {}, mode = ['auto', 'manual', 'off'].includes(settings.micCompensation) ? settings.micCompensation : 'auto';
-      const input = this._mic?.stream.getAudioTracks?.()[0]?.getSettings?.().latency;
+      let input; try { input = this._mic?.stream.getAudioTracks?.()[0]?.getSettings?.().latency; } catch {}
       const reportedInput = Number.isFinite(input) && input >= 0 && input <= 1;
-      const base = Number(c?.baseLatency), output = Number(c?.outputLatency); let outputSeconds = (Number.isFinite(base) && base >= 0 ? base : 0) + (Number.isFinite(output) && output >= 0 ? output : 0);
-      let reportedOutput = Number.isFinite(base) && base >= 0 || Number.isFinite(output) && output >= 0;
-      try { const stamp = c?.getOutputTimestamp?.(), age = Number.isFinite(stamp?.performanceTime) ? Math.max(0, (performance.now() - stamp.performanceTime) / 1000) : 0, gap = c.currentTime - (stamp.contextTime + age); if (Number.isFinite(gap) && gap >= .001 && gap <= 1) { outputSeconds = gap; reportedOutput = true; } } catch {}
+      const validSeconds = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+      const base = c?.baseLatency, output = c?.outputLatency, reportedBase = validSeconds(base), reportedDeviceOutput = validSeconds(output);
+      let outputSeconds = (reportedBase ? base : 0) + (reportedDeviceOutput ? output : 0), reportedOutput = reportedBase || reportedDeviceOutput;
+      let outputSource = reportedOutput ? 'reported' : 'unreported', outputComplete = reportedBase && reportedDeviceOutput;
+      // The timestamp maps the render clock to the physical output clock. Its
+      // gap already contains render buffering; base/device reports are a
+      // fallback, never additional terms. Ignore unstarted, old or broken maps.
+      if (this._outputClockContext !== c) { this._outputClockContext = c; this._outputClockStamp = null; }
+      if (c?.state !== 'running') this._outputClockStamp = null;
+      try {
+        if (c?.state === 'running') {
+          const stamp = c.getOutputTimestamp?.(), now = performance.now(), previous = this._outputClockStamp;
+          const initialized = Number.isFinite(stamp?.contextTime) && stamp.contextTime > 0 && Number.isFinite(stamp?.performanceTime) && stamp.performanceTime > 0;
+          const age = initialized ? (now - stamp.performanceTime) / 1000 : NaN;
+          const monotonic = !previous || stamp.contextTime >= previous.contextTime && stamp.performanceTime >= previous.performanceTime;
+          const gap = initialized ? (c.currentTime - stamp.contextTime) - age : NaN;
+          if (initialized && monotonic && Number.isFinite(age) && age >= 0 && age <= .25 && Number.isFinite(gap) && gap >= -1e-6 && gap <= 1) {
+            outputSeconds = Math.max(0, gap); reportedOutput = true; outputSource = 'timestamp'; outputComplete = true;
+            this._outputClockStamp = { contextTime: stamp.contextTime, performanceTime: stamp.performanceTime };
+          }
+        }
+      } catch {}
       const processingFrames = this._processingFrames || (this.mode === 'fallback' ? this.node?.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames : 128);
       const inputMs = reportedInput ? input * 1000 : 0, outputMs = Math.max(0, Math.min(1000, outputSeconds * 1000)), processingMs = c ? processingFrames / c.sampleRate * 1000 : 0;
       const offset = Math.max(-500, Math.min(500, Number(settings.micOffsetMs) || 0));
-      const compensationMs = mode === 'off' ? 0 : mode === 'manual' ? offset : Math.max(-500, Math.min(1000, inputMs + outputMs + processingMs + offset));
-      return { mode, compensationMs, inputMs, outputMs, processingMs, reportedInput, reportedOutput, estimated: mode === 'auto', offsetMs: offset };
+      // Block duration is granularity, not a separate measured latency. Adding
+      // it here used to move takes too early, especially in fallback mode.
+      const compensationMs = mode === 'off' ? 0 : mode === 'manual' ? offset : Math.max(-500, Math.min(1000, inputMs + outputMs + offset));
+      return { mode, compensationMs, inputMs, outputMs, processingMs, reportedInput, reportedOutput, outputSource, outputComplete, estimateComplete: reportedInput && outputComplete, estimated: mode === 'auto', offsetMs: offset };
     }
     getMicrophoneStatus() {
       return { enabled: this._micEnabled, pending: this._micPending, trackId: this._micTrack >= 0 ? this.state.tracks[this._micTrack]?.id || null : null,

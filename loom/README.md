@@ -128,16 +128,30 @@ if you enabled it. Pause, Stop, Panic, switching Record from back to instruments
 opening a project, and leaving the page turn it off and release the microphone.
 Turning monitoring off during a take leaves the dry recording running.
 
-**Recording alignment** has three modes. Auto estimates input, output, and
-processing delay using the timing available from the browser, plus your extra
-trim. Unreported device delays are clearly identified. Manual uses only your
-signed offset; Off leaves timing unchanged. Positive milliseconds move the take
-earlier; negative milliseconds move it later. The range is −500 to +500 ms for
-manual offset and extra trim. Settings lock while a take is preparing, recording,
-or finishing, so its gain and timing remain consistent. Delay compensation keeps
-the intended length, count-in, and punch boundaries, including a short finishing
-capture when needed. Auto is an estimate: fine-tune the offset by ear for your
-interface. Recording alignment does not remove live monitoring delay.
+**Recording alignment** has three modes. Auto estimates input and output delay
+using the timing available from the browser, plus your extra trim. The engine's
+block size is displayed separately and is not added to the correction: it is
+processing granularity, not a separately measured capture delay. Incomplete
+estimates and unreported device delays are clearly identified. Manual uses only
+your signed offset; Off leaves timing unchanged. Positive milliseconds move new
+takes earlier; negative milliseconds move them later. The range is −500 to
++500 ms for manual offset and extra trim.
+
+If a take lands early, use **Take too early? Later by 5 ms**. If it lands late,
+use **Take too late? Earlier by 5 ms**. Hold Shift while clicking for a 1 ms
+adjustment, or type an exact offset. The buttons change the saved trim, respect
+its range, and participate in Undo/Redo. They are disabled when alignment is Off
+or a take is preparing, recording, or finishing. Corrections affect new takes;
+move an existing clip in the arrangement to adjust that recording.
+
+To fine-tune by ear, play a tight drum pattern or metronome click, record a few
+short muted guitar strums against it, and listen back. Adjust Later/Earlier and
+repeat with a new take until the attacks sit correctly. Auto is an estimate;
+performance timing and your interface's reported delays both affect the result.
+The timing readout shows the estimated correction for new takes, or the frozen
+correction actually applied while recording. Delay compensation keeps the
+intended length, count-in, and punch boundaries, including a short finishing
+capture when needed. Recording alignment does not remove live monitoring delay.
 
 Each of the eight tracks has level, pan, mute, solo, and exactly four serial
 effects slots. Effects can be edited, bypassed, reordered, reset, or removed.
@@ -387,7 +401,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.11.0.
+font license notices. Version 1.11.1.
 
 ## Compatibility
 

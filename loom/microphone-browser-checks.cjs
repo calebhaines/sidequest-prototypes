@@ -19,7 +19,7 @@ function dspChecks() {
   const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {} };
   scope.window = scope;
   vm.createContext(scope);
-  for (const file of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP), rate = 8000;
   const legacy = scope.LoomSchema.defaultState();
   delete legacy.recording.micCompensation; delete legacy.recording.micOffsetMs; delete legacy.recording.micInputGainDb;
@@ -95,7 +95,7 @@ async function serve() {
     const name = new URL(request.url, 'http://localhost').pathname;
     if (name === '/engine.html') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
+      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
       return;
     }
     // Both the repository and the extracted source archive expose identical
@@ -193,15 +193,62 @@ async function engineChecks(browser, url, fallback) {
     const latency = await page.evaluate(() => { const e = window.qaEngine; e.state.recording.micCompensation = 'manual'; e.state.recording.micOffsetMs = 123.5; e.setState(e.state); return e.getMicrophoneLatency(); });
     assert(Math.abs(latency.compensationMs - 123.5) < .01);
     const automatic = await page.evaluate(() => { const e = window.qaEngine; e.state.recording.micCompensation = 'auto'; e.state.recording.micOffsetMs = 0; e.setState(e.state); return e.getMicrophoneLatency(); });
-    assert(Number.isFinite(automatic.compensationMs) && automatic.compensationMs > 0 && automatic.compensationMs <= 500); assert.equal(automatic.reportedInput, true); assert(Math.abs(automatic.inputMs - 12) < .01);
-    results.push((fallback ? 'Fallback' : 'Worklet') + ' reported mic latency / bounded automatic estimate / manual calibration');
+    assert(Number.isFinite(automatic.compensationMs) && automatic.compensationMs > 0 && automatic.compensationMs <= 1000); assert.equal(automatic.reportedInput, true); assert(Math.abs(automatic.inputMs - 12) < .01);
+    assert(Math.abs(automatic.compensationMs - automatic.inputMs - automatic.outputMs) < .01, 'Auto uses the input and one output estimate, without additionally subtracting an engine block.');
+    assert(automatic.processingMs > 0); assert(['timestamp', 'reported', 'unreported'].includes(automatic.outputSource));
+    assert.equal(automatic.estimateComplete, automatic.reportedInput && automatic.outputComplete);
+    const estimates = await page.evaluate(({ fallback }) => {
+      // Browser-clock fixture: timestamp, reports and processing block are
+      // deliberately different so double-counting is observable.
+      const e = new window.LoomAudio(window.LoomSchema.defaultState());
+      e.mode = fallback ? 'fallback' : 'worklet'; e._processingFrames = fallback ? 1024 : 128;
+      e.state.recording.micOffsetMs = 5;
+      e._mic = { stream: { getAudioTracks: () => [{ getSettings: () => ({ latency: .012 }) }] } };
+      const c = { state: 'running', currentTime: 10, sampleRate: 48000, baseLatency: .007, outputLatency: .023, getOutputTimestamp: () => ({ contextTime: 9.91, performanceTime: performance.now() - 10 }) };
+      e.context = c;
+      const timestamp = e.getMicrophoneLatency();
+      c.getOutputTimestamp = () => ({ contextTime: 0, performanceTime: 0 });
+      const uninitialized = e.getMicrophoneLatency();
+      c.getOutputTimestamp = () => ({ contextTime: 9.99, performanceTime: performance.now() - 1000 });
+      const stale = e.getMicrophoneLatency();
+      c.getOutputTimestamp = () => ({ contextTime: 9.99, performanceTime: performance.now() + 100 });
+      const future = e.getMicrophoneLatency();
+      c.getOutputTimestamp = () => ({ contextTime: 1, performanceTime: performance.now() });
+      const backwards = e.getMicrophoneLatency();
+      c.outputLatency = undefined;
+      const partial = e.getMicrophoneLatency();
+      c.baseLatency = undefined;
+      const unreported = e.getMicrophoneLatency();
+      c.state = 'suspended'; c.getOutputTimestamp = () => ({ contextTime: 9.91, performanceTime: performance.now() - 10 });
+      const suspended = e.getMicrophoneLatency();
+      return { timestamp, uninitialized, stale, future, backwards, partial, unreported, suspended };
+    }, { fallback });
+    assert.equal(estimates.timestamp.outputSource, 'timestamp'); assert.equal(estimates.timestamp.outputComplete, true); assert.equal(estimates.timestamp.estimateComplete, true);
+    assert(Math.abs(estimates.timestamp.outputMs - 80) < .5 && Math.abs(estimates.timestamp.compensationMs - 97) < .5, 'A physical-clock output estimate replaces both output reports, and does not add the processing block.');
+    for (const key of ['uninitialized', 'stale', 'future', 'backwards']) {
+      assert.equal(estimates[key].outputSource, 'reported', key + ' output timestamp must fall back to the device reports.');
+      assert(Math.abs(estimates[key].outputMs - 30) < 1e-8 && Math.abs(estimates[key].compensationMs - 47) < 1e-8);
+    }
+    assert.equal(estimates.partial.outputComplete, false); assert.equal(estimates.partial.estimateComplete, false); assert.equal(estimates.partial.outputSource, 'reported'); assert.equal(estimates.partial.compensationMs, 24);
+    for (const key of ['unreported', 'suspended']) {
+      assert.equal(estimates[key].outputSource, 'unreported'); assert.equal(estimates[key].outputMs, 0); assert.equal(estimates[key].compensationMs, 17); assert.equal(estimates[key].estimateComplete, false);
+    }
+    results.push((fallback ? 'Fallback' : 'Worklet') + ' input + one output estimate / no engine-block double count / timestamp freshness / partial-report diagnostics');
 
     await page.evaluate(async () => { const e = window.qaEngine; e.state.recording.micCompensation = 'manual'; e.state.recording.micOffsetMs = 80; e.setState(e.state); await e.startMicrophoneRecording('track-1', { startTransport: false, maxSeconds: 2 }); });
+    const frozen = await page.evaluate(() => { const e = window.qaEngine; const before = e.getMicrophoneStatus().latency; e.state.recording.micOffsetMs = -40; e.setState(e.state); return { before, applied: e.getMicrophoneStatus().latency, next: e.getMicrophoneLatency() }; });
+    assert.equal(frozen.before.compensationMs, 80); assert.equal(frozen.applied.compensationMs, 80); assert.equal(frozen.next.compensationMs, -40, 'Changing timing prepares the next take; an active take keeps its start-time correction.');
+    assert.equal(frozen.applied.compensationFrames, Math.round(80 * dry.status.interface.sampleRate / 1000));
     await wait(250);
     const finish = await page.evaluate(async () => { const at = performance.now(), e = window.qaEngine, takes = await e.stopRecording(); return { elapsed: performance.now() - at, duration: takes[0]?.frames / takes[0]?.sampleRate, bad: takes[0] ? window.qaStats(takes[0].left).bad : 1, compensationMs: takes[0]?.compensationMs, status: e.getMicrophoneStatus() }; });
     assert(finish.elapsed >= 45 && finish.elapsed < 1500, 'Real manual finish waits for delayed input before releasing its source.');
     assert(finish.duration > .15 && finish.duration < .4, 'Post-roll does not extend the intended take length.'); assert.equal(finish.bad, 0); assert.equal(finish.compensationMs, 80); assert.equal(finish.status.enabled, true);
     results.push((fallback ? 'Fallback' : 'Worklet') + ' real manual finish / retained 80 ms post-roll / unchanged musical duration');
+    await page.evaluate(() => window.qaEngine.startMicrophoneRecording('track-1', { startTransport: false, maxSeconds: .12 }));
+    await page.waitForFunction(() => !window.qaEngine.isRecording, null, { timeout: 6000 });
+    const nextTake = await page.evaluate(async () => { const e = window.qaEngine, takes = await e.stopRecording(); return { compensationMs: takes[0]?.compensationMs, mode: takes[0]?.compensationMode, sampleRate: takes[0]?.sampleRate, ...(takes[0] ? window.qaStats(takes[0].left) : {}) }; });
+    assert.equal(nextTake.compensationMs, -40); assert.equal(nextTake.mode, 'manual'); assert.equal(nextTake.frames, Math.floor(.12 * nextTake.sampleRate)); assert.equal(nextTake.bad, 0); assert(nextTake.rms > .15);
+    results.push((fallback ? 'Fallback' : 'Worklet') + ' per-take timing frozen at record start / negative correction applies to the next real take');
 
     await page.evaluate(() => {
       const e = window.qaEngine, definition = window.LoomEffectsCatalog.find(fx => fx.id === 'broiler');
@@ -273,17 +320,65 @@ async function uiChecks(browser, url) {
     await page.goto(url + '/loom/index.html'); await page.waitForFunction(() => !!window.LoomApp);
     await installMicrophone(page, true); await page.selectOption('#recordSource', 'microphone');
     assert(await page.locator('#micInputPanel').evaluate(el => el.open), 'Selecting microphone exposes input controls.');
+    await page.evaluate(() => {
+      const pcm = new Float32Array(1920); pcm[127] = .25; pcm[128] = -.25;
+      window.LoomApp.importAudio({ pcm, sampleRate: 48000, name: 'Existing guitar take' });
+      const state = window.LoomSchema.parseProject(window.LoomSchema.serializeProject(window.LoomApp.getState())); window.qaExistingTake = JSON.stringify({ clips: state.tracks[0].clips, assets: state.assets });
+    });
     await page.locator('#microphoneCompensation').selectOption('manual'); await page.locator('#microphoneOffset').fill('75'); await page.locator('#microphoneOffset').dispatchEvent('change');
     const settings = await page.evaluate(() => window.LoomApp.getState().recording); assert.equal(settings.micCompensation, 'manual'); assert.equal(settings.micOffsetMs, 75);
+    await page.locator('#microphoneLaterButton').click();
+    assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 70, 'Take too early decreases compensation so new audio is placed later.');
+    await page.locator('#undoButton').click(); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 75);
+    await page.locator('#redoButton').click(); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 70);
+    await page.locator('#microphoneEarlierButton').click(); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 75);
+    await page.locator('#microphoneLaterButton').click({ modifiers: ['Shift'] }); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 74);
+    await page.locator('#microphoneEarlierButton').click({ modifiers: ['Shift'] }); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), 75);
+    for (const [start, button, end] of [[499, 'microphoneEarlierButton', 500], [-499, 'microphoneLaterButton', -500]]) {
+      await page.locator('#microphoneOffset').fill(String(start)); await page.locator('#microphoneOffset').dispatchEvent('change'); await page.locator('#' + button).click();
+      assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), end); assert(await page.locator('#' + button).isDisabled(), 'Nudges stop at the persisted ±500 ms boundary.');
+      await page.locator('#' + button).dispatchEvent('click'); assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), end);
+    }
+    await page.locator('#microphoneOffset').fill('0'); await page.locator('#microphoneOffset').dispatchEvent('change'); await page.locator('#microphoneLaterButton').click();
+    const negative = await page.evaluate(() => window.LoomSchema.parseProject(window.LoomSchema.serializeProject(window.LoomApp.getState())).recording);
+    assert.equal(negative.micCompensation, 'manual'); assert.equal(negative.micOffsetMs, -5, 'The saved project preserves a negative, later-take correction.');
+    await page.locator('#microphoneCompensation').selectOption('off');
+    assert(await page.locator('#microphoneLaterButton').isDisabled() && await page.locator('#microphoneEarlierButton').isDisabled());
+    await page.locator('#microphoneLaterButton').dispatchEvent('click'); await page.locator('#microphoneEarlierButton').dispatchEvent('click');
+    assert.equal(await page.evaluate(() => window.LoomApp.getState().recording.micOffsetMs), -5, 'Off stays off and cannot be nudged by a synthetic button event.');
+    await page.locator('#microphoneCompensation').selectOption('auto'); await page.locator('#microphoneLaterButton').click();
+    const trimmed = await page.evaluate(() => window.LoomSchema.parseProject(window.LoomSchema.serializeProject(window.LoomApp.getState())).recording);
+    assert.equal(trimmed.micCompensation, 'auto'); assert.equal(trimmed.micOffsetMs, -10, 'Auto saves a signed extra trim separately from its current device estimate.');
+    assert.equal(await page.evaluate(() => { const state = window.LoomSchema.parseProject(window.LoomSchema.serializeProject(window.LoomApp.getState())); return JSON.stringify({ clips: state.tracks[0].clips, assets: state.assets }) === window.qaExistingTake; }), true, 'Timing changes leave existing clip positions and source PCM intact.');
+    await page.locator('#microphoneCompensation').selectOption('manual'); await page.locator('#microphoneOffset').fill('75'); await page.locator('#microphoneOffset').dispatchEvent('change');
+    assert.match(await page.locator('#microphoneCorrectionLabel').textContent(), /new takes/i);
+    results.push(width + 'px later/earlier signed nudges / Shift fine trim / Undo and Redo / ±500 ms bounds / Off guards / negative project offsets / existing takes preserved');
     await page.locator('#microphoneMonitorButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().enabled);
+    if (width === 390) {
+      assert.match(await page.locator('#microphoneLatencyDetails').textContent(), /engine block \(not added\)/);
+      await page.evaluate(() => window.LoomApp.engine.startMicrophoneRecording('track-1', { startTransport: false, maxSeconds: 2 }));
+      await page.waitForFunction(() => document.getElementById('microphoneLaterButton').disabled && document.getElementById('microphoneEarlierButton').disabled);
+      assert.match(await page.locator('#microphoneCorrectionLabel').textContent(), /applied to this take/i);
+      await page.locator('#microphoneLaterButton').dispatchEvent('click'); await page.locator('#microphoneEarlierButton').dispatchEvent('click');
+      const locked = await page.evaluate(() => ({ offset: window.LoomApp.getState().recording.micOffsetMs, applied: window.LoomApp.engine.getMicrophoneStatus().latency.compensationMs }));
+      assert.deepEqual(locked, { offset: 75, applied: 75 }, 'The UI guards timing edits throughout an active take.');
+      await page.evaluate(() => window.LoomApp.engine.stopRecording());
+      await page.waitForFunction(() => !document.getElementById('microphoneLaterButton').disabled && !document.getElementById('microphoneEarlierButton').disabled);
+      assert.match(await page.locator('#microphoneCorrectionLabel').textContent(), /new takes/i);
+      results.push('390px real microphone take / disabled alignment edits / applied-take readout / controls restored after finishing');
+    }
     await page.evaluate(() => window.LoomApp.selectTrack(1));
     assert.equal(await page.evaluate(() => window.LoomApp.engine.getMicrophoneStatus().trackId), 'track-1', 'Track selection must not silently reroute a live mic.');
     await page.locator('#microphoneRouteButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().trackId === 'track-2');
     assert(await page.locator('#microphoneRouteLabel').textContent());
-    const layout = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, tracks: window.LoomApp.getState().tracks.length, slots: window.LoomApp.getState().tracks.map(t => t.effects.length), effects: window.LoomEffectsCatalog.length, monitor: document.getElementById('microphoneMonitorButton').getBoundingClientRect().toJSON() }));
-    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 4)); assert.equal(layout.effects, 10); assert(layout.monitor.width >= 35 && layout.monitor.height >= 35);
+    const layout = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, tracks: window.LoomApp.getState().tracks.length, slots: window.LoomApp.getState().tracks.map(t => t.effects.length), effects: window.LoomEffectsCatalog.length, targets: ['microphoneMonitorButton', 'microphoneLaterButton', 'microphoneEarlierButton'].map(id => document.getElementById(id).getBoundingClientRect().toJSON()) }));
+    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 4)); assert.equal(layout.effects, 11); assert(layout.targets.every(box => box.width >= 35 && box.height >= 35), 'Monitoring and timing nudges have usable touch targets.');
+    if (process.env.LOOM_MIC_QA_SCREENSHOTS && [390, 1440].includes(width)) {
+      fs.mkdirSync(process.env.LOOM_MIC_QA_SCREENSHOTS, { recursive: true });
+      await page.locator('#micInputPanel').screenshot({ path: path.join(process.env.LOOM_MIC_QA_SCREENSHOTS, 'microphone-timing-' + width + '.png') });
+    }
     await page.locator('[data-slot="0"]').click();
-    const chooser = await page.locator('#effectDialog').evaluate(el => ({ open: el.open, client: el.clientWidth, scroll: el.scrollWidth })); assert(chooser.open && chooser.scroll <= chooser.client + 1, 'The nine-effect chooser fits ' + width + 'px.');
+    const chooser = await page.locator('#effectDialog').evaluate(el => ({ open: el.open, client: el.clientWidth, scroll: el.scrollWidth })); assert(chooser.open && chooser.scroll <= chooser.client + 1, 'The effect chooser fits ' + width + 'px.');
     await page.locator('[data-add-effect="broiler"]').click();
     assert.equal(await page.locator('[data-amp-preset]').count(), 13);
     const presetIds = await page.evaluate(() => window.LoomEffectsCatalog.find(e => e.id === 'broiler').presets.map(p => p.id));
@@ -299,7 +394,7 @@ async function uiChecks(browser, url) {
     assert(ampLayout.document <= width + 1 && ampLayout.body <= width + 1 && ampLayout.editor <= ampLayout.client + 1, 'The grouped amp editor fits ' + width + 'px.');
     const portable = await page.evaluate(serialized => { const restored = window.LoomSchema.parseProject(serialized); return { cabinet: restored.tracks[1].effects[0].params.cabinet, type: restored.tracks[1].effects[0].type, recording: restored.recording }; }, ampLayout.saved);
     assert.equal(portable.type, 'broiler'); assert.equal(portable.cabinet, 'di'); assert.equal(portable.recording.micOffsetMs, 75);
-    results.push(width + 'px BROILER chooser / nine complete presets / DI control clarity / amp and microphone project round-trip');
+    results.push(width + 'px BROILER chooser / thirteen complete presets / DI control clarity / amp and microphone project round-trip');
     await page.locator('#panicButton').click(); await page.waitForFunction(() => !window.LoomApp.engine.getMicrophoneStatus().active);
     await page.selectOption('#recordSource', 'microphone');
     await page.locator('#microphoneMonitorButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().enabled);

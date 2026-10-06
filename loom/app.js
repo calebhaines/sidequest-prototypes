@@ -595,12 +595,15 @@
     $('microphoneRouteButton').textContent='Move monitoring to track '+String(state.selectedTrack+1).padStart(2,'0');
     $('microphoneRouteButton').disabled=locked||pending;
     for(const [id,value]of [['microphoneInputGain',r.micInputGainDb],['microphoneCompensation',r.micCompensation],['microphoneOffset',r.micOffsetMs]]){const input=$(id);if(document.activeElement!==input)input.value=value;input.disabled=locked||(id==='microphoneOffset'&&r.micCompensation==='off');}
+    $('microphoneLaterButton').disabled=locked||r.micCompensation==='off'||r.micOffsetMs<=-500;
+    $('microphoneEarlierButton').disabled=locked||r.micCompensation==='off'||r.micOffsetMs>=500;
     $('recordSource').disabled=locked;
+    $('microphoneCorrectionLabel').textContent=mic.recording?'CORRECTION APPLIED TO THIS TAKE':'CORRECTION FOR NEW TAKES';
     $('microphoneGainValue').textContent=(r.micInputGainDb>0?'+':'')+r.micInputGainDb.toFixed(1)+' dB';
     $('microphoneOffsetLabel').textContent=r.micCompensation==='manual'?'OFFSET (MS)':'EXTRA TRIM (MS)';
     const latency=mic.latency||engine.getMicrophoneLatency(),compensation=Number(latency.compensationMs)||0;
-    $('microphoneTimingSummary').textContent=latency.mode==='off'?'Off · timing unchanged':!engine.context&&latency.mode==='auto'?'Auto · estimate after audio starts':(latency.mode==='auto'?'Estimated · ':'Manual · ')+(Math.abs(compensation)<.05?'no shift':Math.abs(compensation).toFixed(1)+' ms '+(compensation>0?'earlier':'later'));
-    $('microphoneLatencyDetails').textContent=!engine.context?'Device timing appears after audio starts.':(latency.reportedInput?(latency.inputMs||0).toFixed(1)+' ms input':'Input delay unreported')+' · '+(latency.reportedOutput?(latency.outputMs||0).toFixed(1)+' ms output':'output delay unreported')+' · '+(latency.processingMs||0).toFixed(1)+' ms processing';
+    $('microphoneTimingSummary').textContent=latency.mode==='off'?'Off · timing unchanged':!engine.context&&latency.mode==='auto'?'Auto · estimate after audio starts':(latency.mode==='auto'?(latency.estimateComplete?'Estimated · ':'Partial estimate · '):'Manual · ')+(Math.abs(compensation)<.05?'no shift':Math.abs(compensation).toFixed(1)+' ms '+(compensation>0?'earlier':'later'));
+    $('microphoneLatencyDetails').textContent=!engine.context?'Device timing appears after audio starts.':(latency.reportedInput?(latency.inputMs||0).toFixed(1)+' ms input':'Input delay unreported')+' · '+(latency.reportedOutput?(latency.outputMs||0).toFixed(1)+' ms '+(latency.outputComplete===false?'partial output':'output'):'Output delay unreported')+' · '+(latency.processingMs||0).toFixed(1)+' ms engine block (not added)';
     const peak=Math.max(0,Number(mic.inputPeak)||0),db=peak>1e-5?Math.max(-90,20*Math.log10(peak)):-90,meter=$('microphoneMeterFill').closest('.mic-input-meter');
     $('microphoneMeterFill').style.width=Math.min(100,Math.max(0,(db+60)/60*100))+'%';
     $('microphoneMeterValue').textContent=db<=-90?'−∞ dB':db.toFixed(1)+' dB';meter.setAttribute('aria-valuenow',String(Math.min(0,db)));meter.classList.toggle('clipping',peak>=.98);
@@ -831,6 +834,16 @@
   $('microphoneMonitorButton').addEventListener('click',()=>setMicrophoneMonitor());
   $('microphoneRouteButton').addEventListener('click',()=>setMicrophoneMonitor({move:true}));
   $('microphoneInputGain').addEventListener('input',()=>{if(transportLocked())return;if(!activeRanges.has($('microphoneInputGain'))){remember();activeRanges.add($('microphoneInputGain'));}state.recording.micInputGainDb=num($('microphoneInputGain').value,-24,24);changed();renderMicrophone();});
+  function nudgeMicrophoneAlignment(direction, event) {
+    if(transportLocked()||state.recording.micCompensation==='off')return;
+    const previous=state.recording.micOffsetMs,next=Math.round(num(previous+direction*(event.shiftKey?1:5),-500,500)*10)/10;
+    if(next===previous)return;
+    remember();state.recording.micOffsetMs=next;$('microphoneOffset').value=next;changed();renderMicrophone();
+    const amount=Math.abs(next-previous).toFixed(1).replace(/\.0$/,'');
+    status('New microphone takes: '+amount+' ms '+(direction<0?'later':'earlier')+'. '+(state.recording.micCompensation==='manual'?'Offset':'Extra trim')+': '+(next>0?'+':'')+next.toFixed(1)+' ms.');
+  }
+  $('microphoneLaterButton').addEventListener('click',event=>nudgeMicrophoneAlignment(-1,event));
+  $('microphoneEarlierButton').addEventListener('click',event=>nudgeMicrophoneAlignment(1,event));
   $('microphoneCompensation').addEventListener('change',()=>{if(transportLocked())return;remember();state.recording.micCompensation=$('microphoneCompensation').value;changed();renderMicrophone();});
   $('microphoneOffset').addEventListener('change',()=>{if(transportLocked())return;const value=Number($('microphoneOffset').value);if(!Number.isFinite(value)){renderMicrophone();return;}remember();state.recording.micOffsetMs=num(value,-500,500);$('microphoneOffset').value=state.recording.micOffsetMs;changed();renderMicrophone();});
   $('recordSource').addEventListener('change',()=>{if($('recordSource').value==='microphone'){$('micInputPanel').open=true;renderMicrophone();}else if(!transportLocked()){++microphoneOperation;engine.setMicrophoneMonitoring(track().id,{enabled:false}).then(()=>renderMicrophone()).catch(e=>status(e.message));}});
