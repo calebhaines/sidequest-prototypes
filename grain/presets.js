@@ -129,3 +129,100 @@
     }
   ];
 }());
+
+/* Additive noise recipes. The original six grooves above are deliberately untouched. */
+(function () {
+  'use strict';
+  const recipe = (id, name, family, source, description, settings) => ({
+    id, name, family, source, description,
+    noise: Object.assign({ level: 0.8, rate: 1, filter: 'bandpass', cutoff: 3000,
+      resonance: 0.707, attack: 0.001, hold: 0, decay: 0.12,
+      curve: 'exponential', drive: 0, envAmount: 0, bursts: 1, spacing: 0.0175 }, settings)
+  });
+  window.NOISE_RECIPES = [
+    recipe('pan-scrape', 'Pan scrape', 'Friction', 'pink', 'A rough, rising brush against the pan; slow attack and a climbing filter.', { rate: 0.72, cutoff: 1750, resonance: 1.6, attack: 0.035, hold: 0.03, decay: 0.24, curve: 'linear', drive: 0.2, envAmount: -17 }),
+    recipe('wire-brush', 'Wire brush', 'Friction', 'metallic', 'A tight metallic rasp, bright enough to sit between drum hits.', { rate: 0.8, filter: 'highpass', cutoff: 3900, resonance: 0.65, attack: 0.004, decay: 0.065, drive: 0.16, bursts: 2, spacing: 0.009 }),
+    recipe('sandpaper', 'Sandpaper', 'Friction', 'grey', 'A dry midrange swish with an even, brushed falloff.', { rate: 0.6, cutoff: 2300, resonance: 0.85, attack: 0.014, hold: 0.025, decay: 0.17, curve: 'linear', drive: 0.28 }),
+    recipe('cloth-drag', 'Cloth drag', 'Friction', 'brown', 'A soft, low scrape for ghost strokes and shuffled textures.', { level: 0.95, rate: 0.48, filter: 'lowpass', cutoff: 1650, resonance: 0.75, attack: 0.022, hold: 0.015, decay: 0.21, curve: 'linear', envAmount: 6 }),
+    recipe('static-slap', 'Static slap', 'Static', 'white', 'A sharp noise backbeat with three closely spaced attacks.', { cutoff: 3400, resonance: 0.9, decay: 0.085, drive: 0.22, bursts: 3, spacing: 0.014, envAmount: 10 }),
+    recipe('relay-click', 'Relay click', 'Static', 'digital', 'A clipped electrical tick with a short falling filter.', { level: 0.7, rate: 1.65, filter: 'highpass', cutoff: 2800, resonance: 1.2, decay: 0.021, drive: 0.38, envAmount: 14 }),
+    recipe('fuse-fizz', 'Fuse fizz', 'Static', 'crackle', 'Uneven sparks drawn into a short fizzing tail.', { rate: 1.2, filter: 'highpass', cutoff: 1800, resonance: 0.65, attack: 0.002, hold: 0.01, decay: 0.2, drive: 0.31, bursts: 2, spacing: 0.026 }),
+    recipe('bit-crust', 'Bit crust', 'Static', 'digital', 'A chunky, lower-register packet of crushed noise.', { rate: 0.4, cutoff: 920, resonance: 2.1, decay: 0.092, drive: 0.52, envAmount: 15 }),
+    recipe('radio-spill', 'Radio spill', 'Interference', 'radio', 'A narrow wandering signal that slides into focus.', { level: 0.72, rate: 0.65, cutoff: 1250, resonance: 3.8, attack: 0.025, hold: 0.04, decay: 0.32, curve: 'linear', drive: 0.15, envAmount: -12 }),
+    recipe('fork-feedback', 'Fork feedback', 'Interference', 'metallic', 'A resonant cutlery-ring with a falling, almost pitched edge.', { level: 0.65, rate: 0.52, cutoff: 820, resonance: 7, decay: 0.24, drive: 0.12, envAmount: 5 }),
+    recipe('valve-whistle', 'Valve whistle', 'Interference', 'blue', 'A narrow steam squeal with a soft entrance.', { level: 0.64, rate: 0.85, cutoff: 5200, resonance: 9, attack: 0.02, hold: 0.016, decay: 0.18, curve: 'linear', envAmount: -7 }),
+    recipe('mains-rumble', 'Mains rumble', 'Interference', 'brown', 'A dense low pulse; useful beneath dry, bright percussion.', { level: 1, rate: 0.3, filter: 'lowpass', cutoff: 210, resonance: 1.3, decay: 0.32, drive: 0.35, envAmount: 16 }),
+    recipe('pepper-rattle', 'Pepper rattle', 'Percussion', 'dust', 'Four scattered grains with a deliberate short rattle.', { rate: 1.35, filter: 'highpass', cutoff: 1900, resonance: 0.8, decay: 0.035, bursts: 4, spacing: 0.019, drive: 0.09 }),
+    recipe('crumb-tap', 'Crumb tap', 'Percussion', 'velvet', 'Sparse impulses gathered into a hollow contact sound.', { level: 0.95, rate: 0.73, cutoff: 1350, resonance: 4.6, decay: 0.048, drive: 0.18, envAmount: 9 }),
+    recipe('foil-crimp', 'Foil crimp', 'Percussion', 'violet', 'A bright, crinkled double strike with almost no low end.', { level: 0.7, rate: 0.8, filter: 'highpass', cutoff: 4600, resonance: 0.65, decay: 0.057, drive: 0.23, bursts: 2, spacing: 0.012 }),
+    recipe('vent-breath', 'Vent breath', 'Percussion', 'pink', 'A longer, airy release that leaves room for the next hit.', { level: 0.68, rate: 1.1, filter: 'highpass', cutoff: 3200, resonance: 0.7, attack: 0.014, hold: 0.018, decay: 0.38, curve: 'linear', envAmount: 5 })
+  ];
+  const byId = Object.fromEntries(window.NOISE_RECIPES.map(item => [item.id, item]));
+  function noiseVoice(name, recipeId, mode, pattern, level, pan, changes, bodyLevel) {
+    const selected = byId[recipeId];
+    const track = { name, noise: selected.source, mode, steps: pattern.replace(/\s/g, '').split('').map(Number),
+      mute: false, solo: false, level, pan, tone: 0.5, decay: 0.25, pitch: 0.5 };
+    track.synth = window.GrainSynth.defaults(track);
+    track.synth.body.level = bodyLevel || 0;
+    track.synth.noise = Object.assign({}, selected.noise, changes);
+    return track;
+  }
+  window.NOISE_PRESETS.push(
+    {
+      name: 'Prep surface', tagline: 'Brushes, scrapes and contact sounds. Nothing on this counter sits still.',
+      bpm: 96, swing: 0.19, drive: 0.12, space: 0.18,
+      tracks: [
+        noiseVoice('COUNTER PULSE', 'mains-rumble', 'kick', '2000 0010 0002 0010', 0.85, 0, { decay: 0.22 }, 0.65),
+        noiseVoice('PAN SCRAPE', 'pan-scrape', 'texture', '0000 2000 0000 2010', 0.56, -0.12),
+        noiseVoice('WIRE BRUSH', 'wire-brush', 'hat', '2010 1021 2010 1011', 0.33, -0.22),
+        noiseVoice('CLOTH DRAG', 'cloth-drag', 'texture', '0001 0000 0010 0000', 0.38, 0.23),
+        noiseVoice('CRUMB TAP', 'crumb-tap', 'perc', '0010 0000 0100 0001', 0.48, -0.31),
+        noiseVoice('SANDPAPER', 'sandpaper', 'texture', '0000 1000 0000 1000', 0.3, 0.13),
+        noiseVoice('PEPPER RATTLE', 'pepper-rattle', 'perc', '0000 0010 0001 0010', 0.29, 0.36),
+        noiseVoice('VENT BREATH', 'vent-breath', 'texture', '1000 0000 0000 1000', 0.18, -0.08)
+      ]
+    },
+    {
+      name: 'Short-order static', tagline: 'A dry electrical break. The ticket printer has swallowed the backbeat.',
+      bpm: 128, swing: 0.07, drive: 0.24, space: 0.1,
+      tracks: [
+        noiseVoice('FUSE PULSE', 'mains-rumble', 'kick', '2000 0020 1000 0010', 0.83, 0, { cutoff: 320, decay: 0.2 }, 0.72),
+        noiseVoice('STATIC SLAP', 'static-slap', 'snare', '0000 2001 0000 2010', 0.64, 0.03),
+        noiseVoice('RELAY CLICK', 'relay-click', 'hat', '2120 1011 2021 1010', 0.4, -0.17),
+        noiseVoice('FUSE FIZZ', 'fuse-fizz', 'texture', '0000 0010 0000 0010', 0.34, 0.2),
+        noiseVoice('BIT CRUST', 'bit-crust', 'perc', '0001 0000 0010 0100', 0.42, -0.3),
+        noiseVoice('WHITE FLASH', 'static-slap', 'clap', '0000 1000 0000 1000', 0.29, 0.11, { rate: 1.4, bursts: 2, decay: 0.04 }),
+        noiseVoice('FOIL CRIMP', 'foil-crimp', 'perc', '0010 0100 0001 0011', 0.29, 0.33),
+        noiseVoice('RADIO RESIDUE', 'radio-spill', 'texture', '1000 0000 0000 0010', 0.16, -0.06, { resonance: 1.8, decay: 0.21 })
+      ]
+    },
+    {
+      name: 'Radio misdemeanour', tagline: 'Wrong frequencies, right pockets. Somebody has tuned the extractor.',
+      bpm: 114, swing: 0.11, drive: 0.16, space: 0.27,
+      tracks: [
+        noiseVoice('MAINS RUMBLE', 'mains-rumble', 'kick', '2000 0001 0020 0100', 0.83, 0, {}, 0.5),
+        noiseVoice('SIGNAL SNAP', 'bit-crust', 'snare', '0000 2000 0001 2000', 0.61, 0.04, { cutoff: 1900, rate: 0.68, bursts: 2, spacing: 0.011 }),
+        noiseVoice('CARRIER TICK', 'relay-click', 'hat', '2010 0110 2011 0010', 0.34, -0.22, { rate: 0.9, cutoff: 4900 }),
+        noiseVoice('VALVE WHISTLE', 'valve-whistle', 'texture', '0000 0010 0000 0001', 0.29, 0.26),
+        noiseVoice('FORK FEEDBACK', 'fork-feedback', 'perc', '0010 0000 0100 0010', 0.4, -0.29),
+        noiseVoice('RADIO SPILL', 'radio-spill', 'texture', '0000 1000 0000 1000', 0.37, 0.1),
+        noiseVoice('SPARK PACKET', 'fuse-fizz', 'perc', '0001 0010 0000 0101', 0.29, 0.35, { cutoff: 3500, decay: 0.08, bursts: 3 }),
+        noiseVoice('LOW CARRIER', 'radio-spill', 'texture', '1000 0000 0010 0000', 0.2, -0.08, { rate: 0.32, cutoff: 480, resonance: 2.6, decay: 0.52 })
+      ]
+    },
+    {
+      name: 'Crumb counter', tagline: 'Pointillist percussion and tiny accidents. Count the pepper if you can.',
+      bpm: 146, swing: 0.09, drive: 0.13, space: 0.15,
+      tracks: [
+        noiseVoice('DUST THUD', 'mains-rumble', 'kick', '2000 0010 0200 0001', 0.8, 0, { rate: 0.5, cutoff: 460, decay: 0.13 }, 0.6),
+        noiseVoice('FOIL SLAP', 'foil-crimp', 'snare', '0000 2000 0000 2010', 0.59, 0.04, { cutoff: 2100, bursts: 3, decay: 0.065 }),
+        noiseVoice('VELVET TICK', 'crumb-tap', 'hat', '2121 2010 1121 2011', 0.33, -0.21, { rate: 1.7, filter: 'highpass', cutoff: 3400, resonance: 0.8, decay: 0.019 }),
+        noiseVoice('PEPPER RATTLE', 'pepper-rattle', 'perc', '0000 0010 0000 0001', 0.34, 0.27),
+        noiseVoice('CRUMB TAP', 'crumb-tap', 'perc', '0010 0001 0010 0100', 0.46, -0.32),
+        noiseVoice('TWO GRAINS', 'pepper-rattle', 'perc', '0001 0000 0100 0010', 0.31, 0.1, { rate: 0.62, cutoff: 1000, bursts: 2, spacing: 0.026 }),
+        noiseVoice('TIN TICK', 'fork-feedback', 'perc', '0100 0010 0001 0100', 0.26, 0.37, { rate: 1.6, cutoff: 2600, resonance: 3.4, decay: 0.039 }),
+        noiseVoice('SIFTED AIR', 'sandpaper', 'texture', '1000 0000 0000 1000', 0.16, -0.08, { filter: 'notch', cutoff: 3500, decay: 0.34, drive: 0.06 })
+      ]
+    }
+  );
+}());

@@ -64,3 +64,7 @@ Those checks cover audible default mapping, all eight portable presets, stereo P
 ## Compatibility
 
 The Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier FABLE projects continue to open. Source archives keep their existing URL names.
+
+## Interface refresh · 1.0.1
+
+The keyboard and existing sound selection now open in a compact Performance view. Sample editor opens every original inventory, waveform, mapping, envelope and modulation tool; the keyboard remains playable. Arpeggiator and master settings have labelled expandable panels. Workspace choice is transient and never enters instrument data or Undo history. Existing sounds, samples, projects, presets, MIDI and audio rendering are unchanged.

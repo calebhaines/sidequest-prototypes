@@ -53,8 +53,12 @@ needed. The archive includes the fonts and their license.
 Bundled Noto font subsets are copyright Google and licensed under the SIL
 Open Font License 1.1. See `fonts/LICENSE.txt`.
 
-Version 1.0.0.
+Version 1.0.1.
 
 ## Compatibility
 
 The Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier BOWER projects continue to open. Source archives keep their existing URL names.
+
+## Interface refresh (1.0.1)
+
+The compact four-string rack is directly playable: tap a string to select it and pluck its root note. Strum and Hold to damp sit beside the rack. Step buttons display their scale-derived note above the original stored degree, and the selected-step editor sits immediately above the original sound/clock/mix tabs. The sound engine, scale algorithm and saved score remain unchanged.

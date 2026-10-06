@@ -181,3 +181,18 @@ version keeps FORM's app ID, project format, storage keys, sample exchange, and
 old sounds so existing sessions remain usable. GALLEY embeds the updated app;
 the other instruments, effects, sample libraries, and published songs remain
 unchanged. Review conflicts if later releases touch the same files.
+
+## Additive SIZZLE and Kitchen interface refresh
+
+The previous release is preserved at `pre-kitchen-interface-refresh-2026-10-06`, commit `6cbf913df89980f475faf1063ee2551928b2d799`. This release is tagged `kitchen-interface-refresh-v1`.
+
+For an immediate return to SIZZLE’s earlier interface, open [the preserved SIZZLE 1.1.1 HTML](./grain/previous.html). It is byte-for-byte the checkpoint’s standalone file. Existing SIZZLE sounds, six original presets, project format, browser storage and synthesis remain compatible. The new noise recipes use parameters already supported by the previous engine.
+
+To undo the entire interface release and restore matching standalone downloads and GALLEY’s embedded instruments:
+
+```sh
+git revert --no-edit kitchen-interface-refresh-v1
+git push origin main
+```
+
+The release does not change the other instruments’ sound engines, preset data, recorded libraries or project schemas. HOTPLATE, GALLEY effects and both songs remain intact. Download projects for portable backups, and review conflicts if later commits modify the same files.

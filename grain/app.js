@@ -282,8 +282,29 @@
     $('noise-caption').textContent = source.name + ' noise. ' + source.description;
     drawVoice();
     if (voiceLab) voiceLab.render();
+    renderNoiseBench();
     if (focusedParam) { const replacement = Array.from(document.querySelectorAll('.knob')).find((knob) => knob.dataset.param === focusedParam); if (replacement) replacement.focus({ preventScroll: true }); }
     else if (focusedSelector && $(focusedSelector)) $(focusedSelector).focus({ preventScroll: true });
+  }
+  // View state stays in the DOM; recipes write only existing saved noise parameters.
+  function renderNoiseBench() {
+    const track = state.tracks[selected], noise = window.GrainSynth.ensureTrack(track).noise;
+    $('bench-voice-label').textContent = '0' + (selected + 1) + ' / ' + pretty(track.name);
+    $('bench-filter').value = noise.filter; $('bench-curve').value = noise.curve;
+    const container = $('noise-bench-knobs'); container.replaceChildren();
+    ['cutoff', 'decay', 'attack', 'drive', 'rate', 'bursts'].forEach((key) => {
+      const descriptor = window.GrainSynth.descriptors.noise.find(item => item.key === key);
+      const formatter = value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor);
+      const control = knobControl('bench-' + key, descriptor.label, window.GrainSynth.toNormalized(noise[key], descriptor), formatter, value => {
+        noise[key] = window.GrainSynth.fromNormalized(value, descriptor);
+        drawVoice(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
+      });
+      control.querySelector('.knob').title = descriptor.title; container.append(control);
+    });
+  }
+  function updateRecipeDescription() {
+    const recipe = (window.NOISE_RECIPES || []).find(item => item.id === $('noise-recipe-select').value);
+    $('noise-recipe-description').textContent = recipe ? recipe.description : '';
   }
   function renderMaster() {
     const container = $('master-knobs'); container.replaceChildren();
@@ -390,6 +411,30 @@
   }
 
   window.NOISE_PRESETS.forEach((preset, i) => { const option = document.createElement('option'); option.value = i; option.textContent = preset.name; $('preset-select').append(option); });
+  const recipeGroups = new Map();
+  (window.NOISE_RECIPES || []).forEach(recipe => {
+    if (!recipeGroups.has(recipe.family)) { const group = document.createElement('optgroup'); group.label = recipe.family; recipeGroups.set(recipe.family, group); $('noise-recipe-select').append(group); }
+    const option = document.createElement('option'); option.value = recipe.id; option.textContent = recipe.name; recipeGroups.get(recipe.family).append(option);
+  });
+  updateRecipeDescription();
+  $('noise-recipe-select').addEventListener('change', updateRecipeDescription);
+  $('apply-noise-recipe').addEventListener('click', () => {
+    const recipe = (window.NOISE_RECIPES || []).find(item => item.id === $('noise-recipe-select').value); if (!recipe) return;
+    remember(); const track = state.tracks[selected]; track.noise = recipe.source;
+    window.GrainSynth.ensureTrack(track).noise = clone(recipe.noise);
+    renderRows(); renderVoice(); persist();
+    toast(recipe.name + ' applied to noise only. Body, rhythm, mix and modulation kept.');
+    if (!playing) audition(track);
+  });
+  ['filter', 'curve'].forEach(key => $('bench-' + key).addEventListener('change', () => {
+    remember(); window.GrainSynth.ensureTrack(state.tracks[selected]).noise[key] = $('bench-' + key).value;
+    drawVoice(); if (voiceLab) voiceLab.render(); persist();
+  }));
+  $('noise-bench').addEventListener('toggle', () => $('open-noise-bench').setAttribute('aria-expanded', $('noise-bench').open));
+  $('open-noise-bench').addEventListener('click', () => {
+    const panel = $('noise-bench'); panel.open = true;
+    panel.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
+  });
   const customOption = document.createElement('option'); customOption.value = 'custom'; customOption.textContent = 'Custom groove'; customOption.hidden = true; $('preset-select').append(customOption);
   for (let i = 0; i < 16; i++) { const label = document.createElement('span'); label.className = 'step-number' + (i % 4 === 0 ? ' beat' : ''); label.dataset.step = i; label.textContent = String(i + 1).padStart(2, '0'); $('step-numbers').append(label); }
   sources.forEach((source) => {
@@ -449,7 +494,7 @@
   });
   window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
-  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
   renderAll(); drawHero(0); requestAnimationFrame(animate);
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {

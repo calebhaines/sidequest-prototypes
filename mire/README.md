@@ -14,6 +14,13 @@ the current page origin. Importing an audio file works without microphone access
 
 ## Playing
 
+The 1.0.1 recirculation console keeps the live graph, selected processor and
+performance pad together. Section navigation reaches Network, Sources, Routing,
+Modulation and Perform. Route arrowheads and send/receive labels make direction
+visible; controls have larger touch targets. Every original processor, source,
+modulator, routing control, project format and preset remains unchanged.
+
+
 - Four source lanes feed a 16-step pattern into four processing nodes. Audition
   sources with the trigger buttons or keys 1–4. Space starts/stops the pattern.
 - Each node offers tape echo, string, diffuser, singing bowl, spring or cloud.

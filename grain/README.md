@@ -1,12 +1,12 @@
 # SIZZLE.
 
-A self-contained, noise-powered drum machine with an commercial kitchen inspired dark interface.
+A self-contained, noise-powered drum machine with a compact commercial kitchen inspired dark interface.
 
 **Double-click `index.html` to open it in a modern browser, then press Play.** It works offline. No installation, server, account, external fonts, libraries, or samples are needed. All sound is synthesized in the browser.
 
 - Eight individually editable voices and a 16-step sequencer.
 - Twelve sources: white, pink, brown, blue, violet, grey, velvet, crackle, metallic, digital, dust, and radio noise.
-- Six curated grooves, four pattern banks, swing, accents, mute, solo, randomization, and undo.
+- The original six curated grooves, four additional specialist noise kits (Prep surface, Short-order static, Radio misdemeanour, and Crumb counter), four pattern banks, swing, accents, mute, solo, randomization, and undo.
 - Separate BODY and NOISE layer levels, voice level, and stereo pan.
 - Drum-body oscillator waveform, fundamental, harmonics, detune, pitch sweep, sweep time, and its own attack/hold/decay envelope.
 - Noise playback speed, four filter types, cutoff, resonance, filter sweep, saturation, burst count/gap, and an independent envelope.
@@ -17,6 +17,18 @@ A self-contained, noise-powered drum machine with an commercial kitchen inspired
 - Stereo 44.1 kHz / 16-bit WAV export: four bars plus a natural effect tail.
 
 Click a step to toggle it. Shift + click adds an accent; on touchscreens, press and hold. Select a voice to blend its BODY and NOISE levels, then click Synthesis to open Drum body, Noise shaper, and Modulation. Each section edits that voice independently; Hear voice auditions the result. Body can also be added to hats, claps, and textures by raising BODY. Modulation restarts on each hit. Older saved projects load into the new synthesis controls automatically. Drag a knob vertically, or focus it and use arrow keys. Hold Shift for fine adjustments. Press Space to play or pause, 1–8 to audition voices, and Ctrl / Cmd + Z to undo. The question-mark button has the full guide.
+
+## Noise bench (v1.2)
+
+The familiar sequencer, four BODY/NOISE/LEVEL/PAN controls, twelve-source palette, and full Synthesis station remain available. The default groove and the original six presets are unchanged.
+
+**Noise bench** is an optional, initially closed panel. Open it with the Voice station button or its labelled disclosure. Its sixteen recipes cover friction, static, interference, and noise percussion. Choose a recipe, then press **Apply noise**: only the selected voice's noise source and noise synthesis settings change. Drum body, steps and pattern banks, voice level/pan/mute/solo, master effects, and modulation remain yours. Undo restores the previous sound. The recipe chooser itself does not edit the project.
+
+Its six quick controls directly edit the existing cutoff, decay, attack, saturation, playback speed, and burst count parameters. Filter and envelope curve are also available. The same settings appear in the full Noise shaper and are used for playback, project saving, and every WAV/sample export; there is no hidden sound-design state or new audio engine.
+
+Four new complete **Kit + groove** presets append the original bank. Loading one follows the original preset behavior: it changes all eight voices, the rhythm, tempo, swing, and master effects; master output level stays unchanged. These new kits combine authored sixteen-step rhythms with noise-only contact sounds, electrical backbeats, resonant interference, sparse impulses, and a supporting low pulse.
+
+The refresh retains project version 2, existing storage keys and integration APIs. Interface disclosure/recipe selection is excluded from musical projects. Header controls wrap on phones; sequencer lanes retain their names while you scroll to the remaining steps.
 
 ## Sharing samples
 

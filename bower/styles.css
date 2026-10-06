@@ -29,3 +29,62 @@ footer p{font-family:var(--sans);font-style:normal;color:#b5b8b8;font-size:10px;
  .masthead>.text-button,.masthead>.ml-ex-launcher,.masthead>.ml-pat-launcher{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:38px;padding:7px 8px;white-space:normal;font-size:10px;line-height:1.25;letter-spacing:0;background:#282e32;border:1px solid #536068;border-radius:2px;gap:5px;color:#efe6d4}
  .masthead>.text-button span{margin-left:0}.masthead button svg{flex-shrink:0}
 }
+
+/* Four playable skewers, with the score close at hand. */
+body[data-kitchen-app="skewer"] .app-shell{max-width:1440px;padding:0 30px 22px}
+body[data-kitchen-app="skewer"] .masthead{min-height:66px;height:auto;padding:13px 0;gap:15px;flex-wrap:wrap}
+body[data-kitchen-app="skewer"] .hero{display:flex;justify-content:space-between;align-items:center;padding:19px 0 18px;gap:22px}
+body[data-kitchen-app="skewer"] .hero::before{display:none}
+body[data-kitchen-app="skewer"] .hero h1{font-size:38px;line-height:1;letter-spacing:-1.6px;margin:8px 0}
+body[data-kitchen-app="skewer"] .hero .eyebrow{font-size:8px;letter-spacing:1.5px}
+body[data-kitchen-app="skewer"] .hero-copy{font-size:11px;line-height:1.5;margin:0;color:#afb9bd}
+body[data-kitchen-app="skewer"] .hero-caption{display:flex;align-items:center;gap:9px;padding-left:18px;border-left:1px solid #445159;min-width:150px;font-size:10px}
+body[data-kitchen-app="skewer"] .panel,body[data-kitchen-app="skewer"] .lane-card{border-color:#48545c;border-radius:4px;box-shadow:0 3px 14px #0002}
+body[data-kitchen-app="skewer"] .transport{padding:14px 16px;gap:15px;margin-bottom:15px}
+body[data-kitchen-app="skewer"] .garden{padding:14px 18px 10px;margin-bottom:15px;background:linear-gradient(135deg,#252e34,#172025)}
+body[data-kitchen-app="skewer"] .rack-stage{position:relative;margin:9px 0}
+body[data-kitchen-app="skewer"] .garden canvas{height:196px;opacity:.78}
+body[data-kitchen-app="skewer"] .rack-strings{position:absolute;inset:0;display:grid;grid-template-rows:repeat(4,1fr);gap:0}
+body[data-kitchen-app="skewer"] .rack-string{display:grid;grid-template-columns:27px 145px 1fr auto;align-items:center;width:100%;min-height:44px;padding:0 10px;text-align:left;color:#c4cdd1;background:transparent;border:1px solid transparent;border-left:2px solid transparent;transition:background .14s,border-color .14s;position:relative}
+body[data-kitchen-app="skewer"] .rack-string:hover,body[data-kitchen-app="skewer"] .rack-string.selected{border-left-color:var(--string-color);background:linear-gradient(90deg,#41505b35,transparent 85%)}
+body[data-kitchen-app="skewer"] .rack-string.plucked{background:linear-gradient(90deg,#dbc9a82e,transparent);border-color:var(--string-color)}
+body[data-kitchen-app="skewer"] .rack-index{color:var(--string-color);font:10px var(--kk-mono,monospace)}
+body[data-kitchen-app="skewer"] .rack-name{font-size:11px;font-weight:600;color:#e5dfd1;background:#1d272df0;width:max-content;max-width:100%;padding:5px 8px}
+body[data-kitchen-app="skewer"] .rack-pitch{font:10px var(--kk-mono,monospace);color:var(--string-color);justify-self:end;background:#1d272de6;padding:6px 12px}
+body[data-kitchen-app="skewer"] .rack-pluck{font:8px var(--kk-mono,monospace);letter-spacing:1px;color:#a3afb6;background:#1d272de6;padding:6px 8px}
+body[data-kitchen-app="skewer"] .rack-gestures{display:flex;align-items:center;justify-content:space-between;gap:15px;border-top:1px solid #465159;padding:12px 0}
+body[data-kitchen-app="skewer"] .rack-gestures>div:first-child{display:grid;gap:6px}
+body[data-kitchen-app="skewer"] .rack-note{font:10px var(--kk-mono,monospace);color:#e5dfd1}
+body[data-kitchen-app="skewer"] .rack-gestures .gesture-row{margin:0;display:flex;gap:8px}
+body[data-kitchen-app="skewer"] .garden-bottom{padding-top:10px}
+body[data-kitchen-app="skewer"] .lane-grid{gap:13px;margin-bottom:15px}
+body[data-kitchen-app="skewer"] .lane-card{padding:14px 16px;border-top:2px solid var(--lane-color,#82939c);background:linear-gradient(130deg,#293239,#20282d)}
+body[data-kitchen-app="skewer"] .lane-card[data-lane="0"]{--lane-color:#ff8d45}body[data-kitchen-app="skewer"] .lane-card[data-lane="1"]{--lane-color:#f3cb4f}body[data-kitchen-app="skewer"] .lane-card[data-lane="2"]{--lane-color:#b8c4cb}body[data-kitchen-app="skewer"] .lane-card[data-lane="3"]{--lane-color:#efe6d4}
+body[data-kitchen-app="skewer"] .lane-card.selected{border-color:var(--lane-color);background:linear-gradient(130deg,#383a35,#222a2d)}
+body[data-kitchen-app="skewer"] .lane-title{font-family:var(--sans);font-size:13px;font-weight:600}
+body[data-kitchen-app="skewer"] .lane-select{min-height:40px;min-width:0}
+body[data-kitchen-app="skewer"] .mini-button{min-height:36px;font-size:9px;padding:6px 9px}
+body[data-kitchen-app="skewer"] .steps{grid-template-columns:repeat(16,minmax(30px,1fr));overflow-x:auto;gap:5px;padding:4px 2px 8px;scrollbar-color:#74858d #182126;scrollbar-width:thin}
+body[data-kitchen-app="skewer"] .step{height:43px;min-width:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+body[data-kitchen-app="skewer"] .step-pitch{font:9px var(--kk-mono,monospace);font-weight:600}
+body[data-kitchen-app="skewer"] .step-degree{font-size:7px;opacity:.7}
+body[data-kitchen-app="skewer"] .step::after{display:none}
+body[data-kitchen-app="skewer"] .step.on{background:color-mix(in srgb,var(--lane-color) 22%,#1b252b);color:#eee5d3;border-color:color-mix(in srgb,var(--lane-color) 65%,#42525a)}
+body[data-kitchen-app="skewer"] .step.accent{background:color-mix(in srgb,var(--lane-color) 58%,#26333b);color:#141b1e}
+body[data-kitchen-app="skewer"] .workbench{padding:20px 23px;margin-bottom:15px}
+body[data-kitchen-app="skewer"] .workbench h2{font-family:var(--sans);font-size:21px;font-weight:600}
+body[data-kitchen-app="skewer"] .workbench .step-editor{margin:0 0 20px;padding:16px;background:#172026;border:1px solid #43545d;border-left:2px solid #ff8d45;border-radius:3px}
+body[data-kitchen-app="skewer"] .step-note{font-size:20px;color:#ffac76}
+body[data-kitchen-app="skewer"] .control-grid{gap:19px 24px}
+body[data-kitchen-app="skewer"] .control-description{font-size:10px;line-height:1.5;color:#97a5ad}
+body[data-kitchen-app="skewer"] .range-control input{min-height:36px}
+body[data-kitchen-app="skewer"] .lower-grid{gap:15px}
+body[data-kitchen-app="skewer"] .keyboard,body[data-kitchen-app="skewer"] .master{padding:20px 23px}
+body[data-kitchen-app="skewer"] :is(button,select,input):focus-visible{outline:2px solid #ffb884;outline-offset:3px}
+@media(max-width:1000px){body[data-kitchen-app="skewer"] .transport{flex-wrap:wrap}body[data-kitchen-app="skewer"] .transport-end{margin-left:auto}body[data-kitchen-app="skewer"] .preset-field{min-width:200px;flex:1}body[data-kitchen-app="skewer"] .mast-note{display:none}body[data-kitchen-app="skewer"] .lane-grid{grid-template-columns:1fr}}
+@media(max-width:600px){body[data-kitchen-app="skewer"] .app-shell{padding:0 12px 18px}body[data-kitchen-app="skewer"] .masthead{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:90px;gap:7px;padding:11px 0}body[data-kitchen-app="skewer"] .masthead>.lab-link{grid-column:1/-1;min-height:24px}body[data-kitchen-app="skewer"] .masthead>button{min-height:38px;min-width:0}body[data-kitchen-app="skewer"] .hero{padding:16px 0;gap:10px}body[data-kitchen-app="skewer"] .hero h1{font-size:31px}body[data-kitchen-app="skewer"] .hero-caption{display:none}body[data-kitchen-app="skewer"] .hero-copy{font-size:10px}body[data-kitchen-app="skewer"] .transport{display:flex;flex-wrap:wrap;padding:12px;gap:12px 10px}body[data-kitchen-app="skewer"] .transport-buttons{gap:6px}body[data-kitchen-app="skewer"] .tempo-field{margin-left:auto}body[data-kitchen-app="skewer"] .preset-field{min-width:0;width:100%;flex-basis:100%}body[data-kitchen-app="skewer"] .transport-end{width:100%;justify-content:space-between}body[data-kitchen-app="skewer"] .button{min-height:40px}body[data-kitchen-app="skewer"] .garden{padding:13px 12px 9px}body[data-kitchen-app="skewer"] .rack-string{grid-template-columns:23px minmax(0,1fr) auto auto;padding:0 6px}body[data-kitchen-app="skewer"] .rack-name{font-size:10px;padding:5px;max-width:128px}body[data-kitchen-app="skewer"] .rack-pitch{padding:6px}body[data-kitchen-app="skewer"] .rack-pluck{font-size:7px;padding:6px 3px;letter-spacing:.4px}body[data-kitchen-app="skewer"] .rack-gestures{display:grid;gap:12px}body[data-kitchen-app="skewer"] .rack-gestures .gesture-row{display:grid;grid-template-columns:1fr 1fr;width:100%}body[data-kitchen-app="skewer"] .rack-gestures .button{font-size:10px;padding:8px 7px}body[data-kitchen-app="skewer"] .lane-card{padding:13px 12px}body[data-kitchen-app="skewer"] .lane-summary{font-size:8px;letter-spacing:.3px}body[data-kitchen-app="skewer"] .workbench{padding:17px 14px}body[data-kitchen-app="skewer"] .workbench h2{font-size:18px}body[data-kitchen-app="skewer"] .workbench .section-heading{flex-wrap:wrap;gap:12px}body[data-kitchen-app="skewer"] .workbench-actions{width:100%;justify-content:space-between}body[data-kitchen-app="skewer"] .workbench .step-editor{padding:13px;margin-bottom:18px}body[data-kitchen-app="skewer"] .tab-bar{gap:16px}body[data-kitchen-app="skewer"] .tab{font-size:10px;min-height:40px}body[data-kitchen-app="skewer"] .lower-grid{grid-template-columns:1fr}body[data-kitchen-app="skewer"] .keyboard,body[data-kitchen-app="skewer"] .master{padding:17px 14px}}
+@media(max-width:360px){body[data-kitchen-app="skewer"] .tempo-field{margin-left:0}body[data-kitchen-app="skewer"] .transport-buttons{width:100%}body[data-kitchen-app="skewer"] .transport-buttons .button{flex:1}body[data-kitchen-app="skewer"] .hero .eyebrow{font-size:7px;white-space:normal}body[data-kitchen-app="skewer"] .rack-name{max-width:100px}body[data-kitchen-app="skewer"] .tab-bar{gap:10px}body[data-kitchen-app="skewer"] .tab{font-size:9px}}
+@media(prefers-reduced-motion:reduce){body[data-kitchen-app="skewer"] *,body[data-kitchen-app="skewer"] *::before,body[data-kitchen-app="skewer"] *::after{animation:none!important;transition:none!important}}
+body[data-kitchen-app="skewer"] .lane-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}
+body[data-kitchen-app="skewer"] .lane-card,body[data-kitchen-app="skewer"] .steps{min-width:0;max-width:100%}
+@media(max-width:1000px){body[data-kitchen-app="skewer"] .lane-grid{grid-template-columns:minmax(0,1fr)}}

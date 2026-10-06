@@ -14,3 +14,104 @@ body{background:radial-gradient(ellipse at 85% 0,#ff8d450b,transparent 42%),#151
 .hero h1,.hero-copy h2,.editor-heading h2,.panel-topline h3{font-family:var(--kk-heading,var(--sans))}
 /* Keep every library and help control reachable on a narrow service counter. */
 @media(max-width:980px){.masthead{height:auto;min-height:112px;flex-wrap:wrap;justify-content:flex-start;gap:12px;padding:15px 0}.masthead-actions{width:100%;min-width:0;flex-wrap:wrap;justify-content:flex-start;gap:6px}.masthead .music-link{font-size:9px;white-space:nowrap;margin-right:auto}.masthead .music-link svg{display:none}.masthead .icon-button{width:28px;height:31px}.masthead .ml-ex-launcher,.masthead .ml-pat-launcher{padding:7px 8px!important;font-size:10px!important;height:34px;gap:5px!important;min-width:0}.masthead .ml-ex-launcher svg,.masthead .ml-pat-launcher svg{width:13px!important;height:13px!important}.masthead .offline-badge{display:none}}
+
+/* Keep the decks on the working counter, with a compact equipment label above. */
+.masthead{height:auto;min-height:70px;gap:18px;padding:14px 0;flex-wrap:wrap}
+.hero{grid-template-columns:1.3fr 1fr;gap:28px;padding:22px 0 20px}
+.hero h1{font-size:clamp(48px,5.5vw,76px);letter-spacing:-3.5px;line-height:1.02;margin:7px 0 12px}
+.hero-copy{display:block;padding-left:22px;border-left:1px solid var(--line)}
+.hero-copy h2{font-size:21px;line-height:1.3;letter-spacing:-.5px}
+.hero-copy h2 br{display:none}
+.hero-copy>p{font-size:10px;line-height:1.6;margin-top:7px}
+.hero-copy>p br{display:none}
+.hero-rule{font-size:8px;padding-top:9px;letter-spacing:1px}
+.edition-tag,.rotation-engraving{display:none}
+.station-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0 0;padding:5px;border:1px solid var(--line);border-radius:5px;background:#191d1e}
+.station-nav a{display:flex;align-items:center;justify-content:center;min-height:36px;padding:7px 10px;border-radius:3px;font-size:11px;color:var(--muted);background:#242a2c;transition:background .15s,color .15s}
+.station-nav a:hover{background:#353c3f;color:var(--accent)}
+.station-nav a:focus-visible{outline-offset:-3px}
+[id^=spool-]{scroll-margin-top:18px}
+.text-button,.deck-select,.deck-tools>.button,.toggle-button{min-height:36px}
+.deck-mix-button{width:36px;height:36px}
+input[type=range]{height:30px}
+select,.preset-control select{min-height:36px}
+.editor-tabs{gap:18px;padding:0 20px}
+.editor-tab{flex:1;text-align:center;min-width:0;line-height:1.45}
+.editor-sidebar{padding:22px}
+.deck-tools{margin-top:20px}
+.panel-topline{margin-bottom:19px;flex-wrap:wrap}
+.heading-actions{gap:13px}
+.section-heading{min-height:66px}
+@media(max-width:740px){
+ .hero{padding:18px 0;gap:18px;grid-template-columns:1.1fr 1fr}
+ .hero h1{font-size:50px;letter-spacing:-2.7px}
+ .hero-copy{padding-left:15px}
+ .hero-copy h2{font-size:17px}
+ .hero .eyebrow{font-size:8px;letter-spacing:1px}
+ .hero-rule{font-size:7px;letter-spacing:.5px}
+ .station-nav a{font-size:10px;min-height:40px;padding:6px}
+ .deck-tools{margin-top:0}
+ .heading-actions{flex-wrap:wrap;gap:8px}
+ .deck-select{width:100%;min-height:40px}
+ .deck-mix-buttons{gap:4px}
+ .deck-mix-button{width:36px;height:38px}
+ .deck-mix{gap:8px}
+}
+@media(max-width:540px){
+ .masthead{display:flex;height:auto;min-height:0;gap:13px}
+ .brand b{font-size:20px}
+ .brand-description{display:none}
+ .masthead-actions{display:flex;flex-wrap:wrap;width:100%;gap:8px;justify-content:space-between}
+ .masthead-actions>button,.masthead-actions>a{min-height:40px}
+ .masthead-actions>.ml-ex-launcher,.masthead-actions>.ml-pat-launcher{flex:1;justify-content:center;font-size:10px!important;padding:8px!important;letter-spacing:0!important}
+ .hero{display:block;padding:17px 0}
+ .hero h1{font-size:53px;letter-spacing:-3px;margin:5px 0 10px}
+ .hero .eyebrow{font-size:7px;letter-spacing:1px}
+ .hero-rule{display:none}
+ .hero-copy{border-left:0;padding:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+ .hero-copy h2{font-size:15px;letter-spacing:-.2px}
+ .hero-copy>p{font-size:9px;margin:0}
+ .transport{padding:12px;gap:10px}
+ .transport-play{flex:1}
+ .preset-control{min-width:0;flex-basis:100%;order:2}
+ .transport-actions{gap:6px;justify-content:flex-start;flex-wrap:wrap;padding-top:11px}
+ .transport-actions>.button{padding:0 9px;font-size:10px;flex:1;min-width:0}
+ .transport-actions>.icon-button{width:36px}
+ .panic-button{margin-left:0;min-height:40px;padding:0 8px}
+ .section-heading{flex-wrap:wrap;gap:8px;padding:16px 0;min-height:0}
+ .heading-actions{width:100%;justify-content:space-between}
+ .text-button{font-size:10px;padding:5px 6px}
+ .deck{padding:15px 10px 12px}
+ .deck-title b{font-size:10px;max-width:100%}
+ .deck-title small{font-size:6px;letter-spacing:.5px}
+ .deck-letter{width:18px;font-size:21px}
+ .deck-select{gap:5px;min-width:0}
+ .deck-grid{gap:10px}
+ .deck-mix{flex-wrap:wrap}
+ .deck-level{flex-basis:100%}
+ .deck-mix-buttons{width:100%;justify-content:flex-end}
+ .deck-mix-button{flex:1;max-width:none;min-width:0;height:36px}
+ .deck-meta{font-size:7px;gap:5px;flex-wrap:wrap}
+ .editor-sidebar{padding:17px;gap:15px;grid-template-columns:1fr}
+ .editor-heading h2{font-size:22px;line-height:1.2;margin-top:8px}
+ .editor-heading h2 br{display:none}
+ .editor-heading>p{max-width:none;margin-top:7px}
+ .deck-tools{grid-template-columns:1fr 1fr;gap:7px}
+ .deck-tools>.button{height:38px;min-width:0;padding:0 7px;gap:5px;justify-content:center;font-size:9px}
+ .deck-tools .danger-button{margin:0}
+ .editor-tabs{padding:0 12px;gap:10px;height:58px}
+ .editor-tab{font-size:10px}
+ .editor-panel{padding:18px 17px}
+ .parameter-grid{gap:17px 20px}
+ .parameter-label{font-size:9px}
+ .parameter-label output{font-size:10px}
+ .parameter-help{font-size:9px}
+ .loop-switches{gap:11px;margin-top:17px;padding-top:17px}
+ .panel-hint{font-size:10px;line-height:1.65}
+ .keyboard-caption{font-size:7px;flex-wrap:wrap}
+ .footer{gap:12px;flex-wrap:wrap}
+}
+@media(max-width:355px){.hero h1{font-size:47px}.app-shell{padding-left:12px;padding-right:12px}.brand{gap:8px}.deck-title b{font-size:9px}.deck-title small{font-size:6px}.record-strip{gap:8px}.record-strip>.button{font-size:10px;padding:0 8px}}
+@media(prefers-reduced-motion:reduce){.station-nav a{transition:none}}
+/* Keep Help as easy to touch on tablets as it is on phones. */
+.app-shell .masthead #help-button{width:40px;min-width:40px;height:40px;min-height:40px;padding:0;flex:0 0 40px}

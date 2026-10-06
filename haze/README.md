@@ -13,6 +13,15 @@ needed to play the standalone HTML.
 
 ## Playing
 
+The 1.0.1 drawing desk keeps the full score first. Detail view enlarges eight
+columns and eight bands for touch; its Time and Pitch menus reach the complete
+score without changing playback or saved data. Selected cells show their actual
+note and frequency. The precise cell editor opens on small screens. Sound recipe
+contains all existing tuning, synthesis, envelope and space controls; output and
+export remain immediately available. This is a presentation update: all sounds,
+factory studies, project formats and defaults are unchanged.
+
+
 Paint the score and press Play. Its 32 columns form a repeating timeline;
 24 pitch bands feed a bank of up to 48 sine partials. Brush intensity controls
 amplitude. Choose a scale and root, then shape harmonic stretch, envelopes,

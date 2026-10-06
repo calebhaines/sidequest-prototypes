@@ -40,3 +40,7 @@ Playwright/Chromium installation; `TINE_QA_URL` can check the published page.
 ## Display identity
 
 The kitchen name is a presentation change. Existing URL routes, JavaScript integration APIs, storage keys, and portable project identifiers remain unchanged so earlier sessions and shared projects still open.
+
+## Interface refresh (1.1.3)
+
+The compact impact bench puts striking material, pitch, decay and strike position beside the selected resonator. Detailed sound design opens every original Resonator, Exciter and Motion + mix control; nothing is removed. The sequencer and sound engine are unchanged.

@@ -65,3 +65,7 @@ Version 1.0.0.
 ## Compatibility
 
 The Kitchen name is a presentation change. Existing app URLs, project formats, native APIs, storage keys, and source identifiers remain compatible. Earlier RAVEL projects continue to open. Source archives keep their existing URL names.
+
+## Interface refresh · 1.0.1
+
+A compact source → pads → sequence workspace keeps the selected-step controls directly beneath the pattern. Adjacent-slice arrows audition without assigning; adjacent-step arrows move the editor without changing pattern data or Undo history. Sample prep and master effects have labelled expandable panels. All original import, microphone, transient slicing, manual boundaries, presets, pattern tools, capture and export features remain unchanged.

@@ -99,7 +99,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141719">
-  <meta name="grain-version" content="1.1.1">
+  <meta name="grain-version" content="1.2.0">
   <meta name="description" content="SIZZLE — a noise-powered drum machine from Kitchen. Eight voices, sixteen steps. The grill has developed a rhythm.">
   <title>SIZZLE — Kitchen</title>
   <style>
@@ -200,11 +200,107 @@ body[data-kitchen-app="sizzle"] dialog{border-radius:3px;background:#20272a;bord
 @media(max-width:650px){body[data-kitchen-app="sizzle"] h1{font-size:45px}body[data-kitchen-app="sizzle"] .brand{font-size:30px}body[data-kitchen-app="sizzle"] .topbar-right{gap:13px}body[data-kitchen-app="sizzle"] .music-link span{display:none}body[data-kitchen-app="sizzle"] .music-link svg{width:16px;height:16px}body[data-kitchen-app="sizzle"] .intro-art{display:none}body[data-kitchen-app="sizzle"] .intro{padding:28px 0}body[data-kitchen-app="sizzle"] .intro p{font-size:10px;max-width:290px}body[data-kitchen-app="sizzle"] .envelope-panel>h3{font-size:20px}}
 @media(max-width:380px){body[data-kitchen-app="sizzle"] h1{font-size:40px}body[data-kitchen-app="sizzle"] .brand{font-size:27px}body[data-kitchen-app="sizzle"] .envelope-panel>h3{font-size:18px}}
 
+/* SIZZLE 1.2 — the familiar noise station, dressed for service. */
+body[data-kitchen-app="sizzle"]{--panel:#20272a;--line:#414b4c;--muted:#a3ada9;background:radial-gradient(ellipse at 50% -20%,#ff8d4510,transparent 48%),#121719}
+body[data-kitchen-app="sizzle"] .app-shell{max-width:1472px;padding:0 32px}
+body[data-kitchen-app="sizzle"] .topbar{height:auto;min-height:76px;gap:20px;padding:15px 0;flex-wrap:wrap}
+body[data-kitchen-app="sizzle"] .brand{font-size:33px;gap:11px;flex-shrink:0}
+body[data-kitchen-app="sizzle"] .brand-description{font-size:7px;line-height:1.6;padding-left:13px;margin-left:2px}
+body[data-kitchen-app="sizzle"] .topbar-right{gap:12px;flex-wrap:wrap;justify-content:flex-end;min-width:0;max-width:100%}
+body[data-kitchen-app="sizzle"] .local-badge{font-size:8px;letter-spacing:.8px}
+body[data-kitchen-app="sizzle"] .topbar-divider{display:none}
+body[data-kitchen-app="sizzle"] .intro{padding:22px 0;gap:24px}
+body[data-kitchen-app="sizzle"] h1{font-size:clamp(28px,3vw,39px);letter-spacing:-.8px;line-height:1.1;text-transform:none}
+body[data-kitchen-app="sizzle"] .intro .eyebrow{font-size:8px;margin-bottom:8px}
+body[data-kitchen-app="sizzle"] .intro p{font-size:11px;margin-top:7px;max-width:520px}
+body[data-kitchen-app="sizzle"] .intro-art{width:270px;padding:10px 14px;transform:none;box-shadow:0 3px 0 #0a0f10;border-radius:4px;background:repeating-linear-gradient(0deg,#20282b 0,#20282b 3px,#242d30 4px)}
+body[data-kitchen-app="sizzle"] .intro-art::before{content:'NOISE / ON THE HEAT';font-size:6px;top:-5px;transform:none}
+body[data-kitchen-app="sizzle"] .griddle-drawing{display:none}
+body[data-kitchen-app="sizzle"] .art-label{font-size:6px;margin-bottom:5px}
+body[data-kitchen-app="sizzle"] .intro-art canvas{height:32px;border:0}
+body[data-kitchen-app="sizzle"] .art-coordinates{font-size:6px;margin-top:5px;letter-spacing:.5px}
+body[data-kitchen-app="sizzle"] .art-coordinates span{font-size:5px}
+body[data-kitchen-app="sizzle"] .panel{border-radius:6px;background:linear-gradient(135deg,#293134,#20272a 55%);box-shadow:0 3px 0 #0a0f10,inset 0 1px 0 #f1ecdc0a}
+body[data-kitchen-app="sizzle"] .transport{padding:14px 18px;gap:18px;min-height:78px;margin-bottom:18px;flex-wrap:wrap}
+body[data-kitchen-app="sizzle"] .preset-control{min-width:180px}
+body[data-kitchen-app="sizzle"] .select-wrap select{min-height:36px;font-size:13px;padding:5px 23px 5px 0}
+body[data-kitchen-app="sizzle"] .select-wrap svg{top:10px}
+body[data-kitchen-app="sizzle"] .play-button{min-height:44px;border-radius:4px}
+body[data-kitchen-app="sizzle"] .button,body[data-kitchen-app="sizzle"] .icon-button{min-height:40px}
+body[data-kitchen-app="sizzle"] .icon-button{width:40px;flex-shrink:0;border:1px solid #495355;background:#182023;border-radius:4px}
+body[data-kitchen-app="sizzle"] .text-button{min-height:36px;padding:0 7px;color:#bdc7c2;font-size:10px;border-radius:3px}
+body[data-kitchen-app="sizzle"] .text-button:hover{background:#ffffff08;color:#f1ecdc}
+body[data-kitchen-app="sizzle"] .sequencer>.section-heading{height:auto;min-height:55px;gap:14px;padding:9px 18px}
+body[data-kitchen-app="sizzle"] .sequencer-actions{gap:5px}
+body[data-kitchen-app="sizzle"] .action-divider{margin:0 4px}
+body[data-kitchen-app="sizzle"] h2{font-size:10px;letter-spacing:1px}
+body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:180px minmax(0,1fr) 82px;gap:14px}
+body[data-kitchen-app="sizzle"] .track-row{height:44px}
+body[data-kitchen-app="sizzle"] .step{height:34px;border-radius:4px;box-shadow:0 2px 0 #101719}
+body[data-kitchen-app="sizzle"] .step.active{background:color-mix(in srgb,var(--track-color) 50%,#162023);border-color:var(--track-color)}
+body[data-kitchen-app="sizzle"] .step.accent{background:var(--track-color);box-shadow:inset 0 1px 0 #ffffff44,0 0 8px color-mix(in srgb,var(--track-color) 14%,transparent)}
+body[data-kitchen-app="sizzle"] .track-name{font-size:10px;letter-spacing:.6px;color:#ececdf}
+body[data-kitchen-app="sizzle"] .track-noise{font-size:9px;color:#a0ada6}
+body[data-kitchen-app="sizzle"] .track-name-button{min-height:40px}
+body[data-kitchen-app="sizzle"] .mix-button{width:36px;height:36px;border-radius:4px;font-size:11px;color:#a9b4ae;background:#182023;border-color:#485456}
+body[data-kitchen-app="sizzle"] .mix-button.mute-on{background:#4a3829;border-color:#ff8d45;color:#ffc492}
+body[data-kitchen-app="sizzle"] .mix-button.solo-on{background:#dcc85e;color:#202725;border-color:#eadb96}
+body[data-kitchen-app="sizzle"] .sequencer-footer{padding:10px 18px;gap:14px;flex-wrap:wrap}
+body[data-kitchen-app="sizzle"] .bank-button{width:36px;height:36px;border-radius:4px;font-size:11px}
+body[data-kitchen-app="sizzle"] .bank-button.active{color:#ffd2ac;background:#ff8d451b;border-color:#ff8d4588}
+body[data-kitchen-app="sizzle"] .sequencer-hint{color:#a0ada6;font-size:10px}
+body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.7fr) minmax(0,1.1fr) minmax(0,.7fr);gap:14px;margin-top:18px}
+body[data-kitchen-app="sizzle"] .voice-panel .section-heading{height:auto;min-height:50px;flex-wrap:wrap;gap:4px;padding:7px 15px}
+body[data-kitchen-app="sizzle"] .voice-heading-actions{gap:3px;flex-wrap:wrap}
+body[data-kitchen-app="sizzle"] .voice-heading-actions .text-button{font-size:9px;padding:0 5px}
+body[data-kitchen-app="sizzle"] .voice-editor{min-height:153px;padding:17px 16px;gap:18px}
+body[data-kitchen-app="sizzle"] .voice-identity{width:135px;min-width:110px}
+body[data-kitchen-app="sizzle"] .voice-identity h3{font-family:var(--kk-heading,'Arial Narrow',sans-serif);font-size:23px;color:#f1ecdc}
+body[data-kitchen-app="sizzle"] .voice-identity p{font-size:10px;color:#a4afa9}
+body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+body[data-kitchen-app="sizzle"] .voice-knobs .knob,body[data-kitchen-app="sizzle"] .synthesis-knobs .knob{width:42px;height:42px}
+body[data-kitchen-app="sizzle"] .voice-knobs .knob svg,body[data-kitchen-app="sizzle"] .synthesis-knobs .knob svg{width:52px;height:52px}
+body[data-kitchen-app="sizzle"] .knob-label{font-size:8px;letter-spacing:.5px}
+body[data-kitchen-app="sizzle"] .knob-value{font-size:9px}
+body[data-kitchen-app="sizzle"] .noise-sources{padding:13px 13px 0;gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}
+body[data-kitchen-app="sizzle"] .noise-source{height:36px;font-size:10px;border-radius:4px;padding:0 7px;justify-content:center}
+body[data-kitchen-app="sizzle"] .noise-caption{margin:10px 14px 14px;color:#a0ada6;font-size:9px}
+body[data-kitchen-app="sizzle"] .synthesis-panel{margin-top:18px}
+body[data-kitchen-app="sizzle"] .synthesis-header{padding:10px 18px;flex-wrap:wrap}
+body[data-kitchen-app="sizzle"] .synthesis-selector select{min-height:38px}
+body[data-kitchen-app="sizzle"] .synth-tab{min-height:40px}
+body[data-kitchen-app="sizzle"] .synthesis-note,body[data-kitchen-app="sizzle"] .envelope-description{font-size:10px;color:#a6b1ab}
+body[data-kitchen-app="sizzle"] .noise-bench{margin-top:18px;scroll-margin-top:16px}
+.noise-bench>summary{display:flex;align-items:center;justify-content:space-between;min-height:53px;padding:10px 18px;gap:12px;cursor:pointer;list-style:none}
+.noise-bench>summary::-webkit-details-marker{display:none}
+.noise-bench>summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.bench-summary-title{font:600 10px var(--mono);letter-spacing:1px;color:#eadcc5}
+.bench-summary-note{font-size:10px;color:#a7b5ac;margin-left:5px}
+.bench-disclosure{font:9px var(--mono);letter-spacing:.6px;color:#e8b183;white-space:nowrap}
+.noise-bench[open] .bench-disclosure{font-size:0}.noise-bench[open] .bench-disclosure::after{content:'CLOSE −';font:9px var(--mono)}
+.noise-bench[open]>summary{border-bottom:1px solid var(--line)}
+.noise-bench-content{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.5fr);padding:20px;gap:30px}
+.bench-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font:8px var(--mono);letter-spacing:.7px;color:#d6d7bb}
+#bench-voice-label{color:#a4b4ad;letter-spacing:.2px;font-size:9px}
+.bench-recipe-actions{display:flex;gap:10px;margin-top:10px}
+.bench-recipe-actions select,.bench-selectors select{min-width:0;min-height:40px;border:1px solid #546462;background:#172022;color:#f1ecdc;border-radius:4px;padding:8px 9px;font-size:12px}
+.bench-recipe-actions select{flex:1;width:0}
+#noise-recipe-description{font-size:11px;line-height:1.6;color:#c2cbc1;min-height:35px;margin:12px 0 8px}
+.bench-preservation,.bench-control-note{font-size:10px;line-height:1.6;color:#a0ada6;margin:8px 0}
+.bench-selectors{display:flex;gap:12px;margin-top:15px}.bench-selectors label{display:flex;flex-direction:column;gap:7px;flex:1;font:9px var(--mono);color:#b6c1b9}
+.noise-bench-knobs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-top:14px}
+.noise-bench-knobs .knob{width:48px;height:48px}.noise-bench-knobs .knob svg{width:58px;height:58px}
+.bench-control-note{margin:22px 0 0;max-width:570px}
+@media(max-width:1190px){body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,.65fr)}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}body[data-kitchen-app="sizzle"] .voice-editor{min-height:220px}.noise-bench-content{gap:20px}.noise-bench-knobs{grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 18px}}
+@media(max-width:900px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 20px}body[data-kitchen-app="sizzle"] .topbar{min-height:72px}body[data-kitchen-app="sizzle"] .local-badge{display:none}body[data-kitchen-app="sizzle"] .intro{padding:18px 0}body[data-kitchen-app="sizzle"] .intro-art{width:220px}body[data-kitchen-app="sizzle"] .transport{gap:14px}.transport-divider{display:none}body[data-kitchen-app="sizzle"] .sequencer-inner{min-width:920px}body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:152px minmax(0,1fr) 80px;gap:12px}body[data-kitchen-app="sizzle"] .track-row{height:46px}body[data-kitchen-app="sizzle"] .step{height:36px}body[data-kitchen-app="sizzle"] .step-numbers,body[data-kitchen-app="sizzle"] .step-buttons{gap:4px}body[data-kitchen-app="sizzle"] .track-name-button,body[data-kitchen-app="sizzle"] .ruler-voice{position:sticky;left:0;z-index:2;background:#252e31;box-shadow:8px 0 8px #14202366;padding-right:8px}body[data-kitchen-app="sizzle"] .track-row.selected .track-name-button{background:#303833}body[data-kitchen-app="sizzle"] .track-row.selected::before{z-index:3}body[data-kitchen-app="sizzle"] .ruler-voice::after{font-size:7px}body[data-kitchen-app="sizzle"] .track-mini-wave{width:22px}body[data-kitchen-app="sizzle"] .track-name{font-size:9px}body[data-kitchen-app="sizzle"] .track-index{font-size:8px}body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}body[data-kitchen-app="sizzle"] .master-panel{grid-column:1/-1}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr))}body[data-kitchen-app="sizzle"] .voice-editor{min-height:210px}.bench-summary-note{font-size:9px}.noise-bench-content{grid-template-columns:minmax(230px,1fr) minmax(0,1fr);padding:18px}.bench-title{flex-wrap:wrap;gap:6px}.noise-bench-knobs .knob{width:44px;height:44px}.noise-bench-knobs .knob svg{width:54px;height:54px}}
+@media(max-width:650px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 12px}body[data-kitchen-app="sizzle"] .topbar{gap:8px;min-height:65px;padding:12px 0}body[data-kitchen-app="sizzle"] .brand{font-size:29px;gap:8px}body[data-kitchen-app="sizzle"] .brand-description{display:none}body[data-kitchen-app="sizzle"] .brand-mark{width:23px;height:28px;gap:2px}body[data-kitchen-app="sizzle"] .topbar-right{gap:7px;flex:1}body[data-kitchen-app="sizzle"] .music-link{min-width:36px;min-height:40px;justify-content:center}body[data-kitchen-app="sizzle"] .music-link span{display:none}body[data-kitchen-app="sizzle"] .intro{padding:16px 0}body[data-kitchen-app="sizzle"] h1{font-size:27px}body[data-kitchen-app="sizzle"] .intro p{font-size:10px;max-width:340px}body[data-kitchen-app="sizzle"] .intro-art{display:none}body[data-kitchen-app="sizzle"] .transport{display:grid;grid-template-columns:104px minmax(62px,.7fr) minmax(64px,1fr);gap:14px 12px;padding:14px 12px}body[data-kitchen-app="sizzle"] .playback{gap:5px}body[data-kitchen-app="sizzle"] .play-button{width:66px;font-size:10px;gap:4px}body[data-kitchen-app="sizzle"] .play-button svg{width:15px}body[data-kitchen-app="sizzle"] .restart{width:34px;min-height:40px}body[data-kitchen-app="sizzle"] .tempo-control{min-width:0}body[data-kitchen-app="sizzle"] .tempo-control input{font-size:24px;width:45px}body[data-kitchen-app="sizzle"] .tempo-control>div{gap:4px}body[data-kitchen-app="sizzle"] .swing-control{min-width:0;max-width:none;width:auto}body[data-kitchen-app="sizzle"] .preset-control{min-width:0;grid-column:1/-1}body[data-kitchen-app="sizzle"] .file-actions{grid-column:1/-1;width:100%;justify-content:flex-end;gap:8px;margin:0}body[data-kitchen-app="sizzle"] .button.subtle span{display:inline}body[data-kitchen-app="sizzle"] .open-project{display:inline-flex;width:40px}body[data-kitchen-app="sizzle"] .file-actions .button{flex:1;padding:0 8px;font-size:10px}body[data-kitchen-app="sizzle"] .control-label{font-size:8px;letter-spacing:.7px}body[data-kitchen-app="sizzle"] .sequencer>.section-heading{flex-wrap:wrap;gap:2px;padding:10px 12px}body[data-kitchen-app="sizzle"] .sequencer>.section-heading .heading-label{gap:7px}body[data-kitchen-app="sizzle"] .sequencer-actions{margin-left:auto;gap:1px}body[data-kitchen-app="sizzle"] .sequencer-actions .text-button{font-size:10px;padding:0 6px}body[data-kitchen-app="sizzle"] .sequencer-scroll{padding:0 12px}body[data-kitchen-app="sizzle"] .sequencer-inner{min-width:900px}body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:132px minmax(0,1fr) 80px;gap:12px}body[data-kitchen-app="sizzle"] .track-mini-wave{display:none}body[data-kitchen-app="sizzle"] .track-name-button{gap:6px}body[data-kitchen-app="sizzle"] .ruler-voice{font-size:7px;letter-spacing:.7px}body[data-kitchen-app="sizzle"] .ruler-voice::after{font-size:6px;max-width:64px;line-height:1.4}body[data-kitchen-app="sizzle"] .sequencer-footer{padding:10px 12px;gap:10px}body[data-kitchen-app="sizzle"] .pattern-banks{gap:7px}body[data-kitchen-app="sizzle"] .bank-buttons{gap:4px}body[data-kitchen-app="sizzle"] .sequencer-hint{width:100%;order:3;font-size:9px;gap:5px}body[data-kitchen-app="sizzle"] .beat-indicator{font-size:8px;gap:8px;letter-spacing:.3px}body[data-kitchen-app="sizzle"] .time-signature{display:none}body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:1fr;gap:14px}body[data-kitchen-app="sizzle"] .voice-editor{min-height:175px;padding:18px 14px;gap:14px}body[data-kitchen-app="sizzle"] .voice-identity{width:120px;min-width:110px}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}body[data-kitchen-app="sizzle"] .noise-sources{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px 12px 0;gap:6px}body[data-kitchen-app="sizzle"] .noise-source{height:38px;font-size:10px}body[data-kitchen-app="sizzle"] .master-panel{display:flex;gap:0}body[data-kitchen-app="sizzle"] .master-panel>.section-heading{width:100%}body[data-kitchen-app="sizzle"] .master-volume{flex:1;margin-left:14px;min-width:90px}body[data-kitchen-app="sizzle"] .master-effects{gap:24px}body[data-kitchen-app="sizzle"] .synthesis-header{padding:12px;gap:8px}body[data-kitchen-app="sizzle"] .synthesis-header h2{font-size:9px}body[data-kitchen-app="sizzle"] .synthesis-voice{margin-left:0;font-size:9px}body[data-kitchen-app="sizzle"] .synthesis-header-actions{gap:8px;margin-left:auto}body[data-kitchen-app="sizzle"] .synthesis-header-actions .text-button{font-size:10px}body[data-kitchen-app="sizzle"] .synthesis-header-actions .text-button svg{width:13px}body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-label{font-size:8px}body[data-kitchen-app="sizzle"] .synth-tab{font-size:10px;padding:9px 5px}body[data-kitchen-app="sizzle"] .footer{gap:10px;flex-wrap:wrap;font-size:7px}body[data-kitchen-app="sizzle"] .footer-motto{display:none}.noise-bench>summary{padding:12px;gap:7px}.noise-bench>summary .heading-label{gap:7px;flex-wrap:wrap}.bench-summary-note{margin-left:0;font-size:9px}.noise-bench-content{grid-template-columns:1fr;padding:16px;gap:10px}.noise-bench-knobs{margin-top:18px;gap:26px 14px}.bench-title{font-size:8px}#bench-voice-label{font-size:8px}.bench-recipe-actions .button{font-size:10px;padding:0 11px}.bench-control-note{margin-top:19px}}
+@media(max-width:380px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 10px}body[data-kitchen-app="sizzle"] h1{font-size:25px}body[data-kitchen-app="sizzle"] .topbar-right{gap:4px}body[data-kitchen-app="sizzle"] .brand{font-size:27px}body[data-kitchen-app="sizzle"] .transport{column-gap:9px;grid-template-columns:100px minmax(57px,.7fr) minmax(58px,1fr)}body[data-kitchen-app="sizzle"] .tempo-control>div>span{font-size:8px}body[data-kitchen-app="sizzle"] .voice-editor{gap:10px}body[data-kitchen-app="sizzle"] .voice-identity{width:111px;min-width:100px}body[data-kitchen-app="sizzle"] .voice-knobs{gap:19px 11px}body[data-kitchen-app="sizzle"] .noise-source{font-size:9px;padding:0 4px;gap:4px}body[data-kitchen-app="sizzle"] .pattern-banks>.control-label{font-size:7px}body[data-kitchen-app="sizzle"] .beat-indicator{margin-left:auto}.bench-summary-note{width:100%;margin-left:28px}.bench-summary-title{font-size:9px}.noise-bench-knobs .knob{width:42px;height:42px}.noise-bench-knobs .knob svg{width:52px;height:52px}}
+
 </style>
 
 <style>
 /* Deliberately scoped: instruments retain their own typography and controls. */
-.ml-ex-launcher{--ml-ex-accent:#ff8d45;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:34px!important;padding:8px 13px!important;border:1px solid color-mix(in srgb,var(--ml-ex-accent) 35%,#526065)!important;border-radius:4px!important;background:#202729!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;cursor:pointer!important;white-space:nowrap!important;width:auto!important;box-shadow:none!important;text-transform:none!important}.ml-ex-launcher span{font-size:16px;color:var(--ml-ex-accent)}.ml-ex-launcher:hover{background:#2a3336!important;border-color:var(--ml-ex-accent)!important}.ml-ex-launcher:focus-visible{outline:2px solid var(--ml-ex-accent)!important;outline-offset:3px!important}.ml-ex-launcher-floating{position:fixed!important;bottom:18px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
+.ml-ex-launcher{--ml-ex-accent:#ff8d45;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:36px!important;padding:8px 13px!important;border:1px solid color-mix(in srgb,var(--ml-ex-accent) 35%,#526065)!important;border-radius:4px!important;background:#202729!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;cursor:pointer!important;white-space:nowrap!important;width:auto!important;box-shadow:none!important;text-transform:none!important}.ml-ex-launcher span{font-size:16px;color:var(--ml-ex-accent)}.ml-ex-launcher:hover{background:#2a3336!important;border-color:var(--ml-ex-accent)!important}.ml-ex-launcher:focus-visible{outline:2px solid var(--ml-ex-accent)!important;outline-offset:3px!important}.ml-ex-launcher-floating{position:fixed!important;bottom:18px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
 .ml-ex-dialog{--ml-ex-accent:#ff8d45;color-scheme:dark!important;position:fixed!important;inset:0!important;margin:auto!important;box-sizing:border-box!important;padding:0!important;width:min(760px,calc(100vw - 28px))!important;max-width:760px!important;max-height:min(88vh,850px)!important;border:1px solid #596368!important;border-radius:4px!important;background:#151b1d!important;color:#f1ecdc!important;box-shadow:0 40px 140px #000b,0 0 70px color-mix(in srgb,var(--ml-ex-accent) 6%,transparent)!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:13px!important;text-align:left!important;overflow:auto!important;z-index:2147483000!important;letter-spacing:normal!important}.ml-ex-dialog::backdrop{background:#080b0dd6;backdrop-filter:blur(10px)}.ml-ex-dialog *{box-sizing:border-box!important}.ml-ex-dialog [hidden]{display:none!important}.ml-ex-shell{background:radial-gradient(ellipse at 95% 0%,color-mix(in srgb,var(--ml-ex-accent) 9%,transparent),transparent 46%),#151b1d;min-width:0}.ml-ex-header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;padding:27px 28px 21px!important;border:0!important;background:none!important;position:static!important;height:auto!important;min-height:0!important;box-shadow:none!important}.ml-ex-eyebrow{display:block;font-size:9px!important;line-height:1.5!important;letter-spacing:.18em!important;color:var(--ml-ex-accent)!important;font-weight:650!important}.ml-ex-header h2{font-family:var(--kk-heading)!important;font-style:normal!important;font-size:36px!important;font-weight:700!important;letter-spacing:-.015em!important;line-height:1.2!important;margin:9px 0 6px!important;text-transform:none!important;color:#fff8e7!important}.ml-ex-header p,.ml-ex-intro p,.ml-ex-empty p{font-size:12px!important;line-height:1.65!important;margin:0!important;color:#acb4aa!important}.ml-ex-tabs{display:flex!important;gap:0!important;padding:0 28px!important;border-bottom:1px solid #354044!important;background:transparent!important}.ml-ex-tab{position:relative!important;flex:1!important;padding:13px 8px!important;border:0!important;border-radius:0!important;background:none!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.4!important;color:#a1aaa2!important;cursor:pointer!important;white-space:nowrap!important;text-transform:none!important;letter-spacing:.025em!important;box-shadow:none!important}.ml-ex-tab[aria-selected=true]{color:var(--ml-ex-accent)!important}.ml-ex-tab[aria-selected=true]:after{content:'';position:absolute;bottom:-1px;left:12px;right:12px;height:2px;background:var(--ml-ex-accent)}.ml-ex-count{display:inline-block;padding:2px 5px;border-radius:4px;background:#ffffff0b;font-size:9px!important;margin-left:5px}.ml-ex-main{padding:23px 28px!important;min-height:260px!important;display:block!important;overflow:visible!important}.ml-ex-main section{border:0!important;background:transparent!important;padding:0!important;display:block!important;position:static!important;min-height:0!important;border-radius:0!important;margin:0!important}.ml-ex-library-head{display:flex;gap:10px;align-items:center;margin-bottom:16px}.ml-ex-search{display:flex!important;align-items:center!important;gap:8px!important;flex:1!important;background:#0e1214!important;border:1px solid #3c474b!important;border-radius:4px!important;padding:0 11px!important;font-size:20px!important;color:#96a19b!important;margin:0!important;min-width:0!important}.ml-ex-dialog input:not([type=checkbox]):not([type=file]),.ml-ex-dialog select{display:block!important;max-width:100%!important;width:100%!important;min-width:0!important;height:36px!important;padding:8px 10px!important;border:1px solid #455154!important;border-radius:6px!important;background:#111719!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:400!important;font-size:12px!important;line-height:1.4!important;text-transform:none!important;letter-spacing:normal!important;outline:none!important;box-shadow:none!important;appearance:auto!important}.ml-ex-search input{border:0!important;background:transparent!important;padding-left:0!important;height:37px!important}.ml-ex-dialog input:focus,.ml-ex-dialog select:focus{border-color:var(--ml-ex-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--ml-ex-accent) 10%,transparent)!important}.ml-ex-dialog input[type=checkbox]{appearance:auto!important;accent-color:var(--ml-ex-accent)!important;width:15px!important;height:15px!important;margin:0!important;flex:none!important}.ml-ex-dialog input[type=file]{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}.ml-ex-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:auto!important;min-height:34px!important;padding:9px 12px!important;border:1px solid #4a565a!important;border-radius:4px!important;background:#252e31!important;color:#e1e2d3!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:11px!important;font-weight:600!important;line-height:1.3!important;letter-spacing:normal!important;text-transform:none!important;cursor:pointer!important;box-shadow:none!important}.ml-ex-button:hover{background:#343f42!important;border-color:#84918f!important}.ml-ex-primary{background:color-mix(in srgb,var(--ml-ex-accent) 16%,#171e20)!important;color:var(--ml-ex-accent)!important;border-color:color-mix(in srgb,var(--ml-ex-accent) 40%,#333f43)!important}.ml-ex-primary:hover{background:color-mix(in srgb,var(--ml-ex-accent) 24%,#171e20)!important;border-color:var(--ml-ex-accent)!important}.ml-ex-close{padding:0!important;width:29px!important;min-height:29px!important;font-size:14px!important;flex:none!important;background:transparent!important;border-color:#414d51!important;margin-top:0!important}.ml-ex-small{font-size:10px!important;padding:9px!important}.ml-ex-dialog button:disabled{opacity:.4!important;cursor:default!important}.ml-ex-dialog button:focus-visible,.ml-ex-file:focus-within{outline:2px solid var(--ml-ex-accent)!important;outline-offset:3px!important}.ml-ex-library{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow:auto}.ml-ex-sample-row{display:flex;align-items:center;gap:6px;min-width:0}.ml-ex-sample{display:flex!important;align-items:center!important;gap:13px!important;flex:1!important;width:100%!important;min-width:0!important;padding:12px!important;border:1px solid #394448!important;border-radius:5px!important;background:linear-gradient(105deg,#222a2d,#171e20)!important;color:#f1ecdc!important;text-align:left!important;cursor:pointer!important;box-shadow:none!important;text-transform:none!important;letter-spacing:normal!important}.ml-ex-sample:hover{border-color:color-mix(in srgb,var(--ml-ex-accent) 45%,#455154)!important;background:#2c373a!important}.ml-ex-sample-glyph{display:grid;place-items:center;flex:none;width:39px;height:39px;font:32px/1 var(--kk-ui)!important;color:var(--ml-ex-accent);border:1px solid color-mix(in srgb,var(--ml-ex-accent) 17%,#394448);border-radius:4px;transform:rotate(var(--ml-ex-phase));background:radial-gradient(circle,color-mix(in srgb,var(--ml-ex-accent) 8%,transparent),transparent)}.ml-ex-sample-copy{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.ml-ex-sample-copy strong{display:block!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px!important;font-weight:600!important;color:#f1ecdc!important}.ml-ex-sample-copy>span{font-size:10px!important;color:#a1aaa2!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ml-ex-sample-arrow{color:var(--ml-ex-accent);font-size:18px}.ml-ex-delete{display:grid!important;place-items:center!important;flex:none!important;width:26px!important;height:26px!important;border:0!important;background:transparent!important;color:#87948f!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:20px!important;line-height:1!important;padding:0!important;border-radius:4px!important;cursor:pointer!important;box-shadow:none!important}.ml-ex-delete:hover{background:#ff817c14!important;color:#ff9b90!important}.ml-ex-delete-confirm{width:54px!important;font-size:9px!important;color:#ff9b90!important;background:#ff817c14!important}.ml-ex-capacity{display:flex;gap:10px;align-items:center;margin-top:14px;font-size:9px!important;color:#89948f!important}.ml-ex-capacity>div{flex:1;height:3px;background:#353f42;border-radius:2px;overflow:hidden}.ml-ex-capacity i{display:block;height:100%;background:var(--ml-ex-accent);opacity:.5}.ml-ex-empty{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:240px;text-align:center;padding:20px 36px}.ml-ex-empty>span{font:70px/1 var(--kk-heading)!important;color:var(--ml-ex-accent);opacity:.55}.ml-ex-empty h3{margin:11px 0 8px!important;font:650 26px/1.15 var(--kk-heading)!important;color:#e7e5d5!important;letter-spacing:normal!important}.ml-ex-intro{display:flex;gap:16px;align-items:center;margin-bottom:23px}.ml-ex-orbit{display:grid;place-items:center;flex:none;width:47px;height:47px;border:1px solid color-mix(in srgb,var(--ml-ex-accent) 25%,#414d51);border-radius:4px;color:var(--ml-ex-accent);font-size:24px;background:radial-gradient(circle,color-mix(in srgb,var(--ml-ex-accent) 9%,transparent),transparent)}.ml-ex-intro h3{font-family:var(--kk-heading)!important;font-size:25px!important;font-style:normal!important;font-weight:650!important;line-height:1.3!important;color:#f1ecdc!important;margin:0 0 5px!important;text-transform:none!important;letter-spacing:normal!important}.ml-ex-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}.ml-ex-fields label,.ml-ex-name-label,.ml-ex-destination>label{display:flex!important;flex-direction:column!important;gap:7px!important;font-size:10px!important;line-height:1.5!important;font-weight:500!important;color:#b4bbaf!important;text-transform:none!important;letter-spacing:.02em!important;margin:0!important}.ml-ex-export-hint,.ml-ex-target-hint,.ml-ex-incoming-meta,.ml-ex-render-meta,.ml-ex-export-only{font-size:10px!important;line-height:1.7!important;color:#a1aaa2!important;margin:12px 0!important}.ml-ex-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:16px}.ml-ex-rendered{margin-top:22px;padding-top:20px;border-top:1px solid #3c474b}.ml-ex-render-wave{border-radius:4px;border:1px solid #3c474b;background:#0e1214;overflow:hidden}.ml-ex-render-wave canvas{display:block;width:100%;height:112px}.ml-ex-file{display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;min-height:59px!important;border:1px dashed #626f72!important;border-radius:5px!important;background:#1b2326!important;color:var(--ml-ex-accent)!important;margin:0 0 19px!important;font-size:12px!important;cursor:pointer!important}.ml-ex-import-empty{text-align:center;padding:22px 16px;font-size:11px;color:#929f99}.ml-ex-name-label{margin-bottom:13px!important}.ml-ex-wave-wrap{height:112px;position:relative;overflow:hidden;border:1px solid #455154;border-radius:4px;background:#0e1214;cursor:crosshair}.ml-ex-wave{display:block;width:100%;height:112px}.ml-ex-selection{position:absolute;top:0;bottom:0;left:0;width:100%;background:color-mix(in srgb,var(--ml-ex-accent) 8%,transparent);border-left:2px solid var(--ml-ex-accent);border-right:2px solid var(--ml-ex-accent);pointer-events:none}.ml-ex-destination{margin-top:23px;padding-top:19px;border-top:1px solid #3c474b}.ml-ex-dialog .ml-ex-replace{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;color:#dcc796!important;font-size:10px!important;margin-top:12px!important;letter-spacing:normal!important}.ml-ex-footer{display:block!important;padding:15px 28px 20px!important;border-top:1px solid #353f42!important;background:#13191b!important;text-align:left!important;position:static!important;min-height:58px!important;margin:0!important}.ml-ex-storage-note{font-size:9px!important;line-height:1.7!important;color:#89948f!important;margin:0!important}.ml-ex-status{font-size:11px!important;line-height:1.6!important;color:var(--ml-ex-accent)!important;margin:7px 0 0!important;min-height:0!important}.ml-ex-status:empty{display:none!important}.ml-ex-dialog .ml-ex-error{color:#ffa296!important}.ml-ex-dialog :is(h2,h3,p,label,nav,main,footer){max-width:none!important}.ml-ex-dialog button{touch-action:manipulation!important}.ml-ex-dialog .ml-ex-main section[hidden],.ml-ex-dialog .ml-ex-replace[hidden]{display:none!important}@media(max-width:540px){.ml-ex-dialog{width:calc(100vw - 16px)!important;max-height:92dvh!important;border-radius:6px!important}.ml-ex-header{padding:22px 18px 17px!important}.ml-ex-header h2{font-size:28px!important}.ml-ex-tabs{padding:0 12px!important}.ml-ex-main{padding:19px 17px!important}.ml-ex-footer{padding:13px 17px 17px!important}.ml-ex-fields{gap:12px;grid-template-columns:1fr 1fr}.ml-ex-intro{gap:11px;margin-bottom:18px}.ml-ex-intro h3{font-size:19px!important}.ml-ex-intro p{font-size:11px!important}.ml-ex-orbit{width:38px;height:38px;font-size:20px}.ml-ex-tab{font-size:10px!important;padding:13px 4px!important}.ml-ex-count{margin-left:3px}.ml-ex-library-head{gap:6px}.ml-ex-search{padding:0 8px!important}.ml-ex-search input{font-size:10px!important}.ml-ex-sample{padding:10px!important;gap:10px!important}.ml-ex-sample-glyph{width:33px;height:33px;font-size:29px!important}.ml-ex-sample-copy strong{font-size:11px!important}.ml-ex-capacity{font-size:8px!important;gap:7px}.ml-ex-empty{padding:16px;min-height:210px}.ml-ex-launcher-floating{right:12px!important;bottom:12px!important}}@media(prefers-reduced-motion:no-preference){.ml-ex-dialog[open]{animation:ml-ex-arrive .18s ease-out}.ml-ex-button,.ml-ex-sample,.ml-ex-launcher{transition:background .15s,border-color .15s!important}@keyframes ml-ex-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
 
 .ml-ex-launcher>svg{display:block!important;width:17px!important;height:17px!important;flex:none!important;color:var(--ml-ex-accent)!important}.ml-ex-orbit>svg{display:block!important;width:23px!important;height:23px!important;color:var(--ml-ex-accent)!important}
@@ -224,10 +320,10 @@ body[data-kitchen-app="sizzle"] dialog{border-radius:3px;background:#20272a;bord
 .ml-ex-footer{border-top-style:dashed!important}
 .ml-ex-dialog .ml-ex-search input:not([type=checkbox]):not([type=file]){border:0!important;background:transparent!important;padding-left:0!important;box-shadow:none!important}
 .ml-ex-header>div{min-width:0!important;flex:1!important}.ml-ex-header h2{white-space:normal!important;overflow-wrap:normal!important}.ml-ex-eyebrow{overflow-wrap:anywhere!important}
-@media(max-width:440px){.ml-ex-launcher{padding:8px 9px!important;gap:5px!important;font-size:10px!important;min-height:34px!important}.ml-ex-launcher>svg{width:15px!important;height:15px!important}}
+@media(max-width:440px){.ml-ex-launcher{padding:8px 9px!important;gap:5px!important;font-size:10px!important;min-height:36px!important}.ml-ex-launcher>svg{width:15px!important;height:15px!important}}
 
 /* Scoped note exchange: the host instrument keeps its own controls and palette. */
-.ml-pat-launcher{--ml-pat-accent:#ff8d45;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;width:auto!important;min-height:34px!important;padding:8px 12px!important;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 35%,#526065)!important;border-radius:4px!important;background:#202729!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;text-transform:none!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-launcher svg{width:17px!important;height:17px!important;flex:none!important;color:var(--ml-pat-accent)!important}.ml-pat-launcher:hover{border-color:var(--ml-pat-accent)!important;background:#2a3336!important}.ml-pat-floating{position:fixed!important;bottom:60px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
+.ml-pat-launcher{--ml-pat-accent:#ff8d45;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;width:auto!important;min-height:36px!important;padding:8px 12px!important;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 35%,#526065)!important;border-radius:4px!important;background:#202729!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.2!important;letter-spacing:.03em!important;text-transform:none!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-launcher svg{width:17px!important;height:17px!important;flex:none!important;color:var(--ml-pat-accent)!important}.ml-pat-launcher:hover{border-color:var(--ml-pat-accent)!important;background:#2a3336!important}.ml-pat-floating{position:fixed!important;bottom:60px!important;right:18px!important;z-index:3000!important;box-shadow:0 6px 28px #0009!important}
 .ml-pat-dialog{--ml-pat-accent:#ff8d45;position:fixed!important;inset:0!important;margin:auto!important;box-sizing:border-box!important;width:min(780px,calc(100vw - 28px))!important;max-width:780px!important;max-height:min(88vh,900px)!important;padding:0!important;border:1px solid #596368!important;border-radius:4px!important;background:#151b1d!important;color:#f1ecdc!important;color-scheme:dark!important;box-shadow:0 40px 140px #000b,0 0 70px color-mix(in srgb,var(--ml-pat-accent) 6%,transparent)!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:13px!important;text-align:left!important;letter-spacing:normal!important;overflow:auto!important;z-index:2147483001!important}.ml-pat-dialog::backdrop{background:#080b0dd6;backdrop-filter:blur(10px)}.ml-pat-dialog *{box-sizing:border-box!important}.ml-pat-dialog [hidden]{display:none!important}.ml-pat-shell{min-width:0;background:radial-gradient(ellipse at 90% 0%,color-mix(in srgb,var(--ml-pat-accent) 9%,transparent),transparent 48%),#151b1d}.ml-pat-header{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important;padding:27px 28px 21px!important;border:0!important;background:none!important;position:static!important;height:auto!important;min-height:0!important;box-shadow:none!important}.ml-pat-eyebrow{display:block!important;font-size:9px!important;line-height:1.5!important;letter-spacing:.18em!important;font-weight:650!important;color:var(--ml-pat-accent)!important}.ml-pat-header h2{margin:9px 0 6px!important;font:700 36px/1.08 var(--kk-heading)!important;letter-spacing:-.015em!important;text-transform:none!important;color:#fff8e7!important}.ml-pat-header p{margin:0!important;font-size:12px!important;line-height:1.65!important;color:#acb4aa!important}.ml-pat-tabs{display:flex!important;gap:0!important;padding:0 28px!important;border-bottom:1px solid #354044!important;background:transparent!important}.ml-pat-tabs button{position:relative!important;flex:1!important;width:auto!important;min-height:42px!important;padding:13px 8px!important;border:0!important;border-radius:0!important;background:none!important;color:#a1aaa2!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:600!important;font-size:11px!important;line-height:1.4!important;letter-spacing:.025em!important;text-transform:none!important;white-space:nowrap!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-tabs button[aria-selected=true]{color:var(--ml-pat-accent)!important}.ml-pat-tabs button[aria-selected=true]:after{content:'';position:absolute;bottom:-1px;left:12px;right:12px;height:2px;background:var(--ml-pat-accent)}.ml-pat-count{display:inline-block;padding:2px 5px;border-radius:4px;background:#ffffff0b;font-size:9px!important;margin-left:5px}.ml-pat-main{display:block!important;padding:23px 28px!important;min-height:300px!important;overflow:visible!important}.ml-pat-main section{display:block!important;position:static!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important}.ml-pat-dialog :is(h2,h3,h4,p,label,nav,main,footer){max-width:none!important}.ml-pat-dialog button{touch-action:manipulation!important}.ml-pat-dialog button:disabled{opacity:.4!important;cursor:default!important}.ml-pat-dialog button:focus-visible,.ml-pat-launcher:focus-visible,.ml-pat-file:focus-within{outline:2px solid var(--ml-pat-accent)!important;outline-offset:3px!important}
 .ml-pat-dialog input:not([type=checkbox]):not([type=file]),.ml-pat-dialog select{display:block!important;max-width:100%!important;width:100%!important;min-width:0!important;height:36px!important;padding:8px 10px!important;border:1px solid #455154!important;border-radius:6px!important;background:#111719!important;color:#f1ecdc!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-weight:400!important;font-size:12px!important;line-height:1.4!important;letter-spacing:normal!important;text-transform:none!important;outline:none!important;box-shadow:none!important;appearance:auto!important}.ml-pat-dialog input:focus,.ml-pat-dialog select:focus{border-color:var(--ml-pat-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--ml-pat-accent) 10%,transparent)!important}.ml-pat-dialog input[type=checkbox]{appearance:auto!important;accent-color:var(--ml-pat-accent)!important;width:15px!important;height:15px!important;margin:0!important;flex:none!important}.ml-pat-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:auto!important;min-height:34px!important;padding:9px 12px!important;border:1px solid #4a565a!important;border-radius:4px!important;background:#252e31!important;color:#e1e2d3!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:11px!important;font-weight:600!important;line-height:1.3!important;letter-spacing:normal!important;text-transform:none!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-button:hover{background:#343f42!important;border-color:#84918f!important}.ml-pat-primary{background:color-mix(in srgb,var(--ml-pat-accent) 16%,#171e20)!important;color:var(--ml-pat-accent)!important;border-color:color-mix(in srgb,var(--ml-pat-accent) 40%,#333f43)!important}.ml-pat-primary:hover{border-color:var(--ml-pat-accent)!important;background:color-mix(in srgb,var(--ml-pat-accent) 24%,#171e20)!important}.ml-pat-header [data-action=close]{width:29px!important;min-height:29px!important;padding:0!important;flex:none!important;margin-top:0!important;background:transparent!important;border-color:#414d51!important;font-size:16px!important}
 .ml-pat-library-head{display:flex!important;gap:10px!important;align-items:center!important;margin-bottom:16px!important}.ml-pat-library{display:flex;flex-direction:column;gap:7px;max-height:400px;overflow:auto}.ml-pat-row{display:flex;gap:6px;align-items:center;min-width:0}.ml-pat-entry{display:flex!important;align-items:center!important;gap:13px!important;flex:1!important;width:100%!important;min-width:0!important;padding:12px!important;border:1px solid #394448!important;border-radius:5px!important;background:linear-gradient(105deg,#222a2d,#171e20)!important;color:#f1ecdc!important;text-align:left!important;text-transform:none!important;letter-spacing:normal!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-entry:hover{border-color:color-mix(in srgb,var(--ml-pat-accent) 45%,#455154)!important;background:#2c373a!important}.ml-pat-entry-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;border:1px solid color-mix(in srgb,var(--ml-pat-accent) 17%,#394448);border-radius:5px;background:radial-gradient(circle,color-mix(in srgb,var(--ml-pat-accent) 8%,transparent),transparent)}.ml-pat-entry-icon svg{width:27px;height:27px;color:var(--ml-pat-accent)}.ml-pat-entry>span:nth-child(2){display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.ml-pat-entry strong{display:block!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f1ecdc!important;font-size:12px!important;font-weight:600!important}.ml-pat-entry small{display:block!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px!important;color:#a1aaa2!important}.ml-pat-entry b{font-size:20px!important;font-weight:400!important;color:var(--ml-pat-accent)}.ml-pat-delete{display:grid!important;place-items:center!important;flex:none!important;width:28px!important;height:28px!important;padding:0!important;border:0!important;border-radius:4px!important;background:transparent!important;color:#87948f!important;font-family:var(--kk-ui,Arial,sans-serif)!important;font-size:20px!important;line-height:1!important;cursor:pointer!important;box-shadow:none!important}.ml-pat-delete:hover{background:#ff817c14!important;color:#ff9b90!important}.ml-pat-delete-confirm{width:54px!important;background:#ff817c14!important;color:#ff9b90!important;font-size:9px!important}.ml-pat-capacity{margin:14px 0 0!important;font-size:9px!important;line-height:1.6!important;color:#89948f!important}.ml-pat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px;padding:20px 30px;text-align:center}.ml-pat-empty>svg{width:64px;height:64px;color:var(--ml-pat-accent);opacity:.6}.ml-pat-empty h3{margin:15px 0 8px!important;font:650 26px/1.15 var(--kk-heading)!important;color:#e7e5d5!important;letter-spacing:normal!important}.ml-pat-empty p{margin:0!important;max-width:390px!important;color:#acb4aa!important;font-size:12px!important;line-height:1.7!important}
@@ -248,7 +344,7 @@ body[data-kitchen-app="sizzle"] dialog{border-radius:3px;background:#20272a;bord
 .ml-pat-primary:hover{background:color-mix(in srgb,var(--ml-pat-accent) 85%,#fff8e7)!important}
 .ml-pat-footer{border-top-style:dashed!important}
 .ml-pat-header>div{min-width:0!important;flex:1!important}.ml-pat-header h2{white-space:normal!important;overflow-wrap:normal!important}.ml-pat-eyebrow{overflow-wrap:anywhere!important}
-@media(max-width:440px){.ml-pat-launcher{padding:8px 9px!important;gap:5px!important;font-size:10px!important;min-height:34px!important}.ml-pat-launcher svg{width:15px!important;height:15px!important}}
+@media(max-width:440px){.ml-pat-launcher{padding:8px 9px!important;gap:5px!important;font-size:10px!important;min-height:36px!important}.ml-pat-launcher svg{width:15px!important;height:15px!important}}
 
 /*
 Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
@@ -415,7 +511,7 @@ body {
 
     <main>
       <section class="intro" aria-label="Welcome">
-        <div><div class="eyebrow">KITCHEN / NOISE STATION</div><h1>Service with<br>a sizzle<span>.</span></h1><p>Eight voices. Sixteen steps. The grill has developed a rhythm.</p></div>
+        <div><div class="eyebrow">KITCHEN / NOISE STATION</div><h1>Service with a sizzle<span>.</span></h1><p>Eight voices. Sixteen steps. Body, noise, and whatever fell off the griddle.</p></div>
         <div class="intro-art" aria-hidden="true"><span class="art-label">GRIDDLE / HEAT TRACE</span><svg class="griddle-drawing" viewBox="0 0 360 96" aria-hidden="true"><path d="M18 18h324v56H18zM12 74h336v8H12zM52 82v8m256-8v8M30 12h300M42 28h276M42 38h276M42 48h276M42 58h276"/><circle cx="63" cy="70" r="3"/><circle cx="296" cy="70" r="3"/><path class="heat-path" d="M88 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17"/></svg><canvas id="hero-wave" width="600" height="100"></canvas><div class="art-coordinates">HOT <span>DO NOT SEASON THE CIRCUITS</span> 001—016</div></div>
       </section>
 
@@ -425,7 +521,7 @@ body {
         <div class="tempo-control"><label class="control-label" for="tempo">TEMPO</label><div><input id="tempo" type="number" min="40" max="240" step="1" value="118" aria-label="Tempo in beats per minute"><span>BPM</span></div></div>
         <div class="swing-control"><div class="control-label"><label for="swing">SWING</label><span id="swing-value">12<span>%</span></span></div><input id="swing" type="range" min="0" max="60" value="12" aria-label="Swing amount"></div>
         <div class="transport-divider preset-divider"></div>
-        <div class="preset-control"><label class="control-label" for="preset-select">PRESET</label><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
+        <div class="preset-control"><label class="control-label" for="preset-select">KIT + GROOVE</label><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
         <div class="file-actions"><button id="save-button" class="button subtle" aria-label="Save project" title="Download your project"><svg><use href="#i-save"/></svg><span>Save project</span></button><button id="export-button" class="button export"><svg><use href="#i-download"/></svg><span>Export WAV</span></button><button id="open-button" class="icon-button open-project" aria-label="Open saved project" title="Open saved project"><svg><use href="#i-folder"/></svg></button><input type="file" id="project-file" accept=".json,application/json" hidden></div>
       </section>
 
@@ -436,20 +532,27 @@ body {
       </section>
 
       <section class="sound-panels" aria-label="Sound design">
-        <section class="voice-panel panel" aria-labelledby="voice-panel-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">02</span><h2 id="voice-panel-title">VOICE STATION</h2></div><div class="voice-heading-actions"><button id="edit-synthesis" class="text-button" aria-label="Open detailed synthesis controls">Synthesis <svg class="down-arrow"><use href="#i-arrow"/></svg></button><button id="audition-button" class="text-button"><svg><use href="#i-speaker"/></svg>Audition</button></div></div><div class="voice-editor"><div class="voice-identity"><span class="selected-voice-label" id="selected-voice-index">VOICE 01</span><h3 id="selected-voice-name">Sub kick</h3><p id="voice-description">A low thump from the walk-in. Nobody ordered that.</p><div class="voice-wave"><canvas id="voice-wave" width="420" height="80"></canvas><span id="selected-noise-label">BROWN NOISE</span></div></div><div class="voice-knobs" id="voice-knobs"></div></div></section>
+        <section class="voice-panel panel" aria-labelledby="voice-panel-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">02</span><h2 id="voice-panel-title">VOICE STATION</h2></div><div class="voice-heading-actions"><button id="open-noise-bench" class="text-button" aria-controls="noise-bench" aria-expanded="false" title="Noise-only recipes and quick shaping">Noise bench</button><button id="edit-synthesis" class="text-button" aria-label="Open detailed synthesis controls">Synthesis <svg class="down-arrow"><use href="#i-arrow"/></svg></button><button id="audition-button" class="text-button"><svg><use href="#i-speaker"/></svg>Audition</button></div></div><div class="voice-editor"><div class="voice-identity"><span class="selected-voice-label" id="selected-voice-index">VOICE 01</span><h3 id="selected-voice-name">Sub kick</h3><p id="voice-description">A low thump from the walk-in. Nobody ordered that.</p><div class="voice-wave"><canvas id="voice-wave" width="420" height="80"></canvas><span id="selected-noise-label">BROWN NOISE</span></div></div><div class="voice-knobs" id="voice-knobs"></div></div></section>
         <section class="noise-panel panel" aria-labelledby="noise-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">03</span><h2 id="noise-title">NOISE PALETTE</h2></div><span class="small-counter">12 SOURCES</span></div><div class="noise-sources" id="noise-sources"></div><p class="noise-caption" id="noise-caption">Brown noise. Low, warm rumble. The extractor has opinions.</p></section>
         <section class="master-panel panel" aria-labelledby="master-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">04</span><h2 id="master-title">MASTER</h2></div><div class="master-led" id="master-led"></div></div><div class="master-effects" id="master-knobs"></div><div class="master-volume"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"><span id="volume-value">78%</span></div></section>
       </section>
+      <details id="noise-bench" class="noise-bench panel">
+        <summary><span class="heading-label"><span class="section-number">+</span><span class="bench-summary-title">NOISE BENCH</span><span class="bench-summary-note">Recipes &amp; quick shaping</span></span><span class="bench-disclosure" aria-hidden="true">OPEN +</span></summary>
+        <div class="noise-bench-content">
+          <div class="bench-recipe"><div class="bench-title"><label for="noise-recipe-select">NOISE-LAYER RECIPE</label><span id="bench-voice-label">VOICE 01</span></div><div class="bench-recipe-actions"><select id="noise-recipe-select" aria-describedby="noise-recipe-description"></select><button id="apply-noise-recipe" class="button export">Apply noise</button></div><p id="noise-recipe-description"></p><p class="bench-preservation">Changes noise source and noise envelope/filter only. Body, pattern, mix and modulation stay yours. Undo restores everything.</p><div class="bench-selectors"><label>Filter<select id="bench-filter" aria-label="Noise bench filter"><option value="lowpass">Low-pass</option><option value="highpass">High-pass</option><option value="bandpass">Band-pass</option><option value="notch">Notch</option></select></label><label>Envelope<select id="bench-curve" aria-label="Noise bench envelope curve"><option value="exponential">Exponential</option><option value="linear">Linear</option></select></label></div></div>
+          <div><div id="noise-bench-knobs" class="noise-bench-knobs"></div><p class="bench-control-note">These controls edit the same noise settings as Synthesis. Open Noise shaper for hold, resonance, sweep and burst gap.</p></div>
+        </div>
+      </details>
       <section id="synthesis-panel" class="synthesis-panel panel" aria-labelledby="synthesis-title">
         <div class="synthesis-header"><div class="heading-label"><span class="section-number">05</span><h2 id="synthesis-title">SYNTHESIS STATION</h2><span id="synthesis-voice" class="synthesis-voice">01 / SUB KICK</span></div><div class="synthesis-header-actions"><button id="synthesis-reset" class="text-button" title="Restore this section to the selected voice’s original settings"><svg><use href="#i-reset"/></svg>Reset section</button><button id="lab-audition" class="button lab-audition"><svg><use href="#i-speaker"/></svg>Hear voice</button></div></div>
         <div class="synthesis-tabbar"><div id="synthesis-tabs" class="synthesis-tabs" role="tablist" aria-label="Synthesis section"><button data-synth-tab="body" role="tab" aria-selected="true" aria-controls="synthesis-layout" class="synth-tab active"><span class="tab-dot body-dot"></span>Drum body</button><button data-synth-tab="noise" role="tab" aria-selected="false" aria-controls="synthesis-layout" class="synth-tab"><span class="tab-dot noise-dot"></span>Noise shaper</button><button data-synth-tab="mod" role="tab" aria-selected="false" aria-controls="synthesis-layout" class="synth-tab"><span class="tab-dot mod-dot"></span>Modulation</button></div><span class="synthesis-tab-hint">ADJUST TO TASTE. TASTE WITH YOUR EARS.</span></div>
         <div id="synthesis-layout" class="synthesis-layout" role="tabpanel"><aside class="envelope-panel"><span id="envelope-kicker" class="selected-voice-label">AMPLITUDE ENVELOPE</span><h3 id="envelope-title">Attack. Hold. Take off the heat.</h3><canvas id="envelope-canvas" width="620" height="250" aria-label="Envelope or modulation waveform preview"></canvas><div id="envelope-times" class="envelope-times"></div><p id="envelope-description" class="envelope-description"></p></aside><div class="synthesis-controls"><div id="synthesis-selectors" class="synthesis-selectors"></div><div id="synthesis-knobs" class="synthesis-knobs"></div><div id="synthesis-note" class="synthesis-note"></div></div></div>
       </section>
     </main>
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CAUTION: THE DAILY SPECIAL IS LOUD.</span><span class="footer-version">SIZZLE <span>v1.1.1</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CAUTION: THE DAILY SPECIAL IS LOUD.</span><span class="footer-version">SIZZLE <span>v1.2.0</span></span></footer>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / KEEP THIS TICKET</div><h2 id="help-title">Start the grill.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>Blend drum bodies and noise, shape their envelopes, and set the sound in motion. The grill is now taking musical orders.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for a louder accent, or press and hold on a touchscreen. Select a voice to blend its BODY and NOISE layers, level, and pan. Open Synthesis to edit the drum oscillators, separate envelopes, noise filter, distortion, and modulation. Modulation restarts on each hit; tempo sync sets its rate from the beat. Drag knobs up or down; hold Shift for fine adjustments. Use M to mute a track or S to hear it solo.</p></div><div><h3>Make it yours</h3><p>Try a curated preset, or randomize for a new direction. Pattern banks A–D hold four variations. Copy sends your current pattern to the next bank. Changes are saved in this browser automatically. Older projects upgrade to the new synthesis controls when opened.</p></div><div><h3>Take it with you</h3><p>Save project downloads an editable JSON file. The folder button opens it again. Export WAV renders four bars plus an effect tail as a stereo audio file, ready for your DAW.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span> Works offline. No samples, accounts, or external connections.</div></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / KEEP THIS TICKET</div><h2 id="help-title">Start the grill.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>Blend drum bodies and noise, shape their envelopes, and set the sound in motion. The grill is now taking musical orders.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for a louder accent, or press and hold on a touchscreen. Select a voice to blend its BODY and NOISE layers, level, and pan. Open Synthesis to edit the drum oscillators, separate envelopes, noise filter, distortion, and modulation. Modulation restarts on each hit; tempo sync sets its rate from the beat. Drag knobs up or down; hold Shift for fine adjustments. Use M to mute a track or S to hear it solo.</p></div><div><h3>Make it yours</h3><p>Try any of the original six grooves, or the four new noise kits. The optional Noise bench adds sixteen noise-only recipes and quick shaping without changing your drum body, rhythm, mix, or modulation. Every change supports Undo. Randomize for a new direction. Pattern banks A–D hold four variations. Copy sends your current pattern to the next bank. Changes are saved in this browser automatically. Older projects upgrade to the new synthesis controls when opened.</p></div><div><h3>Take it with you</h3><p>Save project downloads an editable JSON file. The folder button opens it again. Export WAV renders four bars plus an effect tail as a stereo audio file, ready for your DAW.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span> Works offline. No samples, accounts, or external connections.</div></dialog>
   <script>
 /* Shared synthesis settings. Physical units keep the editor and audio engine in agreement. */
 (function () {
@@ -818,6 +921,103 @@ body {
       ]
     }
   ];
+}());
+
+/* Additive noise recipes. The original six grooves above are deliberately untouched. */
+(function () {
+  'use strict';
+  const recipe = (id, name, family, source, description, settings) => ({
+    id, name, family, source, description,
+    noise: Object.assign({ level: 0.8, rate: 1, filter: 'bandpass', cutoff: 3000,
+      resonance: 0.707, attack: 0.001, hold: 0, decay: 0.12,
+      curve: 'exponential', drive: 0, envAmount: 0, bursts: 1, spacing: 0.0175 }, settings)
+  });
+  window.NOISE_RECIPES = [
+    recipe('pan-scrape', 'Pan scrape', 'Friction', 'pink', 'A rough, rising brush against the pan; slow attack and a climbing filter.', { rate: 0.72, cutoff: 1750, resonance: 1.6, attack: 0.035, hold: 0.03, decay: 0.24, curve: 'linear', drive: 0.2, envAmount: -17 }),
+    recipe('wire-brush', 'Wire brush', 'Friction', 'metallic', 'A tight metallic rasp, bright enough to sit between drum hits.', { rate: 0.8, filter: 'highpass', cutoff: 3900, resonance: 0.65, attack: 0.004, decay: 0.065, drive: 0.16, bursts: 2, spacing: 0.009 }),
+    recipe('sandpaper', 'Sandpaper', 'Friction', 'grey', 'A dry midrange swish with an even, brushed falloff.', { rate: 0.6, cutoff: 2300, resonance: 0.85, attack: 0.014, hold: 0.025, decay: 0.17, curve: 'linear', drive: 0.28 }),
+    recipe('cloth-drag', 'Cloth drag', 'Friction', 'brown', 'A soft, low scrape for ghost strokes and shuffled textures.', { level: 0.95, rate: 0.48, filter: 'lowpass', cutoff: 1650, resonance: 0.75, attack: 0.022, hold: 0.015, decay: 0.21, curve: 'linear', envAmount: 6 }),
+    recipe('static-slap', 'Static slap', 'Static', 'white', 'A sharp noise backbeat with three closely spaced attacks.', { cutoff: 3400, resonance: 0.9, decay: 0.085, drive: 0.22, bursts: 3, spacing: 0.014, envAmount: 10 }),
+    recipe('relay-click', 'Relay click', 'Static', 'digital', 'A clipped electrical tick with a short falling filter.', { level: 0.7, rate: 1.65, filter: 'highpass', cutoff: 2800, resonance: 1.2, decay: 0.021, drive: 0.38, envAmount: 14 }),
+    recipe('fuse-fizz', 'Fuse fizz', 'Static', 'crackle', 'Uneven sparks drawn into a short fizzing tail.', { rate: 1.2, filter: 'highpass', cutoff: 1800, resonance: 0.65, attack: 0.002, hold: 0.01, decay: 0.2, drive: 0.31, bursts: 2, spacing: 0.026 }),
+    recipe('bit-crust', 'Bit crust', 'Static', 'digital', 'A chunky, lower-register packet of crushed noise.', { rate: 0.4, cutoff: 920, resonance: 2.1, decay: 0.092, drive: 0.52, envAmount: 15 }),
+    recipe('radio-spill', 'Radio spill', 'Interference', 'radio', 'A narrow wandering signal that slides into focus.', { level: 0.72, rate: 0.65, cutoff: 1250, resonance: 3.8, attack: 0.025, hold: 0.04, decay: 0.32, curve: 'linear', drive: 0.15, envAmount: -12 }),
+    recipe('fork-feedback', 'Fork feedback', 'Interference', 'metallic', 'A resonant cutlery-ring with a falling, almost pitched edge.', { level: 0.65, rate: 0.52, cutoff: 820, resonance: 7, decay: 0.24, drive: 0.12, envAmount: 5 }),
+    recipe('valve-whistle', 'Valve whistle', 'Interference', 'blue', 'A narrow steam squeal with a soft entrance.', { level: 0.64, rate: 0.85, cutoff: 5200, resonance: 9, attack: 0.02, hold: 0.016, decay: 0.18, curve: 'linear', envAmount: -7 }),
+    recipe('mains-rumble', 'Mains rumble', 'Interference', 'brown', 'A dense low pulse; useful beneath dry, bright percussion.', { level: 1, rate: 0.3, filter: 'lowpass', cutoff: 210, resonance: 1.3, decay: 0.32, drive: 0.35, envAmount: 16 }),
+    recipe('pepper-rattle', 'Pepper rattle', 'Percussion', 'dust', 'Four scattered grains with a deliberate short rattle.', { rate: 1.35, filter: 'highpass', cutoff: 1900, resonance: 0.8, decay: 0.035, bursts: 4, spacing: 0.019, drive: 0.09 }),
+    recipe('crumb-tap', 'Crumb tap', 'Percussion', 'velvet', 'Sparse impulses gathered into a hollow contact sound.', { level: 0.95, rate: 0.73, cutoff: 1350, resonance: 4.6, decay: 0.048, drive: 0.18, envAmount: 9 }),
+    recipe('foil-crimp', 'Foil crimp', 'Percussion', 'violet', 'A bright, crinkled double strike with almost no low end.', { level: 0.7, rate: 0.8, filter: 'highpass', cutoff: 4600, resonance: 0.65, decay: 0.057, drive: 0.23, bursts: 2, spacing: 0.012 }),
+    recipe('vent-breath', 'Vent breath', 'Percussion', 'pink', 'A longer, airy release that leaves room for the next hit.', { level: 0.68, rate: 1.1, filter: 'highpass', cutoff: 3200, resonance: 0.7, attack: 0.014, hold: 0.018, decay: 0.38, curve: 'linear', envAmount: 5 })
+  ];
+  const byId = Object.fromEntries(window.NOISE_RECIPES.map(item => [item.id, item]));
+  function noiseVoice(name, recipeId, mode, pattern, level, pan, changes, bodyLevel) {
+    const selected = byId[recipeId];
+    const track = { name, noise: selected.source, mode, steps: pattern.replace(/\s/g, '').split('').map(Number),
+      mute: false, solo: false, level, pan, tone: 0.5, decay: 0.25, pitch: 0.5 };
+    track.synth = window.GrainSynth.defaults(track);
+    track.synth.body.level = bodyLevel || 0;
+    track.synth.noise = Object.assign({}, selected.noise, changes);
+    return track;
+  }
+  window.NOISE_PRESETS.push(
+    {
+      name: 'Prep surface', tagline: 'Brushes, scrapes and contact sounds. Nothing on this counter sits still.',
+      bpm: 96, swing: 0.19, drive: 0.12, space: 0.18,
+      tracks: [
+        noiseVoice('COUNTER PULSE', 'mains-rumble', 'kick', '2000 0010 0002 0010', 0.85, 0, { decay: 0.22 }, 0.65),
+        noiseVoice('PAN SCRAPE', 'pan-scrape', 'texture', '0000 2000 0000 2010', 0.56, -0.12),
+        noiseVoice('WIRE BRUSH', 'wire-brush', 'hat', '2010 1021 2010 1011', 0.33, -0.22),
+        noiseVoice('CLOTH DRAG', 'cloth-drag', 'texture', '0001 0000 0010 0000', 0.38, 0.23),
+        noiseVoice('CRUMB TAP', 'crumb-tap', 'perc', '0010 0000 0100 0001', 0.48, -0.31),
+        noiseVoice('SANDPAPER', 'sandpaper', 'texture', '0000 1000 0000 1000', 0.3, 0.13),
+        noiseVoice('PEPPER RATTLE', 'pepper-rattle', 'perc', '0000 0010 0001 0010', 0.29, 0.36),
+        noiseVoice('VENT BREATH', 'vent-breath', 'texture', '1000 0000 0000 1000', 0.18, -0.08)
+      ]
+    },
+    {
+      name: 'Short-order static', tagline: 'A dry electrical break. The ticket printer has swallowed the backbeat.',
+      bpm: 128, swing: 0.07, drive: 0.24, space: 0.1,
+      tracks: [
+        noiseVoice('FUSE PULSE', 'mains-rumble', 'kick', '2000 0020 1000 0010', 0.83, 0, { cutoff: 320, decay: 0.2 }, 0.72),
+        noiseVoice('STATIC SLAP', 'static-slap', 'snare', '0000 2001 0000 2010', 0.64, 0.03),
+        noiseVoice('RELAY CLICK', 'relay-click', 'hat', '2120 1011 2021 1010', 0.4, -0.17),
+        noiseVoice('FUSE FIZZ', 'fuse-fizz', 'texture', '0000 0010 0000 0010', 0.34, 0.2),
+        noiseVoice('BIT CRUST', 'bit-crust', 'perc', '0001 0000 0010 0100', 0.42, -0.3),
+        noiseVoice('WHITE FLASH', 'static-slap', 'clap', '0000 1000 0000 1000', 0.29, 0.11, { rate: 1.4, bursts: 2, decay: 0.04 }),
+        noiseVoice('FOIL CRIMP', 'foil-crimp', 'perc', '0010 0100 0001 0011', 0.29, 0.33),
+        noiseVoice('RADIO RESIDUE', 'radio-spill', 'texture', '1000 0000 0000 0010', 0.16, -0.06, { resonance: 1.8, decay: 0.21 })
+      ]
+    },
+    {
+      name: 'Radio misdemeanour', tagline: 'Wrong frequencies, right pockets. Somebody has tuned the extractor.',
+      bpm: 114, swing: 0.11, drive: 0.16, space: 0.27,
+      tracks: [
+        noiseVoice('MAINS RUMBLE', 'mains-rumble', 'kick', '2000 0001 0020 0100', 0.83, 0, {}, 0.5),
+        noiseVoice('SIGNAL SNAP', 'bit-crust', 'snare', '0000 2000 0001 2000', 0.61, 0.04, { cutoff: 1900, rate: 0.68, bursts: 2, spacing: 0.011 }),
+        noiseVoice('CARRIER TICK', 'relay-click', 'hat', '2010 0110 2011 0010', 0.34, -0.22, { rate: 0.9, cutoff: 4900 }),
+        noiseVoice('VALVE WHISTLE', 'valve-whistle', 'texture', '0000 0010 0000 0001', 0.29, 0.26),
+        noiseVoice('FORK FEEDBACK', 'fork-feedback', 'perc', '0010 0000 0100 0010', 0.4, -0.29),
+        noiseVoice('RADIO SPILL', 'radio-spill', 'texture', '0000 1000 0000 1000', 0.37, 0.1),
+        noiseVoice('SPARK PACKET', 'fuse-fizz', 'perc', '0001 0010 0000 0101', 0.29, 0.35, { cutoff: 3500, decay: 0.08, bursts: 3 }),
+        noiseVoice('LOW CARRIER', 'radio-spill', 'texture', '1000 0000 0010 0000', 0.2, -0.08, { rate: 0.32, cutoff: 480, resonance: 2.6, decay: 0.52 })
+      ]
+    },
+    {
+      name: 'Crumb counter', tagline: 'Pointillist percussion and tiny accidents. Count the pepper if you can.',
+      bpm: 146, swing: 0.09, drive: 0.13, space: 0.15,
+      tracks: [
+        noiseVoice('DUST THUD', 'mains-rumble', 'kick', '2000 0010 0200 0001', 0.8, 0, { rate: 0.5, cutoff: 460, decay: 0.13 }, 0.6),
+        noiseVoice('FOIL SLAP', 'foil-crimp', 'snare', '0000 2000 0000 2010', 0.59, 0.04, { cutoff: 2100, bursts: 3, decay: 0.065 }),
+        noiseVoice('VELVET TICK', 'crumb-tap', 'hat', '2121 2010 1121 2011', 0.33, -0.21, { rate: 1.7, filter: 'highpass', cutoff: 3400, resonance: 0.8, decay: 0.019 }),
+        noiseVoice('PEPPER RATTLE', 'pepper-rattle', 'perc', '0000 0010 0000 0001', 0.34, 0.27),
+        noiseVoice('CRUMB TAP', 'crumb-tap', 'perc', '0010 0001 0010 0100', 0.46, -0.32),
+        noiseVoice('TWO GRAINS', 'pepper-rattle', 'perc', '0001 0000 0100 0010', 0.31, 0.1, { rate: 0.62, cutoff: 1000, bursts: 2, spacing: 0.026 }),
+        noiseVoice('TIN TICK', 'fork-feedback', 'perc', '0100 0010 0001 0100', 0.26, 0.37, { rate: 1.6, cutoff: 2600, resonance: 3.4, decay: 0.039 }),
+        noiseVoice('SIFTED AIR', 'sandpaper', 'texture', '1000 0000 0000 1000', 0.16, -0.08, { filter: 'notch', cutoff: 3500, decay: 0.34, drive: 0.06 })
+      ]
+    }
+  );
 }());
 
 /* A dependency-free noise percussion engine. Works directly from file://. */
@@ -2269,8 +2469,29 @@ body {
     $('noise-caption').textContent = source.name + ' noise. ' + source.description;
     drawVoice();
     if (voiceLab) voiceLab.render();
+    renderNoiseBench();
     if (focusedParam) { const replacement = Array.from(document.querySelectorAll('.knob')).find((knob) => knob.dataset.param === focusedParam); if (replacement) replacement.focus({ preventScroll: true }); }
     else if (focusedSelector && $(focusedSelector)) $(focusedSelector).focus({ preventScroll: true });
+  }
+  // View state stays in the DOM; recipes write only existing saved noise parameters.
+  function renderNoiseBench() {
+    const track = state.tracks[selected], noise = window.GrainSynth.ensureTrack(track).noise;
+    $('bench-voice-label').textContent = '0' + (selected + 1) + ' / ' + pretty(track.name);
+    $('bench-filter').value = noise.filter; $('bench-curve').value = noise.curve;
+    const container = $('noise-bench-knobs'); container.replaceChildren();
+    ['cutoff', 'decay', 'attack', 'drive', 'rate', 'bursts'].forEach((key) => {
+      const descriptor = window.GrainSynth.descriptors.noise.find(item => item.key === key);
+      const formatter = value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor);
+      const control = knobControl('bench-' + key, descriptor.label, window.GrainSynth.toNormalized(noise[key], descriptor), formatter, value => {
+        noise[key] = window.GrainSynth.fromNormalized(value, descriptor);
+        drawVoice(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
+      });
+      control.querySelector('.knob').title = descriptor.title; container.append(control);
+    });
+  }
+  function updateRecipeDescription() {
+    const recipe = (window.NOISE_RECIPES || []).find(item => item.id === $('noise-recipe-select').value);
+    $('noise-recipe-description').textContent = recipe ? recipe.description : '';
   }
   function renderMaster() {
     const container = $('master-knobs'); container.replaceChildren();
@@ -2377,6 +2598,30 @@ body {
   }
 
   window.NOISE_PRESETS.forEach((preset, i) => { const option = document.createElement('option'); option.value = i; option.textContent = preset.name; $('preset-select').append(option); });
+  const recipeGroups = new Map();
+  (window.NOISE_RECIPES || []).forEach(recipe => {
+    if (!recipeGroups.has(recipe.family)) { const group = document.createElement('optgroup'); group.label = recipe.family; recipeGroups.set(recipe.family, group); $('noise-recipe-select').append(group); }
+    const option = document.createElement('option'); option.value = recipe.id; option.textContent = recipe.name; recipeGroups.get(recipe.family).append(option);
+  });
+  updateRecipeDescription();
+  $('noise-recipe-select').addEventListener('change', updateRecipeDescription);
+  $('apply-noise-recipe').addEventListener('click', () => {
+    const recipe = (window.NOISE_RECIPES || []).find(item => item.id === $('noise-recipe-select').value); if (!recipe) return;
+    remember(); const track = state.tracks[selected]; track.noise = recipe.source;
+    window.GrainSynth.ensureTrack(track).noise = clone(recipe.noise);
+    renderRows(); renderVoice(); persist();
+    toast(recipe.name + ' applied to noise only. Body, rhythm, mix and modulation kept.');
+    if (!playing) audition(track);
+  });
+  ['filter', 'curve'].forEach(key => $('bench-' + key).addEventListener('change', () => {
+    remember(); window.GrainSynth.ensureTrack(state.tracks[selected]).noise[key] = $('bench-' + key).value;
+    drawVoice(); if (voiceLab) voiceLab.render(); persist();
+  }));
+  $('noise-bench').addEventListener('toggle', () => $('open-noise-bench').setAttribute('aria-expanded', $('noise-bench').open));
+  $('open-noise-bench').addEventListener('click', () => {
+    const panel = $('noise-bench'); panel.open = true;
+    panel.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
+  });
   const customOption = document.createElement('option'); customOption.value = 'custom'; customOption.textContent = 'Custom groove'; customOption.hidden = true; $('preset-select').append(customOption);
   for (let i = 0; i < 16; i++) { const label = document.createElement('span'); label.className = 'step-number' + (i % 4 === 0 ? ' beat' : ''); label.dataset.step = i; label.textContent = String(i + 1).padStart(2, '0'); $('step-numbers').append(label); }
   sources.forEach((source) => {
@@ -2436,7 +2681,7 @@ body {
   });
   window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
-  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
   renderAll(); drawHero(0); requestAnimationFrame(animate);
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
@@ -3170,6 +3415,31 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
       document.dispatchEvent(new CustomEvent('musiclab:state-change',{bubbles:true,detail:{app:id,kind:'pattern'}}));
     }
     function random(seed) {let value=seed>>>0;return()=>{value+=0x6D2B79F5;let x=Math.imul(value^value>>>15,1|value);x^=x+Math.imul(x^x>>>7,61|x);return((x^x>>>14)>>>0)/4294967296;};}
+    // HOTPLATE's exact received part uses the same per-note choice when played
+    // and exported, including repeated loops. Native step probability remains
+    // one decision per parent step in FORM's production sequencing helper.
+    const formOverlayRoll = (packet, cycle, index, count) =>
+      random((packet.seed ?? 0x5a17c0de) ^ cycle ^ (cycle * count + index + 1))();
+    function formOverlayEvents(s, tempo, repetitions = 1, respectMute = true) {
+      if (id !== 'form' || !s.musicLabPattern) throw new Error('HOTPLATE has no received pattern to render.');
+      const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s);
+      validateNotes(packet,map,s);
+      const bpm=tempo??tempoOf(s);
+      if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isInteger(repetitions)||repetitions<1||repetitions>4)
+        throw new Error('Choose a valid received-pattern tempo and one to four repetitions.');
+      const available=voicesFor(s),seconds=60/bpm,events=[];
+      const notes=[...packet.notes].sort((a,b)=>eventBeat(packet,a)-eventBeat(packet,b));
+      for(let cycle=0;cycle<repetitions;cycle++)notes.forEach((note,index)=>{
+        if(formOverlayRoll(packet,cycle,index,notes.length)>=(note.probability??1))return;
+        const voice=available.find(item=>item.id===map[note.voice]);
+        const voiceIndex=available.indexOf(voice);
+        if(respectMute&&(s.muted?.[voiceIndex]||s.solo!==undefined&&s.solo!==null&&s.solo!==voiceIndex))return;
+        events.push({voice:voiceIndex,at:(cycle*packet.lengthBeats+eventBeat(packet,note))*seconds,
+          duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*seconds,
+          velocity:note.velocity,pitch:note.pitch-voice.pitch});
+      });
+      return{events,durationSeconds:packet.lengthBeats*repetitions*seconds,lengthBeats:packet.lengthBeats,name:packet.name,tempo:bpm};
+    }
     function packetFromNative(s,options={}) {
       if(s.musicLabPattern){
         const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
@@ -3183,7 +3453,25 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
         s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,4-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
       } else if(id==='form') {
         lengthBeats=s.steps[0].length/4;
-        s.steps.forEach((steps,index)=>{if(s.muted[index]||scope==='voice'&&index!==selected)return;steps.forEach((on,step)=>{if(on){const beat=step/4+(step%2?s.swing/400:0);add(all[index],beat,Math.min(.25,lengthBeats-beat),step%4===0?1:.86,all[index].pitch);}});});
+        const finite=(value,fallback)=>typeof value==='number'&&Number.isFinite(value)?value:fallback;
+        const bound=(value,min,max)=>Math.max(min,Math.min(max,value));
+        const swing=bound(finite(s.swing,0),0,75)/100;
+        s.steps.forEach((steps,index)=>{
+          if(s.muted[index]||s.solo!==undefined&&s.solo!==null&&s.solo!==index||scope==='voice'&&index!==selected)return;
+          steps.forEach((on,step)=>{
+            if(!on)return;
+            const detail=s.stepDetails?.[index]?.[step]||{},velocity=bound(finite(detail.velocity,step%4===0?1:.86),0,1);
+            const probability=bound(finite(detail.probability,1),0,1),ratchet=Math.round(bound(finite(detail.ratchet,1),1,4));
+            const timing=bound(finite(detail.timing,0),-.45,.45),pitch=Math.round(bound(finite(detail.pitch,0),-24,24));
+            const delay=step%2?swing:0,gap=step%2?1-swing:1+swing,next=delay+gap;
+            let onset=Math.min(delay+timing,next-.001);if(step===0)onset=Math.max(0,onset);
+            const spacing=(next-onset)/ratchet;
+            for(let repeat=0;repeat<ratchet;repeat++){
+              const beat=(step+onset+spacing*repeat)/4;
+              add(all[index],beat,Math.min(.25,spacing/4,lengthBeats-beat),velocity,all[index].pitch+pitch,probability);
+            }
+          });
+        });
       } else if(id==='ravel') {
         const steps=s.patterns[s.selectedPattern].steps;
         steps.forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<4)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),4-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
@@ -3191,7 +3479,7 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
         lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
         s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
       }
-      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+NAMES[id],sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??0x5a17c0de});
+      return schema().normalize({format:'musiclab-pattern',version:1,name:s.name+' · '+NAMES[id],sourceApp:id,kind:'drums',tempo:tempoOf(s),swing:0,lengthBeats,meter:[4,4],voices:all,notes,seed:s.seed??(id==='form'?0x48504c54:0x5a17c0de)});
     }
     function prepareEngineWrappers() {
       const audio=engine();if(!audio||audio===wrappedEngine)return;wrappedEngine=audio;
@@ -3223,12 +3511,13 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
           const cycle=Math.floor(cursor/Math.max(1,pattern.notes.length)),note=pattern.notes[cursor%Math.max(1,pattern.notes.length)];if(!note)break;
           const when=startTime+cycle*length+eventBeat(pattern,note)*seconds;if(when>current+.13)break;cursor++;
           if(when<current-.03)continue;
-          const rng=random((pattern.seed||0)^cycle^cursor);if(rng()>= (note.probability??1))continue;
+          const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
+          if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
           adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
         }
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%16);
       };
-      pattern.notes.sort((a,b)=>a.beat-b.beat);draw();timer=setInterval(draw,25);
+      pattern.notes.sort((a,b)=>id==='form'?eventBeat(pattern,a)-eventBeat(pattern,b):a.beat-b.beat);draw();timer=setInterval(draw,25);
     }
     const adapter={
       app:id,
@@ -3262,7 +3551,7 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
         if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
         const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
         const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
-        const events=packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
         if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
         const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
         if(id==='form'){
@@ -3274,6 +3563,7 @@ MusicLabExchange.register({...{"id":"grain","name":"SIZZLE","sourceApp":"GRAIN",
       startPattern,stopPattern,
       transport(clock){if(id==='spool')engine().followTransport(clock);},
     };
+    if(id==='form')adapter.getImportedPatternEvents=(options={})=>formOverlayEvents(clone(unwrap(options.state)||viewState()),options.tempo,options.repetitions??1);
     window.MusicLabPatternInstrument=adapter;
     const ready=()=>{try{prepareEngineWrappers();}catch(_){}};ready();document.addEventListener('musiclab:app-ready',ready);
     return adapter;

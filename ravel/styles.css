@@ -19,3 +19,74 @@ button,select,input[type=number]{border-radius:2px;background:#282e32;border-col
  .topline>.text-button,.topline>.ml-ex-launcher,.topline>.ml-pat-launcher{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:38px;padding:7px 8px;white-space:normal;font-size:10px;line-height:1.25;letter-spacing:0;background:#282e32!important;border:1px solid #536068;border-radius:2px;gap:5px;color:#efe6d4}
  .topline button svg{flex-shrink:0}
 }
+
+/* DICER 1.0.1 — source, cuts and order on one prep surface. */
+html[data-musiclab-app="ravel"] .site-shell{max-width:1420px;padding:0 28px}
+html[data-musiclab-app="ravel"] .topline{height:50px;gap:14px}
+html[data-musiclab-app="ravel"] .masthead{min-height:0;padding:17px 0 20px;gap:20px;overflow:visible}
+html[data-musiclab-app="ravel"] .brand h1{font-size:60px;line-height:.95;letter-spacing:-2px;margin:7px 0}
+html[data-musiclab-app="ravel"] .brand p{font-size:12px;line-height:1.5}
+html[data-musiclab-app="ravel"] .brand .eyebrow{font-size:8px;letter-spacing:1px}
+html[data-musiclab-app="ravel"] .masthead-art{display:none}
+html[data-musiclab-app="ravel"] .project-row{margin-bottom:12px;gap:14px}
+html[data-musiclab-app="ravel"] button,html[data-musiclab-app="ravel"] select,html[data-musiclab-app="ravel"] input[type=number]{min-height:36px;font-size:11px;border-radius:4px}
+html[data-musiclab-app="ravel"] button{padding:8px 11px}
+html[data-musiclab-app="ravel"] .transport{padding:12px 16px;margin-bottom:14px;gap:18px;border-radius:5px;background:linear-gradient(135deg,#30383c,#1e2529)}
+html[data-musiclab-app="ravel"] .play-button{min-height:40px;min-width:102px}
+html[data-musiclab-app="ravel"] .panel{border-radius:5px;background:linear-gradient(130deg,#283238,#20272b);box-shadow:0 1px 0 #ffffff09 inset,0 7px 22px #0002}
+html[data-musiclab-app="ravel"] .panel-heading{padding:14px 17px 12px;margin-bottom:12px;gap:10px}
+html[data-musiclab-app="ravel"] .panel-heading h2{font-size:23px;letter-spacing:0}
+html[data-musiclab-app="ravel"] .sample-row{gap:13px;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr)}
+html[data-musiclab-app="ravel"] .sample-name-row{padding:0 17px 10px;gap:12px;min-width:0}
+html[data-musiclab-app="ravel"] .sample-name-row strong{font-size:13px;overflow-wrap:anywhere;min-width:0}
+html[data-musiclab-app="ravel"] .wave-holder{margin:0 17px;height:153px;border-radius:3px}
+html[data-musiclab-app="ravel"] #waveform{height:153px}
+html[data-musiclab-app="ravel"] .slice-toolbar{padding:12px 17px;gap:6px;flex-wrap:wrap}
+html[data-musiclab-app="ravel"] .slice-toolbar button{flex:1;font-size:10px;min-height:36px}
+html[data-musiclab-app="ravel"] .recipe-row{padding:0 17px;gap:8px;flex-wrap:wrap}
+html[data-musiclab-app="ravel"] .recipe-row>label{font-size:8px}
+html[data-musiclab-app="ravel"] .recipe-row>select{flex:1;min-width:80px;font-size:10px}
+html[data-musiclab-app="ravel"] .pad-grid{padding:0 17px;gap:7px}
+html[data-musiclab-app="ravel"] .pad{min-height:57px;border-radius:4px;padding:7px 10px;background:linear-gradient(150deg,#38454d,#252e34);border-color:#52616c;box-shadow:0 2px 0 #0d1216}
+html[data-musiclab-app="ravel"] .pad.selected{background:linear-gradient(145deg,#6d482d,#3d3025);border-color:#ffad72;box-shadow:0 0 0 1px #ff8d4520 inset,0 2px 0 #0d1216}
+html[data-musiclab-app="ravel"] .pad.lit{background:#e9ce8b;color:#211c17;border-color:#f8dda0}
+html[data-musiclab-app="ravel"] .pad-no{font-size:15px}
+html[data-musiclab-app="ravel"] .pad-footer{padding:12px 17px;flex-wrap:wrap;gap:10px;align-items:center}
+html[data-musiclab-app="ravel"] .slice-navigation,html[data-musiclab-app="ravel"] .step-navigation{display:flex;gap:9px;align-items:center;flex-shrink:0}
+html[data-musiclab-app="ravel"] .slice-navigation>button,html[data-musiclab-app="ravel"] .step-navigation>button{min-width:36px;padding:6px;font-size:15px}
+html[data-musiclab-app="ravel"] .slice-navigation>span,html[data-musiclab-app="ravel"] .step-navigation>span{font:10px var(--kk-mono,monospace);white-space:nowrap;color:#ffad72}
+html[data-musiclab-app="ravel"] .pad-footer .micro{font-size:7px;display:block}
+html[data-musiclab-app="ravel"] .sequencer-panel{margin-top:14px;padding-bottom:0}
+html[data-musiclab-app="ravel"] .banks>button{min-width:38px;min-height:38px}
+html[data-musiclab-app="ravel"] .step-grid{padding:0 17px;gap:6px}
+html[data-musiclab-app="ravel"] .step{min-height:100px;border-radius:3px;background:#182125}
+html[data-musiclab-app="ravel"] .step-main{min-height:64px;padding:7px 3px}
+html[data-musiclab-app="ravel"] .step-toggle{height:36px;min-height:36px;border-top:1px solid #4e5b62;border-radius:0 0 2px 2px}
+html[data-musiclab-app="ravel"] .step.enabled{background:#45372c}
+html[data-musiclab-app="ravel"] .step-slice{font-size:18px;line-height:1.1}
+html[data-musiclab-app="ravel"] .sequence-footer{padding:13px 17px 0;gap:12px;flex-wrap:wrap}
+html[data-musiclab-app="ravel"] .pattern-tools{gap:6px;flex-wrap:wrap;max-width:none}
+html[data-musiclab-app="ravel"] .pattern-tools button{font-size:10px}
+html[data-musiclab-app="ravel"] .selected-step-panel{margin-top:12px;border-top:1px solid #56606a;background:#17202470;border-bottom:0}
+html[data-musiclab-app="ravel"] .selected-step-panel .panel-heading{margin-bottom:12px;flex-wrap:wrap;border:0;padding-bottom:0}
+html[data-musiclab-app="ravel"] .selected-step-panel .panel-heading h2{font-size:21px}
+html[data-musiclab-app="ravel"] .step-assignment{padding:0 17px 13px;gap:8px;flex-wrap:wrap}
+html[data-musiclab-app="ravel"] #stepControls{grid-template-columns:repeat(6,minmax(0,1fr));gap:18px;padding:0 17px 16px}
+html[data-musiclab-app="ravel"] .control-header>span{font-size:10px}
+html[data-musiclab-app="ravel"] input[type=range]{height:28px}
+html[data-musiclab-app="ravel"] .fineprint{font-size:9px;line-height:1.6;padding-left:17px;padding-right:17px}
+html[data-musiclab-app="ravel"] .controls-row{grid-template-columns:1fr 1fr;gap:13px;margin-top:14px;align-items:start}
+html[data-musiclab-app="ravel"] .prep-drawer>summary{min-height:51px;padding:14px 17px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;cursor:pointer;list-style:none;font-size:12px;background:#1b2327;color:#e6ddc9}
+html[data-musiclab-app="ravel"] .prep-drawer>summary:before{content:'＋';color:#ffad72;font:18px var(--kk-mono,monospace)}
+html[data-musiclab-app="ravel"] .prep-drawer[open]>summary:before{content:'−'}
+html[data-musiclab-app="ravel"] .prep-drawer>summary>span{font:8px var(--kk-mono,monospace);color:#99abb5;margin-left:auto}
+html[data-musiclab-app="ravel"] .prep-drawer>summary:focus-visible{outline:2px solid #dcc85e;outline-offset:-3px}
+html[data-musiclab-app="ravel"] .controls-row>.panel:last-child .control-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+html[data-musiclab-app="ravel"] .export-panel{margin-top:14px;padding:16px 18px;border-radius:5px;gap:15px}
+html[data-musiclab-app="ravel"] .export-panel p{font-size:14px}
+html[data-musiclab-app="ravel"] .export-controls{max-width:none;gap:8px}
+html[data-musiclab-app="ravel"] .export-controls button{min-height:40px;font-size:11px}
+html[data-musiclab-app="ravel"] footer{padding-top:17px;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){html[data-musiclab-app="ravel"] .transport{flex-wrap:wrap;gap:12px}html[data-musiclab-app="ravel"] .sample-row{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}html[data-musiclab-app="ravel"] .step-grid{grid-template-columns:repeat(8,minmax(0,1fr))}html[data-musiclab-app="ravel"] #stepControls{grid-template-columns:repeat(3,minmax(0,1fr))}html[data-musiclab-app="ravel"] .meter-wrap{min-width:90px}html[data-musiclab-app="ravel"] .export-panel{flex-wrap:wrap}html[data-musiclab-app="ravel"] .export-controls{margin-left:auto}html[data-musiclab-app="ravel"] .pad-footer .micro{width:100%;font-size:6px}html[data-musiclab-app="ravel"] .slice-toolbar{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:600px){html[data-musiclab-app="ravel"] .site-shell{padding:0 12px}html[data-musiclab-app="ravel"] .topline{height:auto;min-height:51px;flex-wrap:wrap;gap:7px;padding:10px 0}html[data-musiclab-app="ravel"] .topline>span{display:none}html[data-musiclab-app="ravel"] .masthead{padding:15px 0 17px}html[data-musiclab-app="ravel"] .brand h1{font-size:54px;letter-spacing:-1px;margin:6px 0}html[data-musiclab-app="ravel"] .brand p{font-size:12px}html[data-musiclab-app="ravel"] .brand .eyebrow{font-size:7px;letter-spacing:.8px}html[data-musiclab-app="ravel"] .project-row{display:flex;flex-direction:column;align-items:stretch;gap:8px}html[data-musiclab-app="ravel"] .study-select{display:block}html[data-musiclab-app="ravel"] .study-select label{display:block;margin-bottom:4px}html[data-musiclab-app="ravel"] .study-select select{width:100%}html[data-musiclab-app="ravel"] .project-tools{padding:0;gap:6px}html[data-musiclab-app="ravel"] .project-tools button{flex:1;font-size:10px}html[data-musiclab-app="ravel"] .transport{padding:11px;gap:10px}html[data-musiclab-app="ravel"] .play-button{min-width:88px;width:auto}html[data-musiclab-app="ravel"] .panic-button{padding:8px;min-width:50px}html[data-musiclab-app="ravel"] .tempo{margin-left:auto;font-size:8px}html[data-musiclab-app="ravel"] .tempo input{width:52px}html[data-musiclab-app="ravel"] .swing{flex:1;flex-basis:60%;max-width:none;min-width:0}html[data-musiclab-app="ravel"] .clock{font-size:14px}html[data-musiclab-app="ravel"] .sample-row{grid-template-columns:1fr}html[data-musiclab-app="ravel"] .panel-heading{padding:13px 13px 11px;flex-wrap:wrap;gap:9px}html[data-musiclab-app="ravel"] .panel-heading h2{font-size:21px}html[data-musiclab-app="ravel"] .sample-name-row{padding:0 13px 10px}html[data-musiclab-app="ravel"] .wave-holder{margin:0 13px}html[data-musiclab-app="ravel"] .slice-toolbar{padding:11px 13px}html[data-musiclab-app="ravel"] .slice-toolbar button{min-height:40px}html[data-musiclab-app="ravel"] .recipe-row{padding:0 13px;flex-wrap:wrap}html[data-musiclab-app="ravel"] .recipe-row>label{width:100%;margin:0}html[data-musiclab-app="ravel"] .recipe-row>select{min-width:0;font-size:10px}html[data-musiclab-app="ravel"] .recipe-row button{font-size:10px}html[data-musiclab-app="ravel"] .pad-grid{padding:0 13px;gap:7px}html[data-musiclab-app="ravel"] .pad{min-height:60px;padding:8px 10px}html[data-musiclab-app="ravel"] .pad-footer{padding:11px 13px;justify-content:space-between;gap:7px}html[data-musiclab-app="ravel"] .pad-footer .micro{width:auto;font-size:6px;max-width:115px;line-height:1.6;text-align:right}html[data-musiclab-app="ravel"] .sequence-heading{padding-bottom:12px}html[data-musiclab-app="ravel"] .banks{width:100%;gap:5px}html[data-musiclab-app="ravel"] .banks>button{min-width:36px;width:36px;min-height:38px}html[data-musiclab-app="ravel"] .chain-toggle{margin-left:auto;font-size:11px}html[data-musiclab-app="ravel"] .step-grid{padding:0 13px;gap:6px 5px}html[data-musiclab-app="ravel"] .step{min-height:93px}html[data-musiclab-app="ravel"] .step-main{min-height:57px;font-size:10px}html[data-musiclab-app="ravel"] .step-slice{font-size:16px}html[data-musiclab-app="ravel"] .sequence-footer{padding:12px 13px 0}html[data-musiclab-app="ravel"] .pattern-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:6px}html[data-musiclab-app="ravel"] .pattern-tools>button{min-height:38px;padding:7px 6px;font-size:10px}html[data-musiclab-app="ravel"] #copyButton{grid-column:2/-1}html[data-musiclab-app="ravel"] .selected-step-panel .panel-heading{padding:13px 13px 0}html[data-musiclab-app="ravel"] .selected-step-panel .panel-heading h2{font-size:20px}html[data-musiclab-app="ravel"] .step-navigation{margin-left:auto;gap:7px}html[data-musiclab-app="ravel"] .step-assignment{padding:0 13px 13px;gap:6px}html[data-musiclab-app="ravel"] .step-assignment button{flex:1;padding:7px;font-size:10px}html[data-musiclab-app="ravel"] #stepControls{padding:0 13px 13px;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}html[data-musiclab-app="ravel"] .controls-row{grid-template-columns:1fr}html[data-musiclab-app="ravel"] .controls-row>.panel:last-child{grid-column:auto}html[data-musiclab-app="ravel"] .controls-row>.panel:last-child .control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-musiclab-app="ravel"] .prep-drawer>summary{padding:13px;font-size:11px}html[data-musiclab-app="ravel"] .prep-drawer>summary>span{width:100%;margin-left:25px;font-size:8px}html[data-musiclab-app="ravel"] .fineprint{padding-left:13px;padding-right:13px;font-size:9px}html[data-musiclab-app="ravel"] .export-panel{display:block;padding:14px 13px}html[data-musiclab-app="ravel"] .export-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:12px}html[data-musiclab-app="ravel"] .export-controls label{grid-column:1/-1;justify-content:flex-end}html[data-musiclab-app="ravel"] .export-controls button{padding:8px;font-size:10px}html[data-musiclab-app="ravel"] .status{font-size:10px}}
+@media(prefers-reduced-motion:reduce){html[data-musiclab-app="ravel"] *{transition:none!important;scroll-behavior:auto!important}}

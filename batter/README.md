@@ -1,5 +1,7 @@
 # BATTER
 
+Interface refresh v1.1.1. The compact workspace puts the acoustic step grid first. Sequence, Drum, Hit and Output links jump to the existing editors. On touch screens, long-press a step to select it without adding or removing a hit; this mirrors Shift-click on a computer. Larger mute/solo, bank and source-audition targets improve touch access. The sample cupboard, blending, LFO, every advanced fold, recorded samples and drum engine remain unchanged.
+
 BATTER is Kitchen's recorded acoustic drum sequencer: twelve lanes, eight pattern banks, and precise control over small, unruly rhythms. Open `index.html` in a browser and press Play. The starter kit is embedded; it does not need a server, a login, or an audio download.
 
 ## Sequence

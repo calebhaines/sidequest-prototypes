@@ -205,10 +205,16 @@
     draw(initial); tile.append(control, title, output); tile.updateValue = draw; return tile;
   }
   function renderVoice() {
-    const focus = $('knob-grid').contains(document.activeElement) || $('selectors').contains(document.activeElement) ? focusKey() : null;
+    const focus = $('knob-grid').contains(document.activeElement) || $('selectors').contains(document.activeElement) || $('impact-knobs').contains(document.activeElement) ? focusKey() : null;
     const track = state.tracks[selected], info = modelInfo(track.model);
     $('voice-index').textContent = 'VOICE ' + String(selected + 1).padStart(2, '0'); $('voice-name').textContent = track.name;
     $('voice-description').textContent = info.description; $('model-description').textContent = info.description;
+    refreshImpactMaterial();
+    $('impact-knobs').replaceChildren();
+    ['pitchHz', 'decay', 'position'].forEach((key) => {
+      const descriptor = model.groups.resonance.find((item) => (item.key || item.id) === key);
+      $('impact-knobs').append(knob(descriptor, track[key], (value) => { track[key] = value; syncVisibleKnobs(key, value); drawVoice(); refreshTrackMeta(); }, 'quick-'));
+    });
     document.querySelectorAll('.model-button').forEach((button) => { const active = button.dataset.model === track.model; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', active); });
     document.querySelectorAll('button[data-tab]').forEach((button) => { const active = button.dataset.tab === tab; button.classList.toggle('active', active); button.setAttribute('aria-selected', active); button.tabIndex = active ? 0 : -1; });
     $('knob-grid').setAttribute('aria-labelledby', 'tab-' + tab); $('knob-grid').dataset.group = tab; $('knob-grid').dataset.tab = tab;
@@ -217,7 +223,7 @@
     $('knob-grid').replaceChildren();
     const addKnob = (descriptor) => {
       const key = descriptor.key || descriptor.id;
-      $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; drawVoice(); refreshTrackMeta(); }));
+      $('knob-grid').append(knob(descriptor, track[key], (value) => { track[key] = value; syncVisibleKnobs(key, value); drawVoice(); refreshTrackMeta(); }));
     };
     if (tab === 'exciter') {
       [
@@ -243,7 +249,7 @@
       };
       model.strikeMaterials.forEach((material) => { const option = document.createElement('option'); option.value = material.id; option.textContent = material.name; option.title = material.description || material.hint || material.name; materialSelect.append(option); });
       materialSelect.value = track.strikeMaterial;
-      materialSelect.addEventListener('change', () => { remember(); track.strikeMaterial = materialSelect.value; describeMaterial(); drawVoice(); persist(); if (!playing) audition(track); });
+      materialSelect.addEventListener('change', () => { remember(); track.strikeMaterial = materialSelect.value; describeMaterial(); refreshImpactMaterial(); drawVoice(); persist(); if (!playing) audition(track); });
       materialWrapper.append(materialLabel, materialSelect); $('selectors').append(materialWrapper);
       const wrapper = document.createElement('div'); wrapper.className = 'selector synthesis-selector noise-selector';
       const label = document.createElement('label'); label.htmlFor = 'noise-color'; label.textContent = 'Noise color';
@@ -252,6 +258,16 @@
       select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper, materialDescription); describeMaterial();
     }
     drawVoice(); restoreFocus(focus);
+  }
+  function syncVisibleKnobs(key, value) {
+    document.querySelectorAll('.knob-control[data-param="' + key + '"]').forEach((tile) => tile.updateValue?.(value));
+  }
+  function refreshImpactMaterial() {
+    const track = state.tracks[selected];
+    const material = model.strikeMaterials.find((item) => item.id === track.strikeMaterial) || model.strikeMaterials[0];
+    $('impact-material').value = track.strikeMaterial;
+    $('impact-material-hint').textContent = material.hint || material.description || material.name;
+    $('impact-material').title = material.description || material.hint || material.name;
   }
   function refreshTrackMeta() {
     const meta = $('track-rows').children[selected].querySelector('.track-meta'), track = state.tracks[selected];
@@ -427,6 +443,11 @@
   }
   function animate(timestamp) { if (playing && !reducedMotion && timestamp - lastFrame > 65) { heroTime += .075; drawHero(heroTime); lastFrame = timestamp; } requestAnimationFrame(animate); }
 
+  model.strikeMaterials.forEach((material) => { const option = document.createElement('option'); option.value = material.id; option.textContent = material.name; $('impact-material').append(option); });
+  $('impact-material').addEventListener('change', () => {
+    remember(); state.tracks[selected].strikeMaterial = $('impact-material').value;
+    renderVoice(); persist(); if (!playing) audition();
+  });
   presets.forEach((preset, index) => { const option = document.createElement('option'); option.value = index; option.textContent = preset.name; $('preset-select').append(option); });
   const custom = document.createElement('option'); custom.value = 'custom'; custom.textContent = 'Custom groove'; custom.hidden = true; $('preset-select').append(custom);
   for (let step = 0; step < 16; step++) { const label = document.createElement('span'); label.className = 'step-number' + (step % 4 === 0 ? ' beat' : ''); label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label); }

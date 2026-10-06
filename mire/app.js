@@ -123,7 +123,7 @@
     container.append(field('DESTINATION', state.nodes.map((_, i) => ({ id: String(i), name: `${String.fromCharCode(65 + i)} · ${nodeShort(i)}` })), String(source.destination), value => { source.destination = +value; renderSources(); }, prefix + 'destination'));
   }
   function renderRouting() {
-    const matrix = $('routing-matrix'); matrix.replaceChildren(); const empty = document.createElement('span'); matrix.append(empty);
+    const matrix = $('routing-matrix'); matrix.replaceChildren(); const empty = document.createElement('span'); empty.className='matrix-origin'; empty.textContent='TO →'; empty.setAttribute('aria-hidden','true'); matrix.append(empty);
     for (let i = 0; i < 4; i++) { const label = document.createElement('span'); label.className = 'matrix-label'; label.textContent = String.fromCharCode(65 + i); label.style.color = colors[i]; matrix.append(label); }
     for (let i = 0; i < 4; i++) {
       const label = document.createElement('span'); label.className = 'matrix-label row'; label.textContent = String.fromCharCode(65 + i) + ' →'; label.style.color = colors[i]; matrix.append(label);
@@ -301,6 +301,7 @@
       else { const dx = d.x - a.x, dy = d.y - a.y, bend = (i < j ? 1 : -1) * Math.min(cw, ch) * .13; b = { x: a.x + dx * .26 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .26 + dx / (Math.hypot(dx, dy) || 1) * bend }; c = { x: a.x + dx * .72 - dy / (Math.hypot(dx, dy) || 1) * bend, y: a.y + dy * .72 + dx / (Math.hypot(dx, dy) || 1) * bend }; }
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.bezierCurveTo(b.x, b.y, c.x, c.y, d.x, d.y); ctx.strokeStyle = colors[i]; ctx.globalAlpha = .10 + amount * .19 + activity * .23; ctx.lineWidth = .8 + amount * 1.2; ctx.stroke();
       if (activity > .005 || engine.isPlaying || state.garden.freeze) for (let k = 0; k < 3; k++) { const progress = (time * (.12 + amount * .08) + k / 3 + i * .11 + j * .17) % 1, point = bezierPoint(a, b, c, d, progress); ctx.globalAlpha = .35 + activity * .6; ctx.shadowColor = colors[i]; ctx.shadowBlur = 9; ctx.fillStyle = colors[i]; ctx.beginPath(); ctx.arc(point.x, point.y, 1 + amount, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; }
+      const tip=bezierPoint(a,b,c,d,.72), ahead=bezierPoint(a,b,c,d,.75),angle=Math.atan2(ahead.y-tip.y,ahead.x-tip.x);ctx.globalAlpha=.48+amount*.32;ctx.fillStyle=colors[i];ctx.beginPath();ctx.moveTo(tip.x+Math.cos(angle)*5,tip.y+Math.sin(angle)*5);ctx.lineTo(tip.x+Math.cos(angle+2.45)*4,tip.y+Math.sin(angle+2.45)*4);ctx.lineTo(tip.x+Math.cos(angle-2.45)*4,tip.y+Math.sin(angle-2.45)*4);ctx.closePath();ctx.fill();
       ctx.globalAlpha = 1;
     }));
     gardenPoints.forEach((p, i) => {

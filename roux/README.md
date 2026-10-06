@@ -1,5 +1,7 @@
 # ROUX
 
+Interface refresh v1.0.1. The compact workspace keeps the circular recipe as the main interaction. Recipe, Clocks, Sound and Output links reach every existing area; Edit stop goes directly to the selected-step inspector on smaller screens. The original synthesis tabs, relative-note sequencing, independent cycles, keyboard and sound settings remain unchanged.
+
 ROUX is Kitchen’s monophonic bass instrument. Its circular recipe moves through a scale rather than storing an independent pitch at every step. A deep fundamental, harmonic oscillator, and tuned resonant waveguide make the sound; independent accent and slide cycles keep the recipe moving.
 
 Open `index.html` in a browser. It is a complete standalone HTML application with inline fonts, styles, synthesis, presets, and sharing adapters. Audio starts after a click or key press. Chrome, Edge, Firefox, and Safari support the instrument; Web MIDI additionally requires browser support and permission. On iPhone, enable sound with the phone’s silent switch.

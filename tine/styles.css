@@ -379,3 +379,60 @@ body[data-kitchen-app="clatter"] dialog { border-radius:3px;background:#20272a;b
 @media(max-width:900px){body[data-kitchen-app="clatter"] h1{font-size:50px}body[data-kitchen-app="clatter"] .brand-description{font-size:6px;padding-left:12px;margin-left:0}}
 @media(max-width:650px){body[data-kitchen-app="clatter"] h1{font-size:45px}body[data-kitchen-app="clatter"] .brand-word{font-size:31px}body[data-kitchen-app="clatter"] .music-link span{display:none}body[data-kitchen-app="clatter"] .music-link svg{width:16px;height:16px}body[data-kitchen-app="clatter"] .intro-art{padding:8px 5px;min-width:83px}body[data-kitchen-app="clatter"] .art-top{font-size:5px;letter-spacing:0}body[data-kitchen-app="clatter"] .art-bottom{font-size:5px;letter-spacing:0}body[data-kitchen-app="clatter"] .intro-art::before{font-size:5px;left:8px;padding:2px 4px}}
 @media(max-width:380px){body[data-kitchen-app="clatter"] h1{font-size:37px}body[data-kitchen-app="clatter"] .brand-word{font-size:29px}body[data-kitchen-app="clatter"] .intro-art{min-width:73px}body[data-kitchen-app="clatter"] .topbar-right{gap:5px}}
+
+/* Impact bench: a compact, playable physical instrument. */
+body[data-kitchen-app="clatter"] .app-shell{max-width:1456px;padding:0 32px 20px}
+body[data-kitchen-app="clatter"] .topbar{height:auto;min-height:76px;gap:16px;padding:12px 0;flex-wrap:wrap}
+body[data-kitchen-app="clatter"] .topbar-right{gap:10px;min-width:0;flex-wrap:wrap}
+body[data-kitchen-app="clatter"] .brand-description{font-size:8px;line-height:1.5}
+body[data-kitchen-app="clatter"] .intro{padding:18px 0;gap:20px;min-height:88px}
+body[data-kitchen-app="clatter"] .intro h1{font-size:29px;line-height:1.1;letter-spacing:-1px;margin:7px 0 0;font-weight:600}
+body[data-kitchen-app="clatter"] .intro p{font-size:10px;margin:7px 0 0}
+body[data-kitchen-app="clatter"] .intro-art{width:190px;max-width:30%;height:60px;border:0;background:transparent;flex:none;padding:0;opacity:.85}
+body[data-kitchen-app="clatter"] #hero-canvas{width:100%;height:60px;display:block}
+body[data-kitchen-app="clatter"] .transport{gap:16px;min-height:80px;padding:15px 18px}
+body[data-kitchen-app="clatter"] .panel{border-color:#465057;box-shadow:0 3px 14px #0002}
+body[data-kitchen-app="clatter"] .section-heading{min-height:59px}
+body[data-kitchen-app="clatter"] .track-row{grid-template-columns:180px minmax(0,1fr) 82px;gap:14px}
+body[data-kitchen-app="clatter"] .mix-button{width:36px;height:36px;font-size:10px}
+body[data-kitchen-app="clatter"] .step{height:38px}
+body[data-kitchen-app="clatter"] .text-button,body[data-kitchen-app="clatter"] .icon-button,body[data-kitchen-app="clatter"] .button{min-height:38px}
+body[data-kitchen-app="clatter"] .icon-button.tiny{width:38px;height:38px}
+body[data-kitchen-app="clatter"] .instrument-layout{grid-template-columns:minmax(290px,.9fr) minmax(0,1.3fr)}
+body[data-kitchen-app="clatter"] .body-panel{padding:22px;background:linear-gradient(140deg,#242b2e,#1b2225);border-color:#465057}
+body[data-kitchen-app="clatter"] .voice-identity h3{font-size:24px}
+body[data-kitchen-app="clatter"] .voice-identity p{font-size:11px;line-height:1.6;max-width:52ch}
+body[data-kitchen-app="clatter"] .resonator-stage{margin:17px 0}
+body[data-kitchen-app="clatter"] .resonator-stage canvas{height:126px;margin-top:18px}
+body[data-kitchen-app="clatter"] .model-button{min-height:48px;flex-direction:row;align-items:center;gap:8px;padding:8px;border-radius:3px}
+body[data-kitchen-app="clatter"] .model-button.selected{border-color:#dcc85e;background:linear-gradient(145deg,#dcc85e26,#dcc85e0b)}
+body[data-kitchen-app="clatter"] .model-name{font-size:10px}
+body[data-kitchen-app="clatter"] .model-description{font-size:10px;line-height:1.6;margin-bottom:0}
+body[data-kitchen-app="clatter"] .impact-primary{padding:22px;display:grid;grid-template-columns:1fr;gap:19px;background:linear-gradient(140deg,#2c3336,#20272a);border-bottom:1px solid #465057}
+body[data-kitchen-app="clatter"] .impact-material{display:grid;grid-template-columns:minmax(90px,.5fr) minmax(0,1fr);gap:10px 14px;align-items:center}
+body[data-kitchen-app="clatter"] .impact-material label{font:9px var(--mono);letter-spacing:1px;color:#dcc85e}
+body[data-kitchen-app="clatter"] .impact-material select{width:100%;min-height:42px;background:#172025;color:#efe6d4;border:1px solid #647077;border-radius:3px;padding:8px 10px;font-size:12px}
+body[data-kitchen-app="clatter"] .impact-material p{grid-column:1/-1;margin:0;color:#afb9bc;font-size:10px;line-height:1.6;min-height:30px}
+body[data-kitchen-app="clatter"] .impact-knobs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+body[data-kitchen-app="clatter"] .impact-knobs .knob-control{padding:17px 6px 13px;background:#171e22;border:1px solid #475159;border-top:2px solid #dcc85e;border-radius:3px;gap:10px}
+body[data-kitchen-app="clatter"] .impact-knobs .knob-value{font-size:11px;color:#efe6d4}
+body[data-kitchen-app="clatter"] .impact-knobs .knob-label{font-size:9px}
+body[data-kitchen-app="clatter"] .impact-details{margin:0;border:0}
+body[data-kitchen-app="clatter"] .impact-details summary{cursor:pointer;padding:18px 22px;color:#efe6d4;background:#1b2327;font-size:12px;min-height:52px}
+body[data-kitchen-app="clatter"] .impact-details summary span{font-size:9px;color:#97a4ab;margin-left:14px;line-height:1.6}
+body[data-kitchen-app="clatter"] .impact-details[open] summary{border-bottom:1px solid #465057;color:#dcc85e}
+body[data-kitchen-app="clatter"] .topology{height:45px}
+body[data-kitchen-app="clatter"] .editor-tabs{gap:10px;justify-content:space-between}
+body[data-kitchen-app="clatter"] .editor-tab{font-size:10px;min-height:43px}
+body[data-kitchen-app="clatter"] .knob-grid>.knob-control{min-height:111px;padding:12px 4px}
+body[data-kitchen-app="clatter"] .grid-scroll-hint{display:none}
+body[data-kitchen-app="clatter"] :is(button,select,input,summary):focus-visible{outline:2px solid #dcc85e;outline-offset:3px}
+@media(max-width:900px){body[data-kitchen-app="clatter"] .transport{flex-wrap:wrap}body[data-kitchen-app="clatter"] .instrument-layout{grid-template-columns:1fr}body[data-kitchen-app="clatter"] .body-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}body[data-kitchen-app="clatter"] .voice-identity{grid-column:1}body[data-kitchen-app="clatter"] .resonator-stage{grid-column:2;grid-row:1/4}body[data-kitchen-app="clatter"] .material-heading,body[data-kitchen-app="clatter"] .model-buttons,body[data-kitchen-app="clatter"] .model-description{grid-column:1}body[data-kitchen-app="clatter"] .impact-primary{grid-template-columns:1fr 1.4fr;align-items:center}body[data-kitchen-app="clatter"] .impact-material{display:block}body[data-kitchen-app="clatter"] .impact-material select{margin-top:9px}body[data-kitchen-app="clatter"] .impact-material p{margin-top:8px}}
+@media(max-width:600px){body[data-kitchen-app="clatter"] .app-shell{padding:0 12px 16px}body[data-kitchen-app="clatter"] .topbar{min-height:66px;padding:13px 0 10px;display:grid;grid-template-columns:1fr;gap:12px}body[data-kitchen-app="clatter"] .brand{min-width:0}body[data-kitchen-app="clatter"] .brand-description{margin-left:auto}body[data-kitchen-app="clatter"] .topbar-right{display:flex;width:100%;justify-content:space-between;gap:6px}body[data-kitchen-app="clatter"] .local-badge,body[data-kitchen-app="clatter"] .topbar-divider{display:none}body[data-kitchen-app="clatter"] .topbar-right>button{flex:1;min-width:0;max-width:none;min-height:38px;padding:7px 8px}body[data-kitchen-app="clatter"] .topbar-right>.music-link{min-height:38px}body[data-kitchen-app="clatter"] .intro{padding:16px 0;display:block}body[data-kitchen-app="clatter"] .intro h1{font-size:25px}body[data-kitchen-app="clatter"] .intro-art{display:none}body[data-kitchen-app="clatter"] .intro p{font-size:9px}body[data-kitchen-app="clatter"] .transport{display:grid;grid-template-columns:1.1fr .8fr 1fr;gap:14px 9px;padding:14px 12px}body[data-kitchen-app="clatter"] .transport-divider{display:none}body[data-kitchen-app="clatter"] .file-actions{flex-wrap:wrap;gap:5px;min-width:0}body[data-kitchen-app="clatter"] .file-actions .button{padding:0 8px;flex:1;font-size:10px}body[data-kitchen-app="clatter"] .sequencer-actions{gap:5px}body[data-kitchen-app="clatter"] .sequencer-actions .text-button{padding:0 5px;font-size:9px}body[data-kitchen-app="clatter"] .action-divider{display:none}body[data-kitchen-app="clatter"] .grid-scroll-hint{display:block;margin:0;padding:8px 14px;background:#151d21;border-top:1px solid #3d494f;font:9px var(--mono);color:#a5b3ba}body[data-kitchen-app="clatter"] .body-panel{display:block;padding:19px}body[data-kitchen-app="clatter"] .resonator-stage canvas{height:115px}body[data-kitchen-app="clatter"] .impact-primary{display:block;padding:19px}body[data-kitchen-app="clatter"] .impact-knobs{margin-top:15px}body[data-kitchen-app="clatter"] .impact-details summary{padding:17px 19px}body[data-kitchen-app="clatter"] .impact-details summary span{display:block;margin:6px 0 0 14px}body[data-kitchen-app="clatter"] .instrument-heading{flex-wrap:wrap;gap:10px;padding:15px 14px}body[data-kitchen-app="clatter"] .instrument-subtitle{display:none}body[data-kitchen-app="clatter"] .voice-actions{display:flex;width:100%;gap:6px;justify-content:space-between}body[data-kitchen-app="clatter"] .voice-actions .text-button{padding:0 4px;font-size:10px}body[data-kitchen-app="clatter"] .voice-actions .button{padding:0 9px}body[data-kitchen-app="clatter"] .editor-tabs{gap:6px;padding:0 12px}body[data-kitchen-app="clatter"] .editor-tab{font-size:9px;padding:0 3px}body[data-kitchen-app="clatter"] .tab-number{display:none}body[data-kitchen-app="clatter"] .master-end-label{display:none}}
+@media(prefers-reduced-motion:reduce){body[data-kitchen-app="clatter"] *,body[data-kitchen-app="clatter"] *::before,body[data-kitchen-app="clatter"] *::after{animation:none!important;transition:none!important}}
+body[data-kitchen-app="clatter"] .model-button{display:grid;grid-template-columns:23px minmax(0,1fr);gap:4px 8px}
+body[data-kitchen-app="clatter"] .model-button svg{grid-column:1;grid-row:1/3;width:22px}
+body[data-kitchen-app="clatter"] .model-button .model-name{grid-column:2;font-size:10px;white-space:normal;line-height:1.3}
+body[data-kitchen-app="clatter"] .model-button .model-subtitle{grid-column:2;font-size:7px;white-space:normal;line-height:1.3}
+@media(max-width:600px){body[data-kitchen-app="clatter"] .instrument-heading{height:auto;min-height:95px;align-items:center;overflow:visible}body[data-kitchen-app="clatter"] .sequencer-actions .text-button{width:36px;height:38px}body[data-kitchen-app="clatter"] .file-actions{grid-column:1/-1;grid-row:3;justify-content:space-between;padding-top:10px;border-top:1px solid #435059}body[data-kitchen-app="clatter"] .file-actions .button span{display:inline}body[data-kitchen-app="clatter"] .file-actions .open-project{min-width:38px}body[data-kitchen-app="clatter"] .model-button{gap:4px;grid-template-columns:20px minmax(0,1fr);padding:8px 5px}body[data-kitchen-app="clatter"] .model-button .model-name{font-size:9px}body[data-kitchen-app="clatter"] .model-button .model-subtitle{font-size:6px}}
+@media(max-width:600px){body[data-kitchen-app="clatter"] .sequencer>.section-heading{height:auto;min-height:68px;flex-wrap:wrap;padding:12px 14px;gap:8px}body[data-kitchen-app="clatter"] .sequencer-actions{margin-left:auto;gap:8px}body[data-kitchen-app="clatter"] .sequencer-actions .text-button{width:auto;min-width:36px;padding:0 5px}body[data-kitchen-app="clatter"] .sequencer-actions .text-button span{display:inline}body[data-kitchen-app="clatter"] .sequencer-actions .text-button svg{width:12px;flex:none}}

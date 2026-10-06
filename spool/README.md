@@ -1,5 +1,7 @@
 # ROTISSERIE
 
+Interface refresh v1.0.1. The compact workspace keeps the four reel decks in front. Decks, Edit deck, Perform and Output links jump to the existing tools; the editor still exposes Loop & motion, Tape character, and Record & overdub. Deck selection, imports, recording, keyboard performance and all sound controls work as before. Larger mute/solo targets and readable mobile tabs make the same workflow easier on touch screens.
+
 A standalone stereo tape-loop playground. Four decks, eight locally generated
 tape studies, and a small playable instrument for making your own phrases.
 
@@ -77,4 +79,4 @@ needed to build or play the instrument.
 The bundled Noto font subsets are copyright Google and licensed under the SIL
 Open Font License 1.1. See `fonts/LICENSE.txt`.
 
-Version 1.0.0.
+Version 1.0.1.
