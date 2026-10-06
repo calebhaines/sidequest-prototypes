@@ -1,0 +1,429 @@
+{
+  "title": "Grease Trap",
+  "sourceCommit": "554030de8a019f43fbffd93d5e2c55fb7137ad4e",
+  "galleyVersion": "1.11.1",
+  "pulseTempo": 106,
+  "gridTempo": 53,
+  "pulseBars": 80,
+  "galleyBars": 40,
+  "durationSeconds": 181.13208333333333,
+  "key": "D minor with E-flat and A-flat tension",
+  "original": true,
+  "thirdPartyAudio": false,
+  "sections": [
+    {
+      "name": "Preheat",
+      "pulseBar": 0,
+      "galleyBar": 0,
+      "seconds": 0
+    },
+    {
+      "name": "The groove",
+      "pulseBar": 8,
+      "galleyBar": 4,
+      "seconds": 18.11320754716981
+    },
+    {
+      "name": "First pressure",
+      "pulseBar": 24,
+      "galleyBar": 12,
+      "seconds": 54.339622641509436
+    },
+    {
+      "name": "Pressure loss",
+      "pulseBar": 40,
+      "galleyBar": 20,
+      "seconds": 90.56603773584905
+    },
+    {
+      "name": "Return to service",
+      "pulseBar": 48,
+      "galleyBar": 24,
+      "seconds": 108.67924528301887
+    },
+    {
+      "name": "Hard service",
+      "pulseBar": 64,
+      "galleyBar": 32,
+      "seconds": 144.9056603773585
+    },
+    {
+      "name": "Power down",
+      "pulseBar": 76,
+      "galleyBar": 38,
+      "seconds": 172.0754716981132
+    }
+  ],
+  "sourceAssets": 25,
+  "pcmBytes": 43471700,
+  "tracks": [
+    {
+      "name": "SIZZLE / Low burner",
+      "instrument": "grain",
+      "clips": 19,
+      "effects": [
+        "prism",
+        "cinder",
+        "velvet"
+      ],
+      "automationLanes": 1
+    },
+    {
+      "name": "CLATTER / Knives on enamel",
+      "instrument": "tine",
+      "clips": 17,
+      "effects": [
+        "prism",
+        "cinder",
+        "velvet",
+        "vestige"
+      ],
+      "automationLanes": 1
+    },
+    {
+      "name": "SIZZLE / Relay teeth",
+      "instrument": "grain",
+      "clips": 19,
+      "effects": [
+        "prism",
+        "cinder",
+        "velvet",
+        "parallax"
+      ],
+      "automationLanes": 1
+    },
+    {
+      "name": "ROUX / Grease motor",
+      "instrument": "roux",
+      "clips": 19,
+      "effects": [
+        "prism",
+        "broiler",
+        "velvet"
+      ],
+      "automationLanes": 4
+    },
+    {
+      "name": "LEAVEN / A private alarm",
+      "instrument": "proof",
+      "clips": 14,
+      "effects": [
+        "prism",
+        "cinder",
+        "parallax",
+        "vestige"
+      ],
+      "automationLanes": 2
+    },
+    {
+      "name": "REDUCE / Stainless objections",
+      "instrument": "mire",
+      "clips": 16,
+      "effects": [
+        "prism",
+        "cinder",
+        "undertow",
+        "parallax"
+      ],
+      "automationLanes": 2
+    },
+    {
+      "name": "MARINADE / Mouth behind the hatch",
+      "instrument": "marinade",
+      "clips": 16,
+      "effects": [
+        "prism",
+        "velvet",
+        "undertow",
+        "vestige"
+      ],
+      "automationLanes": 2
+    },
+    {
+      "name": "STEAM + ROTISSERIE / Extractor ritual",
+      "instrument": "haze",
+      "clips": 19,
+      "effects": [
+        "prism",
+        "cinder",
+        "tremor",
+        "vestige"
+      ],
+      "automationLanes": 3
+    }
+  ],
+  "sourceFiles": [
+    {
+      "file": "kick-verse.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "kick-verse.json",
+      "patternFile": "kick-verse.pattern.json",
+      "sha256": "e95c2223dc3d40658cceb29591b0ec1af1231745f95dc6ec6bed10f5b2516bfd"
+    },
+    {
+      "file": "kick-chorus.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "kick-chorus.json",
+      "patternFile": "kick-chorus.pattern.json",
+      "sha256": "48c647baaa71520cccd6ef4671c5dcce49a77a1d763ad6cc84fa48b2124d5c98"
+    },
+    {
+      "file": "kick-fill.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "kick-fill.json",
+      "patternFile": "kick-fill.pattern.json",
+      "sha256": "3c5fbdd16dd210f64bcda9c1a828c8b1638d98fde096ce7bc00062cfc56d074a"
+    },
+    {
+      "file": "snare-verse.wav",
+      "folder": "drums",
+      "app": "tine",
+      "snapshotFile": "snare-verse.json",
+      "patternFile": "snare-verse.pattern.json",
+      "sha256": "e81182981ddc741e3c5975bd7fdd2d89885c5d6ca2c470c12469553926d4ed92"
+    },
+    {
+      "file": "snare-chorus.wav",
+      "folder": "drums",
+      "app": "tine",
+      "snapshotFile": "snare-chorus.json",
+      "patternFile": "snare-chorus.pattern.json",
+      "sha256": "9b6cac55244691e91c91576036bc35cf38ba534c3978f2a45de63070466d5fce"
+    },
+    {
+      "file": "snare-fill.wav",
+      "folder": "drums",
+      "app": "tine",
+      "snapshotFile": "snare-fill.json",
+      "patternFile": "snare-fill.pattern.json",
+      "sha256": "9718354c2e1b8a6cac7ee2d1e34474dac6c8dc984234a93b3c59f2548aa66683"
+    },
+    {
+      "file": "hats-verse.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "hats-verse.json",
+      "patternFile": "hats-verse.pattern.json",
+      "sha256": "18c31e01ed5a310ba270c2cd2804ef45d70f7215f0c1839bccf0fdea3b03d6ae"
+    },
+    {
+      "file": "hats-chorus.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "hats-chorus.json",
+      "patternFile": "hats-chorus.pattern.json",
+      "sha256": "7be260f024ef76b34de87cba12d9f9c6b70b44eaaf6c2f242e2983244d191c5f"
+    },
+    {
+      "file": "hats-fill.wav",
+      "folder": "drums",
+      "app": "grain",
+      "snapshotFile": "hats-fill.json",
+      "patternFile": "hats-fill.pattern.json",
+      "sha256": "364db2ccc189e2a22c2d760b1596170ebce2aee6c4268862c98822b99cacc75a"
+    },
+    {
+      "file": "bass-intro.wav",
+      "folder": "bass",
+      "app": "roux",
+      "snapshotFile": "bass-intro.roux.json",
+      "patternFile": "bass-intro.pattern.json",
+      "sha256": "d5ab570afcc2352e262293ce642c89f9e156a7338276351ae6d86438f372ff1f"
+    },
+    {
+      "file": "bass-verse.wav",
+      "folder": "bass",
+      "app": "roux",
+      "snapshotFile": "bass-verse.roux.json",
+      "patternFile": "bass-verse.pattern.json",
+      "sha256": "8c3f413e15513419d18e7b29161e59a82acfedd63cb2f65b52947aec64105905"
+    },
+    {
+      "file": "bass-chorus.wav",
+      "folder": "bass",
+      "app": "roux",
+      "snapshotFile": "bass-chorus.roux.json",
+      "patternFile": "bass-chorus.pattern.json",
+      "sha256": "67e5418d0f55c66d41050ee42bf05f6cb4845efd5f165cc63d8740f6ff707841"
+    },
+    {
+      "file": "bass-bridge.wav",
+      "folder": "bass",
+      "app": "roux",
+      "snapshotFile": "bass-bridge.roux.json",
+      "patternFile": "bass-bridge.pattern.json",
+      "sha256": "06a1511ecdd8088548402efbd0ecb0623d40bf6d0241103b1c72ee5f8cfe3afc"
+    },
+    {
+      "file": "bass-final.wav",
+      "folder": "bass",
+      "app": "roux",
+      "snapshotFile": "bass-final.roux.json",
+      "patternFile": "bass-final.pattern.json",
+      "sha256": "867e6fbeea34d0da4c544f40565694ad39133f6e6b0980a93239a45d35cb20d5"
+    },
+    {
+      "file": "hook-call.wav",
+      "folder": "bass",
+      "app": "proof",
+      "snapshotFile": "hook-call.proof.json",
+      "patternFile": "hook-call.pattern.json",
+      "sha256": "22b6e188f25089138017c1fa8f1a4b4f586fd85203228d60ffe2557550c29822"
+    },
+    {
+      "file": "hook-response.wav",
+      "folder": "bass",
+      "app": "proof",
+      "snapshotFile": "hook-response.proof.json",
+      "patternFile": "hook-response.pattern.json",
+      "sha256": "b8c7f145ecbba80ed1fbed69dd210af36d560356a0a7472950cbba8d3ecff98b"
+    },
+    {
+      "file": "hook-final.wav",
+      "folder": "bass",
+      "app": "proof",
+      "snapshotFile": "hook-final.proof.json",
+      "patternFile": "hook-final.pattern.json",
+      "sha256": "990217ef57810f9d915699e7ed55b64a6120007e207357257e5f135d8bd0c283"
+    },
+    {
+      "file": "reduce-piston.wav",
+      "folder": "textures",
+      "app": "mire",
+      "snapshotFile": "reduce-piston.mire.json",
+      "patternFile": null,
+      "sha256": "de744fe8f07927c3b6f80f4d93f7a3c0d61c3e4e38d5c7909add06d9ed2373ff"
+    },
+    {
+      "file": "reduce-clamp.wav",
+      "folder": "textures",
+      "app": "mire",
+      "snapshotFile": "reduce-clamp.mire.json",
+      "patternFile": null,
+      "sha256": "3caf2cbf010747eb9044fcd2b93719b855edf25cd333abdaf43d677073af4a0a"
+    },
+    {
+      "file": "reduce-last-call.wav",
+      "folder": "textures",
+      "app": "mire",
+      "snapshotFile": "reduce-last-call.mire.json",
+      "patternFile": null,
+      "sha256": "b19cc2f0cf39e24e8dca8e66f787d7003e666665f5daa4c78bc7da9d5428052c"
+    },
+    {
+      "file": "marinade-mouth.wav",
+      "folder": "textures",
+      "app": "marinade",
+      "snapshotFile": "marinade-mouth.marinade.json",
+      "patternFile": null,
+      "sha256": "eda5db2f08d260e7f91ffc77f02c750eed7b8c71325c9a0ecefcac459d4ce0ca"
+    },
+    {
+      "file": "marinade-ghost.wav",
+      "folder": "textures",
+      "app": "marinade",
+      "snapshotFile": "marinade-ghost.marinade.json",
+      "patternFile": null,
+      "sha256": "4eff76b0e075bdcb19312e7a48fbf539381edbb3593082444e8f1667703869a6"
+    },
+    {
+      "file": "steam-room.wav",
+      "folder": "textures",
+      "app": "haze",
+      "snapshotFile": "steam-room.haze.json",
+      "patternFile": null,
+      "sha256": "c1b176682941137d4dcfd01e29b78498488c8245394afe660e84ced7f6290a33"
+    },
+    {
+      "file": "steam-pressure.wav",
+      "folder": "textures",
+      "app": "haze",
+      "snapshotFile": "steam-pressure.haze.json",
+      "patternFile": null,
+      "sha256": "f7ea8cf6a470bccf4f9970d1c34d522c1c7222cf9df200491e8b8e56b889e359"
+    },
+    {
+      "file": "rotisserie-intake.wav",
+      "folder": "textures",
+      "app": "spool",
+      "snapshotFile": "rotisserie-intake.spool.json",
+      "patternFile": null,
+      "sha256": "8dac5bdf411ef7decffaa5c1402d6e4f564deba9b95ba51144c2ccea908625f0"
+    }
+  ],
+  "sampleRate": 48000,
+  "channels": 2,
+  "bits": 16,
+  "frames": 8694340,
+  "peak": 0.913482666015625,
+  "rmsLeft": 0.0905298355024026,
+  "rmsRight": 0.08851485186059221,
+  "masterGain": 0.8127832898172325,
+  "previews": [
+    {
+      "name": "verse",
+      "start": 24,
+      "end": 40,
+      "peak": 0.33966064453125,
+      "rmsLeft": 0.03936817227561637,
+      "rmsRight": 0.039045988635506346,
+      "frames": 869434
+    },
+    {
+      "name": "first-pressure",
+      "start": 48,
+      "end": 64,
+      "peak": 0.409088134765625,
+      "rmsLeft": 0.05170249611463437,
+      "rmsRight": 0.0509841280481088,
+      "frames": 869434
+    },
+    {
+      "name": "pressure-loss",
+      "start": 80,
+      "end": 96,
+      "peak": 0.19091796875,
+      "rmsLeft": 0.02092922769048195,
+      "rmsRight": 0.019620149824143018,
+      "frames": 869434
+    },
+    {
+      "name": "hard-service",
+      "start": 128,
+      "end": 144,
+      "peak": 0.400970458984375,
+      "rmsLeft": 0.060993063494042855,
+      "rmsRight": 0.058814327341743355,
+      "frames": 869434
+    },
+    {
+      "name": "power-down",
+      "start": 152,
+      "end": 160,
+      "peak": 0.215911865234375,
+      "rmsLeft": 0.013686509136181944,
+      "rmsRight": 0.013691943224285194,
+      "frames": 434717
+    }
+  ],
+  "browserErrors": [],
+  "render": "Current GALLEY 1.11.1 native Export WAV button, session range, no appended tail; original Kitchen synthesis, no third-party audio. Project saved through native Save project button.",
+  "wavSha256": "09c5779b9530a4d6c0322eb73bb77b338e48b86ed334fa2b4642b464438bc791",
+  "projectSha256": "d26ac00008eabcf78d45dfc12ff1b1acfc3782b6de3b1de9425b2df511777ed7",
+  "quality": {
+    "noNonfiniteSamples": true,
+    "noClippedSamples": true,
+    "last10msSilent": true,
+    "firstSampleBelow005": true,
+    "dcLeft": 1.2963384092139973e-05,
+    "dcRight": 1.314505731961828e-05,
+    "correlation": 0.9898727921901074,
+    "rmsLeft": 0.0905298355024026,
+    "rmsRight": 0.08851485186059221,
+    "waveformBins": 320,
+    "waveformDerivedFromFinalWav": true
+  }
+}
