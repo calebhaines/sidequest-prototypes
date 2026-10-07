@@ -12,7 +12,7 @@ Editable React/Vite sources are in [`voxelbloom/`](voxelbloom/). Install its dep
 
 ## Second Pour
 
-[**Play Second Pour**](https://calebhaines.github.io/sidequest-prototypes/second-pour/) to work a cozy neighborhood coffee shop. Practice making drinks, then take on three-minute shifts with an espresso machine, milk station, kettle, and oven. Match each customer's recipe, warm their food, and chat with the regulars to earn tips. Later days add new drinks and continue their stories; your best shifts are saved in the browser.
+[**Play Second Pour**](https://calebhaines.github.io/sidequest-prototypes/second-pour/) from behind the bar of a softly illustrated neighborhood café. Every visible display and control is drawn inside the game canvas, including orders, recipes, conversations, machines, and shift results. Practice making drinks, then take on three-minute shifts with an espresso machine, milk station, kettle, and oven. Match each customer's recipe, warm their food, and chat with the regulars to earn tips. Later days add new drinks and continue their stories; your best shifts are saved in the browser. Touch controls and keyboard navigation are supported.
 
 Editable React/Vite sources are in [`second-pour/`](second-pour/). Install its dependencies with `npm --prefix second-pour ci`, then run `npm run second-pour:build` from the repository root to rebuild and refresh both `public/second-pour/` and the published `docs/second-pour/`. Run this command after editing the game so the parent site's regular build includes the latest version.
 
