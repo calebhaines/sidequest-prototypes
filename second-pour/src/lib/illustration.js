@@ -1345,6 +1345,115 @@ export function drawMachine(
   ctx.restore();
 }
 
+export function drawMachineControl(
+  ctx,
+  station,
+  rect,
+  { progress = 0, working = false, ready = false, selected = false } = {},
+) {
+  if (!space(ctx, rect, 48, 48)) return;
+  const p = Math.max(0, Math.min(1, progress));
+  const colors = {
+    espresso: ["#aac5ac", "#638673", "#5a7866"],
+    milk: ["#c6dbce", "#7c9e8d", "#668773"],
+    kettle: ["#e8c299", "#bb916d", "#9c7757"],
+    oven: ["#efb9a4", "#be8774", "#a87865"],
+  };
+  const [shell, rim, detail] = colors[station];
+  const light = ready ? "#ffdf8d" : working || p > 0.5 ? "#b8d99d" : "#c5bea1";
+  // A little raised control deck is attached to the machine's upper face.
+  round(ctx, 1.5, 3, 45, 43, 12, shell, rim, 1.5);
+  round(ctx, 4.5, 5, 39, 36, 9, "#fff5dc55");
+  if (selected) {
+    ctx.save();
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#e6edb1";
+    round(ctx, 1.5, 3, 45, 43, 12, null, "#8aa77b", 2.2);
+    ctx.restore();
+  }
+  oval(ctx, 39, 9, 2.8, 2.8, light, detail, 0.8);
+  if (station === "espresso") {
+    round(ctx, 20, 7, 8, 25, 4, "#6e887455", detail, 1);
+    line(ctx, 24, 10, 24, 29, "#f3edcf", 2.5);
+    const handleY = 12 + p * 15;
+    shadow(ctx, 24, handleY + 4, 11, 3, 0.15);
+    line(ctx, 13, handleY, 35, handleY, "#6f7e61", 6);
+    line(ctx, 14, handleY - 1.3, 34, handleY - 1.3, "#fff0c7", 4);
+    oval(ctx, 24, handleY, 4, 4, "#f2ccaa", "#aa9b72", 1);
+    // The chevron points in the same direction as the pull gesture.
+    line(ctx, 8, 20, 11, 24, detail, 1.3);
+    line(ctx, 11, 24, 14, 20, detail, 1.3);
+  } else if (station === "milk" || station === "oven") {
+    const cx = 23,
+      cy = 21;
+    path(
+      ctx,
+      (c) => c.arc(cx, cy, 17, Math.PI * 0.8, Math.PI * 2.25),
+      null,
+      "#fff4d9",
+      2,
+    );
+    path(
+      ctx,
+      (c) =>
+        c.arc(
+          cx,
+          cy,
+          17,
+          Math.PI * 0.8,
+          Math.PI * (0.8 + 1.45 * Math.max(0.04, p)),
+        ),
+      null,
+      ready ? "#f4ca70" : "#8ba87b",
+      2.3,
+    );
+    [
+      Math.PI * 0.8,
+      Math.PI * 1.15,
+      Math.PI * 1.55,
+      Math.PI * 1.9,
+      Math.PI * 2.25,
+    ].forEach((a) => {
+      line(
+        ctx,
+        cx + Math.cos(a) * 17,
+        cy + Math.sin(a) * 17,
+        cx + Math.cos(a) * 19,
+        cy + Math.sin(a) * 19,
+        detail,
+        1.1,
+      );
+    });
+    shadow(ctx, cx + 1, cy + 3, 13, 12, 0.12);
+    oval(ctx, cx, cy, 12.5, 12.5, "#f9efd4", rim, 1.6);
+    oval(ctx, cx - 1, cy - 1, 9, 9, "#fff9e5");
+    const angle = Math.PI * (1.2 + p * 0.5);
+    line(
+      ctx,
+      cx + Math.cos(angle) * 3,
+      cy + Math.sin(angle) * 3,
+      cx + Math.cos(angle) * 9,
+      cy + Math.sin(angle) * 9,
+      detail,
+      2.6,
+    );
+    oval(ctx, cx, cy, 2, 2, shell);
+  } else {
+    round(ctx, 13, 8, 22, 26, 10, detail, rim, 1);
+    round(ctx, 15, 9 + p * 10, 18, 14, 7, "#ffefd0", "#c1a17b", 1.2);
+    const sy = 15.5 + p * 10;
+    path(
+      ctx,
+      (c) => c.arc(24, sy, 3.3, -Math.PI * 0.3, Math.PI * 1.3),
+      null,
+      detail,
+      1.2,
+    );
+    line(ctx, 24, sy - 4, 24, sy - 0.8, detail, 1.2);
+  }
+  ctx.restore();
+}
+
 export function drawDrink(
   ctx,
   drink = {},

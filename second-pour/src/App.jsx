@@ -14,6 +14,10 @@ import {
 import { customers, foods, recipes } from "./lib/data.js";
 import { drawGame } from "./lib/canvas-game.js";
 import { planDrop } from "./lib/drag-rules.js";
+import {
+  machineDragProgress,
+  machineDragCommitted,
+} from "./lib/machine-controls.js";
 
 const BEST_KEY = "second-pour-best";
 const initialUI = {
@@ -71,6 +75,20 @@ function dropAt(canvas, point) {
     .reverse()
     .find((zone) => inside(point, zone));
 }
+function controlAt(canvas, point) {
+  return [...(canvas.__machineControls || [])]
+    .reverse()
+    .find((control) => inside(point, control));
+}
+function viewportChanged(canvas, gesture) {
+  const rect = canvas.getBoundingClientRect();
+  return (
+    gesture.viewport.width !== window.innerWidth ||
+    gesture.viewport.height !== window.innerHeight ||
+    Math.abs(gesture.viewport.canvasWidth - rect.width) > 1 ||
+    Math.abs(gesture.viewport.canvasHeight - rect.height) > 1
+  );
+}
 const center = (box) =>
   box ? { x: box.x + box.w / 2, y: box.y + box.h / 2 } : null;
 
@@ -91,7 +109,13 @@ export default function App() {
     resumeRef = useRef(false),
     dragRef = useRef(null),
     carryRef = useRef(null),
-    motionRef = useRef({ feedback: null, pour: null, snap: null }),
+    machineGestureRef = useRef(null),
+    motionRef = useRef({
+      feedback: null,
+      pour: null,
+      snap: null,
+      machinePulse: null,
+    }),
     lifecycleRef = useRef({
       phase: state.phase,
       day: state.day,
@@ -115,6 +139,12 @@ export default function App() {
     (message = null) => {
       const carry = carryRef.current;
       const pointerId = dragRef.current?.pointerId;
+      if (machineGestureRef.current && message)
+        feedback(
+          "Control released.",
+          "success",
+          center(dragRef.current?.control),
+        );
       if (carry) {
         const source = canvasRef.current?.__draggables?.find(
           (item) => item.id === carry.id,
@@ -131,6 +161,7 @@ export default function App() {
         if (message) feedback(message, "error", carry.origin);
       }
       carryRef.current = null;
+      machineGestureRef.current = null;
       dragRef.current = null;
       const canvas = canvasRef.current;
       if (canvas) {
@@ -365,7 +396,13 @@ export default function App() {
   }, []);
   const activate = useCallback(
     (target) => {
-      if (!target || target.disabled || carryRef.current) return;
+      if (
+        !target ||
+        target.disabled ||
+        carryRef.current ||
+        machineGestureRef.current
+      )
+        return;
       focusRef.current = target.id;
       setAnnouncement(target.label);
       const action = target.action;
@@ -410,6 +447,22 @@ export default function App() {
           current = stateRef.current,
           mode = uiRef.current,
           job = current.jobs[station];
+        if (
+          !["practice", "playing"].includes(current.phase) ||
+          (job && !job.ready)
+        ) {
+          feedback(
+            "This machine is still working. Give it a moment.",
+            "error",
+            center(target),
+          );
+          return;
+        }
+        motionRef.current.machinePulse = {
+          station,
+          startedAt: performance.now(),
+          duration: 650,
+        };
         if (job?.ready) dispatch({ type: "COLLECT_JOB", station });
         else if (station === "milk" && mode.milkMode === "cold")
           dispatch({ type: "ADD_INGREDIENT", ingredient: "coldMilk" });
@@ -524,7 +577,7 @@ export default function App() {
         }
         const ctx = canvas.getContext("2d");
         const now = performance.now();
-        for (const key of ["snap", "pour"]) {
+        for (const key of ["snap", "pour", "machinePulse"]) {
           const motion = motionRef.current[key];
           if (motion && now > motion.startedAt + motion.duration)
             motionRef.current[key] = null;
@@ -540,6 +593,7 @@ export default function App() {
             ...uiRef.current,
             ...motionRef.current,
             drag: carryRef.current,
+            machineGesture: machineGestureRef.current,
             hoverId: hoverRef.current,
             focusId: focusRef.current,
           },
@@ -562,6 +616,7 @@ export default function App() {
         canvas.__targets = view.targets;
         canvas.__draggables = view.draggables || [];
         canvas.__dropZones = view.dropZones || [];
+        canvas.__machineControls = view.machineControls || [];
         canvas.__view = { width: W, height: H, ...view };
         canvas.dataset.phase = stateRef.current.phase;
         canvas.dataset.day = stateRef.current.day;
@@ -574,6 +629,9 @@ export default function App() {
         canvas.dataset.jobs = JSON.stringify(stateRef.current.jobs);
         canvas.dataset.cupDock = uiRef.current.cupDock || "";
         canvas.dataset.drag = carryRef.current?.kind || "";
+        canvas.dataset.machineGesture = JSON.stringify(
+          machineGestureRef.current,
+        );
         canvas.dataset.ovenReady = String(!!stateRef.current.jobs.oven?.ready);
         canvas.dataset.ready = view.targets
           .find((t) => t.id === "serve")
@@ -682,7 +740,8 @@ export default function App() {
       return;
     canvas.focus({ preventScroll: true });
     const point = locationInCanvas(canvas, e);
-    const source = itemAt(canvas, point);
+    const control = controlAt(canvas, point);
+    const source = control ? null : itemAt(canvas, point);
     dragRef.current = {
       pointerId: e.pointerId,
       x: e.clientX,
@@ -692,6 +751,14 @@ export default function App() {
       lastY: e.clientY,
       scroll: uiRef.current.overlayScroll,
       moved: false,
+      control,
+      startPoint: point,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        canvasWidth: canvas.getBoundingClientRect().width,
+        canvasHeight: canvas.getBoundingClientRect().height,
+      },
       source: source
         ? {
             ...source,
@@ -700,10 +767,21 @@ export default function App() {
           }
         : null,
       origin: center(source),
-      blocked: !!source?.disabled,
+      blocked: !!(source?.disabled || control?.disabled),
     };
-    if (source?.disabled)
-      feedback("Let this pour finish first.", "error", point);
+    if (control && !control.disabled) {
+      machineGestureRef.current = { station: control.station, progress: 0 };
+      focusRef.current = control.id;
+      setAnnouncement(control.label);
+    }
+    if (source?.disabled || control?.disabled)
+      feedback(
+        control
+          ? "This machine is working. Give it a moment."
+          : "Let this pour finish first.",
+        "error",
+        point,
+      );
     canvas.setPointerCapture(e.pointerId);
   };
   const pointerMove = (e) => {
@@ -711,6 +789,10 @@ export default function App() {
     if (!canvas.__view) return;
     const drag = dragRef.current;
     if (drag && drag.pointerId !== e.pointerId) return;
+    if (drag && viewportChanged(canvas, drag)) {
+      cancelGesture();
+      return;
+    }
     if (drag) {
       drag.clientX = e.clientX;
       drag.clientY = e.clientY;
@@ -721,6 +803,17 @@ export default function App() {
       : 0;
     if (drag?.blocked) {
       if (distance > 6) drag.moved = true;
+      return;
+    }
+    if (drag?.control) {
+      if (distance > (e.pointerType === "touch" ? 8 : 6) || drag.moved) {
+        drag.moved = true;
+        machineGestureRef.current = {
+          station: drag.control.station,
+          progress: machineDragProgress(drag.control, drag.startPoint, point),
+        };
+        canvas.style.cursor = "grabbing";
+      }
       return;
     }
     if (
@@ -781,22 +874,51 @@ export default function App() {
       return;
     }
     const target = hitAt(canvas, point),
-      item = itemAt(canvas, point);
+      item = itemAt(canvas, point),
+      control = controlAt(canvas, point);
     hoverRef.current = target?.id || null;
     canvas.style.cursor =
-      item && !item.disabled ? "grab" : target ? "pointer" : "default";
+      (control && !control.disabled) || (item && !item.disabled)
+        ? "grab"
+        : target
+          ? "pointer"
+          : "default";
   };
   const pointerUp = (e) => {
     const canvas = canvasRef.current;
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
+    if (viewportChanged(canvas, drag)) {
+      cancelGesture();
+      return;
+    }
     const carry = carryRef.current;
+    const machineGesture = machineGestureRef.current;
     const point = locationInCanvas(canvas, e);
     carryRef.current = null;
+    machineGestureRef.current = null;
     dragRef.current = null;
     if (canvas.hasPointerCapture(e.pointerId))
       canvas.releasePointerCapture(e.pointerId);
     canvas.style.cursor = "default";
+    if (drag.control) {
+      if (drag.blocked) return;
+      if (!drag.moved || machineDragCommitted(machineGesture?.progress)) {
+        activate(
+          canvas.__machineControls.find(
+            (control) => control.id === drag.control.id,
+          ) || drag.control,
+        );
+      } else
+        feedback(
+          drag.control.kind === "dial"
+            ? "Turn clockwise or drag upward, then release."
+            : "Pull down, then release to start.",
+          "success",
+          center(drag.control),
+        );
+      return;
+    }
     if (carry) {
       applyDrop(carry, dropAt(canvas, point), point);
       return;

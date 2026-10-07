@@ -38,19 +38,24 @@ function text(
   y,
   size = 14,
   color = C.ink,
-  weight = 500,
+  weight = 600,
   align = "left",
-  serif = false,
+  playful = false,
+  maxWidth = null,
 ) {
-  ctx.font = `${weight} ${size}px ${serif ? "Fraunces" : '"DM Sans"'}, sans-serif`;
+  ctx.font = `${weight} ${size}px "${playful ? "DynaPuff" : "Nunito"}", sans-serif`;
+  if (maxWidth && ctx.measureText(String(value)).width > maxWidth) {
+    const fittedSize = (size * maxWidth) / ctx.measureText(String(value)).width;
+    ctx.font = `${weight} ${fittedSize}px "${playful ? "DynaPuff" : "Nunito"}", sans-serif`;
+  }
   ctx.textAlign = align;
   ctx.textBaseline = "top";
   ctx.fillStyle = color;
   ctx.fillText(String(value), x, y);
 }
 
-function lines(ctx, value, maxWidth, size = 14, weight = 500, serif = false) {
-  ctx.font = `${weight} ${size}px ${serif ? "Fraunces" : '"DM Sans"'}, sans-serif`;
+function lines(ctx, value, maxWidth, size = 14, weight = 600, playful = false) {
+  ctx.font = `${weight} ${size}px "${playful ? "DynaPuff" : "Nunito"}", sans-serif`;
   const output = [];
   for (const paragraph of String(value || "").split("\n")) {
     if (!paragraph) {
@@ -78,7 +83,7 @@ function paragraph(
   maxWidth,
   size = 14,
   color = C.muted,
-  weight = 500,
+  weight = 600,
   leading = 1.5,
   align = "left",
 ) {
@@ -254,6 +259,8 @@ function button(
     disabled ? "#999085" : primary ? C.white : C.ink,
     700,
     "center",
+    false,
+    w - 24,
   );
   const targetH = Math.max(44, h);
   addTarget({
@@ -385,6 +392,7 @@ function recipeBook(ctx, state, ui, options, addTarget) {
     550,
     "left",
     true,
+    p.w - pad * 2,
   );
   const descH = paragraph(
     ctx,
@@ -474,6 +482,7 @@ function recipeBook(ctx, state, ui, options, addTarget) {
             550,
             "left",
             true,
+            cardW - 90,
           );
           text(
             ctx,
@@ -603,10 +612,10 @@ const HELP_STEPS = [
   ],
   [
     "Start a little magic",
-    "Drag your cup to a drink machine. It fills when the machine finishes. Move it between stations to build the recipe.",
+    "Pull, turn, or press a machine’s control to start it. Drag your cup to a machine for automatic filling, then move it between stations.",
   ],
   [
-    "Settings and something warm",
+    "Settings & warm treats",
     "Choose milk, foam, or cold milk; water or tea. Drag food from the pastry rack into the warmer, then move warm food to the tray.",
   ],
   [
@@ -643,6 +652,7 @@ function help(ctx, state, ui, options, addTarget) {
     550,
     "left",
     true,
+    p.w - pad * 2,
   );
   paragraph(
     ctx,
@@ -675,7 +685,18 @@ function help(ctx, state, ui, options, addTarget) {
       ctx.fillStyle = [C.sage, C.peach, "#ece4c7", "#dbe6e2", "#f4d8c4"][i];
       ctx.fill();
       text(ctx, i + 1, rect.x + 15, y + 7, 14, C.ink, 700, "center");
-      text(ctx, title, rect.x + 43, y + 2, 16, C.ink, 550, "left", true);
+      text(
+        ctx,
+        title,
+        rect.x + 43,
+        y + 2,
+        16,
+        C.ink,
+        550,
+        "left",
+        true,
+        rect.w - 55,
+      );
       paragraph(
         ctx,
         desc,
@@ -800,6 +821,7 @@ function chat(ctx, state, ui, options, addTarget) {
     550,
     "left",
     true,
+    p.w - pad * 2 - 80,
   );
   paragraph(
     ctx,
@@ -975,6 +997,7 @@ function pause(ctx, state, ui, options, addTarget) {
     550,
     "center",
     true,
+    p.w - 58,
   );
   paragraph(
     ctx,

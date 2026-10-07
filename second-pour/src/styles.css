@@ -1,19 +1,19 @@
 @font-face {
-  font-family: "DM Sans";
+  font-family: "Nunito";
   font-style: normal;
-  font-weight: 100 1000;
+  font-weight: 400 900;
   font-display: swap;
-  src: url("/fonts/dm-sans.woff2") format("woff2");
+  src: url("/fonts/nunito.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Fraunces";
+  font-family: "DynaPuff";
   font-style: normal;
-  font-weight: 400 750;
+  font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/fraunces.woff2") format("woff2");
+  src: url("/fonts/dynapuff.woff2") format("woff2");
 }
 :root {
-  font-family: "DM Sans", sans-serif;
+  font-family: "Nunito", sans-serif;
   background: #f9eddb;
   color: #4b5148;
   font-synthesis: none;

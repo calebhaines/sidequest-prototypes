@@ -10,6 +10,7 @@ import {
   drawCounter,
   drawCustomer,
   drawMachine,
+  drawMachineControl,
   drawDrink,
   drawFood,
 } from "./illustration.js";
@@ -61,9 +62,9 @@ function hud(ctx, state, ui, W, compact, targets) {
   round(ctx, compact ? 14 : 25, compact ? 14 : 17, 42, 42, 15, "#e5edd9");
   icon(ctx, "coffee", compact ? 23 : 34, compact ? 23 : 26, 24, "#63846b");
   label(ctx, "Second Pour", compact ? 66 : 79, compact ? 29 : 32, {
-    font: "Fraunces",
+    font: "DynaPuff",
     size: compact ? (W < 360 ? 20 : 23) : 28,
-    weight: 600,
+    weight: 400,
     maxWidth: compact ? W - 222 : undefined,
   });
   label(
@@ -156,7 +157,7 @@ function hud(ctx, state, ui, W, compact, targets) {
     icon(ctx, "clock", x, rowY - 8, 16, C.green);
     label(ctx, clock(state.timeLeft), x + 22, rowY, {
       size: compact ? 18 : 24,
-      font: "Fraunces",
+      font: "DynaPuff",
       color: state.timeLeft < 30 ? "#ad6d53" : C.ink,
     });
     button(ctx, targets, ui, {
@@ -199,7 +200,7 @@ function orderBubble(ctx, state, customer, box, selected, targets) {
   ctx.fill();
   const small = w < 140;
   label(ctx, profile.name, x + 12, y + 15, {
-    font: "Fraunces",
+    font: "DynaPuff",
     size: small ? 14 : 17,
   });
   if (customer.chatted) icon(ctx, "heart", x + w - 28, y + 9, 12, "#c18d7b");
@@ -255,7 +256,7 @@ function guests(
       W / 2,
       counterY - 90,
       {
-        font: "Fraunces",
+        font: "DynaPuff",
         size: compact ? 17 : 27,
         color: "#7b896c",
         align: "center",
@@ -389,7 +390,7 @@ function notebook(ctx, state, W, compact, counterY) {
     x + 23,
     y + 18,
     {
-      font: "Fraunces",
+      font: "DynaPuff",
       size: compact ? 16 : 20,
       color: "#627652",
       maxWidth: w - 60,
@@ -489,7 +490,9 @@ function machine(
     ? { x: x - 3, y: y + 14, w: 83, h: 92 }
     : { x: x + 4, y: y + 2, w: w - 8, h: 175 };
   const hovered =
-    ui.hoverId === `machine-${station}` || ui.hoverId === `station-${station}`;
+    ui.hoverId === `machine-${station}` ||
+    ui.hoverId === `station-${station}` ||
+    ui.hoverId === `control-${station}`;
   drawMachine(ctx, station, art, {
     job,
     time,
@@ -574,6 +577,74 @@ function machine(
     action: { type: "station", value: station },
     disabled: !active || !!running,
   });
+  const controlSize = compact ? 44 : 52;
+  const control = {
+    id: `control-${station}`,
+    station,
+    kind:
+      station === "espresso"
+        ? "lever"
+        : station === "kettle"
+          ? "switch"
+          : "dial",
+    x: compact
+      ? art.x + (station === "espresso" ? 20 : station === "milk" ? 38 : 31)
+      : art.x +
+        art.w * (station === "espresso" ? 0.62 : 0.71) -
+        controlSize / 2,
+    y: art.y + (compact ? -11 : 17),
+    w: controlSize,
+    h: controlSize,
+    disabled: !active || !!running,
+    action: { type: "station", value: station },
+  };
+  const gesture = ui.machineGesture?.station === station;
+  const pulse =
+    ui.machinePulse?.station === station &&
+    performance.now() - ui.machinePulse.startedAt <
+      (ui.machinePulse.duration || 500);
+  const progress = gesture
+    ? ui.machineGesture.progress
+    : running || job?.ready || pulse
+      ? 1
+      : 0;
+  drawMachineControl(ctx, station, control, {
+    progress,
+    working: !!running,
+    ready: !!job?.ready,
+    selected:
+      gesture ||
+      pulse ||
+      ui.hoverId === control.id ||
+      ui.focusId === control.id,
+  });
+  const controlHint = running
+    ? "ON"
+    : job?.ready
+      ? "Take"
+      : station === "espresso"
+        ? "Pull"
+        : station === "kettle"
+          ? "Press"
+          : "Turn";
+  label(
+    ctx,
+    controlHint,
+    control.x + control.w / 2,
+    control.y + control.h * 0.84,
+    {
+      font: "Nunito",
+      size: compact ? 7 : 8.5,
+      weight: 800,
+      align: "center",
+      color: station === "oven" ? "#946d59" : "#687f61",
+    },
+  );
+  control.label = job?.ready
+    ? `Collect from ${stations[station]}. Click or ${control.kind === "dial" ? "turn the dial" : "pull the control"}`
+    : `${stations[station]} ${control.kind}. Click or ${control.kind === "dial" ? "turn clockwise" : "pull down"} to start`;
+  interaction.machineControls.push(control);
+  targets.push(control);
   const bx = compact ? x + 82 : x + 8,
     bw = compact ? w - 82 : w - 16;
   label(
@@ -582,7 +653,7 @@ function machine(
     compact ? bx : x + w / 2,
     y + (compact ? 8 : 180),
     {
-      font: "Fraunces",
+      font: "DynaPuff",
       size: compact ? 13 : 16,
       align: compact ? "left" : "center",
       color: "#5e684e",
@@ -1338,7 +1409,7 @@ function tipJar(ctx, state, W, H) {
   round(ctx, x + 23, y, 94, 19, 8, "#c7c9a3", "#afa778");
   round(ctx, x + 37, y + 43, 66, 42, 7, "#fff9e6", "#dfd1a6");
   label(ctx, "little joys", x + 70, y + 52, {
-    font: "Fraunces",
+    font: "DynaPuff",
     size: 12,
     align: "center",
     color: "#898355",
@@ -1368,7 +1439,7 @@ function notice(ctx, state, ui, W, compact, targets) {
   const w = Math.min(W - 28, 650),
     x = (W - w) / 2,
     y = compact ? 105 : 83;
-  ctx.font = '500 11px "DM Sans",sans-serif';
+  ctx.font = '500 11px "Nunito",sans-serif';
   let count = Math.ceil(ctx.measureText(state.notice.text).width / (w - 74));
   const h = Math.max(44, Math.min(80, count * 17 + 18));
   ctx.save();
@@ -1427,6 +1498,7 @@ export function drawGame(
     interaction = {
       draggables: [],
       dropZones: [],
+      machineControls: [],
       objects: {},
       stationArt: {},
       trayCup: null,
@@ -1538,6 +1610,7 @@ export function drawGame(
     targets.length = 0;
     interaction.draggables.length = 0;
     interaction.dropZones.length = 0;
+    interaction.machineControls.length = 0;
     const vy = viewport?.y || 0,
       vh = viewport?.height || H;
     ctx.save();
@@ -1562,6 +1635,7 @@ export function drawGame(
     compact,
     draggables: interaction.draggables,
     dropZones: interaction.dropZones,
+    machineControls: interaction.machineControls,
     objects: interaction.objects,
   };
 }

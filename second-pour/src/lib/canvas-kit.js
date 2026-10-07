@@ -30,8 +30,8 @@ export function label(
   {
     size = 13,
     color = palette.ink,
-    font = "DM Sans",
-    weight = 500,
+    font = "Nunito",
+    weight = font === "DynaPuff" ? 400 : 600,
     align = "left",
     baseline = "middle",
     maxWidth,
@@ -58,7 +58,8 @@ export function wrap(
     ...options
   } = {},
 ) {
-  ctx.font = `${options.weight || 400} ${size}px "${options.font || "DM Sans"}",sans-serif`;
+  const font = options.font || "Nunito";
+  ctx.font = `${options.weight || (font === "DynaPuff" ? 400 : 600)} ${size}px "${font}",sans-serif`;
   const lines = [];
   for (const paragraph of String(text).split("\n")) {
     let line = "";
@@ -71,16 +72,14 @@ export function wrap(
     }
     lines.push(line);
   }
-  lines
-    .slice(0, maxLines)
-    .forEach((line, i) =>
-      label(ctx, line, x, y + i * lineHeight, {
-        size,
-        color,
-        ...options,
-        baseline: "top",
-      }),
-    );
+  lines.slice(0, maxLines).forEach((line, i) =>
+    label(ctx, line, x, y + i * lineHeight, {
+      size,
+      color,
+      ...options,
+      baseline: "top",
+    }),
+  );
   return Math.min(lines.length, maxLines) * lineHeight;
 }
 export function shadow(ctx, blur = 12, color = "#7d715322", y = 5) {
