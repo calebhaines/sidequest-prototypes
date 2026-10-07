@@ -612,11 +612,11 @@ const HELP_STEPS = [
   ],
   [
     "Start a little magic",
-    "Pull, turn, or press a machine’s control to start it. Drag your cup to a machine for automatic filling, then move it between stations.",
+    "Click, pull, or turn a machine control. On phones, tap your cup and then a machine, or drag it there, to fill it automatically.",
   ],
   [
     "Settings & warm treats",
-    "Choose milk, foam, or cold milk; water or tea. Drag food from the pastry rack into the warmer, then move warm food to the tray.",
+    "Use the phone tabs to change stations. Choose milk, foam, or water and tea. Tap food, then the warmer; tap warmed food to collect. Dragging works too.",
   ],
   [
     "Make it just right",
@@ -624,7 +624,7 @@ const HELP_STEPS = [
   ],
   [
     "Make their morning",
-    "Drag a finished cup or tray food to a guest to serve the whole order. Practice is instant; open for a 3-minute shift and serve 6 guests.",
+    "Tap Serve when the order is complete, or move a finished cup or tray food to your guest. Practice is instant; open for a 3-minute shift and serve 6 guests.",
   ],
 ];
 

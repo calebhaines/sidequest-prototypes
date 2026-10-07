@@ -16,6 +16,8 @@ Editable React/Vite sources are in [`voxelbloom/`](voxelbloom/). Install its dep
 
 Editable React/Vite sources are in [`second-pour/`](second-pour/). Install its dependencies with `npm --prefix second-pour ci`, then run `npm run second-pour:build` from the repository root to rebuild and refresh both `public/second-pour/` and the published `docs/second-pour/`. Run this command after editing the game so the parent site's regular build includes the latest version.
 
+On phones and smaller screens, station tabs show one roomy machine at a time while the order, cup, food tray, and Serve button stay visible. Tap a cup or pastry and then its destination, or drag it; tap warmed food to collect. Touch taps tolerate small finger movements, and the drag preview stays above your finger.
+
 ## Kitchen
 
 [**Listen to The Cupboard at Low Tide**](https://calebhaines.github.io/sidequest-prototypes/music/listen/), a two-minute arrangement made in GALLEY, or [download its original stereo WAV](music/listen/The-Cupboard-at-Low-Tide.wav).

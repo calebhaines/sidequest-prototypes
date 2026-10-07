@@ -29,6 +29,8 @@ const initialUI = {
   ovenFood: "croissant",
   sound: true,
   cupDock: null,
+  mobileStation: "espresso",
+  mobileExtras: false,
 };
 function best() {
   try {
@@ -70,10 +72,21 @@ function itemAt(canvas, point) {
     .reverse()
     .find((item) => inside(point, item));
 }
-function dropAt(canvas, point) {
-  return [...(canvas.__dropZones || [])]
-    .reverse()
-    .find((zone) => inside(point, zone));
+function dropAt(canvas, point, carried = null) {
+  const zones = [...(canvas.__dropZones || [])].reverse();
+  const direct = zones.find((zone) => inside(point, zone));
+  if (direct || carried?.pointerType !== "touch") return direct;
+  return zones
+    .filter((zone) => zone.accepts?.includes(carried.kind))
+    .map((zone) => ({
+      zone,
+      distance: Math.hypot(
+        Math.max(zone.x - point.x, 0, point.x - zone.x - zone.w),
+        Math.max(zone.y - point.y, 0, point.y - zone.y - zone.h),
+      ),
+    }))
+    .filter((candidate) => candidate.distance <= 18)
+    .sort((a, b) => a.distance - b.distance)[0]?.zone;
 }
 function controlAt(canvas, point) {
   return [...(canvas.__machineControls || [])]
@@ -84,15 +97,18 @@ function viewportChanged(canvas, gesture) {
   const rect = canvas.getBoundingClientRect();
   return (
     gesture.viewport.width !== window.innerWidth ||
-    gesture.viewport.height !== window.innerHeight ||
-    Math.abs(gesture.viewport.canvasWidth - rect.width) > 1 ||
-    Math.abs(gesture.viewport.canvasHeight - rect.height) > 1
+    Math.abs(gesture.viewport.canvasWidth - rect.width) > 1
   );
 }
 const center = (box) =>
   box ? { x: box.x + box.w / 2, y: box.y + box.h / 2 } : null;
 
 export default function App() {
+  const [touchScreen] = useState(
+    () =>
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia("(pointer: coarse)").matches,
+  );
   const [state, dispatch] = useReducer(gameReducer, undefined, () =>
     createInitialState(best()),
   );
@@ -109,6 +125,7 @@ export default function App() {
     resumeRef = useRef(false),
     dragRef = useRef(null),
     carryRef = useRef(null),
+    pickedRef = useRef(null),
     machineGestureRef = useRef(null),
     motionRef = useRef({
       feedback: null,
@@ -153,7 +170,10 @@ export default function App() {
           kind: carry.kind,
           foodId: carry.foodId,
           drink: carry.drink,
-          from: { x: carry.x, y: carry.y },
+          from: {
+            x: carry.x,
+            y: carry.y - (carry.pointerType === "touch" ? 48 : 0),
+          },
           to: center(source) || carry.origin,
           startedAt: performance.now(),
           duration: 260,
@@ -161,6 +181,7 @@ export default function App() {
         if (message) feedback(message, "error", carry.origin);
       }
       carryRef.current = null;
+      pickedRef.current = null;
       machineGestureRef.current = null;
       dragRef.current = null;
       const canvas = canvasRef.current;
@@ -217,7 +238,12 @@ export default function App() {
       const source = canvas?.__draggables?.find(
         (item) => item.id === dragged.id,
       );
-      const from = point || center(source) || dragged.origin || { x: 0, y: 0 };
+      const from = point
+        ? {
+            x: point.x,
+            y: point.y - (dragged.pointerType === "touch" ? 48 : 0),
+          }
+        : center(source) || dragged.origin || { x: 0, y: 0 };
       if (!result.accepted) {
         motionRef.current.snap = {
           kind: dragged.kind,
@@ -233,6 +259,7 @@ export default function App() {
         return false;
       }
       result.actions.forEach(dispatch);
+      pickedRef.current = null;
       const nextUI = {};
       if (Object.hasOwn(result, "cupDock")) nextUI.cupDock = result.cupDock;
       if (dragged.kind === "pastry") nextUI.ovenFood = dragged.foodId;
@@ -291,6 +318,32 @@ export default function App() {
     },
     [feedback, sound],
   );
+  const pickItem = useCallback(
+    (source) => {
+      const current = pickedRef.current;
+      if (
+        current?.id === source.id ||
+        (current?.kind === "cup" && source.kind === "cup")
+      ) {
+        pickedRef.current = null;
+        feedback("Item put down.", "success", center(source));
+        return;
+      }
+      pickedRef.current = { ...source, origin: center(source) };
+      motionRef.current.snap = null;
+      feedback(
+        source.kind === "cup"
+          ? "Cup picked. Tap a machine to place it."
+          : source.kind === "trayFood"
+            ? "Order picked. Tap your guest to serve."
+            : "Food picked. Tap the warmer to heat it.",
+        "success",
+        center(source),
+      );
+      sound("pickup");
+    },
+    [feedback, sound],
+  );
   useEffect(() => {
     if (state.phase !== "playing") return;
     const timer = setInterval(() => dispatch({ type: "TICK" }), 1000);
@@ -318,10 +371,15 @@ export default function App() {
       state.served > previous.served ||
       state.phase === "summary"
     ) {
-      setUI((current) =>
-        current.cupDock ? { ...current, cupDock: null } : current,
-      );
+      setUI((current) => ({
+        ...current,
+        cupDock: null,
+        ...(freshShift
+          ? { mobileStation: "espresso", mobileExtras: false }
+          : {}),
+      }));
       motionRef.current.pour = null;
+      pickedRef.current = null;
     }
     if (!["practice", "playing"].includes(state.phase) || ui.modal)
       cancelGesture();
@@ -332,7 +390,11 @@ export default function App() {
     };
   }, [state.phase, state.day, state.served, ui.modal, cancelGesture]);
   useEffect(() => {
-    const resize = () => cancelGesture();
+    let width = window.innerWidth;
+    const resize = () => {
+      if (window.innerWidth !== width) cancelGesture();
+      width = window.innerWidth;
+    };
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, [cancelGesture]);
@@ -406,6 +468,29 @@ export default function App() {
       focusRef.current = target.id;
       setAnnouncement(target.label);
       const action = target.action;
+      if (action.type === "mobileStation") {
+        setUI((current) => ({
+          ...current,
+          mobileStation: action.station,
+          mobileExtras: false,
+        }));
+        hoverRef.current = null;
+        return;
+      }
+      if (action.type === "mobileExtras") {
+        setUI((current) => ({
+          ...current,
+          mobileExtras: !current.mobileExtras,
+        }));
+        return;
+      }
+      if (action.type === "pickItem") {
+        const source = canvasRef.current.__draggables.find(
+          (item) => item.id === action.id,
+        );
+        if (source && !source.disabled) pickItem(source);
+        return;
+      }
       sound(
         action.type === "game" && action.value.type === "CHAT" ? "chat" : "tap",
       );
@@ -427,13 +512,25 @@ export default function App() {
           dispatch({ type: "RESUME" });
           dispatch(action.value);
           dispatch({ type: "PAUSE" });
-        } else dispatch(action.value);
+        } else {
+          if (
+            ["SERVE", "SET_CUP", "CLEAR_DRINK", "CLEAR_FOOD"].includes(
+              action.value.type,
+            )
+          )
+            pickedRef.current = null;
+          dispatch(action.value);
+        }
         return;
       }
       if (action.type === "pastry") {
         const source = canvasRef.current.__draggables?.find(
           (item) => item.kind === "pastry" && item.foodId === action.foodId,
         );
+        if (canvasRef.current.__view.mobile && source) {
+          pickItem(source);
+          return;
+        }
         applyDrop(
           source || { kind: "pastry", foodId: action.foodId },
           canvasRef.current.__dropZones?.find(
@@ -447,6 +544,15 @@ export default function App() {
           current = stateRef.current,
           mode = uiRef.current,
           job = current.jobs[station];
+        if (pickedRef.current && canvasRef.current.__view.mobile) {
+          applyDrop(
+            pickedRef.current,
+            canvasRef.current.__dropZones.find(
+              (zone) => zone.station === station,
+            ),
+          );
+          return;
+        }
         if (
           !["practice", "playing"].includes(current.phase) ||
           (job && !job.ready)
@@ -523,7 +629,7 @@ export default function App() {
             "https://calebhaines.github.io/sidequest-prototypes/";
       }
     },
-    [sound, openModal, closeModal, applyDrop, feedback],
+    [sound, openModal, closeModal, applyDrop, feedback, pickItem],
   );
 
   useEffect(() => {
@@ -553,7 +659,27 @@ export default function App() {
           clientX: gesture.clientX,
           clientY: gesture.clientY,
         });
-        const zone = dropAt(canvas, point);
+        const tab =
+          canvas.__view?.mobile &&
+          canvas.__targets.find(
+            (target) =>
+              target.action?.type === "mobileStation" && inside(point, target),
+          );
+        if (tab && tab.action.station !== uiRef.current.mobileStation) {
+          if (gesture.hoverStation !== tab.action.station) {
+            gesture.hoverStation = tab.action.station;
+            gesture.hoverSince = performance.now();
+          } else if (performance.now() - gesture.hoverSince > 450) {
+            setUI((current) => ({
+              ...current,
+              mobileStation: tab.action.station,
+              mobileExtras: false,
+            }));
+            gesture.hoverStation = null;
+          }
+          hoverRef.current = tab.id;
+        } else gesture.hoverStation = null;
+        const zone = dropAt(canvas, point, carry);
         const valid =
           zone &&
           planDrop(stateRef.current, uiRef.current, carry, zone).accepted;
@@ -594,6 +720,7 @@ export default function App() {
             ...motionRef.current,
             drag: carryRef.current,
             machineGesture: machineGestureRef.current,
+            pickedItem: pickedRef.current,
             hoverId: hoverRef.current,
             focusId: focusRef.current,
           },
@@ -601,6 +728,7 @@ export default function App() {
             width: W,
             height: H,
             time: reduced.matches ? 0 : timestamp / 1000,
+            touch: touchScreen,
             viewport: {
               y: Math.max(0, -rect.top),
               height: Math.max(
@@ -633,6 +761,8 @@ export default function App() {
           machineGestureRef.current,
         );
         canvas.dataset.ovenReady = String(!!stateRef.current.jobs.oven?.ready);
+        canvas.dataset.selectedItem = JSON.stringify(pickedRef.current);
+        canvas.dataset.mobileStation = uiRef.current.mobileStation;
         canvas.dataset.ready = view.targets
           .find((t) => t.id === "serve")
           ?.label.includes("ready")
@@ -750,6 +880,8 @@ export default function App() {
       clientY: e.clientY,
       lastY: e.clientY,
       scroll: uiRef.current.overlayScroll,
+      target: hitAt(canvas, point),
+      pointerType: e.pointerType,
       moved: false,
       control,
       startPoint: point,
@@ -778,7 +910,11 @@ export default function App() {
       feedback(
         control
           ? "This machine is working. Give it a moment."
-          : "Let this pour finish first.",
+          : source?.kind === "cup"
+            ? "Let this pour finish first."
+            : stateRef.current.jobs.oven?.ready
+              ? "Collect the warm food first."
+              : "The warmer is busy. Let it finish.",
         "error",
         point,
       );
@@ -802,15 +938,18 @@ export default function App() {
       ? Math.hypot(e.clientX - drag.x, e.clientY - drag.y)
       : 0;
     if (drag?.blocked) {
-      if (distance > 6) drag.moved = true;
+      if (distance > (e.pointerType === "touch" ? 18 : 6)) drag.moved = true;
       return;
     }
     if (drag?.control) {
-      if (distance > (e.pointerType === "touch" ? 8 : 6) || drag.moved) {
+      if (distance > (e.pointerType === "touch" ? 18 : 6) || drag.moved) {
         drag.moved = true;
         machineGestureRef.current = {
           station: drag.control.station,
-          progress: machineDragProgress(drag.control, drag.startPoint, point),
+          progress: machineDragProgress(drag.control, drag.startPoint, {
+            x: drag.startPoint.x + e.clientX - drag.x,
+            y: drag.startPoint.y + e.clientY - drag.y,
+          }),
         };
         canvas.style.cursor = "grabbing";
       }
@@ -821,7 +960,7 @@ export default function App() {
       !uiRef.current.modal &&
       ["practice", "playing"].includes(stateRef.current.phase)
     ) {
-      if (distance > (e.pointerType === "touch" ? 8 : 6) || carryRef.current) {
+      if (distance > (e.pointerType === "touch" ? 18 : 6) || carryRef.current) {
         drag.moved = true;
         if (!carryRef.current) {
           motionRef.current.snap = null;
@@ -831,10 +970,12 @@ export default function App() {
             origin: drag.origin,
             x: point.x,
             y: point.y,
+            pointerType: e.pointerType,
           };
+          pickedRef.current = null;
           sound("pickup");
         }
-        const zone = dropAt(canvas, point);
+        const zone = dropAt(canvas, point, carryRef.current);
         const valid =
           zone &&
           planDrop(stateRef.current, uiRef.current, carryRef.current, zone)
@@ -857,7 +998,7 @@ export default function App() {
       e.pointerType === "touch"
     ) {
       const delta = drag.y - e.clientY;
-      if (Math.abs(delta) > 7 || drag.moved) {
+      if (Math.abs(delta) > 18 || drag.moved) {
         drag.moved = true;
         const max = canvas.__view.overlay.maxScroll;
         setUI((current) => ({
@@ -867,7 +1008,10 @@ export default function App() {
         return;
       }
     }
-    if (drag && (distance > 8 || drag.moved)) {
+    if (
+      drag &&
+      (distance > (e.pointerType === "touch" ? 18 : 8) || drag.moved)
+    ) {
       drag.moved = true;
       if (e.pointerType === "touch") window.scrollBy(0, drag.lastY - e.clientY);
       drag.lastY = e.clientY;
@@ -920,10 +1064,41 @@ export default function App() {
       return;
     }
     if (carry) {
-      applyDrop(carry, dropAt(canvas, point), point);
+      applyDrop(carry, dropAt(canvas, point, carry), point);
       return;
     }
-    if (drag.moved || drag.blocked) return;
+    if (drag.moved || drag.blocked) {
+      const dx = e.clientX - drag.x,
+        dy = e.clientY - drag.y;
+      if (
+        !drag.blocked &&
+        canvas.__view.mobile &&
+        !uiRef.current.modal &&
+        !drag.source &&
+        inside(drag.startPoint, canvas.__view.objects.workspace) &&
+        Math.abs(dx) > 55 &&
+        Math.abs(dx) > Math.abs(dy) * 1.4
+      ) {
+        const stations = ["espresso", "milk", "kettle", "oven"];
+        setUI((current) => ({
+          ...current,
+          mobileStation:
+            stations[
+              (stations.indexOf(current.mobileStation) + (dx < 0 ? 1 : 3)) % 4
+            ],
+          mobileExtras: false,
+        }));
+      }
+      return;
+    }
+    if (
+      canvas.__view.mobile &&
+      drag.source &&
+      ["cup", "pastry", "trayFood"].includes(drag.source.kind)
+    ) {
+      pickItem(drag.source);
+      return;
+    }
     if (drag.source?.kind === "pastry") {
       applyDrop(
         drag.source,
@@ -942,7 +1117,32 @@ export default function App() {
         "success",
         point,
       );
-    } else activate(hitAt(canvas, point));
+    } else {
+      const zone = dropAt(canvas, point);
+      if (
+        canvas.__view.mobile &&
+        pickedRef.current &&
+        zone &&
+        drag.target?.action?.type !== "mobileStation"
+      ) {
+        applyDrop(pickedRef.current, zone, point);
+        return;
+      }
+      const target =
+        drag.target &&
+        canvas.__targets.find((target) => target.id === drag.target.id);
+      const slop = e.pointerType === "touch" ? 14 : 0;
+      if (
+        target &&
+        inside(point, {
+          x: target.x - slop,
+          y: target.y - slop,
+          w: target.w + 2 * slop,
+          h: target.h + 2 * slop,
+        })
+      )
+        activate(target);
+    }
   };
   const wheel = (e) => {
     const canvas = canvasRef.current,
@@ -975,7 +1175,7 @@ export default function App() {
   }, []);
   const ariaSummary = `Second Pour café game. ${state.phase === "practice" ? "Relaxed practice" : `Day ${state.day}, ${state.timeLeft} seconds remaining`}. ${state.served} guests served. ${formatMoney(state.tips)} in tips. ${selected ? `${customers[selected.profileId].name} is waiting for ${recipes[selected.drinkId].name}${selected.foodId ? ` and a warm ${foods[selected.foodId].name}` : ""}.` : ""} Use Tab and Enter for game controls; P pauses, R opens recipes, C chats, M controls sound, and question mark opens help.`;
   return (
-    <main className="game-stage">
+    <main className={`game-stage${touchScreen ? " touch-stage" : ""}`}>
       <canvas
         ref={canvasRef}
         className="cafe-game"

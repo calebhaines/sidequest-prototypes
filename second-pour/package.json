@@ -1,6 +1,6 @@
 {
   "name": "second-pour",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "A cozy illustrated coffee shop game played entirely inside the café canvas",
   "type": "module",

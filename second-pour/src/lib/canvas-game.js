@@ -24,6 +24,7 @@ import {
   shadow,
 } from "./canvas-kit.js";
 import { drawOverlay } from "./canvas-overlays.js";
+import { drawMobileGame } from "./canvas-mobile.js";
 const clock = (seconds) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 const ingredientLabels = {
@@ -1343,6 +1344,7 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
       };
     }
     if (Number.isFinite(center.x) && Number.isFinite(center.y)) {
+      if (ui.drag?.pointerType === "touch") center.y -= 48;
       const w =
           object.kind === "cup" ? (compact ? 70 : 96) : compact ? 88 : 116,
         h = object.kind === "cup" ? (compact ? 78 : 112) : compact ? 66 : 86,
@@ -1491,8 +1493,10 @@ export function drawGame(
   ctx,
   state,
   ui,
-  { width: W, height: H, time = 0, viewport = null },
+  { width: W, height: H, time = 0, viewport = null, touch = false },
 ) {
+  if (W < 1180 || touch)
+    return drawMobileGame(ctx, state, ui, { width: W, height: H, time });
   const compact = W < 1180,
     targets = [],
     interaction = {
