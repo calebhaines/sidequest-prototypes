@@ -1,0 +1,22 @@
+{
+  "name": "second-pour",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A cozy coffee shop game about coffee, company, and a little counter chaos",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5180",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 5180",
+    "test": "node --test src/lib/game.test.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.3"
+  }
+}
