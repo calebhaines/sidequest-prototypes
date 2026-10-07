@@ -15,6 +15,12 @@ import { customers, foods, recipes } from "./lib/data.js";
 import { drawGame } from "./lib/canvas-game.js";
 import { planDrop } from "./lib/drag-rules.js";
 import {
+  dragAnchor,
+  resolveDrop,
+  movedEnough,
+  returnedToSource,
+} from "./lib/pointer-geometry.js";
+import {
   machineDragProgress,
   machineDragCommitted,
 } from "./lib/machine-controls.js";
@@ -46,12 +52,12 @@ function locationInCanvas(canvas, event) {
     y: ((event.clientY - rect.top) * canvas.__view.height) / rect.height,
   };
 }
-function hitAt(canvas, point) {
+function hitAt(canvas, point, includeDisabled = false) {
   return [...(canvas.__targets || [])]
     .reverse()
     .find(
       (target) =>
-        !target.disabled &&
+        (includeDisabled || !target.disabled) &&
         point.x >= target.x &&
         point.x <= target.x + target.w &&
         point.y >= target.y &&
@@ -72,21 +78,16 @@ function itemAt(canvas, point) {
     .reverse()
     .find((item) => inside(point, item));
 }
-function dropAt(canvas, point, carried = null) {
+function dropAt(canvas, point, carried = null, pointer = point) {
   const zones = [...(canvas.__dropZones || [])].reverse();
-  const direct = zones.find((zone) => inside(point, zone));
-  if (direct || carried?.pointerType !== "touch") return direct;
-  return zones
-    .filter((zone) => zone.accepts?.includes(carried.kind))
-    .map((zone) => ({
-      zone,
-      distance: Math.hypot(
-        Math.max(zone.x - point.x, 0, point.x - zone.x - zone.w),
-        Math.max(zone.y - point.y, 0, point.y - zone.y - zone.h),
-      ),
-    }))
-    .filter((candidate) => candidate.distance <= 18)
-    .sort((a, b) => a.distance - b.distance)[0]?.zone;
+  if (
+    carried &&
+    returnedToSource(carried, point, pointer, canvas.__draggables || [], zones)
+  )
+    return undefined;
+  return carried
+    ? resolveDrop(zones, carried, point, pointer)
+    : zones.find((zone) => inside(point, zone));
 }
 function controlAt(canvas, point) {
   return [...(canvas.__machineControls || [])]
@@ -172,7 +173,7 @@ export default function App() {
           drink: carry.drink,
           from: {
             x: carry.x,
-            y: carry.y - (carry.pointerType === "touch" ? 48 : 0),
+            y: carry.y,
           },
           to: center(source) || carry.origin,
           startedAt: performance.now(),
@@ -239,10 +240,7 @@ export default function App() {
         (item) => item.id === dragged.id,
       );
       const from = point
-        ? {
-            x: point.x,
-            y: point.y - (dragged.pointerType === "touch" ? 48 : 0),
-          }
+        ? point
         : center(source) || dragged.origin || { x: 0, y: 0 };
       if (!result.accepted) {
         motionRef.current.snap = {
@@ -263,6 +261,10 @@ export default function App() {
       const nextUI = {};
       if (Object.hasOwn(result, "cupDock")) nextUI.cupDock = result.cupDock;
       if (dragged.kind === "pastry") nextUI.ovenFood = dragged.foodId;
+      if (canvas?.__view.mobile && zone?.kind === "station") {
+        nextUI.mobileStation = zone.station;
+        nextUI.mobileExtras = false;
+      }
       if (Object.keys(nextUI).length)
         setUI((previous) => ({ ...previous, ...nextUI }));
       let to = result.served
@@ -320,6 +322,11 @@ export default function App() {
   );
   const pickItem = useCallback(
     (source) => {
+      source =
+        canvasRef.current?.__draggables?.find(
+          (item) => item.id === source.id,
+        ) || source;
+      if (source.disabled) return;
       const current = pickedRef.current;
       if (
         current?.id === source.id ||
@@ -428,12 +435,19 @@ export default function App() {
   }, [state.notice?.id, sound]);
   useEffect(() => {
     const hidden = () => {
-      if (document.hidden && stateRef.current.phase === "playing")
-        dispatch({ type: "PAUSE" });
+      if (document.hidden) {
+        cancelGesture();
+        if (stateRef.current.phase === "playing") dispatch({ type: "PAUSE" });
+      }
     };
+    const blurred = () => cancelGesture();
     document.addEventListener("visibilitychange", hidden);
-    return () => document.removeEventListener("visibilitychange", hidden);
-  }, []);
+    window.addEventListener("blur", blurred);
+    return () => {
+      document.removeEventListener("visibilitychange", hidden);
+      window.removeEventListener("blur", blurred);
+    };
+  }, [cancelGesture]);
 
   const openModal = useCallback(
     (modal) => {
@@ -468,6 +482,11 @@ export default function App() {
       focusRef.current = target.id;
       setAnnouncement(target.label);
       const action = target.action;
+      if (action.type === "cancelPick") {
+        pickedRef.current = null;
+        feedback("Item put down.");
+        return;
+      }
       if (action.type === "mobileStation") {
         setUI((current) => ({
           ...current,
@@ -654,38 +673,24 @@ export default function App() {
             : gesture.clientY > window.innerHeight - edge
               ? Math.min(12, (gesture.clientY - window.innerHeight + edge) / 4)
               : 0;
-        if (delta) window.scrollBy(0, delta);
+        if (delta && !canvas.__view?.mobile) window.scrollBy(0, delta);
         const point = locationInCanvas(canvas, {
           clientX: gesture.clientX,
           clientY: gesture.clientY,
         });
-        const tab =
-          canvas.__view?.mobile &&
-          canvas.__targets.find(
-            (target) =>
-              target.action?.type === "mobileStation" && inside(point, target),
-          );
-        if (tab && tab.action.station !== uiRef.current.mobileStation) {
-          if (gesture.hoverStation !== tab.action.station) {
-            gesture.hoverStation = tab.action.station;
-            gesture.hoverSince = performance.now();
-          } else if (performance.now() - gesture.hoverSince > 450) {
-            setUI((current) => ({
-              ...current,
-              mobileStation: tab.action.station,
-              mobileExtras: false,
-            }));
-            gesture.hoverStation = null;
-          }
-          hoverRef.current = tab.id;
-        } else gesture.hoverStation = null;
-        const zone = dropAt(canvas, point, carry);
+        const anchor = dragAnchor(
+          point,
+          gesture.source,
+          gesture.startPoint,
+          gesture.pointerType,
+        );
+        const zone = dropAt(canvas, anchor, carry, point);
         const valid =
           zone &&
           planDrop(stateRef.current, uiRef.current, carry, zone).accepted;
         Object.assign(carry, {
-          x: point.x,
-          y: point.y,
+          ...anchor,
+          pointer: point,
           validDropId: valid ? zone.id : null,
           invalidDropId: zone && !valid ? zone.id : null,
         });
@@ -757,6 +762,7 @@ export default function App() {
         canvas.dataset.jobs = JSON.stringify(stateRef.current.jobs);
         canvas.dataset.cupDock = uiRef.current.cupDock || "";
         canvas.dataset.drag = carryRef.current?.kind || "";
+        canvas.__drag = carryRef.current;
         canvas.dataset.machineGesture = JSON.stringify(
           machineGestureRef.current,
         );
@@ -817,7 +823,7 @@ export default function App() {
       }
       if (e.key === "Escape") {
         e.preventDefault();
-        if (dragRef.current || carryRef.current) {
+        if (dragRef.current || carryRef.current || pickedRef.current) {
           cancelGesture("Back where it belongs.");
           return;
         }
@@ -880,7 +886,7 @@ export default function App() {
       clientY: e.clientY,
       lastY: e.clientY,
       scroll: uiRef.current.overlayScroll,
-      target: hitAt(canvas, point),
+      target: hitAt(canvas, point, true),
       pointerType: e.pointerType,
       moved: false,
       control,
@@ -960,7 +966,10 @@ export default function App() {
       !uiRef.current.modal &&
       ["practice", "playing"].includes(stateRef.current.phase)
     ) {
-      if (distance > (e.pointerType === "touch" ? 18 : 6) || carryRef.current) {
+      if (
+        movedEnough(drag.startPoint, point, e.pointerType) ||
+        carryRef.current
+      ) {
         drag.moved = true;
         if (!carryRef.current) {
           motionRef.current.snap = null;
@@ -968,21 +977,27 @@ export default function App() {
           carryRef.current = {
             ...drag.source,
             origin: drag.origin,
-            x: point.x,
-            y: point.y,
+            ...dragAnchor(point, drag.source, drag.startPoint, e.pointerType),
+            pointer: point,
             pointerType: e.pointerType,
           };
           pickedRef.current = null;
           sound("pickup");
         }
-        const zone = dropAt(canvas, point, carryRef.current);
+        const anchor = dragAnchor(
+          point,
+          drag.source,
+          drag.startPoint,
+          e.pointerType,
+        );
+        const zone = dropAt(canvas, anchor, carryRef.current, point);
         const valid =
           zone &&
           planDrop(stateRef.current, uiRef.current, carryRef.current, zone)
             .accepted;
         Object.assign(carryRef.current, {
-          x: point.x,
-          y: point.y,
+          ...anchor,
+          pointer: point,
           validDropId: valid ? zone.id : null,
           invalidDropId: zone && !valid ? zone.id : null,
         });
@@ -1036,9 +1051,39 @@ export default function App() {
       cancelGesture();
       return;
     }
-    const carry = carryRef.current;
-    const machineGesture = machineGestureRef.current;
     const point = locationInCanvas(canvas, e);
+    const releaseMoved = drag.source
+      ? movedEnough(drag.startPoint, point, drag.pointerType)
+      : Math.hypot(e.clientX - drag.x, e.clientY - drag.y) >
+        (drag.pointerType === "touch" ? 18 : drag.control ? 6 : 8);
+    let carry = carryRef.current;
+    if (
+      !carry &&
+      drag.source &&
+      !drag.blocked &&
+      releaseMoved &&
+      !uiRef.current.modal &&
+      ["practice", "playing"].includes(stateRef.current.phase)
+    ) {
+      carry = {
+        ...drag.source,
+        origin: drag.origin,
+        pointerType: drag.pointerType,
+      };
+      pickedRef.current = null;
+    }
+    if (carry)
+      Object.assign(
+        carry,
+        dragAnchor(point, drag.source, drag.startPoint, drag.pointerType),
+        { pointer: point },
+      );
+    const machineProgress = drag.control
+      ? machineDragProgress(drag.control, drag.startPoint, {
+          x: drag.startPoint.x + e.clientX - drag.x,
+          y: drag.startPoint.y + e.clientY - drag.y,
+        })
+      : 0;
     carryRef.current = null;
     machineGestureRef.current = null;
     dragRef.current = null;
@@ -1047,7 +1092,10 @@ export default function App() {
     canvas.style.cursor = "default";
     if (drag.control) {
       if (drag.blocked) return;
-      if (!drag.moved || machineDragCommitted(machineGesture?.progress)) {
+      if (
+        (!drag.moved && !releaseMoved) ||
+        machineDragCommitted(machineProgress)
+      ) {
         activate(
           canvas.__machineControls.find(
             (control) => control.id === drag.control.id,
@@ -1064,16 +1112,38 @@ export default function App() {
       return;
     }
     if (carry) {
-      applyDrop(carry, dropAt(canvas, point, carry), point);
+      if (
+        returnedToSource(
+          carry,
+          carry,
+          point,
+          canvas.__draggables || [],
+          canvas.__dropZones || [],
+        )
+      ) {
+        motionRef.current.snap = {
+          kind: carry.kind,
+          foodId: carry.foodId,
+          drink: carry.drink,
+          from: { x: carry.x, y: carry.y },
+          to:
+            center(canvas.__draggables.find((item) => item.id === carry.id)) ||
+            carry.origin,
+          startedAt: performance.now(),
+          duration: 260,
+        };
+        feedback("Item put back.", "success", carry.origin);
+      } else applyDrop(carry, dropAt(canvas, carry, carry, point), carry);
       return;
     }
-    if (drag.moved || drag.blocked) {
+    if (drag.moved || releaseMoved || drag.blocked) {
       const dx = e.clientX - drag.x,
         dy = e.clientY - drag.y;
       if (
         !drag.blocked &&
         canvas.__view.mobile &&
         !uiRef.current.modal &&
+        ["practice", "playing"].includes(stateRef.current.phase) &&
         !drag.source &&
         inside(drag.startPoint, canvas.__view.objects.workspace) &&
         Math.abs(dx) > 55 &&
@@ -1118,6 +1188,28 @@ export default function App() {
         point,
       );
     } else {
+      const target =
+        drag.target &&
+        canvas.__targets.find((target) => target.id === drag.target.id);
+      const slop = e.pointerType === "touch" ? 14 : 0;
+      const releasedOnTarget =
+        target &&
+        inside(point, {
+          x: target.x - slop,
+          y: target.y - slop,
+          w: target.w + 2 * slop,
+          h: target.h + 2 * slop,
+        });
+      const placementAction =
+        target?.action?.type === "station" ||
+        (target?.action?.type === "game" &&
+          ["SERVE", "SELECT_CUSTOMER"].includes(target.action.value.type));
+      // Mode selectors, extras, Cancel, and disabled controls retain their
+      // own actions even when the surrounding panel is a valid drop area.
+      if (releasedOnTarget && !placementAction) {
+        activate(target);
+        return;
+      }
       const zone = dropAt(canvas, point);
       if (
         canvas.__view.mobile &&
@@ -1128,20 +1220,7 @@ export default function App() {
         applyDrop(pickedRef.current, zone, point);
         return;
       }
-      const target =
-        drag.target &&
-        canvas.__targets.find((target) => target.id === drag.target.id);
-      const slop = e.pointerType === "touch" ? 14 : 0;
-      if (
-        target &&
-        inside(point, {
-          x: target.x - slop,
-          y: target.y - slop,
-          w: target.w + 2 * slop,
-          h: target.h + 2 * slop,
-        })
-      )
-        activate(target);
+      if (releasedOnTarget) activate(target);
     }
   };
   const wheel = (e) => {

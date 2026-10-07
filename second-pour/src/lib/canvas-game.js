@@ -46,13 +46,6 @@ const stations = {
 };
 const game = (value) => ({ type: "game", value });
 const uiAction = (value) => ({ type: "ui", value });
-const dockCupRect = (art, station, compact) => ({
-  x:
-    art.x + art.w * (station === "espresso" ? 0.5 : 0.33) - (compact ? 26 : 39),
-  y: art.y + art.h * (compact ? 0.43 : 0.48),
-  w: compact ? 52 : 78,
-  h: compact ? 53 : 83,
-});
 
 function hud(ctx, state, ui, W, compact, targets) {
   const h = compact ? 104 : 80;
@@ -74,7 +67,7 @@ function hud(ctx, state, ui, W, compact, targets) {
     compact ? 67 : 80,
     compact ? 49 : 55,
     {
-      size: compact ? 6.4 : 8,
+      size: 12,
       color: "#879276",
       weight: 600,
       maxWidth: compact ? W - 222 : undefined,
@@ -206,7 +199,7 @@ function orderBubble(ctx, state, customer, box, selected, targets) {
   });
   if (customer.chatted) icon(ctx, "heart", x + w - 28, y + 9, 12, "#c18d7b");
   label(ctx, recipe.shortName, x + 12, y + 36, {
-    size: small ? 10 : 12,
+    size: 12,
     color: "#6f775d",
     weight: 600,
     maxWidth: w - 22,
@@ -217,7 +210,7 @@ function orderBubble(ctx, state, customer, box, selected, targets) {
       `+ warm ${foods[customer.foodId].shortName.toLowerCase()}`,
       x + 12,
       y + 53,
-      { size: small ? 8.5 : 10, color: "#8d8060", maxWidth: w - 22 },
+      { size: 12, color: "#8d8060", maxWidth: w - 22 },
     );
   const patience =
     state.phase === "practice" ? 1 : customer.patience / customer.maxPatience;
@@ -454,7 +447,7 @@ function notebook(ctx, state, W, compact, counterY) {
     );
     if (step.complete) icon(ctx, "check", sx + 1, sy - 5, 10, "#719051");
     label(ctx, step.text, sx + 18, sy, {
-      size: compact ? 9.5 : 11,
+      size: 12,
       color: step.excess ? "#b27053" : step.complete ? "#708453" : "#959775",
       maxWidth: w / 2 - 35,
     });
@@ -464,10 +457,10 @@ function notebook(ctx, state, W, compact, counterY) {
       ctx,
       evaluation.correct
         ? "Made with care. Ready to serve."
-        : "Every ingredient is one serving. Extras need a fresh cup.",
+        : "Match the recipe, then serve.",
       x + 23,
       y + h - 13,
-      { size: 9, color: "#8f9878", maxWidth: w - 45 },
+      { size: 12, color: "#8f9878", maxWidth: w - 45 },
     );
   ctx.restore();
 }
@@ -494,6 +487,7 @@ function machine(
     ui.hoverId === `machine-${station}` ||
     ui.hoverId === `station-${station}` ||
     ui.hoverId === `control-${station}`;
+  round(ctx, x, y, w, Math.min(h, 301), 17, "#fff8e85e", "#d7c8a7");
   drawMachine(ctx, station, art, {
     job,
     time,
@@ -522,6 +516,31 @@ function machine(
     ctx.restore();
   }
   interaction.stationArt[station] = art;
+  ctx.save();
+  ctx.setLineDash([4, 5]);
+  round(
+    ctx,
+    art.x + 3,
+    art.y + 1,
+    art.w - 6,
+    art.h - 2,
+    14,
+    "transparent",
+    "#bea980",
+  );
+  ctx.restore();
+  label(
+    ctx,
+    station === "oven" ? "Drop food here" : "Drop cup here",
+    art.x + art.w / 2,
+    art.y + art.h - 8,
+    {
+      size: 12,
+      align: "center",
+      color: "#7e775c",
+      maxWidth: art.w - 12,
+    },
+  );
   interaction.dropZones.push({
     id: `drop-${station}`,
     label:
@@ -531,12 +550,12 @@ function machine(
     kind: "station",
     station,
     accepts: station === "oven" ? ["pastry"] : ["cup"],
-    x: art.x - (compact ? 3 : 2),
-    y: art.y,
-    w: art.w + (compact ? 6 : 4),
-    h: art.h,
-    cupRect:
-      station === "oven" ? undefined : dockCupRect(art, station, compact),
+    x,
+    y,
+    w,
+    h: Math.min(h, 301),
+    well: art,
+    exclude: [],
   });
   if (station === "oven" && job?.ready) {
     const pickup = {
@@ -635,7 +654,7 @@ function machine(
     control.y + control.h * 0.84,
     {
       font: "Nunito",
-      size: compact ? 7 : 8.5,
+      size: 12,
       weight: 800,
       align: "center",
       color: station === "oven" ? "#946d59" : "#687f61",
@@ -652,7 +671,7 @@ function machine(
     ctx,
     stations[station],
     compact ? bx : x + w / 2,
-    y + (compact ? 8 : 180),
+    y + (compact ? 8 : 187),
     {
       font: "DynaPuff",
       size: compact ? 13 : 16,
@@ -712,7 +731,7 @@ function machine(
       compact ? bx : x + w / 2,
       y + (compact ? 39 : 215),
       {
-        size: compact ? 9 : 11,
+        size: 12,
         color: "#929576",
         align: compact ? "left" : "center",
         maxWidth: bw,
@@ -747,14 +766,12 @@ function machine(
             : "Place on tray";
   if (running)
     text = `${job.remaining}s · ${station === "oven" ? "warming" : "working"}`;
+  const actionRect = { x: bx, y: y + (compact ? 68 : 251), w: bw, h: 44 };
   button(ctx, targets, ui, {
     id: `station-${station}`,
     label: text,
     text,
-    x: bx,
-    y: y + (compact ? 68 : 251),
-    w: bw,
-    h: 44,
+    ...actionRect,
     action: { type: "station", value: station },
     disabled: !active || !!running,
     primary: !!job?.ready,
@@ -768,6 +785,17 @@ function machine(
           : station === "kettle"
             ? "#e4eee4"
             : "#e0ecd4",
+  });
+  interaction.dropZones.push({
+    id: `drop-stationbutton-${station}`,
+    label:
+      station === "oven" ? "Food to Warmer" : `Cup to ${stations[station]}`,
+    kind: "station",
+    station,
+    priority: 2,
+    accepts: station === "oven" ? ["pastry"] : ["cup"],
+    exclude: [],
+    ...actionRect,
   });
   if (running) {
     round(
@@ -875,11 +903,11 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
   });
   if (!compact)
     label(ctx, "YOUR SERVING TRAY", x + 15, y - 17, {
-      size: 9,
+      size: 12,
       color: "#928560",
       weight: 600,
     });
-  if (ui.cupDock || ui.drag?.kind === "cup") {
+  if (ui.drag?.kind === "cup") {
     const cup = interaction.trayCup;
     ctx.save();
     ctx.setLineDash([3, 4]);
@@ -896,18 +924,12 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
     );
     ctx.stroke();
     ctx.restore();
-    label(
-      ctx,
-      ui.cupDock ? "Cup at machine" : "In your hand",
-      cup.x + cup.w / 2,
-      y + h - 10,
-      {
-        size: compact ? 6.5 : 8,
-        color: "#a69d7a",
-        align: "center",
-        maxWidth: cup.w,
-      },
-    );
+    label(ctx, "In your hand", cup.x + cup.w / 2, y + h - 10, {
+      size: compact ? 6.5 : 8,
+      color: "#a69d7a",
+      align: "center",
+      maxWidth: cup.w,
+    });
   }
   const cupX = x + (compact ? 64 : 96),
     cupY = y + (compact ? 7 : 15);
@@ -954,7 +976,7 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
       cupX,
       y + 72,
       165,
-      { size: 10, lineHeight: 14, color: "#8b8966", maxLines: 3 },
+      { size: 12, lineHeight: 15, color: "#8b8966", maxLines: 3 },
     );
   else
     label(ctx, components || "A fresh little cup.", cupX, y + 63, {
@@ -1017,7 +1039,7 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
       "For warm food",
       foodX + (compact ? 36 : 48),
       y + (compact ? 59 : 98),
-      { size: compact ? 7 : 10, color: "#b0a17b", align: "center" },
+      { size: 12, color: "#b0a17b", align: "center" },
     );
   }
   button(ctx, targets, ui, {
@@ -1033,6 +1055,12 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
     fill: "#fff9e8",
   });
   const serveW = compact ? W - 28 : 310;
+  const serveRect = {
+    x: (W - serveW) / 2,
+    y: H - (compact ? 53 : 65),
+    w: serveW,
+    h: compact ? 44 : 46,
+  };
   button(ctx, targets, ui, {
     id: "serve",
     label: `Serve ${selected ? customers[selected.profileId].name : "order"}${correct ? ". Order ready." : ""}`,
@@ -1040,10 +1068,7 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
       ? `Serve ${customers[selected.profileId].name} · made with care`
       : `Serve ${selected ? customers[selected.profileId].name : "order"}`,
     icon: correct ? "check" : "coffee",
-    x: (W - serveW) / 2,
-    y: H - (compact ? 53 : 65),
-    w: serveW,
-    h: compact ? 44 : 46,
+    ...serveRect,
     action: game({ type: "SERVE" }),
     disabled:
       !available ||
@@ -1053,13 +1078,23 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
     fill: correct ? undefined : "#f5e8c9",
     color: correct ? undefined : "#8b7952",
   });
+  if (selected)
+    interaction.dropZones.push({
+      id: "drop-serve",
+      label: `Serve ${customers[selected.profileId].name}`,
+      kind: "customer",
+      customerId: selected.id,
+      priority: 2,
+      accepts: ["cup", "trayFood"],
+      ...serveRect,
+    });
   if (!compact) {
     label(
       ctx,
-      "Drag your cup between machines. Slide a finished order over to your guest.",
+      "Tap a machine, or drag your cup to it. Serve when the order is ready.",
       W / 2,
       H - 8,
-      { size: 9, color: "#967f58", align: "center" },
+      { size: 12, color: "#967f58", align: "center" },
     );
   }
 }
@@ -1089,12 +1124,12 @@ function pastryRack(
   ctx.shadowOffsetY = 0;
   round(ctx, x + 5, y + 4, w - 10, h - 8, 9, "#fff6df", "#ebdbba");
   label(ctx, "FRESH FROM THE BAKERY", x + 8, y - 7, {
-    size: compact ? 7 : 8,
+    size: 12,
     weight: 600,
     color: "#937d57",
   });
   label(ctx, "drag to warmer", x + w - 7, y - 7, {
-    size: compact ? 7 : 8,
+    size: 12,
     color: "#937d57",
     align: "right",
   });
@@ -1124,7 +1159,7 @@ function pastryRack(
       { warm: false, time },
     );
     label(ctx, foods[foodId].shortName, x + (i + 0.5) * cell, y + h - 8, {
-      size: compact ? 7.5 : 8.5,
+      size: 12,
       color: "#8d754f",
       align: "center",
       maxWidth: cell - 10,
@@ -1156,7 +1191,7 @@ function dragMarks(ctx, rect, compact, busy = false) {
     cx,
     rect.y + rect.h - (compact ? 3 : 0),
     {
-      size: compact ? 6.5 : 8,
+      size: 12,
       align: "center",
       color: busy ? "#9a8560" : "#8c956e",
     },
@@ -1183,15 +1218,17 @@ function dragMarks(ctx, rect, compact, busy = false) {
 
 function tactileObjects(ctx, state, ui, compact, time, interaction) {
   const dock = ui.cupDock,
-    art = interaction.stationArt[dock],
     available = ["practice", "playing"].includes(state.phase),
     busy = !!(dock && state.jobs[dock] && !state.jobs[dock].ready);
-  const cup = art ? dockCupRect(art, dock, compact) : interaction.trayCup;
+  const cup = interaction.trayCup;
   interaction.objects.cup = cup;
+  interaction.dropZones.forEach((zone) => {
+    if (zone.kind === "station" && zone.station !== "oven") zone.cupRect = cup;
+  });
   interaction.draggables.push({
     id: "drag-cup",
     label: busy
-      ? "Cup brewing at the machine"
+      ? "Cup filling. Please wait"
       : "Your cup. Drag to a machine, tray, or guest",
     kind: "cup",
     ...cup,
@@ -1207,6 +1244,20 @@ function tactileObjects(ctx, state, ui, compact, time, interaction) {
       ready: evaluateOrder(state).correct,
     });
     dragMarks(ctx, cup, compact, busy);
+  }
+  if (busy) {
+    round(ctx, cup.x + cup.w - 32, cup.y + 5, 32, 24, 9, "#e8eed9", "#bdcca2");
+    label(
+      ctx,
+      `${state.jobs[dock].remaining}s`,
+      cup.x + cup.w - 16,
+      cup.y + 17,
+      {
+        size: 12,
+        align: "center",
+        color: "#6b855d",
+      },
+    );
   }
   const pouring =
       ui.pour && now - ui.pour.startedAt < (ui.pour.duration || 900),
@@ -1255,6 +1306,7 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
     interaction.dropZones.forEach((zone) => {
       if (!zone.accepts.includes(ui.drag.kind)) return;
       const hot = ui.drag.validDropId === zone.id,
+        invalid = ui.drag.invalidDropId === zone.id,
         occupied =
           zone.kind === "station" &&
           !!state.jobs[zone.station] &&
@@ -1270,6 +1322,7 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
           ).correct,
         amber = occupied || trayFull || (serving && !correct),
         line = amber ? "#bd9255" : "#78a380";
+      if (!hot && !invalid) return;
       ctx.save();
       ctx.fillStyle = hot ? (amber ? "#f3d79545" : "#d5edbd5c") : "#fff8e81a";
       ctx.strokeStyle = line;
@@ -1316,7 +1369,7 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
           amber ? "#d3b179" : "#a9c797",
         );
         label(ctx, hint, hx + hintW / 2, hy + 11, {
-          size: compact ? 8.5 : 10,
+          size: 12,
           color: amber ? "#977544" : "#68855b",
           align: "center",
         });
@@ -1344,7 +1397,6 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
       };
     }
     if (Number.isFinite(center.x) && Number.isFinite(center.y)) {
-      if (ui.drag?.pointerType === "touch") center.y -= 48;
       const w =
           object.kind === "cup" ? (compact ? 70 : 96) : compact ? 88 : 116,
         h = object.kind === "cup" ? (compact ? 78 : 112) : compact ? 66 : 86,
@@ -1390,7 +1442,7 @@ function dragOverlay(ctx, state, ui, W, H, compact, time, interaction) {
       error ? "#d5aa7d" : "#b0c88d",
     );
     label(ctx, message, x + w / 2, y + 14, {
-      size: compact ? 9.5 : 11,
+      size: 12,
       color: error ? "#a57b51" : "#6e8758",
       align: "center",
       maxWidth: w - 14,
@@ -1429,7 +1481,7 @@ function tipJar(ctx, state, W, H) {
     ctx.fill();
   }
   label(ctx, `${state.served}/6 lovely coffees`, x + 70, y + 124, {
-    size: 10,
+    size: 12,
     align: "center",
     color: "#8d805a",
   });
@@ -1441,7 +1493,7 @@ function notice(ctx, state, ui, W, compact, targets) {
   const w = Math.min(W - 28, 650),
     x = (W - w) / 2,
     y = compact ? 105 : 83;
-  ctx.font = '500 11px "Nunito",sans-serif';
+  ctx.font = '500 12px "Nunito",sans-serif';
   let count = Math.ceil(ctx.measureText(state.notice.text).width / (w - 74));
   const h = Math.max(44, Math.min(80, count * 17 + 18));
   ctx.save();
@@ -1470,7 +1522,7 @@ function notice(ctx, state, ui, W, compact, targets) {
     state.notice.type === "error" ? "#b4805b" : "#7a9462",
   );
   wrap(ctx, state.notice.text, x + 38, y + 11, w - 78, {
-    size: 11,
+    size: 12,
     lineHeight: 17,
     color: state.notice.type === "error" ? "#9c714f" : "#74885c",
     maxLines: 3,
@@ -1604,6 +1656,12 @@ export function drawGame(
   );
   syrups(ctx, state, ui, W, H, compact, targets);
   tray(ctx, state, ui, W, H, compact, targets, time, interaction);
+  const exclusions = targets
+    .filter((target) => target.id.startsWith("extra-"))
+    .map(({ x, y, w, h }) => ({ x, y, w, h }));
+  interaction.dropZones.forEach((zone) => {
+    if (zone.kind === "station") zone.exclude.push(...exclusions);
+  });
   tactileObjects(ctx, state, ui, compact, time, interaction);
   if (!ui.modal && ["practice", "playing"].includes(state.phase))
     dragOverlay(ctx, state, ui, W, H, compact, time, interaction);

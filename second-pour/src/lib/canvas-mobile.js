@@ -110,9 +110,11 @@ function header(ctx, state, ui, W, targets) {
 function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
   const selected = getSelectedCustomer(state),
     { x, y, w, h } = box;
-  const guestW =
+  const guestW = Math.min(
+    140,
     (w - 58 - 8 * Math.max(0, state.queue.length - 1)) /
-    Math.max(1, state.queue.length);
+      Math.max(1, state.queue.length),
+  );
   state.queue.forEach((guest, i) => {
     const profile = customers[guest.profileId],
       gx = x + i * (guestW + 8),
@@ -128,6 +130,27 @@ function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
       selected: chosen,
       action: game({ type: "SELECT_CUSTOMER", id: guest.id }),
     });
+    const guestZone = {
+      id: `drop-guest-selector-${guest.id}`,
+      label: `Serve ${profile.name}`,
+      kind: "customer",
+      customerId: guest.id,
+      priority: 2,
+      accepts: ["cup", "trayFood"],
+      x: gx,
+      y,
+      w: guestW,
+      h: 44,
+    };
+    interaction.dropZones.push(guestZone);
+    if (
+      ui.drag?.validDropId === guestZone.id ||
+      (!ui.drag &&
+        ui.pickedItem &&
+        ["cup", "trayFood"].includes(ui.pickedItem.kind) &&
+        evaluateOrder(state, guest).correct)
+    )
+      outline(ctx, guestZone);
     const patience =
       state.phase === "practice" ? 1 : guest.patience / guest.maxPatience;
     round(ctx, gx + 8, y + 37, guestW - 16, 3, 2, "#e1e4cc");
@@ -258,26 +281,54 @@ function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
     ...card,
   });
   const held = ui.drag || ui.pickedItem;
-  if (held && ["cup", "trayFood"].includes(held.kind)) outline(ctx, card);
+  if (
+    ui.drag?.validDropId === `drop-guest-${selected.id}` ||
+    (!ui.drag &&
+      held &&
+      ["cup", "trayFood"].includes(held.kind) &&
+      evaluateOrder(state, selected).correct)
+  )
+    outline(ctx, card);
 }
 
-function tabs(ctx, state, ui, box, targets) {
+function tabs(ctx, state, ui, box, targets, interaction) {
   const gap = 6,
     w = (box.w - gap * 3) / 4;
   Object.keys(stationNames).forEach((station, i) => {
-    const job = state.jobs[station];
+    const job = state.jobs[station],
+      rect = { x: box.x + i * (w + gap), y: box.y, w, h: 48 },
+      zoneId = `drop-stationtab-${station}`;
     button(ctx, targets, ui, {
       id: `mobile-${station}`,
       label: `Show ${stationNames[station]}${job?.ready ? ". Ready to collect" : job ? `. ${job.remaining} seconds` : ""}`,
       text: stationNames[station],
-      x: box.x + i * (w + gap),
-      y: box.y,
-      w,
-      h: 48,
+      ...rect,
       selected: (ui.mobileStation || "espresso") === station,
       action: { type: "mobileStation", station },
       fill: job?.ready ? "#e8edbf" : undefined,
     });
+    interaction.dropZones.push({
+      id: zoneId,
+      label:
+        station === "oven"
+          ? "Food to Warmer"
+          : `Cup to ${stationNames[station]}`,
+      kind: "station",
+      station,
+      stationTab: true,
+      priority: 2,
+      accepts: station === "oven" ? ["pastry"] : ["cup"],
+      ...rect,
+    });
+    const held = ui.drag || ui.pickedItem;
+    if (
+      ui.drag?.validDropId === zoneId ||
+      (!ui.drag &&
+        held &&
+        ((held.kind === "cup" && station !== "oven") ||
+          (held.kind === "pastry" && station === "oven")))
+    )
+      outline(ctx, rect);
     if (job) {
       const gx = box.x + i * (w + gap) + w - 17;
       round(
@@ -315,6 +366,19 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     "#e0cfb0",
   );
   if (station === "milk" && ui.mobileExtras) {
+    interaction.dropZones.push({
+      id: "drop-milk",
+      label: "Cup to Milk",
+      kind: "station",
+      station: "milk",
+      accepts: ["cup"],
+      ...box,
+    });
+    if (
+      ui.drag?.validDropId === "drop-milk" ||
+      (!ui.drag && ui.pickedItem?.kind === "cup")
+    )
+      outline(ctx, box);
     label(ctx, "A little extra sweetness", x + 14, y + 23, {
       font: "DynaPuff",
       size: 16,
@@ -385,6 +449,7 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     w: artW,
     h: Math.min(h - 8, Math.max(120, artW * 0.88)),
   };
+  if (station === "oven" && h < 148 && w < 440) art.h = Math.max(40, h - 55);
   drawMachine(ctx, station, art, { job, time, selected: job?.ready });
   if (station === "espresso") {
     const scale = Math.min(art.w / 240, art.h / 205);
@@ -398,23 +463,45 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     round(ctx, 42, 170, 154, 15, 6, "#adbba5", "#638875");
     ctx.restore();
   }
-  const smallArt = h < 125,
-    cupW = smallArt ? 48 : 54;
-  const cupRect = {
-    x: art.x + art.w * (station === "espresso" ? 0.5 : 0.33) - cupW / 2,
-    y: art.y + art.h * (smallArt ? 0.51 : 0.45),
-    w: cupW,
-    h: smallArt ? 44 : 62,
-  };
-  interaction.dropZones.push({
+  const smallArt = h < 125;
+  const dropWell = { x: art.x + 5, y: art.y + 2, w: art.w - 10, h: art.h - 3 };
+  ctx.save();
+  ctx.setLineDash([4, 5]);
+  round(
+    ctx,
+    dropWell.x,
+    dropWell.y,
+    dropWell.w,
+    dropWell.h,
+    13,
+    "transparent",
+    "#bea980",
+  );
+  ctx.restore();
+  if (art.h >= 65)
+    label(
+      ctx,
+      station === "oven" ? "Drop food here" : "Drop cup here",
+      art.x + art.w / 2,
+      art.y + art.h - 7,
+      {
+        size: 12,
+        align: "center",
+        color: "#7e775c",
+        maxWidth: art.w - 15,
+      },
+    );
+  const stationZone = {
     id: `drop-${station}`,
     label: `Place ${station === "oven" ? "food in the warmer" : `cup at ${stationNames[station]}`}`,
     kind: "station",
     station,
     accepts: station === "oven" ? ["pastry"] : ["cup"],
-    ...art,
-    cupRect: station === "oven" ? undefined : cupRect,
-  });
+    ...box,
+    well: dropWell,
+    exclude: [],
+  };
+  interaction.dropZones.push(stationZone);
   targets.push({
     id: `machine-${station}`,
     label: `Use ${stationNames[station]}`,
@@ -422,37 +509,6 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     action: { type: "station", value: station },
     disabled: !usable || running,
   });
-  if (ui.cupDock === station && station !== "oven") {
-    interaction.objects.cup = cupRect;
-    interaction.draggables.push({
-      id: "dock-cup",
-      label: running ? "Cup is filling. Please wait" : "Pick up your cup",
-      kind: "cup",
-      ...cupRect,
-      disabled: !usable || running,
-    });
-    if (ui.drag?.kind !== "cup" && ui.snap?.kind !== "cup")
-      drawDrink(ctx, state.drink, cupRect, {
-        time,
-        ready: evaluateOrder(state).correct,
-      });
-    if ((running || ui.pour?.station === station) && ui.drag?.kind !== "cup") {
-      ctx.save();
-      ctx.strokeStyle =
-        station === "espresso"
-          ? "#966e45"
-          : station === "milk"
-            ? "#fff9df"
-            : "#cbb679";
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(cupRect.x + 26, cupRect.y - 5);
-      ctx.lineTo(cupRect.x + 26, cupRect.y + 18);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
   const controlSize = smallArt ? 44 : 54;
   // Large workspaces contain the illustration with empty margins. Attach the
   // control to its painted face rather than the edge of that containing box.
@@ -463,13 +519,10 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     kettle: [121, 70],
     oven: [159, 71],
   }[station];
-  const anchored = art.w > 250 && art.h > 180;
-  const controlCenter = anchored
-    ? {
-        x: art.x + (art.w - 240 * artScale) / 2 + faceControl[0] * artScale,
-        y: art.y + (art.h - 205 * artScale) / 2 + faceControl[1] * artScale,
-      }
-    : { x: art.x + art.w * 0.64, y: art.y + 1 + controlSize / 2 };
+  const controlCenter = {
+    x: art.x + (art.w - 240 * artScale) / 2 + faceControl[0] * artScale,
+    y: art.y + (art.h - 205 * artScale) / 2 + faceControl[1] * artScale,
+  };
   const control = {
     id: `control-${station}`,
     station,
@@ -506,12 +559,22 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
   const sideX = x + w - sideW - 7;
   if (station === "oven") {
     const horizontalRack = h < 148,
+      sideRack = horizontalRack && w >= 440,
       rackH = horizontalRack ? 44 : Math.max(44, Math.min(52, (h - 18) / 3));
-    const rackW = horizontalRack ? (w - 20 - 12) / 3 : sideW;
+    const rackW = horizontalRack
+      ? ((sideRack ? sideW : w - 20) - 12) / 3
+      : sideW;
     Object.keys(foods).forEach((foodId, i) => {
-      const fy = horizontalRack ? y + h - 49 : y + 7 + i * (rackH + 2),
-        fx = horizontalRack ? x + 10 + i * (rackW + 6) : sideX,
+      const fy = horizontalRack
+          ? sideRack
+            ? y + 4
+            : y + h - 49
+          : y + 7 + i * (rackH + 2),
+        fx = horizontalRack
+          ? (sideRack ? sideX : x + 10) + i * (rackW + 6)
+          : sideX,
         rect = { x: fx, y: fy, w: rackW, h: rackH };
+      stationZone.exclude.push(rect);
       button(ctx, targets, ui, {
         id: `pastry-${foodId}`,
         label: `Pick up ${foods[foodId].shortName} to warm`,
@@ -551,7 +614,7 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
       });
     });
     const ovenAction = horizontalRack
-      ? { x: sideX, y: y + 4, w: sideW, h: 44 }
+      ? { x: sideX, y: y + (sideRack ? 50 : 4), w: sideW, h: 44 }
       : { x: art.x + 4, y: y + h - 50, w: artW - 8, h: 44 };
     button(ctx, targets, ui, {
       id: "station-oven",
@@ -570,6 +633,17 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
       disabled: !usable || running,
       primary: !!job?.ready,
     });
+    interaction.dropZones.push({
+      id: "drop-stationbutton-oven",
+      label: "Food to Warmer",
+      kind: "station",
+      station: "oven",
+      priority: 2,
+      accepts: ["pastry"],
+      ...ovenAction,
+    });
+    if (ui.drag?.validDropId === "drop-stationbutton-oven")
+      outline(ctx, ovenAction);
     if (job?.ready) {
       const rect = ovenAction;
       interaction.draggables.push({
@@ -660,6 +734,12 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
             ? "Brew tea"
             : "Heat water";
     const narrowAction = flavorControls && short && sideW < 160;
+    const actionRect = {
+      x: sideX,
+      y: Math.min(by, y + h - 48),
+      w: flavorControls && short ? sideW - 60 : sideW,
+      h: tight ? 44 : 48,
+    };
     button(ctx, targets, ui, {
       id: `station-${station}`,
       label: running
@@ -676,15 +756,23 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
           : narrowAction && mode === "milk"
             ? "Steam"
             : verb,
-      x: sideX,
-      y: Math.min(by, y + h - 48),
-      w: flavorControls && short ? sideW - 60 : sideW,
-      h: tight ? 44 : 48,
+      ...actionRect,
       action: { type: "station", value: station },
       disabled: !usable || running,
       primary: !!job?.ready,
       fill: job?.ready ? undefined : "#e4eedb",
     });
+    const actionZone = {
+      id: `drop-stationbutton-${station}`,
+      label: `Cup to ${stationNames[station]}`,
+      kind: "station",
+      station,
+      priority: 2,
+      accepts: ["cup"],
+      ...actionRect,
+    };
+    interaction.dropZones.push(actionZone);
+    if (ui.drag?.validDropId === actionZone.id) outline(ctx, actionRect);
     if (flavorControls)
       button(ctx, targets, ui, {
         id: "mobile-extras",
@@ -717,7 +805,8 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     ((held.kind === "cup" && station !== "oven") ||
       (held.kind === "pastry" && station === "oven"))
   )
-    outline(ctx, art, running ? "#be947a" : "#75a16d");
+    if (!ui.drag || ui.drag.validDropId === `drop-${station}`)
+      outline(ctx, box, running ? "#be947a" : "#75a16d");
 }
 
 function tray(ctx, state, ui, W, H, targets, interaction, time) {
@@ -736,7 +825,10 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
     food = { x: 89, y: y + 4, w: 67, h: 58 };
   interaction.objects.tray = trayBox;
   interaction.objects.foodSlot = food;
-  interaction.objects.cup ||= cup;
+  interaction.objects.cup = cup;
+  interaction.dropZones.forEach((zone) => {
+    if (zone.kind === "station" && zone.station !== "oven") zone.cupRect = cup;
+  });
   interaction.dropZones.push({
     id: "drop-tray",
     label: "Place on serving tray",
@@ -760,27 +852,35 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
     id: "pick-cup",
     action: { type: "pickItem", id: "drag-cup" },
   });
-  if (ui.cupDock) {
-    round(
-      ctx,
-      cup.x + 3,
-      cup.y + 4,
-      cup.w - 6,
-      cup.h - 8,
-      12,
-      "#eaf0de",
-      "#cbd8b9",
-    );
-    icon(ctx, busy ? "clock" : "coffee", cup.x + 25, cup.y + 10, 21, "#75926e");
-    label(
-      ctx,
-      `At ${stationNames[ui.cupDock]}`,
-      cup.x + cup.w / 2,
-      cup.y + 48,
-      { size: 12, align: "center", maxWidth: cup.w - 8 },
-    );
-  } else if (ui.drag?.kind !== "cup" && ui.snap?.kind !== "cup")
+  if (ui.drag?.kind !== "cup" && ui.snap?.kind !== "cup")
     drawDrink(ctx, state.drink, cup, { time, ready: correct });
+  if (busy) {
+    round(ctx, cup.x + 43, cup.y + 5, 28, 22, 9, "#e8eed9", "#bccaa1");
+    label(ctx, `${state.jobs[ui.cupDock].remaining}s`, cup.x + 57, cup.y + 16, {
+      size: 12,
+      align: "center",
+      color: "#64805c",
+    });
+  }
+  if (ui.pour && ui.drag?.kind !== "cup") {
+    const elapsed = performance.now() - ui.pour.startedAt;
+    if (elapsed >= 0 && elapsed < ui.pour.duration) {
+      ctx.save();
+      ctx.strokeStyle =
+        ui.pour.station === "espresso"
+          ? "#9d734d"
+          : ui.pour.station === "milk"
+            ? "#e7d7a8"
+            : "#c5a36b";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cup.x + 33, cup.y + 2);
+      ctx.lineTo(cup.x + 33, cup.y + 24);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
   if (isPicked(ui, source)) outline(ctx, cup);
   if (state.food) {
     const sourceFood = {
@@ -837,6 +937,7 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
       maxWidth: W - 179,
     });
   const by = H - 65;
+  const serveRect = { x: 201, y: by - 2, w: W - 210, h: 48 };
   button(ctx, targets, ui, {
     id: "cup-type",
     label: `${state.drink.cup} cup. Change cup type`,
@@ -851,41 +952,70 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
     }),
     disabled: !usable || busy,
   });
-  button(ctx, targets, ui, {
-    id: "remake",
-    label: "Remake drink",
-    icon: "reset",
-    x: 100,
-    y: by,
-    w: 44,
-    h: 44,
-    action: game({ type: "CLEAR_DRINK" }),
-    disabled: !usable || busy,
-  });
-  button(ctx, targets, ui, {
-    id: "clear-food",
-    label: "Clear food",
-    icon: "close",
-    x: 150,
-    y: by,
-    w: 44,
-    h: 44,
-    action: game({ type: "CLEAR_FOOD" }),
-    disabled: !usable || !state.food,
-  });
+  if (ui.pickedItem) {
+    button(ctx, targets, ui, {
+      id: "cancel-picked",
+      label: "Cancel selected item",
+      text: "Cancel",
+      x: 100,
+      y: by,
+      w: 94,
+      h: 44,
+      action: { type: "cancelPick" },
+      fill: "#f6ebdd",
+    });
+  } else {
+    button(ctx, targets, ui, {
+      id: "remake",
+      label: "Remake drink",
+      icon: "reset",
+      x: 100,
+      y: by,
+      w: 44,
+      h: 44,
+      action: game({ type: "CLEAR_DRINK" }),
+      disabled: !usable || busy,
+    });
+    button(ctx, targets, ui, {
+      id: "clear-food",
+      label: "Clear food",
+      icon: "close",
+      x: 150,
+      y: by,
+      w: 44,
+      h: 44,
+      action: game({ type: "CLEAR_FOOD" }),
+      disabled: !usable || !state.food,
+    });
+  }
   button(ctx, targets, ui, {
     id: "serve",
     label: `Serve ${selected ? customers[selected.profileId].name : "order"}${correct ? ". Order ready." : ""}`,
     text: correct ? "Serve ✓" : "Serve",
-    x: 201,
-    y: by - 2,
-    w: W - 210,
-    h: 48,
+    ...serveRect,
     action: game({ type: "SERVE" }),
     disabled: !usable || !selected || busy,
     primary: correct,
     fill: correct ? undefined : "#f2e5c6",
   });
+  if (selected)
+    interaction.dropZones.push({
+      id: "drop-serve",
+      label: `Serve ${customers[selected.profileId].name}`,
+      kind: "customer",
+      customerId: selected.id,
+      priority: 2,
+      accepts: ["cup", "trayFood"],
+      ...serveRect,
+    });
+  if (
+    ui.drag?.validDropId === "drop-serve" ||
+    (!ui.drag &&
+      ui.pickedItem &&
+      correct &&
+      ["cup", "trayFood"].includes(ui.pickedItem.kind))
+  )
+    outline(ctx, serveRect);
   if ((ui.drag || ui.pickedItem)?.kind === "warmFood") outline(ctx, trayBox);
 }
 
@@ -906,8 +1036,7 @@ function floatingItem(ctx, state, ui, time) {
     };
   }
   if (!item) return;
-  const lift = item.pointerType === "touch" ? 48 : 0;
-  const rect = { x: item.x - 35, y: item.y - 39 - lift, w: 70, h: 78 };
+  const rect = { x: item.x - 35, y: item.y - 39, w: 70, h: 78 };
   ctx.save();
   ctx.shadowColor = "#5b473b44";
   ctx.shadowBlur = 12;
@@ -918,7 +1047,7 @@ function floatingItem(ctx, state, ui, time) {
     drawFood(
       ctx,
       item.foodId,
-      { ...rect, y: item.y - 29 - lift, h: 58 },
+      { ...rect, y: item.y - 29, h: 58 },
       { time, warm: item.kind !== "pastry" },
     );
   ctx.restore();
@@ -941,16 +1070,20 @@ export function drawMobileGame(
     wide = W >= 620;
   const leftW = wide ? Math.min(340, W * 0.36) : W - 20;
   const customerBox = wide
-    ? { x: 10, y: 61, w: leftW, h: H - 225 }
+    ? { x: 10, y: 61, w: leftW, h: Math.min(215, H - 225) }
     : { x: 10, y: 60, w: W - 20, h: 136 };
   const tabBox = wide
-    ? { x: leftW + 22, y: 61, w: W - leftW - 32 }
+    ? {
+        x: leftW + 22,
+        y: H > W ? Math.max(61, H - 600) : 61,
+        w: W - leftW - 32,
+      }
     : { x: 10, y: 202, w: W - 20 };
   const machineBox = {
     x: tabBox.x,
     y: tabBox.y + 56,
     w: tabBox.w,
-    h: Math.max(97, H - 176 - (tabBox.y + 56)),
+    h: Math.min(wide ? 340 : 320, Math.max(97, H - 176 - (tabBox.y + 56))),
   };
   interaction.objects.workspace = machineBox;
   ctx.save();
@@ -964,7 +1097,7 @@ export function drawMobileGame(
     { time },
   );
   customerPanel(ctx, state, ui, customerBox, targets, interaction, time, wide);
-  tabs(ctx, state, ui, tabBox, targets);
+  tabs(ctx, state, ui, tabBox, targets, interaction);
   workspace(ctx, state, ui, machineBox, targets, interaction, time);
   tray(ctx, state, ui, W, H, targets, interaction, time);
   const picked = ui.pickedItem;
@@ -981,19 +1114,28 @@ export function drawMobileGame(
         ? "Tap a machine to place the cup"
         : picked.kind === "pastry"
           ? "Tap the warmer to place food"
-          : "Tap your guest to serve the order"
+          : picked.kind === "warmFood"
+            ? "Tap the tray to collect warm food"
+            : "Tap your guest or Serve"
       : ui.feedback?.text ||
         state.notice?.text ||
         (ui.cupDock && state.jobs[ui.cupDock] && !state.jobs[ui.cupDock].ready
           ? "Your cup is filling — one little moment"
-          : "Tap an item, then its destination · or drag"));
-  wrap(ctx, hint, W / 2, H - 173, W - 20, {
-    size: 12,
-    lineHeight: 15,
-    maxLines: 2,
-    align: "center",
-    color: error ? "#a9765b" : "#6f7a58",
-  });
+          : "Tap or drag to a machine"));
+  wrap(
+    ctx,
+    hint,
+    W / 2,
+    Math.min(H - 173, machineBox.y + machineBox.h + 7),
+    W - 20,
+    {
+      size: 12,
+      lineHeight: 15,
+      maxLines: 2,
+      align: "center",
+      color: error ? "#a9765b" : "#6f7a58",
+    },
+  );
   header(ctx, state, ui, W, targets);
   let overlay = null;
   if (ui.modal || state.phase === "paused" || state.phase === "summary") {

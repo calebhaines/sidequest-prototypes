@@ -278,7 +278,7 @@ export function button(
     );
   if (text) {
     const available = w - (iconName ? 34 : 12),
-      fontSize = small ? 11 : 13;
+      fontSize = small ? 12 : 13;
     const words = String(text).split("\n");
     words.forEach((word, i) =>
       label(
