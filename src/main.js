@@ -104,7 +104,7 @@ function renderApp() {
         <div class="idea-feature">${icon('sword')}<h3>Grow into your adventure</h3><p>Fight in real time, collect a little loot, and level up as you make your way.</p></div>
       </section>
     </main>
-    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span>Made for wandering.</span><div>Six worlds. Eight ways to explore. <span class="footer-spark">✦</span></div></footer>
+    <footer><a class="brand footer-brand" href="#">${brandMark}<span>sidequest.</span></a><span><a href="https://calebhaines.github.io/sidequest-prototypes/voxelbloom/" title="Sprite-stacked pixel art studio">Make pixels in Voxelbloom ↗</a></span><div>Six worlds. Eight ways to explore. <span class="footer-spark">✦</span></div></footer>
     <div class="toast" id="toast" role="status"></div>
     <div class="overlay" id="help-overlay" hidden>
       <section class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">

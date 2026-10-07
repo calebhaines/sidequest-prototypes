@@ -4,6 +4,12 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
+## Voxelbloom
+
+[**Open Voxelbloom**](https://calebhaines.github.io/sidequest-prototypes/voxelbloom/) to make sprite-stacked pixel art. Draw and fill pixels, arrange editable layers, orbit the live stack preview, and place sprites into a scene. Includes six starter sprites, undo/redo, local project saving, editable project import/export, and PNG exports for sprite sheets, stack renders, and scenes.
+
+Editable React/Vite sources are in [`voxelbloom/`](voxelbloom/). Install its dependencies with `npm --prefix voxelbloom ci`, then run `npm run voxelbloom:build` from the repository root to rebuild and refresh both `public/voxelbloom/` and the published `docs/voxelbloom/`. The parent site's regular build copies the tracked public version; run `voxelbloom:build` after editing the app.
+
 ## Kitchen
 
 [**Listen to The Cupboard at Low Tide**](https://calebhaines.github.io/sidequest-prototypes/music/listen/), a two-minute arrangement made in GALLEY, or [download its original stereo WAV](music/listen/The-Cupboard-at-Low-Tide.wav).

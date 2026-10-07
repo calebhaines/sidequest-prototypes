@@ -10,6 +10,8 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "music:sync": "node scripts/sync-music.mjs",
+    "voxelbloom:build": "npm --prefix voxelbloom run build && node scripts/sync-voxelbloom.mjs",
+    "voxelbloom:sync": "node scripts/sync-voxelbloom.mjs",
     "check:loom": "node loom/checks.cjs",
     "check:loom-amp": "node loom/amp-checks.cjs",
     "check:loom-vocal": "node loom/vocal-checks.cjs",
