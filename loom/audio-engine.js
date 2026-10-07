@@ -5,6 +5,14 @@
   function createLoomEngineDSP(effectsFactory) {
     const clamp = (v, lo, hi, fallback = lo) => Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
     const effects = effectsFactory();
+    const serviceGeometry = (options, beat) => {
+      const clip = options.clip, nativeRate = clamp(clip.rate, .125, 8, 1), nativeLength = clamp(clip.length, .0001, 256, 1), stutter = [.125, .25, .5].includes(options.stutterBeats) ? options.stutterBeats : 0;
+      const rate = stutter ? nativeRate : options.fill ? Math.min(8, nativeRate * 2) : nativeRate, factor = rate / nativeRate, length = stutter || nativeLength / factor;
+      const phase = Number(options.phaseOrigin) || 0, padBeat = Number(options.padBeat) || 0, sceneBeat = Number(options.sceneBeat) || 0;
+      const origin = stutter ? padBeat : options.fill ? padBeat - phase / factor : sceneBeat, start = origin + Math.floor((beat - origin + 1e-10) / length) * length;
+      const span = Number(clip.sourceEnd) - Number(clip.sourceStart), offset = clamp(clip.sourceOffset, 0, 120, 0) + (stutter ? phase * 60 / clamp(options.tempo, 40, 240, 120) * nativeRate : 0);
+      return { start, length, sourceOffset: stutter && span > 0 ? ((offset % span) + span) % span : offset, rate, loop: stutter > 0 || clip.loop === true, fadeIn: Math.min(length / 2, clamp(clip.fadeIn, 0, 32, 0) / factor), fadeOut: Math.min(length / 2, clamp(clip.fadeOut, 0, 32, 0) / factor) };
+    };
     const automationValue = (lane, beat, fallback) => {
       const points = lane?.points;
       if (!lane || lane.enabled === false || !points?.length) return fallback;
@@ -46,6 +54,8 @@
         this.clickPhase = 0;
         this.clickRemaining = 0;
         this.previousClickBeat = -1;
+        this.service = null;
+        this.serviceEvents = [];
         this.setAssets(assets);
         this.setState(state);
         this.meters = { beat: 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), master: emptyMeter() };
@@ -69,6 +79,10 @@
         }).filter(item => item.left?.length && item.span > 0));
       }
       setState(state) {
+        if (this.service) { this.service.baseState = state || {}; this._setState(this._serviceState()); }
+        else this._setState(state);
+      }
+      _setState(state) {
         this.state = state || {};
         this.tempo = clamp(this.state.tempo, 40, 240, 120);
         this.tracks = Array.from({ length: 8 }, (_, i) => this.state.tracks?.[i] || { id: `track-${i + 1}`, clips: [], effects: [] });
@@ -100,8 +114,8 @@
         }
       }
       get endBeat() { return clamp(this.state.lengthBars, 1, 64, 4) * 4; }
-      start(beat = this.beat) { this.seek(beat); this.playing = true; this.silent = false; this.meters = { ...this.meters, beat: this.beat, playing: true, ended: false }; }
-      stop() { this.playing = false; this.countInRemaining = 0; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended, countInBeatsRemaining: 0 }; }
+      start(beat = this.beat) { if (this.service) this.stopService(); this.seek(beat); this.playing = true; this.silent = false; this.meters = { ...this.meters, beat: this.beat, playing: true, ended: false }; }
+      stop() { if (this.service) { this.stopService(); return; } this.playing = false; this.countInRemaining = 0; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended, countInBeatsRemaining: 0 }; }
       seek(beat) {
         this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
         this.transportCycle = 0;
@@ -130,6 +144,7 @@
       resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
+        if (this.service) this.stopService();
         this.playing = false; this.ended = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
         this.countInRemaining = 0; this.recordingPunch = false;
         this.lastOutput.fill(0); this.seekOrigin.fill(0); this.seekFadeRemaining = 0;
@@ -156,7 +171,123 @@
         const a = Math.floor(position), f = position - a;
         return (data[a] || 0) * (1 - f) + (data[Math.min(a + 1, data.length - 1)] || 0) * f;
       }
+      // SERVICE is an opt-in runtime overlay. The arrangement renderer below
+      // receives the same state, clips and block sizes whenever it is inactive.
+      startService(scene, fromBeat = 0, seq = 0, performance = null) {
+        if (this.service) this.stopService(seq);
+        const baseState = this.state, arrangementBeat = this.beat, options = this.options;
+        this.stop(); this.seek(clamp(fromBeat, 0, Number.MAX_SAFE_INTEGER, 0));
+        this.service = { baseState, arrangementBeat, options, scene: this._serviceScene(scene), sceneBeat: this.beat, sceneStarts: Array(8).fill(this.beat), padBeat: this.beat, padBeats: Array(8).fill(this.beat), phaseOrigins: Array(8).fill(0), performance: { drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [] }, pending: [] };
+        if (performance) this.service.performance = this._servicePerformance(performance);
+        this.options = { ...options, linear: true };
+        this._setState(this._serviceState()); this.playing = true; this.silent = false; this.ended = false;
+        this.meters = { ...this.meters, beat: this.beat, cycle: 0, playing: true, ended: false };
+        this._emitService('start', seq); this._emitService('scene', seq); this._emitService('performance', seq);
+      }
+      _serviceScene(scene) {
+        if (!scene || !Array.isArray(scene.clips) || scene.clips.length !== 8) throw Error('A SERVICE scene needs eight clip cells.');
+        return { ...scene, clips: scene.clips.map(clip => clip ? { ...clip, start: 0 } : null) };
+      }
+      queueService(type, value, quantize = 'immediate', seq = 0) {
+        if (!this.service) throw Error('Start SERVICE before launching a scene or performance control.');
+        let quantum = { beat: 1, halfbar: 2, bar: 4, '2bar': 8, '4bar': 16 }[quantize];
+        if (!quantum && type === 'performance' && ((value?.stutterBeats || 0) !== this.service.performance.stutterBeats || (value?.fill === true) !== this.service.performance.fill)) quantum = 1 / 64;
+        const beat = quantum ? (Math.floor((this.beat + 1e-10) / quantum) + 1) * quantum : this.beat;
+        if (type === 'scene') value = this._serviceScene(value);
+        else if (type !== 'performance') throw Error('Choose a SERVICE scene or performance control.');
+        // A fresh scene supersedes an unplayed launch, so rapid pad taps do not
+        // unexpectedly play several scenes at the same musical boundary.
+        this.service.pending = this.service.pending.filter(event => event.type !== type);
+        this.service.pending.push({ type, value, beat, seq });
+        this.service.pending.sort((a, b) => a.beat - b.beat || a.seq - b.seq);
+        return beat;
+      }
+      _serviceState() {
+        const { baseState, performance } = this.service;
+        const tracks = Array.from({ length: 8 }, (_, index) => {
+          const base = baseState.tracks?.[index] || { id: 'track-' + (index + 1), effects: [], automation: [] }, overrides = performance.overrides.filter(item => indexFor(item.trackId, baseState.tracks || []) === index);
+          const track = { ...base, clips: [], instrumentLive: false, notePlayback: false, effects: Array.from({ length: 4 }, (_, slot) => { const effect = base.effects?.[slot]; return effect ? { ...effect, params: { ...effect.params } } : null; }), automation: [] };
+          for (const item of overrides) {
+            if (item.target === 'level') track.level = clamp(item.value, 0, 1.5, base.level);
+            else if (item.target === 'pan') track.pan = clamp(item.value, -1, 1, base.pan);
+            else { const match = /^fx:([0-3]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(item.target || ''), effect = match && track.effects[Number(match[1])]; if (effect && typeof effect.params?.[match[2]] === 'number') effect.params[match[2]] = item.value; }
+          }
+          if (performance.drops[index]) { track.level = 0; track.automation = track.automation.filter(lane => lane.target !== 'level'); }
+          return track;
+        });
+        return { ...baseState, loopEnabled: false, tracks };
+      }
+      _servicePhase(track, beat) {
+        const service = this.service, clip = service.scene.clips[track]; if (!clip) return 0;
+        const period = clamp(clip.length, .0001, 256, 1), p = service.performance;
+        const elapsed = Math.max(0, beat - service.padBeats[track]), mod = (a, b) => ((a % b) + b) % b;
+        if (p.stutterBeats) return mod(service.phaseOrigins[track] + mod(elapsed, p.stutterBeats), period);
+        if (p.fill) { const rate = clamp(clip.rate, .125, 8, 1); return mod(service.phaseOrigins[track] + elapsed * Math.min(8, rate * 2) / rate, period); }
+        return mod(beat - service.sceneStarts[track], period);
+      }
+      _applyService(event) {
+        const service = this.service;
+        if (event.type === 'scene') {
+          const previous = service.scene;
+          service.scene = { ...event.value, clips: event.value.clips.map((clip, track) => event.value.holds?.[track] ? previous.clips[track] : clip) };
+          for (let track = 0; track < 8; track++) if (!event.value.holds?.[track]) { service.sceneStarts[track] = this.beat; service.padBeats[track] = this.beat; service.phaseOrigins[track] = 0; }
+          service.sceneBeat = this.beat; service.padBeat = this.beat;
+        }
+        else {
+          const value = this._servicePerformance(event.value), old = service.performance, { stutterBeats, fill } = value;
+          if (stutterBeats !== old.stutterBeats || fill !== old.fill) { service.phaseOrigins = Array.from({ length: 8 }, (_, track) => this._servicePhase(track, this.beat)); service.padBeat = this.beat; service.padBeats = Array(8).fill(this.beat); }
+          service.performance = value;
+          this._setState(this._serviceState());
+        }
+        this._emitService(event.type, event.seq);
+      }
+      _servicePerformance(value = {}) {
+        return { drops: Array.from({ length: 8 }, (_, i) => value.drops?.[i] === true), stutterBeats: [.125, .25, .5].includes(value.stutterBeats) ? value.stutterBeats : 0, fill: value.fill === true, overrides: (value.overrides || []).filter(item => item && Number.isFinite(item.value)).map(item => ({ trackId: item.trackId, target: item.target, value: item.value })) };
+      }
+      _emitService(type, seq) {
+        const service = this.service;
+        this.serviceEvents.push({ type, seq, beat: this.beat, frame: this.sampleClock, tempo: this.tempo, arrangementBeat: service?.arrangementBeat, scene: service?.scene || null, sceneBeat: service?.sceneBeat || 0, sceneStarts: service?.sceneStarts?.slice() || [], performance: service?.performance || null, padBeat: service?.padBeat || 0, padBeats: service?.padBeats?.slice() || [], phaseOrigins: service?.phaseOrigins?.slice() || [] });
+      }
+      drainServiceEvents(contextTime = 0, blockFrame = this.sampleClock) {
+        const events = this.serviceEvents.splice(0);
+        return events.map(event => ({ ...event, contextTime: contextTime + (event.frame - blockFrame) / this.sampleRate }));
+      }
+      stopService(seq = 0) {
+        if (!this.service) return this.beat;
+        const service = this.service; this._emitService('stop', seq);
+        this.service = null; this.options = service.options; this._setState(service.baseState);
+        this.playing = false; this.seek(service.arrangementBeat); this.countInRemaining = 0; this.clickRemaining = 0;
+        return this.beat;
+      }
+      _serviceClips(endBeat) {
+        const service = this.service, p = service.performance;
+        return service.scene.clips.map((clip, track) => {
+          if (!clip) return [];
+          const asset = this.assets.get(clip.assetId), sr = clamp(asset?.sampleRate, 8000, 192000, 48000), duration = asset?.left?.length / sr || 0;
+          const sourceStart = clamp(clip.sourceStart, 0, duration, 0), sourceEnd = clamp(clip.sourceEnd, sourceStart, duration, duration);
+          if (!asset?.left?.length || sourceEnd <= sourceStart) return [];
+          const geometryOptions = { clip: { ...clip, sourceStart, sourceEnd }, tempo: this.tempo, sceneBeat: service.sceneStarts[track], padBeat: service.padBeats[track], phaseOrigin: service.phaseOrigins[track], stutterBeats: p.stutterBeats, fill: p.fill }, first = serviceGeometry(geometryOptions, this.beat), result = [];
+          for (let start = first.start; start <= endBeat + 1e-10; start += first.length) {
+            if (start < service.sceneStarts[track] - 1e-10 && !p.fill) continue;
+            result.push({ ...first, start, left: asset.left, right: asset.right || asset.left, sampleRate: sr, sourceStart, sourceEnd, span: sourceEnd - sourceStart, reverse: clip.reverse === true, gain: clamp(clip.gain, 0, 4, 1) });
+          }
+          return result;
+        });
+      }
       processBlock(left, right, inputs = []) {
+        if (!this.service) return this._processBlock(left, right, inputs);
+        const n = Math.min(left.length, right.length), advance = this.tempo / (60 * this.sampleRate);
+        let at = 0, meters;
+        while (at < n) {
+          while (this.service.pending.length && this.service.pending[0].beat <= this.beat + 1e-10) this._applyService(this.service.pending.shift());
+          const next = this.service.pending[0], until = next ? Math.max(1, Math.ceil((next.beat - this.beat - 1e-10) / advance)) : n - at, count = Math.min(n - at, until);
+          this.clipLists = this._serviceClips(this.beat + advance * count);
+          const segmentInputs = inputs.map(input => input?.map(channel => channel?.subarray(at, at + count)));
+          meters = this._processBlock(left.subarray(at, at + count), right.subarray(at, at + count), segmentInputs); at += count;
+        }
+        return meters;
+      }
+      _processBlock(left, right, inputs = []) {
         const n = Math.min(left.length, right.length), sr = this.sampleRate;
         left.fill(0); right.fill(0);
         const microphone = inputs[8]; this.microphonePeak = 0;
@@ -423,7 +554,7 @@
       }
       cancel() { this.active = false; this.stage = 'idle'; this.frames = 0; this.used = 0; this.buffers = []; }
     }
-    return { Core, Recorder };
+    return { Core, Recorder, ServiceTiming: { geometry: serviceGeometry } };
   }
 
   const silenceMeters = beat => ({ beat: beat || 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), master: { peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 } });
@@ -497,6 +628,7 @@
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null; this.microphoneInput = null; this._micRequest = 0; this._micEnabled = false; this._micTrack = -1; this._micPending = false; this._micPurpose = null; this._recordMicrophone = null;
       this._recordStage = 'idle'; this._recordTransportStarted = false;
       this._transportListeners = new Set(); this._clockAnchor = { beat: 0, time: 0, cycle: 0, countIn: 0 };
+      this._serviceListeners = new Set(); this._serviceSeq = 0; this._serviceRuntime = { active: false, scene: null, performance: null }; this._serviceArrangementBeat = 0; this._serviceStops = new Map();
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
       this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
       this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
@@ -627,13 +759,17 @@
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
                   this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
-                    const m=e.data;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
+                    const m=e.data,serviceFrame=m.type==='serviceStart'?0:this.core.sampleClock;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
                     if(m.type==='state')this.core.setState(m.state);
                     else if(m.type==='assets')this.core.setAssets(m.assets);
                     else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);
                     else if(m.type==='play')this.core.start(m.beat);
                     else if(m.type==='stop')this.core.stop();
                     else if(m.type==='seek')this.core.seek(m.beat);
+                    else if(m.type==='serviceStart')this.core.startService(m.scene,m.beat,m.seq,m.performance);
+                    else if(m.type==='serviceScene')this.core.queueService('scene',m.scene,m.quantize,m.seq);
+                    else if(m.type==='servicePerformance')this.core.queueService('performance',m.performance,m.quantize,m.seq);
+                    else if(m.type==='serviceStop')this.core.stopService(m.seq);
                     else if(m.type==='recordHold')this.core.setRecordingHold(m.value);
                     else if(m.type==='audition')this.core.resumeAudition(m.track);
                     else if(m.type==='clearAudition')this.core.clearAudition(m.track);
@@ -650,12 +786,14 @@
                     else if(m.type==='recordStop'){const meta=this.recorder.stop(m.stopId);this.core.endRecording();if(!meta.pending)this.port.postMessage({type:'recordStopped',...meta,stopId:m.stopId});}
                     else if(m.type==='recordCancel'){this.recorder.cancel();this.core.endRecording();}
                     else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}
+                    if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                     if(Number.isInteger(m.epoch))this.port.postMessage({type:'clock',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});
                   };
                 }
                 process(inputs,outputs) {
                   const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;
-                  this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                   if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
                   this.recorder.capture(inputs,n,this.core);
                   if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters()});}
@@ -685,7 +823,9 @@
           this.merger.connect(this.node);
           this.node.onaudioprocess = e => {
             const inputs = Array.from({ length: 9 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
+            const serviceFrame = this.core.sampleClock;
             this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
             this.recorder.capture(inputs, e.outputBuffer.length, this.core);
             this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
@@ -701,20 +841,25 @@
     }
     getTrackInput(id) { if (this._audioApplying) throw Error('Finish setting up the audio interface before opening an instrument.'); if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
-      if (['play', 'stop', 'seek', 'panic', 'recordStart'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
+      if (['play', 'stop', 'seek', 'panic', 'recordStart', 'serviceStart', 'serviceStop'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (Number.isInteger(m.epoch)) {
         const now = this.context?.currentTime || 0;
-        this._clockAnchor = { beat: this._meters.beat || 0, cycle: m.type === 'seek' || m.type === 'play' ? 0 : this._clockAnchor.cycle || 0, time: now, countIn: this._meters.countInBeatsRemaining || 0 };
+        this._clockAnchor = { beat: this._meters.beat || 0, cycle: ['seek', 'play', 'serviceStart', 'serviceStop'].includes(m.type) ? 0 : this._clockAnchor.cycle || 0, time: now, countIn: this._meters.countInBeatsRemaining || 0 };
         this._notifyTransport(m.type);
       }
       if (this.mode === 'worklet') { this.node.port.postMessage(m); return; }
       if (!this.core) return;
+      const serviceFrame = m.type === 'serviceStart' ? 0 : this.core.sampleClock;
       if (m.type === 'state') this.core.setState(m.state);
       else if (m.type === 'assets') this.core.setAssets(m.assets);
       else if (m.type === 'assetDelta') this.core.updateAssets(m.additions, m.removals);
       else if (m.type === 'play') this.core.start(m.beat);
       else if (m.type === 'stop') this.core.stop();
       else if (m.type === 'seek') this.core.seek(m.beat);
+      else if (m.type === 'serviceStart') this.core.startService(m.scene, m.beat, m.seq, m.performance);
+      else if (m.type === 'serviceScene') this.core.queueService('scene', m.scene, m.quantize, m.seq);
+      else if (m.type === 'servicePerformance') this.core.queueService('performance', m.performance, m.quantize, m.seq);
+      else if (m.type === 'serviceStop') this.core.stopService(m.seq);
       else if (m.type === 'recordHold') this.core.setRecordingHold(m.value);
       else if (m.type === 'audition') this.core.resumeAudition(m.track);
       else if (m.type === 'clearAudition') this.core.clearAudition(m.track);
@@ -727,9 +872,17 @@
       else if (m.type === 'recordStop') { const meta = this.recorder.stop(m.stopId); this.core.endRecording(); if (!meta.pending) this._message({ type: 'recordStopped', ...meta, stopId: m.stopId }); }
       else if (m.type === 'recordCancel') { this.recorder.cancel(); this.core.endRecording(); }
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
+      if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(this.context?.currentTime || 0, serviceFrame)) this._message({ type: 'serviceEvent', event });
       if (Number.isInteger(m.epoch)) this._acceptMeters(this.core.getMeters(), m.epoch, this.context?.currentTime || 0);
     }
     _message(m) {
+      if (m.type === 'serviceEvent') {
+        const event = m.event;
+        if (event.type === 'stop') { this._serviceRuntime = { ...event, active: false }; this._serviceArrangementBeat = event.arrangementBeat ?? this._serviceArrangementBeat; this._meters = { ...this._meters, beat: this._serviceArrangementBeat, cycle: 0, playing: false, ended: false }; this._serviceStops.get(event.seq)?.(event); this._serviceStops.delete(event.seq); }
+        else this._serviceRuntime = { ...event, active: true };
+        for (const listener of this._serviceListeners) { try { listener(event); } catch (error) { this.onStatus?.({ type: 'error', message: error.message }); } }
+        return;
+      }
       if ((m.type === 'meters' || m.type === 'transportEnded' || m.type === 'clock') && m.epoch === this._transportEpoch) { this._acceptMeters(m.meters, m.epoch, m.contextTime); if (this.isRecording && m.recordId === this._recordId) { this._recordFrames = Math.max(this._recordFrames, m.recordFrames || 0); this._recordStage = m.recordStage || this._recordStage; } }
       else if (m.type === 'chunk' && m.id === this._recordId) { if (!this._chunks.has(m.trackIndex)) this._chunks.set(m.trackIndex, []); this._chunks.get(m.trackIndex).push({ left: m.left, right: m.right }); this._recordStartBeat = m.startBeat; }
       else if (m.type === 'recordStarted' && m.id === this._recordId) this._recordStartBeat = m.startBeat;
@@ -754,9 +907,9 @@
     _notifyTransport(reason) { const clock = this.getTransport(); for (const listener of this._transportListeners) { try { listener(clock, reason); } catch (error) { this.onStatus?.({ type: 'error', message: error.message }); } } }
     getTransport(atTime = this.context?.currentTime || 0) {
       const configuration = this._clockConfiguration, tempo = Math.max(40, Math.min(240, Number(configuration.tempo) || 120)), anchor = this._clockAnchor;
-      const sessionEnd = Math.max(1, Math.min(64, Number(configuration.lengthBars) || 4)) * 4, endBeat = this.recordingBusy && !this._recordSchedule?.punchEnabled ? 256 : sessionEnd;
+      const service = this._serviceRuntime.active === true, sessionEnd = Math.max(1, Math.min(64, Number(configuration.lengthBars) || 4)) * 4, endBeat = service ? Infinity : this.recordingBusy && !this._recordSchedule?.punchEnabled ? 256 : sessionEnd;
       const loopStart = Math.max(0, Number(configuration.loopStart) || 0), loopEnd = Math.min(sessionEnd, Number(configuration.loopEnd) || sessionEnd);
-      const loopEnabled = configuration.loopEnabled === true && !(this.isRecording && this._recordSchedule?.punchEnabled), span = Math.max(.25, loopEnd - loopStart);
+      const loopEnabled = !service && configuration.loopEnabled === true && !(this.isRecording && this._recordSchedule?.punchEnabled), span = Math.max(.25, loopEnd - loopStart);
       const playing = this._meters.playing === true && !this._panicLatched;
       const elapsed = playing ? (atTime - anchor.time) * tempo / 60 : 0, countIn = Math.max(0, anchor.countIn - Math.max(0, elapsed));
       let beat = anchor.beat + (playing ? Math.max(0, elapsed - anchor.countIn) : 0), cycle = anchor.cycle;
@@ -765,9 +918,9 @@
       if (playing && elapsed < 0 && !anchor.countIn) beat = anchor.beat + elapsed;
       if (loopEnabled && cycle > 0 && beat < loopStart) { beat += span; cycle--; }
       if (playing && loopEnabled && beat >= loopEnd) { const wraps = 1 + Math.floor((beat - loopEnd) / span); beat = loopStart + (beat - loopEnd) % span; cycle += wraps; }
-      if (!loopEnabled && !this.recordingBusy) beat = Math.min(endBeat, beat);
+      if (!loopEnabled && !this.recordingBusy && !service) beat = Math.min(endBeat, beat);
       beat = Math.max(0, beat);
-      return { beat, absoluteBeat: beat + cycle * span, cycle, contextTime: atTime, anchorTime: anchor.time, anchorBeat: anchor.beat, tempo, playing, revision: this._transportEpoch, loopEnabled, loopStart, loopEnd, endBeat, countInBeatsRemaining: countIn, mode: this.mode };
+      return { beat, absoluteBeat: service ? beat : beat + cycle * span, cycle, contextTime: atTime, anchorTime: anchor.time, anchorBeat: anchor.beat, tempo, playing, revision: this._transportEpoch, loopEnabled, loopStart, loopEnd, endBeat, countInBeatsRemaining: countIn, mode: this.mode };
     }
     get recordingBusy() { return Boolean(this.isRecording || this._recordPreparing || this._micPending || this._stopPromise || this._chunks.size); }
     _updateRecordHold() { this._send({ type: 'recordHold', value: this.recordingBusy }); }
@@ -787,7 +940,51 @@
       if (!additions.size && !removals.length) return;
       this._send({ type: 'assetDelta', additions, removals }); this._sentAssets = new Map(this.assets);
     }
+    _validateServiceScene(scene) {
+      if (!scene || !Array.isArray(scene.clips) || scene.clips.length !== 8) throw Error('Choose a SERVICE scene with eight clip cells.');
+      for (const clip of scene.clips) if (clip && (clip.type === 'notes' || !this.assets.has(clip.assetId) || !Number.isFinite(clip.length) || clip.length <= 0)) throw Error('Prepare each SERVICE cell as a valid audio clip before playing.');
+      return { ...scene, clips: scene.clips.map(clip => clip ? { ...clip, start: 0 } : null), ...(scene.holds ? { holds: Array.from({ length: 8 }, (_, i) => scene.holds[i] === true) } : {}) };
+    }
+    async startService({ scene, performance = null, fromBeat = 0 } = {}) {
+      if (this.recordingBusy) throw Error('Finish the current recording before starting SERVICE.');
+      if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before starting SERVICE.');
+      scene = this._validateServiceScene(scene);
+      if (this._serviceRuntime.active) await this.stopService();
+      const generation = this.generation, request = ++this._playRequest;
+      this._playPending++;
+      try {
+        await this.init(); if (generation !== this.generation || request !== this._playRequest) return false;
+        await this.context.resume(); if (generation !== this.generation || request !== this._playRequest) return false;
+        this._serviceArrangementBeat = this.getTransport().beat;
+        const beat = Math.max(0, Number(fromBeat) || 0), seq = ++this._serviceSeq;
+        this._serviceRuntime = { active: true, scene, performance, beat, seq };
+        this._panicLatched = false; this._meters = { ...this._meters, beat, cycle: 0, playing: true, ended: false };
+        this._send({ type: 'serviceStart', scene, performance, beat, seq }); return true;
+      } finally { this._playPending--; }
+    }
+    queueServiceScene(scene, { quantize = 'bar' } = {}) {
+      if (!this._serviceRuntime.active) throw Error('Start SERVICE before launching a scene.');
+      scene = this._validateServiceScene(scene); const seq = ++this._serviceSeq;
+      this._send({ type: 'serviceScene', scene, quantize, seq }); return seq;
+    }
+    setServicePerformance(performance, { quantize = 'immediate' } = {}) {
+      if (!this._serviceRuntime.active) throw Error('Start SERVICE before using performance controls.');
+      if (!performance || !Array.isArray(performance.overrides || []) || (performance.overrides || []).some(item => !Number.isFinite(item?.value))) throw Error('Choose finite SERVICE performance values.');
+      const seq = ++this._serviceSeq; this._send({ type: 'servicePerformance', performance, quantize, seq }); return seq;
+    }
+    stopService() {
+      this._playRequest++;
+      if (!this._serviceRuntime.active) return Promise.resolve({ active: false, beat: this.getTransport().beat });
+      const seq = ++this._serviceSeq;
+      const stopped = new Promise(resolve => this._serviceStops.set(seq, resolve));
+      this._serviceRuntime = { ...this._serviceRuntime, active: false };
+      this._meters = { ...this._meters, beat: this._serviceArrangementBeat, cycle: 0, playing: false, ended: false };
+      this._send({ type: 'serviceStop', seq }); return stopped;
+    }
+    subscribeService(listener) { if (typeof listener !== 'function') throw TypeError('Provide a SERVICE event listener.'); this._serviceListeners.add(listener); return () => this._serviceListeners.delete(listener); }
+    getServiceState() { return { ...this._serviceRuntime, beat: this._serviceRuntime.active ? this.getTransport().beat : this._serviceRuntime.beat || 0 }; }
     async play(fromBeat = this._meters.beat) {
+      if (this._serviceRuntime.active) await this.stopService();
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before starting playback.');
       this._playPending++;
       try {
@@ -796,9 +993,10 @@
         this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
       } finally { this._playPending--; }
     }
-    stop(options = {}) { if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
+    stop(options = {}) { if (this._serviceRuntime.active) this.stopService(); if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
       if (this.recordingBusy) throw Error('Finish or cancel the current take before moving the playhead.');
+      if (this._serviceRuntime.active) throw Error('Stop SERVICE before moving the arrangement playhead.');
       this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
     }
     resumeAudition(id) { this._panicLatched = false; this._send({ type: 'audition', track: id == null ? undefined : this._trackIndex(id) }); }
@@ -822,6 +1020,7 @@
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
     async startRecording(trackIds, options = {}) {
+      if (this._serviceRuntime.active) throw Error('Stop SERVICE before recording a microphone or instrument take.');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
       this._recordPreparing = true; this._updateRecordHold();
@@ -1032,8 +1231,9 @@
       })().finally(() => { this._closingAudioGraph = null; });
       return this._closingAudioGraph;
     }
-    async dispose() { this.panic(); this._transportListeners.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
+    async dispose() { this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
+  window.LoomServiceTiming = createLoomEngineDSP(window.createLoomEffectsDSP).ServiceTiming;
   window.LoomAudio = LoomAudio;
 })();

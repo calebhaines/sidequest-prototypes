@@ -193,6 +193,7 @@
       s.tracks.push(t);
     }
     if (snapshotBytes > LIMITS.snapshotBytes) throw Error('Instrument states, note patterns, and printed sources exceed the 96 MB budget. Remove unused parts or saved sources.');
+    if (raw.service !== undefined) { if (!window.LoomServiceSchema) throw Error('The SERVICE project schema is unavailable.'); s.service = window.LoomServiceSchema.normalize(raw.service, s); }
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
@@ -250,6 +251,7 @@
         const a = s.assets.find(a => a.id === c.assetId); if (c.sourceEnd > a.frames / a.sampleRate + 1 / a.sampleRate) throw Error('A clip extends beyond its source audio.');
       }
     }
+    if (s.service !== undefined) { if (!window.LoomServiceSchema) throw Error('The SERVICE project schema is unavailable.'); window.LoomServiceSchema.validate(s.service, s); }
     return normalize(s);
   }
   function pruneAssets(state) {

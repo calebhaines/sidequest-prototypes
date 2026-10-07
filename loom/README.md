@@ -35,6 +35,55 @@ embedded for offline use; the studio retains eight tracks and four inserts per t
 
 **MARINADE** combines two recorded ingredients into a polyphonic spectral morphing instrument. Its full native editor, two sample-import bays, editable note patterns and isolated native renderer are available inside the studio. Printed parts retain the source audio, patch and original notes for Edit source, Update audio or Restore notes.
 
+## SERVICE · separate performance desk
+
+Open SERVICE from [Kitchen](https://calebhaines.github.io/sidequest-prototypes/music/loom/#service),
+the **Operating notes** dialog, or **Alt + P**. It opens its own full-screen desk;
+GALLEY's existing arrangement layout and controls remain unchanged. Closing it
+stops the performance and returns to the original arrangement position.
+
+Sixteen scenes each select a clip, silence, or **Hold** for each of the eight
+tracks. Hold keeps that track's current source and phase while the others change.
+Use **From loop** or **From markers** to build a scene bank, then edit each scene's
+source clips. Each source repeats its own length. Scene launches can be immediate
+or synchronized to a beat, half bar, bar, two bars, or four bars. The audio engine
+applies queued changes at its sample clock; selecting another scene replaces the
+pending launch. SERVICE does not automatically change tempo.
+
+Four assignable macros can control track volume, pan, and numeric controls in
+the existing four effects slots. Their center position is neutral. Range,
+baseline, and direction are editable per mapping. The supplied Pressure, Heat,
+Space, and Spread mappings are starting points, using the effects already in
+the project. Hold the stutter, fill, or drop pads for momentary changes. Releasing
+the pad, closing the desk, or losing focus releases those controls.
+
+Arm **Capture**, then press **Play** to record a new performance from bar one.
+Stop to keep the take. **Create arrangement from take** explicitly replaces the
+current arrangement with editable clips, scene markers, and control automation
+in one undoable step. One **Undo** restores the previous session. Capture keeps
+up to 64 bars and 8,192 applied events; a completed capture can be retained while
+performance continues. Source note clips use private dry renders of their saved
+instrument patches. Captured prints retain their original note sources for
+restoring or editing. Very short repeated cuts can become a small dry loop;
+effects remain in their slots and are applied once. Captured cut boundaries use
+GALLEY's usual short fades.
+
+SERVICE uses saved static mixer and effect settings as its starting point.
+Existing arrangement automation is reserved for arrangement playback; it is
+neither changed nor played while SERVICE is active. Scenes, macro mappings,
+learned MIDI assignments, and the latest stopped take are saved in the normal
+GALLEY project. The original clips and assets remain untouched until an explicit
+arrangement creation. If a deleted clip or replaced effect invalidates a saved
+assignment, its stale reference is removed rather than routed to another sound.
+
+**Enable MIDI** is optional. In a browser supporting Web MIDI, choose **Learn**
+for a scene, macro, transport button, or pad and move the desired physical control.
+Learn consumes the first message without playing it. MIDI only controls SERVICE
+while its desk is open. Note-off, port disconnection, focus loss, and desk closure
+release momentary pads. Unsupported browsers retain all on-screen controls.
+
+SERVICE is version 1.0.0; the existing GALLEY engine and arrangement remain 1.11.1.
+
 ## Making a piece
 
 Select a track, choose an instrument, and open its editor. Its full original

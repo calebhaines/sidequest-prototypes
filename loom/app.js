@@ -18,7 +18,7 @@
   let recoveryWarned=false,recoveryUnavailable=false;
   let assetMap = {}, waveformFrame = 0, fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
-  let automationEditor, pianoRoll, noteWorkflow;
+  let automationEditor, pianoRoll, noteWorkflow, serviceController;
   let audioSettingsBusy = false, audioDeviceBusy = false, ampPracticeBusy = false, audioDeviceOperation = 0, audioSettingsOperation = 0, audioDiagnosticsTime = 0, audioDevices = null;
   let vocalEditorView = 'basic';
   const vocalHelpOpen = new Set();
@@ -563,6 +563,7 @@
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();seekTo((engine.getMeters().beat||0)+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?4:state.view.snap||.25));}
   });
   function animate(now) {
+    if(serviceController?.isOpen){requestAnimationFrame(animate);return;}
     if(now-meterTime>45){
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
@@ -876,5 +877,23 @@
   const releaseInputOnExit=()=>{++microphoneOperation;engine.panic();};window.addEventListener('beforeunload',releaseInputOnExit);
   if(location.protocol==='file:'){const home='https://calebhaines.github.io/sidequest-prototypes/music/';$('musicHome').href=home;$('downloadHtml').href=home+'loom/index.html';$('downloadSource').href=home+'loom/LOOM-source.zip';$('downloadApi').href='https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md';}
   window.addEventListener('pagehide',()=>{++microphoneOperation;notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
-  window.LoomApp=Object.freeze({get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>replaceState(next,{message:'Session loaded.'}),get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  let serviceReturnStatus='';
+  const serviceNoteRenderer=new window.LoomServiceNoteRenderer({host,context:()=>engine.context});
+  serviceController=new window.LoomServiceController({
+    engine,getState:()=>state,getAssets:()=>assetMap,
+    canOpen:()=>!transportLocked()&&!transportPending&&!exportAbort,
+    persist:(service,{remember:recordHistory=true}={})=>{if(recordHistory)remember();state.service=service;scheduleAutosave();},
+    prepareSources:async({signal})=>serviceNoteRenderer.prepareNotes(state,assetMap,{signal}),
+    suspendArrangement:async()=>{serviceReturnStatus=$('status').textContent;await halt({keepMicrophone:true});notePlayback.stop();engine.clearAudition();await Promise.allSettled(state.tracks.filter(t=>t.instrument&&frames.has(t.id)).map(t=>host.command(t.id,'stop')));},
+    restoreArrangement:beat=>{engine.seek(beat);renderTransport();status(serviceReturnStatus);},
+    applyArrangement:next=>replaceState(next,{message:'SERVICE take placed in the arrangement. One Undo restores the previous session.'}),status
+  });
+  const serviceOpenButton=document.createElement('button');serviceOpenButton.type='button';serviceOpenButton.dataset.serviceOpen='';serviceOpenButton.textContent='Open SERVICE · performance desk';serviceOpenButton.title='Separate performance view (Alt + P)';
+  serviceOpenButton.style.cssText='width:100%;white-space:normal;margin:0 0 18px;padding:12px';
+  $('helpDialog').querySelector('.dialog-top').insertAdjacentElement('afterend',serviceOpenButton);
+  serviceOpenButton.addEventListener('click',()=>{$('helpDialog').close();serviceController.open();});
+  document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
+  window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
+  const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
+  window.LoomApp=Object.freeze({get service(){return serviceController;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{serviceController.reset();return replaceState(next,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

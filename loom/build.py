@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade']
-SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'app.js']
+SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -39,7 +39,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -61,6 +61,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     target = ROOT.parent / 'music' / 'loom' / 'LOOM-source.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'vocal-checks.cjs', 'vocal-browser-checks.cjs', 'utility-checks.cjs', 'utility-integration-checks.cjs', 'utility-browser-checks.cjs', 'batter-integration-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
+    sources += ['service.css', 'service-schema-checks.cjs', 'service-engine-checks.cjs', 'service-note-checks.cjs', 'service-capture-checks.cjs', 'service-midi-checks.cjs', 'service-controller-checks.cjs', 'service-browser-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     files += exchange_helpers['exchange_sources'](ROOT)
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]

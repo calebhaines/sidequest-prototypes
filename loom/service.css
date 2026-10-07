@@ -1,0 +1,173 @@
+/* SERVICE stays inside its own dialog. The GALLEY arrangement keeps its finish. */
+.loom-service-dialog {
+  --svc-paper: #eee9d9; --svc-dim: #aab3a9; --svc-line: #4b5855;
+  --svc-hot: #ffae68; --svc-green: #d9e694; --svc-dark: #11191b;
+  position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; height: 100dvh;
+  max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: #182123; color: var(--svc-paper); overflow: auto;
+  font-family: var(--kk-mono, 'Loom Sans', monospace); font-size: 12px;
+  box-shadow: none; overscroll-behavior: contain; scrollbar-color: #75806c #182123;
+}
+.loom-service-dialog::backdrop { background: #0b1114; }
+.loom-service-dialog *, .loom-service-dialog *::before, .loom-service-dialog *::after { box-sizing: border-box; }
+.loom-service-dialog [hidden] { display: none !important; }
+.loom-service-dialog button, .loom-service-dialog input, .loom-service-dialog select { font: inherit; }
+.loom-service-dialog button { min-height: 38px; padding: 8px 12px; border: 1px solid #64716a; background: linear-gradient(#33403e, #273331); border-radius: 3px; color: var(--svc-paper); cursor: pointer; line-height: 1.35; }
+.loom-service-dialog button:hover { background: #445046; border-color: #bac99e; }
+.loom-service-dialog button:disabled { cursor: default; opacity: .4; }
+.loom-service-dialog button:focus-visible, .loom-service-dialog input:focus-visible, .loom-service-dialog select:focus-visible, .loom-service-dialog summary:focus-visible { outline: 2px solid var(--svc-green); outline-offset: 3px; }
+.loom-service-dialog input:not([type=range]):not([type=checkbox]), .loom-service-dialog select { padding: 8px 9px !important; min-height: 38px; border: 1px solid #617069; background: #111c1e; border-radius: 3px; color: var(--svc-paper); min-width: 0; width: 100%; }
+.loom-service-dialog input[type=range] { width: 100%; accent-color: var(--svc-hot); height: 24px; margin: 0; }
+.loom-service-dialog input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--svc-hot); margin: 0; }
+.loom-service-dialog h2, .loom-service-dialog h3, .loom-service-dialog p { margin: 0; }
+.loom-service-dialog h2, .loom-service-dialog h3 { font-family: var(--kk-heading, 'Loom Sans', sans-serif); letter-spacing: .025em; }
+.loom-service-kicker { color: var(--svc-hot); font-size: 9px; letter-spacing: .12em; font-weight: 700; }
+.loom-service-muted { color: var(--svc-dim); font-size: 11px; line-height: 1.65; }
+.loom-service-head { padding: 19px 27px 18px; display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--svc-line); background: repeating-linear-gradient(110deg, #9bac7010 0 14px, transparent 14px 28px), #202b2c; }
+.loom-service-brand { flex: 1; min-width: 0; }
+.loom-service-brand h2 { font-size: 48px; line-height: .95; margin: 8px 0 9px; letter-spacing: -.035em; font-weight: 800; }
+.loom-service-brand h2 span { color: var(--svc-hot); }
+.loom-service-brand p { color: #bdc6b8; font-size: 11px; }
+.loom-service-ticket { display: grid; gap: 6px; border-left: 1px dashed #869175; padding-left: 20px; color: #c5cfb9; font-size: 9px; line-height: 1.6; letter-spacing: .04em; }
+.loom-service-ticket strong { color: var(--svc-green); font-size: 12px; letter-spacing: .12em; }
+.loom-service-head .loom-service-close { align-self: flex-start; white-space: nowrap; background: #152023; }
+.loom-service-transport { position: sticky; top: 0; z-index: 7; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 19px; padding: 13px 27px; background: #263233f5; border-bottom: 1px solid #6f7c65; box-shadow: 0 4px 15px #0004; }
+.loom-service-transport-buttons { display: flex; gap: 6px; }
+.loom-service-transport .loom-service-play { background: var(--svc-green); color: #1d2a26; border-color: #e2eead; font-weight: 700; min-width: 97px; }
+.loom-service-transport .loom-service-panic { color: #ffc39f; border-color: #ab7559; }
+.loom-service-clock { min-width: 130px; display: grid; gap: 5px; padding: 8px 13px; background: #10191b; border: 1px solid #59675c; box-shadow: inset 0 2px 7px #0005; }
+.loom-service-clock output { color: #ffca8d; font-size: 21px; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: .07em; }
+.loom-service-clock span { color: #bdc7b4; font-size: 8px; letter-spacing: .12em; }
+.loom-service-transport label { display: flex; flex-direction: column; gap: 5px; font-size: 8px; color: #c0cab7; letter-spacing: .09em; }
+.loom-service-transport label select { width: 134px; font-size: 11px; }
+.loom-service-tempo { display: grid; gap: 5px; font-size: 8px; color: #bdc7b4; }
+.loom-service-tempo strong { font-size: 17px; color: var(--svc-paper); font-variant-numeric: tabular-nums; }
+.loom-service-capture-toggle { margin-left: auto; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.loom-service-capture-toggle i { width: 9px; height: 9px; background: #a57d6e; border-radius: 50%; }
+.loom-service-capture-toggle[aria-pressed=true] { background: #4c2f25; color: #ffc39d; border-color: #f08c5e; }
+.loom-service-capture-toggle[aria-pressed=true] i { background: #ff9464; box-shadow: 0 0 10px #f18a5970; }
+.loom-service-workspace { max-width: 1760px; margin: 0 auto; padding: 23px 27px 30px; display: grid; grid-template-columns: minmax(0, 1fr) 336px; align-items: start; gap: 20px; }
+.loom-service-main, .loom-service-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.loom-service-panel { min-width: 0; border: 1px solid var(--svc-line); background: linear-gradient(140deg, #263130, #1b2627); border-radius: 4px; overflow: hidden; }
+.loom-service-panel-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px 15px; border-bottom: 1px solid var(--svc-line); background: #303b36; }
+.loom-service-panel-head>div { margin-right: auto; min-width: 0; }
+.loom-service-panel-head h3 { font-size: 22px; margin-bottom: 5px; }
+.loom-service-panel-head p { color: #bac5b5; font-size: 10px; line-height: 1.5; }
+.loom-service-add-menu { display: flex; gap: 5px; flex-wrap: wrap; }
+.loom-service-add-menu button { font-size: 10px; min-height: 33px; padding: 6px 8px; }
+.loom-service-grid-scroll { overflow: auto; max-height: 620px; overscroll-behavior: contain; scrollbar-color: #728068 #152022; }
+.loom-service-grid { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.loom-service-grid th, .loom-service-grid td { border-right: 1px solid #435249; border-bottom: 1px solid #435249; padding: 7px 5px; vertical-align: middle; }
+.loom-service-grid tr:last-child td, .loom-service-grid tr:last-child th { border-bottom: 0; }
+.loom-service-grid th:last-child, .loom-service-grid td:last-child { border-right: 0; }
+.loom-service-grid thead th { position: sticky; top: 0; z-index: 3; background: #1a2727; text-align: left; height: 83px; }
+.loom-service-grid .loom-service-scene-heading { width: 166px; padding: 11px 12px; left: 0; z-index: 4; background: #293532; }
+.loom-service-track-head { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.loom-service-track-head>span { font-size: 8px; color: var(--svc-track); letter-spacing: .08em; }
+.loom-service-track-head strong { color: var(--svc-paper); font-size: 10px; line-height: 1.3; font-weight: 400; height: 26px; overflow: hidden; }
+.loom-service-track-meter { width: 100%; height: 4px; background: #0c1718; overflow: hidden; }
+.loom-service-track-meter i { display: block; width: 0; height: 100%; background: var(--svc-track, #d9e694); transition: width .08s linear; }
+.loom-service-grid tbody th { position: sticky; left: 0; z-index: 2; padding: 0; background: #25332e; }
+.loom-service-scene-ticket { display: flex; align-items: center; gap: 6px; padding: 7px; border-left: 3px solid transparent; }
+.loom-service-scene-ticket .loom-service-scene-launch { display: flex; flex: 1; min-width: 0; align-items: center; gap: 7px; text-align: left; background: transparent; border-color: transparent; padding: 4px 3px; }
+.loom-service-scene-launch>i { font-style: normal; color: var(--svc-green); font-size: 16px; flex: none; }
+.loom-service-scene-launch>span { display: grid; gap: 4px; min-width: 0; }
+.loom-service-scene-launch strong { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loom-service-scene-launch small { color: #a9b9a0; font-size: 8px; font-weight: 400; }
+.loom-service-scene-ticket .loom-service-edit-scene { width: 29px; padding: 4px; min-height: 32px; flex: none; font-size: 17px; background: #1d2827; }
+.loom-service-grid tr.is-selected .loom-service-scene-ticket { border-left-color: #a1ac81; }
+.loom-service-grid tr.is-active td, .loom-service-grid tr.is-active th { background: #414930; }
+.loom-service-grid tr.is-active .loom-service-scene-ticket { border-left-color: var(--svc-green); }
+.loom-service-grid tr.is-active .loom-service-scene-launch small { color: #e6efa8; }
+.loom-service-grid tr.is-queued .loom-service-scene-ticket { border-left-color: var(--svc-hot); }
+.loom-service-grid tr.is-queued .loom-service-scene-launch>i { color: var(--svc-hot); }
+.loom-service-cell { display: flex; align-items: center; gap: 5px; min-height: 35px; padding: 5px 7px; border: 1px solid color-mix(in srgb, var(--svc-track) 35%, #31443d); border-radius: 2px; color: #e3e8d9; background: color-mix(in srgb, var(--svc-track) 9%, #162325); font-size: 10px; line-height: 1.3; }
+.loom-service-cell>i { flex: none; width: 4px; height: 16px; background: var(--svc-track); }
+.loom-service-cell>span { overflow: hidden; text-overflow: ellipsis; }
+.loom-service-cell.is-silence, .loom-service-cell.is-hold { color: #8a9c91; background: #172124; border-color: #3d5148; font-size: 9px; }
+.loom-service-cell.is-silence>i { height: 1px; opacity: .35; }.loom-service-cell.is-hold>i { height: 7px; opacity: .6; }
+.loom-service-empty { padding: 32px 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 13px; }
+.loom-service-empty>strong { font-family: var(--kk-heading, sans-serif); font-size: 27px; color: var(--svc-green); }
+.loom-service-grid-foot { display: flex; justify-content: space-between; gap: 10px; padding: 10px 15px; border-top: 1px solid var(--svc-line); font-size: 9px; color: #b7c1b0; line-height: 1.5; }
+.loom-service-grid-foot output { color: var(--svc-hot); }
+.loom-service-edit-fields { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 13px; padding: 15px; }
+.loom-service-edit-fields label, .loom-service-slot label, .loom-service-mapping label { display: flex; flex-direction: column; gap: 6px; font-size: 9px; color: #bdc9b5; letter-spacing: .04em; }
+.loom-service-slots { padding: 0 15px 15px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.loom-service-slot { min-width: 0; padding: 10px; border: 1px solid #455c50; background: #172628; border-top: 2px solid var(--svc-track); }
+.loom-service-slot label>span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d8e1ca; }
+.loom-service-slot select { font-size: 10px; padding: 6px !important; }
+.loom-service-editor-bottom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 15px; border-top: 1px dashed #556a57; background: #24302b; }
+.loom-service-editor-bottom>p { margin-right: auto; font-size: 10px; color: #c1ccb7; line-height: 1.55; flex: 1; min-width: 180px; }
+.loom-service-dialog .loom-service-delete { color: #ffc39c; border-color: #8a6754; background: #372c27; }
+.loom-service-macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.loom-service-macro { padding: 15px; position: relative; border-bottom: 1px solid #415149; min-width: 0; }
+.loom-service-macro:nth-child(odd) { border-right: 1px solid #415149; }
+.loom-service-macro:nth-child(n+3) { border-bottom: 0; }
+.loom-service-macro-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.loom-service-macro-name { overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 700; }
+.loom-service-macro .loom-service-macro-edit { min-height: 28px; width: 27px; padding: 1px; font-size: 16px; background: transparent; border-color: #46584c; }
+.loom-service-macro-dial { width: 84px; height: 84px; display: grid; place-items: center; margin: 13px auto 11px; position: relative; border-radius: 50%; background: conic-gradient(from 225deg, var(--svc-hot) 0deg var(--svc-turn, 135deg), #465246 var(--svc-turn, 135deg) 270deg, transparent 270deg); }
+.loom-service-macro-dial::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: radial-gradient(circle at 45% 35%, #47514c, #1c2828 70%); border: 1px solid #819277; box-shadow: 0 2px 8px #0007, inset 0 1px 2px #e2e7cb26; }
+.loom-service-macro-dial output { position: relative; color: #f6d0a2; font-size: 19px; font-variant-numeric: tabular-nums; }
+.loom-service-macro label { display: block; }.loom-service-macro input[type=range] { height: 25px; }
+.loom-service-macro-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 8px; color: #a9bba1; }
+.loom-service-macro-meta button { padding: 2px 5px; min-height: 24px; font-size: 8px; background: transparent; }
+.loom-service-macro-map { padding: 15px; border-top: 1px dashed #6f7c5f; background: #21332c; }
+.loom-service-map-heading { display: flex; justify-content: space-between; align-items: center; gap: 9px; margin-bottom: 12px; }
+.loom-service-map-heading strong { font-size: 12px; color: var(--svc-green); }
+.loom-service-map-heading button { min-height: 28px; padding: 3px 7px; font-size: 10px; }
+.loom-service-map-name { display: grid; gap: 5px; font-size: 9px; color: #bccbb3; margin-bottom: 11px; }
+.loom-service-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 11px; margin: 9px 0; border: 1px solid #536b53; background: #182922; }
+.loom-service-mapping label:nth-of-type(2) { grid-column: 1/-1; }
+.loom-service-mapping input, .loom-service-mapping select { font-size: 10px; min-height: 32px !important; padding: 5px !important; }
+.loom-service-mapping>button { min-height: 28px; font-size: 9px; padding: 4px; align-self: end; }
+.loom-service-map-add { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.loom-service-map-add button { min-height: 32px; font-size: 10px; }
+.loom-service-map-add p { font-size: 9px; color: #b7c6ab; line-height: 1.5; }
+.loom-service-pad-tools { display: flex; gap: 9px; align-items: center; padding: 12px 15px 0; }
+.loom-service-pad-tools label { color: #becdb7; font-size: 9px; flex: 1; }
+.loom-service-pad-tools select { width: 108px; min-height: 32px; font-size: 10px; }
+.loom-service-pad-target-label { padding: 11px 15px 0; font-size: 8px; letter-spacing: .08em; color: #b6c5ac; }
+.loom-service-pad-tracks { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; padding: 10px 15px 12px; }
+.loom-service-pad-tracks button { min-height: 30px; padding: 4px 0; font-size: 10px; color: #b5c3b0; background: #162325; }
+.loom-service-pad-tracks button[aria-pressed=true] { background: color-mix(in srgb, var(--svc-track) 20%, #203329); border-color: var(--svc-track); color: var(--svc-paper); }
+.loom-service-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 15px 14px; }
+.loom-service-pads .loom-service-pad { min-height: 82px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 9px; text-align: left; padding: 12px; border: 1px solid #7a8766; background: linear-gradient(135deg, #4d583a, #303e30); color: #f1efd5; touch-action: none; user-select: none; -webkit-user-select: none; }
+.loom-service-pad strong { font-family: var(--kk-heading, sans-serif); font-size: 21px; letter-spacing: .04em; font-weight: 750; }
+.loom-service-pad small { color: #ccd6b7; font-size: 9px; }
+.loom-service-pad[data-service-pad=fill] { background: linear-gradient(135deg, #5e472f, #3a3124); border-color: #ab8a5c; }
+.loom-service-pad[data-service-pad=drop] { background: linear-gradient(135deg, #304951, #253335); border-color: #6f9696; }
+.loom-service-pads .loom-service-pad.is-held { color: #202d21; background: var(--svc-green); border-color: #edffb7; box-shadow: inset 0 2px 5px #0002, 0 0 20px #d9e69420; }
+.loom-service-pads .loom-service-pad.is-held small { color: #364931; }
+.loom-service-pads .loom-service-release { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 7px; padding: 10px; min-height: 82px; background: #172326; color: #c0cbb4; }
+.loom-service-release strong { font-size: 13px; }.loom-service-release small { font-size: 9px; }
+.loom-service-panel-note { padding: 0 15px 14px; color: #b1c0ad; font-size: 10px; line-height: 1.6; }
+.loom-service-capture-body { padding: 15px; display: grid; gap: 12px; }
+.loom-service-take-readout { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.loom-service-take-readout output { color: var(--svc-green); font-size: 26px; font-variant-numeric: tabular-nums; }
+.loom-service-take-readout span { color: #bcc9b2; font-size: 9px; }
+.loom-service-capture-body label { color: #bbc9b2; font-size: 9px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.loom-service-capture-body label input { width: 78px !important; }
+.loom-service-dialog .loom-service-apply { background: #d5df9c; color: #243124; border-color: #eaf2b8; font-weight: 700; min-height: 42px; }
+.loom-service-capture-body .loom-service-clear-take { background: transparent; font-size: 10px; min-height: 30px; border-color: #526451; }
+.loom-service-midi { padding: 14px 15px; border-top: 1px solid #556450; }
+.loom-service-midi summary { display: flex; justify-content: space-between; gap: 9px; cursor: pointer; color: #d4dec6; font-size: 11px; min-height: 25px; }
+.loom-service-midi summary::after { content: '+'; color: var(--svc-hot); }.loom-service-midi[open] summary::after { content: '−'; }
+.loom-service-midi-body { display: grid; gap: 11px; padding-top: 14px; }
+.loom-service-midi-body>p { font-size: 10px; color: #b5c5ac; line-height: 1.65; }
+.loom-service-midi-body label { display: grid; gap: 6px; font-size: 9px; color: #c6d3ba; }
+.loom-service-midi-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.loom-service-midi-actions button { min-height: 33px; padding: 5px 8px; font-size: 10px; }
+.loom-service-midi-state { color: var(--svc-hot); font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.loom-service-midi-bindings { display: flex; flex-direction: column; gap: 7px; }
+.loom-service-midi-binding { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #c4d1b6; font-size: 9px; padding-top: 7px; border-top: 1px dashed #51634d; }
+.loom-service-midi-binding button { min-height: 26px; padding: 2px 5px; font-size: 9px; }
+.loom-service-status { padding: 11px 27px; display: flex; gap: 12px; align-items: center; border-top: 1px solid #4e604e; background: #121f22; color: #bbccb3; font-size: 10px; line-height: 1.55; }
+.loom-service-status>i { width: 6px; height: 6px; border-radius: 50%; background: var(--svc-green); flex: none; }
+.loom-service-status output { overflow-wrap: anywhere; }
+.loom-service-status>span { color: #89a18c; margin-left: auto; font-size: 9px; white-space: nowrap; }
+@media (min-width: 1600px) { .loom-service-workspace { grid-template-columns: minmax(0, 1fr) 360px; }.loom-service-grid { min-width: 1020px; } }
+@media (max-width: 1180px) { .loom-service-workspace { grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; padding: 18px; }.loom-service-head, .loom-service-transport { padding-left: 18px; padding-right: 18px; }.loom-service-ticket { display: none; }.loom-service-macro { padding: 12px; }.loom-service-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) { .loom-service-workspace { grid-template-columns: minmax(0, 1fr); }.loom-service-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }.loom-service-side>.loom-service-panel:last-child { grid-column: 1/-1; }.loom-service-grid-scroll { max-height: 480px; }.loom-service-capture-body { grid-template-columns: 1fr 1fr; }.loom-service-capture-body>p, .loom-service-capture-body>.loom-service-clear-take { grid-column: 1/-1; }.loom-service-capture-toggle { margin-left: 0; }.loom-service-slots { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .loom-service-head { padding: 17px 12px; gap: 8px; align-items: flex-start; }.loom-service-brand h2 { font-size: 43px; }.loom-service-brand p { font-size: 10px; max-width: 180px; line-height: 1.5; }.loom-service-head .loom-service-close { padding: 7px 8px; font-size: 10px; min-height: 36px; }.loom-service-kicker { font-size: 8px; }.loom-service-transport { padding: 12px; gap: 10px; }.loom-service-transport-buttons { flex: 1; }.loom-service-transport-buttons button { padding: 7px 9px; font-size: 11px; min-height: 40px; }.loom-service-transport .loom-service-play { min-width: 82px; }.loom-service-clock { min-width: 123px; padding: 8px 10px; }.loom-service-clock output { font-size: 18px; }.loom-service-tempo { margin-right: auto; }.loom-service-transport label { flex: 1; }.loom-service-transport label select { width: 100%; }.loom-service-capture-toggle { min-width: 123px; font-size: 10px; }.loom-service-workspace { padding: 12px; gap: 14px; }.loom-service-main, .loom-service-side { display: flex; align-items: stretch; gap: 14px; }.loom-service-panel-head { padding: 12px; gap: 10px; }.loom-service-panel-head h3 { font-size: 21px; }.loom-service-add-menu { width: 100%; }.loom-service-add-menu button { flex: 1; font-size: 9px; min-height: 34px; padding: 6px; }.loom-service-grid { min-width: 890px; }.loom-service-grid .loom-service-scene-heading { width: 155px; }.loom-service-grid-scroll { max-height: 430px; }.loom-service-grid-foot { flex-direction: column; gap: 5px; padding: 10px 12px; font-size: 9px; }.loom-service-edit-fields { grid-template-columns: minmax(0, 1fr) 80px; padding: 12px; gap: 10px; }.loom-service-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 12px 12px; gap: 8px; }.loom-service-slot { padding: 8px; }.loom-service-slot select { font-size: 10px; }.loom-service-editor-bottom { padding: 12px; }.loom-service-editor-bottom>p { flex-basis: 100%; }.loom-service-editor-bottom button { font-size: 10px; min-height: 35px; }.loom-service-capture-body { grid-template-columns: 1fr; }.loom-service-capture-body>p, .loom-service-capture-body>.loom-service-clear-take { grid-column: 1; }.loom-service-status { padding: 11px 12px; }.loom-service-status>span { display: none; }.loom-service-empty { padding: 25px 15px; } }
+@media (prefers-reduced-motion: reduce) { .loom-service-dialog *, .loom-service-dialog *::before, .loom-service-dialog *::after { transition: none !important; animation: none !important; } }

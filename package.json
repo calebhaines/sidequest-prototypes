@@ -47,7 +47,9 @@
     "check:marinade": "node marinade/engine-checks.cjs",
     "check:marinade-browser": "node marinade/browser-checks.cjs",
     "check:marinade-integration": "node marinade/integration-checks.cjs",
-    "check:performance-audio": "node scripts/performance-audio-checks.cjs"
+    "check:performance-audio": "node scripts/performance-audio-checks.cjs",
+    "check:loom-service": "node loom/service-schema-checks.cjs && node loom/service-engine-checks.cjs && node loom/service-note-checks.cjs && node loom/service-capture-checks.cjs && node loom/service-midi-checks.cjs && node loom/service-controller-checks.cjs",
+    "check:loom-service-browser": "node loom/service-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
