@@ -13,6 +13,7 @@ import {
 } from "./lib/game.js";
 import { customers, foods, recipes } from "./lib/data.js";
 import { drawGame } from "./lib/canvas-game.js";
+import { planDrop } from "./lib/drag-rules.js";
 
 const BEST_KEY = "second-pour-best";
 const initialUI = {
@@ -23,6 +24,7 @@ const initialUI = {
   kettleMode: "water",
   ovenFood: "croissant",
   sound: true,
+  cupDock: null,
 };
 function best() {
   try {
@@ -50,6 +52,27 @@ function hitAt(canvas, point) {
         point.y <= target.y + target.h,
     );
 }
+function inside(point, box) {
+  return (
+    box &&
+    point.x >= box.x &&
+    point.x <= box.x + box.w &&
+    point.y >= box.y &&
+    point.y <= box.y + box.h
+  );
+}
+function itemAt(canvas, point) {
+  return [...(canvas.__draggables || [])]
+    .reverse()
+    .find((item) => inside(point, item));
+}
+function dropAt(canvas, point) {
+  return [...(canvas.__dropZones || [])]
+    .reverse()
+    .find((zone) => inside(point, zone));
+}
+const center = (box) =>
+  box ? { x: box.x + box.w / 2, y: box.y + box.h / 2 } : null;
 
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, undefined, () =>
@@ -67,9 +90,57 @@ export default function App() {
     focusRef = useRef(null),
     resumeRef = useRef(false),
     dragRef = useRef(null),
+    carryRef = useRef(null),
+    motionRef = useRef({ feedback: null, pour: null, snap: null }),
+    lifecycleRef = useRef({
+      phase: state.phase,
+      day: state.day,
+      served: state.served,
+    }),
     modalFocusRef = useRef(null);
   stateRef.current = state;
   uiRef.current = ui;
+  const feedback = useCallback((text, tone = "success", point = null) => {
+    const canvas = canvasRef.current;
+    motionRef.current.feedback = {
+      text,
+      tone,
+      x: point?.x ?? (canvas?.__view?.width || 500) / 2,
+      y: point?.y ?? 200,
+      until: performance.now() + 2900,
+    };
+    setAnnouncement(text);
+  }, []);
+  const cancelGesture = useCallback(
+    (message = null) => {
+      const carry = carryRef.current;
+      const pointerId = dragRef.current?.pointerId;
+      if (carry) {
+        const source = canvasRef.current?.__draggables?.find(
+          (item) => item.id === carry.id,
+        );
+        motionRef.current.snap = {
+          kind: carry.kind,
+          foodId: carry.foodId,
+          drink: carry.drink,
+          from: { x: carry.x, y: carry.y },
+          to: center(source) || carry.origin,
+          startedAt: performance.now(),
+          duration: 260,
+        };
+        if (message) feedback(message, "error", carry.origin);
+      }
+      carryRef.current = null;
+      dragRef.current = null;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.style.cursor = "default";
+        if (pointerId !== undefined && canvas.hasPointerCapture(pointerId))
+          canvas.releasePointerCapture(pointerId);
+      }
+    },
+    [feedback],
+  );
   const sound = useCallback((kind = "tap") => {
     if (!uiRef.current.sound) return;
     try {
@@ -84,7 +155,11 @@ export default function App() {
             ? [247, 220]
             : kind === "chat"
               ? [440, 554]
-              : [392];
+              : kind === "pickup"
+                ? [330, 440]
+                : kind === "drop"
+                  ? [440, 659]
+                  : [392];
       notes.forEach((frequency, i) => {
         const oscillator = ctx.createOscillator(),
           gain = ctx.createGain(),
@@ -101,11 +176,135 @@ export default function App() {
       });
     } catch {}
   }, []);
+  const applyDrop = useCallback(
+    (dragged, zone, point = null) => {
+      const current = stateRef.current,
+        settings = uiRef.current;
+      const result = planDrop(current, settings, dragged, zone);
+      const canvas = canvasRef.current,
+        now = performance.now();
+      const source = canvas?.__draggables?.find(
+        (item) => item.id === dragged.id,
+      );
+      const from = point || center(source) || dragged.origin || { x: 0, y: 0 };
+      if (!result.accepted) {
+        motionRef.current.snap = {
+          kind: dragged.kind,
+          foodId: dragged.foodId,
+          drink: dragged.drink,
+          from,
+          to: center(source) || dragged.origin || from,
+          startedAt: now,
+          duration: 260,
+        };
+        feedback(result.reason, "error", from);
+        sound("error");
+        return false;
+      }
+      result.actions.forEach(dispatch);
+      const nextUI = {};
+      if (Object.hasOwn(result, "cupDock")) nextUI.cupDock = result.cupDock;
+      if (dragged.kind === "pastry") nextUI.ovenFood = dragged.foodId;
+      if (Object.keys(nextUI).length)
+        setUI((previous) => ({ ...previous, ...nextUI }));
+      let to = result.served
+        ? center(zone)
+        : dragged.kind === "cup"
+          ? center(zone?.cupRect || canvas?.__view?.objects?.cup)
+          : center(canvas?.__view?.objects?.foodSlot);
+      if (dragged.kind === "pastry") to = center(zone);
+      motionRef.current.snap = {
+        kind: dragged.kind,
+        foodId: dragged.foodId,
+        drink: dragged.drink || current.drink,
+        from,
+        to: to || from,
+        startedAt: now,
+        duration: 270,
+      };
+      const station =
+        result.pourStation ||
+        (dragged.kind === "cup" && zone?.kind === "station"
+          ? zone.station
+          : null);
+      if (station)
+        motionRef.current.pour = {
+          station,
+          startedAt: now + 270,
+          duration: result.pourStation
+            ? 850
+            : current.phase === "practice"
+              ? 850
+              : station === "espresso"
+                ? 4000
+                : station === "kettle" && settings.kettleMode === "tea"
+                  ? 6000
+                  : 5000,
+        };
+      const message = result.served
+        ? "A lovely little delivery!"
+        : dragged.kind === "pastry"
+          ? `${foods[dragged.foodId].shortName} in the warmer.`
+          : dragged.kind === "warmFood"
+            ? "Warm and on the tray."
+            : dragged.kind === "trayFood"
+              ? "Back on the tray."
+              : zone?.kind === "tray"
+                ? "Cup back on the tray."
+                : result.pourStation
+                  ? "A fresh pour for your cup."
+                  : "Cup in place. Let it pour.";
+      feedback(message, "success", to || from);
+      sound("drop");
+      return true;
+    },
+    [feedback, sound],
+  );
   useEffect(() => {
     if (state.phase !== "playing") return;
     const timer = setInterval(() => dispatch({ type: "TICK" }), 1000);
     return () => clearInterval(timer);
   }, [state.phase]);
+  useEffect(() => {
+    const job = state.jobs[ui.cupDock];
+    if (!job?.ready || !["practice", "playing"].includes(state.phase)) return;
+    dispatch({ type: "COLLECT_JOB", station: ui.cupDock });
+    motionRef.current.pour = {
+      station: ui.cupDock,
+      startedAt: performance.now(),
+      duration: 850,
+    };
+  }, [state.jobs, state.phase, ui.cupDock]);
+  useEffect(() => {
+    const previous = lifecycleRef.current;
+    const freshShift =
+      state.day !== previous.day ||
+      state.served < previous.served ||
+      (previous.phase === "practice" && state.phase === "playing") ||
+      (previous.phase === "summary" && state.phase === "playing");
+    if (
+      freshShift ||
+      state.served > previous.served ||
+      state.phase === "summary"
+    ) {
+      setUI((current) =>
+        current.cupDock ? { ...current, cupDock: null } : current,
+      );
+      motionRef.current.pour = null;
+    }
+    if (!["practice", "playing"].includes(state.phase) || ui.modal)
+      cancelGesture();
+    lifecycleRef.current = {
+      phase: state.phase,
+      day: state.day,
+      served: state.served,
+    };
+  }, [state.phase, state.day, state.served, ui.modal, cancelGesture]);
+  useEffect(() => {
+    const resize = () => cancelGesture();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, [cancelGesture]);
   useEffect(() => {
     try {
       localStorage.setItem(BEST_KEY, JSON.stringify(state.best));
@@ -143,14 +342,18 @@ export default function App() {
     return () => document.removeEventListener("visibilitychange", hidden);
   }, []);
 
-  const openModal = useCallback((modal) => {
-    resumeRef.current = stateRef.current.phase === "playing";
-    modalFocusRef.current = focusRef.current;
-    if (resumeRef.current) dispatch({ type: "PAUSE" });
-    hoverRef.current = null;
-    focusRef.current = "overlay-close";
-    setUI((current) => ({ ...current, modal, overlayScroll: 0 }));
-  }, []);
+  const openModal = useCallback(
+    (modal) => {
+      cancelGesture();
+      resumeRef.current = stateRef.current.phase === "playing";
+      modalFocusRef.current = focusRef.current;
+      if (resumeRef.current) dispatch({ type: "PAUSE" });
+      hoverRef.current = null;
+      focusRef.current = "overlay-close";
+      setUI((current) => ({ ...current, modal, overlayScroll: 0 }));
+    },
+    [cancelGesture],
+  );
   const closeModal = useCallback(() => {
     setUI((current) => ({ ...current, modal: null, overlayScroll: 0 }));
     if (resumeRef.current && stateRef.current.phase === "paused")
@@ -162,7 +365,7 @@ export default function App() {
   }, []);
   const activate = useCallback(
     (target) => {
-      if (!target || target.disabled) return;
+      if (!target || target.disabled || carryRef.current) return;
       focusRef.current = target.id;
       setAnnouncement(target.label);
       const action = target.action;
@@ -170,6 +373,15 @@ export default function App() {
         action.type === "game" && action.value.type === "CHAT" ? "chat" : "tap",
       );
       if (action.type === "game") {
+        const dockedJob = stateRef.current.jobs[uiRef.current.cupDock];
+        if (
+          dockedJob &&
+          !dockedJob.ready &&
+          ["SERVE", "SET_CUP", "CLEAR_DRINK"].includes(action.value.type)
+        ) {
+          feedback("Let this pour finish first.", "error");
+          return;
+        }
         if (
           action.value.type === "CHAT" &&
           stateRef.current.phase === "paused" &&
@@ -179,6 +391,18 @@ export default function App() {
           dispatch(action.value);
           dispatch({ type: "PAUSE" });
         } else dispatch(action.value);
+        return;
+      }
+      if (action.type === "pastry") {
+        const source = canvasRef.current.__draggables?.find(
+          (item) => item.kind === "pastry" && item.foodId === action.foodId,
+        );
+        applyDrop(
+          source || { kind: "pastry", foodId: action.foodId },
+          canvasRef.current.__dropZones?.find(
+            (zone) => zone.station === "oven",
+          ),
+        );
         return;
       }
       if (action.type === "station") {
@@ -246,7 +470,7 @@ export default function App() {
             "https://calebhaines.github.io/sidequest-prototypes/";
       }
     },
-    [sound, openModal, closeModal],
+    [sound, openModal, closeModal, applyDrop, feedback],
   );
 
   useEffect(() => {
@@ -261,6 +485,32 @@ export default function App() {
         return;
       }
       previous = timestamp;
+      const gesture = dragRef.current,
+        carry = carryRef.current;
+      if (carry && gesture) {
+        const edge = Math.min(60, window.innerHeight / 5);
+        const delta =
+          gesture.clientY < edge
+            ? -Math.min(12, (edge - gesture.clientY) / 4)
+            : gesture.clientY > window.innerHeight - edge
+              ? Math.min(12, (gesture.clientY - window.innerHeight + edge) / 4)
+              : 0;
+        if (delta) window.scrollBy(0, delta);
+        const point = locationInCanvas(canvas, {
+          clientX: gesture.clientX,
+          clientY: gesture.clientY,
+        });
+        const zone = dropAt(canvas, point);
+        const valid =
+          zone &&
+          planDrop(stateRef.current, uiRef.current, carry, zone).accepted;
+        Object.assign(carry, {
+          x: point.x,
+          y: point.y,
+          validDropId: valid ? zone.id : null,
+          invalidDropId: zone && !valid ? zone.id : null,
+        });
+      }
       const rect = canvas.getBoundingClientRect(),
         W = rect.width,
         H = rect.height,
@@ -273,6 +523,14 @@ export default function App() {
           canvas.height = height;
         }
         const ctx = canvas.getContext("2d");
+        const now = performance.now();
+        for (const key of ["snap", "pour"]) {
+          const motion = motionRef.current[key];
+          if (motion && now > motion.startedAt + motion.duration)
+            motionRef.current[key] = null;
+        }
+        if (motionRef.current.feedback?.until < now)
+          motionRef.current.feedback = null;
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         ctx.imageSmoothingEnabled = true;
         const view = drawGame(
@@ -280,6 +538,8 @@ export default function App() {
           stateRef.current,
           {
             ...uiRef.current,
+            ...motionRef.current,
+            drag: carryRef.current,
             hoverId: hoverRef.current,
             focusId: focusRef.current,
           },
@@ -300,6 +560,8 @@ export default function App() {
           },
         );
         canvas.__targets = view.targets;
+        canvas.__draggables = view.draggables || [];
+        canvas.__dropZones = view.dropZones || [];
         canvas.__view = { width: W, height: H, ...view };
         canvas.dataset.phase = stateRef.current.phase;
         canvas.dataset.day = stateRef.current.day;
@@ -307,6 +569,12 @@ export default function App() {
         canvas.dataset.clock = stateRef.current.timeLeft;
         canvas.dataset.tips = stateRef.current.tips;
         canvas.dataset.modal = uiRef.current.modal || "";
+        canvas.dataset.drink = JSON.stringify(stateRef.current.drink);
+        canvas.dataset.food = JSON.stringify(stateRef.current.food);
+        canvas.dataset.jobs = JSON.stringify(stateRef.current.jobs);
+        canvas.dataset.cupDock = uiRef.current.cupDock || "";
+        canvas.dataset.drag = carryRef.current?.kind || "";
+        canvas.dataset.ovenReady = String(!!stateRef.current.jobs.oven?.ready);
         canvas.dataset.ready = view.targets
           .find((t) => t.id === "serve")
           ?.label.includes("ready")
@@ -361,6 +629,10 @@ export default function App() {
       }
       if (e.key === "Escape") {
         e.preventDefault();
+        if (dragRef.current || carryRef.current) {
+          cancelGesture("Back where it belongs.");
+          return;
+        }
         if (mode.modal) closeModal();
         else if (current.phase === "paused") dispatch({ type: "RESUME" });
         else if (current.phase === "playing") dispatch({ type: "PAUSE" });
@@ -397,23 +669,94 @@ export default function App() {
     };
     canvas.addEventListener("keydown", keydown);
     return () => canvas.removeEventListener("keydown", keydown);
-  }, [activate, closeModal, openModal]);
+  }, [activate, closeModal, openModal, cancelGesture]);
 
   const pointerDown = (e) => {
     const canvas = canvasRef.current;
+    if (
+      !canvas.__view ||
+      dragRef.current ||
+      e.button !== 0 ||
+      e.isPrimary === false
+    )
+      return;
     canvas.focus({ preventScroll: true });
+    const point = locationInCanvas(canvas, e);
+    const source = itemAt(canvas, point);
     dragRef.current = {
+      pointerId: e.pointerId,
       x: e.clientX,
       y: e.clientY,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      lastY: e.clientY,
       scroll: uiRef.current.overlayScroll,
       moved: false,
+      source: source
+        ? {
+            ...source,
+            drink:
+              source.kind === "cup" ? { ...stateRef.current.drink } : undefined,
+          }
+        : null,
+      origin: center(source),
+      blocked: !!source?.disabled,
     };
+    if (source?.disabled)
+      feedback("Let this pour finish first.", "error", point);
     canvas.setPointerCapture(e.pointerId);
   };
   const pointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas.__view) return;
     const drag = dragRef.current;
+    if (drag && drag.pointerId !== e.pointerId) return;
+    if (drag) {
+      drag.clientX = e.clientX;
+      drag.clientY = e.clientY;
+    }
+    const point = locationInCanvas(canvas, e);
+    const distance = drag
+      ? Math.hypot(e.clientX - drag.x, e.clientY - drag.y)
+      : 0;
+    if (drag?.blocked) {
+      if (distance > 6) drag.moved = true;
+      return;
+    }
+    if (
+      drag?.source &&
+      !uiRef.current.modal &&
+      ["practice", "playing"].includes(stateRef.current.phase)
+    ) {
+      if (distance > (e.pointerType === "touch" ? 8 : 6) || carryRef.current) {
+        drag.moved = true;
+        if (!carryRef.current) {
+          motionRef.current.snap = null;
+          motionRef.current.feedback = null;
+          carryRef.current = {
+            ...drag.source,
+            origin: drag.origin,
+            x: point.x,
+            y: point.y,
+          };
+          sound("pickup");
+        }
+        const zone = dropAt(canvas, point);
+        const valid =
+          zone &&
+          planDrop(stateRef.current, uiRef.current, carryRef.current, zone)
+            .accepted;
+        Object.assign(carryRef.current, {
+          x: point.x,
+          y: point.y,
+          validDropId: valid ? zone.id : null,
+          invalidDropId: zone && !valid ? zone.id : null,
+        });
+        hoverRef.current = null;
+        canvas.style.cursor = "grabbing";
+      }
+      return;
+    }
     if (
       drag &&
       (uiRef.current.modal || stateRef.current.phase === "summary") &&
@@ -431,16 +774,53 @@ export default function App() {
         return;
       }
     }
-    const target = hitAt(canvas, locationInCanvas(canvas, e));
+    if (drag && (distance > 8 || drag.moved)) {
+      drag.moved = true;
+      if (e.pointerType === "touch") window.scrollBy(0, drag.lastY - e.clientY);
+      drag.lastY = e.clientY;
+      return;
+    }
+    const target = hitAt(canvas, point),
+      item = itemAt(canvas, point);
     hoverRef.current = target?.id || null;
-    canvas.style.cursor = target ? "pointer" : "default";
+    canvas.style.cursor =
+      item && !item.disabled ? "grab" : target ? "pointer" : "default";
   };
   const pointerUp = (e) => {
     const canvas = canvasRef.current;
     const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const carry = carryRef.current;
+    const point = locationInCanvas(canvas, e);
+    carryRef.current = null;
     dragRef.current = null;
-    if (drag?.moved) return;
-    if (canvas.__view) activate(hitAt(canvas, locationInCanvas(canvas, e)));
+    if (canvas.hasPointerCapture(e.pointerId))
+      canvas.releasePointerCapture(e.pointerId);
+    canvas.style.cursor = "default";
+    if (carry) {
+      applyDrop(carry, dropAt(canvas, point), point);
+      return;
+    }
+    if (drag.moved || drag.blocked) return;
+    if (drag.source?.kind === "pastry") {
+      applyDrop(
+        drag.source,
+        canvas.__dropZones.find((zone) => zone.station === "oven"),
+      );
+    } else if (drag.source?.kind === "warmFood") {
+      applyDrop(
+        drag.source,
+        canvas.__dropZones.find((zone) => zone.kind === "tray"),
+      );
+    } else if (drag.source) {
+      feedback(
+        drag.source.kind === "cup"
+          ? "Pick me up! Drag to a machine or your guest."
+          : "Slide the finished order over to your guest.",
+        "success",
+        point,
+      );
+    } else activate(hitAt(canvas, point));
   };
   const wheel = (e) => {
     const canvas = canvasRef.current,
@@ -483,18 +863,16 @@ export default function App() {
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
-        onPointerCancel={() => {
-          dragRef.current = null;
+        onPointerCancel={(event) => {
+          if (dragRef.current?.pointerId === event.pointerId) cancelGesture();
+        }}
+        onLostPointerCapture={(event) => {
+          if (dragRef.current?.pointerId === event.pointerId) cancelGesture();
         }}
         onPointerLeave={() => {
           hoverRef.current = null;
         }}
-        style={{
-          touchAction:
-            ui.modal || ["summary", "paused"].includes(state.phase)
-              ? "none"
-              : "pan-y",
-        }}
+        style={{ touchAction: "none" }}
       />
       <p
         className="sr-only"

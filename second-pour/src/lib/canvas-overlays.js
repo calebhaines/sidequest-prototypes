@@ -603,19 +603,19 @@ const HELP_STEPS = [
   ],
   [
     "Start a little magic",
-    "Click a machine to start it. When it says ready, click again to collect. Several machines can work together.",
+    "Drag your cup to a drink machine. It fills when the machine finishes. Move it between stations to build the recipe.",
   ],
   [
-    "Pick the right setting",
-    "Choose milk, foam, or cold milk at the milk station. Choose water or tea at the kettle. Pick a pastry or toastie for the oven.",
+    "Settings and something warm",
+    "Choose milk, foam, or cold milk; water or tea. Drag food from the pastry rack into the warmer, then move warm food to the tray.",
   ],
   [
     "Make it just right",
-    "Match the recipe, use a hot or iced cup, and warm any food. Extra ingredients count too! A fresh cup lets you try again.",
+    "Match the cup and recipe; extras count too! Tap machines to start and collect when ready. A fresh cup lets you try again.",
   ],
   [
     "Make their morning",
-    "Serve a complete tray. Practice has instant machines and no rush. Open the café for a 3-minute shift; aim to serve 6 guests.",
+    "Drag a finished cup or tray food to a guest to serve the whole order. Practice is instant; open for a 3-minute shift and serve 6 guests.",
   ],
 ];
 
