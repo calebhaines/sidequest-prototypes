@@ -13,6 +13,8 @@ import {
   drawMachineControl,
   drawDrink,
   drawFood,
+  espressoCupRect,
+  drawEspressoPour,
 } from "./illustration.js";
 import {
   palette as C,
@@ -44,6 +46,8 @@ const ingredientNames = {
 const game = (value) => ({ type: "game", value });
 const uiAction = (value) => ({ type: "ui", value });
 const active = (state) => ["practice", "playing"].includes(state.phase);
+const wideCounter = (width, height) =>
+  width >= 620 || (width >= 480 && width > height);
 const clock = (seconds) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 const isPicked = (ui, item) =>
@@ -182,6 +186,8 @@ function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
     disabled: state.phase === "summary",
   });
   const card = { x, y: y + 52, w, h: h - 52 };
+  const compactOrder = wide && card.h < 90;
+  interaction.objects.orderCard = card;
   round(ctx, card.x, card.y, card.w, card.h, 17, "#fffdf0", "#d6dfbf");
   if (!selected) {
     label(ctx, "A new friend will arrive soon", x + w / 2, card.y + 35, {
@@ -194,16 +200,16 @@ function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
   const portrait = {
     x: x + 2,
     y: card.y + 3,
-    w: wide ? 80 : 69,
-    h: wide ? Math.min(card.h - 5, 142) : card.h - 5,
+    w: compactOrder ? 52 : wide ? 80 : 69,
+    h: compactOrder ? 40 : wide ? Math.min(card.h - 5, 142) : card.h - 5,
   };
   drawCustomer(ctx, customers[selected.profileId], portrait, {
     time,
     selected: true,
     chatted: selected.chatted,
   });
-  const tx = x + (wide ? 84 : 72),
-    textWidth = w - (wide ? 95 : 83);
+  const tx = x + (compactOrder ? 56 : wide ? 84 : 72),
+    textWidth = w - (compactOrder ? 67 : wide ? 95 : 83);
   label(
     ctx,
     `${customers[selected.profileId].name} · ${recipes[selected.drinkId].shortName}`,
@@ -244,14 +250,18 @@ function customerPanel(ctx, state, ui, box, targets, interaction, time, wide) {
   )
     steps.push({ text: "Remake extras", excess: true });
   let sx = tx,
-    sy = card.y + 47;
+    sy = card.y + (compactOrder ? 38 : 47),
+    rowStart = tx,
+    rowRight = compactOrder ? card.x + card.w - 54 : tx + textWidth;
   const availableWidth = textWidth;
   ctx.font = '600 12px "Nunito", sans-serif';
   steps.forEach((step) => {
     const width = ctx.measureText(step.text).width + 24;
-    if (sx > tx && sx + width > tx + availableWidth) {
-      sx = tx;
-      sy += 19;
+    if (sx > rowStart && sx + width > rowRight) {
+      rowStart = compactOrder ? card.x + 12 : tx;
+      rowRight = compactOrder ? card.x + card.w - 12 : tx + availableWidth;
+      sx = rowStart;
+      sy += compactOrder ? 14 : 19;
     }
     if (sy > card.y + card.h - 8) return;
     if (step.done) icon(ctx, "check", sx, sy - 6, 12, "#62906b");
@@ -450,21 +460,33 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     h: Math.min(h - 8, Math.max(120, artW * 0.88)),
   };
   if (station === "oven" && h < 148 && w < 440) art.h = Math.max(40, h - 55);
-  drawMachine(ctx, station, art, { job, time, selected: job?.ready });
+  // Short screens still need room for the cup and lever as separate objects.
   if (station === "espresso") {
-    const scale = Math.min(art.w / 240, art.h / 205);
-    ctx.save();
-    ctx.translate(
-      art.x + (art.w - 240 * scale) / 2,
-      art.y + (art.h - 205 * scale) / 2,
-    );
-    ctx.scale(scale, scale);
-    round(ctx, 55, 123, 123, 47, 8, "#456b5d");
-    round(ctx, 42, 170, 154, 15, 6, "#adbba5", "#638875");
-    ctx.restore();
+    art.h = Math.max(105, art.h);
+    if (h < 125) art.y = y - (h < 105 ? 14 : 0);
+  }
+  drawMachine(ctx, station, art, {
+    job,
+    time,
+    selected: job?.ready,
+    movableCup: station === "espresso",
+  });
+  if (station === "espresso") {
+    interaction.objects.espressoCup = espressoCupRect(art);
+    interaction.objects.espressoArt = art;
+    const cup = interaction.objects.espressoCup;
+    interaction.objects.espressoWell = {
+      x: cup.x - 5,
+      y: cup.y - 3,
+      w: cup.w + 10,
+      h: cup.h + 6,
+    };
   }
   const smallArt = h < 125;
-  const dropWell = { x: art.x + 5, y: art.y + 2, w: art.w - 10, h: art.h - 3 };
+  const dropWell =
+    station === "espresso"
+      ? interaction.objects.espressoWell
+      : { x: art.x + 5, y: art.y + 2, w: art.w - 10, h: art.h - 3 };
   ctx.save();
   ctx.setLineDash([4, 5]);
   round(
@@ -478,10 +500,18 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     "#bea980",
   );
   ctx.restore();
-  if (art.h >= 65)
+  if (
+    art.h >= 65 &&
+    art.y + art.h <= y + h &&
+    !(station === "espresso" && ui.cupDock === "espresso")
+  )
     label(
       ctx,
-      station === "oven" ? "Drop food here" : "Drop cup here",
+      station === "oven"
+        ? "Drop food here"
+        : station === "espresso" && ui.cupDock === "espresso"
+          ? "Cup in place"
+          : "Drop cup here",
       art.x + art.w / 2,
       art.y + art.h - 7,
       {
@@ -502,6 +532,19 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     exclude: [],
   };
   interaction.dropZones.push(stationZone);
+  if (station === "espresso")
+    interaction.dropZones.push({
+      id: "drop-espresso-well",
+      label: "Place cup beneath the espresso nozzle",
+      kind: "station",
+      station: "espresso",
+      accepts: ["cup"],
+      exclude: [],
+      priority: 1,
+      cupRect: interaction.objects.espressoCup,
+      ...dropWell,
+    });
+  if (ui.drag?.validDropId === "drop-espresso-well") outline(ctx, dropWell);
   targets.push({
     id: `machine-${station}`,
     label: `Use ${stationNames[station]}`,
@@ -523,6 +566,14 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
     x: art.x + (art.w - 240 * artScale) / 2 + faceControl[0] * artScale,
     y: art.y + (art.h - 205 * artScale) / 2 + faceControl[1] * artScale,
   };
+  if (station === "espresso") {
+    const cup = interaction.objects.espressoCup,
+      cupHitTop = cup.y + cup.h / 2 - Math.max(44, cup.h) / 2;
+    controlCenter.y = Math.min(
+      controlCenter.y,
+      cupHitTop - controlSize / 2 - 3,
+    );
+  }
   const control = {
     id: `control-${station}`,
     station,
@@ -711,11 +762,24 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
         disabled: !usable || !!job,
       });
     else
-      label(ctx, "One fresh shot", sideX + sideW / 2, y + (tight ? 25 : 58), {
-        size: 13,
-        align: "center",
-        color: C.muted,
-      });
+      label(
+        ctx,
+        ui.cupDock === "espresso"
+          ? running
+            ? "Your shot is brewing"
+            : state.drink.shots > 0
+              ? "Take your cup to the tray"
+              : "Pull the lever for one shot"
+          : "Place cup, then pull",
+        sideX + sideW / 2,
+        y + (tight ? 25 : 58),
+        {
+          size: 13,
+          align: "center",
+          color: C.muted,
+          maxWidth: sideW - 8,
+        },
+      );
     const by = tight
       ? y + 50
       : flavorControls
@@ -723,7 +787,9 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
         : Math.max(y + 86, y + h - 55);
     const verb =
       station === "espresso"
-        ? "Pull shot"
+        ? state.drink.shots > 0 && ui.cupDock === "espresso"
+          ? "Pull another shot"
+          : "Pull shot"
         : station === "milk"
           ? mode === "foam"
             ? "Make foam"
@@ -767,6 +833,7 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
       label: `Cup to ${stationNames[station]}`,
       kind: "station",
       station,
+      activate: station === "espresso",
       priority: 2,
       accepts: ["cup"],
       ...actionRect,
@@ -810,7 +877,9 @@ function workspace(ctx, state, ui, box, targets, interaction, time) {
 }
 
 function tray(ctx, state, ui, W, H, targets, interaction, time) {
-  const y = H - 140,
+  const compactWide = wideCounter(W, H) && H < 380,
+    trayHeight = compactWide ? 112 : 140,
+    y = H - trayHeight,
     usable = active(state),
     busy = !!(
       ui.cupDock &&
@@ -819,31 +888,59 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
     ),
     selected = getSelectedCustomer(state),
     correct = evaluateOrder(state, selected).correct;
-  round(ctx, 0, y, W, 140, 17, "#fffaf0", "#d3c6a9");
-  const trayBox = { x: 7, y: y + 4, w: W - 14, h: 65 },
-    cup = { x: 9, y: y + 1, w: 72, h: 66 },
-    food = { x: 89, y: y + 4, w: 67, h: 58 };
+  round(ctx, 0, y, W, trayHeight, 17, "#fffaf0", "#d3c6a9");
+  const trayBox = { x: 7, y: y + 4, w: W - 14, h: compactWide ? 50 : 65 },
+    trayCup = {
+      x: 9,
+      y: y + 2,
+      w: compactWide ? 54 : 72,
+      h: compactWide ? 48 : 66,
+    },
+    atEspresso = ui.cupDock === "espresso",
+    visibleEspresso =
+      atEspresso && (ui.mobileStation || "espresso") === "espresso",
+    cup = visibleEspresso ? interaction.objects.espressoCup : trayCup,
+    food = {
+      x: compactWide ? 75 : 89,
+      y: y + 4,
+      w: compactWide ? 60 : 67,
+      h: compactWide ? 46 : 58,
+    };
   interaction.objects.tray = trayBox;
   interaction.objects.foodSlot = food;
   interaction.objects.cup = cup;
+  interaction.objects.trayCup = trayCup;
   interaction.dropZones.forEach((zone) => {
-    if (zone.kind === "station" && zone.station !== "oven") zone.cupRect = cup;
+    if (zone.kind === "station" && zone.station !== "oven")
+      zone.cupRect =
+        zone.station === "espresso"
+          ? interaction.objects.espressoCup || trayCup
+          : trayCup;
   });
   interaction.dropZones.push({
     id: "drop-tray",
     label: "Place on serving tray",
     kind: "tray",
+    // When retrieving from espresso, a finger on the tray is deliberate even
+    // if the lifted cup preview still overlaps its old machine well.
+    priority: atEspresso ? 2 : 0,
     accepts: ["cup", "warmFood", "trayFood"],
     ...trayBox,
-    cupRect: cup,
+    cupRect: trayCup,
   });
   const source = {
     id: "drag-cup",
     label: busy
       ? "Cup is filling. Please wait"
-      : "Pick up cup. Tap a machine to place it",
+      : visibleEspresso
+        ? "Pick up cup from espresso machine. Return it to the tray or move to another machine"
+        : "Pick up cup. Tap a machine to place it",
     kind: "cup",
-    ...cup,
+    paintRect: cup,
+    x: cup.x + cup.w / 2 - Math.max(44, cup.w) / 2,
+    y: cup.y + cup.h / 2 - Math.max(44, cup.h) / 2,
+    w: Math.max(44, cup.w),
+    h: Math.max(44, cup.h),
     disabled: !usable || busy,
   };
   interaction.draggables.push(source);
@@ -852,19 +949,94 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
     id: "pick-cup",
     action: { type: "pickItem", id: "drag-cup" },
   });
-  if (ui.drag?.kind !== "cup" && ui.snap?.kind !== "cup")
+  if (
+    ui.drag?.kind !== "cup" &&
+    ui.snap?.kind !== "cup" &&
+    (!atEspresso || visibleEspresso)
+  )
     drawDrink(ctx, state.drink, cup, { time, ready: correct });
-  if (busy) {
-    round(ctx, cup.x + 43, cup.y + 5, 28, 22, 9, "#e8eed9", "#bccaa1");
-    label(ctx, `${state.jobs[ui.cupDock].remaining}s`, cup.x + 57, cup.y + 16, {
-      size: 12,
-      align: "center",
-      color: "#64805c",
+  if (atEspresso) {
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    round(
+      ctx,
+      trayCup.x + 4,
+      trayCup.y + 5,
+      trayCup.w - 8,
+      trayCup.h - 10,
+      13,
+      "#faf1db",
+      "#cabd9e",
+    );
+    ctx.restore();
+    label(
+      ctx,
+      compactWide ? "Espresso" : "At espresso",
+      trayCup.x + trayCup.w / 2,
+      trayCup.y + (compactWide ? 17 : 28),
+      {
+        size: 12,
+        align: "center",
+        color: C.muted,
+        maxWidth: trayCup.w - (compactWide ? 2 : 6),
+      },
+    );
+    label(
+      ctx,
+      compactWide
+        ? busy
+          ? `${state.jobs[ui.cupDock].remaining}s`
+          : "Return"
+        : busy
+          ? "Brewing…"
+          : "Return cup",
+      trayCup.x + trayCup.w / 2,
+      trayCup.y + (compactWide ? 34 : 45),
+      {
+        size: 12,
+        align: "center",
+        color: "#77916a",
+        maxWidth: trayCup.w - 6,
+      },
+    );
+    targets.push({
+      id: "return-cup",
+      label: "Return the espresso cup to the serving tray",
+      ...trayCup,
+      action: { type: "returnCup" },
+      disabled: !usable || busy,
     });
+  }
+  if (busy && !(compactWide && atEspresso)) {
+    round(
+      ctx,
+      trayCup.x + trayCup.w - 29,
+      trayCup.y + 5,
+      28,
+      22,
+      9,
+      "#e8eed9",
+      "#bccaa1",
+    );
+    label(
+      ctx,
+      `${state.jobs[ui.cupDock].remaining}s`,
+      trayCup.x + trayCup.w - 15,
+      trayCup.y + 16,
+      {
+        size: 12,
+        align: "center",
+        color: "#64805c",
+      },
+    );
   }
   if (ui.pour && ui.drag?.kind !== "cup") {
     const elapsed = performance.now() - ui.pour.startedAt;
-    if (elapsed >= 0 && elapsed < ui.pour.duration) {
+    if (
+      elapsed >= 0 &&
+      elapsed < ui.pour.duration &&
+      ui.pour.station !== "espresso"
+    ) {
       ctx.save();
       ctx.strokeStyle =
         ui.pour.station === "espresso"
@@ -881,6 +1053,18 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
       ctx.restore();
     }
   }
+  const espressoJob = state.jobs.espresso,
+    espressoPour =
+      ui.pour?.station === "espresso" &&
+      performance.now() >= ui.pour.startedAt &&
+      performance.now() - ui.pour.startedAt < ui.pour.duration;
+  if (
+    visibleEspresso &&
+    ui.drag?.kind !== "cup" &&
+    ui.snap?.kind !== "cup" &&
+    ((espressoJob && !espressoJob.ready) || espressoPour)
+  )
+    drawEspressoPour(ctx, interaction.objects.espressoArt, cup, time);
   if (isPicked(ui, source)) outline(ctx, cup);
   if (state.food) {
     const sourceFood = {
@@ -920,24 +1104,39 @@ function tray(ctx, state, ui, W, H, targets, interaction, time) {
   const components = Object.keys(ingredientNames)
     .filter((key) => state.drink[key] > 0)
     .map((key) => `${state.drink[key]} ${ingredientNames[key]}`);
-  label(ctx, correct ? "Order ready!" : "Your drink", 166, y + 18, {
+  const summaryX = compactWide ? 149 : 166;
+  label(ctx, correct ? "Order ready!" : "Your drink", summaryX, y + 18, {
     size: 13,
     color: correct ? "#64865d" : C.ink,
-    maxWidth: W - 179,
+    maxWidth: W - summaryX - 13,
   });
-  label(ctx, components.slice(0, 2).join(" · ") || "Empty cup", 166, y + 38, {
-    size: 12,
-    color: C.muted,
-    maxWidth: W - 179,
-  });
-  if (components.length > 2)
+  label(
+    ctx,
+    (compactWide ? components : components.slice(0, 2)).join(" · ") ||
+      "Empty cup",
+    summaryX,
+    y + 38,
+    {
+      size: 12,
+      color: C.muted,
+      maxWidth: W - summaryX - 13,
+    },
+  );
+  if (!compactWide && components.length > 2)
     label(ctx, components.slice(2).join(" · "), 166, y + 56, {
       size: 12,
       color: C.muted,
       maxWidth: W - 179,
     });
-  const by = H - 65;
-  const serveRect = { x: 201, y: by - 2, w: W - 210, h: 48 };
+  const by = H - (compactWide ? 54 : 65);
+  const serveRect = {
+    // Keep the primary action beside the tray-return path on short screens.
+    // A lifted cup over the tray must not put its finger on Serve below it.
+    x: compactWide ? W - 189 : 201,
+    y: by - (compactWide ? 0 : 2),
+    w: compactWide ? 180 : W - 210,
+    h: compactWide ? 44 : 48,
+  };
   button(ctx, targets, ui, {
     id: "cup-type",
     label: `${state.drink.cup} cup. Change cup type`,
@@ -1067,10 +1266,11 @@ export function drawMobileGame(
       machineControls: [],
       objects: {},
     },
-    wide = W >= 620;
+    wide = wideCounter(W, H),
+    compactWide = wide && H < 380;
   const leftW = wide ? Math.min(340, W * 0.36) : W - 20;
   const customerBox = wide
-    ? { x: 10, y: 61, w: leftW, h: Math.min(215, H - 225) }
+    ? { x: 10, y: 61, w: leftW, h: compactWide ? 130 : Math.min(215, H - 225) }
     : { x: 10, y: 60, w: W - 20, h: 136 };
   const tabBox = wide
     ? {
@@ -1083,7 +1283,9 @@ export function drawMobileGame(
     x: tabBox.x,
     y: tabBox.y + 56,
     w: tabBox.w,
-    h: Math.min(wide ? 340 : 320, Math.max(97, H - 176 - (tabBox.y + 56))),
+    h: compactWide
+      ? Math.min(340, Math.max(44, H - 120 - (tabBox.y + 56)))
+      : Math.min(wide ? 340 : 320, Math.max(97, H - 176 - (tabBox.y + 56))),
   };
   interaction.objects.workspace = machineBox;
   ctx.save();
@@ -1125,13 +1327,15 @@ export function drawMobileGame(
   wrap(
     ctx,
     hint,
-    W / 2,
-    Math.min(H - 173, machineBox.y + machineBox.h + 7),
-    W - 20,
+    compactWide ? leftW / 2 + 10 : W / 2,
+    compactWide
+      ? customerBox.y + customerBox.h + 3
+      : Math.min(H - 173, machineBox.y + machineBox.h + 7),
+    compactWide ? leftW - 20 : W - 20,
     {
       size: 12,
-      lineHeight: 15,
-      maxLines: 2,
+      lineHeight: compactWide ? 13 : 15,
+      maxLines: compactWide && H < 340 ? 1 : 2,
       align: "center",
       color: error ? "#a9765b" : "#6f7a58",
     },

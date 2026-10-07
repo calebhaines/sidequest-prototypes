@@ -612,11 +612,11 @@ const HELP_STEPS = [
   ],
   [
     "Start a little magic",
-    "Click, pull, or turn a machine control. On phones, tap your cup and then a machine, or drag it there, to fill it automatically.",
+    "Place your cup under the espresso spout, then pull the lever for one shot. Move the filled cup back to the tray. Dropping onto Pull Shot places and starts it together.",
   ],
   [
     "Settings & warm treats",
-    "Use the phone tabs to change stations. Choose milk, foam, or water and tea. Tap food, then the warmer; tap warmed food to collect. Dragging works too.",
+    "Drag your cup to milk or kettle to fill it, or tap an item and its destination. Choose milk, foam, water or tea. Move food to the warmer, then collect it onto the tray.",
   ],
   [
     "Make it just right",

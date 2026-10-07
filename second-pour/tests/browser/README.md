@@ -20,8 +20,18 @@ at hidden drop-zone centers. Both direct pointer aiming and positioning the
 lifted preview over a destination are covered. Fixed virtual time verifies real machine jobs,
 parallel warming, pause, and cancellation without waiting through real shifts.
 
+`espresso-journey.spec.js` adds a separate real-time driver for the physical
+espresso workflow. Its destinations come from the painted machine illustration,
+not drop-zone bounds. It checks placement before activating the lever, sees the
+actual cup under the nozzle, waits for one shot, retrieves it from the machine,
+and completes a latte order. Screenshots document those steps. It uses native
+Chromium mouse and CDP touch gestures; its Chromium-only scope is explicit.
+The shared driver also rejects multiple cup sources and sources outside the
+viewport instead of silently scrolling or substituting coordinates.
+
 Browser exceptions, console errors, and failed asset requests fail each test.
 Failure screenshots and Playwright traces are saved in `test-results`; an HTML
 report is saved in `playwright-report`.
+A machine-readable run record is saved in `test-results/results.json`.
 
 The current verification record is in [../README.md](../README.md).

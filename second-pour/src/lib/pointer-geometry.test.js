@@ -86,6 +86,47 @@ test("explicit Serve and tab targets win over the tray or machine panel", () => 
     "milk-tab",
   );
 });
+test("a visible espresso well wins over the broad tray beneath the lifted preview on short screens", () => {
+  const panel = { ...machine, x: 300, y: 117, w: 440, h: 97 };
+  const well = {
+    ...panel,
+    id: "espresso-well",
+    x: 380,
+    y: 174,
+    w: 54,
+    h: 46,
+    priority: 1,
+  };
+  const tray = {
+    id: "tray",
+    kind: "tray",
+    accepts: ["cup"],
+    x: 7,
+    y: 206,
+    w: 736,
+    h: 65,
+  };
+  const anchor = { x: 407, y: 197 },
+    pointer = { x: 407, y: 233 };
+  assert.equal(
+    resolveDrop([panel, well, tray], cup, anchor, pointer).id,
+    "espresso-well",
+  );
+  const serve = {
+    ...tray,
+    id: "serve",
+    kind: "customer",
+    x: 380,
+    y: 220,
+    w: 100,
+    h: 44,
+    priority: 2,
+  };
+  assert.equal(
+    resolveDrop([panel, well, tray, serve], cup, anchor, pointer).id,
+    "serve",
+  );
+});
 test("wrong stations and distant misses do not redirect to another destination", () => {
   assert.equal(
     resolveDrop([machine, oven], cup, { x: 315, y: 220 }, { x: 355, y: 220 })
@@ -110,6 +151,62 @@ test("final release movement can qualify as a drag, while normal touch drift rem
   assert.equal(movedEnough({ x: 0, y: 0 }, { x: 10, y: 4 }, "touch"), false);
   assert.equal(movedEnough({ x: 0, y: 0 }, { x: 60, y: 5 }, "touch"), true);
   assert.equal(movedEnough({ x: 0, y: 0 }, { x: 5, y: 0 }), true);
+});
+test("a minimum touch hit box preserves the actual painted cup center during a mouse pickup", () => {
+  const source = {
+    x: 90,
+    y: 170,
+    w: 44,
+    h: 44,
+    paintRect: { x: 100, y: 180, w: 30, h: 28 },
+  };
+  assert.deepEqual(dragAnchor({ x: 220, y: 350 }, source, { x: 120, y: 194 }), {
+    x: 215,
+    y: 350,
+  });
+});
+test("a deliberate tray return beats a lifted preview still inside the espresso cup and well", () => {
+  const source = { id: "drag-cup", kind: "cup", x: 288, y: 156, w: 44, h: 44 };
+  const item = { ...source, pointerType: "touch" };
+  const well = {
+    id: "espresso-well",
+    kind: "station",
+    accepts: ["cup"],
+    priority: 1,
+    x: 283,
+    y: 155,
+    w: 54,
+    h: 46,
+  };
+  const tray = {
+    id: "tray",
+    kind: "tray",
+    accepts: ["cup"],
+    priority: 2,
+    x: 7,
+    y: 212,
+    w: 554,
+    h: 50,
+  };
+  for (const x of [284, 300]) {
+    const pointer = { x, y: 235 };
+    const anchor = dragAnchor(pointer, source, source, "touch");
+    assert.equal(
+      returnedToSource(item, anchor, pointer, [source], [well, tray]),
+      false,
+    );
+    assert.equal(resolveDrop([well, tray], item, anchor, pointer).id, "tray");
+  }
+  assert.equal(
+    returnedToSource(
+      item,
+      { x: 300, y: 199 },
+      { x: 300, y: 199 },
+      [source],
+      [well, tray],
+    ),
+    true,
+  );
 });
 test("a finger on a station tab does not accidentally serve through the lifted preview", () => {
   const customer = {

@@ -18,7 +18,7 @@ const distanceToBox = (point, box) =>
 // Rendering and hit testing both use this visible center.
 export function dragAnchor(pointer, source, start, pointerType = "mouse") {
   if (pointerType === "touch") return { x: pointer.x, y: pointer.y - 36 };
-  const center = boxCenter(source);
+  const center = boxCenter(source.paintRect || source);
   return {
     x: pointer.x + center.x - start.x,
     y: pointer.y + center.y - start.y,

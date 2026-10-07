@@ -284,7 +284,7 @@ export default function App() {
       };
       const station =
         result.pourStation ||
-        (dragged.kind === "cup" && zone?.kind === "station"
+        (!result.placed && dragged.kind === "cup" && zone?.kind === "station"
           ? zone.station
           : null);
       if (station)
@@ -303,17 +303,19 @@ export default function App() {
         };
       const message = result.served
         ? "A lovely little delivery!"
-        : dragged.kind === "pastry"
-          ? `${foods[dragged.foodId].shortName} in the warmer.`
-          : dragged.kind === "warmFood"
-            ? "Warm and on the tray."
-            : dragged.kind === "trayFood"
-              ? "Back on the tray."
-              : zone?.kind === "tray"
-                ? "Cup back on the tray."
-                : result.pourStation
-                  ? "A fresh pour for your cup."
-                  : "Cup in place. Let it pour.";
+        : result.placed
+          ? "Cup placed. Pull the lever for one shot."
+          : dragged.kind === "pastry"
+            ? `${foods[dragged.foodId].shortName} in the warmer.`
+            : dragged.kind === "warmFood"
+              ? "Warm and on the tray."
+              : dragged.kind === "trayFood"
+                ? "Back on the tray."
+                : zone?.kind === "tray"
+                  ? "Cup back on the tray."
+                  : result.pourStation
+                    ? "A fresh pour for your cup."
+                    : "Cup in place. Let it pour.";
       feedback(message, "success", to || from);
       sound("drop");
       return true;
@@ -360,12 +362,19 @@ export default function App() {
     const job = state.jobs[ui.cupDock];
     if (!job?.ready || !["practice", "playing"].includes(state.phase)) return;
     dispatch({ type: "COLLECT_JOB", station: ui.cupDock });
+    const now = performance.now();
+    const snap = motionRef.current.snap;
     motionRef.current.pour = {
       station: ui.cupDock,
-      startedAt: performance.now(),
+      startedAt:
+        snap?.kind === "cup"
+          ? Math.max(now, snap.startedAt + snap.duration)
+          : now,
       duration: 850,
     };
-  }, [state.jobs, state.phase, ui.cupDock]);
+    if (ui.cupDock === "espresso" && ui.mobileStation !== "espresso")
+      setUI((current) => ({ ...current, cupDock: null }));
+  }, [state.jobs, state.phase, ui.cupDock, ui.mobileStation]);
   useEffect(() => {
     const previous = lifecycleRef.current;
     const freshShift =
@@ -487,11 +496,28 @@ export default function App() {
         feedback("Item put down.");
         return;
       }
+      if (action.type === "returnCup") {
+        const canvas = canvasRef.current;
+        const source = canvas.__draggables.find(
+          (item) => item.id === "drag-cup",
+        );
+        applyDrop(
+          source,
+          canvas.__dropZones.find((zone) => zone.kind === "tray"),
+          center(canvas.__view.objects.cup),
+        );
+        return;
+      }
       if (action.type === "mobileStation") {
         setUI((current) => ({
           ...current,
           mobileStation: action.station,
           mobileExtras: false,
+          ...(current.cupDock === "espresso" &&
+          action.station !== "espresso" &&
+          !stateRef.current.jobs.espresso
+            ? { cupDock: null }
+            : {}),
         }));
         hoverRef.current = null;
         return;
@@ -567,9 +593,37 @@ export default function App() {
           applyDrop(
             pickedRef.current,
             canvasRef.current.__dropZones.find(
-              (zone) => zone.station === station,
+              (zone) =>
+                zone.station === station &&
+                (station !== "espresso" ||
+                  (target.id === "machine-espresso"
+                    ? !zone.activate && !zone.stationTab
+                    : zone.activate)),
             ),
           );
+          return;
+        }
+        if (station === "espresso" && mode.cupDock !== "espresso") {
+          if (target.id === "control-espresso") {
+            feedback(
+              "Place your cup under the espresso spout first.",
+              "error",
+              center(target),
+            );
+          } else {
+            const canvas = canvasRef.current;
+            const source = canvas.__draggables.find(
+              (item) => item.id === "drag-cup",
+            );
+            const zone = canvas.__dropZones.find(
+              (zone) =>
+                zone.station === station &&
+                (target.id === "machine-espresso"
+                  ? !zone.activate && !zone.stationTab
+                  : zone.activate),
+            );
+            applyDrop(source, zone);
+          }
           return;
         }
         if (
@@ -876,8 +930,14 @@ export default function App() {
       return;
     canvas.focus({ preventScroll: true });
     const point = locationInCanvas(canvas, e);
-    const control = controlAt(canvas, point);
-    const source = control ? null : itemAt(canvas, point);
+    const item = itemAt(canvas, point);
+    // The movable cup is painted in front of the machine. Its painted bounds
+    // take precedence over a neighboring lever's enlarged touch hit box.
+    const control =
+      item?.kind === "cup" && inside(point, item.paintRect || item)
+        ? null
+        : controlAt(canvas, point);
+    const source = control ? null : item;
     dragRef.current = {
       pointerId: e.pointerId,
       x: e.clientX,
@@ -1157,6 +1217,9 @@ export default function App() {
               (stations.indexOf(current.mobileStation) + (dx < 0 ? 1 : 3)) % 4
             ],
           mobileExtras: false,
+          ...(current.cupDock === "espresso" && !stateRef.current.jobs.espresso
+            ? { cupDock: null }
+            : {}),
         }));
       }
       return;

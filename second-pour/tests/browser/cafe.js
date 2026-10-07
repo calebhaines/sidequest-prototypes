@@ -80,11 +80,14 @@ export async function cafe(page, context, browserName, { best = null } = {}) {
               : kind === "control"
                 ? c.__machineControls
                 : c.__targets;
-          box =
-            id === "cup"
-              ? list.find((item) => item.id === "dock-cup") ||
-                list.find((item) => item.kind === "cup")
-              : list.find((item) => item.id === id);
+          if (id === "cup") {
+            const cups = list.filter((item) => item.kind === "cup");
+            if (cups.length !== 1)
+              throw Error(
+                `Expected one painted cup source, found ${cups.length}: ${cups.map((item) => item.id).join(", ")}`,
+              );
+            box = cups[0];
+          } else box = list.find((item) => item.id === id);
           if (!box)
             throw Error(
               `Missing visible ${kind}: ${id}; available: ${list.map((item) => item.id).join(", ")}`,

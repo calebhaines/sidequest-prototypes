@@ -13,6 +13,8 @@ import {
   drawMachineControl,
   drawDrink,
   drawFood,
+  espressoCupRect,
+  drawEspressoPour,
 } from "./illustration.js";
 import {
   palette as C,
@@ -492,55 +494,40 @@ function machine(
     job,
     time,
     selected: hovered || job?.ready,
+    movableCup: station === "espresso",
   });
   if (station === "espresso") {
-    // The illustrated machine originally included a fixed cup. Clear that cup
-    // so the movable cup is the only one sitting beneath the portafilter.
-    const scale = Math.min(art.w / 240, art.h / 205);
-    ctx.save();
-    ctx.translate(
-      art.x + (art.w - 240 * scale) / 2,
-      art.y + (art.h - 205 * scale) / 2,
-    );
-    ctx.scale(scale, scale);
-    round(ctx, 55, 123, 123, 47, 8, "#456b5d");
-    round(ctx, 42, 170, 154, 15, 6, "#adbba5", "#638875");
-    ctx.strokeStyle = "#718c7d";
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 11; i++) {
-      ctx.beginPath();
-      ctx.moveTo(52 + i * 12, 177);
-      ctx.lineTo(57 + i * 12, 177);
-      ctx.stroke();
-    }
-    ctx.restore();
+    interaction.objects.espressoCup = espressoCupRect(art);
+    const cup = interaction.objects.espressoCup;
+    interaction.objects.espressoWell = {
+      x: cup.x - 5,
+      y: cup.y - 3,
+      w: cup.w + 10,
+      h: cup.h + 6,
+    };
   }
   interaction.stationArt[station] = art;
   ctx.save();
   ctx.setLineDash([4, 5]);
-  round(
-    ctx,
-    art.x + 3,
-    art.y + 1,
-    art.w - 6,
-    art.h - 2,
-    14,
-    "transparent",
-    "#bea980",
-  );
+  const well =
+    station === "espresso"
+      ? interaction.objects.espressoWell
+      : { x: art.x + 3, y: art.y + 1, w: art.w - 6, h: art.h - 2 };
+  round(ctx, well.x, well.y, well.w, well.h, 14, "transparent", "#bea980");
   ctx.restore();
-  label(
-    ctx,
-    station === "oven" ? "Drop food here" : "Drop cup here",
-    art.x + art.w / 2,
-    art.y + art.h - 8,
-    {
-      size: 12,
-      align: "center",
-      color: "#7e775c",
-      maxWidth: art.w - 12,
-    },
-  );
+  if (!(station === "espresso" && ui.cupDock === "espresso"))
+    label(
+      ctx,
+      station === "oven" ? "Drop food here" : "Drop cup here",
+      art.x + art.w / 2,
+      art.y + art.h - 8,
+      {
+        size: 12,
+        align: "center",
+        color: "#7e775c",
+        maxWidth: art.w - 12,
+      },
+    );
   interaction.dropZones.push({
     id: `drop-${station}`,
     label:
@@ -554,9 +541,21 @@ function machine(
     y,
     w,
     h: Math.min(h, 301),
-    well: art,
+    well,
     exclude: [],
   });
+  if (station === "espresso")
+    interaction.dropZones.push({
+      id: "drop-espresso-well",
+      label: "Place cup beneath the espresso nozzle",
+      kind: "station",
+      station: "espresso",
+      accepts: ["cup"],
+      exclude: [],
+      priority: 1,
+      cupRect: interaction.objects.espressoCup,
+      ...well,
+    });
   if (station === "oven" && job?.ready) {
     const pickup = {
       x: art.x + art.w * 0.24,
@@ -739,7 +738,9 @@ function machine(
     );
   let text =
     station === "espresso"
-      ? "Pull espresso"
+      ? state.drink.shots > 0 && ui.cupDock === "espresso"
+        ? "Pull another shot"
+        : "Pull shot"
       : station === "milk"
         ? ui.milkMode === "foam"
           ? "Make foam"
@@ -792,6 +793,7 @@ function machine(
       station === "oven" ? "Food to Warmer" : `Cup to ${stations[station]}`,
     kind: "station",
     station,
+    activate: station === "espresso",
     priority: 2,
     accepts: station === "oven" ? ["pastry"] : ["cup"],
     exclude: [],
@@ -894,6 +896,7 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
     id: "drop-tray",
     label: "Back to your serving tray",
     kind: "tray",
+    priority: ui.cupDock === "espresso" ? 2 : 0,
     accepts: ["cup", "warmFood", "trayFood"],
     x,
     y,
@@ -907,7 +910,7 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
       color: "#928560",
       weight: 600,
     });
-  if (ui.drag?.kind === "cup") {
+  if (ui.drag?.kind === "cup" || ui.cupDock === "espresso") {
     const cup = interaction.trayCup;
     ctx.save();
     ctx.setLineDash([3, 4]);
@@ -924,12 +927,27 @@ function tray(ctx, state, ui, W, H, compact, targets, time, interaction) {
     );
     ctx.stroke();
     ctx.restore();
-    label(ctx, "In your hand", cup.x + cup.w / 2, y + h - 10, {
-      size: compact ? 6.5 : 8,
-      color: "#a69d7a",
-      align: "center",
-      maxWidth: cup.w,
-    });
+    label(
+      ctx,
+      ui.cupDock === "espresso" ? "At espresso" : "In your hand",
+      cup.x + cup.w / 2,
+      y + h - 10,
+      {
+        size: 12,
+        color: "#a69d7a",
+        align: "center",
+        maxWidth: cup.w,
+      },
+    );
+    if (ui.cupDock === "espresso")
+      targets.push({
+        id: "return-cup",
+        label: "Return the espresso cup to the serving tray",
+        ...cup,
+        action: { type: "returnCup" },
+        disabled:
+          !available || !!(state.jobs.espresso && !state.jobs.espresso.ready),
+      });
   }
   const cupX = x + (compact ? 64 : 96),
     cupY = y + (compact ? 7 : 15);
@@ -1220,18 +1238,28 @@ function tactileObjects(ctx, state, ui, compact, time, interaction) {
   const dock = ui.cupDock,
     available = ["practice", "playing"].includes(state.phase),
     busy = !!(dock && state.jobs[dock] && !state.jobs[dock].ready);
-  const cup = interaction.trayCup;
+  const trayCup = interaction.trayCup,
+    cup = dock === "espresso" ? interaction.objects.espressoCup : trayCup;
   interaction.objects.cup = cup;
+  interaction.objects.trayCup = trayCup;
   interaction.dropZones.forEach((zone) => {
-    if (zone.kind === "station" && zone.station !== "oven") zone.cupRect = cup;
+    if (zone.kind === "station" && zone.station !== "oven")
+      zone.cupRect =
+        zone.station === "espresso" ? interaction.objects.espressoCup : trayCup;
   });
   interaction.draggables.push({
     id: "drag-cup",
     label: busy
       ? "Cup filling. Please wait"
-      : "Your cup. Drag to a machine, tray, or guest",
+      : dock === "espresso"
+        ? "Your espresso cup. Drag back to the tray, another machine, or guest"
+        : "Your cup. Drag to a machine, tray, or guest",
     kind: "cup",
-    ...cup,
+    paintRect: cup,
+    x: cup.x + cup.w / 2 - Math.max(44, cup.w) / 2,
+    y: cup.y + cup.h / 2 - Math.max(44, cup.h) / 2,
+    w: Math.max(44, cup.w),
+    h: Math.max(44, cup.h),
     disabled: !available || busy,
   });
   const now = performance.now(),
@@ -1243,15 +1271,24 @@ function tactileObjects(ctx, state, ui, compact, time, interaction) {
       time,
       ready: evaluateOrder(state).correct,
     });
-    dragMarks(ctx, cup, compact, busy);
+    if (dock !== "espresso") dragMarks(ctx, cup, compact, busy);
   }
   if (busy) {
-    round(ctx, cup.x + cup.w - 32, cup.y + 5, 32, 24, 9, "#e8eed9", "#bdcca2");
+    round(
+      ctx,
+      trayCup.x + trayCup.w - 32,
+      trayCup.y + 5,
+      32,
+      24,
+      9,
+      "#e8eed9",
+      "#bdcca2",
+    );
     label(
       ctx,
       `${state.jobs[dock].remaining}s`,
-      cup.x + cup.w - 16,
-      cup.y + 17,
+      trayCup.x + trayCup.w - 16,
+      trayCup.y + 17,
       {
         size: 12,
         align: "center",
@@ -1260,10 +1297,18 @@ function tactileObjects(ctx, state, ui, compact, time, interaction) {
     );
   }
   const pouring =
-      ui.pour && now - ui.pour.startedAt < (ui.pour.duration || 900),
+      ui.pour &&
+      now >= ui.pour.startedAt &&
+      now - ui.pour.startedAt < (ui.pour.duration || 900),
     brewing =
       dock === "espresso" && state.jobs.espresso && !state.jobs.espresso.ready;
   if ((pouring || brewing) && ui.drag?.kind !== "cup") {
+    if (dock === "espresso" && (brewing || ui.pour.station === "espresso")) {
+      if (ui.snap?.kind !== "cup")
+        drawEspressoPour(ctx, interaction.stationArt.espresso, cup, time);
+      return;
+    }
+    if (ui.pour?.station === "espresso") return;
     const station = brewing ? "espresso" : ui.pour.station,
       t = brewing
         ? (now % 900) / 900

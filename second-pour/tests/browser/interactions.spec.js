@@ -209,13 +209,40 @@ test("machine lever and dial gestures activate once and cancellation activates n
   browserName,
 }) => {
   const game = await cafe(page, context, browserName);
+  await game.click("control-espresso");
+  expect((await game.state()).drink.shots).toBe(0);
+  expect((await game.state()).jobs.espresso).toBeNull();
+  const trayCup = await game.point("source", "cup");
+  await game.drag("cup", "object", "espressoWell", {
+    edge: true,
+    preview: true,
+  });
+  expect((await game.state()).drink.shots).toBe(0);
+  expect((await game.state()).cupDock).toBe("espresso");
+  const placedCup = await game.point("source", "cup");
+  const well = await game.point("object", "espressoWell");
+  expect(
+    Math.hypot(
+      placedCup.center.x - trayCup.center.x,
+      placedCup.center.y - trayCup.center.y,
+    ),
+  ).toBeGreaterThan(40);
+  expect(Math.abs(placedCup.center.x - well.center.x)).toBeLessThan(well.w / 2);
+  expect(Math.abs(placedCup.center.y - well.center.y)).toBeLessThan(well.h / 2);
   await game.controlGesture("control-espresso", 0, 40, { cancel: true });
   expect((await game.state()).jobs.espresso).toBeNull();
+  expect((await game.state()).drink.shots).toBe(0);
+  expect((await game.state()).cupDock).toBe("espresso");
   await game.controlGesture("control-espresso", 0, 40);
-  expect((await game.state()).jobs.espresso).toMatchObject({ ready: true });
-  await game.click("control-espresso");
   expect((await game.state()).drink.shots).toBe(1);
   expect((await game.state()).jobs.espresso).toBeNull();
+  expect((await game.state()).cupDock).toBe("espresso");
+  await game.drag("cup", "object", "trayCup", {
+    edge: true,
+    preview: true,
+  });
+  expect((await game.state()).drink.shots).toBe(1);
+  expect((await game.state()).cupDock).toBe("");
   await game.station("milk");
   await game.click("mode-milk");
   await game.controlGesture("control-milk", 0, -40);
@@ -234,6 +261,42 @@ test("machine lever and dial gestures activate once and cancellation activates n
   });
   await game.click("control-kettle");
   expect((await game.state()).drink.tea).toBe(1);
+  await game.assertClean();
+});
+
+test("picking a cup and tapping the espresso body places it without a hidden pour", async ({
+  page,
+  context,
+  browserName,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "Phone tap placement and retrieval");
+  const game = await cafe(page, context, browserName);
+  await game.click("control-espresso");
+  expect((await game.state()).drink.shots).toBe(0);
+  expect((await game.state()).jobs.espresso).toBeNull();
+  const cup = await game.point("source", "cup");
+  await page.touchscreen.tap(cup.x, cup.y);
+  await game.frame();
+  expect((await game.state()).selectedItem).toMatchObject({ kind: "cup" });
+  // Use the body's upper-left area; on short landscape screens its geometric
+  // center overlaps the separately painted lever.
+  const body = await game.point("target", "machine-espresso", { edge: true });
+  await page.touchscreen.tap(body.x, body.y);
+  await game.frame();
+  expect((await game.state()).drink.shots).toBe(0);
+  expect((await game.state()).jobs.espresso).toBeNull();
+  expect((await game.state()).cupDock).toBe("espresso");
+  expect((await game.state()).selectedItem).toBeNull();
+  await game.click("control-espresso");
+  expect((await game.state()).drink.shots).toBe(1);
+  expect((await game.state()).jobs.espresso).toBeNull();
+  await game.click("pick-cup");
+  expect((await game.state()).selectedItem).toMatchObject({ kind: "cup" });
+  await game.click("return-cup");
+  expect((await game.state()).selectedItem).toBeNull();
+  expect((await game.state()).cupDock).toBe("");
+  expect((await game.state()).drink.shots).toBe(1);
   await game.assertClean();
 });
 

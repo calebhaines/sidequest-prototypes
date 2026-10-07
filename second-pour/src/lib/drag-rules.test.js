@@ -40,6 +40,10 @@ test("a dragged cup and croissant complete and serve the practice latte", () => 
   let result = drop(state, ui, cup, station("espresso"));
   ({ state, ui } = result);
   assert.equal(ui.cupDock, "espresso");
+  assert.equal(result.plan.placed, true);
+  assert.equal(state.jobs.espresso, null);
+  assert.equal(state.drink.shots, 0);
+  state = act(state, "START_JOB", { station: "espresso" });
   assert.equal(state.jobs.espresso.ready, true);
   assert.equal(state.drink.shots, 0);
   result = drop(state, ui, cup, station("espresso"));
@@ -73,12 +77,10 @@ test("a dragged cup and croissant complete and serve the practice latte", () => 
 });
 
 test("a working machine holds its cup while the warmer can run in parallel", () => {
-  let { state, ui } = drop(
-    start(),
-    { cupDock: null },
-    cup,
-    station("espresso"),
-  );
+  let { state, ui } = drop(start(), { cupDock: null }, cup, {
+    ...station("espresso"),
+    activate: true,
+  });
   assert.equal(state.jobs.espresso.remaining, 4);
   for (const zone of [
     tray,
@@ -97,6 +99,41 @@ test("a working machine holds its cup while the warmer can run in parallel", () 
   assert.equal(state.jobs.oven.remaining, 3);
   ({ state, ui } = drop(state, ui, cup, tray));
   assert.equal(ui.cupDock, null);
+});
+
+test("espresso placement never makes a hidden shot, even when repeated or returned to the tray", () => {
+  for (const initial of [createInitialState(), start()]) {
+    const first = drop(initial, {}, cup, station("espresso"));
+    assert.deepEqual(first.plan.actions, []);
+    assert.equal(first.state, initial);
+    assert.equal(first.plan.placed, true);
+    const repeated = drop(first.state, first.ui, cup, station("espresso"));
+    assert.equal(repeated.state.drink.shots, 0);
+    assert.equal(repeated.state.jobs.espresso, null);
+    const returned = drop(repeated.state, repeated.ui, cup, tray);
+    assert.equal(returned.ui.cupDock, null);
+    assert.equal(returned.state.drink.shots, 0);
+  }
+});
+
+test("the espresso start-button drop deliberately starts one shot while a finished cup can be moved freely", () => {
+  for (const initial of [createInitialState(), start()]) {
+    let { state, ui } = drop(initial, {}, cup, {
+      ...station("espresso"),
+      activate: true,
+    });
+    assert.equal(ui.cupDock, "espresso");
+    assert.equal(state.drink.shots, 0);
+    assert.ok(state.jobs.espresso);
+    if (!state.jobs.espresso.ready) state = act(state, "TICK", { seconds: 4 });
+    state = act(state, "COLLECT_JOB", { station: "espresso" });
+    assert.equal(state.drink.shots, 1);
+    assert.equal(state.jobs.espresso, null);
+    ({ state, ui } = drop(state, ui, cup, tray));
+    ({ state, ui } = drop(state, ui, cup, station("espresso")));
+    assert.equal(state.drink.shots, 1);
+    assert.equal(state.jobs.espresso, null);
+  }
 });
 
 test("cold milk pours immediately; steam, foam, tea, and water use the selected modes", () => {

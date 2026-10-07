@@ -7,7 +7,17 @@ export default defineConfig({
   fullyParallel: true,
   workers: 2,
   retries: 0,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+    [
+      "json",
+      {
+        outputFile:
+          process.env.PLAYWRIGHT_JSON_OUTPUT_FILE || "test-results/results.json",
+      },
+    ],
+  ],
   use: {
     baseURL: process.env.COFFEE_QA_URL || "http://127.0.0.1:5181",
     trace: "retain-on-failure",

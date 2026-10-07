@@ -1087,11 +1087,42 @@ function machineCup(ctx, x, y, coffee = false) {
   if (coffee) oval(ctx, x, y - 11, 19, 4, "#b48657");
 }
 
+// The movable cup uses the same contained coordinate system as the machine.
+// Its rim sits below the portafilter and its saucer sits on the drip tray.
+export function espressoCupRect(art) {
+  const scale = Math.min(art.w / 240, art.h / 205);
+  return {
+    x: art.x + (art.w - 240 * scale) / 2 + 77 * scale,
+    y: art.y + (art.h - 205 * scale) / 2 + 109 * scale,
+    w: 84 * scale,
+    h: 75.6 * scale,
+  };
+}
+
+export function drawEspressoPour(ctx, art, cup, time = 0) {
+  const scale = Math.min(art.w / 240, art.h / 205),
+    ox = art.x + (art.w - 240 * scale) / 2,
+    oy = art.y + (art.h - 205 * scale) / 2,
+    rimY = cup.y + (55 / 180) * cup.h;
+  ctx.save();
+  ctx.strokeStyle = "#9a714b";
+  ctx.lineWidth = Math.max(1.5, scale * 2);
+  ctx.lineCap = "round";
+  ctx.globalAlpha = 0.8 + Math.sin(time * 13) * 0.15;
+  for (const x of [112, 124]) {
+    ctx.beginPath();
+    ctx.moveTo(ox + x * scale, oy + 120 * scale);
+    ctx.lineTo(ox + x * scale, rimY);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function drawMachine(
   ctx,
   station,
   rect,
-  { job = null, time = 0, selected = false } = {},
+  { job = null, time = 0, selected = false, movableCup = false } = {},
 ) {
   if (!space(ctx, rect, 240, 205, true)) return;
   const working = job && !job.ready;
@@ -1125,8 +1156,8 @@ export function drawMachine(
     round(ctx, 130, 104, 36, 7, 3, "#6c6453", "#514e43", 1.5);
     line(ctx, 112, 113, 112, 121, "#d6d4bf", 4);
     line(ctx, 124, 113, 124, 121, "#d6d4bf", 4);
-    machineCup(ctx, 117, 146, ready || working);
-    if (working) {
+    if (!movableCup) machineCup(ctx, 117, 146, ready || working);
+    if (working && !movableCup) {
       line(ctx, 112, 120, 112, 135, "#9a714b", 2);
       line(ctx, 124, 120, 124, 135, "#9a714b", 2);
     }

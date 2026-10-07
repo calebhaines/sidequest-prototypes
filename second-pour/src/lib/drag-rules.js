@@ -40,6 +40,10 @@ export function planDrop(state, ui = {}, dragged, zone) {
         cupDock: station,
         pourStation: station,
       });
+    // Placing a cup and operating the espresso machine are separate actions.
+    // A drop on its explicit start button is the deliberate one-step shortcut.
+    if (station === "espresso" && !zone.activate)
+      return accept([], { cupDock: station, placed: true });
     if (station === "milk" && ui.milkMode === "cold")
       return accept([{ type: "ADD_INGREDIENT", ingredient: "coldMilk" }], {
         cupDock: station,
