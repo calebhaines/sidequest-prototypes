@@ -51,6 +51,7 @@ function CanvasArt({ sprite, layer, type = 'thumbnail', className = '', rotation
     if (!canvas || !sprite) return;
     const render = () => {
       const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
       const ratio = type === 'layer' ? 1 : window.devicePixelRatio || 1;
       const width = Math.max(1, Math.round(rect.width * ratio));
       const height = Math.max(1, Math.round(rect.height * ratio));

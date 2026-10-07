@@ -172,7 +172,7 @@ export function drawStack(ctx, sprite, options = {}) {
     });
   });
   if (!voxels.length) { ctx.restore(); return; }
-  const fit = Math.min((width - padding * 2) / Math.max(1, maxX - minX), (height - padding * 2) / Math.max(1, maxY - minY));
+  const fit = Math.min(Math.max(1, width - padding * 2) / Math.max(1, maxX - minX), Math.max(1, height - padding * 2) / Math.max(1, maxY - minY));
   const scale = fit * 0.79 * zoom;
   const ox = centerX - (minX + maxX) / 2 * scale;
   const oy = centerY - (minY + maxY) / 2 * scale;
