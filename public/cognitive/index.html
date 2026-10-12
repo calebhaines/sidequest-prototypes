@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173f36">
+<meta name="description" content="Twelve thoughtful cognitive practice exercises, including dual n-back. Clear scores, adaptive difficulty, local progress, and honest research notes. A self-contained mobile app.">
+<title>Clear — a little cognitive practice</title>
+<style>
+:root{--paper:#f6f5ef;--white:#fffefa;--ink:#203c34;--muted:#66736c;--line:#dedfd4;--green:#173f36;--mint:#dce9cf;--orange:#b85b36;--soft:#efeee5;--radius:20px;--sans:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--serif:Georgia,"Times New Roman",serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}button,input,select{font:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.5;cursor:default}button,a,select,input{outline-offset:5px}button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--orange)}a{color:var(--green)}button{border:1px solid var(--line);border-radius:12px;background:var(--white);color:var(--ink);padding:12px 18px;min-height:48px;font-weight:600}button:hover:not(:disabled){border-color:#92a290;background:#f0f3e9}.primary{background:var(--green);color:var(--white);border-color:var(--green)}.primary:hover:not(:disabled){background:#285346;border-color:#285346}.quiet{background:none;border-color:transparent}.eyebrow{text-transform:uppercase;letter-spacing:.17em;font-size:11px;font-weight:700;color:var(--muted)}h1,h2,h3,p{margin-top:0}h1,h2{font-family:var(--serif);font-weight:400;line-height:1.09;letter-spacing:-.04em}h1{font-size:clamp(42px,5vw,68px);margin-bottom:22px}h2{font-size:36px;margin-bottom:14px}h3{font-size:18px;letter-spacing:-.025em;margin-bottom:8px}p{margin-bottom:18px}.muted{color:var(--muted)}.small{font-size:13px}.wrap{max-width:1120px;margin:auto;padding:0 32px}.topbar{border-bottom:1px solid var(--line);height:90px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;text-align:left;line-height:1.2}.brand svg{width:36px;height:36px}.brand strong{display:block;font-family:var(--serif);font-size:29px;letter-spacing:-.04em;font-weight:400}.brand small{font-weight:400;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}.navigation{display:flex;gap:6px}.navigation button{background:none;border-color:transparent;font-size:13px;font-weight:500;padding:10px 16px}.navigation button[aria-current=page]{background:#e7ebdf;color:var(--green)}.local-tag{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px}.dot{height:6px;width:6px;border-radius:50%;background:#689879;display:inline-block}.hero{display:grid;grid-template-columns:1.35fr .65fr;align-items:center;padding:60px 0 42px;gap:50px}.hero .intro{font-size:16px;max-width:480px;color:var(--muted)}.hero-art{width:100%;max-width:330px;justify-self:center}.hero-art svg{width:100%;display:block}.hero .eyebrow{margin-bottom:18px}.hero-links{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.text-button{border:0;background:none;padding:12px;font-size:13px;text-decoration:underline;text-underline-offset:4px}.stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;margin-bottom:35px}.stat{display:flex;align-items:center;gap:12px;padding:0 24px;border-right:1px solid var(--line)}.stat:first-child{padding-left:0}.stat:last-child{border:0}.stat strong{font-family:var(--serif);font-size:32px;font-weight:400;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}.section-top{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:18px}.section-top h2{font-size:30px;margin-bottom:0}.section-top p{margin-bottom:0;font-size:13px;color:var(--muted)}.featured{display:grid;grid-template-columns:1.3fr .7fr;background:var(--green);border-radius:var(--radius);color:#f9faf0;overflow:hidden;margin-bottom:24px;min-height:240px}.featured-copy{padding:30px 34px}.featured .eyebrow{color:#bcd3b6}.featured h2{font-size:35px;margin:10px 0 12px}.featured p{font-size:14px;color:#c5d2c5;max-width:430px}.featured button{background:#e4edce;color:var(--green);border-color:#e4edce}.featured-art{display:flex;align-items:center;justify-content:center;border-left:1px solid #ffffff18;background:radial-gradient(circle,#50735740,transparent 75%)}.nback-diagram{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:153px;transform:rotate(-9deg)}.nback-diagram span{aspect-ratio:1;border:1px solid #7c9d81;border-radius:9px;background:#ffffff05}.nback-diagram span:nth-child(2){background:#d4e5a6;box-shadow:0 0 35px #d4e5a622}.featured-caption{font-size:11px;color:#bccbbb;text-align:center;margin-top:24px}.daily{border:1px solid var(--line);background:#eeefe5;border-radius:var(--radius);padding:24px;display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:42px}.daily h3{margin-bottom:6px}.daily p{margin:0;font-size:13px;color:var(--muted)}.daily small{display:block;font-size:11px;margin-top:6px;color:var(--muted)}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.filters button{padding:8px 17px;min-height:44px;font-size:12px;background:none;border-radius:24px}.filters button[aria-pressed=true]{background:var(--green);color:var(--white);border-color:var(--green)}.library{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.exercise-card{border:1px solid var(--line);border-radius:var(--radius);padding:24px;background:var(--white);display:flex;flex-direction:column;min-height:260px}.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.glyph{width:42px;height:42px;border-radius:12px;background:#edf0e4;display:grid;place-items:center;font-size:25px;font-family:var(--serif);color:#315d48}.category-tag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.exercise-card p{font-size:13px;color:var(--muted);margin-bottom:14px;flex:1}.card-meta{font-size:11px;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.card-start{margin-top:14px;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;min-height:44px;background:#f0f2e8;border-color:transparent;font-size:12px}.card-start span:last-child{font-size:17px}.evidence-foot{border-top:1px solid var(--line);margin-top:40px;padding-top:22px;display:flex;gap:30px;align-items:center;justify-content:space-between}.evidence-foot p{font-size:12px;color:var(--muted);max-width:670px;margin:0}.footer{margin-top:45px;padding:25px 0 95px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:15px;border-top:1px solid var(--line)}.footer a{color:var(--muted)}.page-title{padding:48px 0 25px}.page-title h1{font-size:48px}.panel{background:var(--white);border:1px solid var(--line);padding:26px;border-radius:var(--radius);margin-bottom:22px}.panel h2{font-size:27px}.progress-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:22px}.chart{height:180px;width:100%;display:block;margin:25px 0 8px}.chart-empty{min-height:200px;display:grid;place-items:center;text-align:center;color:var(--muted)}.history-row{padding:15px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:15px;font-size:13px}.history-row:last-child{border-bottom:0}.history-row small{display:block;color:var(--muted);font-size:11px}.history-row strong{font-size:18px}.score-disclaimer{font-size:12px;color:var(--muted);margin-bottom:28px}.progress-table{width:100%;border-collapse:collapse;font-size:13px}.progress-table th,.progress-table td{text-align:left;padding:12px 5px;border-bottom:1px solid var(--line)}.progress-table th{color:var(--muted);font-weight:500;font-size:11px}.progress-table td:last-child{text-align:right}.chart-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}select,input{background:var(--white);border:1px solid #bbc4b5;border-radius:10px;padding:10px 12px;min-height:44px;color:var(--ink);max-width:100%}label{font-size:12px;color:var(--muted)}.reference-list{padding-left:20px}.reference-list li{margin-bottom:16px;font-size:13px}.reference-list a{display:inline;overflow-wrap:anywhere}.evidence-row{display:grid;grid-template-columns:180px 1fr;gap:25px;padding:22px 0;border-top:1px solid var(--line)}.evidence-row strong{font-size:14px}.evidence-row p{font-size:13px;margin-bottom:0;color:var(--muted)}.run{max-width:760px;margin:auto;padding-top:30px}.run-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:25px}.run-header h1{font-size:34px;margin:0}.run-label{display:flex;align-items:center;gap:10px}.run-level{max-width:100px}.run-subtitle{font-size:12px;color:var(--muted);margin-bottom:18px}.run-track{height:5px;border-radius:4px;background:var(--line);margin-bottom:18px;overflow:hidden}.run-track div{height:100%;background:var(--orange);width:0;transition:width .15s}.run-status{display:flex;justify-content:space-between;gap:14px;font-size:12px;color:var(--muted);margin-bottom:15px}.task-stage{min-height:280px;background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:25px;display:flex;flex-direction:column;justify-content:center;text-align:center;overflow:hidden}.task-stage h2{font-size:29px}.task-stage p{font-size:14px;color:var(--muted)}.task-stage ul{font-size:14px;color:var(--muted);text-align:left;max-width:500px;margin:10px auto 20px}.task-controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:20px 0}.task-controls button{flex:1;max-width:360px;min-width:120px}.task-hint{font-size:12px;text-align:center;color:var(--muted);min-height:25px}.task-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:310px;width:100%;margin:15px auto}.tile{border-radius:12px;border:1px solid #c7d1c1;background:#e9ede1;min-height:55px;aspect-ratio:1;color:var(--green)}.tile.lit,.lit{background:#a7c784!important;box-shadow:inset 0 0 0 2px #497a42}.stimulus{font-size:64px;font-weight:600;line-height:1.3;min-height:100px;display:flex;align-items:center;justify-content:center}.answer-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:15px auto;width:100%;max-width:480px}.prompt{font-size:20px;font-weight:600;color:var(--ink)}.task-note{font-size:13px;color:var(--muted)}.choice{padding:12px;border-radius:12px;min-height:48px}.result{padding:30px 0}.result-heading{text-align:center;padding:20px 0}.result-heading .big-score{font-family:var(--serif);font-size:84px;line-height:1.15;letter-spacing:-.06em;color:var(--green)}.result-heading p{color:var(--muted);font-size:13px;margin:10px 0}.result-details{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:22px 0}.result-detail{background:#f0f2e7;border-radius:12px;padding:16px}.result-detail small{display:block;font-size:11px;color:var(--muted)}.result-detail strong{font-size:15px;font-weight:500;overflow-wrap:anywhere}.next-step{padding:22px;background:#e6ecd9;border-radius:16px;margin-top:20px}.next-step h3{font-size:16px}.next-step p{font-size:13px;margin-bottom:0;color:#47604b}.result-actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}.result-actions button{flex:1}.tool-actions{display:flex;gap:10px;flex-wrap:wrap}.notice{background:#e9eddf;border:1px solid #ced7c2;border-radius:12px;padding:16px;font-size:13px;margin:15px 0}.danger{color:#9a3f2b}.hidden,[hidden]{display:none!important}.skip-link{position:fixed;left:15px;top:-70px;z-index:100;padding:12px;background:var(--white)}.skip-link:focus{top:12px}.toast{position:fixed;left:50%;bottom:85px;transform:translateX(-50%);padding:12px 18px;border-radius:12px;background:var(--green);color:var(--white);z-index:20;max-width:90%;font-size:13px}.reset-confirm{margin-top:16px}.intro-key{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:0 6px;font-size:11px}.privacy-label{margin-top:20px;font-size:12px;color:var(--muted)}
+@media(min-width:760px){.mobile-nav{display:none}}@media(max-width:900px){.library{grid-template-columns:repeat(2,1fr)}.local-tag{display:none}.hero{gap:20px}.progress-grid{grid-template-columns:1fr}}@media(max-width:600px){.wrap{padding:0 20px}.topbar{height:77px}.brand strong{font-size:27px}.navigation{display:none}.hero{display:block;padding:37px 0 28px}.hero-art{display:none}.hero h1{font-size:45px}.hero .intro{font-size:14px}.hero-links button{font-size:12px}.stats-strip{padding:17px 0;margin-bottom:28px}.stat{display:block;padding:0 14px}.stat strong{font-size:29px;display:block}.stat span{font-size:10px;line-height:1.3;display:block;margin-top:4px}.section-top{align-items:start}.section-top h2{font-size:27px}.section-top p{font-size:11px;max-width:120px;text-align:right}.featured{grid-template-columns:1fr}.featured-copy{padding:26px}.featured h2{font-size:34px}.featured-art{display:none}.daily{padding:20px;display:block;margin-bottom:32px}.daily button{width:100%;margin-top:15px}.library{grid-template-columns:1fr;gap:12px}.exercise-card{min-height:0;padding:21px}.card-top{margin-bottom:12px}.exercise-card p{margin-bottom:12px}.filters{gap:6px}.filters button{padding:8px 13px}.evidence-foot{display:block}.evidence-foot button{padding-left:0;margin-top:10px}.footer{margin-top:30px;padding-bottom:100px;display:block}.footer span{display:block;margin-bottom:10px}.mobile-nav{position:fixed;z-index:10;bottom:0;left:0;right:0;background:#f9f9f1f5;backdrop-filter:blur(15px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:7px 8px calc(7px + env(safe-area-inset-bottom))}.mobile-nav button{font-size:11px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;width:30%;border:0;background:none;min-height:49px;padding:5px}.mobile-nav svg{width:19px;height:19px}.mobile-nav button[aria-current=page]{background:#e9eede}.page-title{padding:35px 0 18px}.page-title h1{font-size:40px}.panel{padding:21px}.evidence-row{grid-template-columns:1fr;gap:8px}.run{padding-top:20px}.run-header{flex-wrap:wrap}.run-header h1{font-size:29px}.run-header .quiet{padding:8px 10px}.run-label{gap:7px}.run-header select{font-size:12px;min-width:44px;min-height:44px;padding:7px}.task-stage{padding:18px 14px;min-height:280px}.task-stage .stimulus{font-size:clamp(32px,11vw,48px)}.task-controls button{min-width:110px;padding:12px 10px;font-size:13px}.result-details{gap:9px}.result-detail{padding:13px}.result-detail strong{font-size:13px}.result-heading .big-score{font-size:76px}.progress-table{font-size:12px}.tool-actions button{font-size:12px}.result-actions{flex-direction:column}.task-controls{margin-top:15px}.run-subtitle{font-size:11px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="wrap">
+<header class="topbar">
+<button class="brand" data-view="practice" aria-label="Clear home"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="20" r="17" stroke="#173f36"/><circle cx="20" cy="20" r="11" stroke="#173f36"/><circle cx="20" cy="20" r="4" fill="#b85b36"/><path d="M20 1v8M20 31v8M1 20h8M31 20h8" stroke="#f6f5ef" stroke-width="4"/></svg><span><strong>clear</strong><small>Cognitive practice</small></span></button>
+<nav class="navigation" aria-label="Main navigation"><button data-view="practice">Practice</button><button data-view="progress">Progress</button><button data-view="evidence">The evidence</button></nav>
+<span class="local-tag"><i class="dot"></i>Saved on this device</span>
+</header>
+<main id="main" tabindex="-1"></main>
+<footer class="footer"><span>Clear · Practice a skill. Notice your progress.</span><span><a href="../">Your GitHub site</a> &nbsp;·&nbsp; <a href="./index.html" download="clear-cognitive.html">Download single HTML</a> &nbsp;·&nbsp; <button class="text-button" data-view="evidence" style="padding:0;min-height:44px;font-size:11px">Research & privacy</button></span></footer>
+</div>
+<nav class="mobile-nav" aria-label="Mobile navigation"><button data-view="practice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Practice</button><button data-view="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 3v17h17M8 15l4-5 4 2 5-7"/></svg>Progress</button><button data-view="evidence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 6c-4-3-8-2-9-1v15c3-2 6-2 9 0 3-2 6-2 9 0V5c-1-1-5-2-9 1Zm0 0v14"/></svg>Evidence</button></nav>
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+'use strict';
+const TASKS = {};
+const META = [
+{id:'nback',name:'Dual n-back',category:'Memory',glyph:'▦',duration:'1–2 min',description:'Hold two streams in mind. Match a sound and a position from N steps ago.',evidence:'Trained & related-task gains',unit:'back',start:2},
+{id:'corsi',name:'Spatial span',category:'Memory',glyph:'⋯',duration:'2 min',description:'Watch a path light up, then retrace the sequence from memory.',evidence:'Spatial memory practice',unit:'level',start:1},
+{id:'digits',name:'Backward digit span',category:'Memory',glyph:'321',duration:'2 min',description:'Hold a number sequence, then recall its digits in reverse order.',evidence:'Working memory practice',unit:'level',start:1},
+{id:'stroop',name:'Color & conflict',category:'Attention',glyph:'Aa',duration:'1 min',description:'Name the ink color while a competing word asks for your attention.',evidence:'Inhibition task practice',unit:'level',start:1},
+{id:'switch',name:'Rule switching',category:'Attention',glyph:'⇄',duration:'1 min',description:'Follow changing rules. Sort numbers by parity or magnitude.',evidence:'Executive task practice',unit:'level',start:1},
+{id:'vigilance',name:'Steady attention',category:'Attention',glyph:'◯',duration:'1 min',description:'Respond to circles, let triangles pass. Stay present through a paced stream.',evidence:'Attention task practice',unit:'level',start:1},
+{id:'search',name:'Visual search',category:'Attention',glyph:'T',duration:'1 min',description:'Find one target among distractors. Aim for accuracy, then fluency.',evidence:'Visual attention practice',unit:'level',start:1},
+{id:'divided',name:'Peripheral focus',category:'Attention',glyph:'⊙',duration:'2 min',description:'Catch a central detail and a peripheral location in one brief glimpse.',evidence:'Research-inspired speed task',unit:'level',start:1},
+{id:'reasoning',name:'Pattern reasoning',category:'Reasoning',glyph:'∴',duration:'2 min',description:'Discover the rule behind a sequence and choose what comes next.',evidence:'Reasoning skill practice',unit:'level',start:1},
+{id:'rotation',name:'Mental rotation',category:'Reasoning',glyph:'↻',duration:'2 min',description:'Turn a shape in your mind. Decide whether its partner is rotated or mirrored.',evidence:'Spatial training evidence',unit:'level',start:1},
+{id:'pairs',name:'Paired recall',category:'Learning',glyph:'↔',duration:'2 min',description:'Study unrelated word pairs, then retrieve each partner with a cue.',evidence:'Associative memory practice',unit:'level',start:1},
+{id:'retrieval',name:'Spaced retrieval',category:'Learning',glyph:'◷',duration:'2 min',description:'Recall a small set of facts and revisit them over expanding intervals.',evidence:'Strong retention evidence',unit:'review',start:1}
+];
+const STORE='clear-cognitive-v1';
+const freshState=()=>({version:1,history:[],tasks:{},taskData:{}});
+let storageOkay=true, state;
+try{const raw=localStorage.getItem(STORE);state=raw?sanitize(JSON.parse(raw)):freshState()}catch{state=freshState();storageOkay=false}
+function sanitize(data){
+ if(!data||data.version!==1||!Array.isArray(data.history)||typeof data.tasks!=='object'||!data.tasks)throw Error('Invalid progress file');
+ const out=freshState();out.history=data.history.filter(x=>x&&META.some(m=>m.id===x.id)&&Number.isFinite(x.accuracy)&&x.accuracy>=0&&x.accuracy<=100&&Number.isInteger(x.level)&&x.level>=1&&x.level<=8&&Number.isFinite(x.at)&&Number.isFinite(x.seconds)&&x.seconds>=0).slice(-500);
+ for(const m of META){const s=data.tasks[m.id];if(s&&Number.isInteger(s.level)&&s.level>=1&&s.level<=8)out.tasks[m.id]={level:s.level}}
+ const cards=data.taskData?.retrieval?.cards;if(cards&&typeof cards==='object'){const clean={};for(const id of ['water','earth','light','photosynthesis','angle','percent','density','metric','correlation','mean','half','byte']){const r=cards[id];if(r&&Number.isFinite(r.due)&&r.due>=0&&Number.isInteger(r.streak)&&r.streak>=0&&r.streak<=5)clean[id]={due:r.due,streak:r.streak,lastReviewed:Number.isFinite(r.lastReviewed)?r.lastReviewed:0}}out.taskData={retrieval:{cards:clean}}}
+ return out;
+}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state));storageOkay=true}catch{storageOkay=false;notify('Storage is unavailable. Export progress to keep this session.')}}
+function taskState(id){if(!state.tasks[id])state.tasks[id]={level:META.find(m=>m.id===id).start};return state.tasks[id]}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const $=(sel)=>document.querySelector(sel);
+const main=$('#main');let currentView='practice',activeRun=null,circuit=null,filter='All';
+function notify(message){const node=$('#toast');node.textContent=message;node.hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>node.hidden=true,4000)}
+function dayKey(at=Date.now()){const d=new Date(at);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function practiceDays(){return new Set(state.history.map(x=>dayKey(x.at)))}
+function streak(){const days=practiceDays();let count=0,d=new Date();d.setHours(12,0,0,0);if(!days.has(dayKey(d.getTime())))d.setDate(d.getDate()-1);while(days.has(dayKey(d.getTime()))){count++;d.setDate(d.getDate()-1)}return count}
+function renderStats(){return `<div class="stats-strip"><div class="stat"><strong>${state.history.length}</strong><span>completed sessions</span></div><div class="stat"><strong>${practiceDays().size}</strong><span>days of practice</span></div><div class="stat"><strong>${streak()}</strong><span>day streak · gentle consistency</span></div></div>`}
+function navigate(view,{keepCircuit=false}={}){if(activeRun){activeRun.dispose();activeRun=null}if(!keepCircuit)circuit=null;currentView=view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current',b.dataset.view===view?'page':'false'));({practice:renderPractice,progress:renderProgress,evidence:renderEvidence}[view]||renderPractice)();window.scrollTo(0,0)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)navigate(b.dataset.view);if(e.target.closest('a[download="clear-cognitive.html"]')){e.preventDefault();const clone=document.documentElement.cloneNode(true);clone.querySelector('#main').replaceChildren();clone.querySelector('#toast').textContent='';clone.querySelector('#toast').hidden=true;const url=URL.createObjectURL(new Blob(['<!doctype html>\n'+clone.outerHTML],{type:'text/html'})),a=document.createElement('a');a.href=url;a.download='clear-cognitive.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}});
+function renderPractice(){
+ main.innerHTML=`<section class="hero"><div><p class="eyebrow">Small sessions. Specific skills.</p><h1>A little practice.<br>A clearer rhythm.</h1><p class="intro">A quiet place to challenge your memory, attention, and reasoning. Twelve exercises, thoughtful progression, and scores you can actually understand.</p><div class="hero-links"><button class="primary" id="hero-start">Start a small circuit <span aria-hidden="true">→</span></button><button class="text-button" data-view="evidence">What does the research say?</button></div></div><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 330 330" fill="none"><circle cx="165" cy="165" r="142" stroke="#d2d9c5"/><circle cx="165" cy="165" r="99" stroke="#d2d9c5" stroke-dasharray="3 7"/><circle cx="165" cy="165" r="52" stroke="#73927c"/><path d="M65 65 165 113 265 65M65 265 165 217 265 265M23 165h90M217 165h90M165 23v90M165 217v90" stroke="#aebfa4"/><circle cx="165" cy="165" r="17" fill="#173f36"/><circle cx="65" cy="65" r="9" fill="#d9e4c8"/><circle cx="265" cy="265" r="9" fill="#d9e4c8"/><circle cx="265" cy="65" r="7" fill="#b85b36"/><circle cx="65" cy="265" r="7" fill="#b85b36"/><circle cx="165" cy="23" r="5" fill="#173f36"/><circle cx="307" cy="165" r="5" fill="#173f36"/><circle cx="23" cy="165" r="5" fill="#173f36"/><circle cx="165" cy="307" r="5" fill="#173f36"/></svg></div></section>${renderStats()}<div class="section-top"><h2>Two streams. One focus.</h2><p>Featured practice · sound on</p></div><section class="featured"><div class="featured-copy"><span class="eyebrow">Working memory · dual n-back</span><h2>Stay with the sequence.</h2><p>Track a sound and a square. Recognize each one from ${taskState('nback').level} steps ago. Separate scores make every hit, miss, and false alarm clear.</p><button data-start="nback">Practice ${taskState('nback').level}-back <span aria-hidden="true">→</span></button></div><div class="featured-art" aria-hidden="true"><div><div class="nback-diagram">${'<span></span>'.repeat(9)}</div><div class="featured-caption">see a position · hear a sound</div></div></div></section><section class="daily"><div><h3>A small daily circuit</h3><p>One memory task, one attention task, one spatial or learning task. Around five minutes, at your pace.</p><small>The suggested routine is an app feature; it is not a validated training dose.</small></div><button id="daily-start">Start today’s circuit →</button></section><section id="exercise-library"><div class="section-top"><h2>Find your practice.</h2><p>Choose a skill, not an IQ score.</p></div><div class="filters" aria-label="Exercise categories">${['All','Memory','Attention','Reasoning','Learning'].map(c=>`<button data-filter="${c}" aria-pressed="${filter===c}">${c}</button>`).join('')}</div><div class="library">${META.filter(m=>filter==='All'||m.category===filter).map(card).join('')}</div></section><div class="evidence-foot"><p>Practice often improves the trained skill. Broader benefits vary, and this app has not been clinically validated. Scores reflect these exercises, not intelligence or diagnosis.</p><button class="text-button" data-view="evidence">Read the evidence →</button></div>`;
+ $('#hero-start').onclick=startCircuit;$('#daily-start').onclick=startCircuit;
+ main.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>startTask(b.dataset.start));
+ main.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;renderPractice();$('#exercise-library').scrollIntoView({block:'start'})});
+}
+function card(m){const ts=taskState(m.id),variant=state.history.filter(x=>x.id===m.id).at(-1)?.variant||'voice',h=state.history.filter(x=>x.id===m.id&&x.level===ts.level&&(m.id!=='nback'||(x.variant||'voice')===variant)),best=h.length?Math.max(...h.map(x=>x.accuracy)):null;return `<article class="exercise-card"><div class="card-top"><span class="glyph" aria-hidden="true" style="${m.id==='digits'?'font-size:18px':''}">${m.glyph}</span><span class="category-tag">${m.category}</span></div><h3>${m.name}</h3><p>${m.description}</p><div class="card-meta"><span>${m.duration} · ${m.id==='nback'?ts.level+'-back':m.id==='retrieval'?retrievalSummary():'level '+ts.level}</span><span>${best===null?'Ready to begin':'Best '+Math.round(best)+'%'}</span></div><button class="card-start" data-start="${m.id}" aria-label="Practice ${m.name}"><span>Practice</span><span aria-hidden="true">→</span></button></article>`}
+function retrievalSummary(){const records=Object.values(state.taskData.retrieval?.cards||{}).filter(r=>r&&Number.isFinite(r.due)&&Number.isInteger(r.streak));const fresh=Math.max(0,12-records.length),due=records.filter(r=>r.due<=Date.now()).length;return fresh?fresh+' new · '+due+' due':due?due+' cards due':'Reviews up to date'}
+function startCircuit(){const day=Math.floor(Date.now()/86400000),attention=['stroop','switch','vigilance','search','divided'];circuit={ids:['nback',attention[day%attention.length],day%2?'retrieval':'rotation'],index:0};startTask(circuit.ids[0])}
+let audioContext=null;const oscillators=new Set();
+const audioPitches={A:261.63,C:293.66,H:329.63,K:349.23,L:392,Q:440,R:493.88,S:523.25,T:587.33};
+function audio(letter,mode){
+ if(mode==='voice'){if(!window.speechSynthesis)return false;const u=new SpeechSynthesisUtterance(letter);u.lang='en-US';u.rate=.85;u.volume=.8;const v=speechSynthesis.getVoices().find(v=>/^en[-_]/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}
+ try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;if(!audioContext)audioContext=new AC();audioContext.resume();const o=audioContext.createOscillator(),g=audioContext.createGain();o.type='sine';o.frequency.value=audioPitches[letter]||330;g.gain.setValueAtTime(.001,audioContext.currentTime);g.gain.exponentialRampToValueAtTime(.12,audioContext.currentTime+.02);g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+.38);o.connect(g);g.connect(audioContext.destination);oscillators.add(o);o.onended=()=>{oscillators.delete(o);o.disconnect();g.disconnect()};o.start();o.stop(audioContext.currentTime+.4);return true}catch{return false}
+}
+function startTask(id,overrideLevel){
+ if(activeRun){activeRun.dispose();activeRun=null}
+ currentView='run';document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current','false'));
+ const meta=META.find(x=>x.id===id),ts=taskState(id);if(Number.isInteger(overrideLevel)&&overrideLevel>=1&&overrideLevel<=8){ts.level=overrideLevel;save()}const level=ts.level;
+ main.innerHTML=`<section class="run"><div class="run-header"><button class="quiet" id="exit-run">← Practice</button><h1>${meta.name}</h1><div class="run-label ${id==='retrieval'?'hidden':''}"><label for="run-level">${id==='nback'?'N-back':'Difficulty'}</label><select id="run-level" class="run-level" ${id==='retrieval'?'disabled':''}>${Array.from({length:8},(_,i)=>`<option value="${i+1}" ${level===i+1?'selected':''}>${i+1}${id==='nback'?'-back':''}</option>`).join('')}</select></div></div><p class="run-subtitle">${circuit?`Circuit ${circuit.index+1} of ${circuit.ids.length} · `:''}${meta.evidence} · Your scores stay on this device</p><div class="run-track" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div><div class="run-status"><span id="run-status" role="status">Get comfortable. Accuracy comes first.</span><span id="run-count"></span></div><div id="task-stage" class="task-stage"></div><div id="task-controls" class="task-controls"></div><p id="task-hint" class="task-hint"></p><p class="privacy-label">You can leave any time. An unfinished session is not scored.</p><div id="exit-confirm" class="notice" hidden>Leave this session? Its unfinished score will not be saved.<div class="tool-actions" style="margin-top:10px"><button id="continue-run">Keep practicing</button><button id="leave-run">Leave session</button></div></div></section>`;
+ const runState={taskData:JSON.parse(JSON.stringify(state.taskData))};const controller=new AbortController(),timers=new Set(),intervals=new Set(),cleanup=[];let disposed=false,finished=false,started=Date.now();
+ function dispose(){if(disposed)return;disposed=true;controller.abort();for(const t of timers)clearTimeout(t);for(const t of intervals)clearInterval(t);for(const fn of cleanup){try{fn()}catch{}}if(window.speechSynthesis)speechSynthesis.cancel();for(const o of oscillators){try{o.stop()}catch{}}}
+ const ctx={id,level,state:runState,stage:$('#task-stage'),controls:$('#task-controls'),listen(el,event,fn){el.addEventListener(event,fn,{signal:controller.signal})},timeout(fn,ms){const t=setTimeout(()=>{timers.delete(t);if(!disposed)fn()},ms);timers.add(t);return t},interval(fn,ms){const t=setInterval(()=>{if(!disposed)fn()},ms);intervals.add(t);return t},onCleanup(fn){cleanup.push(fn)},setStatus(t){if(!disposed)$('#run-status').textContent=t},setHint(t){if(!disposed)$('#task-hint').textContent=t},setProgress(done,total){if(disposed)return;const p=Math.max(0,Math.min(100,100*done/Math.max(1,total)));$('.run-track div').style.width=p+'%';$('.run-track').setAttribute('aria-valuenow',Math.round(p));$('#run-count').textContent=`${done} / ${total}`},audio,audioAvailable(mode){return mode==='voice'?!!(window.speechSynthesis&&speechSynthesis.getVoices().some(v=>/^en[-_]/i.test(v.lang))):!!(window.AudioContext||window.webkitAudioContext)},button(label,fn,{primary=false}={}){const b=document.createElement('button');b.textContent=label;if(primary)b.className='primary';ctx.controls.appendChild(b);ctx.listen(b,'click',()=>{if(/^(begin|start|study|extra practice)/i.test(label)){started=Date.now();$('#run-level').disabled=true}if(id==='nback'){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){if(!audioContext)audioContext=new AC();audioContext.resume()}}catch{}}fn()});return b},finish(result){if(finished||disposed)return;finished=true;const seconds=Math.max(0,Math.round((Date.now()-started)/1000));dispose();activeRun=null;state.taskData=runState.taskData;recordResult(meta,level,result,seconds)}};
+ activeRun={dispose,id};
+ $('#exit-run').onclick=()=>{ $('#exit-confirm').hidden=false;$('#exit-confirm').scrollIntoView({block:'nearest'})};$('#continue-run').onclick=()=>$('#exit-confirm').hidden=true;$('#leave-run').onclick=()=>navigate('practice');$('#run-level').onchange=e=>startTask(id,Number(e.target.value));
+ window.scrollTo(0,0);
+ try{TASKS[id](ctx)}catch(error){dispose();activeRun=null;ctx.stage.innerHTML='<h2>Something interrupted this exercise.</h2><p>Your previous progress is safe. Return to practice and try again.</p>';console.error(error)}
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&activeRun){activeRun.dispose();activeRun=null;main.innerHTML='<section class="page-title"><p class="eyebrow">Take your time</p><h1>Session paused.</h1><p class="muted">The page left the foreground. To keep timing and scores fair, restart when you’re ready. No unfinished score was saved.</p><button class="primary" data-view="practice">Return to practice</button></section>'}});
+function recordResult(meta,level,result,seconds){
+ const accuracy=Math.max(0,Math.min(100,Number(result.accuracy)||0)),ts=taskState(meta.id),entry={id:meta.id,level,accuracy,at:Date.now(),seconds,variant:meta.id==='nback'?(result.variant==='tone'?'tone':'voice'):undefined,practice:result.metric==='Practice accuracy',correct:Number(result.correct)||0,total:Number(result.total)||0};
+ const previous=state.history.filter(x=>x.id===meta.id&&x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)),oldBest=previous.length?Math.max(...previous.map(x=>x.accuracy)):null;
+ state.history.push(entry);state.history=state.history.slice(-500);
+ const recent=state.history.filter(x=>x.id===meta.id).slice(-2);let next='Repeat this level to build consistency. Accuracy matters more than rushing.';
+ if(meta.id==='retrieval'&&result.metric==='Practice accuracy')next='Extra practice complete. Your existing review dates are unchanged; this was not a scheduled review.';else if(meta.id==='retrieval')next='Your review schedule is saved. Return when the next cards are due; spacing creates time to retrieve rather than immediately repeat.';
+ else if(ts.level===level&&recent.length===2&&recent.every(x=>x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)&&x.accuracy>=80)&&level<8){ts.level=level+1;next=`Two sessions at 80% or above. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level}. You can always choose a gentler level.`}
+ else if(ts.level===level&&recent.length===2&&recent.every(x=>x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)&&x.accuracy<55)&&level>1){ts.level=level-1;next=`Two sessions below 55%. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level} so you can rebuild accuracy.`}
+ else if(level===8&&accuracy>=80)next='You’re practicing at the highest level. Keep accuracy steady; there is no need to chase a perfect score.';
+ save();
+ const details=Array.isArray(result.details)?result.details:[];
+ main.innerHTML=`<section class="run result"><div class="result-heading"><p class="eyebrow">Session complete · ${escapeHtml(meta.name)}</p><div class="big-score">${Math.round(accuracy)}<span style="font-size:.4em">%</span></div><p>${['nback','vigilance'].includes(meta.id)?'Balanced accuracy':['corsi','digits'].includes(meta.id)?'Complete-sequence accuracy':'First-answer accuracy'} · ${entry.correct} / ${entry.total} correct${['nback','vigilance'].includes(meta.id)?' decisions':''}</p><p>${meta.id==='nback'?level+'-back':meta.id==='retrieval'?'Spaced retrieval':'Level '+level} · ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} · ${oldBest===null?'Your first completed session at this level':accuracy>oldBest?'A new best at this level':'Best at this level: '+Math.round(Math.max(accuracy,oldBest))+'%'}</p></div><div class="panel"><h2>Your session, clearly.</h2><p class="small muted">${escapeHtml(result.summary||'This score describes your performance on this exercise.')}</p><div class="result-details">${result.metric&&result.value?`<div class="result-detail"><small>${escapeHtml(result.metric)}</small><strong>${escapeHtml(result.value)}</strong></div>`:''}${details.map(d=>`<div class="result-detail"><small>${escapeHtml(d.label)}</small><strong>${escapeHtml(d.value)}</strong></div>`).join('')}</div><p class="small muted">${['nback','vigilance'].includes(meta.id)?'Balanced accuracy averages target hit rate and non-target correct rejection rate. Withholding every response scores 50%; the two rates show why. ':''}Compare sessions at the same level, audio mode, and device. These are practice scores, not clinical norms.</p><div class="next-step"><h3>Your next step</h3><p>${next}</p></div><div class="result-actions"><button class="primary" id="result-next">${circuit&&circuit.index<circuit.ids.length-1?'Next in your circuit →':circuit?'Finish circuit →':'Practice again'}</button><button id="result-progress">See progress</button><button id="result-home">Back to practice</button></div></div><p class="small muted">Difficulty changes after two consecutive sessions at ≥80% or &lt;55%. These thresholds are app settings, not research-established training doses.</p></section>`;
+ $('#result-next').onclick=()=>{if(circuit){circuit.index++;if(circuit.index<circuit.ids.length)startTask(circuit.ids[circuit.index]);else{navigate('practice');notify('Circuit complete. A little practice is enough for today.')}}else startTask(meta.id)};
+ $('#result-progress').onclick=()=>navigate('progress');$('#result-home').onclick=()=>navigate('practice');window.scrollTo(0,0);
+}
+function renderProgress(){
+ main.innerHTML=`<section class="page-title"><p class="eyebrow">A record, not a ranking</p><h1>Your practice, over time.</h1><p class="muted">Notice consistency and improvement within a skill. There’s no combined “brain score.”</p></section>${renderStats()}<div class="progress-grid"><section class="panel"><h2>Accuracy at the same level</h2><div class="chart-controls"><label for="chart-task">Exercise</label><select id="chart-task">${META.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select><span id="chart-mode-wrap"><label for="chart-mode">Sound</label> <select id="chart-mode"><option value="tone">Tones</option><option value="voice">Letters</option></select></span><label for="chart-level">Level</label><select id="chart-level"></select></div><div id="chart-body"></div><p class="small muted">Latest 20 sessions at one difficulty and audio mode. Changing difficulty can lower accuracy as the challenge increases.</p></section><section class="panel"><h2>Recent sessions</h2><div>${state.history.slice(-6).reverse().map(h=>`<div class="history-row"><div>${META.find(m=>m.id===h.id).name}<small>${new Date(h.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})} · ${h.id==='nback'?h.level+'-back · '+(h.variant==='tone'?'tones':'letters'):h.id==='retrieval'?(h.practice?'extra practice':'spaced review'):'level '+h.level}</small></div><strong>${Math.round(h.accuracy)}%</strong></div>`).join('')||'<p class="muted small">Your first completed session will appear here.</p>'}</div></section></div><section class="panel"><h2>Each skill has its own path</h2><table class="progress-table"><thead><tr><th scope="col">Exercise</th><th scope="col">Next level</th><th scope="col">Sessions</th><th scope="col">Best at next level</th></tr></thead><tbody>${META.map(m=>{const level=taskState(m.id).level,all=state.history.filter(x=>x.id===m.id),variant=all.at(-1)?.variant||'voice',same=all.filter(x=>x.level===level&&(m.id!=='nback'||(x.variant||'voice')===variant));return `<tr><td>${m.name}</td><td>${m.id==='retrieval'?'Scheduled':m.id==='nback'?level+'-back · '+(variant==='tone'?'tones':'letters'):level}</td><td>${all.length}</td><td>${same.length?Math.round(Math.max(...same.map(x=>x.accuracy)))+'%':'—'}</td></tr>`}).join('')}</tbody></table></section><section class="panel"><h2>Keep your record</h2><p class="small muted">Saved only in this browser. Clearing site data removes your record. Export a backup to move it between devices.</p>${!storageOkay?'<p class="notice">Browser storage is unavailable. Export before leaving to keep your record.</p>':''}<div class="tool-actions"><button id="export-data">Export progress</button><button id="import-data">Import progress</button><button id="reset-data" class="quiet danger">Reset progress</button><input id="import-file" type="file" accept="application/json,.json" hidden></div><div id="reset-confirm" class="notice reset-confirm" hidden>Reset all scores and card schedules on this device? Export a backup first if you want to keep them.<div class="tool-actions" style="margin-top:10px"><button id="cancel-reset">Keep progress</button><button id="confirm-reset" class="danger">Reset everything</button></div></div></section>`;
+ function chartLevels(){const id=$('#chart-task').value;$('#chart-mode-wrap').hidden=id!=='nback';const levels=[...new Set(state.history.filter(h=>h.id===id&&(id!=='nback'||(h.variant||'voice')===$('#chart-mode').value)).map(h=>h.level))].sort((a,b)=>a-b);if(!levels.length)levels.push(taskState(id).level);$('#chart-level').innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('');$('#chart-level').value=String(levels.includes(taskState(id).level)?taskState(id).level:levels.at(-1));drawChart()}
+ function drawChart(){const data=state.history.filter(h=>h.id===$('#chart-task').value&&h.level===Number($('#chart-level').value)&&(h.id!=='nback'||(h.variant||'voice')===$('#chart-mode').value)).slice(-20);if(!data.length){$('#chart-body').innerHTML='<div class="chart-empty"><p>No sessions at this level yet.<br><small>Start with one small practice.</small></p></div>';return}const x=i=>data.length===1?270:35+i*470/(data.length-1),y=v=>170-v*1.4;const points=data.map((h,i)=>`${x(i)},${y(h.accuracy)}`).join(' ');$('#chart-body').innerHTML=`<svg class="chart" viewBox="0 0 540 195" role="img" aria-label="Accuracy for ${data.length} sessions, from ${Math.round(data[0].accuracy)} to ${Math.round(data.at(-1).accuracy)} percent">${[0,50,100].map(v=>`<line x1="35" y1="${y(v)}" x2="505" y2="${y(v)}" stroke="#dfe3d6"/><text x="0" y="${y(v)+4}" font-size="10" fill="#66736c">${v}%</text>`).join('')}<polyline points="${points}" fill="none" stroke="#426747" stroke-width="2.5"/>${data.map((h,i)=>`<circle cx="${x(i)}" cy="${y(h.accuracy)}" r="4" fill="#426747"><title>${new Date(h.at).toLocaleDateString()}: ${Math.round(h.accuracy)}%</title></circle>`).join('')}</svg><p class="small muted">${data.length} session${data.length===1?'':'s'} · latest ${Math.round(data.at(-1).accuracy)}% · best ${Math.round(Math.max(...data.map(h=>h.accuracy)))}%</p>`}
+ $('#chart-mode').onchange=chartLevels;$('#chart-task').onchange=chartLevels;$('#chart-level').onchange=drawChart;chartLevels();
+ $('#export-data').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`clear-progress-${dayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+ $('#import-data').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(file.size>1000000){notify('That file is too large to be a Clear progress backup.');return}try{const imported=sanitize(JSON.parse(await file.text()));const box=document.createElement('div');box.className='notice';box.innerHTML=`This backup has ${imported.history.length} sessions. Importing replaces this device’s current record.<div class="tool-actions" style="margin-top:10px"><button id="accept-import">Replace with backup</button><button id="cancel-import">Cancel</button></div>`;$('#import-data').closest('.panel').appendChild(box);$('#accept-import').onclick=()=>{state=imported;save();renderProgress();notify('Progress imported.')};$('#cancel-import').onclick=()=>box.remove()}catch{notify('Please choose a valid Clear progress JSON backup.')}};
+ $('#reset-data').onclick=()=>$('#reset-confirm').hidden=false;$('#cancel-reset').onclick=()=>$('#reset-confirm').hidden=true;$('#confirm-reset').onclick=()=>{state=freshState();save();renderProgress();notify('Progress reset.')};
+}
+function renderEvidence(){
+ main.innerHTML=`<section class="page-title"><p class="eyebrow">Curiosity, with the claims kept small</p><h1>What practice can do.</h1><p class="muted" style="max-width:700px">Research supports learning specific skills. That is different from proving that a collection of browser games improves intelligence, prevents decline, or changes everyday functioning.</p></section><section class="panel"><h2>Useful practice. Honest expectations.</h2><p class="small muted">This library covers major research task families, not every possible cognitive intervention. It adapts familiar paradigms for brief mobile sessions. This particular app has not been studied in a clinical trial.</p><div class="evidence-row"><strong>Working memory<br><span class="small muted">Dual n-back · spatial & digit spans</span></strong><p>Training reliably improves the tasks people practice. N-back reviews find their clearest transfer to other n-back tasks; transfer to other working-memory measures is smaller, and benefits for intelligence or everyday abilities remain unproven. Use these exercises to practice updating and holding information, rather than expecting an IQ increase.</p></div><div class="evidence-row"><strong>Attention & control<br><span class="small muted">Conflict · switching · vigilance · search</span></strong><p>These are well-established ways to exercise and measure specific processes. Being a valid experimental task does not establish broad benefits from practicing our version. Scores describe this exercise. Reaction times also depend on your phone, browser, input method, and interruptions.</p></div><div class="evidence-row"><strong>Processing & reasoning<br><span class="small muted">Peripheral focus · patterns</span></strong><p>The ACTIVE trial found durable trained-ability gains for structured reasoning and speed training in older adults, with less decline in self-reported everyday function. Our brief adaptations do not reproduce those validated protocols, doses, or participant settings. Peripheral focus is not the clinical UFOV assessment or a licensed training program.</p></div><div class="evidence-row"><strong>Spatial skills<br><span class="small muted">Mental rotation</span></strong><p>A large meta-analysis supports the trainability of spatial skills, including some transfer to other spatial tasks. Practicing rotations is a reasonable way to develop that particular skill; a few browser sessions are not a guarantee of broader benefit.</p></div><div class="evidence-row"><strong>Learning & retention<br><span class="small muted">Paired recall · spaced retrieval</span></strong><p>Retrieving studied material and distributing practice over time have strong evidence for longer-term retention. Benefits apply to what you learn. Our cards use cued recognition and feedback, which is easier than unaided recall; the facts and review schedule are a demonstration you can practice.</p></div></section><section class="panel"><h2>Understand your score</h2><p class="small muted">Most exercises report first-answer accuracy. Dual n-back and steady attention report balanced accuracy, with target hits and false alarms separated. Span tasks count completely correct sequences. Reaction-time summaries use correct responses only. Compare the same exercise at the same difficulty, and allow room for a tired day.</p><p class="small muted">For level-based exercises, two consecutive sessions at 80% or above move the next difficulty up; two below 55% move it down. You can choose levels 1–8 yourself. These are transparent design choices, not clinically validated thresholds. A daily circuit is a convenience, not a prescribed training dose.</p></section><section class="panel"><h2>The reading behind the choices</h2><ol class="reference-list"><li><strong>Simons et al. (2016).</strong> <a href="https://doi.org/10.1177/1529100616661983" target="_blank" rel="noopener noreferrer">Do “Brain-Training” Programs Work?</a><br><span class="muted">A broad review distinguishing trained skills from transfer and everyday outcomes.</span></li><li><strong>Melby-Lervåg, Redick & Hulme (2016).</strong> <a href="https://doi.org/10.1177/1745691616635612" target="_blank" rel="noopener noreferrer">Working Memory Training Does Not Improve Performance on Measures of Intelligence or Other Measures of “Far Transfer”: Evidence From a Meta-Analytic Review.</a><br><span class="muted">Working-memory task gains do not establish intelligence or far-transfer benefits.</span></li><li><strong>Soveri et al. (2017).</strong> <a href="https://doi.org/10.3758/s13423-016-1217-0" target="_blank" rel="noopener noreferrer">Working memory training revisited: A multi-level meta-analysis of n-back training studies.</a><br><span class="muted">The largest transfer effects concerned other n-back tasks; effects on other skills were much smaller.</span></li><li><strong>Rebok et al. (2014).</strong> <a href="https://doi.org/10.1111/jgs.12607" target="_blank" rel="noopener noreferrer">Ten-Year Effects of the Advanced Cognitive Training for Independent and Vital Elderly Cognitive Training Trial on Cognition and Everyday Functioning in Older Adults.</a><br><span class="muted">Durable results for specific structured reasoning and speed interventions in older adults.</span></li><li><strong>Uttal et al. (2013).</strong> <a href="https://doi.org/10.1037/a0028446" target="_blank" rel="noopener noreferrer">The malleability of spatial skills: A meta-analysis of training studies.</a><br><span class="muted">Evidence that spatial skills can improve through training, including transfer within the spatial domain.</span></li><li><strong>Roediger & Karpicke (2006).</strong> <a href="https://doi.org/10.1111/j.1467-9280.2006.01693.x" target="_blank" rel="noopener noreferrer">Test-enhanced learning: Taking memory tests improves long-term retention.</a><br><span class="muted">Retrieval practice supports retention of studied material.</span></li><li><strong>Cepeda et al. (2006).</strong> <a href="https://doi.org/10.1037/0033-2909.132.3.354" target="_blank" rel="noopener noreferrer">Distributed practice in verbal recall tasks: A review and quantitative synthesis.</a><br><span class="muted">Spacing benefits retention; useful intervals depend on how long material must be remembered.</span></li><li><strong>Dunlosky et al. (2013).</strong> <a href="https://doi.org/10.1177/1529100612453266" target="_blank" rel="noopener noreferrer">Improving Students’ Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology.</a><br><span class="muted">Practice testing and distributed practice were rated high-utility learning techniques.</span></li></ol><p class="small muted">Research notes reviewed October 2026. References support the distinctions above; they do not validate this app.</p></section><section class="panel"><h2>A quiet app, by design</h2><p class="small muted">No account, tracking, analytics, or external scripts. Scores and review schedules stay in this browser’s local storage. Export or reset them on the Progress tab. Hosting follows GitHub Pages’ normal web-server logging.</p><p class="small muted">Download the single HTML file to use it offline. Tone-based dual n-back works without speech services; spoken letters depend on your browser and installed voices and may use your platform’s speech service. The app never requests a microphone.</p><p class="small muted">Large touch targets, visible keyboard focus, reduced-motion support, and text labels accompany the interface. Some tasks inherently require vision, color discrimination, hearing, or quick motor responses, and are not equally accessible to everyone.</p><a href="./index.html" download="clear-cognitive.html">Download Clear as one HTML file →</a></section>`;
+}
+/* Memory practice tasks. No libraries or network access required. */
+TASKS.nback = function (ctx) {
+  const n = Math.max(1, Math.min(8, Math.round(ctx.level || 2)));
+  const scoredTrials = 20;
+  const letters = ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'];
+  let alive = true, running = false, trial = -1, previewToken = 0;
+  let responded = { position: false, sound: false };
+  const stats = {
+    position: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
+    sound: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 }
+  };
+  ctx.onCleanup(function () { alive = false; previewToken++; });
+  const available = mode => typeof ctx.audioAvailable !== 'function' || ctx.audioAvailable(mode);
+  let mode = available('voice') ? 'voice' : 'tone';
+  ctx.setStatus(n + '-back · two channels');
+  ctx.setProgress(0, scoredTrials);
+  ctx.setHint('Learn the rule, preview the sound, then begin.');
+  ctx.stage.innerHTML = '<div class="task-note"><strong>Remember position and sound separately.</strong><p>Tap Position when the lit square is in the same place as ' + n + ' steps earlier. Tap Sound when the sound repeats the one from ' + n + ' steps earlier. Both can match, or neither can match.</p><p>There are ' + n + ' warm-up steps, then 20 scored steps. Each step lasts 2.5 seconds. No response means “no match.”</p><p>Your score gives equal weight to finding matches and avoiding false alarms, then averages both channels.</p></div><label class="prompt" for="nback-sound-mode">Sound type</label><select class="choice" id="nback-sound-mode"><option value="voice">Spoken letters</option><option value="tone">Musical tones</option></select><p class="task-note" id="nback-audio-description"></p>';
+  const select = ctx.stage.querySelector('select');
+  const description = ctx.stage.querySelector('#nback-audio-description');
+  select.value = mode;
+  Array.from(select.options).forEach(option => { option.disabled = !available(option.value); });
+  const describe = function () {
+    description.textContent = mode === 'voice'
+      ? 'Use headphones or a quiet room. Match the letter you hear; it will not appear on screen. If the preview is silent, choose Musical tones before beginning.'
+      : 'Each sound has a fixed pitch. Match the pitch you hear. This is an auditory n-back variation, with no letter names to remember.';
+  };
+  describe();
+  ctx.listen(select, 'change', function () { mode = select.value; previewToken++; describe(); });
+  const preview = ctx.button('Preview sounds', function () {
+    const token = ++previewToken;
+    const previewLetters = ['C', 'L', 'C'];
+    previewLetters.forEach(function (letter, index) {
+      ctx.timeout(function () {
+        if (alive && !running && token === previewToken) ctx.audio(letter, mode);
+      }, index * 1100);
+    });
+    ctx.setHint('Listen: first sound, different sound, then the first sound again.');
+  });
+  preview.disabled = !available(mode);
+  const begin = ctx.button('Begin ' + n + '-back', start, { primary: true });
+  begin.disabled = !available('voice') && !available('tone');
+  if (begin.disabled) ctx.setHint('This browser cannot play the required audio. Try another browser.');
+
+  function shuffle(items) {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  }
+  function makeSequence(options) {
+    const matches = shuffle(Array.from({ length: scoredTrials }, (_, i) => i < 6));
+    const sequence = [];
+    for (let i = 0; i < n + scoredTrials; i++) {
+      if (i >= n && matches[i - n]) sequence.push(sequence[i - n]);
+      else {
+        const choices = options.filter(item => i < n || item !== sequence[i - n]);
+        sequence.push(choices[Math.floor(Math.random() * choices.length)]);
+      }
+    }
+    return sequence;
+  }
+  let positions, sounds, cells, positionButton, soundButton;
+  function start() {
+    if (!alive || running) return;
+    running = true;
+    previewToken++;
+    positions = makeSequence([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    sounds = makeSequence(letters);
+    ctx.controls.innerHTML = '';
+    ctx.stage.innerHTML = '<div class="task-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:12px auto 20px" role="img" aria-label="Nine positions for the visual sequence">' + Array.from({ length: 9 }, () => '<div class="tile" style="aspect-ratio:1;border-radius:18px;transition:background .1s"></div>').join('') + '</div><p class="task-note" style="text-align:center">Position: <kbd>F</kbd> &nbsp; Sound: <kbd>J</kbd><br>Only respond to matches.</p>';
+    cells = Array.from(ctx.stage.querySelectorAll('.tile'));
+    positionButton = ctx.button('Position · F', () => answer('position'));
+    soundButton = ctx.button('Sound · J', () => answer('sound'));
+    ctx.listen(document, 'keydown', function (event) {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === 'f' || key === 'j') {
+        event.preventDefault();
+        answer(key === 'f' ? 'position' : 'sound');
+      }
+    });
+    nextTrial();
+  }
+  function answer(channel) {
+    if (!alive || !running || trial < n || trial >= n + scoredTrials || responded[channel]) return;
+    responded[channel] = true;
+    const button = channel === 'position' ? positionButton : soundButton;
+    button.classList.add('primary');
+    button.textContent = channel === 'position' ? 'Position marked ✓' : 'Sound marked ✓';
+    button.setAttribute('aria-pressed', 'true');
+  }
+  function nextTrial() {
+    if (!alive || !running) return;
+    trial++;
+    if (trial >= n + scoredTrials) { complete(); return; }
+    responded = { position: false, sound: false };
+    const warmup = trial < n;
+    [positionButton, soundButton].forEach(button => {
+      button.disabled = warmup;
+      button.classList.remove('primary');
+      button.setAttribute('aria-pressed', 'false');
+    });
+    positionButton.textContent = 'Position · F';
+    soundButton.textContent = 'Sound · J';
+    ctx.setStatus(warmup ? 'Warm-up ' + (trial + 1) + ' of ' + n : 'Step ' + (trial - n + 1) + ' of ' + scoredTrials + ' · ' + n + '-back');
+    ctx.setHint(warmup ? 'Remember this position and sound. Responses begin after warm-up.' : 'Compare with ' + n + ' steps earlier. Mark each matching channel.');
+    cells.forEach((cell, i) => cell.classList.toggle('lit', i === positions[trial]));
+    ctx.audio(sounds[trial], mode);
+    const currentTrial = trial;
+    ctx.timeout(function () {
+      if (alive && running && trial === currentTrial) cells.forEach(cell => cell.classList.remove('lit'));
+    }, 650);
+    ctx.timeout(function () {
+      if (!alive || !running || trial !== currentTrial) return;
+      if (!warmup) {
+        ['position', 'sound'].forEach(function (channel) {
+          const sequence = channel === 'position' ? positions : sounds;
+          const target = sequence[trial] === sequence[trial - n];
+          const result = target ? (responded[channel] ? 'hit' : 'miss') : (responded[channel] ? 'falseAlarm' : 'correctRejection');
+          stats[channel][result]++;
+        });
+        ctx.setProgress(trial - n + 1, scoredTrials);
+      }
+      nextTrial();
+    }, 2500);
+  }
+  function complete() {
+    running = false;
+    if (!alive) return;
+    alive = false;
+    const balanced = s => 50 * (s.hit / (s.hit + s.miss) + s.correctRejection / (s.correctRejection + s.falseAlarm));
+    const positionScore = balanced(stats.position);
+    const soundScore = balanced(stats.sound);
+    const accuracy = (positionScore + soundScore) / 2;
+    const formatStats = s => s.hit + ' hits · ' + s.miss + ' misses · ' + s.falseAlarm + ' false alarms · ' + s.correctRejection + ' correct rejections';
+    ctx.finish({
+      accuracy: accuracy, variant: mode,
+      correct: stats.position.hit + stats.position.correctRejection + stats.sound.hit + stats.sound.correctRejection,
+      total: scoredTrials * 2,
+      metric: 'Balanced accuracy', value: Math.round(accuracy) + '%',
+      details: [
+        { label: 'Level', value: n + '-back · ' + (mode === 'voice' ? 'spoken letters' : 'musical tones') },
+        { label: 'Position · ' + Math.round(positionScore) + '%', value: formatStats(stats.position) },
+        { label: 'Sound · ' + Math.round(soundScore) + '%', value: formatStats(stats.sound) },
+        { label: 'How scoring works', value: 'For each channel, average the match hit rate and the nonmatch rejection rate. Then average both channels. Making no responses scores 50%.' }
+      ],
+      summary: 'You completed ' + n + '-back. This score measures performance on this practice task; it is not an IQ score.'
+    });
+  }
+};
+
+TASKS.corsi = function (ctx) {
+  const length = Math.max(3, Math.min(10, Math.round(ctx.level || 1) + 2));
+  const rounds = 5;
+  let alive = true, phase = 'ready', round = 0, sequence = [], response = [], correct = 0;
+  const outcomes = [];
+  ctx.onCleanup(function () { alive = false; phase = 'closed'; });
+  ctx.setStatus('Spatial span · ' + length + ' positions');
+  ctx.setProgress(0, rounds);
+  ctx.setHint('Watch a sequence, then tap it back in the same order.');
+  ctx.stage.innerHTML = '<div class="task-note"><strong>Follow the path.</strong><p>Watch ' + length + ' tiles light up one at a time. After they finish, tap the same tiles in the same order. Tiles can appear more than once.</p><p>Practice has 5 rounds. A round counts as correct only when the complete sequence matches.</p></div>';
+  ctx.button('Begin spatial span', start, { primary: true });
+  let cells, footer;
+  function start() {
+    if (!alive || phase !== 'ready') return;
+    ctx.controls.innerHTML = '';
+    ctx.stage.innerHTML = '<div class="task-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:340px;margin:14px auto">' + Array.from({ length: 9 }, (_, i) => '<button class="tile" style="aspect-ratio:1;border-radius:18px;font-size:1.15rem" aria-label="Tile ' + (i + 1) + '">' + (i + 1) + '</button>').join('') + '</div><p class="task-note" style="text-align:center" id="spatial-input-status"></p>';
+    cells = Array.from(ctx.stage.querySelectorAll('.tile'));
+    footer = ctx.stage.querySelector('#spatial-input-status');
+    cells.forEach((cell, index) => ctx.listen(cell, 'click', () => choose(index)));
+    nextRound();
+  }
+  function nextRound() {
+    if (!alive) return;
+    round++;
+    phase = 'show';
+    response = [];
+    sequence = [];
+    while (sequence.length < length) {
+      const value = Math.floor(Math.random() * 9);
+      if (!sequence.length || value !== sequence[sequence.length - 1]) sequence.push(value);
+    }
+    ctx.controls.innerHTML = '';
+    ctx.setStatus('Round ' + round + ' of ' + rounds + ' · watch');
+    ctx.setHint('Remember the order. Wait until the sequence ends.');
+    footer.textContent = length + ' positions to remember';
+    cells.forEach(cell => { cell.disabled = true; cell.classList.remove('lit'); });
+    sequence.forEach(function (tile, index) {
+      ctx.timeout(function () {
+        if (alive && phase === 'show') cells[tile].classList.add('lit');
+      }, 500 + index * 850);
+      ctx.timeout(function () {
+        if (alive && phase === 'show') cells[tile].classList.remove('lit');
+      }, 1050 + index * 850);
+    });
+    ctx.timeout(function () {
+      if (!alive || phase !== 'show') return;
+      phase = 'recall';
+      cells.forEach(cell => { cell.disabled = false; cell.classList.remove('lit'); });
+      ctx.setStatus('Round ' + round + ' of ' + rounds + ' · your turn');
+      ctx.setHint('Tap the tiles in the same order.');
+      footer.textContent = '0 of ' + length + ' entered';
+      ctx.button('Clear taps', function () {
+        if (phase !== 'recall') return;
+        response = [];
+        footer.textContent = '0 of ' + length + ' entered';
+      });
+    }, 500 + length * 850);
+  }
+  function choose(index) {
+    if (!alive || phase !== 'recall') return;
+    response.push(index);
+    footer.textContent = response.length + ' of ' + length + ' entered';
+    cells[index].classList.add('lit');
+    ctx.timeout(() => { if (alive && phase === 'recall') cells[index].classList.remove('lit'); }, 130);
+    if (response.length === length) grade();
+  }
+  function grade() {
+    phase = 'feedback';
+    const passed = sequence.every((value, i) => value === response[i]);
+    if (passed) correct++;
+    outcomes.push(passed);
+    ctx.setProgress(round, rounds);
+    cells.forEach(cell => { cell.disabled = true; cell.classList.remove('lit'); });
+    ctx.controls.innerHTML = '';
+    ctx.setStatus(passed ? 'Sequence correct' : 'Sequence complete');
+    ctx.setHint(passed ? 'You reproduced all ' + length + ' positions.' : 'Keep practicing the order. The next round uses a fresh sequence.');
+    footer.textContent = passed ? '✓ ' + response.map(i => i + 1).join(' → ') : 'Your taps: ' + response.map(i => i + 1).join(' → ') + ' · Sequence: ' + sequence.map(i => i + 1).join(' → ');
+    ctx.button(round === rounds ? 'See results' : 'Next round', function () {
+      if (!alive || phase !== 'feedback') return;
+      if (round < rounds) nextRound();
+      else {
+        alive = false;
+        phase = 'closed';
+        ctx.finish({ accuracy: correct / rounds * 100, correct: correct, total: rounds, metric: 'Sequences recalled', value: correct + ' / ' + rounds,
+          details: [{ label: 'Span practiced', value: length + ' positions, forward order' }, { label: 'Rounds', value: outcomes.map((passed, i) => (i + 1) + ': ' + (passed ? 'correct' : 'missed')).join(' · ') }],
+          summary: 'You recalled ' + correct + ' complete sequences. This is a practice score, not a clinical memory assessment.' });
+      }
+    }, { primary: true });
+  }
+};
+
+TASKS.digits = function (ctx) {
+  const length = Math.max(3, Math.min(10, Math.round(ctx.level || 1) + 2));
+  const rounds = 5;
+  let alive = true, phase = 'ready', round = 0, sequence = [], response = '', correct = 0;
+  const outcomes = [];
+  ctx.onCleanup(function () { alive = false; phase = 'closed'; });
+  ctx.setStatus('Reverse digit span · ' + length + ' digits');
+  ctx.setProgress(0, rounds);
+  ctx.setHint('Remember the numbers, then enter them in reverse order.');
+  ctx.stage.innerHTML = '<div class="task-note"><strong>Hold it, then reverse it.</strong><p>Watch ' + length + ' digits, one at a time. When the sequence ends, enter the digits backwards. For 3, 7, 2, you would enter 2, 7, 3.</p><p>Practice has 5 rounds. Your score counts complete sequences recalled correctly.</p></div>';
+  ctx.button('Begin reverse digits', nextRound, { primary: true });
+  let display, input, digitButtons, submit;
+  function nextRound() {
+    if (!alive || (phase !== 'ready' && phase !== 'feedback')) return;
+    round++;
+    phase = 'show';
+    response = '';
+    sequence = Array.from({ length: length }, () => Math.floor(Math.random() * 10));
+    ctx.controls.innerHTML = '';
+    ctx.stage.innerHTML = '<div class="stimulus" style="min-height:150px;display:flex;align-items:center;justify-content:center;font-size:5rem;font-weight:600;font-variant-numeric:tabular-nums" aria-live="polite">Ready</div><p class="task-note" style="text-align:center">Watch every digit. Recall comes next.</p>';
+    display = ctx.stage.querySelector('.stimulus');
+    ctx.setStatus('Round ' + round + ' of ' + rounds + ' · watch');
+    ctx.setHint('Remember ' + length + ' digits, then reverse their order.');
+    sequence.forEach(function (digit, index) {
+      ctx.timeout(function () { if (alive && phase === 'show') display.textContent = digit; }, 600 + index * 1100);
+      ctx.timeout(function () { if (alive && phase === 'show') display.textContent = ''; }, 1400 + index * 1100);
+    });
+    ctx.timeout(recall, 600 + length * 1100);
+  }
+  function recall() {
+    if (!alive || phase !== 'show') return;
+    phase = 'recall';
+    ctx.stage.innerHTML = '<label class="prompt" for="reverse-digit-input">Enter the digits backwards</label><input class="choice" id="reverse-digit-input" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="' + length + '" aria-describedby="reverse-digit-count" style="width:100%;font-size:2rem;text-align:center;letter-spacing:.15em;font-variant-numeric:tabular-nums"><p class="task-note" id="reverse-digit-count" style="text-align:center">0 of ' + length + ' digits entered</p><div class="answer-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:310px;margin:14px auto">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'Clear'].map(digit => '<button class="choice" type="button" data-digit="' + digit + '" style="min-height:48px;font-size:1.15rem">' + digit + '</button>').join('') + '</div>';
+    input = ctx.stage.querySelector('input');
+    digitButtons = Array.from(ctx.stage.querySelectorAll('[data-digit]'));
+    const count = ctx.stage.querySelector('#reverse-digit-count');
+    function update() {
+      input.value = response;
+      count.textContent = response.length + ' of ' + length + ' digits entered';
+      submit.disabled = response.length !== length;
+    }
+    digitButtons.forEach(button => ctx.listen(button, 'click', function () {
+      if (!alive || phase !== 'recall') return;
+      const value = button.dataset.digit;
+      if (value === '⌫') response = response.slice(0, -1);
+      else if (value === 'Clear') response = '';
+      else if (response.length < length) response += value;
+      update();
+    }));
+    ctx.listen(input, 'input', function () {
+      if (!alive || phase !== 'recall') return;
+      response = input.value.replace(/[^0-9]/g, '').slice(0, length);
+      update();
+    });
+    ctx.listen(input, 'keydown', function (event) { if (event.key === 'Enter' && response.length === length) { event.preventDefault(); grade(); } });
+    submit = ctx.button('Check sequence', grade, { primary: true });
+    submit.disabled = true;
+    ctx.setStatus('Round ' + round + ' of ' + rounds + ' · your turn');
+    ctx.setHint('Enter the last digit first, working back to the first.');
+  }
+  function grade() {
+    if (!alive || phase !== 'recall' || response.length !== length) return;
+    phase = 'feedback';
+    const expected = sequence.slice().reverse().join('');
+    const passed = response === expected;
+    if (passed) correct++;
+    outcomes.push(passed);
+    ctx.setProgress(round, rounds);
+    ctx.controls.innerHTML = '';
+    ctx.stage.innerHTML = '<div class="task-note"><strong>' + (passed ? 'Sequence correct' : 'Sequence complete') + '</strong><p>Your answer: <span style="font-variant-numeric:tabular-nums;letter-spacing:.12em">' + response + '</span></p><p>Reverse sequence: <span style="font-variant-numeric:tabular-nums;letter-spacing:.12em">' + expected + '</span></p></div>';
+    ctx.setStatus(passed ? 'All ' + length + ' digits correct' : 'Keep practicing');
+    ctx.setHint(passed ? 'You reversed the entire sequence.' : 'Try grouping a few digits together as you remember them.');
+    ctx.button(round === rounds ? 'See results' : 'Next round', function () {
+      if (!alive || phase !== 'feedback') return;
+      if (round < rounds) nextRound();
+      else {
+        alive = false;
+        phase = 'closed';
+        ctx.finish({ accuracy: correct / rounds * 100, correct: correct, total: rounds, metric: 'Sequences recalled', value: correct + ' / ' + rounds,
+          details: [{ label: 'Span practiced', value: length + ' digits, reverse order' }, { label: 'Rounds', value: outcomes.map((passed, i) => (i + 1) + ': ' + (passed ? 'correct' : 'missed')).join(' · ') }],
+          summary: 'You recalled ' + correct + ' complete reversed sequences. This is a practice score, not a clinical memory assessment.' });
+      }
+    }, { primary: true });
+  }
+};
+
+/* Attention and control exercises. These are practice tasks, not diagnostic tests. */
+(() => {
+  const median = values => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const half = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+  };
+  const ms = values => median(values) === null ? '—' : `${Math.round(median(values))} ms`;
+  const pct = (n, d) => d ? Math.round(100 * n / d) : 0;
+  const shuffled = source => {
+    const items = [...source];
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  };
+  const pick = source => source[Math.floor(Math.random() * source.length)];
+  const levelOf = ctx => Math.min(8, Math.max(1, Number(ctx.level) || 1));
+  const node = (tag, className, text) => {
+    const item = document.createElement(tag);
+    if (className) item.className = className;
+    if (text !== undefined) item.textContent = text;
+    return item;
+  };
+  const reset = ctx => { ctx.stage.replaceChildren(); ctx.controls.replaceChildren(); };
+  const intro = (ctx, title, copy, start, note) => {
+    reset(ctx);
+    ctx.stage.append(node('h2', 'prompt', title), node('p', 'task-note', copy));
+    if (note) ctx.stage.append(node('p', 'task-note', note));
+    ctx.setStatus('Ready when you are');
+    ctx.setHint('Accuracy comes first. Your result will show accuracy and speed separately.');
+    ctx.setProgress(0, 1);
+    ctx.button('Begin', start, { primary: true });
+  };
+  const rtDetail = (label, times) => ({ label, value: ms(times) });
+
+  TASKS.stroop = ctx => {
+    const level = levelOf(ctx);
+    const allColors = [
+      { name: 'RED', ink: '#b52e35' },
+      { name: 'BLUE', ink: '#175baf' },
+      { name: 'GREEN', ink: '#187247' },
+      { name: 'PURPLE', ink: '#79409b' }
+    ];
+    const colors = level < 4 ? allColors.slice(0, 3) : allColors;
+    const count = 20;
+    const congruentCount = Math.max(4, 11 - level);
+    const plan = shuffled(Array.from({ length: count }, (_, i) => i < congruentCount));
+    let index = 0, correct = 0, opened = 0, accepting = false;
+    const correctTimes = [], congruentTimes = [], incongruentTimes = [];
+    const done = () => {
+      const details = [rtDetail('Correct response time', correctTimes), { label: 'Ink choices', value: `${colors.length} colors` }];
+      if (congruentTimes.length >= 3 && incongruentTimes.length >= 3) {
+        details.push({ label: 'Incongruent − congruent time', value: `${Math.round(median(incongruentTimes) - median(congruentTimes))} ms` });
+      }
+      ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(correctTimes), details, summary: 'A Stroop practice result: accuracy and response speed on this session, not a measure of general intelligence.' });
+    };
+    const next = () => {
+      if (index >= count) return done();
+      reset(ctx);
+      const ink = pick(colors);
+      const word = plan[index] ? ink : pick(colors.filter(color => color !== ink));
+      ctx.stage.append(node('p', 'prompt', 'Choose the INK color'));
+      const stimulus = node('div', 'stimulus', word.name);
+      stimulus.style.cssText = `color:${ink.ink};font-size:clamp(2.8rem,14vw,5rem);font-weight:800;letter-spacing:.05em;`;
+      ctx.stage.append(stimulus);
+      ctx.setStatus(`Trial ${index + 1} of ${count}`);
+      ctx.setHint('Read the color of the ink, then choose its written label.');
+      ctx.setProgress(index, count);
+      colors.forEach(color => {
+        const button = ctx.button(color.name, () => {
+          if (!accepting) return;
+          accepting = false;
+          const elapsed = performance.now() - opened;
+          const right = color === ink;
+          if (right) {
+            correct++;
+            correctTimes.push(elapsed);
+            (plan[index] ? congruentTimes : incongruentTimes).push(elapsed);
+          }
+          Array.from(ctx.controls.querySelectorAll('button')).forEach(b => b.disabled = true);
+          ctx.setStatus(right ? 'Correct' : `Ink color: ${ink.name}`);
+          index++;
+          ctx.setProgress(index, count);
+          ctx.timeout(next, 350);
+        });
+        if (button) button.style.borderBottom = `4px solid ${color.ink}`;
+      });
+      opened = performance.now();
+      accepting = true;
+    };
+    intro(ctx, 'Color & word', 'A color word appears in colored ink. Tap the label matching the ink, even when the word says something else. There are 20 trials; respond accurately, then quickly.', next, `Level ${level}: ${colors.length} color choices, with ${count - congruentCount} conflicting trials. This practices the Stroop task; wider cognitive benefits are uncertain.`);
+  };
+
+  TASKS.switch = ctx => {
+    const level = levelOf(ctx), count = 20;
+    const switchCount = Math.round((count - 1) * Math.min(.8, .3 + .06 * level));
+    const changes = shuffled(Array.from({ length: count - 1 }, (_, i) => i < switchCount));
+    const digits = [1, 2, 3, 4, 6, 7, 8, 9];
+    const times = [], switchTimes = [], repeatTimes = [];
+    let index = 0, correct = 0, cue = Math.random() < .5 ? 'parity' : 'magnitude', previous = null, opened = 0, accepting = false;
+    const next = () => {
+      if (index >= count) {
+        const details = [rtDetail('Correct response time', times), { label: 'Rule changes', value: `${switchCount}` }];
+        if (switchTimes.length >= 3 && repeatTimes.length >= 3) details.push({ label: 'Switch − repeat time', value: `${Math.round(median(switchTimes) - median(repeatTimes))} ms` });
+        return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(times), details, summary: 'This result reflects rule switching in this practice session. Faster responses are meaningful only alongside accuracy.' });
+      }
+      if (index && changes[index - 1]) cue = cue === 'parity' ? 'magnitude' : 'parity';
+      const isSwitch = previous !== null && previous !== cue;
+      const digit = pick(digits);
+      const labels = cue === 'parity' ? ['ODD', 'EVEN'] : ['LOW: below 5', 'HIGH: above 5'];
+      const answer = cue === 'parity' ? (digit % 2 ? 0 : 1) : (digit < 5 ? 0 : 1);
+      reset(ctx);
+      const cueLabel = node('div', 'prompt', cue === 'parity' ? 'ODD or EVEN?' : 'LOW or HIGH?');
+      cueLabel.style.cssText = 'padding:.8rem 1rem;border:2px solid currentColor;border-radius:16px;display:inline-block;font-weight:800;';
+      ctx.stage.append(cueLabel, node('div', 'stimulus', String(digit)));
+      ctx.setStatus(`Trial ${index + 1} of ${count}`);
+      ctx.setHint(cue === 'parity' ? 'Use the odd/even rule.' : 'Below 5 is LOW. Above 5 is HIGH.');
+      ctx.setProgress(index, count);
+      labels.forEach((label, choice) => ctx.button(label, () => {
+        if (!accepting) return;
+        accepting = false;
+        const elapsed = performance.now() - opened, right = choice === answer;
+        if (right) {
+          correct++;
+          times.push(elapsed);
+          if (previous !== null) (isSwitch ? switchTimes : repeatTimes).push(elapsed);
+        }
+        Array.from(ctx.controls.querySelectorAll('button')).forEach(b => b.disabled = true);
+        ctx.setStatus(right ? 'Correct' : `Correct choice: ${labels[answer]}`);
+        previous = cue;
+        index++;
+        ctx.setProgress(index, count);
+        ctx.timeout(next, 350);
+      }));
+      opened = performance.now();
+      accepting = true;
+    };
+    intro(ctx, 'Switch the rule', 'Check the rule above each digit. For ODD/EVEN, judge parity. For LOW/HIGH, judge whether it is below or above 5. The rule can change each trial. Complete 20 accurate choices.', next, `Level ${level} includes ${switchCount} rule changes. This is task-switching practice; transfer to everyday attention is uncertain.`);
+  };
+
+  TASKS.vigilance = ctx => {
+    const level = levelOf(ctx), count = 30, goCount = 21, noGoCount = 9;
+    const pace = Math.max(960, 1540 - level * 70);
+    const plan = shuffled(Array.from({ length: count }, (_, i) => i < goCount));
+    let index = 0, hits = 0, rejections = 0, responded = false, active = false, opened = 0, tapButton;
+    const hitTimes = [];
+    ctx.onCleanup(() => { active = false; });
+    const next = () => {
+      active = false;
+      if (index >= count) {
+        const balanced = Math.round(50 * (hits / goCount + rejections / noGoCount));
+        return ctx.finish({ accuracy: balanced, correct: hits + rejections, total: count, metric: 'Balanced accuracy', value: `${balanced}%`, details: [ { label: 'Circle hits', value: `${hits} / ${goCount}` }, { label: 'Triangle withholds', value: `${rejections} / ${noGoCount}` }, { label: 'False alarms', value: `${noGoCount - rejections}` }, { label: 'Missed circles', value: `${goCount - hits}` }, rtDetail('Correct circle response time', hitTimes) ], summary: 'Balanced accuracy gives circle responses and triangle withholds equal weight. Repeated taps cannot improve the score.' });
+      }
+      ctx.stage.replaceChildren();
+      const shape = node('div', 'stimulus', plan[index] ? '●' : '▲');
+      shape.style.cssText = 'font-size:clamp(5rem,25vw,8rem);line-height:1.4;color:var(--ink,#173d3c);';
+      shape.setAttribute('role', 'img');
+      shape.setAttribute('aria-label', plan[index] ? 'Circle: respond' : 'Triangle: withhold');
+      ctx.stage.append(shape);
+      ctx.setStatus(`Symbol ${index + 1} of ${count}`);
+      ctx.setHint('Circle: tap. Triangle: wait. One response per symbol.');
+      ctx.setProgress(index, count);
+      responded = false;
+      tapButton.disabled = false;
+      opened = performance.now();
+      active = true;
+      ctx.timeout(() => {
+        active = false;
+        if (plan[index] && responded) hits++;
+        if (!plan[index] && !responded) rejections++;
+        index++;
+        ctx.setProgress(index, count);
+        tapButton.disabled = true;
+        ctx.stage.replaceChildren(node('div', 'stimulus', '·'));
+        ctx.timeout(next, 180);
+      }, pace);
+    };
+    const begin = () => {
+      reset(ctx);
+      ctx.stage.append(node('div', 'stimulus', 'Ready'));
+      tapButton = ctx.button('● Circle — tap', () => {
+        if (!active || responded) return;
+        responded = true;
+        tapButton.disabled = true;
+        if (plan[index]) hitTimes.push(performance.now() - opened);
+        ctx.setStatus('Response recorded');
+      }, { primary: true });
+      ctx.setHint('Keep your eyes on the shape.');
+      ctx.timeout(next, 700);
+    };
+    intro(ctx, 'Stay with the signal', 'Tap for a circle ●. Hold your response for a triangle ▲. Symbols change automatically, so stay ready and make only one response to each. There are 30 symbols.', begin, `Level ${level}: each symbol lasts ${(pace / 1000).toFixed(2)} seconds. The score balances successful taps and successful withholds. This practice is not an attention disorder assessment.`);
+  };
+
+  TASKS.search = ctx => {
+    const level = levelOf(ctx), count = 12;
+    const columns = level <= 2 ? 3 : level <= 5 ? 4 : 5;
+    const rows = level <= 2 ? 3 : level <= 5 ? 4 : 5;
+    const size = columns * rows;
+    const times = [];
+    let index = 0, correct = 0, accepting = false, opened = 0;
+    const next = () => {
+      if (index >= count) return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct search time', value: ms(times), details: [ rtDetail('Correct search time', times), { label: 'Grid', value: `${rows} × ${columns} letters` } ], summary: 'Your result measures finding T among L letters in this session. It does not establish a general improvement in visual attention.' });
+      reset(ctx);
+      ctx.stage.append(node('p', 'prompt', 'Find and tap the T'));
+      const grid = node('div', 'task-grid');
+      grid.style.cssText = `display:grid;grid-template-columns:repeat(${columns},minmax(44px,1fr));gap:6px;max-width:360px;margin:1rem auto;width:100%;`;
+      const target = Math.floor(Math.random() * size);
+      for (let i = 0; i < size; i++) {
+        const tile = node('button', 'tile', i === target ? 'T' : 'L');
+        tile.type = 'button';
+        tile.setAttribute('aria-label', `${i === target ? 'T' : 'L'}, row ${Math.floor(i / columns) + 1}, column ${i % columns + 1}`);
+        tile.style.cssText = 'min-width:44px;min-height:52px;aspect-ratio:auto;font-size:1.8rem;font-weight:700;line-height:1;padding:.45rem;border-radius:12px;';
+        ctx.listen(tile, 'click', () => {
+          if (!accepting) return;
+          accepting = false;
+          const right = i === target;
+          if (right) { correct++; times.push(performance.now() - opened); }
+          grid.querySelectorAll('button').forEach(b => b.disabled = true);
+          grid.children[target].style.outline = '3px solid #cf6837';
+          ctx.setStatus(right ? 'Found it' : 'The outlined letter is T');
+          index++;
+          ctx.setProgress(index, count);
+          ctx.timeout(next, 450);
+        });
+        grid.append(tile);
+      }
+      ctx.stage.append(grid);
+      ctx.setStatus(`Search ${index + 1} of ${count}`);
+      ctx.setHint('There is exactly one T. All other letters are L.');
+      ctx.setProgress(index, count);
+      opened = performance.now();
+      accepting = true;
+    };
+    intro(ctx, 'Find the target', 'Find the one T among the L letters and tap its tile. Make one choice per grid. Your result shows accuracy and the median time of correct searches across 12 grids.', next, `Level ${level}: ${size} letters per grid. This visual search exercise practices this specific search skill.`);
+  };
+
+  TASKS.divided = ctx => {
+    const level = levelOf(ctx), count = 12;
+    const flashMs = Math.max(180, 920 - (level - 1) * 100);
+    const locations = ['Top left', 'Top', 'Top right', 'Left', 'Right', 'Bottom left', 'Bottom', 'Bottom right'];
+    const cellIndices = [0, 1, 2, 3, 5, 6, 7, 8];
+    const digits = [1, 2, 3, 4, 6, 7, 8, 9];
+    let index = 0, jointCorrect = 0, centerCorrect = 0, peripheralCorrect = 0, target = 0, digit = 0, centerAnswer = null, phase = 'idle';
+    ctx.onCleanup(() => { phase = 'idle'; });
+    const makeGrid = (showStimulus, choose) => {
+      const grid = node('div', 'task-grid');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,minmax(44px,1fr));gap:8px;max-width:330px;width:100%;margin:1rem auto;';
+      for (let i = 0; i < 9; i++) {
+        const peripheralIndex = cellIndices.indexOf(i);
+        const label = i === 4 ? (showStimulus ? String(digit) : '·') : (showStimulus ? (peripheralIndex === target ? '●' : '·') : locations[peripheralIndex]);
+        const cell = node(choose && i !== 4 ? 'button' : 'div', choose && i !== 4 ? 'tile' : 'tile task-note', label);
+        cell.style.cssText = `min-width:44px;min-height:64px;display:flex;align-items:center;justify-content:center;text-align:center;padding:.3rem;border-radius:12px;${showStimulus ? 'font-size:2rem;font-weight:700;' : 'font-size:.85rem;line-height:1.15;'}`;
+        if (showStimulus) cell.setAttribute('aria-hidden', 'true');
+        if (choose && i !== 4) {
+          cell.type = 'button';
+          ctx.listen(cell, 'click', () => {
+            if (phase !== 'location') return;
+            phase = 'feedback';
+            const centerRight = centerAnswer === (digit % 2 ? 'odd' : 'even');
+            const peripheralRight = peripheralIndex === target;
+            if (centerRight) centerCorrect++;
+            if (peripheralRight) peripheralCorrect++;
+            if (centerRight && peripheralRight) jointCorrect++;
+            grid.querySelectorAll('button').forEach(b => b.disabled = true);
+            grid.children[cellIndices[target]].style.outline = '3px solid #cf6837';
+            ctx.setStatus(centerRight && peripheralRight ? 'Both correct' : `${centerRight ? 'Center correct' : 'Center missed'} · ${peripheralRight ? 'Location correct' : 'Location missed'}`);
+            ctx.setHint(`Center was ${digit} (${digit % 2 ? 'odd' : 'even'}). Marker: ${locations[target].toLowerCase()}.`);
+            index++;
+            ctx.setProgress(index, count);
+            ctx.timeout(next, 850);
+          });
+        }
+        grid.append(cell);
+      }
+      return grid;
+    };
+    const chooseLocation = answer => {
+      if (phase !== 'center') return;
+      centerAnswer = answer;
+      phase = 'location';
+      reset(ctx);
+      ctx.stage.append(node('p', 'prompt', 'Where was the marker?'), makeGrid(false, true));
+      ctx.setHint('Tap the location where you saw ●.');
+    };
+    const flash = () => {
+      phase = 'flash';
+      reset(ctx);
+      ctx.stage.append(node('p', 'prompt', 'Observe the center and marker'), makeGrid(true, false));
+      ctx.setHint('Remember whether the digit is odd or even, and the marker location.');
+      ctx.timeout(() => {
+        if (phase !== 'flash') return;
+        phase = 'center';
+        reset(ctx);
+        ctx.stage.append(node('p', 'prompt', 'Was the center digit odd or even?'), node('div', 'stimulus', '?'));
+        ctx.setHint('Choose parity first; then choose the marker location.');
+        ctx.button('ODD', () => chooseLocation('odd'));
+        ctx.button('EVEN', () => chooseLocation('even'));
+      }, flashMs);
+    };
+    const next = () => {
+      if (index >= count) {
+        return ctx.finish({ accuracy: pct(jointCorrect, count), correct: jointCorrect, total: count, metric: 'Both answers correct', value: `${jointCorrect} / ${count}`, details: [ { label: 'Center accuracy', value: `${pct(centerCorrect, count)}% (${centerCorrect}/${count})` }, { label: 'Peripheral accuracy', value: `${pct(peripheralCorrect, count)}% (${peripheralCorrect}/${count})` }, { label: 'Display duration', value: `${flashMs} ms` } ], summary: 'Joint accuracy requires both the center and location answers. This is an inspired practice task, distinct from the validated UFOV assessment and training program.' });
+      }
+      phase = 'ready';
+      target = Math.floor(Math.random() * locations.length);
+      digit = pick(digits);
+      centerAnswer = null;
+      reset(ctx);
+      ctx.stage.append(node('p', 'prompt', 'Look at the center'), makeGrid(false, false));
+      ctx.setStatus(`Trial ${index + 1} of ${count}`);
+      ctx.setHint(`Tap Show when ready. The display lasts ${flashMs} ms.`);
+      ctx.setProgress(index, count);
+      ctx.button('Show', () => { if (phase === 'ready') flash(); }, { primary: true });
+    };
+    intro(ctx, 'Center & surroundings', 'A digit appears in the center while one ● marker appears around it. After the display disappears, answer whether the digit was odd or even, then tap the marker’s location. There are 12 trials, each started by you.', next, `Level ${level}: the display lasts ${flashMs} ms. This exercise is inspired by divided visual attention tasks, but is distinct from the validated UFOV program. It is not a vision or driving assessment.`);
+  };
+})();
+
+/* Reasoning, mental rotation, paired associates and spaced retrieval. */
+(() => {
+  const shuffle = items => {
+    const copy = items.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+  const random = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+  const element = (tag, text, className) => {
+    const el = document.createElement(tag);
+    if (text !== undefined) el.textContent = text;
+    if (className) el.className = className;
+    return el;
+  };
+  const clear = ctx => { ctx.stage.replaceChildren(); ctx.controls.replaceChildren(); };
+  const note = (ctx, text) => ctx.stage.append(element('p', text, 'task-note'));
+  const percent = (correct, total) => total ? Math.round(100 * correct / total) : 0;
+  const showIntro = (ctx, title, copy, beginLabel, begin) => {
+    clear(ctx);
+    ctx.stage.append(element('h3', title, 'prompt'));
+    note(ctx, copy);
+    ctx.button(beginLabel, begin, { primary: true });
+  };
+  const choices = (ctx, options, onChoose) => {
+    const grid = element('div', undefined, 'answer-grid');
+    let answered = false;
+    options.forEach(option => {
+      const choice = element('button', String(option), 'choice');
+      choice.type = 'button';
+      ctx.listen(choice, 'click', () => {
+        if (answered) return;
+        answered = true;
+        grid.querySelectorAll('button').forEach(btn => { btn.disabled = true; });
+        onChoose(option, choice);
+      });
+      grid.append(choice);
+    });
+    ctx.stage.append(grid);
+  };
+  const numericChoices = answer => {
+    const values = new Set([answer]);
+    const scale = Math.max(2, Math.round(Math.abs(answer) * 0.12));
+    let tries = 0;
+    while (values.size < 4 && tries++ < 40) {
+      const difference = random(1, scale);
+      values.add(answer + (Math.random() < 0.5 ? -difference : difference));
+    }
+    for (let i = 1; values.size < 4; i++) values.add(answer + i);
+    return shuffle([...values]);
+  };
+
+  function sequence(level, index) {
+    const easy = ['arithmetic', 'geometric', 'growing', 'squares', 'alternating', 'fibonacci'];
+    const harder = ['arithmetic', 'growing', 'affine', 'interleaved', 'squares', 'fibonacci', 'alternating', 'geometric', 'cubes', 'interleaved', 'affine', 'growing'];
+    const family = level < 4 ? easy[index % easy.length] : harder[index];
+    const terms = [];
+    let rule;
+    if (family === 'arithmetic') {
+      const start = random(level > 3 ? -18 : 1, 15);
+      const step = random(2, 3 + level) * (level > 4 && Math.random() < 0.35 ? -1 : 1);
+      for (let i = 0; i < 6; i++) terms.push(start + step * i);
+      rule = `${step > 0 ? 'Add' : 'Subtract'} ${Math.abs(step)} each time.`;
+    } else if (family === 'geometric') {
+      const start = random(1, 4), factor = level > 4 ? random(2, 4) : 2;
+      for (let i = 0; i < 6; i++) terms.push(start * factor ** i);
+      rule = `Multiply the previous number by ${factor}.`;
+    } else if (family === 'growing') {
+      const first = random(1, 12), firstStep = random(1, 5), increase = random(1, Math.min(4, level));
+      terms.push(first);
+      for (let i = 0; i < 5; i++) terms.push(terms[i] + firstStep + i * increase);
+      const diffs = terms.slice(1).map((v, i) => v - terms[i]);
+      rule = `The additions are ${diffs.slice(0, -1).join(', ')}… Each addition grows by ${increase}; the next addition is ${diffs.at(-1)}.`;
+    } else if (family === 'squares' || family === 'cubes') {
+      const start = random(1, 4), power = family === 'cubes' ? 3 : 2;
+      const offset = level >= 6 ? random(1, 8) : 0;
+      for (let i = 0; i < 6; i++) terms.push((start + i) ** power + offset);
+      rule = `${family === 'cubes' ? 'Cubes' : 'Squares'} of consecutive integers (${start}, ${start + 1}, ${start + 2}…)${offset ? `, each plus ${offset}` : ''}. The next is ${start + 5}${power === 3 ? '³' : '²'}${offset ? ` + ${offset}` : ''}.`;
+    } else if (family === 'alternating') {
+      const start = random(1, 12), a = random(2, 5), b = a + random(2, 5);
+      terms.push(start);
+      for (let i = 0; i < 7; i++) terms.push(terms[i] + (i % 2 ? b : a));
+      rule = `Alternate adding ${a} and adding ${b}. The next step adds ${a}.`;
+    } else if (family === 'fibonacci') {
+      terms.push(random(1, 5), random(6, 10));
+      for (let i = 2; i < 7; i++) terms.push(terms[i - 1] + terms[i - 2]);
+      rule = `Each number is the sum of the previous two: ${terms.at(-3)} + ${terms.at(-2)} = ${terms.at(-1)}.`;
+    } else if (family === 'affine') {
+      const multiplier = level >= 7 ? 3 : 2, add = random(1, 5);
+      terms.push(random(1, 5));
+      for (let i = 0; i < 5; i++) terms.push(terms[i] * multiplier + add);
+      rule = `Multiply the previous number by ${multiplier}, then add ${add}.`;
+    } else {
+      const a = random(1, 8), b = random(20, 32), da = random(2, 5), db = random(6, 9);
+      for (let i = 0; i < 8; i++) terms.push(i % 2 ? b + Math.floor(i / 2) * db : a + Math.floor(i / 2) * da);
+      rule = `Two sequences alternate. Positions 1, 3, 5… add ${da}; positions 2, 4, 6… add ${db}. The next number belongs to the second sequence.`;
+    }
+    return { shown: terms.slice(0, -1), answer: terms.at(-1), rule };
+  }
+
+  TASKS.reasoning = ctx => {
+    let index = 0, correct = 0;
+    const total = 12;
+    const trials = Array.from({ length: total }, (_, i) => sequence(ctx.level, i));
+    const next = () => {
+      if (index === total) {
+        ctx.finish({ accuracy: percent(correct, total), correct, total, metric: 'Patterns solved', value: `${correct} / ${total}`, details: [{ label: 'First answers', value: `${percent(correct, total)}% correct` }, { label: 'Difficulty', value: `Level ${ctx.level}` }], summary: 'You practiced recognizing number patterns. These generated exercises are inspired by reasoning training; they are not the validated ACTIVE intervention or an IQ test.' });
+        return;
+      }
+      clear(ctx);
+      const trial = trials[index];
+      ctx.setStatus(`Pattern ${index + 1} of ${total}`);
+      ctx.setProgress(index, total);
+      ctx.setHint('Look for a simple, consistent rule. Choose the next number.');
+      ctx.stage.append(element('p', 'What comes next?', 'prompt'));
+      const stimulus = element('div', `${trial.shown.join('  ·  ')}  ·  ?`, 'stimulus');
+      stimulus.style.cssText = 'font-size:clamp(1.15rem,5vw,1.65rem);line-height:1.7;overflow-wrap:anywhere;letter-spacing:0';
+      ctx.stage.append(stimulus);
+      choices(ctx, numericChoices(trial.answer), (answer, button) => {
+        const success = answer === trial.answer;
+        if (success) correct++;
+        button.style.background = success ? '#d4e9e2' : '#f7e0ce';
+        note(ctx, `${success ? 'Correct.' : `The answer is ${trial.answer}.`} ${trial.rule}`);
+        ctx.setHint('One point for each correct first answer.');
+        index++;
+        ctx.setProgress(index, total);
+        ctx.button(index === total ? 'See results' : 'Next pattern', next, { primary: true });
+      });
+    };
+    showIntro(ctx, 'Find the pattern', 'Twelve number sequences, four choices each. After each answer you will see the intended rule. There is no time pressure; the score counts your first answer to each pattern.', 'Begin patterns', next);
+    ctx.setStatus('12 patterns · untimed');
+    ctx.setHint('Practice a reasoning skill. Improvement on this task does not establish a general intelligence gain.');
+    ctx.setProgress(0, total);
+  };
+
+  const normalizeCells = cells => {
+    const minX = Math.min(...cells.map(c => c[0])), minY = Math.min(...cells.map(c => c[1]));
+    return cells.map(([x, y]) => [x - minX, y - minY]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  };
+  const signature = cells => JSON.stringify(normalizeCells(cells));
+  const rotateCells = cells => cells.map(([x, y]) => [-y, x]);
+  const isChiral = cells => {
+    const original = signature(cells);
+    let reflected = cells.map(([x, y]) => [-x, y]);
+    for (let i = 0; i < 4; i++) {
+      if (signature(reflected) === original) return false;
+      reflected = rotateCells(reflected);
+    }
+    return true;
+  };
+  const makeShape = size => {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const cells = [[0, 0]], occupied = new Set(['0,0']);
+      let tries = 0;
+      while (cells.length < size && tries++ < 300) {
+        const [x, y] = cells[random(0, cells.length - 1)];
+        const [dx, dy] = [[1, 0], [-1, 0], [0, 1], [0, -1]][random(0, 3)];
+        const key = `${x + dx},${y + dy}`;
+        if (!occupied.has(key)) { cells.push([x + dx, y + dy]); occupied.add(key); }
+      }
+      if (cells.length === size && isChiral(cells)) return normalizeCells(cells);
+    }
+    return [[0, 0], [0, 1], [0, 2], [1, 2], [1, 3]];
+  };
+  const shapeSVG = (cells, angle, mirrored, label) => {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 220 220');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', label);
+    svg.style.cssText = 'display:block;width:100%;max-height:220px';
+    const xs = cells.map(c => c[0]), ys = cells.map(c => c[1]);
+    const centerX = (Math.min(...xs) + Math.max(...xs) + 1) / 2;
+    const centerY = (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+    const radius = Math.max(...cells.flatMap(([x, y]) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].map(([cx, cy]) => Math.hypot(cx - centerX, cy - centerY))));
+    const scale = 84 / radius;
+    const group = document.createElementNS(svgNS, 'g');
+    group.setAttribute('transform', `translate(110 110) rotate(${angle}) scale(${mirrored ? -1 : 1} 1)`);
+    cells.forEach(([x, y]) => {
+      const rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x', String((x - centerX) * scale));
+      rect.setAttribute('y', String((y - centerY) * scale));
+      rect.setAttribute('width', String(scale + 0.2));
+      rect.setAttribute('height', String(scale + 0.2));
+      rect.setAttribute('fill', '#296b61');
+      group.append(rect);
+    });
+    svg.append(group);
+    return svg;
+  };
+
+  TASKS.rotation = ctx => {
+    let index = 0, correct = 0;
+    const total = 12;
+    const mirrors = shuffle(Array.from({ length: total }, (_, i) => i < total / 2));
+    const next = () => {
+      if (index === total) {
+        ctx.finish({ accuracy: percent(correct, total), correct, total, metric: 'Shapes compared', value: `${correct} / ${total}`, details: [{ label: 'First answers', value: `${percent(correct, total)}% correct` }, { label: 'Shape complexity', value: `${5 + Math.floor((ctx.level - 1) / 2)} blocks` }], summary: 'You practiced recognizing rotated shapes and distinguishing mirror images. This score describes spatial-task performance.' });
+        return;
+      }
+      clear(ctx);
+      ctx.setStatus(`Comparison ${index + 1} of ${total}`);
+      ctx.setProgress(index, total);
+      ctx.setHint('Rotate the left shape in your mind. You cannot turn it over.');
+      const cells = makeShape(5 + Math.floor((ctx.level - 1) / 2));
+      const angle = ctx.level < 3 ? [90, 180, 270][random(0, 2)] : ctx.level < 6 ? [45, 90, 135, 180, 225, 270, 315][random(0, 6)] : random(1, 23) * 15;
+      const mirrored = mirrors[index];
+      ctx.stage.append(element('p', 'Same shape, or a mirror image?', 'prompt'));
+      const grid = element('div', undefined, 'task-grid');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin:12px auto';
+      ['Reference', 'Comparison'].forEach((label, i) => {
+        const panel = element('div');
+        panel.style.cssText = 'border:1px solid #d8ddd6;border-radius:16px;padding:8px;background:#fffdf7;min-width:0;text-align:center';
+        panel.append(element('span', label, 'task-note'), shapeSVG(cells, i ? angle : 0, i ? mirrored : false, `${label} block shape`));
+        grid.append(panel);
+      });
+      ctx.stage.append(grid);
+      choices(ctx, ['Same rotated shape', 'Mirror image'], (answer, button) => {
+        const expected = mirrored ? 'Mirror image' : 'Same rotated shape';
+        const success = answer === expected;
+        if (success) correct++;
+        button.style.background = success ? '#d4e9e2' : '#f7e0ce';
+        note(ctx, `${success ? 'Correct.' : `${expected}.`} ${mirrored ? 'The comparison was reflected and then rotated. Rotation alone cannot match it.' : `The comparison is the reference rotated ${angle}°. No reflection was used.`}`);
+        index++;
+        ctx.setProgress(index, total);
+        ctx.button(index === total ? 'See results' : 'Next shapes', next, { primary: true });
+      });
+    };
+    showIntro(ctx, 'Turn it in your mind', 'Compare twelve pairs of shapes. Decide whether the right shape is a rotation of the left, or its mirror image. The shapes are deliberately asymmetric, so each answer is definite. Take your time.', 'Begin comparisons', next);
+    ctx.setStatus('12 comparisons · untimed');
+    ctx.setHint('One point per correct first answer. The two answer types occur equally often.');
+    ctx.setProgress(0, total);
+  };
+
+  const pairBank = [
+    ['Lantern', 'Otter'], ['Anchor', 'Cinnamon'], ['Violin', 'Pebble'], ['Helmet', 'Tulip'],
+    ['Pillow', 'Copper'], ['Ladder', 'Mango'], ['Compass', 'Velvet'], ['Basket', 'Comet'],
+    ['Window', 'Badger'], ['Ribbon', 'Volcano'], ['Fountain', 'Walnut'], ['Kettle', 'Orchid'],
+    ['Castle', 'Sparrow'], ['Envelope', 'Coral'], ['Bicycle', 'Nutmeg'], ['Boot', 'Galaxy'],
+    ['Candle', 'Beetle'], ['Spoon', 'Meadow'], ['Mirror', 'Acorn'], ['Drum', 'Quartz'],
+    ['Notebook', 'Falcon'], ['Bridge', 'Papaya'], ['Scarf', 'Meteor'], ['Saddle', 'Fern']
+  ];
+
+  TASKS.pairs = ctx => {
+    const total = 6 + Math.round((ctx.level - 1) * 4 / 7);
+    const pairs = shuffle(pairBank).slice(0, total);
+    const order = shuffle(pairs);
+    let index = 0, correct = 0;
+    const recall = () => {
+      if (index === total) {
+        ctx.finish({ accuracy: percent(correct, total), correct, total, metric: 'Pairs recalled', value: `${correct} / ${total}`, details: [{ label: 'First answers', value: `${percent(correct, total)}% correct` }, { label: 'Pairs studied', value: String(total) }], summary: 'You practiced learning associations between words. Multiple-choice answers measure cued recognition, which is easier than recalling an answer without choices.' });
+        return;
+      }
+      clear(ctx);
+      ctx.setStatus(`Recall ${index + 1} of ${total}`);
+      ctx.setHint('Choose the word that was paired with this cue.');
+      ctx.setProgress(index, total);
+      const [cue, target] = order[index];
+      ctx.stage.append(element('p', 'Which word goes with…', 'prompt'), element('div', cue, 'stimulus'));
+      const distractors = shuffle(pairs.map(p => p[1]).filter(word => word !== target)).slice(0, 3);
+      choices(ctx, shuffle([target, ...distractors]), (answer, button) => {
+        const success = answer === target;
+        if (success) correct++;
+        button.style.background = success ? '#d4e9e2' : '#f7e0ce';
+        note(ctx, `${success ? 'Correct.' : 'Study the correct pair:'} ${cue} ↔ ${target}`);
+        index++;
+        ctx.setProgress(index, total);
+        ctx.button(index === total ? 'See results' : 'Next pair', recall, { primary: true });
+      });
+    };
+    const study = () => {
+      clear(ctx);
+      ctx.setStatus(`Study ${total} pairs`);
+      ctx.setHint('Make a vivid mental image connecting the two words. Study at your own pace.');
+      ctx.stage.append(element('h3', 'Make a connection', 'prompt'));
+      const grid = element('div');
+      grid.style.cssText = 'display:grid;gap:8px;width:100%;max-width:480px;margin:16px auto';
+      pairs.forEach(([a, b]) => {
+        const row = element('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px;border:1px solid #d8ddd6;border-radius:12px;background:#fffdf7';
+        row.append(element('strong', a), element('span', '↔'), element('strong', b));
+        grid.append(row);
+      });
+      ctx.stage.append(grid);
+      ctx.button('Ready to recall', recall, { primary: true });
+    };
+    showIntro(ctx, 'Remember the connection', `Study ${total} unrelated word pairs, then retrieve each partner from four choices. A vivid image connecting the words can help. Each pair is scored once, on your first answer.`, 'Study word pairs', study);
+    ctx.setStatus(`${total} pairs · untimed`);
+    ctx.setHint('Practice association learning. These words are practice material, not a standardized memory assessment.');
+    ctx.setProgress(0, total);
+  };
+
+  const facts = [
+    { id: 'water', question: 'At sea level, what is the boiling point of pure water?', answer: '100 °C', wrong: ['90 °C', '110 °C', '120 °C'], explanation: 'At standard atmospheric pressure, pure water boils at 100 °C. Lower pressure lowers the boiling point.' },
+    { id: 'earth', question: 'Approximately how long does Earth take to orbit the Sun?', answer: '365.25 days', wrong: ['24 days', '180 days', '730 days'], explanation: 'Earth takes roughly 365.25 days to complete an orbit. Leap years help keep the calendar aligned with the seasons.' },
+    { id: 'light', question: 'Approximately how fast does light travel in a vacuum?', answer: '300,000 km/s', wrong: ['300 km/s', '3,000 km/s', '30,000 km/s'], explanation: 'The exact speed of light in a vacuum is 299,792.458 kilometres per second.' },
+    { id: 'photosynthesis', question: 'Which gas do plants take in during photosynthesis?', answer: 'Carbon dioxide', wrong: ['Oxygen', 'Hydrogen', 'Helium'], explanation: 'Photosynthesis uses carbon dioxide and water, with energy from light, to produce sugars and release oxygen.' },
+    { id: 'angle', question: 'What is the sum of the interior angles of a triangle on a flat plane?', answer: '180°', wrong: ['90°', '270°', '360°'], explanation: 'The three interior angles of a triangle in Euclidean geometry add up to 180°.' },
+    { id: 'percent', question: 'What is 15% of 200?', answer: '30', wrong: ['15', '20', '35'], explanation: '15% means 15 out of 100. Multiplying 200 by 0.15 gives 30.' },
+    { id: 'density', question: 'How do you calculate density?', answer: 'Mass divided by volume', wrong: ['Volume divided by mass', 'Mass multiplied by volume', 'Mass divided by area'], explanation: 'Density is mass per unit volume. For example, kilograms per cubic metre.' },
+    { id: 'metric', question: 'How many millilitres are in one litre?', answer: '1,000', wrong: ['10', '100', '10,000'], explanation: 'The prefix milli- means one thousandth, so one litre contains 1,000 millilitres.' },
+    { id: 'correlation', question: 'What does correlation alone establish?', answer: 'An association between variables', wrong: ['That one variable causes the other', 'That neither variable has a cause', 'That the association cannot be coincidence'], explanation: 'Correlation describes an association. Establishing causation requires further evidence, including attention to confounding and direction.' },
+    { id: 'mean', question: 'How do you calculate the arithmetic mean?', answer: 'Add the values, then divide by their count', wrong: ['Select the middle value after sorting', 'Select the most frequent value', 'Subtract the smallest value from the largest'], explanation: 'The arithmetic mean is the sum divided by the number of values. The other choices describe the median, mode, and range.' },
+    { id: 'half', question: 'After two half-lives, what fraction of an initial radioactive sample remains undecayed?', answer: 'One quarter', wrong: ['One half', 'One eighth', 'Three quarters'], explanation: 'Each half-life halves the remaining amount: 1 → ½ → ¼.' },
+    { id: 'byte', question: 'How many bits are in one byte?', answer: '8', wrong: ['2', '4', '16'], explanation: 'A modern byte consists of eight bits. Each bit represents a binary value, 0 or 1.' }
+  ];
+
+  TASKS.retrieval = ctx => {
+    const day = 24 * 60 * 60 * 1000;
+    const intervals = [1, 3, 7, 14, 30];
+    const root = ctx.state.taskData || (ctx.state.taskData = {});
+    const saved = root.retrieval || (root.retrieval = { cards: {} });
+    if (!saved.cards || typeof saved.cards !== 'object' || Array.isArray(saved.cards)) saved.cards = {};
+    const now = Date.now();
+    const validRecord = card => {
+      const record = saved.cards[card.id];
+      return record && Number.isFinite(record.due) && Number.isInteger(record.streak) && record.streak >= 0;
+    };
+    const newCards = facts.filter(card => !validRecord(card));
+    const dueCards = facts.filter(card => validRecord(card) && saved.cards[card.id].due <= now);
+    let practice = false, index = 0, correct = 0, items = [], reviewed = 0;
+    const dateLabel = timestamp => new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const nextDue = () => {
+      const times = facts.filter(validRecord).map(card => saved.cards[card.id].due);
+      return times.length ? Math.min(...times) : null;
+    };
+    const recall = () => {
+      if (index === items.length) {
+        const due = nextDue();
+        ctx.finish({ accuracy: percent(correct, items.length), correct, total: items.length, metric: practice ? 'Practice accuracy' : 'Cued retrieval', value: `${correct} / ${items.length}`, details: [{ label: 'Answers', value: 'Multiple-choice recognition' }, { label: practice ? 'Schedule' : 'Cards scheduled', value: practice ? 'Unchanged during extra practice' : String(reviewed) }, { label: 'Next review', value: due ? dateLabel(due) : 'Not scheduled' }], summary: practice ? 'This was extra practice. Existing review dates and interval streaks were unchanged.' : 'Correct answers expand the interval to 1, 3, 7, 14, then 30 days. An incorrect answer returns tomorrow. Spacing and retrieval improve retention of studied material; this score is not a measure of general cognition.' });
+        return;
+      }
+      clear(ctx);
+      const card = items[index];
+      ctx.setStatus(`${practice ? 'Extra practice' : 'Review'} ${index + 1} of ${items.length}`);
+      ctx.setProgress(index, items.length);
+      ctx.setHint('Try to recall the answer before reading the choices.');
+      ctx.stage.append(element('p', card.question, 'prompt'));
+      choices(ctx, shuffle([card.answer, ...card.wrong]), (answer, button) => {
+        const success = answer === card.answer;
+        if (success) correct++;
+        button.style.background = success ? '#d4e9e2' : '#f7e0ce';
+        let schedule = '';
+        if (!practice) {
+          const previous = validRecord(card) ? saved.cards[card.id] : { streak: 0 };
+          const streak = success ? Math.min(previous.streak + 1, intervals.length) : 0;
+          const days = success ? intervals[Math.max(0, streak - 1)] : 1;
+          saved.cards[card.id] = { streak, due: Date.now() + days * day, lastReviewed: Date.now() };
+          reviewed++;
+          schedule = ` Next review: ${days === 1 ? 'tomorrow' : `in ${days} days`}.`;
+        }
+        note(ctx, `${success ? 'Correct.' : `Answer: ${card.answer}.`} ${card.explanation}${schedule}`);
+        if (practice) note(ctx, 'Extra practice leaves the spaced-review schedule unchanged.');
+        index++;
+        ctx.setProgress(index, items.length);
+        ctx.button(index === items.length ? 'See results' : 'Next card', recall, { primary: true });
+      });
+    };
+    const begin = optionalPractice => {
+      practice = optionalPractice;
+      index = 0;
+      correct = 0;
+      reviewed = 0;
+      items = shuffle(practice ? facts : [...newCards, ...dueCards]);
+      if (!items.length) return;
+      if (practice || !newCards.length) { recall(); return; }
+      clear(ctx);
+      ctx.setStatus(`Study ${newCards.length} new cards`);
+      ctx.setHint('Read each answer, then look away and try to say it from memory.');
+      ctx.stage.append(element('h3', 'Learn something worth remembering', 'prompt'));
+      const list = element('div');
+      list.style.cssText = 'display:grid;gap:12px;width:100%;max-width:580px;margin:16px auto';
+      newCards.forEach(card => {
+        const panel = element('div');
+        panel.style.cssText = 'border:1px solid #d8ddd6;border-radius:14px;padding:16px;background:#fffdf7;text-align:left';
+        panel.append(element('p', card.question), element('strong', card.answer), element('p', card.explanation, 'task-note'));
+        list.append(panel);
+      });
+      ctx.stage.append(list);
+      ctx.button('Ready to retrieve', recall, { primary: true });
+    };
+    clear(ctx);
+    ctx.stage.append(element('h3', 'Remember it for longer', 'prompt'));
+    note(ctx, 'Learn twelve useful facts, then revisit them on an expanding schedule: 1, 3, 7, 14, and 30 days. Reviews use multiple-choice cued retrieval; recalling an answer without choices is a stronger test, so try that first.');
+    note(ctx, 'Review dates are saved in this browser. New cards are studied before their first quiz. An incorrect answer is explained and returns tomorrow.');
+    const count = newCards.length + dueCards.length;
+    ctx.setProgress(0, count || facts.length);
+    if (count) {
+      ctx.setStatus(`${newCards.length} new · ${dueCards.length} due`);
+      ctx.setHint('Only new and due cards enter the scheduled session.');
+      note(ctx, `Today: ${newCards.length} new ${newCards.length === 1 ? 'card' : 'cards'} and ${dueCards.length} due for review.`);
+      ctx.button(newCards.length ? 'Study and review' : 'Begin due review', () => begin(false), { primary: true });
+    } else {
+      const next = nextDue();
+      ctx.setStatus('All cards up to date');
+      ctx.setHint('Your next scheduled review is waiting. Extra practice does not advance the intervals.');
+      note(ctx, `No cards are due. Next scheduled review: ${next ? dateLabel(next) : 'not scheduled'}.`);
+      ctx.button('Extra practice · schedule unchanged', () => begin(true));
+    }
+  };
+})();
+
+navigate('practice');
+</script>
+</body>
+</html>

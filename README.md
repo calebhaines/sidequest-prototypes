@@ -4,6 +4,14 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
+## Clear — cognitive practice
+
+[**Open Clear**](https://calebhaines.github.io/sidequest-prototypes/cognitive/) for twelve mobile-friendly cognitive exercises: dual n-back, spatial span, backward digit span, Stroop, rule switching, go/no-go attention, visual search, divided visual attention, pattern reasoning, mental rotation, paired recall, and spaced retrieval. Each exercise has clear instructions and scores, with adaptive levels, same-level progress charts, local saving, and JSON backups. Dual n-back supports spoken letters or offline tones, with separate channel statistics and balanced accuracy. Spaced retrieval maintains a due-card schedule rather than difficulty levels.
+
+Clear is one self-contained HTML file, with no external assets or runtime dependencies. Download it from the app to practice offline. Its evidence notes cite eight research sources and distinguish practiced-skill gains from unsupported broad intelligence claims; this browser adaptation has not been clinically validated. The editable file is [`public/cognitive/index.html`](public/cognitive/index.html), with an identical published copy at [`docs/cognitive/index.html`](docs/cognitive/index.html). Keep both copies synchronized so the site's normal build preserves it.
+
+For browser checks, serve `docs/` locally and run `node scripts/check-cognitive.cjs` with Playwright available. The default URL is `http://127.0.0.1:8765/cognitive/`; set `CLEAR_QA_URL` to override it and `CHROMIUM_PATH` to choose a browser. The checks cover actual n-back target scoring, adaptive difficulty, persistence, backup handling, background interruption, small-screen layouts, and the downloaded standalone file.
+
 ## Graph Theory
 
 [**Explore The shape of connection**](https://calebhaines.github.io/sidequest-prototypes/graph-theory/), an independent visual companion to Chapter 1 of Reinhard Diestel’s *Graph Theory*, sixth edition (2025). All ten sections include interactive graph labs, 113 illustrated concept entries, all 27 numbered results with original proof ideas, and 190 original practice questions: 90 quick checks, 40 interactive graph tasks, and 60 proof questions. Filter by type and difficulty, reveal graduated hints, and compare arguments with complete model proofs and self-assessment checklists. Search concepts and questions; answers, graph attempts, proof drafts, and exploration progress are saved in the browser. Revealed solutions count as reviewed rather than solved. The page works offline and on mobile; its text and diagrams are original.
