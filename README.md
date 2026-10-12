@@ -4,6 +4,12 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
+## Graph Theory
+
+[**Explore The shape of connection**](https://calebhaines.github.io/sidequest-prototypes/graph-theory/), an independent visual companion to Chapter 1 of Reinhard Diestel’s *Graph Theory*, sixth edition (2025). All ten sections include interactive graph labs, 113 illustrated concept entries, all 27 numbered results with original proof ideas, quizzes, searchable definitions, and locally saved exploration progress. The page works offline and on mobile; its text and diagrams are original.
+
+The self-contained HTML is tracked in [`public/graph-theory/index.html`](public/graph-theory/index.html), with an identical published copy in [`docs/graph-theory/index.html`](docs/graph-theory/index.html). Keep both copies synchronized when updating the page. The site’s normal Vite build preserves the public copy. Font licenses and links to the official chapter are included inside the HTML.
+
 ## Voxelbloom
 
 [**Open Voxelbloom**](https://calebhaines.github.io/sidequest-prototypes/voxelbloom/) to make sprite-stacked pixel art. Draw and fill pixels, arrange editable layers, orbit the live stack preview, and place sprites into a scene. Includes six starter sprites, undo/redo, local project saving, editable project import/export, and PNG exports for sprite sheets, stack renders, and scenes.
