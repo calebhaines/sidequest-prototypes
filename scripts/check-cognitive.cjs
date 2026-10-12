@@ -4,7 +4,8 @@ const assert=require('node:assert/strict');const baseUrl=process.env.CLEAR_QA_UR
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  const errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
- await page.clock.install();await page.goto(baseUrl);
+ const testEpoch=new Date();await page.clock.install({time:testEpoch});
+ await page.clock.pauseAt(new Date(testEpoch.getTime()+1));await page.goto(baseUrl);
  assert.equal(await page.locator('.exercise-card').count(),14);
  if(process.env.CLEAR_SCREENSHOTS)await page.screenshot({path:process.env.CLEAR_SCREENSHOTS+'/mobile.png',fullPage:true});
  await page.evaluate(()=>{window.heard=[];audio=function(letter,mode){window.heard.push(letter);return true}});
