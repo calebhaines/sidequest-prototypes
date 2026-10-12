@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#173f36">
-<meta name="description" content="Twelve thoughtful cognitive practice exercises, including dual n-back. Clear scores, adaptive difficulty, local progress, and honest research notes. A self-contained mobile app.">
+<meta name="description" content="Fourteen thoughtful cognitive practice exercises, including dual n-back. Clear scores, adaptive difficulty, local progress, and honest research notes. A self-contained mobile app.">
 <title>Clear — a little cognitive practice</title>
 <style>
 :root{--paper:#f6f5ef;--white:#fffefa;--ink:#203c34;--muted:#66736c;--line:#dedfd4;--green:#173f36;--mint:#dce9cf;--orange:#b85b36;--soft:#efeee5;--radius:20px;--sans:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--serif:Georgia,"Times New Roman",serif}
@@ -33,6 +33,8 @@ const META = [
 {id:'nback',name:'Dual n-back',category:'Memory',glyph:'▦',duration:'1–2 min',description:'Hold two streams in mind. Match a sound and a position from N steps ago.',evidence:'Trained & related-task gains',unit:'back',start:2},
 {id:'corsi',name:'Spatial span',category:'Memory',glyph:'⋯',duration:'2 min',description:'Watch a path light up, then retrace the sequence from memory.',evidence:'Spatial memory practice',unit:'level',start:1},
 {id:'digits',name:'Backward digit span',category:'Memory',glyph:'321',duration:'2 min',description:'Hold a number sequence, then recall its digits in reverse order.',evidence:'Working memory practice',unit:'level',start:1},
+{id:'operation',name:'Operation span',category:'Memory',glyph:'A+',duration:'2–4 min',description:'Judge an arithmetic statement, remember a letter, and recall the interleaved sequence.',evidence:'Complex working-memory practice',unit:'level',start:1},
+{id:'symmetry',name:'Symmetry span',category:'Memory',glyph:'▥',duration:'2–4 min',description:'Judge a pattern’s symmetry while holding a sequence of spatial locations in memory.',evidence:'Complex working-memory practice',unit:'level',start:1},
 {id:'stroop',name:'Color & conflict',category:'Attention',glyph:'Aa',duration:'1 min',description:'Name the ink color while a competing word asks for your attention.',evidence:'Inhibition task practice',unit:'level',start:1},
 {id:'switch',name:'Rule switching',category:'Attention',glyph:'⇄',duration:'1 min',description:'Follow changing rules. Sort numbers by parity or magnitude.',evidence:'Executive task practice',unit:'level',start:1},
 {id:'vigilance',name:'Steady attention',category:'Attention',glyph:'◯',duration:'1 min',description:'Respond to circles, let triangles pass. Stay present through a paced stream.',evidence:'Attention task practice',unit:'level',start:1},
@@ -49,11 +51,35 @@ let storageOkay=true, state;
 try{const raw=localStorage.getItem(STORE);state=raw?sanitize(JSON.parse(raw)):freshState()}catch{state=freshState();storageOkay=false}
 function sanitize(data){
  if(!data||data.version!==1||!Array.isArray(data.history)||typeof data.tasks!=='object'||!data.tasks)throw Error('Invalid progress file');
- const out=freshState();out.history=data.history.filter(x=>x&&META.some(m=>m.id===x.id)&&Number.isFinite(x.accuracy)&&x.accuracy>=0&&x.accuracy<=100&&Number.isInteger(x.level)&&x.level>=1&&x.level<=8&&Number.isFinite(x.at)&&Number.isFinite(x.seconds)&&x.seconds>=0).slice(-500);
+ const out=freshState();out.history=data.history.filter(x=>x&&META.some(m=>m.id===x.id)&&Number.isFinite(x.accuracy)&&x.accuracy>=0&&x.accuracy<=100&&Number.isInteger(x.level)&&x.level>=1&&x.level<=8&&Number.isFinite(x.at)&&x.at>=0&&x.at<=8640000000000000&&Number.isFinite(x.seconds)&&x.seconds>=0).slice(-500).map(x=>({...x,metrics:sanitizeMetrics(x.metrics),profile:sanitizeProfile(x.profile)}));
  for(const m of META){const s=data.tasks[m.id];if(s&&Number.isInteger(s.level)&&s.level>=1&&s.level<=8)out.tasks[m.id]={level:s.level}}
  const cards=data.taskData?.retrieval?.cards;if(cards&&typeof cards==='object'){const clean={};for(const id of ['water','earth','light','photosynthesis','angle','percent','density','metric','correlation','mean','half','byte']){const r=cards[id];if(r&&Number.isFinite(r.due)&&r.due>=0&&Number.isInteger(r.streak)&&r.streak>=0&&r.streak<=5)clean[id]={due:r.due,streak:r.streak,lastReviewed:Number.isFinite(r.lastReviewed)?r.lastReviewed:0}}out.taskData={retrieval:{cards:clean}}}
  return out;
 }
+function sanitizeMetrics(raw){
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))return undefined;
+ const out={},count=v=>Number.isInteger(v)&&v>=0&&v<=10000,latency=v=>Number.isFinite(v)&&v>=0&&v<=600000;
+ if(raw.rtMs===null||latency(raw.rtMs))out.rtMs=raw.rtMs;
+ if(count(raw.rtCount))out.rtCount=raw.rtCount;
+ if(raw.channels&&typeof raw.channels==='object'){
+  const channels={};for(const name of ['position','sound','signal']){const c=raw.channels[name];if(c&&['hit','miss','falseAlarm','correctRejection'].every(k=>count(c[k]))&&c.hit+c.miss+c.falseAlarm+c.correctRejection<=10000)channels[name]={hit:c.hit,miss:c.miss,falseAlarm:c.falseAlarm,correctRejection:c.correctRejection}}
+  if(Object.keys(channels).length)out.channels=channels;
+ }
+ const processing=raw.processing;if(processing&&count(processing.correct)&&count(processing.total)&&processing.total>0&&processing.correct<=processing.total&&count(processing.timeouts)&&processing.correct+processing.timeouts<=processing.total)out.processing={correct:processing.correct,total:processing.total,timeouts:processing.timeouts};
+ const recall=raw.recall;if(recall&&count(recall.correct)&&count(recall.total)&&recall.total>0&&recall.correct<=recall.total&&count(recall.complete)&&count(recall.totalSequences)&&recall.complete<=recall.totalSequences)out.recall={correct:recall.correct,total:recall.total,complete:recall.complete,totalSequences:recall.totalSequences};
+ if(raw.subRT&&typeof raw.subRT==='object'){const sub={};for(const key of ['congruentMs','incongruentMs','switchMs','repeatMs'])if(raw.subRT[key]===null||latency(raw.subRT[key]))sub[key]=raw.subRT[key];if(Object.keys(sub).length)out.subRT=sub}
+ if(count(raw.trials)&&count(raw.centerCorrect)&&count(raw.peripheralCorrect)&&raw.centerCorrect<=raw.trials&&raw.peripheralCorrect<=raw.trials){out.trials=raw.trials;out.centerCorrect=raw.centerCorrect;out.peripheralCorrect=raw.peripheralCorrect}
+ return Object.keys(out).length?out:undefined;
+}
+function sanitizeProfile(raw){
+ if(!raw||typeof raw!=='object'||typeof raw.protocol!=='string'||!(/^[a-z0-9-]{1,40}$/).test(raw.protocol)||!['touch','mouse','pen','keyboard','mixed','none'].includes(raw.input)||!['phone','tablet','desktop'].includes(raw.device))return undefined;
+ return {protocol:raw.protocol,input:raw.input,device:raw.device};
+}
+function sameSettings(a,b){
+ const key=x=>x.profile?JSON.stringify([x.profile.protocol,x.profile.input,x.profile.device]):'legacy';
+ return a.level===b.level&&(a.id!=='nback'||(a.variant||'voice')===(b.variant||'voice'))&&key(a)===key(b);
+}
+function readyToAdvance(entry){const processing=entry.metrics?.processing;return !['operation','symmetry'].includes(entry.id)||(processing&&processing.total>0&&100*processing.correct/processing.total>=80)}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state));storageOkay=true}catch{storageOkay=false;notify('Storage is unavailable. Export progress to keep this session.')}}
 function taskState(id){if(!state.tasks[id])state.tasks[id]={level:META.find(m=>m.id===id).start};return state.tasks[id]}
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -67,12 +93,12 @@ function renderStats(){return `<div class="stats-strip"><div class="stat"><stron
 function navigate(view,{keepCircuit=false}={}){if(activeRun){activeRun.dispose();activeRun=null}if(!keepCircuit)circuit=null;currentView=view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current',b.dataset.view===view?'page':'false'));({practice:renderPractice,progress:renderProgress,evidence:renderEvidence}[view]||renderPractice)();window.scrollTo(0,0)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)navigate(b.dataset.view);if(e.target.closest('a[download="clear-cognitive.html"]')){e.preventDefault();const clone=document.documentElement.cloneNode(true);clone.querySelector('#main').replaceChildren();clone.querySelector('#toast').textContent='';clone.querySelector('#toast').hidden=true;const url=URL.createObjectURL(new Blob(['<!doctype html>\n'+clone.outerHTML],{type:'text/html'})),a=document.createElement('a');a.href=url;a.download='clear-cognitive.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}});
 function renderPractice(){
- main.innerHTML=`<section class="hero"><div><p class="eyebrow">Small sessions. Specific skills.</p><h1>A little practice.<br>A clearer rhythm.</h1><p class="intro">A quiet place to challenge your memory, attention, and reasoning. Twelve exercises, thoughtful progression, and scores you can actually understand.</p><div class="hero-links"><button class="primary" id="hero-start">Start a small circuit <span aria-hidden="true">→</span></button><button class="text-button" data-view="evidence">What does the research say?</button></div></div><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 330 330" fill="none"><circle cx="165" cy="165" r="142" stroke="#d2d9c5"/><circle cx="165" cy="165" r="99" stroke="#d2d9c5" stroke-dasharray="3 7"/><circle cx="165" cy="165" r="52" stroke="#73927c"/><path d="M65 65 165 113 265 65M65 265 165 217 265 265M23 165h90M217 165h90M165 23v90M165 217v90" stroke="#aebfa4"/><circle cx="165" cy="165" r="17" fill="#173f36"/><circle cx="65" cy="65" r="9" fill="#d9e4c8"/><circle cx="265" cy="265" r="9" fill="#d9e4c8"/><circle cx="265" cy="65" r="7" fill="#b85b36"/><circle cx="65" cy="265" r="7" fill="#b85b36"/><circle cx="165" cy="23" r="5" fill="#173f36"/><circle cx="307" cy="165" r="5" fill="#173f36"/><circle cx="23" cy="165" r="5" fill="#173f36"/><circle cx="165" cy="307" r="5" fill="#173f36"/></svg></div></section>${renderStats()}<div class="section-top"><h2>Two streams. One focus.</h2><p>Featured practice · sound on</p></div><section class="featured"><div class="featured-copy"><span class="eyebrow">Working memory · dual n-back</span><h2>Stay with the sequence.</h2><p>Track a sound and a square. Recognize each one from ${taskState('nback').level} steps ago. Separate scores make every hit, miss, and false alarm clear.</p><button data-start="nback">Practice ${taskState('nback').level}-back <span aria-hidden="true">→</span></button></div><div class="featured-art" aria-hidden="true"><div><div class="nback-diagram">${'<span></span>'.repeat(9)}</div><div class="featured-caption">see a position · hear a sound</div></div></div></section><section class="daily"><div><h3>A small daily circuit</h3><p>One memory task, one attention task, one spatial or learning task. Around five minutes, at your pace.</p><small>The suggested routine is an app feature; it is not a validated training dose.</small></div><button id="daily-start">Start today’s circuit →</button></section><section id="exercise-library"><div class="section-top"><h2>Find your practice.</h2><p>Choose a skill, not an IQ score.</p></div><div class="filters" aria-label="Exercise categories">${['All','Memory','Attention','Reasoning','Learning'].map(c=>`<button data-filter="${c}" aria-pressed="${filter===c}">${c}</button>`).join('')}</div><div class="library">${META.filter(m=>filter==='All'||m.category===filter).map(card).join('')}</div></section><div class="evidence-foot"><p>Practice often improves the trained skill. Broader benefits vary, and this app has not been clinically validated. Scores reflect these exercises, not intelligence or diagnosis.</p><button class="text-button" data-view="evidence">Read the evidence →</button></div>`;
+ main.innerHTML=`<section class="hero"><div><p class="eyebrow">Small sessions. Specific skills.</p><h1>A little practice.<br>A clearer rhythm.</h1><p class="intro">A quiet place to challenge your memory, attention, and reasoning. ${META.length} exercises, thoughtful progression, and scores you can actually understand.</p><div class="hero-links"><button class="primary" id="hero-start">Start a small circuit <span aria-hidden="true">→</span></button><button class="text-button" data-view="evidence">What does the research say?</button></div></div><div class="hero-art" aria-hidden="true"><svg viewBox="0 0 330 330" fill="none"><circle cx="165" cy="165" r="142" stroke="#d2d9c5"/><circle cx="165" cy="165" r="99" stroke="#d2d9c5" stroke-dasharray="3 7"/><circle cx="165" cy="165" r="52" stroke="#73927c"/><path d="M65 65 165 113 265 65M65 265 165 217 265 265M23 165h90M217 165h90M165 23v90M165 217v90" stroke="#aebfa4"/><circle cx="165" cy="165" r="17" fill="#173f36"/><circle cx="65" cy="65" r="9" fill="#d9e4c8"/><circle cx="265" cy="265" r="9" fill="#d9e4c8"/><circle cx="265" cy="65" r="7" fill="#b85b36"/><circle cx="65" cy="265" r="7" fill="#b85b36"/><circle cx="165" cy="23" r="5" fill="#173f36"/><circle cx="307" cy="165" r="5" fill="#173f36"/><circle cx="23" cy="165" r="5" fill="#173f36"/><circle cx="165" cy="307" r="5" fill="#173f36"/></svg></div></section>${renderStats()}<div class="section-top"><h2>Two streams. One focus.</h2><p>Featured practice · sound on</p></div><section class="featured"><div class="featured-copy"><span class="eyebrow">Working memory · dual n-back</span><h2>Stay with the sequence.</h2><p>Track a sound and a square. Recognize each one from ${taskState('nback').level} steps ago. Separate scores make every hit, miss, and false alarm clear.</p><button data-start="nback">Practice ${taskState('nback').level}-back <span aria-hidden="true">→</span></button></div><div class="featured-art" aria-hidden="true"><div><div class="nback-diagram">${'<span></span>'.repeat(9)}</div><div class="featured-caption">see a position · hear a sound</div></div></div></section><section class="daily"><div><h3>A small daily circuit</h3><p>One memory task, one attention task, one spatial or learning task. Around five minutes, at your pace.</p><small>The suggested routine is an app feature; it is not a validated training dose.</small></div><button id="daily-start">Start today’s circuit →</button></section><section id="exercise-library"><div class="section-top"><h2>Find your practice.</h2><p>Choose a skill, not an IQ score.</p></div><div class="filters" aria-label="Exercise categories">${['All','Memory','Attention','Reasoning','Learning'].map(c=>`<button data-filter="${c}" aria-pressed="${filter===c}">${c}</button>`).join('')}</div><div class="library">${META.filter(m=>filter==='All'||m.category===filter).map(card).join('')}</div></section><div class="evidence-foot"><p>Practice often improves the trained skill. Broader benefits vary, and this app has not been clinically validated. Scores reflect these exercises, not intelligence or diagnosis.</p><button class="text-button" data-view="evidence">Read the evidence →</button></div>`;
  $('#hero-start').onclick=startCircuit;$('#daily-start').onclick=startCircuit;
  main.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>startTask(b.dataset.start));
  main.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;renderPractice();$('#exercise-library').scrollIntoView({block:'start'})});
 }
-function card(m){const ts=taskState(m.id),variant=state.history.filter(x=>x.id===m.id).at(-1)?.variant||'voice',h=state.history.filter(x=>x.id===m.id&&x.level===ts.level&&(m.id!=='nback'||(x.variant||'voice')===variant)),best=h.length?Math.max(...h.map(x=>x.accuracy)):null;return `<article class="exercise-card"><div class="card-top"><span class="glyph" aria-hidden="true" style="${m.id==='digits'?'font-size:18px':''}">${m.glyph}</span><span class="category-tag">${m.category}</span></div><h3>${m.name}</h3><p>${m.description}</p><div class="card-meta"><span>${m.duration} · ${m.id==='nback'?ts.level+'-back':m.id==='retrieval'?retrievalSummary():'level '+ts.level}</span><span>${best===null?'Ready to begin':'Best '+Math.round(best)+'%'}</span></div><button class="card-start" data-start="${m.id}" aria-label="Practice ${m.name}"><span>Practice</span><span aria-hidden="true">→</span></button></article>`}
+function card(m){const ts=taskState(m.id),last=state.history.filter(x=>x.id===m.id).at(-1),variant=last?.variant||'voice',h=state.history.filter(x=>x.id===m.id&&sameSettings(x,{id:m.id,level:ts.level,variant,profile:last?.profile})),best=h.length?Math.max(...h.map(x=>x.accuracy)):null;return `<article class="exercise-card"><div class="card-top"><span class="glyph" aria-hidden="true" style="${m.id==='digits'?'font-size:18px':''}">${m.glyph}</span><span class="category-tag">${m.category}</span></div><h3>${m.name}</h3><p>${m.description}</p><div class="card-meta"><span>${m.duration} · ${m.id==='nback'?ts.level+'-back':m.id==='retrieval'?retrievalSummary():'level '+ts.level}</span><span>${best===null?'Ready to begin':'Best '+Math.round(best)+'%'}</span></div><button class="card-start" data-start="${m.id}" aria-label="Practice ${m.name}"><span>Practice</span><span aria-hidden="true">→</span></button></article>`}
 function retrievalSummary(){const records=Object.values(state.taskData.retrieval?.cards||{}).filter(r=>r&&Number.isFinite(r.due)&&Number.isInteger(r.streak));const fresh=Math.max(0,12-records.length),due=records.filter(r=>r.due<=Date.now()).length;return fresh?fresh+' new · '+due+' due':due?due+' cards due':'Reviews up to date'}
 function startCircuit(){const day=Math.floor(Date.now()/86400000),attention=['stroop','switch','vigilance','search','divided'];circuit={ids:['nback',attention[day%attention.length],day%2?'retrieval':'rotation'],index:0};startTask(circuit.ids[0])}
 let audioContext=null;const oscillators=new Set();
@@ -86,41 +112,35 @@ function startTask(id,overrideLevel){
  currentView='run';document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current','false'));
  const meta=META.find(x=>x.id===id),ts=taskState(id);if(Number.isInteger(overrideLevel)&&overrideLevel>=1&&overrideLevel<=8){ts.level=overrideLevel;save()}const level=ts.level;
  main.innerHTML=`<section class="run"><div class="run-header"><button class="quiet" id="exit-run">← Practice</button><h1>${meta.name}</h1><div class="run-label ${id==='retrieval'?'hidden':''}"><label for="run-level">${id==='nback'?'N-back':'Difficulty'}</label><select id="run-level" class="run-level" ${id==='retrieval'?'disabled':''}>${Array.from({length:8},(_,i)=>`<option value="${i+1}" ${level===i+1?'selected':''}>${i+1}${id==='nback'?'-back':''}</option>`).join('')}</select></div></div><p class="run-subtitle">${circuit?`Circuit ${circuit.index+1} of ${circuit.ids.length} · `:''}${meta.evidence} · Your scores stay on this device</p><div class="run-track" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div><div class="run-status"><span id="run-status" role="status">Get comfortable. Accuracy comes first.</span><span id="run-count"></span></div><div id="task-stage" class="task-stage"></div><div id="task-controls" class="task-controls"></div><p id="task-hint" class="task-hint"></p><p class="privacy-label">You can leave any time. An unfinished session is not scored.</p><div id="exit-confirm" class="notice" hidden>Leave this session? Its unfinished score will not be saved.<div class="tool-actions" style="margin-top:10px"><button id="continue-run">Keep practicing</button><button id="leave-run">Leave session</button></div></div></section>`;
- const runState={taskData:JSON.parse(JSON.stringify(state.taskData))};const controller=new AbortController(),timers=new Set(),intervals=new Set(),cleanup=[];let disposed=false,finished=false,started=Date.now();
+ const runState={taskData:JSON.parse(JSON.stringify(state.taskData))};const controller=new AbortController(),timers=new Set(),intervals=new Set(),cleanup=[];const inputTypes=new Set(),runDevice=innerWidth<=600?'phone':innerWidth<=1000?'tablet':'desktop';let disposed=false,finished=false,started=Date.now();
  function dispose(){if(disposed)return;disposed=true;controller.abort();for(const t of timers)clearTimeout(t);for(const t of intervals)clearInterval(t);for(const fn of cleanup){try{fn()}catch{}}if(window.speechSynthesis)speechSynthesis.cancel();for(const o of oscillators){try{o.stop()}catch{}}}
- const ctx={id,level,state:runState,stage:$('#task-stage'),controls:$('#task-controls'),listen(el,event,fn){el.addEventListener(event,fn,{signal:controller.signal})},timeout(fn,ms){const t=setTimeout(()=>{timers.delete(t);if(!disposed)fn()},ms);timers.add(t);return t},interval(fn,ms){const t=setInterval(()=>{if(!disposed)fn()},ms);intervals.add(t);return t},onCleanup(fn){cleanup.push(fn)},setStatus(t){if(!disposed)$('#run-status').textContent=t},setHint(t){if(!disposed)$('#task-hint').textContent=t},setProgress(done,total){if(disposed)return;const p=Math.max(0,Math.min(100,100*done/Math.max(1,total)));$('.run-track div').style.width=p+'%';$('.run-track').setAttribute('aria-valuenow',Math.round(p));$('#run-count').textContent=`${done} / ${total}`},audio,audioAvailable(mode){return mode==='voice'?!!(window.speechSynthesis&&speechSynthesis.getVoices().some(v=>/^en[-_]/i.test(v.lang))):!!(window.AudioContext||window.webkitAudioContext)},button(label,fn,{primary=false}={}){const b=document.createElement('button');b.textContent=label;if(primary)b.className='primary';ctx.controls.appendChild(b);ctx.listen(b,'click',()=>{if(/^(begin|start|study|extra practice)/i.test(label)){started=Date.now();$('#run-level').disabled=true}if(id==='nback'){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){if(!audioContext)audioContext=new AC();audioContext.resume()}}catch{}}fn()});return b},finish(result){if(finished||disposed)return;finished=true;const seconds=Math.max(0,Math.round((Date.now()-started)/1000));dispose();activeRun=null;state.taskData=runState.taskData;recordResult(meta,level,result,seconds)}};
- activeRun={dispose,id};
+ const ctx={id,level,state:runState,stage:$('#task-stage'),controls:$('#task-controls'),listen(el,event,fn){el.addEventListener(event,fn,{signal:controller.signal})},timeout(fn,ms){const t=setTimeout(()=>{timers.delete(t);if(!disposed)fn()},ms);timers.add(t);return t},interval(fn,ms){const t=setInterval(()=>{if(!disposed)fn()},ms);intervals.add(t);return t},onCleanup(fn){cleanup.push(fn)},setStatus(t){if(!disposed)$('#run-status').textContent=t},setHint(t){if(!disposed)$('#task-hint').textContent=t},setProgress(done,total){if(disposed)return;const p=Math.max(0,Math.min(100,100*done/Math.max(1,total)));$('.run-track div').style.width=p+'%';$('.run-track').setAttribute('aria-valuenow',Math.round(p));$('#run-count').textContent=`${done} / ${total}`},audio,audioAvailable(mode){return mode==='voice'?!!(window.speechSynthesis&&speechSynthesis.getVoices().some(v=>/^en[-_]/i.test(v.lang))):!!(window.AudioContext||window.webkitAudioContext)},button(label,fn,{primary=false}={}){const b=document.createElement('button');b.textContent=label;if(primary)b.className='primary';ctx.controls.appendChild(b);ctx.listen(b,'click',()=>{if(/^(begin|start|study|extra practice)/i.test(label)&&activeRun&&!activeRun.running){started=Date.now();activeRun.running=true;inputTypes.clear();$('#run-level').disabled=true}if(id==='nback'){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){if(!audioContext)audioContext=new AC();audioContext.resume()}}catch{}}fn()});return b},finish(result){if(finished||disposed)return;finished=true;const seconds=Math.max(0,Math.round((Date.now()-started)/1000));const profile={protocol:id+'-v1',input:inputTypes.size>1?'mixed':inputTypes.values().next().value||'none',device:runDevice};dispose();activeRun=null;state.taskData=runState.taskData;recordResult(meta,level,result,seconds,profile)}};
+ activeRun={dispose,id,running:false};
+ document.addEventListener('pointerdown',event=>{if(!disposed&&activeRun?.running){const type=event.pointerType||'mouse';if(['touch','mouse','pen'].includes(type))inputTypes.add(type)}},{capture:true,signal:controller.signal});
+ document.addEventListener('keydown',event=>{if(!disposed&&activeRun?.running&&!['Tab','Shift','Control','Alt','Meta','Escape'].includes(event.key))inputTypes.add('keyboard')},{capture:true,signal:controller.signal});
  $('#exit-run').onclick=()=>{ $('#exit-confirm').hidden=false;$('#exit-confirm').scrollIntoView({block:'nearest'})};$('#continue-run').onclick=()=>$('#exit-confirm').hidden=true;$('#leave-run').onclick=()=>navigate('practice');$('#run-level').onchange=e=>startTask(id,Number(e.target.value));
  window.scrollTo(0,0);
  try{TASKS[id](ctx)}catch(error){dispose();activeRun=null;ctx.stage.innerHTML='<h2>Something interrupted this exercise.</h2><p>Your previous progress is safe. Return to practice and try again.</p>';console.error(error)}
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&activeRun){activeRun.dispose();activeRun=null;main.innerHTML='<section class="page-title"><p class="eyebrow">Take your time</p><h1>Session paused.</h1><p class="muted">The page left the foreground. To keep timing and scores fair, restart when you’re ready. No unfinished score was saved.</p><button class="primary" data-view="practice">Return to practice</button></section>'}});
-function recordResult(meta,level,result,seconds){
- const accuracy=Math.max(0,Math.min(100,Number(result.accuracy)||0)),ts=taskState(meta.id),entry={id:meta.id,level,accuracy,at:Date.now(),seconds,variant:meta.id==='nback'?(result.variant==='tone'?'tone':'voice'):undefined,practice:result.metric==='Practice accuracy',correct:Number(result.correct)||0,total:Number(result.total)||0};
- const previous=state.history.filter(x=>x.id===meta.id&&x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)),oldBest=previous.length?Math.max(...previous.map(x=>x.accuracy)):null;
+function recordResult(meta,level,result,seconds,profile){
+ const accuracy=Math.max(0,Math.min(100,Number(result.accuracy)||0)),ts=taskState(meta.id),entry={id:meta.id,level,accuracy,at:Date.now(),seconds,variant:meta.id==='nback'?(result.variant==='tone'?'tone':'voice'):undefined,practice:result.metric==='Practice accuracy',correct:Number(result.correct)||0,total:Number(result.total)||0,metrics:sanitizeMetrics(result.metrics),profile:sanitizeProfile(profile)};
+ const previous=state.history.filter(x=>x.id===meta.id&&sameSettings(x,entry)),oldBest=previous.length?Math.max(...previous.map(x=>x.accuracy)):null;
  state.history.push(entry);state.history=state.history.slice(-500);
  const recent=state.history.filter(x=>x.id===meta.id).slice(-2);let next='Repeat this level to build consistency. Accuracy matters more than rushing.';
  if(meta.id==='retrieval'&&result.metric==='Practice accuracy')next='Extra practice complete. Your existing review dates are unchanged; this was not a scheduled review.';else if(meta.id==='retrieval')next='Your review schedule is saved. Return when the next cards are due; spacing creates time to retrieve rather than immediately repeat.';
- else if(ts.level===level&&recent.length===2&&recent.every(x=>x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)&&x.accuracy>=80)&&level<8){ts.level=level+1;next=`Two sessions at 80% or above. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level}. You can always choose a gentler level.`}
- else if(ts.level===level&&recent.length===2&&recent.every(x=>x.level===level&&(meta.id!=='nback'||(x.variant||'voice')===entry.variant)&&x.accuracy<55)&&level>1){ts.level=level-1;next=`Two sessions below 55%. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level} so you can rebuild accuracy.`}
+ else if(ts.level===level&&recent.length===2&&recent.every(x=>sameSettings(x,entry)&&x.accuracy>=80&&readyToAdvance(x))&&level<8){ts.level=level+1;next=`Two sessions at 80% or above${['operation','symmetry'].includes(meta.id)?' for recall and processing':''}. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level}. You can always choose a gentler level.`}
+ else if(ts.level===level&&recent.length===2&&recent.every(x=>sameSettings(x,entry)&&x.accuracy<55)&&level>1){ts.level=level-1;next=`Two sessions below 55%. Your next session moves to ${meta.id==='nback'?ts.level+'-back':'level '+ts.level} so you can rebuild accuracy.`}
+ else if(['operation','symmetry'].includes(meta.id)&&!readyToAdvance(entry))next='Keep this span while building processing accuracy. Moving up requires both recall and processing to reach 80% in two consecutive sessions.';
  else if(level===8&&accuracy>=80)next='You’re practicing at the highest level. Keep accuracy steady; there is no need to chase a perfect score.';
  save();
  const details=Array.isArray(result.details)?result.details:[];
- main.innerHTML=`<section class="run result"><div class="result-heading"><p class="eyebrow">Session complete · ${escapeHtml(meta.name)}</p><div class="big-score">${Math.round(accuracy)}<span style="font-size:.4em">%</span></div><p>${['nback','vigilance'].includes(meta.id)?'Balanced accuracy':['corsi','digits'].includes(meta.id)?'Complete-sequence accuracy':'First-answer accuracy'} · ${entry.correct} / ${entry.total} correct${['nback','vigilance'].includes(meta.id)?' decisions':''}</p><p>${meta.id==='nback'?level+'-back':meta.id==='retrieval'?'Spaced retrieval':'Level '+level} · ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} · ${oldBest===null?'Your first completed session at this level':accuracy>oldBest?'A new best at this level':'Best at this level: '+Math.round(Math.max(accuracy,oldBest))+'%'}</p></div><div class="panel"><h2>Your session, clearly.</h2><p class="small muted">${escapeHtml(result.summary||'This score describes your performance on this exercise.')}</p><div class="result-details">${result.metric&&result.value?`<div class="result-detail"><small>${escapeHtml(result.metric)}</small><strong>${escapeHtml(result.value)}</strong></div>`:''}${details.map(d=>`<div class="result-detail"><small>${escapeHtml(d.label)}</small><strong>${escapeHtml(d.value)}</strong></div>`).join('')}</div><p class="small muted">${['nback','vigilance'].includes(meta.id)?'Balanced accuracy averages target hit rate and non-target correct rejection rate. Withholding every response scores 50%; the two rates show why. ':''}Compare sessions at the same level, audio mode, and device. These are practice scores, not clinical norms.</p><div class="next-step"><h3>Your next step</h3><p>${next}</p></div><div class="result-actions"><button class="primary" id="result-next">${circuit&&circuit.index<circuit.ids.length-1?'Next in your circuit →':circuit?'Finish circuit →':'Practice again'}</button><button id="result-progress">See progress</button><button id="result-home">Back to practice</button></div></div><p class="small muted">Difficulty changes after two consecutive sessions at ≥80% or &lt;55%. These thresholds are app settings, not research-established training doses.</p></section>`;
+ main.innerHTML=`<section class="run result"><div class="result-heading"><p class="eyebrow">Session complete · ${escapeHtml(meta.name)}</p><div class="big-score">${Math.round(accuracy)}<span style="font-size:.4em">%</span></div><p>${['nback','vigilance'].includes(meta.id)?'Balanced accuracy':['corsi','digits'].includes(meta.id)?'Complete-sequence accuracy':['operation','symmetry'].includes(meta.id)?'Serial-position recall accuracy':'First-answer accuracy'} · ${entry.correct} / ${entry.total} correct${['nback','vigilance'].includes(meta.id)?' decisions':''}</p><p>${meta.id==='nback'?level+'-back':meta.id==='retrieval'?'Spaced retrieval':'Level '+level} · ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} · ${oldBest===null?'Your first completed session at this level':accuracy>oldBest?'A new best at this level':'Best at this level: '+Math.round(Math.max(accuracy,oldBest))+'%'}</p></div><div class="panel"><h2>Your session, clearly.</h2><p class="small muted">${escapeHtml(result.summary||'This score describes your performance on this exercise.')}</p><div class="result-details">${result.metric&&result.value?`<div class="result-detail"><small>${escapeHtml(result.metric)}</small><strong>${escapeHtml(result.value)}</strong></div>`:''}${details.map(d=>`<div class="result-detail"><small>${escapeHtml(d.label)}</small><strong>${escapeHtml(d.value)}</strong></div>`).join('')}</div><p class="small muted">${['nback','vigilance'].includes(meta.id)?'Balanced accuracy averages target hit rate and non-target correct rejection rate. Withholding every response scores 50%; the two rates show why. ':''}Compare sessions at the same level, audio mode, and input/screen settings. Browser and hardware can affect timing. These are practice scores, not clinical norms.</p><div class="next-step"><h3>Your next step</h3><p>${next}</p></div><div class="result-actions"><button class="primary" id="result-next">${circuit&&circuit.index<circuit.ids.length-1?'Next in your circuit →':circuit?'Finish circuit →':'Practice again'}</button><button id="result-progress">See progress</button><button id="result-home">Back to practice</button></div></div><p class="small muted">Difficulty changes after two consecutive sessions at ≥80% or &lt;55% under the same settings. Complex spans also require processing accuracy ≥80% to move up. These thresholds are app settings, not research-established training doses.</p></section>`;
  $('#result-next').onclick=()=>{if(circuit){circuit.index++;if(circuit.index<circuit.ids.length)startTask(circuit.ids[circuit.index]);else{navigate('practice');notify('Circuit complete. A little practice is enough for today.')}}else startTask(meta.id)};
  $('#result-progress').onclick=()=>navigate('progress');$('#result-home').onclick=()=>navigate('practice');window.scrollTo(0,0);
 }
-function renderProgress(){
- main.innerHTML=`<section class="page-title"><p class="eyebrow">A record, not a ranking</p><h1>Your practice, over time.</h1><p class="muted">Notice consistency and improvement within a skill. There’s no combined “brain score.”</p></section>${renderStats()}<div class="progress-grid"><section class="panel"><h2>Accuracy at the same level</h2><div class="chart-controls"><label for="chart-task">Exercise</label><select id="chart-task">${META.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select><span id="chart-mode-wrap"><label for="chart-mode">Sound</label> <select id="chart-mode"><option value="tone">Tones</option><option value="voice">Letters</option></select></span><label for="chart-level">Level</label><select id="chart-level"></select></div><div id="chart-body"></div><p class="small muted">Latest 20 sessions at one difficulty and audio mode. Changing difficulty can lower accuracy as the challenge increases.</p></section><section class="panel"><h2>Recent sessions</h2><div>${state.history.slice(-6).reverse().map(h=>`<div class="history-row"><div>${META.find(m=>m.id===h.id).name}<small>${new Date(h.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})} · ${h.id==='nback'?h.level+'-back · '+(h.variant==='tone'?'tones':'letters'):h.id==='retrieval'?(h.practice?'extra practice':'spaced review'):'level '+h.level}</small></div><strong>${Math.round(h.accuracy)}%</strong></div>`).join('')||'<p class="muted small">Your first completed session will appear here.</p>'}</div></section></div><section class="panel"><h2>Each skill has its own path</h2><table class="progress-table"><thead><tr><th scope="col">Exercise</th><th scope="col">Next level</th><th scope="col">Sessions</th><th scope="col">Best at next level</th></tr></thead><tbody>${META.map(m=>{const level=taskState(m.id).level,all=state.history.filter(x=>x.id===m.id),variant=all.at(-1)?.variant||'voice',same=all.filter(x=>x.level===level&&(m.id!=='nback'||(x.variant||'voice')===variant));return `<tr><td>${m.name}</td><td>${m.id==='retrieval'?'Scheduled':m.id==='nback'?level+'-back · '+(variant==='tone'?'tones':'letters'):level}</td><td>${all.length}</td><td>${same.length?Math.round(Math.max(...same.map(x=>x.accuracy)))+'%':'—'}</td></tr>`}).join('')}</tbody></table></section><section class="panel"><h2>Keep your record</h2><p class="small muted">Saved only in this browser. Clearing site data removes your record. Export a backup to move it between devices.</p>${!storageOkay?'<p class="notice">Browser storage is unavailable. Export before leaving to keep your record.</p>':''}<div class="tool-actions"><button id="export-data">Export progress</button><button id="import-data">Import progress</button><button id="reset-data" class="quiet danger">Reset progress</button><input id="import-file" type="file" accept="application/json,.json" hidden></div><div id="reset-confirm" class="notice reset-confirm" hidden>Reset all scores and card schedules on this device? Export a backup first if you want to keep them.<div class="tool-actions" style="margin-top:10px"><button id="cancel-reset">Keep progress</button><button id="confirm-reset" class="danger">Reset everything</button></div></div></section>`;
- function chartLevels(){const id=$('#chart-task').value;$('#chart-mode-wrap').hidden=id!=='nback';const levels=[...new Set(state.history.filter(h=>h.id===id&&(id!=='nback'||(h.variant||'voice')===$('#chart-mode').value)).map(h=>h.level))].sort((a,b)=>a-b);if(!levels.length)levels.push(taskState(id).level);$('#chart-level').innerHTML=levels.map(l=>`<option value="${l}">${l}</option>`).join('');$('#chart-level').value=String(levels.includes(taskState(id).level)?taskState(id).level:levels.at(-1));drawChart()}
- function drawChart(){const data=state.history.filter(h=>h.id===$('#chart-task').value&&h.level===Number($('#chart-level').value)&&(h.id!=='nback'||(h.variant||'voice')===$('#chart-mode').value)).slice(-20);if(!data.length){$('#chart-body').innerHTML='<div class="chart-empty"><p>No sessions at this level yet.<br><small>Start with one small practice.</small></p></div>';return}const x=i=>data.length===1?270:35+i*470/(data.length-1),y=v=>170-v*1.4;const points=data.map((h,i)=>`${x(i)},${y(h.accuracy)}`).join(' ');$('#chart-body').innerHTML=`<svg class="chart" viewBox="0 0 540 195" role="img" aria-label="Accuracy for ${data.length} sessions, from ${Math.round(data[0].accuracy)} to ${Math.round(data.at(-1).accuracy)} percent">${[0,50,100].map(v=>`<line x1="35" y1="${y(v)}" x2="505" y2="${y(v)}" stroke="#dfe3d6"/><text x="0" y="${y(v)+4}" font-size="10" fill="#66736c">${v}%</text>`).join('')}<polyline points="${points}" fill="none" stroke="#426747" stroke-width="2.5"/>${data.map((h,i)=>`<circle cx="${x(i)}" cy="${y(h.accuracy)}" r="4" fill="#426747"><title>${new Date(h.at).toLocaleDateString()}: ${Math.round(h.accuracy)}%</title></circle>`).join('')}</svg><p class="small muted">${data.length} session${data.length===1?'':'s'} · latest ${Math.round(data.at(-1).accuracy)}% · best ${Math.round(Math.max(...data.map(h=>h.accuracy)))}%</p>`}
- $('#chart-mode').onchange=chartLevels;$('#chart-task').onchange=chartLevels;$('#chart-level').onchange=drawChart;chartLevels();
- $('#export-data').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`clear-progress-${dayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
- $('#import-data').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(file.size>1000000){notify('That file is too large to be a Clear progress backup.');return}try{const imported=sanitize(JSON.parse(await file.text()));const box=document.createElement('div');box.className='notice';box.innerHTML=`This backup has ${imported.history.length} sessions. Importing replaces this device’s current record.<div class="tool-actions" style="margin-top:10px"><button id="accept-import">Replace with backup</button><button id="cancel-import">Cancel</button></div>`;$('#import-data').closest('.panel').appendChild(box);$('#accept-import').onclick=()=>{state=imported;save();renderProgress();notify('Progress imported.')};$('#cancel-import').onclick=()=>box.remove()}catch{notify('Please choose a valid Clear progress JSON backup.')}};
- $('#reset-data').onclick=()=>$('#reset-confirm').hidden=false;$('#cancel-reset').onclick=()=>$('#reset-confirm').hidden=true;$('#confirm-reset').onclick=()=>{state=freshState();save();renderProgress();notify('Progress reset.')};
-}
 function renderEvidence(){
- main.innerHTML=`<section class="page-title"><p class="eyebrow">Curiosity, with the claims kept small</p><h1>What practice can do.</h1><p class="muted" style="max-width:700px">Research supports learning specific skills. That is different from proving that a collection of browser games improves intelligence, prevents decline, or changes everyday functioning.</p></section><section class="panel"><h2>Useful practice. Honest expectations.</h2><p class="small muted">This library covers major research task families, not every possible cognitive intervention. It adapts familiar paradigms for brief mobile sessions. This particular app has not been studied in a clinical trial.</p><div class="evidence-row"><strong>Working memory<br><span class="small muted">Dual n-back · spatial & digit spans</span></strong><p>Training reliably improves the tasks people practice. N-back reviews find their clearest transfer to other n-back tasks; transfer to other working-memory measures is smaller, and benefits for intelligence or everyday abilities remain unproven. Use these exercises to practice updating and holding information, rather than expecting an IQ increase.</p></div><div class="evidence-row"><strong>Attention & control<br><span class="small muted">Conflict · switching · vigilance · search</span></strong><p>These are well-established ways to exercise and measure specific processes. Being a valid experimental task does not establish broad benefits from practicing our version. Scores describe this exercise. Reaction times also depend on your phone, browser, input method, and interruptions.</p></div><div class="evidence-row"><strong>Processing & reasoning<br><span class="small muted">Peripheral focus · patterns</span></strong><p>The ACTIVE trial found durable trained-ability gains for structured reasoning and speed training in older adults, with less decline in self-reported everyday function. Our brief adaptations do not reproduce those validated protocols, doses, or participant settings. Peripheral focus is not the clinical UFOV assessment or a licensed training program.</p></div><div class="evidence-row"><strong>Spatial skills<br><span class="small muted">Mental rotation</span></strong><p>A large meta-analysis supports the trainability of spatial skills, including some transfer to other spatial tasks. Practicing rotations is a reasonable way to develop that particular skill; a few browser sessions are not a guarantee of broader benefit.</p></div><div class="evidence-row"><strong>Learning & retention<br><span class="small muted">Paired recall · spaced retrieval</span></strong><p>Retrieving studied material and distributing practice over time have strong evidence for longer-term retention. Benefits apply to what you learn. Our cards use cued recognition and feedback, which is easier than unaided recall; the facts and review schedule are a demonstration you can practice.</p></div></section><section class="panel"><h2>Understand your score</h2><p class="small muted">Most exercises report first-answer accuracy. Dual n-back and steady attention report balanced accuracy, with target hits and false alarms separated. Span tasks count completely correct sequences. Reaction-time summaries use correct responses only. Compare the same exercise at the same difficulty, and allow room for a tired day.</p><p class="small muted">For level-based exercises, two consecutive sessions at 80% or above move the next difficulty up; two below 55% move it down. You can choose levels 1–8 yourself. These are transparent design choices, not clinically validated thresholds. A daily circuit is a convenience, not a prescribed training dose.</p></section><section class="panel"><h2>The reading behind the choices</h2><ol class="reference-list"><li><strong>Simons et al. (2016).</strong> <a href="https://doi.org/10.1177/1529100616661983" target="_blank" rel="noopener noreferrer">Do “Brain-Training” Programs Work?</a><br><span class="muted">A broad review distinguishing trained skills from transfer and everyday outcomes.</span></li><li><strong>Melby-Lervåg, Redick & Hulme (2016).</strong> <a href="https://doi.org/10.1177/1745691616635612" target="_blank" rel="noopener noreferrer">Working Memory Training Does Not Improve Performance on Measures of Intelligence or Other Measures of “Far Transfer”: Evidence From a Meta-Analytic Review.</a><br><span class="muted">Working-memory task gains do not establish intelligence or far-transfer benefits.</span></li><li><strong>Soveri et al. (2017).</strong> <a href="https://doi.org/10.3758/s13423-016-1217-0" target="_blank" rel="noopener noreferrer">Working memory training revisited: A multi-level meta-analysis of n-back training studies.</a><br><span class="muted">The largest transfer effects concerned other n-back tasks; effects on other skills were much smaller.</span></li><li><strong>Rebok et al. (2014).</strong> <a href="https://doi.org/10.1111/jgs.12607" target="_blank" rel="noopener noreferrer">Ten-Year Effects of the Advanced Cognitive Training for Independent and Vital Elderly Cognitive Training Trial on Cognition and Everyday Functioning in Older Adults.</a><br><span class="muted">Durable results for specific structured reasoning and speed interventions in older adults.</span></li><li><strong>Uttal et al. (2013).</strong> <a href="https://doi.org/10.1037/a0028446" target="_blank" rel="noopener noreferrer">The malleability of spatial skills: A meta-analysis of training studies.</a><br><span class="muted">Evidence that spatial skills can improve through training, including transfer within the spatial domain.</span></li><li><strong>Roediger & Karpicke (2006).</strong> <a href="https://doi.org/10.1111/j.1467-9280.2006.01693.x" target="_blank" rel="noopener noreferrer">Test-enhanced learning: Taking memory tests improves long-term retention.</a><br><span class="muted">Retrieval practice supports retention of studied material.</span></li><li><strong>Cepeda et al. (2006).</strong> <a href="https://doi.org/10.1037/0033-2909.132.3.354" target="_blank" rel="noopener noreferrer">Distributed practice in verbal recall tasks: A review and quantitative synthesis.</a><br><span class="muted">Spacing benefits retention; useful intervals depend on how long material must be remembered.</span></li><li><strong>Dunlosky et al. (2013).</strong> <a href="https://doi.org/10.1177/1529100612453266" target="_blank" rel="noopener noreferrer">Improving Students’ Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology.</a><br><span class="muted">Practice testing and distributed practice were rated high-utility learning techniques.</span></li></ol><p class="small muted">Research notes reviewed October 2026. References support the distinctions above; they do not validate this app.</p></section><section class="panel"><h2>A quiet app, by design</h2><p class="small muted">No account, tracking, analytics, or external scripts. Scores and review schedules stay in this browser’s local storage. Export or reset them on the Progress tab. Hosting follows GitHub Pages’ normal web-server logging.</p><p class="small muted">Download the single HTML file to use it offline. Tone-based dual n-back works without speech services; spoken letters depend on your browser and installed voices and may use your platform’s speech service. The app never requests a microphone.</p><p class="small muted">Large touch targets, visible keyboard focus, reduced-motion support, and text labels accompany the interface. Some tasks inherently require vision, color discrimination, hearing, or quick motor responses, and are not equally accessible to everyone.</p><a href="./index.html" download="clear-cognitive.html">Download Clear as one HTML file →</a></section>`;
+ main.innerHTML=`<section class="page-title"><p class="eyebrow">Curiosity, with the claims kept small</p><h1>What practice can do.</h1><p class="muted" style="max-width:700px">Research supports learning specific skills. That is different from proving that a collection of browser games improves intelligence, prevents decline, or changes everyday functioning.</p></section><section class="panel"><h2>Useful practice. Honest expectations.</h2><p class="small muted">This library covers major research task families, not every possible cognitive intervention. It adapts familiar paradigms for brief mobile sessions. This particular app has not been studied in a clinical trial.</p><div class="evidence-row"><strong>Working memory<br><span class="small muted">Dual n-back · spatial, digit & complex spans</span></strong><p>Training reliably improves the tasks people practice. N-back reviews find their clearest transfer to other n-back tasks; transfer to other working-memory measures is smaller, and benefits for intelligence or everyday abilities remain unproven. Use these exercises to practice updating and holding information, rather than expecting an IQ increase.</p></div><div class="evidence-row"><strong>Complex span<br><span class="small muted">Operation span · symmetry span</span></strong><p>Complex-span tasks combine remembering items with an intervening task. These exercises adapt established verbal and spatial working-memory paradigms for browser practice. Recall measures items remembered in the correct positions; processing accuracy measures the arithmetic or symmetry decisions, with missed deadlines counted as errors. Higher recall alongside lower processing accuracy can reflect reduced attention to the intervening task. Improved scores describe the practiced task; broader cognitive benefits remain uncertain.</p></div><div class="evidence-row"><strong>Attention & control<br><span class="small muted">Conflict · switching · vigilance · search</span></strong><p>These are well-established ways to exercise and measure specific processes. Being a valid experimental task does not establish broad benefits from practicing our version. Scores describe this exercise. Reaction times also depend on your phone, browser, input method, and interruptions.</p></div><div class="evidence-row"><strong>Processing & reasoning<br><span class="small muted">Peripheral focus · patterns</span></strong><p>The ACTIVE trial found durable trained-ability gains for structured reasoning and speed training in older adults, with less decline in self-reported everyday function. Our brief adaptations do not reproduce those validated protocols, doses, or participant settings. Peripheral focus is not the clinical UFOV assessment or a licensed training program.</p></div><div class="evidence-row"><strong>Spatial skills<br><span class="small muted">Mental rotation</span></strong><p>A large meta-analysis supports the trainability of spatial skills, including some transfer to other spatial tasks. Practicing rotations is a reasonable way to develop that particular skill; a few browser sessions are not a guarantee of broader benefit.</p></div><div class="evidence-row"><strong>Learning & retention<br><span class="small muted">Paired recall · spaced retrieval</span></strong><p>Retrieving studied material and distributing practice over time have strong evidence for longer-term retention. Benefits apply to what you learn. Our cards use cued recognition and feedback, which is easier than unaided recall; the facts and review schedule are a demonstration you can practice.</p></div></section><section class="panel"><h2>Understand your score</h2><p class="small muted">Most exercises report first-answer accuracy. Dual n-back and steady attention report balanced accuracy, with target hits and false alarms separated. Simple span tasks count completely correct sequences. Complex span tasks score items recalled in their correct positions and report processing accuracy separately. Reaction-time summaries use correct responses only. Compare the same exercise at the same difficulty, and allow room for a tired day.</p><p class="small muted">For level-based exercises, two consecutive sessions at 80% or above move the next difficulty up; two below 55% move it down. Complex-span increases require both recall and processing accuracy to meet 80%. You can choose levels 1–8 yourself. These are transparent design choices, not clinically validated thresholds. A daily circuit is a convenience, not a prescribed training dose.</p></section><section class="panel"><h2>The reading behind the choices</h2><ol class="reference-list"><li><strong>Unsworth et al. (2005).</strong> <a href="https://doi.org/10.3758/BF03192720" target="_blank" rel="noopener noreferrer">An automated version of the operation span task.</a><br><span class="muted">A research method for interleaving arithmetic processing with letter recall; our adaptation is not the standardized assessment.</span></li><li><strong>Unsworth et al. (2009).</strong> <a href="https://doi.org/10.1080/09658210902998047" target="_blank" rel="noopener noreferrer">Complex working memory span tasks and higher-order cognition: A latent-variable analysis of the relationship between processing and storage.</a><br><span class="muted">Separates processing accuracy, processing time, and storage accuracy in complex-span tasks.</span></li><li><strong>Simons et al. (2016).</strong> <a href="https://doi.org/10.1177/1529100616661983" target="_blank" rel="noopener noreferrer">Do “Brain-Training” Programs Work?</a><br><span class="muted">A broad review distinguishing trained skills from transfer and everyday outcomes.</span></li><li><strong>Melby-Lervåg, Redick & Hulme (2016).</strong> <a href="https://doi.org/10.1177/1745691616635612" target="_blank" rel="noopener noreferrer">Working Memory Training Does Not Improve Performance on Measures of Intelligence or Other Measures of “Far Transfer”: Evidence From a Meta-Analytic Review.</a><br><span class="muted">Working-memory task gains do not establish intelligence or far-transfer benefits.</span></li><li><strong>Soveri et al. (2017).</strong> <a href="https://doi.org/10.3758/s13423-016-1217-0" target="_blank" rel="noopener noreferrer">Working memory training revisited: A multi-level meta-analysis of n-back training studies.</a><br><span class="muted">The largest transfer effects concerned other n-back tasks; effects on other skills were much smaller.</span></li><li><strong>Rebok et al. (2014).</strong> <a href="https://doi.org/10.1111/jgs.12607" target="_blank" rel="noopener noreferrer">Ten-Year Effects of the Advanced Cognitive Training for Independent and Vital Elderly Cognitive Training Trial on Cognition and Everyday Functioning in Older Adults.</a><br><span class="muted">Durable results for specific structured reasoning and speed interventions in older adults.</span></li><li><strong>Uttal et al. (2013).</strong> <a href="https://doi.org/10.1037/a0028446" target="_blank" rel="noopener noreferrer">The malleability of spatial skills: A meta-analysis of training studies.</a><br><span class="muted">Evidence that spatial skills can improve through training, including transfer within the spatial domain.</span></li><li><strong>Roediger & Karpicke (2006).</strong> <a href="https://doi.org/10.1111/j.1467-9280.2006.01693.x" target="_blank" rel="noopener noreferrer">Test-enhanced learning: Taking memory tests improves long-term retention.</a><br><span class="muted">Retrieval practice supports retention of studied material.</span></li><li><strong>Cepeda et al. (2006).</strong> <a href="https://doi.org/10.1037/0033-2909.132.3.354" target="_blank" rel="noopener noreferrer">Distributed practice in verbal recall tasks: A review and quantitative synthesis.</a><br><span class="muted">Spacing benefits retention; useful intervals depend on how long material must be remembered.</span></li><li><strong>Dunlosky et al. (2013).</strong> <a href="https://doi.org/10.1177/1529100612453266" target="_blank" rel="noopener noreferrer">Improving Students’ Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology.</a><br><span class="muted">Practice testing and distributed practice were rated high-utility learning techniques.</span></li></ol><p class="small muted">Research notes reviewed October 2026. References support the distinctions above; they do not validate this app.</p></section><section class="panel"><h2>A quiet app, by design</h2><p class="small muted">No account, tracking, analytics, or external scripts. Scores and review schedules stay in this browser’s local storage. Export or reset them on the Progress tab. Hosting follows GitHub Pages’ normal web-server logging.</p><p class="small muted">Download the single HTML file to use it offline. Tone-based dual n-back works without speech services; spoken letters depend on your browser and installed voices and may use your platform’s speech service. The app never requests a microphone.</p><p class="small muted">Large touch targets, visible keyboard focus, reduced-motion support, and text labels accompany the interface. Some tasks inherently require vision, color discrimination, hearing, or quick motor responses, and are not equally accessible to everyone.</p><a href="./index.html" download="clear-cognitive.html">Download Clear as one HTML file →</a></section>`;
 }
 /* Memory practice tasks. No libraries or network access required. */
 TASKS.nback = function (ctx) {
@@ -128,6 +148,8 @@ TASKS.nback = function (ctx) {
   const scoredTrials = 20;
   const letters = ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'];
   let alive = true, running = false, trial = -1, previewToken = 0;
+  let trialOpened = 0;
+  const hitTimes = [];
   let responded = { position: false, sound: false };
   const stats = {
     position: { hit: 0, miss: 0, falseAlarm: 0, correctRejection: 0 },
@@ -210,6 +232,8 @@ TASKS.nback = function (ctx) {
   function answer(channel) {
     if (!alive || !running || trial < n || trial >= n + scoredTrials || responded[channel]) return;
     responded[channel] = true;
+    const sequence = channel === 'position' ? positions : sounds;
+    if (sequence[trial] === sequence[trial - n]) hitTimes.push(performance.now() - trialOpened);
     const button = channel === 'position' ? positionButton : soundButton;
     button.classList.add('primary');
     button.textContent = channel === 'position' ? 'Position marked ✓' : 'Sound marked ✓';
@@ -231,6 +255,7 @@ TASKS.nback = function (ctx) {
     ctx.setStatus(warmup ? 'Warm-up ' + (trial + 1) + ' of ' + n : 'Step ' + (trial - n + 1) + ' of ' + scoredTrials + ' · ' + n + '-back');
     ctx.setHint(warmup ? 'Remember this position and sound. Responses begin after warm-up.' : 'Compare with ' + n + ' steps earlier. Mark each matching channel.');
     cells.forEach((cell, i) => cell.classList.toggle('lit', i === positions[trial]));
+    trialOpened = performance.now();
     ctx.audio(sounds[trial], mode);
     const currentTrial = trial;
     ctx.timeout(function () {
@@ -258,9 +283,13 @@ TASKS.nback = function (ctx) {
     const positionScore = balanced(stats.position);
     const soundScore = balanced(stats.sound);
     const accuracy = (positionScore + soundScore) / 2;
+    const sortedTimes = hitTimes.slice().sort((a, b) => a - b);
+    const middle = Math.floor(sortedTimes.length / 2);
+    const medianHitTime = sortedTimes.length ? (sortedTimes.length % 2 ? sortedTimes[middle] : (sortedTimes[middle - 1] + sortedTimes[middle]) / 2) : null;
     const formatStats = s => s.hit + ' hits · ' + s.miss + ' misses · ' + s.falseAlarm + ' false alarms · ' + s.correctRejection + ' correct rejections';
     ctx.finish({
       accuracy: accuracy, variant: mode,
+      metrics: { rtMs: medianHitTime, rtCount: hitTimes.length, channels: { position: { ...stats.position }, sound: { ...stats.sound } } },
       correct: stats.position.hit + stats.position.correctRejection + stats.sound.hit + stats.sound.correctRejection,
       total: scoredTrials * 2,
       metric: 'Balanced accuracy', value: Math.round(accuracy) + '%',
@@ -278,7 +307,7 @@ TASKS.nback = function (ctx) {
 TASKS.corsi = function (ctx) {
   const length = Math.max(3, Math.min(10, Math.round(ctx.level || 1) + 2));
   const rounds = 5;
-  let alive = true, phase = 'ready', round = 0, sequence = [], response = [], correct = 0;
+  let alive = true, phase = 'ready', round = 0, sequence = [], response = [], correct = 0, itemsCorrect = 0;
   const outcomes = [];
   ctx.onCleanup(function () { alive = false; phase = 'closed'; });
   ctx.setStatus('Spatial span · ' + length + ' positions');
@@ -344,6 +373,7 @@ TASKS.corsi = function (ctx) {
   function grade() {
     phase = 'feedback';
     const passed = sequence.every((value, i) => value === response[i]);
+    itemsCorrect += sequence.filter((value, i) => value === response[i]).length;
     if (passed) correct++;
     outcomes.push(passed);
     ctx.setProgress(round, rounds);
@@ -359,6 +389,7 @@ TASKS.corsi = function (ctx) {
         alive = false;
         phase = 'closed';
         ctx.finish({ accuracy: correct / rounds * 100, correct: correct, total: rounds, metric: 'Sequences recalled', value: correct + ' / ' + rounds,
+          metrics: { recall: { correct: itemsCorrect, total: rounds * length, complete: correct, totalSequences: rounds } },
           details: [{ label: 'Span practiced', value: length + ' positions, forward order' }, { label: 'Rounds', value: outcomes.map((passed, i) => (i + 1) + ': ' + (passed ? 'correct' : 'missed')).join(' · ') }],
           summary: 'You recalled ' + correct + ' complete sequences. This is a practice score, not a clinical memory assessment.' });
       }
@@ -369,7 +400,7 @@ TASKS.corsi = function (ctx) {
 TASKS.digits = function (ctx) {
   const length = Math.max(3, Math.min(10, Math.round(ctx.level || 1) + 2));
   const rounds = 5;
-  let alive = true, phase = 'ready', round = 0, sequence = [], response = '', correct = 0;
+  let alive = true, phase = 'ready', round = 0, sequence = [], response = '', correct = 0, itemsCorrect = 0;
   const outcomes = [];
   ctx.onCleanup(function () { alive = false; phase = 'closed'; });
   ctx.setStatus('Reverse digit span · ' + length + ' digits');
@@ -431,6 +462,7 @@ TASKS.digits = function (ctx) {
     phase = 'feedback';
     const expected = sequence.slice().reverse().join('');
     const passed = response === expected;
+    itemsCorrect += Array.from(expected).filter((digit, i) => digit === response[i]).length;
     if (passed) correct++;
     outcomes.push(passed);
     ctx.setProgress(round, rounds);
@@ -445,6 +477,7 @@ TASKS.digits = function (ctx) {
         alive = false;
         phase = 'closed';
         ctx.finish({ accuracy: correct / rounds * 100, correct: correct, total: rounds, metric: 'Sequences recalled', value: correct + ' / ' + rounds,
+          metrics: { recall: { correct: itemsCorrect, total: rounds * length, complete: correct, totalSequences: rounds } },
           details: [{ label: 'Span practiced', value: length + ' digits, reverse order' }, { label: 'Rounds', value: outcomes.map((passed, i) => (i + 1) + ': ' + (passed ? 'correct' : 'missed')).join(' · ') }],
           summary: 'You recalled ' + correct + ' complete reversed sequences. This is a practice score, not a clinical memory assessment.' });
       }
@@ -509,7 +542,7 @@ TASKS.digits = function (ctx) {
       if (congruentTimes.length >= 3 && incongruentTimes.length >= 3) {
         details.push({ label: 'Incongruent − congruent time', value: `${Math.round(median(incongruentTimes) - median(congruentTimes))} ms` });
       }
-      ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(correctTimes), details, summary: 'A Stroop practice result: accuracy and response speed on this session, not a measure of general intelligence.' });
+      ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(correctTimes), metrics: { rtMs: median(correctTimes), rtCount: correctTimes.length, subRT: { congruentMs: median(congruentTimes), incongruentMs: median(incongruentTimes) } }, details, summary: 'A Stroop practice result: accuracy and response speed on this session, not a measure of general intelligence.' });
     };
     const next = () => {
       if (index >= count) return done();
@@ -559,7 +592,7 @@ TASKS.digits = function (ctx) {
       if (index >= count) {
         const details = [rtDetail('Correct response time', times), { label: 'Rule changes', value: `${switchCount}` }];
         if (switchTimes.length >= 3 && repeatTimes.length >= 3) details.push({ label: 'Switch − repeat time', value: `${Math.round(median(switchTimes) - median(repeatTimes))} ms` });
-        return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(times), details, summary: 'This result reflects rule switching in this practice session. Faster responses are meaningful only alongside accuracy.' });
+        return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct response time', value: ms(times), metrics: { rtMs: median(times), rtCount: times.length, subRT: { switchMs: median(switchTimes), repeatMs: median(repeatTimes) } }, details, summary: 'This result reflects rule switching in this practice session. Faster responses are meaningful only alongside accuracy.' });
       }
       if (index && changes[index - 1]) cue = cue === 'parity' ? 'magnitude' : 'parity';
       const isSwitch = previous !== null && previous !== cue;
@@ -606,7 +639,7 @@ TASKS.digits = function (ctx) {
       active = false;
       if (index >= count) {
         const balanced = Math.round(50 * (hits / goCount + rejections / noGoCount));
-        return ctx.finish({ accuracy: balanced, correct: hits + rejections, total: count, metric: 'Balanced accuracy', value: `${balanced}%`, details: [ { label: 'Circle hits', value: `${hits} / ${goCount}` }, { label: 'Triangle withholds', value: `${rejections} / ${noGoCount}` }, { label: 'False alarms', value: `${noGoCount - rejections}` }, { label: 'Missed circles', value: `${goCount - hits}` }, rtDetail('Correct circle response time', hitTimes) ], summary: 'Balanced accuracy gives circle responses and triangle withholds equal weight. Repeated taps cannot improve the score.' });
+        return ctx.finish({ accuracy: balanced, correct: hits + rejections, total: count, metric: 'Balanced accuracy', value: `${balanced}%`, metrics: { rtMs: median(hitTimes), rtCount: hitTimes.length, channels: { signal: { hit: hits, miss: goCount - hits, falseAlarm: noGoCount - rejections, correctRejection: rejections } } }, details: [ { label: 'Circle hits', value: `${hits} / ${goCount}` }, { label: 'Triangle withholds', value: `${rejections} / ${noGoCount}` }, { label: 'False alarms', value: `${noGoCount - rejections}` }, { label: 'Missed circles', value: `${goCount - hits}` }, rtDetail('Correct circle response time', hitTimes) ], summary: 'Balanced accuracy gives circle responses and triangle withholds equal weight. Repeated taps cannot improve the score.' });
       }
       ctx.stage.replaceChildren();
       const shape = node('div', 'stimulus', plan[index] ? '●' : '▲');
@@ -656,7 +689,7 @@ TASKS.digits = function (ctx) {
     const times = [];
     let index = 0, correct = 0, accepting = false, opened = 0;
     const next = () => {
-      if (index >= count) return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct search time', value: ms(times), details: [ rtDetail('Correct search time', times), { label: 'Grid', value: `${rows} × ${columns} letters` } ], summary: 'Your result measures finding T among L letters in this session. It does not establish a general improvement in visual attention.' });
+      if (index >= count) return ctx.finish({ accuracy: pct(correct, count), correct, total: count, metric: 'Correct search time', value: ms(times), metrics: { rtMs: median(times), rtCount: times.length }, details: [ rtDetail('Correct search time', times), { label: 'Grid', value: `${rows} × ${columns} letters` } ], summary: 'Your result measures finding T among L letters in this session. It does not establish a general improvement in visual attention.' });
       reset(ctx);
       ctx.stage.append(node('p', 'prompt', 'Find and tap the T'));
       const grid = node('div', 'task-grid');
@@ -756,7 +789,7 @@ TASKS.digits = function (ctx) {
     };
     const next = () => {
       if (index >= count) {
-        return ctx.finish({ accuracy: pct(jointCorrect, count), correct: jointCorrect, total: count, metric: 'Both answers correct', value: `${jointCorrect} / ${count}`, details: [ { label: 'Center accuracy', value: `${pct(centerCorrect, count)}% (${centerCorrect}/${count})` }, { label: 'Peripheral accuracy', value: `${pct(peripheralCorrect, count)}% (${peripheralCorrect}/${count})` }, { label: 'Display duration', value: `${flashMs} ms` } ], summary: 'Joint accuracy requires both the center and location answers. This is an inspired practice task, distinct from the validated UFOV assessment and training program.' });
+        return ctx.finish({ accuracy: pct(jointCorrect, count), correct: jointCorrect, total: count, metric: 'Both answers correct', value: `${jointCorrect} / ${count}`, metrics: { centerCorrect, peripheralCorrect, trials: count }, details: [ { label: 'Center accuracy', value: `${pct(centerCorrect, count)}% (${centerCorrect}/${count})` }, { label: 'Peripheral accuracy', value: `${pct(peripheralCorrect, count)}% (${peripheralCorrect}/${count})` }, { label: 'Display duration', value: `${flashMs} ms` } ], summary: 'Joint accuracy requires both the center and location answers. This is an inspired practice task, distinct from the validated UFOV assessment and training program.' });
       }
       phase = 'ready';
       target = Math.floor(Math.random() * locations.length);
@@ -1176,6 +1209,430 @@ TASKS.digits = function (ctx) {
     }
   };
 })();
+
+/* Complex span practice: processing is interleaved with items held for ordered recall. */
+(() => {
+  const letters = ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'];
+  const median = values => {
+    if (!values.length) return null;
+    const sorted = values.slice().sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
+  const shuffle = values => {
+    for (let i = values.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [values[i], values[j]] = [values[j], values[i]];
+    }
+    return values;
+  };
+  const node = (tag, className, text) => {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  };
+
+  function complexSpan(ctx, spatial) {
+    const level = Math.max(1, Math.min(8, Math.round(ctx.level || 1)));
+    const length = level + 2, sets = 5, total = length * sets;
+    const deadlineMs = 6000, exposureMs = 900, blankMs = 250;
+    const name = spatial ? 'Symmetry span' : 'Operation span';
+    const itemName = spatial ? 'locations' : 'letters';
+    const truthPlan = shuffle(Array.from({ length: total }, (_, i) => i < Math.ceil(total / 2)));
+    let alive = true, phase = 'ready', token = 0, set = 0, item = 0;
+    let sequence = [], response = [], expectedJudgment = false, opened = 0;
+    let recallCorrect = 0, completeSets = 0, processingCorrect = 0, timeouts = 0;
+    let setProcessingCorrect = 0, setTimeouts = 0;
+    const processingTimes = [];
+    let count, entry, check, recallButtons, remove, clear;
+    ctx.onCleanup(() => { alive = false; phase = 'closed'; token++; });
+    ctx.setStatus(name + ' · ' + length + ' ' + itemName);
+    ctx.setProgress(0, sets);
+    ctx.setHint('Alternate a judgment with a memory item, then recall the items in order.');
+    const intro = node('div', 'task-note');
+    intro.append(node('strong', '', spatial ? 'Remember while judging patterns.' : 'Remember while checking arithmetic.'));
+    intro.append(node('p', '', spatial
+      ? 'Decide whether a 4 × 4 pattern is symmetric across its vertical center line: the left half must mirror the right. Then remember the highlighted location in a separate 4 × 4 grid.'
+      : 'Decide whether an arithmetic statement is true or false. Then remember the letter that appears. Keep earlier letters in mind while solving the next statement.'));
+    intro.append(node('p', '', 'Each judgment has a fixed 6-second deadline. A memory item appears for 0.9 seconds, followed by a 0.25-second blank. After ' + length + ' judgments and memory items, recall all ' + itemName + ' in their original order. Items may repeat. There are 5 sets, with a break after each set.'));
+    intro.append(node('p', '', 'Your main score is the percentage of items recalled in the correct serial position. Processing accuracy and completely correct sets are scored separately. Progression requires at least 80% recall and 80% processing accuracy. This is research-inspired practice, not a standardized assessment.'));
+    ctx.stage.replaceChildren(intro);
+    ctx.button('Begin ' + name.toLowerCase(), () => {
+      if (!alive || phase !== 'ready') return;
+      nextSet();
+    }, { primary: true });
+
+    function reset() {
+      ctx.stage.replaceChildren();
+      ctx.controls.replaceChildren();
+    }
+    function grid(choose, pattern, memoryLocation) {
+      const element = node('div', 'task-grid');
+      element.style.cssText = 'display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px;max-width:300px;width:100%;margin:14px auto;';
+      for (let i = 0; i < 16; i++) {
+        const filled = pattern ? pattern[i] : i === memoryLocation;
+        const tile = node(choose ? 'button' : 'div', 'tile' + (filled ? ' lit' : ''), choose ? String(i + 1) : '');
+        tile.style.cssText = 'min-width:44px;min-height:48px;aspect-ratio:1;padding:4px;display:flex;align-items:center;justify-content:center;font-size:1rem;border-radius:10px;';
+        if (choose) {
+          tile.type = 'button';
+          tile.setAttribute('aria-label', 'Location ' + (i + 1) + ', row ' + (Math.floor(i / 4) + 1) + ', column ' + (i % 4 + 1));
+          ctx.listen(tile, 'click', () => chooseItem(i));
+        } else {
+          tile.setAttribute('aria-label', 'Row ' + (Math.floor(i / 4) + 1) + ', column ' + (i % 4 + 1) + ': ' + (filled ? 'filled' : 'empty'));
+          tile.setAttribute('role', 'img');
+        }
+        element.append(tile);
+      }
+      return element;
+    }
+    function makePattern(symmetric) {
+      const left = Array.from({ length: 8 }, () => Math.random() < 0.5);
+      if (left.every(Boolean) || left.every(value => !value)) {
+        const changed = Math.floor(Math.random() * left.length);
+        left[changed] = !left[changed];
+      }
+      const pattern = [];
+      for (let row = 0; row < 4; row++) {
+        const a = left[row * 2], b = left[row * 2 + 1];
+        pattern.push(a, b, b, a);
+      }
+      if (!symmetric) {
+        const changed = Math.floor(Math.random() * 16);
+        pattern[changed] = !pattern[changed];
+      }
+      return pattern;
+    }
+    function nextSet() {
+      if (!alive || (phase !== 'ready' && phase !== 'feedback')) return;
+      set++;
+      item = 0;
+      response = [];
+      sequence = Array.from({ length }, () => spatial ? Math.floor(Math.random() * 16) : letters[Math.floor(Math.random() * letters.length)]);
+      setProcessingCorrect = 0;
+      setTimeouts = 0;
+      showProcessing();
+    }
+    function showProcessing() {
+      if (!alive) return;
+      phase = 'processing';
+      const currentToken = ++token;
+      expectedJudgment = truthPlan[(set - 1) * length + item];
+      reset();
+      ctx.stage.append(node('p', 'prompt', spatial ? 'Does the left half mirror the right?' : 'Is this statement true?'));
+      if (spatial) {
+        ctx.stage.append(grid(false, makePattern(expectedJudgment)));
+      } else {
+        const a = 2 + Math.floor(Math.random() * 8), b = 2 + Math.floor(Math.random() * 8), c = 1 + Math.floor(Math.random() * 9);
+        const actual = a * b + c;
+        const offset = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 5));
+        const statement = '(' + a + ' × ' + b + ') + ' + c + ' = ' + (actual + (expectedJudgment ? 0 : offset));
+        const stimulus = node('div', 'stimulus', statement);
+        stimulus.style.cssText = 'font-size:clamp(22px,5vw,36px);font-variant-numeric:tabular-nums;min-height:125px;white-space:normal;overflow-wrap:anywhere;';
+        ctx.stage.append(stimulus);
+      }
+      const countdown = node('p', 'task-note', '6.0 seconds remaining');
+      countdown.style.fontVariantNumeric = 'tabular-nums';
+      ctx.stage.append(countdown);
+      ctx.setStatus('Set ' + set + ' of ' + sets + ' · judgment ' + (item + 1) + ' of ' + length);
+      ctx.setHint('Keep the earlier ' + itemName + ' in mind while you decide. Feedback comes after recall.');
+      ctx.button(spatial ? 'Symmetric' : 'True', () => processAnswer(true, false));
+      ctx.button(spatial ? 'Not symmetric' : 'False', () => processAnswer(false, false));
+      opened = performance.now();
+      const tick = () => {
+        if (!alive || phase !== 'processing' || token !== currentToken) return;
+        countdown.textContent = Math.max(0, (deadlineMs - (performance.now() - opened)) / 1000).toFixed(1) + ' seconds remaining';
+        ctx.timeout(tick, 200);
+      };
+      ctx.timeout(tick, 200);
+      ctx.timeout(() => {
+        if (alive && phase === 'processing' && token === currentToken) processAnswer(null, true);
+      }, deadlineMs);
+    }
+    function processAnswer(answer, timedOut) {
+      if (!alive || phase !== 'processing') return;
+      const elapsed = performance.now() - opened;
+      timedOut = timedOut || elapsed >= deadlineMs;
+      if (timedOut) { timeouts++; setTimeouts++; }
+      else if (answer === expectedJudgment) {
+        processingCorrect++;
+        setProcessingCorrect++;
+        processingTimes.push(elapsed);
+      }
+      showMemory();
+    }
+    function showMemory() {
+      phase = 'memory';
+      const currentToken = ++token;
+      reset();
+      ctx.stage.append(node('p', 'prompt', spatial ? 'Remember this location' : 'Remember this letter'));
+      if (spatial) ctx.stage.append(grid(false, null, sequence[item]));
+      else ctx.stage.append(node('div', 'stimulus', sequence[item]));
+      ctx.setStatus('Set ' + set + ' of ' + sets + ' · memory item ' + (item + 1) + ' of ' + length);
+      ctx.setHint('Keep the order. The next step starts automatically.');
+      ctx.timeout(() => {
+        if (!alive || phase !== 'memory' || token !== currentToken) return;
+        phase = 'blank';
+        ctx.stage.replaceChildren(node('div', 'stimulus', '·'));
+        ctx.timeout(() => {
+          if (!alive || phase !== 'blank' || token !== currentToken) return;
+          item++;
+          if (item < length) showProcessing();
+          else showRecall();
+        }, blankMs);
+      }, exposureMs);
+    }
+    function showRecall() {
+      phase = 'recall';
+      token++;
+      reset();
+      ctx.stage.append(node('p', 'prompt', 'Recall the ' + itemName + ' in order'));
+      count = node('p', 'task-note');
+      entry = node('p', 'task-note');
+      entry.style.cssText = 'overflow-wrap:anywhere;min-height:24px;font-weight:600;color:var(--ink);';
+      ctx.stage.append(count, entry);
+      let keypad;
+      if (spatial) keypad = grid(true);
+      else {
+        keypad = node('div', 'answer-grid');
+        keypad.style.cssText = 'display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px;max-width:300px;width:100%;margin:14px auto;';
+        letters.forEach(letter => {
+          const button = node('button', 'choice', letter);
+          button.type = 'button';
+          button.style.cssText = 'min-width:44px;min-height:48px;padding:8px;font-size:1.15rem;';
+          ctx.listen(button, 'click', () => chooseItem(letter));
+          keypad.append(button);
+        });
+      }
+      ctx.stage.append(keypad);
+      recallButtons = Array.from(keypad.querySelectorAll('button'));
+      remove = ctx.button('Remove last', () => {
+        if (!alive || phase !== 'recall') return;
+        response.pop(); updateRecall();
+      });
+      clear = ctx.button('Clear', () => {
+        if (!alive || phase !== 'recall') return;
+        response = []; updateRecall();
+      });
+      check = ctx.button('Check recall', grade, { primary: true });
+      ctx.setStatus('Set ' + set + ' of ' + sets + ' · ordered recall');
+      ctx.setHint('Enter exactly ' + length + ' items. Repeated items are allowed. Check when ready.');
+      updateRecall();
+    }
+    function format(items) { return items.map(value => spatial ? value + 1 : value).join(' → '); }
+    function chooseItem(value) {
+      if (!alive || phase !== 'recall' || response.length >= length) return;
+      response.push(value);
+      updateRecall();
+    }
+    function updateRecall() {
+      count.textContent = response.length + ' of ' + length + ' entered';
+      entry.textContent = response.length ? 'Your response: ' + format(response) : 'Your response will appear here.';
+      check.disabled = response.length !== length;
+      remove.disabled = clear.disabled = response.length === 0;
+      recallButtons.forEach(button => { button.disabled = response.length >= length; });
+    }
+    function grade() {
+      if (!alive || phase !== 'recall' || response.length !== length) return;
+      phase = 'feedback';
+      token++;
+      const correct = sequence.reduce((sum, value, index) => sum + (value === response[index] ? 1 : 0), 0);
+      recallCorrect += correct;
+      if (correct === length) completeSets++;
+      reset();
+      const feedback = node('div', 'task-note');
+      feedback.append(node('strong', '', correct + ' of ' + length + ' recalled in the correct position'));
+      feedback.append(node('p', '', 'Processing: ' + setProcessingCorrect + ' of ' + length + ' correct' + (setTimeouts ? ' · ' + setTimeouts + ' timed out' : '') + '.'));
+      const expected = node('p', '', 'Sequence: ' + format(sequence));
+      const entered = node('p', '', 'Your response: ' + format(response));
+      expected.style.overflowWrap = entered.style.overflowWrap = 'anywhere';
+      feedback.append(expected, entered);
+      ctx.stage.append(feedback);
+      ctx.setProgress(set, sets);
+      ctx.setStatus('Set ' + set + ' complete');
+      ctx.setHint(set === sets ? 'Your session is complete. See results when ready.' : 'Take a moment before continuing. The next set uses a fresh sequence.');
+      ctx.button(set === sets ? 'See results' : 'Next set', () => {
+        if (!alive || phase !== 'feedback') return;
+        if (set < sets) nextSet();
+        else finish();
+      }, { primary: true });
+    }
+    function finish() {
+      alive = false;
+      phase = 'closed';
+      token++;
+      const accuracy = recallCorrect / total * 100;
+      const rtMs = median(processingTimes);
+      ctx.finish({
+        accuracy, correct: recallCorrect, total, metric: 'Recall accuracy', value: Math.round(accuracy) + '%',
+        details: [
+          { label: 'Span practiced', value: length + ' ' + itemName + ' per set · 5 sets · ordered recall' },
+          { label: 'Recall in the correct position', value: recallCorrect + ' / ' + total + ' · ' + Math.round(accuracy) + '%' },
+          { label: 'Processing accuracy', value: processingCorrect + ' / ' + total + ' · ' + Math.round(processingCorrect / total * 100) + '% · ' + timeouts + ' timeouts' },
+          { label: 'Complete sets recalled', value: completeSets + ' / ' + sets },
+          { label: 'Correct processing time', value: rtMs === null ? 'No correct judgments to time' : Math.round(rtMs) + ' ms median · ' + processingTimes.length + ' correct judgments' },
+          { label: 'Progression', value: 'At least 80% recall and 80% processing accuracy are needed for a qualifying session.' }
+        ],
+        summary: 'Your ' + name.toLowerCase() + ' score measures ordered recall while doing another task. This practice score is not a diagnostic assessment or evidence of broader cognitive gains.',
+        metrics: {
+          rtMs, rtCount: processingTimes.length,
+          processing: { correct: processingCorrect, total, timeouts },
+          recall: { correct: recallCorrect, total, complete: completeSets, totalSequences: sets }
+        }
+      });
+    }
+  }
+  TASKS.operation = ctx => complexSpan(ctx, false);
+  TASKS.symmetry = ctx => complexSpan(ctx, true);
+})();
+
+// Progress uses recorded settings and counts; a missing measurement stays missing.
+const PROGRESS_LEGACY = 'earlier';
+function progressProfileKey(entry) {
+ const p=entry.profile;
+ return p&&typeof p.protocol==='string'&&typeof p.input==='string'&&typeof p.device==='string'
+  ?JSON.stringify([p.protocol,p.input,p.device]):PROGRESS_LEGACY;
+}
+function progressProfileLabel(entry) {
+ if(progressProfileKey(entry)===PROGRESS_LEGACY)return 'Earlier settings (accuracy only)';
+ const p=entry.profile,version=/-v(\d+)$/.exec(p.protocol);
+ return `${version?'Format '+version[1]:p.protocol} · ${p.input==='none'?'no task response':p.input} · ${p.device} screen`;
+}
+function progressWeekStart(at=Date.now()) {
+ const d=new Date(at);d.setHours(0,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7);return d.getTime();
+}
+function progressDate(at,includeYear=false) {
+ return new Date(at).toLocaleDateString(undefined,{month:'short',day:'numeric',...(includeYear?{year:'numeric'}:{})});
+}
+function progressNumber(value,digits=1) {
+ return Number.isFinite(value)?Number(value.toFixed(digits)).toLocaleString(): 'Not recorded';
+}
+function progressMean(values) {return values.length?values.reduce((s,n)=>s+n,0)/values.length:null}
+function progressMedian(values) {
+ if(!values.length)return null;
+ const sorted=values.slice().sort((a,b)=>a-b),mid=Math.floor(sorted.length/2);
+ return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+function progressCount(value) {return Number.isInteger(value)&&value>=0?value:null}
+function progressMetrics(entry) {return progressProfileKey(entry)!==PROGRESS_LEGACY?entry.metrics||{}:{}}
+function progressChannel(entry,key) {
+ const c=progressMetrics(entry).channels?.[key];
+ return c&&['hit','miss','falseAlarm','correctRejection'].every(k=>progressCount(c[k])!==null)?c:null;
+}
+function progressProcessing(entry) {
+ const p=progressMetrics(entry).processing;
+ return p&&progressCount(p.correct)!==null&&progressCount(p.total)!==null&&p.total>0?p:null;
+}
+function progressRt(entry) {
+ const m=progressMetrics(entry);
+ return Number.isFinite(m.rtMs)&&m.rtMs>=0&&progressCount(m.rtCount)>0?m.rtMs:null;
+}
+function progressBuckets(entries,weekly=false) {
+ if(!weekly)return entries.map(h=>({at:h.at,entries:[h],label:progressDate(h.at,true)}));
+ const groups=new Map();
+ for(const h of entries){const at=progressWeekStart(h.at);if(!groups.has(at))groups.set(at,[]);groups.get(at).push(h)}
+ return [...groups].sort((a,b)=>a[0]-b[0]).map(([at,items])=>({at,entries:items,label:'Week of '+progressDate(at,true)}));
+}
+function progressSelectedEntries(entries,{id,level,mode='voice',profile,from=null,to=null}) {
+ return entries.filter(h=>h.id===id&&h.level===level&&(id!=='nback'||(h.variant||'voice')===mode)&&progressProfileKey(h)===profile&&(from===null||h.at>=from)&&(to===null||h.at<=to)).sort((a,b)=>a.at-b.at);
+}
+function progressWeeks(entries,at=Date.now(),amount=8) {
+ const current=progressWeekStart(at),weeks=[];
+ for(let i=amount-1;i>=0;i--){const start=new Date(current);start.setDate(start.getDate()-7*i);const end=new Date(start);end.setDate(end.getDate()+7);weeks.push({at:start.getTime(),end:end.getTime(),entries:entries.filter(h=>h.at>=start.getTime()&&h.at<end.getTime()&&h.at<=at),current:i===0})}
+ return weeks;
+}
+function progressChannelRate(bucket,key,kind) {
+ const counts=bucket.entries.map(h=>progressChannel(h,key)).filter(Boolean);
+ if(!counts.length)return null;
+ const numerator=counts.reduce((n,c)=>n+(kind==='hit'?c.hit:c.falseAlarm),0);
+ const denominator=counts.reduce((n,c)=>n+(kind==='hit'?c.hit+c.miss:c.falseAlarm+c.correctRejection),0);
+ return denominator?{value:100*numerator/denominator,detail:`${numerator} / ${denominator} ${kind==='hit'?'targets':'non-targets'}`}:{value:null,detail:`0 ${kind==='hit'?'targets':'non-targets'}`};
+}
+function progressRtLabel(id) {
+ return id==='nback'?'Median match response time':id==='vigilance'?'Median correct-target response time':id==='operation'||id==='symmetry'?'Median processing response time':'Median response time';
+}
+function progressRtNote(id) {
+ return id==='nback'?'Correct position and sound matches only; correct rejections have no response time.':id==='vigilance'?'Correct circle responses only; non-targets have no response time.':id==='operation'||id==='symmetry'?'Correct processing judgments only. This measures the interleaved arithmetic or symmetry decision, not memory recall.':'Correct answers only. Incorrect answers and timeouts do not contribute.';
+}
+function progressChart(buckets,series,{label,unit='%',max=100,className='progress-svg',chartId='',empty='Not recorded for these sessions.'}={}) {
+ const available=series.map(s=>({...s,values:buckets.map(b=>{const v=s.get(b);return typeof v==='number'?{value:v}:v||{value:null}})}));
+ if(!available.some(s=>s.values.some(v=>Number.isFinite(v.value))))return `<div${chartId?` id="${chartId}"`:''}><p class="small muted progress-no-measure">${escapeHtml(empty)}</p></div>`;
+ const first=buckets[0].at,last=buckets.at(-1).at,x=at=>first===last?198:50+(at-first)*295/(last-first),y=value=>151-126*value/max;
+ const tickValues=[0,max/2,max],axis=tickValues.map(v=>`<line x1="50" y1="${y(v)}" x2="345" y2="${y(v)}" stroke="#dfe3d6"/><text x="1" y="${y(v)+4}" font-size="12" fill="#66736c">${progressNumber(v,0)}${unit}</text>`).join('');
+ const lines=available.map(s=>{
+  const segments=[];let current=[];
+  s.values.forEach((v,i)=>{if(Number.isFinite(v.value))current.push(`${x(buckets[i].at)},${y(v.value)}`);else if(current.length){segments.push(current);current=[]}});
+  if(current.length)segments.push(current);
+  return segments.map(points=>`<polyline points="${points.join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.3"${s.dashed?' stroke-dasharray="5 4"':''}/>`).join('')+s.values.map((v,i)=>Number.isFinite(v.value)?`<circle cx="${x(buckets[i].at)}" cy="${y(v.value)}" r="3.5" fill="${s.color}"><title>${escapeHtml(buckets[i].label+': '+s.name+' '+progressNumber(v.value)+(unit==='ms'?' ms':'%')+(v.detail?' · '+v.detail:''))}</title></circle>`:'').join('');
+ }).join('');
+ const summaries=available.map(s=>{const values=s.values.filter(v=>Number.isFinite(v.value));return values.length?`${s.name}: latest ${progressNumber(values.at(-1).value)}${unit==='ms'?' ms':'%'}, ${values.length} recorded point${values.length===1?'':'s'}.`:`${s.name}: not recorded.`}).join(' ');
+ const table=`<details class="progress-chart-data"><summary>Show chart values</summary><div class="progress-table-scroll" tabindex="0" role="region" aria-label="${escapeHtml(label)} values"><table class="progress-values"><thead><tr><th scope="col">Date</th><th scope="col">Sessions</th>${available.map(s=>`<th scope="col">${escapeHtml(s.name)}</th>`).join('')}</tr></thead><tbody>${buckets.map((b,i)=>`<tr><th scope="row">${escapeHtml(b.label)}</th><td>${b.entries.length}</td>${available.map(s=>{const v=s.values[i];return `<td>${Number.isFinite(v.value)?progressNumber(v.value)+(unit==='ms'?' ms':'%'):'Not recorded'}${v.detail?`<small>${escapeHtml(v.detail)}</small>`:''}</td>`}).join('')}</tr>`).join('')}</tbody></table></div></details>`;
+ return `<div${chartId?` id="${chartId}"`:''}><div class="progress-legend">${available.map(s=>`<span><i style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div><svg class="${className}" viewBox="0 0 360 192" role="img" aria-label="${escapeHtml(label+'. '+summaries)}"><title>${escapeHtml(label)}</title>${axis}${lines}<text x="50" y="181" font-size="14" fill="#66736c">${escapeHtml(progressDate(first,true))}</text>${first!==last?`<text x="345" y="181" text-anchor="end" font-size="14" fill="#66736c">${escapeHtml(progressDate(last,true))}</text>`:''}</svg><p class="small muted progress-chart-summary">${escapeHtml(summaries)}</p>${table}</div>`;
+}
+function progressSessionDetails(h) {
+ const metrics=progressMetrics(h),rt=progressRt(h),profile=progressProfileKey(h)===PROGRESS_LEGACY?'Earlier settings (accuracy only)':progressProfileLabel(h),channels=['position','sound','signal'].map(key=>{
+  const c=progressChannel(h,key);if(!c)return '';
+  const targets=c.hit+c.miss,others=c.falseAlarm+c.correctRejection,name=key==='position'?'Position':key==='sound'?'Sound':'Signal';
+  return `<p class="small"><strong>${name}</strong><br>Hits ${c.hit} / ${targets} targets${targets?' ('+progressNumber(100*c.hit/targets)+'%)':''}; misses ${c.miss}.<br>False alarms ${c.falseAlarm} / ${others} non-targets${others?' ('+progressNumber(100*c.falseAlarm/others)+'%)':''}; correct rejections ${c.correctRejection}.</p>`;
+ }).join('');
+ const processing=progressProcessing(h),recall=metrics.recall;
+ return `<div class="progress-session-details"><dl class="progress-detail-grid"><div><dt>Accuracy</dt><dd>${progressNumber(h.accuracy)}%${Number.isFinite(h.correct)&&Number.isFinite(h.total)&&h.total>0?` · ${h.correct} / ${h.total}`:''}</dd></div><div><dt>Session duration</dt><dd>${progressNumber(h.seconds)} seconds</dd></div><div><dt>${escapeHtml(progressRtLabel(h.id))}</dt><dd>${rt===null?'Not recorded':progressNumber(rt,0)+' ms · '+metrics.rtCount+' correct responses'}</dd></div><div><dt>Input / screen settings</dt><dd>${escapeHtml(profile)}</dd></div></dl>${rt!==null?`<p class="small muted">${escapeHtml(progressRtNote(h.id))}</p>`:''}${processing?`<p class="small"><strong>Processing accuracy:</strong> ${processing.correct} / ${processing.total} (${progressNumber(100*processing.correct/processing.total)}%). ${progressCount(processing.timeouts)!==null?processing.timeouts+' timeouts.':''}</p>`:''}${recall&&progressCount(recall.correct)!==null&&progressCount(recall.total)!==null?`<p class="small"><strong>Ordered recall:</strong> ${recall.correct} / ${recall.total} positions correct.${progressCount(recall.complete)!==null&&progressCount(recall.totalSequences)!==null?` ${recall.complete} / ${recall.totalSequences} sequences fully correct.`:''}</p>`:''}${channels||(['nback','vigilance'].includes(h.id)?'<p class="small muted">Hit and false-alarm counts: Not recorded.</p>':'')}${h.profile?.protocol?'<p class="small muted">Input and screen size describe this session; they do not identify a device.</p>':''}</div>`;
+}
+function progressStyles() {
+ if(document.getElementById('progress-style'))return;
+ const style=document.createElement('style');style.id='progress-style';style.textContent=`
+ .progress-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}.progress-control{display:flex;flex-direction:column;gap:5px;min-width:0}.progress-control select{width:100%;min-width:0;font-size:13px}.progress-control-wide{grid-column:span 3}.progress-week-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin:20px 0 14px}.progress-week{min-width:0;padding:9px 4px;border-radius:12px;font-size:10px;background:var(--paper);text-align:center;font-weight:500}.progress-week[aria-pressed=true]{border-color:var(--green);background:#e6edda;box-shadow:inset 0 0 0 1px var(--green)}.progress-week-track{height:72px;display:flex;align-items:end;justify-content:center;margin:5px 0 8px}.progress-week-fill{background:#80a176;border-radius:5px 5px 0 0;width:24px;max-width:70%}.progress-week strong{font-size:15px;display:block;line-height:1.3}.progress-week small{display:block;font-size:10px;min-height:17px}.progress-week-summary{padding:17px;background:var(--paper);border-radius:12px}.progress-week-summary h3{font-size:14px;margin-bottom:12px}.progress-activity-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.progress-activity-stats strong{display:block;font:29px/1.2 var(--serif)}.progress-activity-stats span{display:block;font-size:11px;color:var(--muted)}.progress-trend-summary{background:#edf1e4;border-radius:12px;padding:16px;margin:18px 0;font-size:13px}.progress-trend-summary p{margin:0}.progress-trend-summary p+p{margin-top:6px}.progress-chart-block{padding-top:22px;margin-top:22px;border-top:1px solid var(--line)}.progress-chart-block h3{font-size:16px;margin-bottom:7px}.progress-svg{width:100%;height:auto;display:block;margin:12px 0 5px}.progress-svg.chart{height:auto;margin:12px 0 5px}.progress-legend{display:flex;flex-wrap:wrap;gap:7px 20px;font-size:11px;margin-top:12px}.progress-legend span{display:flex;gap:6px;align-items:center}.progress-legend i{display:inline-block;width:9px;height:9px;border-radius:50%}.progress-chart-summary{margin-bottom:8px}.progress-chart-data summary,.progress-channel-details>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:12px;text-decoration:underline;text-underline-offset:3px}.progress-chart-data summary::before,.progress-channel-details>summary::before{content:'＋';margin-right:8px;text-decoration:none}.progress-chart-data[open] summary::before,.progress-channel-details[open]>summary::before{content:'−'}.progress-values{width:100%;border-collapse:collapse;font-size:11px;min-width:340px}.progress-values td,.progress-values th{text-align:left;padding:9px 7px;border-bottom:1px solid var(--line);vertical-align:top}.progress-values th{font-weight:500}.progress-values small{display:block;color:var(--muted)}.progress-table-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain}.progress-history-list>details{border-bottom:1px solid var(--line)}.progress-history-list>details:last-child{border:0}.progress-history-list .history-row{cursor:pointer;border:0;align-items:center;min-height:68px;list-style:none}.progress-history-list .history-row::-webkit-details-marker{display:none}.progress-history-list .history-row::after{content:'＋';font-size:18px;color:var(--muted)}.progress-history-list details[open] .history-row::after{content:'−'}.progress-history-list .history-row>div{flex:1;min-width:0}.progress-history-list .history-row strong{white-space:nowrap}.progress-session-details{padding:0 0 16px;overflow-wrap:anywhere}.progress-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:2px 0 16px}.progress-detail-grid dt{font-size:10px;color:var(--muted)}.progress-detail-grid dd{margin:0;font-size:12px}.progress-session-details p{margin-bottom:12px}.progress-panel-note{margin-bottom:0}.progress-no-measure{padding:18px 0;margin:0}.progress-skills{min-width:440px}.progress-channel-details{margin-top:12px}.progress-channel-details>summary{font-weight:600}.progress-channel-details .progress-chart-block:first-of-type{margin-top:0}.progress-view .progress-grid>*{min-width:0}.progress-view .panel{min-width:0}.progress-history-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.progress-history-title span{font-size:11px;color:var(--muted)}
+ @media(max-width:600px){.progress-week-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-week-track{height:50px}.progress-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.progress-control-wide{grid-column:span 2}.progress-controls .progress-control:first-child{grid-column:span 2}.progress-week-summary{padding:14px}.progress-detail-grid{grid-template-columns:1fr}.progress-view .panel{padding:18px}.progress-activity-stats strong{font-size:26px}.progress-activity-stats span{font-size:10px}.progress-history-list .history-row{gap:10px}.progress-view .panel h2{font-size:25px}.progress-chart-data summary,.progress-channel-details>summary{font-size:12px}.progress-week strong{font-size:14px}.progress-trend-summary{padding:14px}.progress-controls select{font-size:12px;padding:10px}.progress-week-grid{gap:7px}}
+ `;document.head.appendChild(style);
+}
+function renderProgress() {
+ progressStyles();
+ const history=state.history.slice().sort((a,b)=>a.at-b.at),now=Date.now(),thisWeek=progressWeekStart(now),weeks=progressWeeks(history,now);
+ const peak=Math.max(1,...weeks.map(w=>w.entries.length));
+ const recent=history.slice(-12).reverse();
+ main.innerHTML=`<div class="progress-view"><section class="page-title"><p class="eyebrow">A record, not a ranking</p><h1>Your practice, over time.</h1><p class="muted">Follow your rhythm and each skill’s progress. Compare accuracy and speed at the same settings.</p></section>${renderStats()}<section class="panel"><h2>A rhythm you can see</h2><p class="small muted">Last eight calendar weeks · Monday starts. These are activity counts across exercises, with no combined “brain score.” Select a week for its details.</p><div class="progress-week-grid" aria-label="Weekly practice activity">${weeks.map((w,i)=>`<button class="progress-week" data-progress-week="${i}" aria-pressed="${i===7}" aria-label="Week of ${escapeHtml(progressDate(w.at,true))}, ${w.entries.length} sessions${w.current?', current week so far':''}"><strong>${w.entries.length}</strong><span class="progress-week-track" aria-hidden="true"><span class="progress-week-fill" style="height:${w.entries.length?Math.max(5,Math.round(w.entries.length/peak*100)):0}%"></span></span><span>${escapeHtml(progressDate(w.at))}</span><small>${w.current?'so far':'week of'}</small></button>`).join('')}</div><div id="progress-week-summary" class="progress-week-summary" aria-live="polite"></div></section><div class="progress-grid"><section class="panel"><h2>One skill, clear trends</h2><p class="small muted">Choose one exercise, difficulty, sound mode, and input / screen profile. Accuracy and response time stay separate.</p><div class="progress-controls"><div class="progress-control"><label for="chart-task">Exercise</label><select id="chart-task">${META.map(m=>`<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}</select></div><div class="progress-control"><label for="chart-level">Difficulty</label><select id="chart-level"></select></div><div class="progress-control" id="chart-mode-wrap"><label for="chart-mode">Sound</label><select id="chart-mode"><option value="tone">Tones</option><option value="voice">Letters</option></select></div><div class="progress-control progress-control-wide"><label for="chart-profile">Input / screen settings</label><select id="chart-profile"></select></div><div class="progress-control"><label for="chart-period">Time period</label><select id="chart-period"><option value="all">All recorded</option><option value="4">Last 4 weeks</option><option value="8">Last 8 weeks</option></select></div><div class="progress-control"><label for="chart-view">Trend view</label><select id="chart-view"><option value="session">Sessions</option><option value="week">Weekly</option></select></div></div><div id="chart-body" aria-live="polite"></div><p class="small muted progress-panel-note">Changing difficulty can lower accuracy as the challenge increases. Browser and hardware can affect timings even with the same input and screen settings.</p></section><section class="panel"><div class="progress-history-title"><h2>Recent sessions</h2><span>Latest ${recent.length}</span></div><p class="small muted">Select a session to see recorded counts, response times, and settings.</p><div class="progress-history-list">${recent.map(h=>`<details><summary class="history-row"><div>${escapeHtml(META.find(m=>m.id===h.id)?.name||h.id)}<small>${escapeHtml(progressDate(h.at,true))} · ${h.id==='nback'?h.level+'-back · '+(h.variant==='tone'?'tones':'letters'):h.id==='retrieval'?(h.practice?'extra practice':'spaced review'):'level '+h.level}</small></div><strong>${progressNumber(h.accuracy,0)}%</strong></summary>${progressSessionDetails(h)}</details>`).join('')||'<p class="muted small">Your first completed session will appear here.</p>'}</div></section></div><section class="panel"><h2>Each skill has its own path</h2><div class="progress-table-scroll" tabindex="0" role="region" aria-label="Progress by exercise"><table class="progress-table progress-skills"><thead><tr><th scope="col">Exercise</th><th scope="col">Next level</th><th scope="col">Sessions</th><th scope="col">Best at next level</th></tr></thead><tbody>${META.map(m=>{const level=taskState(m.id).level,all=history.filter(x=>x.id===m.id),atLevel=all.filter(x=>x.level===level),latest=atLevel.at(-1),variant=latest?.variant||'voice',profile=latest?progressProfileKey(latest):null,same=atLevel.filter(x=>progressProfileKey(x)===profile&&(m.id!=='nback'||(x.variant||'voice')===variant));return `<tr><td>${escapeHtml(m.name)}</td><td>${m.id==='retrieval'?'Scheduled':m.id==='nback'?level+'-back · '+(variant==='tone'?'tones':'letters'):level}</td><td>${all.length}</td><td>${same.length?progressNumber(Math.max(...same.map(x=>x.accuracy)),0)+'%':'—'}</td></tr>`}).join('')}</tbody></table></div><p class="small muted progress-panel-note" style="margin-top:14px">Best scores use the next level’s most recent recorded sound and input / screen settings. Levels are specific to each exercise; they are not comparable across skills.</p></section><section class="panel"><h2>Keep your record</h2><p class="small muted">Saved only in this browser. Clearing site data removes your record. Export a backup to move it between devices. Up to 500 recent sessions are kept on this device; export a backup to archive your record.</p>${!storageOkay?'<p class="notice">Browser storage is unavailable. Export before leaving to keep your record.</p>':''}<div class="tool-actions"><button id="export-data">Export progress</button><button id="import-data">Import progress</button><button id="reset-data" class="quiet danger">Reset progress</button><input id="import-file" type="file" accept="application/json,.json" hidden></div><div id="reset-confirm" class="notice reset-confirm" hidden>Reset all scores and card schedules on this device? Export a backup first if you want to keep them.<div class="tool-actions" style="margin-top:10px"><button id="cancel-reset">Keep progress</button><button id="confirm-reset" class="danger">Reset everything</button></div></div></section></div>`;
+ function drawWeek(index) {
+  const week=weeks[index],minutes=week.entries.reduce((sum,h)=>sum+h.seconds,0)/60,days=new Set(week.entries.map(h=>dayKey(h.at))).size,end=week.current?now:week.end-1;
+  $('#progress-week-summary').innerHTML=`<h3>${escapeHtml(progressDate(week.at)+' – '+progressDate(end,true))}${week.current?' · this week so far':''}</h3><div class="progress-activity-stats"><div><strong>${week.entries.length}</strong><span>sessions</span></div><div><strong>${progressNumber(minutes)}</strong><span>minutes practiced</span></div><div><strong>${days}</strong><span>practice days</span></div></div>`;
+  document.querySelectorAll('[data-progress-week]').forEach(b=>b.setAttribute('aria-pressed',Number(b.dataset.progressWeek)===index?'true':'false'));
+ }
+ document.querySelectorAll('[data-progress-week]').forEach(b=>b.onclick=()=>drawWeek(Number(b.dataset.progressWeek)));drawWeek(7);
+ function baseEntries() {const id=$('#chart-task').value;return history.filter(h=>h.id===id&&(id!=='nback'||(h.variant||'voice')===$('#chart-mode').value))}
+ function chartLevels(resetMode=false) {
+  const id=$('#chart-task').value;$('#chart-mode-wrap').hidden=id!=='nback';
+  if(resetMode&&id==='nback')$('#chart-mode').value=history.filter(h=>h.id===id).at(-1)?.variant==='tone'?'tone':'voice';
+  const levels=[...new Set(baseEntries().map(h=>h.level))].sort((a,b)=>a-b),current=taskState(id).level;
+  if(!levels.length)levels.push(current);
+  $('#chart-level').innerHTML=levels.map(level=>`<option value="${level}">${id==='nback'?level+'-back':'Level '+level}</option>`).join('');
+  $('#chart-level').value=String(levels.includes(current)?current:levels.at(-1));chartProfiles();
+ }
+ function chartProfiles() {
+  const entries=baseEntries().filter(h=>h.level===Number($('#chart-level').value)),profiles=new Map();
+  for(const h of entries)profiles.set(progressProfileKey(h),h);
+  const select=$('#chart-profile'),previous=select.value;
+  select.innerHTML=profiles.size?[...profiles].map(([key,h])=>`<option value="${escapeHtml(key)}">${escapeHtml(progressProfileLabel(h))}</option>`).join(''):'<option value="">No recorded settings yet</option>';
+  select.value=profiles.has(previous)?previous:entries.length?progressProfileKey(entries.at(-1)):'';drawChart();
+ }
+ function drawChart() {
+  const id=$('#chart-task').value,level=Number($('#chart-level').value),profile=$('#chart-profile').value,weeksBack=Number($('#chart-period').value),weekly=$('#chart-view').value==='week';
+  const start=new Date(thisWeek);if(weeksBack)start.setDate(start.getDate()-7*(weeksBack-1));
+  const selection={id,level,mode:$('#chart-mode').value,profile},same=progressSelectedEntries(history,selection),data=weeksBack?progressSelectedEntries(history,{...selection,from:start.getTime(),to:now}):same;
+  if(!data.length){$('#chart-body').innerHTML=`<div class="chart-empty"><p>${same.length?'No sessions in this time period.':'No sessions at these settings yet.'}<br><small>${same.length?'Try all recorded sessions.':'Start with one small practice.'}</small></p></div>`;return}
+  const buckets=progressBuckets(data,weekly),last5=data.slice(-5),previous5=data.slice(-10,-5),latestMean=progressMean(last5.map(h=>h.accuracy)),difference=last5.length===5&&previous5.length===5?latestMean-progressMean(previous5.map(h=>h.accuracy)):null;
+  const mainLabel=id==='operation'||id==='symmetry'?'Ordered recall accuracy':'Accuracy';
+  const accuracy=progressChart(buckets,[{name:mainLabel,color:'#426747',get:b=>({value:progressMean(b.entries.map(h=>h.accuracy)),detail:b.entries.length===1&&b.entries[0].total>0?`${b.entries[0].correct} / ${b.entries[0].total}`:`${b.entries.length} session${b.entries.length===1?'':'s'}`})}],{label:weekly?'Weekly mean '+mainLabel.toLowerCase():mainLabel,className:'progress-svg chart',chartId:'progress-accuracy-chart'});
+  const rtValues=data.map(progressRt).filter(v=>v!==null),rtMax=rtValues.length?Math.max(100,Math.ceil(Math.max(...rtValues)/100)*100):100;
+  const rt=progressChart(buckets,[{name:weekly?'Median of session medians':progressRtLabel(id),color:'#b85b36',get:b=>{const measured=b.entries.filter(h=>progressRt(h)!==null);return {value:progressMedian(measured.map(progressRt)),detail:measured.length?`${measured.reduce((sum,h)=>sum+progressMetrics(h).rtCount,0)} correct response${measured.reduce((sum,h)=>sum+progressMetrics(h).rtCount,0)===1?'':'s'}${weekly?' across '+measured.length+' sessions':''}`:''}}}],{label:progressRtLabel(id),unit:'ms',max:rtMax,chartId:'progress-rt-chart',empty:profile===PROGRESS_LEGACY?'Response times were not recorded for earlier settings.':'Response time was not recorded for these sessions.'});
+  let companions='';
+  if(id==='operation'||id==='symmetry')companions+=`<div class="progress-chart-block"><h3>Processing accuracy</h3><p class="small muted">Keep the interleaved decisions in view alongside recall. Timeouts count as incorrect processing answers.</p>${progressChart(buckets,[{name:'Processing accuracy',color:'#546d91',get:b=>{const measured=b.entries.map(progressProcessing).filter(Boolean),correct=measured.reduce((sum,p)=>sum+p.correct,0),total=measured.reduce((sum,p)=>sum+p.total,0);return total?{value:100*correct/total,detail:`${correct} / ${total} decisions`}:null}}],{label:'Processing accuracy',chartId:'progress-processing-chart'})}</div>`;
+  const channelKeys=id==='nback'?['position','sound']:id==='vigilance'?['signal']:[];
+  if(channelKeys.length)companions+=`<details class="progress-channel-details"><summary>${id==='nback'?'Position & sound hit / false-alarm rates':'Signal hit / false-alarm rates'}</summary><p class="small muted">Hit rate = hits ÷ targets. False-alarm rate = false alarms ÷ non-targets. Zero-target points are not plotted. ${weekly?'Weekly rates use summed counts at these settings.':'Each point uses that session’s recorded counts.'}</p><div class="progress-chart-block"><h3>Hit rates <span class="small muted">· higher is better</span></h3>${progressChart(buckets,channelKeys.map((key,i)=>({name:key==='sound'?'Sound':key==='position'?'Position':'Signal',color:i?'#546d91':'#426747',get:b=>progressChannelRate(b,key,'hit')})),{label:'Hit rates',chartId:'progress-hit-chart',empty:profile===PROGRESS_LEGACY?'Channel counts were not recorded for earlier settings.':'Hit counts were not recorded for these sessions.'})}</div><div class="progress-chart-block"><h3>False-alarm rates <span class="small muted">· lower is better</span></h3>${progressChart(buckets,channelKeys.map((key,i)=>({name:key==='sound'?'Sound':key==='position'?'Position':'Signal',color:i?'#546d91':'#b85b36',get:b=>progressChannelRate(b,key,'falseAlarm')})),{label:'False-alarm rates',chartId:'progress-false-alarm-chart',empty:profile===PROGRESS_LEGACY?'Channel counts were not recorded for earlier settings.':'False-alarm counts were not recorded for these sessions.'})}</div></details>`;
+  $('#chart-body').innerHTML=`<p class="small muted">${data.length} session${data.length===1?'':'s'} at these settings${weeksBack?' · last '+weeksBack+' calendar weeks':''}${weekly?' · weeks start Monday':''}.</p><div id="progress-rolling-summary" class="progress-trend-summary"><p><strong>Latest ${last5.length}${last5.length<5?' of 5':''} sessions:</strong> ${progressNumber(latestMean)}% mean accuracy.</p><p>${difference===null?'A comparison appears after 10 sessions at these settings within the selected time period.':`${difference>0?'+':''}${progressNumber(difference)} percentage points compared with the previous 5 sessions (${progressNumber(progressMean(previous5.map(h=>h.accuracy)))}%).`}</p><p class="small muted">Descriptive practice trends, not a test of statistical significance or broader cognitive change.</p></div><div class="progress-chart-block" style="border:0;margin-top:0;padding-top:0"><h3>${mainLabel}${weekly?' · weekly session average':''}</h3>${accuracy}</div><div class="progress-chart-block"><h3>${escapeHtml(progressRtLabel(id))}</h3><p class="small muted">${escapeHtml(progressRtNote(id))}${weekly?' Weekly points show the median of recorded session medians, not pooled response times.':''} Read speed alongside accuracy; faster responses can come with more errors.</p>${rt}</div>${companions}`;
+ }
+ $('#chart-task').onchange=()=>chartLevels(true);$('#chart-mode').onchange=()=>chartLevels();$('#chart-level').onchange=chartProfiles;$('#chart-profile').onchange=drawChart;$('#chart-period').onchange=drawChart;$('#chart-view').onchange=drawChart;chartLevels(true);
+ $('#export-data').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`clear-progress-${dayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+ $('#import-data').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(file.size>1000000){notify('That file is too large to be a Clear progress backup.');return}try{const imported=sanitize(JSON.parse(await file.text()));$('#progress-import-confirm')?.remove();const box=document.createElement('div');box.id='progress-import-confirm';box.className='notice';box.innerHTML=`This backup has ${imported.history.length} sessions. Importing replaces this device’s current record.<div class="tool-actions" style="margin-top:10px"><button id="accept-import">Replace with backup</button><button id="cancel-import">Cancel</button></div>`;$('#import-data').closest('.panel').appendChild(box);$('#accept-import').onclick=()=>{state=imported;save();renderProgress();notify('Progress imported.')};$('#cancel-import').onclick=()=>box.remove()}catch{notify('Please choose a valid Clear progress JSON backup.')}finally{e.target.value=''}};
+ $('#reset-data').onclick=()=>$('#reset-confirm').hidden=false;$('#cancel-reset').onclick=()=>$('#reset-confirm').hidden=true;$('#confirm-reset').onclick=()=>{state=freshState();save();renderProgress();notify('Progress reset.')};
+}
 
 navigate('practice');
 </script>
