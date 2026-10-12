@@ -6,7 +6,7 @@
 
 ## Graph Theory
 
-[**Explore The shape of connection**](https://calebhaines.github.io/sidequest-prototypes/graph-theory/), an independent visual companion to Chapter 1 of Reinhard Diestel’s *Graph Theory*, sixth edition (2025). All ten sections include interactive graph labs, 113 illustrated concept entries, all 27 numbered results with original proof ideas, quizzes, searchable definitions, and locally saved exploration progress. The page works offline and on mobile; its text and diagrams are original.
+[**Explore The shape of connection**](https://calebhaines.github.io/sidequest-prototypes/graph-theory/), an independent visual companion to Chapter 1 of Reinhard Diestel’s *Graph Theory*, sixth edition (2025). All ten sections include interactive graph labs, 113 illustrated concept entries, all 27 numbered results with original proof ideas, and 190 original practice questions: 90 quick checks, 40 interactive graph tasks, and 60 proof questions. Filter by type and difficulty, reveal graduated hints, and compare arguments with complete model proofs and self-assessment checklists. Search concepts and questions; answers, graph attempts, proof drafts, and exploration progress are saved in the browser. Revealed solutions count as reviewed rather than solved. The page works offline and on mobile; its text and diagrams are original.
 
 The self-contained HTML is tracked in [`public/graph-theory/index.html`](public/graph-theory/index.html), with an identical published copy in [`docs/graph-theory/index.html`](docs/graph-theory/index.html). Keep both copies synchronized when updating the page. The site’s normal Vite build preserves the public copy. Font licenses and links to the official chapter are included inside the HTML.
 
