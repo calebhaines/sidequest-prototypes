@@ -3,13 +3,19 @@ import type { ActorKind, Vec } from './types';
 /** Temporary, original marker drawings. Coordinates are continuous; actors are anchored at their feet.
  * Replacement sheets remain optional so finished artwork can be supplied without changing the world. */
 export type SpriteSheetOptions = { frameWidth: number; frameHeight: number; columns?: number; rows?: number; feetX?: number; feetY?: number };
-export type ActorDrawingState = { asleep?: boolean; mindChanged?: boolean; brainAbsent?: boolean };
+export type ActorDrawingState = {
+  asleep?: boolean; mindChanged?: boolean; brainAbsent?: boolean;
+  reducedMotion?: boolean; pace?: number; action?: number; hurt?: number;
+  phaseOffset?: number; billboard?: boolean;
+};
 const replacementSheets = new Map<ActorKind, { image: HTMLImageElement; options: SpriteSheetOptions }>();
 const iconCache = new Map<string, string>();
 const itemCanvasCache = new Map<string, HTMLCanvasElement>();
 const portraitCache = new Map<string, string>();
 type PaintedPart = { canvas: HTMLCanvasElement; x: number; y: number; width: number; height: number };
 const partCache = new Map<string, PaintedPart>();
+const PART_CACHE_BYTES = 20 * 1024 * 1024;
+let paintedBytes = 0;
 const INK = '#302b2c';
 const PAPER = '#c5baa5';
 const RUST = '#996451';
@@ -112,13 +118,23 @@ function patch(ctx: CanvasRenderingContext2D, x: number, y: number, color: strin
 
 function paintedPart(ctx: CanvasRenderingContext2D, key: string, bounds: [number, number, number, number], paint: (ctx: CanvasRenderingContext2D) => void): void {
   let part = partCache.get(key);
+  if (part) {
+    // Frequently drawn inhabitants retain their layers as new districts introduce more clothing and faces.
+    partCache.delete(key); partCache.set(key, part);
+  }
   if (!part) {
     const [x, y, width, height] = bounds;
     const canvas = document.createElement('canvas'); canvas.width = width * 3; canvas.height = height * 3;
     const brush = canvas.getContext('2d')!; brush.scale(3, 3); brush.translate(-x, -y); paint(brush);
     part = { canvas, x, y, width, height };
-    // This limit also bounds memory if external world content supplies many clothing colours.
-    if (partCache.size > 320) partCache.delete(partCache.keys().next().value!);
+    const bytes = canvas.width * canvas.height * 4;
+    // A pixel budget keeps many small wrists and ears without treating them like large head paintings.
+    while (partCache.size && paintedBytes + bytes > PART_CACHE_BYTES) {
+      const oldest = partCache.keys().next().value!;
+      const removed = partCache.get(oldest)!;
+      paintedBytes -= removed.canvas.width * removed.canvas.height * 4; partCache.delete(oldest);
+    }
+    paintedBytes += bytes;
     partCache.set(key, part);
   }
   ctx.drawImage(part.canvas, part.x, part.y, part.width, part.height);
@@ -127,9 +143,10 @@ function articulatedPart(ctx: CanvasRenderingContext2D, key: string, bounds: [nu
   ctx.save(); ctx.translate(x, y + lift); ctx.rotate(angle); ctx.translate(-x, -y); paintedPart(ctx, key, bounds, paint); ctx.restore();
 }
 
-function wingsAndTails(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, sway: number, time: number): void {
+function wingsAndTails(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, sway: number, time: number, wingSide = 0): void {
   if (kind === 'moth') {
     for (const side of [-1, 1]) {
+      if (wingSide && side !== wingSide) continue;
       ctx.save(); ctx.scale(side, 1); ctx.translate(2.5, -29); ctx.rotate(.035 + Math.sin(time * 2.3) * .035);
       wash(ctx, side < 0 ? 'M0 0 C9 -12 20 -14 23 -7 L20 -4 L24 -3 L20 1 L22 2 L17 4 L20 7 L16 8 L17 13 L13 11 L12 18 C8 20 4 12 0 9 Z' : 'M0 0 C9 -12 20 -14 23 -7 C27 1 18 7 22 11 L18 10 L16 14 L14 13 L12 18 C8 20 4 12 0 9 Z', '#a79e90', true);
       wash(ctx, 'M3 3 C12 0 22 -6 20 -8 C13 -10 9 -6 3 3Z', '#bcb29c');
@@ -170,13 +187,6 @@ function leg(ctx: CanvasRenderingContext2D, side: number, gait: number, kind: Ac
   wash(ctx, side > 0 ? 'M-2.9 10 Q-.2 8.8 2.5 10 L5.2 12 Q5.8 14 2 14 L-3.1 13.5Z' : 'M-2.5 10 Q0 9.1 2.5 10 L2.8 13.4 L-4.6 14 Q-6 12 -2.5 10Z', '#49413b');
   pen(ctx, 'M-2 12.1 L2.2 12.4', '#8d8170', .65); ctx.restore();
 }
-function arm(ctx: CanvasRenderingContext2D, side: number, gait: number, p: Palette, wide: boolean): void {
-  ctx.save(); ctx.translate(side * (wide ? 11 : 8), -28); ctx.rotate(-side * .07 - gait * side * .2);
-  wash(ctx, 'M-2.3 -1 Q-4.9 2 -4.3 6 L-3.4 11 Q-.7 13 1.9 10 L2.1 5 Q3 1 .9 -.7 Z', p.shade, true);
-  pen(ctx, 'M-3.3 7 Q-.9 8 1.6 7.4', p.trim, .7);
-  wash(ctx, 'M-2.7 10 Q-6.1 10.8 -4.8 13.4 Q-5 17 -1.7 16.3 Q1 18 3.1 14.5 L2.6 10.9 Q-.4 9.7 -2.7 10Z', p.face, true);
-  pen(ctx, 'M-3.4 12 L-2.5 14.5 M-1.2 12 L-.4 15 M.7 11.9 L1.5 14.4', p.faceShade, .55); ctx.restore();
-}
 function torso(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, back: boolean): void {
   const wide = kind === 'ox' || kind === 'boar';
   const w = wide ? 12.7 : kind === 'lady' ? 10 : 9;
@@ -208,23 +218,23 @@ function torso(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, back:
   if (kind === 'lady') { pen(ctx, 'M-7 -22 Q-10 -10 -8.5 -1 M5 -23 Q9 -11 8 -2', '#b18b8d', 2.2); oval(ctx, -.3, -25.8, 1.4, 1.8, '#aaa082'); pen(ctx, 'M-7 -30 Q0 -24 6 -30', '#b8a389', 1); }
 }
 
-function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: boolean, back: boolean, blink: boolean, time: number, state: ActorDrawingState): void {
+function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: boolean, back: boolean, blink: boolean, time: number, state: ActorDrawingState, gaze = 0, kiss = false, detached = false): void {
   const lady = kind === 'lady';
   const wide = kind === 'ox' || kind === 'boar';
   const cy = kind === 'heron' ? -42 : lady ? -40 : kind === 'human' ? -38.4 : -37;
   const hw = lady ? 17 : wide ? 12.6 : kind === 'human' ? 10.1 : 9;
   ctx.save(); ctx.translate(side ? 1.2 : 0, cy); ctx.rotate(lady ? -.025 : .06);
-  if (kind === 'hare') {
+  if (kind === 'hare' && !detached) {
     wash(ctx, 'M-7 -6 Q-14 -26 -9 -29 Q-4 -27 -3 -7Z', p.face, true);
     wash(ctx, 'M3 -7 C3 -25 11 -27 12 -18 Q13 -12 7 -6Z', p.face, true);
     pen(ctx, 'M-8 -9 Q-11 -20 -9 -25 M6 -9 Q6 -18 10 -22', '#9d817b', 1.3); pen(ctx, 'M10 -18 Q8 -16 8 -12', INK, .6);
     stitch(ctx, 'M-10 -18 L-6 -17', '#786e60'); pen(ctx, 'M9 -19 L12 -18 L10 -17', '#6a6056', .75);
   }
-  if (kind === 'fox' || kind === 'boar') {
+  if ((kind === 'fox' || kind === 'boar') && !(detached && kind === 'fox')) {
     wash(ctx, 'M-8 -4 L-11 -17 Q-4 -16 -2 -6Z', p.face);
     wash(ctx, 'M3 -6 Q7 -16 12 -14 L9 -3Z', p.face); pen(ctx, 'M-8 -12 L-6 -7 M8 -11 L6 -6', '#9d7468', 1.3);
   }
-  if (kind === 'mouse' || kind === 'merchant' || kind === 'otter') {
+  if ((kind === 'mouse' || kind === 'merchant' || kind === 'otter') && !(detached && kind === 'mouse')) {
     oval(ctx, -8, -8, kind === 'otter' ? 3.2 : 5, kind === 'otter' ? 3.2 : 5.6, p.faceShade);
     oval(ctx, 8, -7.8, kind === 'otter' ? 3.2 : 5, kind === 'otter' ? 3.2 : 5.6, p.faceShade);
     if (kind !== 'otter') { oval(ctx, -8, -8, 3, 3.5, '#a48b84', false); oval(ctx, 8, -8, 3, 3.5, '#a48b84', false); }
@@ -235,9 +245,9 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
     pen(ctx, antler ? 'M-12 -20 L-11 -18 M12 -20 L13 -18' : 'M-16 -13 L-16 -10', '#d1c3a7', .6);
     wash(ctx, 'M-8 -3 Q-16 -5 -14 1 L-8 4Z', p.faceShade); wash(ctx, 'M8 -3 Q15 -4 14 2 L8 4Z', p.faceShade);
   }
-  if (kind === 'moth') { pen(ctx, 'M-4 -7 Q-10 -22 -15 -17 M4 -7 Q8 -21 14 -18', '#75695e', 1); pen(ctx, 'M-15 -17 l2 2 M14 -18 l-1 2', p.trim, 1.6); }
+  if (kind === 'moth' && !detached) { pen(ctx, 'M-4 -7 Q-10 -22 -15 -17 M4 -7 Q8 -21 14 -18', '#75695e', 1); pen(ctx, 'M-15 -17 l2 2 M14 -18 l-1 2', p.trim, 1.6); }
   if (kind === 'heron' || kind === 'peacock') { pen(ctx, 'M-1 -8 Q-4 -17 -6 -19 M2 -9 Q1 -20 5 -21 M5 -8 Q8 -15 9 -16', p.hair, 1.25); }
-  if (kind === 'salamander') {
+  if (kind === 'salamander' && !detached) {
     for (const s of [-1, 1]) for (let i = 0; i < 3; i++) pen(ctx, `M${s * 7} ${-6 + i * 3} Q${s * 12} ${-9 + i * 4} ${s * (15 - i)} ${-11 + i * 6}`, '#9b726b', 1.4);
   }
   if (lady) {
@@ -251,12 +261,13 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
     pen(ctx, 'M-11 5 Q-8 7 -5 5 M4 5 Q8 7 12 4', '#ac727e', 2.4);
     if (state.asleep || blink) pen(ctx, 'M-11 2.6 Q-7 4 -4.8 2.4 M3.7 2.5 Q8.2 4.2 12 1.6', INK, .9);
     else {
-      oval(ctx, -7.7, 2.3, 1.1, 1.2, state.mindChanged ? '#675e53' : '#272428', false);
-      oval(ctx, 7.5, 2.3, 1.1, 1.2, state.mindChanged ? '#675e53' : '#272428', false);
+      oval(ctx, -7.7 + gaze * .65, 2.3, 1.1, 1.2, state.mindChanged ? '#675e53' : '#272428', false);
+      oval(ctx, 7.5 + gaze * .65, 2.3, 1.1, 1.2, state.mindChanged ? '#675e53' : '#272428', false);
       pen(ctx, state.mindChanged ? 'M-12 -1 Q-8 -2 -4 -1 M4 -1 Q8 -2 12 -1' : 'M-12 -1 L-5 .2 M4 -.1 L12 -1.8', INK, 1);
     }
     wash(ctx, 'M0 2 Q-3.8 5 -2.2 7.5 Q.8 9 3 6.8 L1.8 2Z', '#b78683');
-    pen(ctx, 'M-5 10 Q.9 8 6 10.4 M-5 10.5 Q.4 12 5 10.5', '#865763', 1.15);
+    if (kiss) { wash(ctx, 'M-1.8 9 Q1 7 3 9.7 Q4 11.4 1.1 12 Q-2 12 -.9 10.5Z', '#936572'); pen(ctx, 'M.4 9.8 Q1.5 11 2.7 9.9', '#60444d', .75); }
+    else pen(ctx, 'M-5 10 Q.9 8 6 10.4 M-5 10.5 Q.4 12 5 10.5', '#865763', 1.15);
     pen(ctx, 'M-10 8 l1 2 l-.5 1 M8 8 l.5 3 M-7 -4 q2 -2 3 -.5 M4 -4 q4 -2 6 -.7', '#8c6c6d', .6);
     pen(ctx, 'M-14 9 L-11 12 M12 9 L10 12', '#94706c', .6);
     // Thick bruised rim and the literal interior of her head are readable even at world scale.
@@ -305,7 +316,7 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
     pen(ctx, `M${eye - 2.6} 3.9 L${eye - 1.6} 4.9 M${eye + .2} 4.7 L${eye + 1.9} 4.1`, '#78655e', .55);
     if (blink || state.asleep) pen(ctx, `M${eye - 1.8} .7 Q${eye} 2 ${eye + 1.8} .8`, INK, .8);
     else {
-      oval(ctx, eye + eyeShift * .15, .9, .78, 1.05, cruel ? '#3c252b' : '#322d2c', false);
+      oval(ctx, eye + eyeShift * .15 + gaze * .55, .9, .78, 1.05, cruel ? '#3c252b' : '#322d2c', false);
       pen(ctx, cruel ? `M${eye - 2} -.8 L${eye + 1.9} .2` : `M${eye - 2.1} -.7 Q${eye} -1.6 ${eye + 2.2} -.2`, INK, .8);
     }
   }
@@ -343,11 +354,114 @@ function prop(ctx: CanvasRenderingContext2D, kind: ActorKind, gait: number, p: P
   ctx.restore();
 }
 
-function bat(ctx: CanvasRenderingContext2D, time: number, back: boolean): void {
-  const lift = Math.sin(time * 10.6) * 6;
-  ctx.save(); ctx.translate(0, -21 + Math.sin(time * 4.2) * 1.5);
+function smooth(low: number, high: number, value: number): number {
+  const t = Math.min(1, Math.max(0, (value - low) / (high - low)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Separate sleeve and wrist layers make gestures bend at an elbow instead of rotating a cutout. */
+function sleeve(ctx: CanvasRenderingContext2D, p: Palette, lower: boolean): void {
+  if (!lower) {
+    wash(ctx, 'M-2.2 -.9 Q-4.6 1.2 -4.2 5.7 L-3.2 8 Q-.4 9 2 6.8 L2.1 3.8 Q2.8 .5 .8 -.8Z', p.shade, true);
+    pen(ctx, 'M-3 3.5 Q-1 4.3 1.6 3.2', p.coat, 1.1);
+  } else {
+    wash(ctx, 'M-3.2 -.8 L1.8 -.5 Q3 1.7 1.7 4.3 L-3.4 4.2 Q-4 1.5 -3.2 -.8Z', p.shade, true);
+    pen(ctx, 'M-3.1 3.2 Q-.5 4.2 1.8 3.2', p.trim, .8);
+    wash(ctx, 'M-2.9 3.8 Q-6.1 4.7 -4.8 7.4 Q-5 10.4 -1.7 9.7 Q.7 11.4 2.7 8.1 L2.1 4.5 Q-.4 3.5 -2.9 3.8Z', p.face, true);
+    pen(ctx, 'M-3.4 5.4 L-2.5 7.9 M-1.2 5.4 L-.4 8.4 M.7 5.3 L1.5 7.8', p.faceShade, .55);
+  }
+}
+function bentArm(ctx: CanvasRenderingContext2D, key: string, p: Palette, x: number, y: number, upper: number, lower: number): void {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(upper);
+  paintedPart(ctx, `${key}:upper-sleeve`, [-7, -3, 14, 14], brush => sleeve(brush, p, false));
+  ctx.translate(-.4, 7.3); ctx.rotate(lower);
+  paintedPart(ctx, `${key}:wrist`, [-7, -2, 14, 15], brush => sleeve(brush, p, true)); ctx.restore();
+}
+function armToPoint(x: number, y: number, goalX: number, goalY: number): { upper: number; lower: number } {
+  const dx = goalX - x, dy = goalY - y;
+  const distance = Math.min(16.5, Math.max(1.7, Math.hypot(dx, dy)));
+  const upperLength = 7.3, lowerLength = 9.4;
+  const lower = Math.acos(Math.min(1, Math.max(-1, (distance * distance - upperLength * upperLength - lowerLength * lowerLength) / (2 * upperLength * lowerLength))));
+  return { upper: Math.atan2(-dx, dy) - Math.atan2(lowerLength * Math.sin(lower), upperLength + lowerLength * Math.cos(lower)), lower };
+}
+
+/** The actual right palm and forearm direction, in continuous, unscaled feet-relative coordinates.
+ * Tool art can attach here throughout anticipation, contact and recovery instead of orbiting the torso. */
+export function playerToolPose(facing: number, moving: boolean, animation: number, time: number, state: ActorDrawingState = {}): { x: number; y: number; angle: number } {
+  const facingAngle = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const mirror = Math.cos(facingAngle) < -.35 ? -1 : 1;
+  const side = Math.abs(Math.cos(facingAngle)) > .72;
+  const clock = time + (state.phaseOffset ?? hash('human') % 17 * .43);
+  const pace = Math.min(1.65, Math.max(.55, state.pace ?? 1));
+  const running = smooth(1.03, 1.42, pace), sneaking = 1 - smooth(.66, .96, pace);
+  const decoration = state.asleep ? 0 : state.reducedMotion ? .14 : 1;
+  const phase = animation * 10, gait = moving ? Math.sin(phase) : 0;
+  const breath = Math.sin(clock * 1.5) * decoration;
+  const remaining = state.asleep ? 0 : Math.min(.26, Math.max(0, state.action || 0));
+  const progress = 1 - remaining / .26;
+  const action = remaining > 0 ? Math.sin(progress * Math.PI) : 0;
+  const strike = remaining <= 0 ? 0 : progress < .07 / .26 ? smooth(0, .07 / .26, progress) * .55
+    : progress < .16 / .26 ? .55 - smooth(.07 / .26, .16 / .26, progress) * 1.65
+      : -1.1 * (1 - smooth(.16 / .26, 1, progress));
+  const recoil = state.asleep ? 0 : Math.min(1, Math.max(0, state.hurt || 0) / .3);
+  const upper = .07 - (moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration) * (.28 + running * .17) + strike;
+  const lower = .07 - (moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration) * .12 - running * .2 + action * .4;
+  const handX = 8 - Math.sin(upper) * 7.3 - Math.cos(upper) * .4 - Math.sin(upper + lower) * 6.8 - Math.cos(upper + lower) * .6;
+  const handY = -28 + Math.cos(upper) * 7.3 - Math.sin(upper) * .4 + Math.cos(upper + lower) * 6.8 - Math.sin(upper + lower) * .6;
+  const bodyAngle = state.asleep ? 0 : .037 + gait * .025 + (side ? running * .09 - sneaking * .045 : 0) + action * .13 - recoil * .1;
+  const shift = state.asleep ? 0 : moving ? gait * (.9 + running * .55) : Math.sin(clock * .72) * .35 * decoration;
+  const bob = state.asleep ? 0 : moving ? -Math.abs(Math.cos(phase)) * (.7 + running * 1.05) + sneaking * 2.2 : breath * .6;
+  const x = handX * Math.cos(bodyAngle) - (handY + 15) * Math.sin(bodyAngle) + shift + action * .7 - recoil * 1.7;
+  const y = handX * Math.sin(bodyAngle) + (handY + 15) * Math.cos(bodyAngle) - 15 + bob - action * .8;
+  const armAngle = Math.PI / 2 + upper + lower + bodyAngle;
+  return { x: x * mirror, y, angle: mirror > 0 ? armAngle : Math.PI - armAngle };
+}
+
+function feature(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: number): void {
+  if (kind === 'hare') {
+    wash(ctx, side < 0 ? 'M-2 1 Q-9 -19 -4 -22 Q1 -20 2 0Z' : 'M-2 0 C-2 -18 6 -20 7 -11 Q8 -5 2 1Z', p.face, true);
+    pen(ctx, side < 0 ? 'M-3 -2 Q-6 -13 -4 -18' : 'M1 -2 Q1 -11 5 -15', '#9d817b', 1.3);
+    if (side < 0) stitch(ctx, 'M-5 -11 L-1 -10', '#786e60');
+    else pen(ctx, 'M4 -12 L7 -11 L5 -10', '#6a6056', .75);
+  } else if (kind === 'moth') {
+    pen(ctx, `M0 0 Q${side * 6} -15 ${side * 11} -10`, '#75695e', 1);
+    pen(ctx, `M${side * 11} -10 l${side * -2} 2`, p.trim, 1.6);
+  } else if (kind === 'fox') {
+    ctx.save(); ctx.scale(side, 1); wash(ctx, 'M-3 -1 Q1 -11 6 -9 L3 2Z', p.face, true); pen(ctx, 'M2 -7 L0 -2', '#9d7468', 1.3); ctx.restore();
+  } else if (kind === 'mouse') {
+    oval(ctx, 0, 0, 5, 5.6, p.faceShade); oval(ctx, 0, -.2, 3, 3.5, '#a48b84', false);
+  } else if (kind === 'salamander') {
+    for (let i = 0; i < 3; i++) pen(ctx, `M0 ${-3 + i * 3} Q${side * 5} ${-6 + i * 4} ${side * (8 - i)} ${-8 + i * 6}`, '#9b726b', 1.4);
+  }
+}
+function expressiveFeatures(ctx: CanvasRenderingContext2D, key: string, kind: ActorKind, p: Palette, sideFacing: boolean, clock: number, gait: number, decoration: number): void {
+  const cy = kind === 'human' ? -38.4 : -37;
+  ctx.save(); ctx.translate(sideFacing ? 1.2 : 0, cy); ctx.rotate(.06);
+  const cycle = (clock + hash(kind) % 7) % 8.6;
+  const twitch = (smooth(4.3, 4.42, cycle) - smooth(4.7, 4.88, cycle)) * Math.sin(clock * 23);
   for (const s of [-1, 1]) {
-    ctx.save(); ctx.scale(s, 1);
+    const x = kind === 'hare' ? s * 5 : kind === 'moth' ? s * 4 : kind === 'fox' ? s * 6 : kind === 'mouse' ? s * 8 : s * 7;
+    const y = kind === 'mouse' ? -7.8 : kind === 'fox' ? -5 : kind === 'salamander' ? -3 : -7;
+    const movement = kind === 'hare' ? Math.sin(clock * 1.45 + s * .6) * .08 + twitch * (s < 0 ? .28 : .12) + gait * .065
+      : kind === 'moth' ? Math.sin(clock * 2.8 + s) * .085 + twitch * .12
+      : kind === 'salamander' ? Math.sin(clock * 3.6 + s) * .07
+      : Math.sin(clock * 1.8 + s) * .025 + twitch * .11 + gait * .035;
+    articulatedPart(ctx, `${key}:feature:${s}`, [-20, -34, 40, 47], brush => {
+      brush.translate(x, y); feature(brush, kind, p, s);
+    }, x, y, movement * decoration);
+  }
+  ctx.restore();
+}
+
+function bat(ctx: CanvasRenderingContext2D, time: number, back: boolean, state: ActorDrawingState): void {
+  const decoration = state.reducedMotion ? .16 : 1;
+  const flight = state.reducedMotion ? .55 : 1;
+  const attack = Math.sin(Math.min(1, (state.action || 0) / .26) * Math.PI);
+  ctx.save(); ctx.translate(Math.sin(time * 2.7) * .8 * decoration, -21 + Math.sin(time * 4.2) * 2.6 * decoration - attack * 2.3);
+  ctx.rotate(Math.sin(time * 2.7) * .055 * decoration + attack * .16);
+  for (const s of [-1, 1]) {
+    const lift = Math.sin(time * 15.6 + s * .1) * 8.5 * flight;
+    ctx.save(); ctx.scale(s, 1); ctx.translate(3, -7); ctx.rotate(Math.sin(time * 15.6 - .3 + s * .1) * .045 * flight); ctx.translate(-3, 7);
     wash(ctx, `M3 -8 Q16 ${-27 + lift} 29 ${-16 + lift} Q21 ${-9 + lift} 26 ${1 + lift} Q16 ${-5 + lift} 17 ${9 + lift * .4} Q10 4 5 12 L1 0Z`, '#716369', true, 1.2);
     pen(ctx, `M3 -5 Q17 ${-24 + lift} 29 ${-16 + lift} M3 -3 Q13 ${-12 + lift} 26 ${1 + lift} M3 -2 Q8 ${-2 + lift} 17 ${9 + lift * .4}`, '#a09289', .85); ctx.restore();
   }
@@ -378,32 +492,131 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
     ctx.restore(); return;
   }
   ctx.translate(xScreen, yScreen); ctx.scale(scale * mirror, scale);
-  if (kind === 'bat') { bat(ctx, time, back); ctx.restore(); return; }
+  const clock = time + (state.phaseOffset ?? hash(kind) % 17 * .43);
+  if (kind === 'bat') { bat(ctx, clock, back, state); ctx.restore(); return; }
   const p: Palette = { ...palettes[kind], ...(color ? { coat: color } : {}) };
   const key = `${kind}:${color || ''}`;
-  const gait = moving ? Math.sin(animation * 10) : 0;
-  const breath = state.asleep ? Math.sin(time * 1.1) * .4 : Math.sin(time * 1.6 + hash(kind) % 11) * .2;
-  const blink = Math.sin(time * 1.1 + hash(kind) % 23) > .996;
+  const pace = Math.min(1.65, Math.max(.55, state.pace ?? 1));
+  const running = smooth(1.03, 1.42, pace), sneaking = 1 - smooth(.66, .96, pace);
+  const decoration = state.asleep ? 0 : state.reducedMotion ? .14 : 1;
+  const phase = animation * 10;
+  const gait = moving ? Math.sin(phase) : 0;
+  const stride = .22 + running * .15 - sneaking * .075;
+  const weight = kind === 'ox' || kind === 'boar' ? 1.38 : kind === 'tortoise' ? .7 : 1;
+  const breath = Math.sin(clock * (kind === 'lady' ? .9 : kind === 'ox' ? 1.1 : 1.5)) * decoration;
+  const blinkCycle = (clock + hash(kind) % 13 * .27) % 5.7;
+  const blink = blinkCycle > 4.66 && blinkCycle < 4.84 || blinkCycle > 5.16 && blinkCycle < 5.24;
+  const remaining = state.asleep ? 0 : Math.min(.26, Math.max(0, state.action || 0));
+  const progress = 1 - remaining / .26;
+  const action = remaining > 0 ? Math.sin(progress * Math.PI) : 0;
+  // The tool renderer shares this 70 ms anticipation, 90 ms contact and 100 ms recovery timeline.
+  const armStrike = remaining <= 0 ? 0 : progress < .07 / .26
+    ? smooth(0, .07 / .26, progress) * .55
+    : progress < .16 / .26 ? .55 - smooth(.07 / .26, .16 / .26, progress) * 1.65
+      : -1.1 * (1 - smooth(.16 / .26, 1, progress));
+  const recoil = state.asleep ? 0 : Math.min(1, Math.max(0, state.hurt || 0) / .3);
+  const glanceCycle = clock % 12.4;
+  const gaze = !moving && !state.asleep ? glanceCycle > 2.9 && glanceCycle < 4.5 ? -1 : glanceCycle > 8.1 && glanceCycle < 9.5 ? 1 : 0 : 0;
+  const glance = (smooth(2.75, 3.1, glanceCycle) - smooth(4.25, 4.6, glanceCycle)) * -1
+    + smooth(7.95, 8.35, glanceCycle) - smooth(9.25, 9.65, glanceCycle);
+  const kissCycle = clock % 10.4;
+  const kissRaise = state.billboard && !state.asleep ? smooth(2.2, 3.8, kissCycle) * (1 - smooth(6.65, 8.2, kissCycle)) : 0;
+  const kissRelease = smooth(4.6, 5.65, kissCycle);
+  const isKissing = kind === 'lady' && kissRaise > .8 && kissCycle < 5.05;
+
+  // Wings fold around their real shoulder joints. Their ragged left and right edges never move in lockstep.
   if (['moth', 'fox', 'otter', 'mouse', 'salamander', 'tortoise', 'peacock'].includes(kind)) {
-    ctx.save(); ctx.translate(0, -27);
-    ctx.scale(kind === 'moth' ? 1 + Math.sin(time * 2.3) * .024 : 1, 1);
-    ctx.rotate(kind === 'fox' || kind === 'mouse' || kind === 'salamander' ? gait * .015 : 0); ctx.translate(0, 27);
-    paintedPart(ctx, `${key}:silhouette`, [-33, -51, 66, 53], brush => wingsAndTails(brush, kind, p, 0, 0)); ctx.restore();
+    if (kind === 'moth') {
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * 2.5, -29);
+        ctx.rotate(s * (Math.sin(clock * 2.8 + s * .22) * .15 + gait * .075) * decoration);
+        ctx.scale(1 - (1 + Math.sin(clock * 2.8 - .3 + s * .22)) * .08 * decoration, 1);
+        ctx.translate(-s * 2.5, 29);
+        paintedPart(ctx, `${key}:wing:${s}`, [-33, -51, 66, 53], brush => wingsAndTails(brush, kind, p, 0, 0, s)); ctx.restore();
+      }
+    } else {
+      const tail = kind === 'fox' || kind === 'mouse' || kind === 'otter' || kind === 'salamander';
+      const pivotX = tail ? 5 : 0, pivotY = tail ? -9 : kind === 'peacock' ? -12 : -23;
+      const tailRate = kind === 'salamander' ? 3.8 : kind === 'mouse' ? 3.15 : 1.7;
+      ctx.save(); ctx.translate(pivotX, pivotY);
+      ctx.rotate(tail ? (Math.sin(clock * tailRate) * (kind === 'fox' ? .15 : .2) + gait * .11) * decoration : Math.sin(clock * 1.3) * .035 * decoration);
+      if (kind === 'peacock') ctx.scale(1 + Math.sin(clock * .95) * .055 * decoration, 1);
+      if (kind === 'tortoise') ctx.translate(gait * .45, breath * .3);
+      ctx.translate(-pivotX, -pivotY);
+      paintedPart(ctx, `${key}:silhouette`, [-33, -51, 66, 53], brush => wingsAndTails(brush, kind, p, 0, 0)); ctx.restore();
+    }
   }
   if (kind !== 'lady') {
-    for (const s of [-1, 1]) articulatedPart(ctx, `${key}:leg:${s}`, [-18, -17, 36, 22], brush => leg(brush, s, 0, kind), s * (kind === 'ox' || kind === 'boar' ? 5.6 : 3.8), -13, gait * s * .2);
+    for (const s of [-1, 1]) {
+      const step = moving ? Math.sin(phase + (s > 0 ? Math.PI : 0)) : 0;
+      const angle = step * stride * (side ? 1.25 : .75);
+      const lift = Math.max(0, step) * (2.3 + running * 1.8 - sneaking * .8);
+      // Compensating the thigh's arc keeps the planted boot on the ground while the other foot clears it.
+      const plant = 14 * (1 - Math.cos(angle)) - lift;
+      articulatedPart(ctx, `${key}:leg:${s}`, [-18, -17, 36, 22], brush => leg(brush, s, 0, kind), s * (kind === 'ox' || kind === 'boar' ? 5.6 : 3.8), -13, angle, plant);
+    }
   }
-  ctx.save(); ctx.translate(gait * .25, moving ? Math.abs(gait) * -.5 : breath);
-  ctx.rotate(kind === 'moth' ? -.055 : kind === 'human' ? .037 : kind === 'ox' ? -.028 : kind === 'tortoise' ? .048 : 0);
+  const fixed = !!state.asleep;
+  const shift = fixed ? 0 : moving ? gait * (.9 + running * .55) * weight : Math.sin(clock * .72) * .35 * decoration;
+  const bob = fixed ? 0 : moving ? -Math.abs(Math.cos(phase)) * (.7 + running * 1.05) + sneaking * 2.2 : breath * (kind === 'lady' ? .3 : .6);
+  ctx.save(); ctx.translate(shift + action * .7 - recoil * 1.7, bob - action * .8);
+  const posture = kind === 'moth' ? -.055 : kind === 'human' ? .037 : kind === 'ox' ? -.028 : kind === 'tortoise' ? .048 : 0;
+  ctx.translate(0, -15);
+  ctx.rotate(fixed ? 0 : posture + gait * .025 * weight + (side ? running * .09 - sneaking * .045 : 0) + action * .13 - recoil * .1);
+  ctx.translate(0, 15);
   const wide = kind === 'ox' || kind === 'boar';
-  articulatedPart(ctx, `${key}:arm:-1`, [-22, -33, 44, 28], brush => arm(brush, -1, 0, p, wide), -(wide ? 11 : 8), -28, gait * .2);
-  paintedPart(ctx, `${key}:coat:${back}`, [-19, -38, 38, 41], brush => torso(brush, kind, p, back));
-  articulatedPart(ctx, `${key}:arm:1`, [-22, -33, 44, 28], brush => arm(brush, 1, 0, p, wide), wide ? 11 : 8, -28, -gait * .2);
+  const armGait = moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration;
+  const elbowGait = moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration;
+  const leftUpper = -.07 + armGait * (.28 + running * .17) + action * .28;
+  const leftLower = -.06 + elbowGait * .12 - running * .2;
+  let rightUpper = .07 - armGait * (.28 + running * .17) + armStrike;
+  let rightLower = .07 - elbowGait * .12 - running * .2 + action * .4;
+  if (kind === 'lady' && kissRaise > 0) {
+    const lift = kissRaise * decoration;
+    const target = armToPoint(8, -28, 3.5 + kissRelease * 15, -30 - kissRelease * 1.5);
+    rightUpper += (target.upper - rightUpper) * lift;
+    rightLower += (target.lower - rightLower) * lift;
+  }
+  bentArm(ctx, key, p, -(wide ? 11 : 8), -28, leftUpper, leftLower);
+  ctx.save(); ctx.translate(0, -24);
+  const chestBreath = state.asleep ? Math.sin(clock * 1.1) * .4 : breath;
+  ctx.scale(1 + chestBreath * (kind === 'ox' || kind === 'lady' ? .022 : .012), 1 + chestBreath * .009);
+  ctx.translate(0, 24); paintedPart(ctx, `${key}:coat:${back}`, [-19, -38, 38, 41], brush => torso(brush, kind, p, back)); ctx.restore();
+  const foregroundArm = kind === 'lady' && kissRaise > .1;
+  if (!foregroundArm) bentArm(ctx, key, p, wide ? 11 : 8, -28, rightUpper, rightLower);
   if (kind === 'heron') { wash(ctx, 'M-3 -28 Q-5 -36 -2 -41 L3 -40 Q1 -33 3 -28Z', p.face); }
-  const expression = `${side}:${back}:${blink}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}`;
-  paintedPart(ctx, `${key}:head:${expression}`, [-28, -71, 56, 56], brush => head(brush, kind, p, side, back, blink, 0, state));
+  const detached = ['hare', 'moth', 'fox', 'mouse', 'salamander'].includes(kind);
+  const headY = kind === 'lady' ? -40 : kind === 'heron' ? -42 : kind === 'human' ? -38.4 : -37;
+  ctx.save(); ctx.translate(fixed ? 0 : glance * .8 * decoration, fixed ? 0 : moving ? Math.sin(phase - .35) * .28 : Math.sin(clock * .85) * .25 * decoration);
+  ctx.translate(0, headY);
+  ctx.rotate(fixed ? 0 : (kind === 'lady' ? Math.sin(clock * .53) * .038 : Math.sin(clock * 1.05) * .016) * decoration + glance * .035 * decoration - action * .075);
+  ctx.translate(0, -headY);
+  if (detached) expressiveFeatures(ctx, key, kind, p, side, clock, gait, decoration);
+  const expression = `${side}:${back}:${blink}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}:${gaze}:${isKissing}`;
+  paintedPart(ctx, `${key}:head:${expression}`, [-28, -71, 56, 56], brush => head(brush, kind, p, side, back, blink, 0, state, gaze, isKissing, detached)); ctx.restore();
+  if (foregroundArm) bentArm(ctx, key, p, 8, -28, rightUpper, rightLower);
+  if (kind === 'lady' && state.billboard && decoration > .8) {
+    const release = kissCycle - 4.8;
+    if (release > 0 && release < 1.6) {
+      ctx.save(); ctx.translate(5 + release * 10, -30 - release * 3.7); ctx.rotate(release * -.25);
+      ctx.globalAlpha *= Math.sin(Math.min(1, release / .22) * Math.PI / 2) * (1 - smooth(.7, 1.6, release));
+      paintedPart(ctx, 'propaganda-lip-print', [-5, -4, 10, 8], brush => {
+        wash(brush, 'M-3.5 0 Q-1.5 -3 0 -1.4 Q1.9 -3 3.9 -.2 Q1 2.6 -3.5 0Z', '#946a75');
+        pen(brush, 'M-2.5 -.1 Q0 .8 2.8 -.2', '#65494f', .5);
+      }); ctx.restore();
+    }
+  }
   if (!back && ['human', 'hare', 'fox', 'moth', 'mole', 'merchant', 'gatekeeper', 'tortoise', 'lady'].includes(kind)) {
-    articulatedPart(ctx, `${key}:prop`, [-3, -38, 27, 36], brush => prop(brush, kind, 0, p), kind === 'human' ? 11.2 : 9.5, -13, gait * .08, gait * .65);
+    if (!(kind === 'lady' && state.billboard)) {
+      const heldLeft = kind === 'human';
+      const upper = heldLeft ? leftUpper : rightUpper, lower = heldLeft ? leftLower : rightLower;
+      const shoulder = (heldLeft ? -1 : 1) * (wide ? 11 : 8);
+      const handX = shoulder - Math.sin(upper) * 7.3 - Math.sin(upper + lower) * 9.4 - Math.cos(upper) * .4;
+      const handY = -28 + Math.cos(upper) * 7.3 + Math.cos(upper + lower) * 9.4 - Math.sin(upper) * .4;
+      ctx.save(); ctx.translate(handX - (heldLeft ? -8.4 : 7.6), handY + 11.3);
+      if (heldLeft) ctx.scale(-1, 1);
+      articulatedPart(ctx, `${key}:prop`, [-3, -38, 27, 36], brush => prop(brush, kind, 0, p), kind === 'human' ? 11.2 : 9.5, -13, moving ? Math.sin(phase - .9) * .18 : breath * .025, 0); ctx.restore();
+    }
   }
   ctx.restore(); ctx.restore();
 }
@@ -547,7 +760,8 @@ export function actorPortraitDataUrl(kind: ActorKind, size = 64, state: ActorDra
   ctx.restore();
   const zoom = size / (kind === 'lady' ? 43 : 31);
   const faceOffset = kind === 'lady' ? 39 : kind === 'bat' ? 34 : 37;
-  drawActorSprite(ctx, kind, size * .5, size * .55 + faceOffset * zoom, Math.PI / 2, false, 0, 2, zoom, undefined, state);
+  drawActorSprite(ctx, kind, size * .5, size * .55 + faceOffset * zoom, Math.PI / 2, false, 0, 2, zoom, undefined,
+    { asleep: state.asleep, mindChanged: state.mindChanged, brainAbsent: state.brainAbsent, reducedMotion: true, phaseOffset: 0 });
   ctx.strokeStyle = '#665c50'; ctx.lineWidth = size / 80;
   ctx.beginPath(); ctx.moveTo(size * .035, size * .06); ctx.lineTo(size * .97, size * .025); ctx.lineTo(size * .94, size * .95); ctx.lineTo(size * .03, size * .975); ctx.closePath(); ctx.stroke();
   const url = canvas.toDataURL('image/png'); portraitCache.set(key, url); return url;

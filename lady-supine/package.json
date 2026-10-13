@@ -20,7 +20,8 @@
     "test:investigations": "node scripts/open-world-widget-check.mjs --cases",
     "test:pacing": "node scripts/validate-investigations.mjs",
     "test:marker": "node scripts/marker-and-mind-check.mjs",
-    "test:marker-viewports": "node scripts/marker-viewport-check.mjs"
+    "test:marker-viewports": "node scripts/marker-viewport-check.mjs",
+    "test:animations": "node scripts/animation-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

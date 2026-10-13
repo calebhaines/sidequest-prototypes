@@ -70,3 +70,38 @@ kbd{font-family:var(--hand);color:#343630;background:#b8b7a999;border:1px solid 
 @media(max-width:620px){.ow-game:has(.ow-interact-prompt) .ow-quest-card{display:none}}
 .ow-game .puzzle-modal,.ow-game .inv-modal{border:1.5px solid #454843;border-radius:4px 8px 3px 7px;box-shadow:0 18px 70px #191c2199;background-color:#c8c4b6;background-image:var(--ink-tracing),radial-gradient(ellipse at 82% 6%,#815d6823,transparent 34%),radial-gradient(ellipse at 7% 88%,#5b584a24,transparent 36%),linear-gradient(105deg,#c0c1b2,#cec7b8 42%,#c7c5b5);background-size:100% 100%;color:#252622}
 .ow-game .puzzle-footer,.ow-game .inv-footer{color:#454740;border-top-color:#85897d}
+
+/* A paper form lands, a loose pocket answers the hand. Motion never changes layout. */
+.ow-game button,.ow-game .ow-import-button{transition:background-color 170ms ease,border-color 170ms ease,color 170ms ease,box-shadow 170ms ease,translate 120ms ease}
+.ow-panel-overlay,.ow-title-overlay,.ow-ending-overlay,.ow-recovery-overlay{animation:ow-shade-arrive 180ms ease-out both}
+.ow-panel{animation:ow-paper-settle 280ms cubic-bezier(.18,.68,.22,1) both;transform-origin:50% 70%}
+.ow-title-card,.ow-ending-card,.ow-recovery-card{animation:ow-paper-settle 340ms cubic-bezier(.18,.68,.22,1) both;transform-origin:50% 70%}
+.ow-dialogue{animation:ow-statement-settle 250ms cubic-bezier(.18,.68,.22,1) both;transform-origin:50% 100%}
+.ow-dialogue-reading{animation:ow-ink-arrive 190ms ease-out both}
+.ow-dialogue-choices,.ow-dialogue-page-controls{animation:ow-ink-arrive 230ms ease-out both}
+.ow-notice{animation:ow-notice-arrive 270ms cubic-bezier(.16,.72,.25,1) both}
+.ow-area-notice{animation:ow-place-arrive 550ms ease-out both}
+.ow-interact-prompt{animation:ow-prompt-arrive 210ms cubic-bezier(.2,.65,.3,1) backwards;transition:background-color 170ms ease,border-color 170ms ease,translate 100ms ease}
+.ow-exchange-caption{animation:ow-statement-settle 270ms cubic-bezier(.18,.68,.22,1) both}
+.ow-hotbar-slot.ow-selected{animation:ow-pocket-select 240ms cubic-bezier(.18,.68,.22,1) backwards}
+.ow-hotbar-slot>img{transition:translate 150ms ease,rotate 150ms ease}
+.ow-stat-bar i{transition:width 280ms cubic-bezier(.2,.6,.3,1)}
+.ow-toggle span{transition:transform 210ms cubic-bezier(.2,.6,.3,1),background-color 170ms ease}
+.ow-fishing-bite{animation:ow-ink-warning 750ms ease-in-out infinite alternate}
+.ow-button:active:not(:disabled),.ow-close:active,.ow-hud-buttons button:active,.ow-dialogue-choices>button:active:not(:disabled),.ow-dialogue-page-controls>button:active,.ow-interact-prompt:active,.ow-hotbar-slot:active,.ow-panel-nav button:active,.ow-touch-buttons button:active{translate:0 2px;transition-duration:65ms}
+.ow-hotbar-slot:active>img{translate:0 1px;rotate:-2deg}
+@media(hover:hover) and (pointer:fine){.ow-button:hover:not(:disabled),.ow-dialogue-choices>button:hover:not(:disabled),.ow-dialogue-page-controls>button:hover,.ow-hud-buttons button:hover,.ow-close:hover{translate:0 -1px}.ow-hotbar-slot:hover>img{translate:0 -2px;rotate:-1.5deg}}
+@keyframes ow-shade-arrive{from{opacity:0}to{opacity:1}}
+@keyframes ow-paper-settle{0%{opacity:0;translate:0 var(--ow-paper-shift,12px);rotate:-.35deg}70%{opacity:1}100%{opacity:1;translate:0 0;rotate:0deg}}
+@keyframes ow-statement-settle{0%{opacity:0;translate:0 var(--ow-statement-shift,10px);rotate:.2deg}100%{opacity:1;translate:0 0;rotate:0deg}}
+@keyframes ow-ink-arrive{from{opacity:.15;translate:0 2px}to{opacity:1;translate:0 0}}
+@keyframes ow-notice-arrive{0%{opacity:0;translate:0 -7px;rotate:-.8deg}100%{opacity:1;translate:0 0;rotate:0deg}}
+@keyframes ow-place-arrive{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}
+@keyframes ow-prompt-arrive{from{opacity:0;translate:0 4px}to{opacity:1;translate:0 0}}
+@keyframes ow-pocket-select{0%{translate:0 2px}100%{translate:0 0}}
+@keyframes ow-ink-warning{from{opacity:.74}to{opacity:1}}
+.ow-game[data-reduced-motion='true'] *,.ow-game[data-reduced-motion='true'] *:before,.ow-game[data-reduced-motion='true'] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+.ow-game[data-reduced-motion='true'] button,.ow-game[data-reduced-motion='true'] .ow-hotbar-slot>img{translate:0 0!important;rotate:0deg!important}
+@media(prefers-reduced-motion:reduce){.ow-game *,.ow-game *:before,.ow-game *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.ow-game button,.ow-game .ow-hotbar-slot>img{translate:0 0!important;rotate:0deg!important}}
+
+@media(max-width:620px),(max-height:480px){.ow-game{--ow-paper-shift:6px;--ow-statement-shift:5px}}

@@ -1,5 +1,5 @@
-import { TILE_SIZE, type ActorFrame, type RenderFrame, type TileKind, type WorldObject, type WorldScene } from './types';
-import { drawActorSprite, drawItemIcon } from './sprites';
+import { TILE_SIZE, type ActorFrame, type RenderFrame, type TileKind, type VisualImpact, type WorldObject, type WorldScene } from './types';
+import { drawActorSprite, drawItemIcon, playerToolPose } from './sprites';
 import { worldHash } from './world';
 import { drawMindExchange } from './mindExchange';
 
@@ -15,6 +15,17 @@ const colors: Record<TileKind, string> = {
 };
 const wet = (kind?: TileKind) => kind === 'water' || kind === 'deepWater';
 const noise = (n: number, seed = 1) => worldHash(n * 31 + seed * 7, seed * 19 + n * 3);
+const actorPhases = new Map<string, number>();
+let sceneryDebris = true;
+function actorPhase(id: string) {
+  const cached = actorPhases.get(id); if (cached !== undefined) return cached;
+  const phase = id.split('').reduce((sum, character) => sum * 1.07 + character.charCodeAt(0), 0) % 37;
+  actorPhases.set(id, phase); return phase;
+}
+function wind(x: number, y: number, time: number) {
+  const slow = Math.sin(time * .57 + x * .13 + y * .05), gust = Math.max(0, Math.sin(time * .19 + y * .037));
+  return slow * .55 + Math.sin(time * 1.21 + x * .29 - y * .17) * .18 + gust * Math.sin(time * .83 + x * .07) * .45;
+}
 function tileAt(scene: WorldScene, x: number, y: number): TileKind | undefined {
   return x >= 0 && y >= 0 && x < scene.width && y < scene.height ? scene.tiles[y * scene.width + x] : undefined;
 }
@@ -229,10 +240,19 @@ function groundChunk(scene: WorldScene, cx: number, cy: number) {
 }
 function fire(ctx: CanvasRenderingContext2D, time: number) {
   line(ctx, [-12, 1, 11, -4], '#635041', 5); line(ctx, [-10, -5, 12, 3], '#4b453a', 4);
-  const flick = Math.sin(time * 8) * 2;
-  ctx.beginPath(); ctx.moveTo(-7, 0); ctx.bezierCurveTo(-13, -7, -5, -12, -4, -21 + flick); ctx.bezierCurveTo(1, -16, -2, -12, 3, -18 - flick); ctx.bezierCurveTo(4, -11, 13, -6, 7, 0); ctx.closePath(); ctx.fillStyle = '#b47b51'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-5, -9, 0, -14 - flick); ctx.quadraticCurveTo(1, -6, 5, -2); ctx.closePath(); ctx.fillStyle = '#d9b16d'; ctx.fill();
-  for (let n = 0; n < 3; n++) { const age = (time * 9 + n * 15) % 47; blob(ctx, Math.sin(time + n) * age * .12, -22 - age, 6 + age * .13, 3 + age * .12, `rgba(69,66,57,${.15 * (1 - age / 47)})`, n + 12); }
+  for (let n = 0; n < 3; n++) {
+    const phase = time * (6.2 + n * .83) + n * 2.3;
+    const width = 7 - n * 1.4, height = 19 + Math.sin(phase) * 3 + Math.cos(phase * .61) * 2;
+    const tip = Math.sin(phase * .48) * 4 + n - 1;
+    ctx.beginPath(); ctx.moveTo(-width, 0); ctx.bezierCurveTo(-width - 4, -height * .42, tip - 5, -height * .5, tip, -height);
+    ctx.bezierCurveTo(tip + 1, -height * .42, width + 4, -height * .35, width, 0); ctx.closePath(); ctx.fillStyle = ['#a5744e', '#bd935c', '#d2b071'][n]; ctx.fill();
+  }
+  if (sceneryDebris) for (let n = 0; n < 5; n++) {
+    const age = (time * (10 + n * .7) + n * 13) % 59, sway = Math.sin(time * .7 + n) * age * .16;
+    ctx.save(); ctx.globalAlpha *= .6 * (1 - age / 59);
+    curve(ctx, n % 2 ? '#be9564' : '#d0b87b', 1.05, -6 + n * 3 + sway, -12 - age, -7 + n * 3 + sway, -15 - age, -5 + n * 3 + sway, -17 - age); ctx.restore();
+  }
+  for (let n = 0; n < 4; n++) { const age = (time * 8 + n * 15) % 62; blob(ctx, Math.sin(time * .64 + n) * age * .18 + age * .12, -22 - age, 5 + age * .15, 3 + age * .10, `rgba(69,66,57,${.15 * (1 - age / 62)})`, n + 12); }
 }
 function drawTree(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade: number) {
   const willow = o.kind === 'willow', variant = o.variant || 0, seed = o.x * 23 + o.y * 17;
@@ -249,11 +269,6 @@ function drawTree(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, f
   };
   if (willow) {
     leaf(0, -69, 27, 18, '#8c9376', 1); leaf(-21, -51, 18, 19, '#7c886e', 3); leaf(21, -54, 20, 22, '#76836b', 5);
-    for (let n = 0; n < 14; n++) {
-      const x = -33 + n * 5, y = -56 + noise(n, seed) * 14, length = 15 + noise(n + 14, seed) * 35;
-      curve(ctx, n % 2 ? '#64745e' : '#889277', 1.6 + noise(n + 8, seed), x, y, x + Math.sin(time * .8 + n) * 7, y + length * .65, x + Math.sin(time * .7 + n) * 4, y + length);
-      for (let k = 0; k < 3; k++) curve(ctx, '#8b9577', 2, x, y + k * length / 3, x + 5, y + k * length / 3 + 4, x + 4, y + k * length / 3 + 7);
-    }
   } else if (variant === 1) {
     shape(ctx, [-28, -27, -19, -46, -22, -47, -10, -68, -14, -67, 1, -94, 10, -68, 7, -65, 22, -47, 18, -45, 29, -26], '#737e68', '#4e5948', 1.7);
     for (let n = 0; n < 6; n++) curve(ctx, n % 2 ? 'rgba(167,174,136,.30)' : 'rgba(44,57,38,.23)', 3, -18 + n * 5, -39 - n * 6, 0, -49 - n * 6, 14 - n, -33 - n * 7);
@@ -332,8 +347,7 @@ function drawBuilding(ctx: CanvasRenderingContext2D, o: WorldObject, time: numbe
     shape(ctx, [8, h - 21, 27, h - 25, 30, h + 3, 12, h + 6], '#a2987e', '#666250', 1.1);
     line(ctx, [14, h - 19, 27, h - 20, 26, h - 10, 14, h - 8, 14, h - 19], '#7c775f', .8, true);
     curve(ctx, '#646650', .75, -8, front + 25, -3, front + 47, w * .28, front + 35);
-    shape(ctx, [3, front + 28, 13, front + 31, 12 + Math.sin(time) * .5, front + 48, 2, front + 44], '#a09b86', 'rgba(67,70,50,.4)', .8);
-    scribble(ctx, 4, front + 35, 7, 8, seed + 2, 'rgba(70,67,51,.22)');
+
   }
   // Public offices are caravan colonies. Her Ladyship adds a painted, scaffold-supported facade.
   if (variant === 4) {
@@ -370,7 +384,7 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       shadow(ctx, 5, 4, 17, 5, .19); blob(ctx, -1, -7, 16, 11, '#8b9084', seed, true); shape(ctx, [-13, -9, -5, -20, 6, -17, 13, -7, 2, -5], '#a8a895', 'rgba(66,72,58,.36)', 1); hatch(ctx, -10, -15, 23, 17, seed, 'rgba(71,76,64,.30)', 8);
       if (o.kind === 'ore') { blob(ctx, -5, -13, 4, 3, '#a7a29b', seed); blob(ctx, 6, -8, 4, 2, '#b7aea0', seed + 1); line(ctx, [-6, -13, -3, -9, 3, -10, 7, -6], '#767686', 1.8); } break;
     case 'flower': {
-      const sway = Math.sin(time * .8 + o.x) * 2;
+      const sway = wind(o.x, o.y, time) * 3;
       curve(ctx, '#747d5e', 1.4, 0, 2, -2, -7, sway, -14);
       curve(ctx, '#868c69', 1.9, 0, -5, -7, -8, -7, -5); curve(ctx, '#777f5d', 1.7, 0, -8, 5, -11, 7, -8);
       const c = ['#bca489', '#b2988b', '#a2aaa0', '#c4ba9d'][v % 4];
@@ -378,13 +392,18 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       blob(ctx, sway, -15, 1.4, 1.3, '#967f5c', seed); break;
     }
     case 'bush': shadow(ctx, 3, 3, 16, 5, .15); blob(ctx, 0, -9, 17, 12, '#7f896c', seed, true); hatch(ctx, -13, -16, 25, 17, seed, 'rgba(53,65,39,.23)', 9); scribble(ctx, -11, -14, 23, 12, seed); if (v % 2) { blob(ctx, -6, -11, 2, 2, '#a1887b', seed); blob(ctx, 7, -8, 2, 2, '#a1887b', seed + 1); } break;
-    case 'crop':
-      curve(ctx, '#727e5c', 2, 0, 3, -3, -7, 2, -16); blob(ctx, -6, -7, 6, 2.5, '#8b9671', seed, true); blob(ctx, 6, -13, 7, 3, '#929b74', seed + 1, true); blob(ctx, -1, 0, 6, 4, v % 2 ? '#b49f6c' : '#b7946e', seed + 2, true); break;
+    case 'crop': {
+      const bend = wind(o.x, o.y, time) * 3.5;
+      curve(ctx, '#727e5c', 2, 0, 3, -3 + bend * .4, -7, 2 + bend, -16);
+      ctx.save(); ctx.translate(bend * .7, 0); ctx.rotate(bend * .016);
+      blob(ctx, -6, -7, 6, 2.5, '#8b9671', seed, true); blob(ctx, 6, -13, 7, 3, '#929b74', seed + 1, true); ctx.restore();
+      blob(ctx, -1, 0, 6, 4, v % 2 ? '#b49f6c' : '#b7946e', seed + 2, true); break;
+    }
     case 'reed':
       if (v === 8) { curve(ctx, '#8a9070', 3.5, -14, 3, 8, -2, 13, 4); curve(ctx, '#a1aa7f', 2.6, -10, -2, -16, -17, 1, -8); curve(ctx, '#899771', 2.1, 1, -8, 10, -13, 7, 0); break; }
-      for (let i = 0; i < 5; i++) { const xx = -7 + i * 3.3, sway = Math.sin(time * .8 + i + o.x) * 2, hh = 16 + noise(i, seed) * 17; curve(ctx, '#7a8567', 1.2, xx, 5, xx + sway * 2, -hh / 2, xx + sway, -hh); blob(ctx, xx + sway, -hh, 1.7, 5, '#a19878', seed + i, true); } break;
+      for (let i = 0; i < 5; i++) { const xx = -7 + i * 3.3, sway = wind(o.x + i * .8, o.y, time) * (3 + i * .15), hh = 16 + noise(i, seed) * 17; curve(ctx, '#7a8567', 1.2, xx, 5, xx + sway * 2, -hh / 2, xx + sway, -hh); blob(ctx, xx + sway, -hh, 1.7, 5, '#a19878', seed + i, true); } break;
     case 'campfire':
-      shadow(ctx, 0, 4, 17, 6, .19); for (let n = 0; n < 6; n++) { const a = n / 6 * Math.PI * 2; blob(ctx, Math.cos(a) * 14, Math.sin(a) * 6 + 2, 4, 3, '#9c9a87', seed + n, true); } fire(ctx, time); break;
+      shadow(ctx, 0, 4, 17, 6, .19); for (let n = 0; n < 6; n++) { const a = n / 6 * Math.PI * 2; blob(ctx, Math.cos(a) * 14, Math.sin(a) * 6 + 2, 4, 3, '#9c9a87', seed + n, true); } fire(ctx, time + noise(5, seed) * 13); break;
     case 'lantern':
       shadow(ctx, 3, 3, 7, 3, .15); curve(ctx, '#636b58', 2.5, 0, 5, 2, -18, -1, -36); curve(ctx, '#666c59', 1.6, -1, -35, -3, -43, 6, -38);
       panel(ctx, 0, -35, 9, 14, '#a39d79', seed); blob(ctx, 4, -28, 3, 5, '#c6b58b', seed + 1); line(ctx, [0, -21, 9, -21], '#535b4e', 1.7); break;
@@ -401,12 +420,10 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       line(ctx, [-1, 4, -2, -24], '#776c55', 4);
       if (v === 1) {
         panel(ctx, -31, -69, 63, 49, '#b6aa8e', seed); panel(ctx, -27, -65, 55, 35, '#a39489', seed + 1);
-        drawActorSprite(ctx, 'lady', 0, -28, Math.PI / 2, false, 0, time, .61);
+        drawActorSprite(ctx, 'lady', 0, -28, Math.PI / 2, false, 0, 0, .61, undefined, { reducedMotion: true, billboard: true });
         panel(ctx, -27, -30, 55, 8, '#c8b79a', seed + 3, false); ctx.font = '8px "Patrick Hand", sans-serif'; ctx.fillStyle = '#5f5347'; ctx.textAlign = 'center'; ctx.fillText('BE DIVINE', 0, -24); hatch(ctx, -27, -65, 55, 35, seed, 'rgba(232,218,183,.21)', 14);
       } else if (v === 2) {
-        line(ctx, [-23, -83, 23, -81], '#918674', 3); const sway = Math.sin(time * .7 + o.x) * 2;
-        shape(ctx, [-18, -80, 18, -80, 17 + sway, -22, 1 + sway, -28, -18 + sway, -23], '#9c8176', '#6c6658', 1);
-        scribble(ctx, -11, -68, 23, 26, seed, '#b8ac8e'); hatch(ctx, -16, -76, 32, 46, seed, 'rgba(69,49,41,.14)', 12);
+        line(ctx, [-23, -83, 23, -81], '#918674', 3);
       } else { panel(ctx, -24, -43, 48, 24, '#b7a88a', seed); scribble(ctx, -18, -38, 32, 11, seed); line(ctx, [-18, -24, 15, -26], '#918265', .8, true); }
       break;
     case 'crate': case 'chest':
@@ -458,7 +475,66 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
     }
   }
 }
-function drawIllustration(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade = 1) {
+function secondaryScenery(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, reducedMotion: boolean) {
+  const seed = o.x * 29 + o.y * 73, phase = noise(3, seed) * 15, gust = reducedMotion ? 0 : wind(o.x, o.y, time);
+  if (o.kind === 'willow') {
+    for (let n = 0; n < 15; n++) {
+      const xx = -34 + n * 4.7, yy = -56 + noise(n, seed) * 13, length = 19 + noise(n + 14, seed) * 35;
+      const pull = gust * (5 + n % 4) + (reducedMotion ? 0 : Math.sin(time * 1.5 + n * .4 + phase) * 1.7);
+      curve(ctx, n % 2 ? '#64745e' : '#889277', 1.35 + noise(n + 8, seed), xx, yy, xx + pull * .55, yy + length * .66, xx + pull, yy + length);
+      for (let k = 1; k < 4; k++) {
+        const y = yy + k * length / 4, x = xx + pull * k / 4;
+        curve(ctx, '#8b9577', 1.7, x, y, x + 4 + gust, y + 3, x + 3 + gust, y + 7);
+      }
+    }
+  } else if (o.kind === 'tree' && o.variant !== 1) {
+    // Fine branches flex independently of the broad painted silhouette.
+    for (let n = 0; n < 3; n++) {
+      const side = n % 2 ? -1 : 1, baseX = side * (4 + n * 2), endX = side * (23 - n * 3) + gust * (3 + n);
+      curve(ctx, 'rgba(78,87,64,.59)', 1.1, baseX, -39 - n * 8, side * 20 + gust * 2, -50 - n * 8, endX, -65 - n * 5);
+      curve(ctx, '#92997a', 2.7, endX - 3, -65 - n * 5, endX + gust, -72 - n * 5, endX + 4, -67 - n * 5);
+    }
+    if (sceneryDebris && !reducedMotion && noise(9, seed) > .58) {
+      const age = (time * 4 + phase * 6) % 93, xx = -22 + noise(4, seed) * 42 + Math.sin(age * .13 + phase) * 8 + gust * age * .2;
+      const yy = -80 + age, turn = Math.sin(age * .19 + phase);
+      curve(ctx, 'rgba(151,145,104,.64)', 2.2, xx - 2.5 * turn, yy - 1, xx, yy + 2, xx + 3 * turn, yy - 1);
+    }
+  } else if (o.kind === 'building') {
+    const w = (o.width || 5) * TILE_SIZE, h = (o.height || 4) * TILE_SIZE, front = h * .57, px = w * .16;
+    // Smoke is pulled into wandering ribbons before breaking into translucent charcoal clouds.
+    for (let n = 0; n < 5; n++) {
+      const age = ((reducedMotion ? 0 : time) * (6.4 + n * .3) + n * 17 + phase) % 91;
+      const xx = px + 7 + age * .17 + gust * age * .34 + Math.sin(age * .068 + phase) * 5;
+      blob(ctx, xx, -14 - age, 4 + age * .15, 3 + age * .10, `rgba(76,74,64,${.16 * (1 - age / 91)})`, n + seed);
+    }
+    const tx = w * .64;
+    ctx.beginPath(); ctx.moveTo(tx - 10, front + 7); ctx.bezierCurveTo(tx + w * .05, front + 5, w - 15, front + 14 + gust * 3, w + 9, front + 15);
+    ctx.lineTo(w + 8 + gust * 2, front + 22 + gust * 3); ctx.bezierCurveTo(w - 13, front + 22 - gust * 3, tx + w * .04, front + 15 + gust * 4, tx - 12 + gust, front + 15); ctx.closePath();
+    ctx.fillStyle = '#7a7e6e'; ctx.fill(); ctx.lineWidth = .9; ctx.strokeStyle = '#57604f'; ctx.stroke();
+    if (!(o.variant || 0)) {
+      const xx = 3 + gust * 3;
+      ctx.beginPath(); ctx.moveTo(3, front + 29); ctx.lineTo(13, front + 31); ctx.bezierCurveTo(13 + gust * 2, front + 36, xx + 12, front + 41, xx + 10, front + 49); ctx.quadraticCurveTo(xx + 5, front + 45 + gust, xx, front + 45); ctx.quadraticCurveTo(4 + gust * 2, front + 36, 3, front + 29); ctx.closePath();
+      ctx.fillStyle = '#a09b86'; ctx.fill(); ctx.lineWidth = .8; ctx.strokeStyle = '#6c7058'; ctx.stroke(); curve(ctx, 'rgba(199,189,150,.38)', 1, 8, front + 33, 8 + gust * 2, front + 38, xx + 6, front + 44);
+    }
+  } else if (o.kind === 'lantern') {
+    const flicker = reducedMotion ? .5 : .5 + Math.sin(time * 7.3 + phase) * .22 + Math.sin(time * 11.7 + phase * 2) * .12;
+    ctx.save(); ctx.globalAlpha *= .6 + flicker * .35; blob(ctx, 4, -28, 2.5, 4.5, '#cbb88b', seed);
+    curve(ctx, '#ded0a7', 1.05, 4, -26, 3.5 + gust, -29, 4 + gust * .5, -31 - flicker * 1.2); ctx.restore();
+  } else if (o.kind === 'sign' && o.variant === 2) {
+    ctx.beginPath(); ctx.moveTo(-18, -80); ctx.lineTo(18, -80); ctx.bezierCurveTo(18 + gust * 2, -60, 14 + gust * 4, -44, 17 + gust * 5, -22);
+    ctx.quadraticCurveTo(8 + gust * 3, -25 + gust, 1 + gust * 4, -28); ctx.lineTo(-18 + gust * 4, -23); ctx.bezierCurveTo(-17 + gust * 3, -44, -19 + gust, -64, -18, -80); ctx.closePath();
+    ctx.fillStyle = '#9c8176'; ctx.fill(); ctx.strokeStyle = '#6c6658'; ctx.lineWidth = 1; ctx.stroke();
+    curve(ctx, 'rgba(184,166,139,.38)', 2, -10, -76, -7 + gust * 2, -54, -11 + gust * 4, -27); scribble(ctx, -11 + gust, -68, 23, 26, seed, '#b8ac8e');
+  } else if (o.kind === 'sign' && o.variant === 1) {
+    ctx.save(); ctx.beginPath(); ctx.rect(-27, -65, 55, 35); ctx.clip(); ctx.fillStyle = '#a39489'; ctx.fillRect(-27, -65, 55, 35);
+    drawActorSprite(ctx, 'lady', 0, -28, Math.PI / 2, false, 0, time, .61, undefined, { reducedMotion, phaseOffset: phase, billboard: true }); ctx.restore();
+  } else if (o.kind === 'machine' && o.variant === 2) {
+    ctx.save(); ctx.beginPath(); ctx.rect(-13, -28, 26, 22); ctx.clip(); ctx.fillStyle = '#83968c'; ctx.fillRect(-13, -28, 26, 22);
+    drawActorSprite(ctx, 'lady', 0, -7, Math.PI / 2, false, 0, time, .35, undefined, { reducedMotion, phaseOffset: phase, billboard: true });
+    curve(ctx, 'rgba(176,190,166,.20)', .8, -12, -18 + Math.sin(time * 2 + phase) * 7, 0, -18 + Math.sin(time * 2 + phase) * 7, 12, -17 + Math.sin(time * 2 + phase) * 7); ctx.restore();
+  }
+}
+function drawIllustration(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade = 1, reducedMotion = false) {
   if (o.kind === 'campfire' || o.kind === 'reed' || o.kind === 'flower' || o.kind === 'crop') { drawObject(ctx, o, time, fade); return; }
   const key = `${o.id}:${o.kind}:${o.variant}:${o.color}:${o.width}:${o.height}`;
   let art = objectCache.get(key);
@@ -476,16 +552,76 @@ function drawIllustration(ctx: CanvasRenderingContext2D, o: WorldObject, time: n
     if (objectCache.size > 256) objectCache.delete(objectCache.keys().next().value!);
   } else { objectCache.delete(key); objectCache.set(key, art); }
   ctx.save();
-  if (o.kind === 'tree' || o.kind === 'willow') { ctx.globalAlpha *= fade; ctx.transform(1, 0, Math.sin(time * .6 + o.x) * .023, 1, 0, 0); }
-  ctx.drawImage(art.canvas, art.left, art.top, art.width, art.height); ctx.restore();
-  if (o.kind === 'building') {
-    const px = (o.width || 5) * 32 * .16;
-    for (let n = 0; n < 3; n++) { const age = (time * 6 + n * 19) % 68; blob(ctx, px + 7 + age * .22 + Math.sin(time + n) * 4, -13 - age, 5 + age * .11, 3 + age * .11, `rgba(76,74,64,${.18 * (1 - age / 68)})`, n + o.x); }
-  }
-  if (o.kind === 'machine' && o.variant === 2) curve(ctx, 'rgba(176,190,166,.17)', .8, -12, -18 + Math.sin(time * 3) * 6, 0, -18 + Math.sin(time * 3) * 6, 12, -17 + Math.sin(time * 3) * 6);
+  const gust = reducedMotion ? 0 : wind(o.x, o.y, time);
+  if (o.kind === 'tree' || o.kind === 'willow') { ctx.globalAlpha *= fade; ctx.transform(1, 0, gust * .030, 1 - Math.abs(gust) * .003, 0, 0); }
+  if (o.kind === 'bush') ctx.transform(1, 0, gust * .016, 1 + Math.sin(time * .6 + o.x) * .009, 0, 0);
+  if (o.kind === 'sign' && !o.variant) ctx.rotate(gust * .009);
+  ctx.drawImage(art.canvas, art.left, art.top, art.width, art.height);
+  secondaryScenery(ctx, o, time, reducedMotion); ctx.restore();
 }
 function onScreen(o: WorldObject, f: RenderFrame, hw: number, hh: number) { return o.x + (o.width || 1) + 3 > f.camera.x - hw && o.x - 3 < f.camera.x + hw && o.y + (o.height || 1) + 2 > f.camera.y - hh && o.y - 5 < f.camera.y + hh; }
 function position(f: RenderFrame, x: number, y: number, width: number, height: number) { return { x: (x - f.camera.x) * TILE_SIZE * f.zoom + width / 2, y: (y - f.camera.y) * TILE_SIZE * f.zoom + height / 2 }; }
+function drawImpact(ctx: CanvasRenderingContext2D, impact: VisualImpact, frame: RenderFrame, width: number, height: number) {
+  if (impact.age < 0 || impact.age > impact.duration) return;
+  const p = position(frame, impact.position.x, impact.position.y, width, height), z = frame.zoom;
+  const t = Math.min(1, impact.age / impact.duration), lift = frame.reducedMotion ? 0 : Math.sin(t * Math.PI) * 11;
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(z, z);
+  if (impact.kind === 'eat' || impact.kind === 'coupon' || impact.kind === 'craft') {
+    const item = impact.itemId || (impact.kind === 'eat' ? 'soup' : impact.kind === 'coupon' ? 'time_coupon' : 'wood');
+    ctx.save(); ctx.globalAlpha *= impact.kind === 'coupon' ? Math.max(0, 1 - t * 1.4) : Math.max(0, 1 - t);
+    ctx.translate(impact.kind === 'eat' ? 10 - t * 7 : 0, -25 - lift); ctx.rotate(frame.reducedMotion ? 0 : Math.sin(t * Math.PI) * (impact.kind === 'eat' ? -.3 : .12));
+    drawItemIcon(ctx, item, 0, 0, 23); ctx.restore();
+    if (impact.kind === 'coupon' && !frame.reducedMotion && sceneryDebris) {
+      for (let n = 0; n < 6; n++) { const angle = noise(n, impact.seed) * Math.PI * 2, r = 3 + t * 30; ctx.save(); ctx.globalAlpha *= (1 - t) * .7; line(ctx, [Math.cos(angle) * r, -25 + Math.sin(angle) * r - t * 9, Math.cos(angle) * r + 2, -23 + Math.sin(angle) * r - t * 9], '#baa785', 1.5, true); ctx.restore(); }
+    }
+  } else if (impact.kind === 'door') {
+    ctx.globalAlpha *= (1 - t) * .30; const radius = frame.reducedMotion ? 12 : 10 + t * 20;
+    curve(ctx, '#b0a389', 1.4, -radius, 2, 0, -radius * .55, radius, 2);
+  } else if (impact.kind === 'build') {
+    ctx.globalAlpha *= (1 - t) * .40;
+    line(ctx, [-14, 4, -14, -11, -1, -20, 14, -10, 14, 4], '#b1a589', 1.4, true);
+    if (sceneryDebris && !frame.reducedMotion) for (let n = 0; n < 5; n++) line(ctx, [-19 + n * 9, 6 - t * 9, -17 + n * 9, 9 - t * 9], '#9f947a', 1.2, true);
+  } else if (sceneryDebris) {
+    const contactHeight = impact.kind === 'hit' ? -21 : impact.object && ['tree', 'willow'].includes(impact.object.kind) ? -23 : -9;
+    const progress = frame.reducedMotion ? .16 : t;
+    const shade = impact.kind === 'stone' ? '#9b9d8d' : impact.kind === 'hit' ? '#9e8175' : '#a18e6c';
+    ctx.globalAlpha *= (1 - t) * .72;
+    for (let n = 0; n < 7; n++) {
+      const angle = noise(n + 12, impact.seed) * Math.PI * 2, velocity = 9 + noise(n + 9, impact.seed) * 19;
+      const xx = Math.cos(angle) * (3 + velocity * progress), yy = contactHeight + Math.sin(angle) * velocity * progress + 26 * progress * progress;
+      if (impact.kind === 'stone') shape(ctx, [xx - 2, yy, xx + 1, yy - 3, xx + 3, yy + 1, xx, yy + 2], shade, 'rgba(64,70,55,.45)', .6);
+      else curve(ctx, shade, impact.kind === 'wood' ? 1.8 : 1.3, xx - 2, yy - 1, xx, yy + 1, xx + 3, yy - 2);
+    }
+    if (impact.kind === 'hit') curve(ctx, 'rgba(87,66,57,.50)', 2.5, -6, contactHeight - 4, 0, contactHeight + 2, 7, contactHeight - 6);
+  }
+  ctx.restore();
+}
+function drawWater(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number, hw: number, hh: number, time: number) {
+  const minX = Math.max(0, Math.floor((frame.camera.x - hw) / 2) * 2), maxX = Math.min(frame.scene.width - 1, Math.ceil(frame.camera.x + hw));
+  const minY = Math.max(0, Math.floor((frame.camera.y - hh) / 2) * 2), maxY = Math.min(frame.scene.height - 1, Math.ceil(frame.camera.y + hh));
+  const z = frame.zoom;
+  ctx.save();
+  for (let y = minY; y <= maxY; y += 2) for (let x = minX; x <= maxX; x += 2) {
+    const phase = worldHash(x + 31, y + 7) * Math.PI * 2;
+    const wx = x + .4 + worldHash(x + 6, y) * 1.3, wy = y + .4 + worldHash(x, y + 9) * 1.2;
+    if (!wet(tileAt(frame.scene, Math.floor(wx), Math.floor(wy)))) continue;
+    const p = position(frame, wx, wy, width, height);
+    const travel = frame.reducedMotion ? 0 : Math.sin(time * .44 + phase) * 7;
+    const swell = frame.reducedMotion ? 1 : 1 + Math.sin(time * .81 + phase) * .55;
+    ctx.globalAlpha = .12 + swell * .03;
+    if (wet(tileAt(frame.scene, Math.floor(wx + .8), Math.floor(wy)))) {
+      curve(ctx, '#cad0b7', z * .8, p.x + travel * z, p.y, p.x + (14 + travel) * z, p.y - swell * 2.1 * z, p.x + (28 + travel) * z, p.y + .3 * z);
+      curve(ctx, '#6c8582', z * .65, p.x + (4 + travel) * z, p.y + 3 * z, p.x + (17 + travel) * z, p.y + (3 - swell) * z, p.x + (24 + travel) * z, p.y + 3.5 * z);
+    }
+    if (!frame.reducedMotion && worldHash(x + 13, y + 29) > .80) {
+      const age = (time * .3 + phase) % 1, radius = (3 + age * 15) * z;
+      ctx.globalAlpha = (1 - age) * .17; ctx.strokeStyle = '#c0c7b2'; ctx.lineWidth = .7 * z;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y + 8 * z, radius, radius * .35, -.12, 0, Math.PI * 2); ctx.stroke();
+      if (age > .26) { ctx.beginPath(); ctx.ellipse(p.x, p.y + 8 * z, radius * .62, radius * .21, -.12, 0, Math.PI * 2); ctx.stroke(); }
+    }
+  }
+  ctx.restore();
+}
 function roomWalls(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number) {
   const z = frame.zoom, scale = TILE_SIZE * z, top = position(frame, 1, 1, width, height), rw = (frame.scene.width - 2) * scale;
   panel(ctx, top.x, top.y, rw, scale * 1.3, '#9f9b86', 22);
@@ -500,44 +636,98 @@ function roomWalls(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: num
 export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number) {
   ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#53584d'; ctx.fillRect(0, 0, width, height);
   const { scene, zoom } = frame, scale = TILE_SIZE * zoom, time = frame.reducedMotion ? 0 : frame.time;
+  sceneryDebris = frame.particlesEnabled !== false;
   const hw = width / scale / 2 + 2, hh = height / scale / 2 + 2;
+  const heldPose = playerToolPose(frame.player.facing, frame.player.moving, frame.player.animation, time, { reducedMotion: frame.reducedMotion, phaseOffset: 0, pace: frame.playerPace || 1, action: frame.player.attacking, hurt: frame.player.hurt });
   const cx1 = Math.max(0, Math.floor((frame.camera.x - hw) / CHUNK)), cx2 = Math.min(Math.floor((scene.width - 1) / CHUNK), Math.floor((frame.camera.x + hw) / CHUNK));
   const cy1 = Math.max(0, Math.floor((frame.camera.y - hh) / CHUNK)), cy2 = Math.min(Math.floor((scene.height - 1) / CHUNK), Math.floor((frame.camera.y + hh) / CHUNK));
   for (let cy = cy1; cy <= cy2; cy++) for (let cx = cx1; cx <= cx2; cx++) {
     const p = position(frame, cx * CHUNK, cy * CHUNK, width, height), c = groundChunk(scene, cx, cy);
     ctx.drawImage(c, 20, 20, CHUNK * 32 * 2, CHUNK * 32 * 2, p.x, p.y, CHUNK * scale, CHUNK * scale);
   }
-  const minX = Math.max(0, Math.floor(frame.camera.x - hw)), maxX = Math.min(scene.width - 1, Math.ceil(frame.camera.x + hw)), minY = Math.max(0, Math.floor(frame.camera.y - hh)), maxY = Math.min(scene.height - 1, Math.ceil(frame.camera.y + hh));
-  for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) if (wet(tileAt(scene, x, y)) && worldHash(x, y) > .43) {
-    const p = position(frame, x + .2, y + .5, width, height), phase = worldHash(x, y) * 6;
-    ctx.save(); ctx.globalAlpha = .11 + (Math.sin(time * .6 + phase) + 1) * .055;
-    curve(ctx, '#c6cbb4', .95 * zoom, p.x + Math.sin(time * .5 + phase) * 3 * zoom, p.y, p.x + 7 * zoom, p.y - 2 * zoom, p.x + 17 * zoom, p.y + 1.5 * zoom); ctx.restore();
-  }
+  drawWater(ctx, frame, width, height, hw, hh, time);
   if (!scene.outdoors) roomWalls(ctx, frame, width, height);
   const visible = frame.objects.filter(o => !frame.harvested[o.id] && onScreen(o, frame, hw, hh));
-  for (const o of visible.filter(o => o.kind === 'rug')) { const p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); drawIllustration(ctx, o, time); ctx.restore(); }
-  type Entry = { depth: number; object?: WorldObject; actor?: ActorFrame; player?: true };
+  for (const o of visible.filter(o => o.kind === 'rug')) { const p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); drawIllustration(ctx, o, time, 1, frame.reducedMotion); ctx.restore(); }
+  type Entry = { depth: number; object?: WorldObject; actor?: ActorFrame; player?: true; impact?: VisualImpact };
   const entries: Entry[] = visible.filter(o => o.kind !== 'rug').map(o => ({ depth: o.y + ((o.width || 1) >= 2 || (o.height || 1) >= 2 ? (o.height || 1) : 0), object: o }));
+  for (const impact of frame.impacts || []) if (impact.destroyed && impact.object && impact.age < .58 && onScreen(impact.object, frame, hw, hh) && !visible.some(o => o.id === impact.object!.id)) {
+    const o = impact.object; entries.push({ depth: o.y + ((o.width || 1) >= 2 || (o.height || 1) >= 2 ? (o.height || 1) : 0), object: o, impact });
+  }
   for (const a of frame.actors) if (Math.abs(a.x - frame.camera.x) < hw + 2 && Math.abs(a.y - frame.camera.y) < hh + 2 && a.health > 0) entries.push({ depth: a.y, actor: a });
   entries.push({ depth: frame.player.y, player: true }); entries.sort((a, b) => a.depth - b.depth);
   for (const e of entries) {
-    if (e.object) { const o = e.object, p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); const near = (o.kind === 'tree' || o.kind === 'willow') && Math.hypot(o.x - frame.player.x, o.y - frame.player.y) < 1.7 && frame.player.y < o.y + .4; drawIllustration(ctx, o, time, near ? .42 : 1); ctx.restore(); }
+    if (e.object) {
+      const o = e.object, p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom);
+      const hit = e.impact || (frame.impacts || []).find(event => event.targetId === o.id && event.age >= 0 && event.age < .35 && ['wood', 'stone', 'gather'].includes(event.kind));
+      if (e.impact) {
+        const fall = Math.min(1, Math.max(0, e.impact.age) / .58);
+        ctx.globalAlpha *= frame.reducedMotion ? 1 - fall : 1 - Math.max(0, (fall - .28) / .72);
+        if (!frame.reducedMotion) {
+          if (o.kind === 'tree' || o.kind === 'willow') ctx.rotate(Math.sin((e.impact.direction || 1) + .4) * fall * fall * .82);
+          else { ctx.translate(0, fall * 6); ctx.scale(1 - fall * .26, 1 - fall * .46); }
+        }
+      } else if (hit && !frame.reducedMotion) {
+        const recoil = Math.sin(hit.age * 37) * Math.exp(-hit.age * 12); ctx.rotate(recoil * .035); ctx.translate(recoil * 2, 0);
+      }
+      const near = (o.kind === 'tree' || o.kind === 'willow') && Math.hypot(o.x - frame.player.x, o.y - frame.player.y) < 1.7 && frame.player.y < o.y + .4;
+      drawIllustration(ctx, o, time, near ? .42 : 1, frame.reducedMotion); ctx.restore();
+    }
     else if (e.actor) {
       const a = e.actor, p = position(frame, a.x, a.y, width, height), dist = Math.hypot(a.x - frame.player.x, a.y - frame.player.y);
       shadow(ctx, p.x + 3 * zoom, p.y + 2 * zoom, (a.kind === 'bat' ? 13 : 11) * zoom, 4 * zoom, a.kind === 'bat' ? .12 : .2);
-      ctx.save(); if (a.hurt > 0 && Math.sin(time * 30) > 0) ctx.globalAlpha = .43;
-      drawActorSprite(ctx, a.kind, p.x, p.y + (a.kind === 'bat' ? Math.sin(time * 3 + a.x) * 3 * zoom : 0), a.facing, a.moving, a.animation, time, zoom, a.color, { asleep: a.kind === 'lady' && frame.flags.includes('supine_asleep'), mindChanged: (a.kind === 'lady' || a.id === 'supine-in-ada') && frame.flags.includes('mind_changed') && (!frame.sequence || frame.sequence.elapsed / frame.sequence.duration > .8), brainAbsent: a.kind === 'lady' && frame.flags.includes('ada_restored') }); ctx.restore();
+      ctx.save(); if (a.hurt > 0) ctx.globalAlpha = frame.reducedMotion ? .83 : .68 + Math.max(0, .35 - a.hurt) * .5;
+      drawActorSprite(ctx, a.kind, p.x, p.y + (a.kind === 'bat' ? Math.sin(time * 3 + a.x) * 3 * zoom : 0), a.facing, a.moving, a.animation, time, zoom, a.color, { reducedMotion: frame.reducedMotion, phaseOffset: actorPhase(a.id), pace: a.hostile ? 1.3 : .88, action: a.attackTime || 0, hurt: a.hurt, asleep: (a.kind === 'lady' && frame.flags.includes('supine_asleep') && !frame.flags.includes('mind_changed')) || Boolean(frame.sequence && (Math.hypot(a.x - frame.sequence.from.x, a.y - frame.sequence.from.y) < .2 || Math.hypot(a.x - frame.sequence.to.x, a.y - frame.sequence.to.y) < .2)), mindChanged: (a.kind === 'lady' || a.id === 'supine-in-ada') && frame.flags.includes('mind_changed') && (!frame.sequence || frame.sequence.elapsed / frame.sequence.duration > .86), brainAbsent: a.kind === 'lady' && frame.flags.includes('ada_restored') }); ctx.restore();
+      if (a.kind === 'bat' && !frame.reducedMotion && dist < 6) {
+        if ((a.attackTime || 0) > 0) {
+          ctx.save(); ctx.globalAlpha = Math.min(.27, (a.attackTime || 0)); ctx.translate(p.x, p.y - 24 * zoom); ctx.rotate(a.facing);
+          curve(ctx, '#6c625e', zoom, -22 * zoom, -9 * zoom, -12 * zoom, -7 * zoom, -3 * zoom, -12 * zoom);
+          curve(ctx, '#6c625e', zoom * .7, -26 * zoom, 8 * zoom, -13 * zoom, 7 * zoom, -6 * zoom, 12 * zoom); ctx.restore();
+        } else if (!a.moving && !a.hostile) {
+          ctx.save(); ctx.globalAlpha = .06 + Math.max(0, Math.sin(time * 1.9 + actorPhase(a.id))) * .10; ctx.strokeStyle = '#8c8170'; ctx.lineWidth = .7 * zoom;
+          for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(p.x + side * 8 * zoom, p.y - 37 * zoom, 7 * zoom, side < 0 ? 2.1 : -1.05, side < 0 ? 4.1 : 1.05); ctx.stroke(); } ctx.restore();
+        }
+      }
       if (!a.hostile && dist < 5.4) { label(ctx, a.name, p.x, p.y - (a.kind === 'lady' ? 70 : a.kind === 'ox' ? 53 : 46) * zoom, a.id === frame.nearby?.id ? '#dbc8a8' : '#dfd7c4', `${Math.max(10, 10 * zoom)}px "Patrick Hand", "DM Sans", sans-serif`); if (frame.flags.includes(`${a.id}_friend`)) { ctx.save(); ctx.fillStyle = '#a7ad86'; ctx.beginPath(); ctx.arc(p.x + 15 * zoom, p.y - 36 * zoom, 2 * zoom, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
       else if (a.hostile && dist < 5) { line(ctx, [p.x - 13 * zoom, p.y - 40 * zoom, p.x + 13 * zoom, p.y - 40 * zoom], '#514943', 4 * zoom, true); line(ctx, [p.x - 13 * zoom, p.y - 40 * zoom, p.x - 13 * zoom + Math.min(1, a.health / 42) * 26 * zoom, p.y - 40 * zoom], '#ac8171', 2.5 * zoom, true); }
     } else {
-      const a = frame.player, p = position(frame, a.x, a.y, width, height); shadow(ctx, p.x + 4 * zoom, p.y + 2 * zoom, 11 * zoom, 4 * zoom, .21); ctx.save(); if (a.hurt > 0 && Math.sin(time * 30) > 0) ctx.globalAlpha = .43; drawActorSprite(ctx, 'human', p.x, p.y, a.facing, a.moving, a.animation, time, zoom); ctx.restore();
-      if (a.attacking > 0) { const swing = a.facing + (1 - Math.min(1, a.attacking / .3)) * 1.7 - .8; ctx.save(); ctx.translate(p.x, p.y - 14 * zoom); ctx.rotate(swing + Math.PI / 2); drawItemIcon(ctx, frame.selected, 9 * zoom, -17 * zoom, 23 * zoom); ctx.restore(); ctx.strokeStyle = 'rgba(191,180,147,.51)'; ctx.lineWidth = 2 * zoom; ctx.beginPath(); ctx.arc(p.x, p.y - 14 * zoom, 24 * zoom, swing - .6, swing + .6); ctx.stroke(); }
+      const a = frame.player, p = position(frame, a.x, a.y, width, height); shadow(ctx, p.x + 4 * zoom, p.y + 2 * zoom, 11 * zoom, 4 * zoom, .21); ctx.save(); if (a.hurt > 0) ctx.globalAlpha = frame.reducedMotion ? .83 : .68 + Math.max(0, .35 - a.hurt) * .5; drawActorSprite(ctx, 'human', p.x, p.y, a.facing, a.moving, a.animation, time, zoom, undefined, { reducedMotion: frame.reducedMotion, phaseOffset: 0, pace: frame.playerPace || 1, action: a.attacking, hurt: a.hurt }); ctx.restore();
+      if (a.attacking > 0 || ['walking_cane', 'willow_axe', 'stone_pick', 'fishing_rod'].includes(frame.selected)) {
+        const phase = a.attacking > 0 ? 1 - Math.min(1, a.attacking / .26) : 1, anticipation = .07 / .26, contact = .16 / .26;
+        const wrist = a.attacking > 0 ? phase < anticipation ? -.15 * phase / anticipation : phase < contact ? -.15 + .5 * ((phase - anticipation) / (contact - anticipation)) : .35 * (1 - (phase - contact) / (1 - contact)) : 0;
+        const grip = frame.selected.includes('cane') ? { x: 14, y: 25 } : frame.selected.includes('rod') ? { x: 11, y: 23 } : { x: 13, y: 21 };
+        const itemSize = 28 * zoom, hx = p.x + heldPose.x * zoom, hy = p.y + heldPose.y * zoom;
+        ctx.save(); ctx.translate(hx, hy); ctx.rotate(heldPose.angle - Math.PI / 2 + wrist); drawItemIcon(ctx, frame.selected, -grip.x / 32 * itemSize, -grip.y / 32 * itemSize, itemSize); ctx.restore();
+        if (!frame.reducedMotion && a.attacking > 0 && phase >= anticipation && phase < contact) {
+          const sweep = heldPose.angle - Math.PI / 2 + wrist;
+          ctx.save(); ctx.translate(hx, hy); ctx.rotate(sweep); curve(ctx, 'rgba(188,174,141,.38)', 1.5 * zoom, -14 * zoom, -13 * zoom, -6 * zoom, -23 * zoom, 8 * zoom, -15 * zoom); ctx.restore();
+        }
+      }
     }
   }
+  for (const impact of frame.impacts || []) drawImpact(ctx, impact, frame, width, height);
   drawMindExchange(ctx, frame, width, height);
   const pp = position(frame, frame.player.x, frame.player.y, width, height);
   ctx.strokeStyle = 'rgba(203,191,153,.33)'; ctx.lineWidth = zoom; ctx.beginPath(); ctx.ellipse(pp.x, pp.y + 4 * zoom, 12 * zoom, 4.5 * zoom, -.1, 0, Math.PI * 2); ctx.stroke();
-  if (frame.fishing) { const p = position(frame, frame.fishing.position.x, frame.fishing.position.y, width, height); curve(ctx, '#c3b99b', .9, pp.x + 9 * zoom, pp.y - 19 * zoom, (pp.x + p.x) / 2, Math.min(pp.y, p.y) - 22 * zoom, p.x, p.y); blob(ctx, p.x, p.y - 3 * zoom + Math.sin(time * 3) * zoom, 2 * zoom, 4 * zoom, frame.fishing.phase === 'bite' ? '#cdb88a' : '#aa8170', 21, true); if (frame.fishing.phase === 'bite') label(ctx, 'Reel', p.x, p.y - 24 * zoom, '#d7c69f', 'bold 15px "Patrick Hand", sans-serif'); }
+  if (frame.fishing) {
+    const fishing = frame.fishing, bob = position(frame, fishing.position.x, fishing.position.y, width, height), bite = fishing.phase === 'bite';
+    const toss = frame.reducedMotion ? 0 : Math.sin(time * (bite ? 9 : 2.4)) * (bite ? 2.5 : .9), dip = frame.reducedMotion ? 0 : bite ? Math.abs(Math.sin(time * 8)) * 4 : Math.sin(time * 2) * .7;
+    let floatX = bob.x + toss * zoom, floatY = bob.y + dip * zoom;
+    if (fishing.phase === 'caught') {
+      const travel = Math.min(1, fishing.elapsed / .64);
+      floatX = frame.reducedMotion ? pp.x + 8 * zoom : bob.x + (pp.x + 8 * zoom - bob.x) * travel;
+      floatY = frame.reducedMotion ? pp.y - 23 * zoom : bob.y + (pp.y - 22 * zoom - bob.y) * travel - Math.sin(travel * Math.PI) * 37 * zoom;
+      ctx.save(); ctx.translate(floatX, floatY); ctx.rotate(frame.reducedMotion ? 0 : Math.atan2(pp.y - 22 * zoom - bob.y, pp.x - bob.x) + Math.sin(travel * 18) * .19); ctx.scale(zoom, zoom);
+      blob(ctx, 0, 0, 8, 3.3, '#a4ad99', 71, true); shape(ctx, [7, 0, 12, -4, 11, 4], '#899888', '#536250', .7); curve(ctx, '#ccd0b9', 1, -5, -1, 0, -2, 5, -1); ctx.fillStyle = '#465245'; ctx.beginPath(); ctx.arc(-5, -.5, .8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    } else {
+      ctx.save(); ctx.globalAlpha = bite ? .22 : .12; ctx.strokeStyle = '#ccd1b7'; ctx.lineWidth = .8 * zoom;
+      for (let n = 0; n < 2; n++) { const age = frame.reducedMotion ? .45 + n * .2 : ((fishing.elapsed * (bite ? 1.25 : .44)) + n * .5) % 1, r = (3 + age * (bite ? 17 : 10)) * zoom; ctx.beginPath(); ctx.ellipse(bob.x, bob.y + 3 * zoom, r, r * .33, -.1, 0, Math.PI * 2); ctx.stroke(); } ctx.restore();
+      ctx.save(); ctx.translate(floatX, floatY - 3 * zoom); ctx.rotate(frame.reducedMotion ? 0 : toss * .15); blob(ctx, 0, 0, 2 * zoom, 4 * zoom, bite ? '#cdb88a' : '#aa8170', 21, true); ctx.restore();
+    }
+    const sag = bite || fishing.phase === 'caught' ? 10 : 19 + (frame.reducedMotion ? 0 : Math.sin(time * 1.3) * 3);
+    curve(ctx, '#c3b99b', .9, pp.x + heldPose.x * zoom, pp.y + (heldPose.y - 16) * zoom, (pp.x + floatX) / 2, Math.min(pp.y, floatY) - sag * zoom, floatX, floatY);
+    if (bite) label(ctx, 'Reel', bob.x, bob.y - 25 * zoom, '#d7c69f', 'bold 15px "Patrick Hand", sans-serif');
+  }
   if (frame.buildPreview) { const b = frame.buildPreview, p = position(frame, b.position.x, b.position.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); ctx.globalAlpha = .59; drawObject(ctx, { id: 'preview', kind: b.kind, ...b.position, solid: false }, time); ctx.restore(); ctx.strokeStyle = b.valid ? '#a4af8b' : '#a56f65'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(p.x, p.y, 17 * zoom, 9 * zoom, -.1, 0, Math.PI * 2); ctx.stroke(); }
   for (const particle of frame.particles) { const p = position(frame, particle.x, particle.y, width, height); if (Math.abs(particle.x - frame.camera.x) > hw || Math.abs(particle.y - frame.camera.y) > hh) continue; ctx.save(); ctx.globalAlpha = Math.min(.75, particle.life / Math.max(.01, particle.maxLife)); if (particle.kind === 'smoke' || particle.kind === 'dust') blob(ctx, p.x, p.y, particle.size * zoom, particle.size * zoom * .7, particle.color, particle.maxLife * 18); else curve(ctx, particle.color, Math.max(.8, particle.size * zoom * .5), p.x, p.y, p.x + particle.size * zoom, p.y - particle.size * zoom * .4, p.x + particle.size * zoom * 1.3, p.y + zoom); ctx.restore(); }
   // Damp air moves over the drawing. Nature survives beneath the municipal neglect.
@@ -547,7 +737,7 @@ export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, w
   }
   const night = scene.outdoors ? .035 + Math.max(0, Math.cos((frame.dayTime + .08) * Math.PI * 2)) * .25 : .09;
   ctx.fillStyle = `rgba(38,46,44,${night})`; ctx.fillRect(0, 0, width, height);
-  ctx.save(); ctx.globalCompositeOperation = 'screen'; for (const o of visible) if (['campfire', 'lantern', 'machine'].includes(o.kind)) { const p = position(frame, o.x, o.y - .3, width, height), r = (o.kind === 'campfire' ? 73 : 42) * zoom; const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, r); g.addColorStop(0, 'rgba(176,146,91,.055)'); g.addColorStop(1, 'rgba(176,146,91,0)'); ctx.fillStyle = g; ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); } ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; for (const o of visible) if (['campfire', 'lantern', 'machine'].includes(o.kind)) { const p = position(frame, o.x, o.y - .3, width, height), r = (o.kind === 'campfire' ? 73 : 42) * zoom; const g = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, r); g.addColorStop(0, `rgba(176,146,91,${frame.reducedMotion ? .055 : .045 + (Math.sin(time * (o.kind === 'campfire' ? 5.7 : 6.3) + o.x) + 1) * .008})`); g.addColorStop(1, 'rgba(176,146,91,0)'); ctx.fillStyle = g; ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); } ctx.restore();
   if (frame.waypoint) { const p = position(frame, frame.waypoint.x, frame.waypoint.y, width, height); ctx.strokeStyle = '#bbab86'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(p.x, p.y, 12 * zoom, 5 * zoom, 0, 0, Math.PI * 2); ctx.stroke(); const lift = Math.sin(time * 1.3) * 2; line(ctx, [p.x, p.y - (17 + lift) * zoom, p.x - 4 * zoom, p.y - (24 + lift) * zoom, p.x + 4 * zoom, p.y - (24 + lift) * zoom, p.x, p.y - (17 + lift) * zoom], '#cfbc93', 1.4);
     if (p.x < 35 || p.x > width - 35 || p.y < 110 || p.y > height - 100) { const angle = Math.atan2(p.y - height / 2, p.x - width / 2), factor = Math.min((width / 2 - 44) / Math.max(.01, Math.abs(p.x - width / 2)), (height / 2 - 115) / Math.max(.01, Math.abs(p.y - height / 2))); const x = width / 2 + (p.x - width / 2) * Math.max(.05, factor), y = height / 2 + (p.y - height / 2) * Math.max(.05, factor); ctx.save(); ctx.translate(x, y); ctx.rotate(angle); line(ctx, [-4, -5, 6, 0, -4, 5], '#c3b08b', 2); ctx.restore(); }
   }

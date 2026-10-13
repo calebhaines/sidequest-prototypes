@@ -26,6 +26,7 @@ export type WorldData = {
 };
 export type ActorFrame = ActorDef & {
   facing: number; moving: boolean; animation: number; health: number; attacking: boolean; hurt: number;
+  attackTime?: number;
 };
 export type PlayerFrame = Vec & {
   facing: number; moving: boolean; animation: number; health: number; maxHealth: number;
@@ -33,6 +34,11 @@ export type PlayerFrame = Vec & {
 };
 export type Particle = Vec & { vx: number; vy: number; life: number; maxLife: number; color: string; size: number; kind: 'dust' | 'spark' | 'leaf' | 'heart' | 'smoke' | 'time' | 'splash' };
 export type FloatingText = Vec & { id: number; text: string; color: string; life: number };
+export type VisualImpact = {
+  id: number; kind: 'wood' | 'stone' | 'build' | 'hit' | 'eat' | 'coupon' | 'door' | 'gather' | 'craft';
+  position: Vec; age: number; duration: number; seed: number;
+  targetId?: string; object?: WorldObject; destroyed?: boolean; direction?: number; itemId?: string;
+};
 export type FishingState = { position: Vec; phase: 'waiting' | 'bite' | 'caught'; elapsed: number; biteAt: number };
 export type InteractTarget = { id: string; type: 'npc' | 'object' | 'door'; name: string; location: string; scene: string; position: Vec; actor?: ActorDef; object?: WorldObject };
 export type ResourceItem = { id: string; name: string; description: string; kind: 'tool' | 'resource' | 'food' | 'placeable' | 'time'; color: string; icon: string };
@@ -47,6 +53,7 @@ export type WorldSnapshot = WorldSave & {
   region: Region; nearby: InteractTarget | null; fishing: FishingState | null; enemies: number;
   paused: boolean; saving: boolean; areaNotice: string;
   sequence?: WorldSequence | null;
+  playerPace?: number; impacts?: VisualImpact[];
 };
 export type WorldSequence = { kind: 'exchange' | 'restore'; elapsed: number; duration: number; from: Vec; to: Vec };
 export type RenderFrame = {
@@ -54,8 +61,9 @@ export type RenderFrame = {
   objects: WorldObject[]; harvested: Record<string, number>; particles: Particle[]; floating: FloatingText[];
   camera: Vec; zoom: number; time: number; dayTime: number; flags: string[];
   selected: string; nearby: InteractTarget | null; fishing: FishingState | null; waypoint: Vec | null;
-  reducedMotion: boolean; buildPreview?: { kind: ObjectKind; position: Vec; valid: boolean } | null;
+  reducedMotion: boolean; particlesEnabled?: boolean; buildPreview?: { kind: ObjectKind; position: Vec; valid: boolean } | null;
   sequence?: WorldSequence | null;
+  playerPace?: number; impacts?: VisualImpact[];
 };
 export type EngineCallbacks = {
   onInteract: (target: InteractTarget) => void;

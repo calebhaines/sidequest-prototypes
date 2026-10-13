@@ -1,6 +1,6 @@
 import { ITEMS, RECIPES } from './items';
 import { renderWorld } from './renderer';
-import { TILE_SIZE, type ActorFrame, type EngineCallbacks, type FishingState, type FloatingText, type GameEngine, type InteractTarget, type ObjectKind, type Particle, type PlayerFrame, type Region, type Vec, type WorldData, type WorldObject, type WorldSave, type WorldScene, type WorldSnapshot, type WorldSequence } from './types';
+import { TILE_SIZE, type ActorFrame, type EngineCallbacks, type FishingState, type FloatingText, type GameEngine, type InteractTarget, type ObjectKind, type Particle, type PlayerFrame, type Region, type Vec, type WorldData, type WorldObject, type WorldSave, type WorldScene, type WorldSnapshot, type WorldSequence, type VisualImpact } from './types';
 
 const TWO_PI = Math.PI * 2;
 const CHUNK = 8;
@@ -43,6 +43,10 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   let particles: Particle[] = [];
   let floating: FloatingText[] = [];
   let floatingId = 0;
+  let impacts: VisualImpact[] = [];
+  let impactId = 0;
+  let playerPace = 1;
+  let footstepIndex = -1;
   let fishing: FishingState | null = null;
   let sequence: WorldSequence | null = null;
   let building: string | null = null;
@@ -183,7 +187,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     if (!object.resource || !canHarvest(object)) return;
     harvested[object.id] = elapsed + 150;
     addResource(object.resource.item, object.resource.amount);
-    gainXP(3); burst(object, '#becb96', 'leaf', 6); callbacks.onSound('gather'); refreshObjects(); publish();
+    gainXP(3); impact('gather', object, object, true); burst(object, '#a0a586', 'leaf', 6); callbacks.onSound('gather'); refreshObjects(); publish();
   }
 
   function ensureFollowers() {
@@ -234,6 +238,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       ...save(), region: { ...region, landmark: { ...region.landmark } }, nearby: nearby ? clone(nearby) : null,
       fishing: fishing ? clone(fishing) : null, enemies: actors.filter((actor) => actor.hostile && actor.health > 0 && distance(actor, player) < 18).length,
       paused, saving: false, areaNotice: areaNoticeTime > 0 ? areaNotice : '', sequence: sequence ? clone(sequence) : null,
+      playerPace, impacts: clone(impacts),
     };
   }
 
@@ -262,6 +267,13 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   function burst(position: Vec, color: string, kind: Particle['kind'], count = 8) {
     if (!options.particles) return;
     for (let i = 0; i < count; i++) particles.push({ ...position, vx: random(-1.1, 1.1), vy: random(-1.8, -0.2), life: random(0.3, 0.75), maxLife: 0.75, color, size: random(1.5, 3), kind });
+  }
+
+  function impact(kind: VisualImpact['kind'], position: Vec, object?: WorldObject, destroyed = false, direction = player.facing, itemId?: string) {
+    const durations: Record<VisualImpact['kind'], number> = { wood: .85, stone: .65, build: .7, hit: .48, eat: 1.15, coupon: 1.6, door: .55, gather: .55, craft: .65 };
+    const id = impactId++;
+    impacts.push({ id, kind, position: { x: position.x, y: position.y }, age: ['wood', 'stone', 'hit'].includes(kind) ? -.07 : 0, duration: durations[kind], seed: id * 47 + Math.round(position.x * 13 + position.y * 29), direction, targetId: object?.id, object: object ? { ...object } : undefined, destroyed, itemId });
+    impacts = impacts.slice(-20);
   }
 
   function gainXP(amount: number) {
@@ -305,12 +317,14 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       player.stamina = player.maxStamina;
       addFloating(`+${health} health`, '#a8dca0');
       burst(player, '#969080', 'smoke');
+      impact('eat', player, undefined, false, player.facing, id);
       callbacks.onSound('eat');
     } else if (ITEMS[id].kind === 'time') {
       inventory[id]--;
       callbacks.onTimeChange(180);
       addFloating('+3:00 borrowed time', '#ebcf80');
       burst(player, '#ead185', 'time', 18);
+      impact('coupon', player, undefined, false, player.facing, id);
       callbacks.onSound('coupon');
       notify('The printed mouth blows a kiss. The paper dissolves; the face lasts longest. Three minutes credited.', 'success');
     } else if (ITEMS[id].kind === 'placeable') {
@@ -343,6 +357,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     for (const [item, amount] of Object.entries(recipe.ingredients)) inventory[item] -= amount;
     addResource(recipe.result, recipe.amount);
     gainXP(8);
+    impact('craft', player, undefined, false, player.facing, recipe.result);
     callbacks.onSound('craft');
     notify(`Made ${recipe.amount} ${ITEMS[recipe.result].name.toLowerCase()}.`, 'success');
     publish();
@@ -388,6 +403,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     if (kind === 'bench') object.text = 'Somebody made room for somebody else.';
     inventory[building]--;
     placed.push(object);
+    impact('build', object, object);
     burst(object, '#c3b887', 'dust');
     gainXP(5);
     callbacks.onSound('build');
@@ -500,6 +516,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       const amount = item === 'walking_cane' ? 24 + player.level * 2 : 16 + player.level;
       enemy.health -= amount;
       enemy.hurt = 0.22;
+      impact('hit', enemy);
       move(enemy, Math.cos(player.facing) * 0.6, Math.sin(player.facing) * 0.6, false);
       addFloating(`−${amount}`, '#f2a494', enemy);
       burst(enemy, '#d0b2e9', 'spark');
@@ -531,6 +548,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       }
       const damage = (damageToObject.get(target.id) ?? 0) + 1;
       damageToObject.set(target.id, damage);
+      impact(wantsPick ? 'stone' : 'wood', target, target, damage >= target.resource.health);
       burst(target, wantsPick ? '#c3c5b7' : '#afc395', wantsPick ? 'spark' : 'leaf', 6);
       addFloating(`${Math.max(0, target.resource.health - damage)} / ${target.resource.health}`, '#d3d7b0', target);
       callbacks.onSound(wantsPick ? 'stone' : 'wood');
@@ -597,6 +615,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     }
     if (object?.door) {
       teleport(object.door.scene, object.door.position);
+      impact('door', player);
       callbacks.onSound('door');
       return;
     }
@@ -638,6 +657,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     player.y = position?.y ?? scene.spawn.y;
     player.moving = false;
     player.attacking = 0;
+    playerPace = 1;
+    impacts = [];
     camera = { x: player.x, y: player.y };
     mouse = null;
     pointerWorld = null;
@@ -698,6 +719,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     const now = elapsed;
     for (const actor of actors) {
       actor.hurt = Math.max(0, actor.hurt - dt);
+      actor.attackTime = Math.max(0, (actor.attackTime || 0) - dt);
       actor.attacking = false;
       const length = distance(actor, player);
       if (actor.hostile) {
@@ -732,6 +754,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
           player.stamina = Math.max(0, player.stamina - 8);
           player.hurt = 0.6;
           actor.attacking = true;
+          actor.attackTime = .34;
+          impact('hit', player, undefined, false, actor.facing);
           enemyCooldowns.set(actor.id, 1.4);
           callbacks.onTimeChange(-15);
           callbacks.onSound('hurt');
@@ -787,6 +811,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     const sneaking = keys.has('c');
     const sprinting = keys.has('shift') && player.stamina > 1 && magnitude > 0.05 && !sneaking;
     const speed = sneaking ? 1.9 : sprinting ? 5.7 : 3.3;
+    playerPace = sprinting ? 1.45 : sneaking ? .65 : 1;
     const before = { x: player.x, y: player.y };
     if (magnitude > 0.05 && !fishing) {
       player.facing = Math.atan2(dy, dx);
@@ -802,7 +827,12 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
         borrowedFraction -= debt;
         callbacks.onTimeChange(-debt);
       }
-      if (Math.random() < dt * 6 && !options.reducedMotion) burst(player, '#baa885', 'dust', 1);
+      const step = Math.floor(player.animation * 10 / Math.PI);
+      if (step !== footstepIndex && !options.reducedMotion) {
+        const side = step % 2 ? 1 : -1;
+        burst({ x: player.x + Math.cos(player.facing + Math.PI / 2) * side * .13, y: player.y + Math.sin(player.facing + Math.PI / 2) * side * .13 }, '#a2987f', 'dust', sprinting ? 2 : 1);
+      }
+      footstepIndex = step;
     }
     if (!sprinting && player.attacking === 0) player.stamina = Math.min(player.maxStamina, player.stamina + dt * (player.moving ? 9 : 16));
     if (heldAction && !fishing && !building && ['walking_cane', 'willow_axe', 'stone_pick'].includes(hotbar[selected])) primaryAction();
@@ -830,6 +860,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     particles = particles.filter((particle) => particle.life > 0).slice(-160);
     for (const text of floating) { text.life -= dt; text.y -= dt * 0.35; }
     floating = floating.filter((text) => text.life > 0);
+    for (const effect of impacts) effect.age += dt;
+    impacts = impacts.filter(effect => effect.age < effect.duration);
     scanTimer += dt;
     if (scanTimer > 0.22) {
       scanTimer = 0;
@@ -881,7 +913,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       harvested, particles, floating, camera, zoom: options.zoom, time: elapsed, dayTime, flags,
       selected: hotbar[selected], nearby, fishing,
       waypoint: !waypoint ? null : waypointScene === scene.id ? waypoint : scene.outdoors ? data.interiors[waypointScene]?.exit?.position || waypoint : scene.exit?.positionInRoom || null,
-      reducedMotion: options.reducedMotion, buildPreview, sequence,
+      reducedMotion: options.reducedMotion, particlesEnabled: options.particles, buildPreview, sequence, playerPace, impacts,
     }, width, height);
     publishTimer += dt;
     if (publishTimer > 0.1) { publishTimer = 0; publish(); }
@@ -975,6 +1007,9 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     waypoint = value.waypoint ? { ...value.waypoint } : null;
     waypointScene = value.waypointScene || data.overworld.id;
     camera = { x: player.x, y: player.y };
+    impacts = [];
+    playerPace = 1;
+    footstepIndex = -1;
     if (!Number.isFinite(player.x) || !Number.isFinite(player.y)) { player.x = scene.spawn.x; player.y = scene.spawn.y; }
     initActors();
     ensureFollowers();
