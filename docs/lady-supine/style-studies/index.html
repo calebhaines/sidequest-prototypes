@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ddd2ba">
+  <meta name="description" content="Ten art directions for Lady Supine. Compare characters, places, interiors, and outdoor objects from the Land of Limited Time.">
+  <title>Ten art studies · Lady Supine</title>
+  <link rel="icon" href="../art/supine-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../fonts/fonts.css">
+  <style>
+    :root {
+      --p-ink:#27252a; --p-charcoal:#3e393d; --p-slate:#545350; --p-smoke:#757a78;
+      --p-fog:#9da59e; --p-paper:#ddd2ba; --p-chalk:#efe5cf; --p-ash:#beb7a4;
+      --p-umbra:#564a3d; --p-bark:#78634a; --p-clay:#a28766; --p-sand:#c1ad87;
+      --p-rust:#a45d47; --p-ochre:#c29559; --p-ember:#c57c50; --p-straw:#d5bd78;
+      --p-pine:#465951; --p-moss:#637c61; --p-sage:#8e9b71; --p-lichen:#b0b894;
+      --p-deepWater:#445e68; --p-water:#708a8c; --p-bruise:#725b70; --p-flesh:#c9968f;
+      color-scheme:light;
+      font-family:'DM Sans',sans-serif;
+      color:var(--p-ink);
+      background:var(--p-paper);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;scroll-padding-top:24px}
+    body{margin:0;line-height:1.55}
+    button,select,a{touch-action:manipulation}
+    button,select{font:inherit}
+    button,select,.button{min-height:44px;border:1px solid var(--p-slate);border-radius:3px;background:var(--p-chalk);color:var(--p-ink)}
+    button,.button{padding:9px 14px;cursor:pointer;font-weight:600}
+    button:hover,.button:hover{background:var(--p-paper)}
+    button:disabled{opacity:.55;cursor:default}
+    :focus-visible{outline:3px solid var(--p-deepWater);outline-offset:3px}
+    a{color:var(--p-pine);text-underline-offset:3px}
+    .button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;line-height:1.45}
+    .quiet-button{background:transparent}
+    .wrap{width:min(1480px,100% - 64px);margin:0 auto}
+    .skip{position:absolute;top:-100px;left:16px;z-index:10;padding:12px;background:var(--p-chalk)}
+    .skip:focus{top:12px}
+    .top-line{padding-top:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:13px}
+    .series{letter-spacing:.12em;text-transform:uppercase;color:var(--p-slate)}
+    header{padding:48px 0 28px}
+    .eyebrow{margin:0 0 8px;color:var(--p-umbra);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+    h1,h2,h3{font-family:'Libre Baskerville',serif;font-weight:400;line-height:1.25}
+    h1{font-size:clamp(34px,4.5vw,66px);max-width:960px;margin:0 0 20px;letter-spacing:-.045em}
+    .intro{max-width:780px;font-size:17px;margin:0}
+    .brief{margin:28px 0 0;padding:16px 0;border-top:1px solid var(--p-ash);border-bottom:1px solid var(--p-ash)}
+    .brief summary{cursor:pointer;font-weight:600;min-height:32px}
+    .brief p{max-width:960px;margin:12px 0}
+    .palette{display:flex;flex-wrap:wrap;gap:5px;margin:15px 0 3px;list-style:none;padding:0}
+    .palette li{width:25px;height:25px;background:var(--swatch);border:1px solid var(--p-slate);border-radius:2px}
+    .legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;list-style:none;padding:0;margin:22px 0 0}
+    .legend li{display:flex;gap:10px;font-size:14px;align-items:baseline}
+    .legend b{font-family:'Kalam',cursive;font-size:19px;color:var(--p-umbra);font-weight:400}
+    .legend span{display:block}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:20px}
+    .section-head h2{font-size:28px;margin:0 0 6px}
+    .section-head p{margin:0;font-size:14px;max-width:760px}
+    section{padding:30px 0}
+    .compare-section{border-bottom:1px solid var(--p-ash)}
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+    .compare-tools{display:flex;align-items:flex-end;gap:18px;margin:0 0 18px}
+    .compare-subject-control{width:100%;max-width:360px;flex-shrink:0}
+    .compare-subject-control select{margin-bottom:0}
+    .compare-tools p{margin:0 0 10px;font-size:13px;max-width:580px;color:var(--p-umbra)}
+    .compare-pane{min-width:0}
+    .compare-label{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;color:var(--p-umbra)}
+    select{width:100%;padding:10px 34px 10px 12px;margin-bottom:12px}
+    .image-button{display:block;width:100%;padding:0;border:1px solid var(--p-ash);border-radius:0;background:var(--p-chalk);overflow:hidden;line-height:0;min-height:0}
+    .image-button:hover{border-color:var(--p-slate);background:var(--p-chalk)}
+    .image-button img{aspect-ratio:3/2;object-fit:contain}
+    .compare-grid.panel-focus .image-button{position:relative;aspect-ratio:1}
+    .compare-grid.panel-focus .image-button img{position:absolute;left:var(--panel-x,0%);top:var(--panel-y,0%);width:300%;height:200%;max-width:none;max-height:none;aspect-ratio:auto;object-fit:fill}
+    img{display:block;width:100%;height:auto}
+    .compare-note{font-size:13px;margin:10px 0 0;color:var(--p-umbra)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .gallery-actions{align-items:center}
+    .shortlist-count{font-size:13px;color:var(--p-umbra);white-space:nowrap}
+    .gallery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 22px}
+    .style-card{min-width:0;background:var(--p-chalk);border:1px solid var(--p-ash)}
+    .style-card .image-button{border:0;border-bottom:1px solid var(--p-ash)}
+    .card-copy{padding:19px 20px 20px}
+    .card-title{display:flex;align-items:baseline;gap:11px;margin-bottom:8px}
+    .card-number{font-family:'Kalam',cursive;font-size:22px;color:var(--p-umbra)}
+    .card-title h3{margin:0;font-size:23px}
+    .card-copy p{margin:0 0 18px;font-size:14px;min-height:44px}
+    .card-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    .card-actions button,.card-actions .button{font-size:13px;padding:8px 11px}
+    .favorite[aria-pressed="true"],#shortlist-filter[aria-pressed="true"]{background:var(--p-pine);border-color:var(--p-pine);color:var(--p-chalk)}
+    .empty{padding:30px 0;max-width:680px}
+    footer{border-top:1px solid var(--p-ash);padding:25px 0 36px;font-size:13px;color:var(--p-umbra)}
+    footer p{margin:5px 0}
+    [hidden]{display:none!important}
+    .viewer{width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;margin:0;padding:0;border:0;background:var(--p-ink);color:var(--p-chalk);overflow:hidden}
+    .viewer::backdrop{background:var(--p-ink)}
+    .viewer-shell{height:100%;display:flex;flex-direction:column}
+    .viewer-head{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-shrink:0;border-bottom:1px solid var(--p-slate)}
+    .viewer-head h2{font-size:20px;margin:0}
+    .viewer-head p{margin:4px 0 0;font-size:12px;color:var(--p-ash)}
+    .viewer-head .actions{justify-content:flex-end;flex-shrink:0}
+    .viewer-head button,.viewer-head .button,.viewer-foot button{font-size:13px;padding:8px 12px}
+    .viewer-stage{--viewer-padding:16px;position:relative;min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:var(--viewer-padding)}
+    .viewer-stage img{width:auto;max-width:100%;max-height:100%;object-fit:contain;margin:auto}
+    .viewer-stage:not(.zoomed) img{position:absolute;inset:var(--viewer-padding);max-width:calc(100% - var(--viewer-padding) - var(--viewer-padding));max-height:calc(100% - var(--viewer-padding) - var(--viewer-padding))}
+    .viewer-stage.zoomed{display:block}
+    .viewer-stage.zoomed img{max-width:none;max-height:none;width:auto;height:auto}
+    .viewer-foot{padding:10px 20px;border-top:1px solid var(--p-slate);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-shrink:0}
+    .viewer-foot p{font-size:12px;color:var(--p-ash);margin:0}
+    .viewer-foot .actions{flex-shrink:0}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(min-width:1700px){.gallery-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:850px){
+      .wrap{width:calc(100% - 36px)}
+      header{padding-top:34px}
+      .legend{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .section-head{align-items:flex-start;flex-direction:column}
+      .compare-grid{gap:14px}
+      .compare-tools{flex-wrap:wrap;gap:8px}
+      .compare-tools p{margin:0}
+      .card-title h3{font-size:20px}
+      .card-copy{padding:15px}
+      .card-copy p{min-height:66px}
+      .viewer-head{align-items:flex-start;flex-wrap:wrap;padding:12px}
+      .viewer-head .actions{justify-content:flex-start;gap:6px}
+      .viewer-foot{padding:10px 12px}
+    }
+    @media(max-width:560px){
+      .wrap{width:calc(100% - 28px)}
+      .top-line{padding-top:18px;font-size:12px}
+      .series{letter-spacing:.06em}
+      header{padding-top:30px}
+      h1{font-size:37px}
+      .intro{font-size:15px}
+      .legend{gap:12px 14px}
+      .legend li{font-size:12px;gap:7px}
+      .section-head h2{font-size:25px}
+      .compare-grid{grid-template-columns:1fr;gap:24px}
+      .gallery-grid{grid-template-columns:1fr;gap:20px}
+      .card-copy p{min-height:0}
+      .card-title h3{font-size:23px}
+      .viewer-head h2{font-size:17px}
+      .viewer-head button,.viewer-head .button,.viewer-foot button{font-size:12px;padding:8px}
+      .viewer-stage{--viewer-padding:8px}
+      .viewer-foot p{max-width:155px;font-size:11px}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#studies">Skip to the art studies</a>
+  <div class="wrap">
+    <div class="top-line"><a href="../">← Return to Lady Supine</a><span class="series">Land of Limited Time</span></div>
+    <header>
+      <p class="eyebrow">Art direction studies · 01—10</p>
+      <h1>Ten ways to draw<br>a world running out.</h1>
+      <p class="intro">The same characters and places, seen through ten different materials. Open a sheet to inspect it, compare two directions, or keep a shortlist for the next conversation.</p>
+      <details class="brief">
+        <summary>The shared brief</summary>
+        <p>A bleak, patched trailer park under a beautiful and terrifying ruler. Things have been repaired too often and replaced too rarely. Lady Supine is human, with an enormous head and a hole in the top of her head. These studies explore abstract, handmade art with the game's 24 pigment colors as their palette direction.</p>
+        <ul class="palette" aria-label="The game's 24 pigment colors">
+          <li style="--swatch:var(--p-ink)" title="Ink" aria-label="Ink"></li><li style="--swatch:var(--p-charcoal)" title="Charcoal" aria-label="Charcoal"></li><li style="--swatch:var(--p-slate)" title="Slate" aria-label="Slate"></li><li style="--swatch:var(--p-smoke)" title="Smoke" aria-label="Smoke"></li><li style="--swatch:var(--p-fog)" title="Fog" aria-label="Fog"></li><li style="--swatch:var(--p-paper)" title="Paper" aria-label="Paper"></li><li style="--swatch:var(--p-chalk)" title="Chalk" aria-label="Chalk"></li><li style="--swatch:var(--p-ash)" title="Ash" aria-label="Ash"></li><li style="--swatch:var(--p-umbra)" title="Umbra" aria-label="Umbra"></li><li style="--swatch:var(--p-bark)" title="Bark" aria-label="Bark"></li><li style="--swatch:var(--p-clay)" title="Clay" aria-label="Clay"></li><li style="--swatch:var(--p-sand)" title="Sand" aria-label="Sand"></li><li style="--swatch:var(--p-rust)" title="Rust" aria-label="Rust"></li><li style="--swatch:var(--p-ochre)" title="Ochre" aria-label="Ochre"></li><li style="--swatch:var(--p-ember)" title="Ember" aria-label="Ember"></li><li style="--swatch:var(--p-straw)" title="Straw" aria-label="Straw"></li><li style="--swatch:var(--p-pine)" title="Pine" aria-label="Pine"></li><li style="--swatch:var(--p-moss)" title="Moss" aria-label="Moss"></li><li style="--swatch:var(--p-sage)" title="Sage" aria-label="Sage"></li><li style="--swatch:var(--p-lichen)" title="Lichen" aria-label="Lichen"></li><li style="--swatch:var(--p-deepWater)" title="Deep water" aria-label="Deep water"></li><li style="--swatch:var(--p-water)" title="Water" aria-label="Water"></li><li style="--swatch:var(--p-bruise)" title="Bruise" aria-label="Bruise"></li><li style="--swatch:var(--p-flesh)" title="Flesh" aria-label="Flesh"></li>
+        </ul>
+      </details>
+      <ol class="legend" aria-label="Subjects on every sheet, from top left to bottom right">
+        <li><b>01</b><span>Lady Supine<br>Human ruler, open-topped head</span></li>
+        <li><b>02</b><span>Ada and an Aristobat<br>A friend and a time collector</span></li>
+        <li><b>03</b><span>Shanty Hours<br>Patched trailers and her billboard</span></li>
+        <li><b>04</b><span>The Hospital<br>Interior for those out of time</span></li>
+        <li><b>05</b><span>The Library<br>Interior of Time Well Spent</span></li>
+        <li><b>06</b><span>Willow and lakeshore<br>Trees, water, and outdoor objects</span></li>
+      </ol>
+    </header>
+    <main>
+      <section class="compare-section" id="compare" aria-labelledby="compare-heading">
+        <div class="section-head">
+          <div><h2 id="compare-heading">Put two sheets together.</h2><p>Choose a direction on each side. Tap either image to inspect the complete sheet at full size.</p></div>
+          <a href="#studies">Browse all ten ↓</a>
+        </div>
+        <div class="compare-tools">
+          <div class="compare-subject-control">
+            <label class="compare-label" for="compare-subject">Compare subject</label>
+            <select id="compare-subject">
+              <option value="whole">Whole sheet</option>
+              <option value="supine" data-column="0" data-row="0">Lady Supine</option>
+              <option value="companions" data-column="1" data-row="0">Ada and Aristobat</option>
+              <option value="shanty" data-column="2" data-row="0">Shanty Hours</option>
+              <option value="hospital" data-column="0" data-row="1">Hospital interior</option>
+              <option value="library" data-column="1" data-row="1">Library interior</option>
+              <option value="willow" data-column="2" data-row="1">Willow and lakeshore</option>
+            </select>
+          </div>
+          <p id="compare-focus-note" aria-live="polite">Showing the complete sheets. Choose a subject to look closer on both sides.</p>
+        </div>
+        <div class="compare-grid">
+          <div class="compare-pane">
+            <label class="compare-label" for="compare-left">First direction</label>
+            <select id="compare-left"></select>
+            <button class="image-button" id="compare-left-open" type="button"><img id="compare-left-image" width="1536" height="1024" decoding="async" alt=""></button>
+            <p class="compare-note" id="compare-left-note"></p>
+          </div>
+          <div class="compare-pane">
+            <label class="compare-label" for="compare-right">Second direction</label>
+            <select id="compare-right"></select>
+            <button class="image-button" id="compare-right-open" type="button"><img id="compare-right-image" width="1536" height="1024" decoding="async" alt=""></button>
+            <p class="compare-note" id="compare-right-note"></p>
+          </div>
+        </div>
+      </section>
+      <section id="studies" aria-labelledby="studies-heading">
+        <div class="section-head">
+          <div><h2 id="studies-heading">All ten directions</h2><p>Every download is the original image. Shortlists stay in this browser.</p></div>
+          <div class="actions gallery-actions"><span class="shortlist-count" id="shortlist-count" aria-live="polite">0 shortlisted</span><button id="shortlist-filter" type="button" aria-pressed="false">Show shortlist</button></div>
+        </div>
+        <div class="gallery-grid" id="gallery"></div>
+        <p class="empty" id="empty-shortlist" hidden>Your shortlist is empty. Choose “Shortlist” on any sheet, or show all ten to start comparing.</p>
+        <noscript><p>The comparison controls need JavaScript. You can still open the original sheets below.</p><ol><li><a href="01-heavy-marker.png">01 · Heavy marker</a></li><li><a href="02-drypoint-ink.png">02 · Drypoint and ink</a></li><li><a href="03-torn-paper.png">03 · Torn paper</a></li><li><a href="04-geometric-gouache.png">04 · Geometric gouache</a></li><li><a href="05-stained-watercolor.png">05 · Stained watercolor</a></li><li><a href="06-linocut.png">06 · Linocut</a></li><li><a href="07-oil-pastel.png">07 · Oil pastel</a></li><li><a href="08-stitched-patchwork.png">08 · Stitched patchwork</a></li><li><a href="09-puppet-theatre.png">09 · Puppet theatre</a></li><li><a href="10-misregistered-print.png">10 · Misregistered print</a></li></ol></noscript>
+      </section>
+    </main>
+    <footer><p>Exploratory art for Lady Supine: Entering the Unenterable Entrance. The playable game remains at its current art direction.</p><p><a href="../">Return to the game</a> · To share a preference, use the number and title shown on each card.</p></footer>
+  </div>
+  <dialog class="viewer" id="viewer" aria-labelledby="viewer-title" aria-describedby="viewer-instructions">
+    <div class="viewer-shell">
+      <div class="viewer-head">
+        <div><h2 id="viewer-title"></h2><p id="viewer-instructions">The complete sheet. Zoom to inspect the original image.</p></div>
+        <div class="actions"><button type="button" id="viewer-zoom" aria-pressed="false">Zoom to 100%</button><a class="button" id="viewer-download" download>Download PNG</a><button type="button" id="viewer-close" autofocus>Close</button></div>
+      </div>
+      <div class="viewer-stage" id="viewer-stage"><img id="viewer-image" width="1536" height="1024" alt=""></div>
+      <div class="viewer-foot"><p>Use ← and → for other styles. Escape closes the sheet.</p><div class="actions"><button type="button" id="viewer-prev" aria-label="View previous style">← Previous</button><button type="button" id="viewer-next" aria-label="View next style">Next →</button></div></div>
+    </div>
+  </dialog>
+  <div class="sr-only" id="status" role="status" aria-live="polite"></div>
+  <script>
+    'use strict';
+    const studies = [
+      {id:'01',file:'01-heavy-marker.png',name:'Heavy marker',note:'Blunt felt-tip contours, dirty fills, and restless scribbles. Weight and wear carried by the line.'},
+      {id:'02',file:'02-drypoint-ink.png',name:'Drypoint and ink',note:'Scratched, wiry marks with thin pigment washes. Fragile figures and interiors full of uneasy detail.'},
+      {id:'03',file:'03-torn-paper.png',name:'Torn paper',note:'Ragged paper shapes, pasted repairs, and exposed edges. A world assembled from what was left over.'},
+      {id:'04',file:'04-geometric-gouache.png',name:'Geometric gouache',note:'Flat, opaque shapes and crooked planes. Bodies and buildings reduced to a spare, uneasy geometry.'},
+      {id:'05',file:'05-stained-watercolor.png',name:'Stained watercolor',note:'Bleeding washes, damp stains, and spare ink. The landscape feels soaked through and quietly exhausted.'},
+      {id:'06',file:'06-linocut.png',name:'Linocut',note:'Carved contours, heavy silhouettes, and rough ink. Stark faces and places with the force of a printed warning.'},
+      {id:'07',file:'07-oil-pastel.png',name:'Oil pastel',note:'Wax, smears, and scratched pigment. Soft bodies set against a dense, bruised surface.'},
+      {id:'08',file:'08-stitched-patchwork.png',name:'Stitched patchwork',note:'Worn cloth, visible seams, and pieced scraps. Characters and shelters share the same endless repairs.'},
+      {id:'09',file:'09-puppet-theatre.png',name:'Puppet theatre',note:'Painted cardboard, jointed figures, and shallow stage sets. A handmade miniature with an unsettling stillness.'},
+      {id:'10',file:'10-misregistered-print.png',name:'Misregistered print',note:'Offset pigment layers, scuffed halftones, and imperfect alignment. Authority printed cheaply over everyday decay.'}
+    ];
+    const subjectDescription = 'Six panels showing Lady Supine, Ada and an Aristobat, Shanty Hours with a billboard, the Hospital interior, the Library interior, and willow lakeshore objects.';
+    const storageKey = 'lady-supine-art-shortlist-v1';
+    let favorites = new Set();
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(saved)) favorites = new Set(saved.filter(id => studies.some(study => study.id === id)));
+    } catch (_) {}
+    let showingShortlist = false;
+    let viewerIndex = 0;
+    let lastViewerOpener = null;
+    const gallery = document.getElementById('gallery');
+    const viewer = document.getElementById('viewer');
+    const viewerStage = document.getElementById('viewer-stage');
+    const viewerZoom = document.getElementById('viewer-zoom');
+    const subjectSelect = document.getElementById('compare-subject');
+    function imageAlt(study) { return study.name + ' art study. ' + subjectDescription; }
+    function updateComparisonLabel(side) {
+      const study = studies[Number(document.getElementById('compare-' + side).value)];
+      const subject = subjectSelect.selectedOptions[0];
+      document.getElementById('compare-' + side + '-image').alt = subject.value === 'whole' ? imageAlt(study) : subject.textContent + ' panel in the ' + study.name + ' art study.';
+      document.getElementById('compare-' + side + '-open').setAttribute('aria-label', 'Open complete ' + study.name + ' sheet');
+    }
+    function updateSubjectFocus() {
+      const subject = subjectSelect.selectedOptions[0];
+      const comparison = document.querySelector('.compare-grid');
+      const focused = subject.value !== 'whole';
+      comparison.classList.toggle('panel-focus', focused);
+      comparison.style.setProperty('--panel-x', (-Number(subject.dataset.column || 0) * 100) + '%');
+      comparison.style.setProperty('--panel-y', (-Number(subject.dataset.row || 0) * 100) + '%');
+      document.getElementById('compare-focus-note').textContent = focused ? 'Showing ' + subject.textContent + ' on both sides. Open either preview to see its complete sheet.' : 'Showing the complete sheets. Choose a subject to look closer on both sides.';
+      updateComparisonLabel('left');
+      updateComparisonLabel('right');
+    }
+    function updateShortlist() {
+      document.getElementById('shortlist-count').textContent = favorites.size + ' shortlisted';
+      const filter = document.getElementById('shortlist-filter');
+      filter.textContent = showingShortlist ? 'Show all ten' : 'Show shortlist';
+      filter.setAttribute('aria-pressed', String(showingShortlist));
+      for (const card of gallery.children) {
+        const chosen = favorites.has(card.dataset.id);
+        card.hidden = showingShortlist && !chosen;
+        const button = card.querySelector('.favorite');
+        button.setAttribute('aria-pressed', String(chosen));
+        button.textContent = chosen ? '✓ Shortlisted' : 'Shortlist';
+      }
+      document.getElementById('empty-shortlist').hidden = !showingShortlist || favorites.size > 0;
+    }
+    function toggleFavorite(study) {
+      const removingFromFilteredList = showingShortlist && favorites.has(study.id);
+      if (favorites.has(study.id)) favorites.delete(study.id); else favorites.add(study.id);
+      try { localStorage.setItem(storageKey, JSON.stringify(Array.from(favorites))); } catch (_) {}
+      updateShortlist();
+      if (removingFromFilteredList) document.getElementById('shortlist-filter').focus();
+      document.getElementById('status').textContent = study.name + (favorites.has(study.id) ? ' added to shortlist.' : ' removed from shortlist.');
+    }
+    function setViewerImage(index) {
+      viewerIndex = (index + studies.length) % studies.length;
+      const study = studies[viewerIndex];
+      document.getElementById('viewer-title').textContent = study.id + ' · ' + study.name;
+      const image = document.getElementById('viewer-image');
+      image.src = study.file;
+      image.alt = imageAlt(study);
+      const download = document.getElementById('viewer-download');
+      download.href = study.file;
+      download.download = 'Lady-Supine-' + study.file;
+      viewerStage.classList.remove('zoomed');
+      viewerStage.scrollTop = 0;
+      viewerStage.scrollLeft = 0;
+      viewerZoom.textContent = 'Zoom to 100%';
+      viewerZoom.setAttribute('aria-pressed', 'false');
+    }
+    function openViewer(index, opener) {
+      lastViewerOpener = opener || document.activeElement;
+      setViewerImage(index);
+      if (typeof viewer.showModal === 'function') {
+        viewer.showModal();
+        document.body.style.overflow = 'hidden';
+      } else {
+        window.open(studies[index].file, '_blank', 'noopener');
+      }
+    }
+    studies.forEach((study, index) => {
+      const card = document.createElement('article');
+      card.className = 'style-card';
+      card.dataset.id = study.id;
+      card.setAttribute('aria-labelledby', 'style-' + study.id);
+      const imageButton = document.createElement('button');
+      imageButton.type = 'button'; imageButton.className = 'image-button';
+      imageButton.setAttribute('aria-label', 'Open ' + study.id + ' · ' + study.name + ' full-size sheet');
+      const image = document.createElement('img');
+      image.src = study.file; image.alt = imageAlt(study); image.width = 1536; image.height = 1024; image.loading = 'lazy'; image.decoding = 'async';
+      imageButton.append(image);
+      imageButton.addEventListener('click', () => openViewer(index, imageButton));
+      const copy = document.createElement('div'); copy.className = 'card-copy';
+      const title = document.createElement('div'); title.className = 'card-title';
+      const number = document.createElement('span'); number.className = 'card-number'; number.textContent = study.id;
+      const heading = document.createElement('h3'); heading.id = 'style-' + study.id; heading.textContent = study.name;
+      title.append(number, heading);
+      const note = document.createElement('p'); note.textContent = study.note;
+      const actions = document.createElement('div'); actions.className = 'card-actions';
+      const zoom = document.createElement('button'); zoom.type = 'button'; zoom.textContent = 'View full size';
+      zoom.setAttribute('aria-label', 'View ' + study.name + ' full size');
+      zoom.addEventListener('click', () => openViewer(index, zoom));
+      const download = document.createElement('a'); download.className = 'button quiet-button'; download.href = study.file; download.download = 'Lady-Supine-' + study.file; download.textContent = 'Download PNG'; download.setAttribute('aria-label', 'Download ' + study.name + ' PNG');
+      const favorite = document.createElement('button'); favorite.type = 'button'; favorite.className = 'favorite quiet-button'; favorite.setAttribute('aria-label', 'Shortlist ' + study.name); favorite.addEventListener('click', () => toggleFavorite(study));
+      actions.append(zoom, download, favorite);
+      copy.append(title, note, actions);
+      card.append(imageButton, copy); gallery.append(card);
+    });
+    ['left','right'].forEach((side, sideIndex) => {
+      const select = document.getElementById('compare-' + side);
+      studies.forEach((study, index) => {
+        const option = document.createElement('option'); option.value = String(index); option.textContent = study.id + ' · ' + study.name; select.append(option);
+      });
+      select.value = String(sideIndex === 0 ? 0 : 3);
+      function updateComparison() {
+        const study = studies[Number(select.value)];
+        const image = document.getElementById('compare-' + side + '-image'); image.src = study.file;
+        document.getElementById('compare-' + side + '-note').textContent = study.note;
+        updateComparisonLabel(side);
+      }
+      select.addEventListener('change', updateComparison);
+      const opener = document.getElementById('compare-' + side + '-open');
+      opener.addEventListener('click', () => openViewer(Number(select.value), opener));
+      updateComparison();
+    });
+    subjectSelect.addEventListener('change', updateSubjectFocus);
+    document.getElementById('shortlist-filter').addEventListener('click', () => { showingShortlist = !showingShortlist; updateShortlist(); });
+    document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+    document.getElementById('viewer-prev').addEventListener('click', () => setViewerImage(viewerIndex - 1));
+    document.getElementById('viewer-next').addEventListener('click', () => setViewerImage(viewerIndex + 1));
+    viewerZoom.addEventListener('click', () => {
+      const zoomed = viewerStage.classList.toggle('zoomed');
+      viewerZoom.textContent = zoomed ? 'Fit the sheet' : 'Zoom to 100%';
+      viewerZoom.setAttribute('aria-pressed', String(zoomed));
+    });
+    viewer.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault(); setViewerImage(viewerIndex + (event.key === 'ArrowLeft' ? -1 : 1));
+      }
+    });
+    viewer.addEventListener('close', () => {
+      document.body.style.overflow = '';
+      if (lastViewerOpener && lastViewerOpener.isConnected) lastViewerOpener.focus();
+    });
+    updateShortlist();
+  </script>
+</body>
+</html>

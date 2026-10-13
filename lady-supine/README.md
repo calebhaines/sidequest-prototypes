@@ -35,6 +35,8 @@ The six investigations recover a missing afternoon in the Library, expose artifi
 
 ## Replace the temporary art
 
+[Compare ten exploratory art directions](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/). Each sheet includes characters, a settlement exterior, two interiors, and outdoor assets, with original PNG downloads. These studies leave the playable game's art unchanged.
+
 The characters, scenery, portraits, icons, and map use abstract marker drawings: fractured paper planes, asymmetrical masks, broken contours, large scratched gestures, and patched trailers. All authored paints use a shared set of **24 pigments** in `src/openworld/palette.ts` and `src/styles/palette.css`. Smooth vector edges and overlapping translucent ink naturally blend those pigments. There is no pixel art or nearest-neighbour rendering. `src/openworld/sprites.ts` draws the figures, portraits, and inventory objects; `src/openworld/renderer.ts` draws terrain, architecture, weather, and lights. Both can be replaced without changing the story or saved progress. See [the art guide](public/art/README.md) and [the 24-colour swatches](public/art/palette-24.svg).
 
 The visual references are Philip Guston’s heavy, awkward bodies, Cy Twombly’s nervous scrawls and rubbed-out marks, and Paul Klee’s fragile geometry and muted colour. The setting should look repaired repeatedly under deprivation, never like a tidy fantasy village.
