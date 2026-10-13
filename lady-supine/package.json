@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/build-single-html.mjs",
+    "build:single": "tsc -b && node scripts/build-single-html.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test:campaign": "node scripts/validate-campaign.mjs",
     "test:browser": "node scripts/open-world-check.mjs",
@@ -22,7 +23,8 @@
     "test:marker": "node scripts/marker-and-mind-check.mjs",
     "test:marker-viewports": "node scripts/marker-viewport-check.mjs",
     "test:animations": "node scripts/animation-check.mjs",
-    "test:abstract": "node scripts/abstract-art-check.mjs"
+    "test:abstract": "node scripts/abstract-art-check.mjs",
+    "test:single": "node scripts/single-html-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

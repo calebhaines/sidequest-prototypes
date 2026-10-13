@@ -156,3 +156,10 @@ kbd{font-family:var(--hand);color:var(--p-charcoal);background:rgba(var(--p-ash-
 .ow-area-notice{background:rgba(var(--p-paper-rgb),.77);text-shadow:none;border-bottom:1px solid rgba(var(--p-ink-rgb),.4)}
 .ow-exchange-caption{background-color:rgba(var(--p-paper-rgb),.95);border-left:5px solid var(--p-bruise)}
 .ow-game .puzzle-modal,.ow-game .inv-modal{background-color:var(--p-paper);background-image:var(--ink-tracing);border:1.5px solid var(--p-ink);border-radius:0;box-shadow:6px 7px 0 rgba(var(--p-ink-rgb),.25)}
+
+/* The game copy travels separately from the saved account. */
+.ow-game-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-family:var(--hand);font-size:14px;line-height:1.5;max-width:100%;white-space:normal}
+.ow-game-download svg{flex-shrink:0}
+.ow-title-card>.ow-game-download{display:flex;width:fit-content;min-width:210px;max-width:100%;margin:2px auto 10px;padding:9px 18px;background:var(--p-ash);color:var(--p-ink);border:1px solid var(--p-slate)}
+.ow-title-card>.ow-game-download:hover{background:var(--p-chalk)}
+@media(max-width:620px),(max-height:480px){.ow-title-card>.ow-game-download{font-size:13px;padding:6px 12px;margin:0 auto 8px}}

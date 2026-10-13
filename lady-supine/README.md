@@ -2,6 +2,12 @@
 
 A freely walkable, hand-drawn browser adventure in the Land of Limited Time. Its trailer homes are patched with tarpaulin and rejected signs. Its ruler is a living woman with a large head and an opening in the top. The world, dialogue, borrowed time, inventory, maps, puzzles, and menus all live inside one gameplay window.
 
+## Download and play offline
+
+[Play the game](https://calebhaines.github.io/sidequest-prototypes/lady-supine/) and select **Download game (.html)** on the title screen or in Settings. The download is one `Lady-Supine.html` file; open it in a modern browser to play without an internet connection, installation, or local server. Its game code, art, fonts, puzzles, and sound are all included.
+
+To carry an existing journey between the website and a downloaded copy, use **Settings → Export save**, then **Settings → Import save** in the other copy. Each browser keeps its own progress; keep an exported save before moving or replacing the HTML file.
+
 ## Play locally
 
 ```sh
@@ -10,6 +16,8 @@ npm run dev
 ```
 
 Open the address printed by Vite. For a production build, run `npm run build`; `npm run preview` serves that build.
+
+The production build also creates `dist/lady-supine.html`. Use `npm run build:single` to rebuild just that file, or `node scripts/build-single-html.mjs path/to/game.html` to choose its filename. The single-file build embeds the locally cached fonts and their licenses from `public/fonts`; it needs no network access once dependencies are installed. The normal website assets remain available alongside the download.
 
 ## The adventure
 
@@ -57,3 +65,5 @@ The game is entirely client-side and requires no account, server, or API key.
 `npm run build` type-checks and builds the game. `npm run test:campaign` validates narrative links, enforces all six investigations, and replays routes to every ending. `npm run test:pacing` verifies all 36 investigation solutions, independently checks clue consistency, and regenerates [the pacing report](scripts/pacing-report.json). `test:marker` checks smooth rendering, both physical brain procedures, the occupied companion body, and restoration. `test:marker-viewports` checks every menu at four desktop and mobile sizes. `test:animations` checks visible movement, frozen menus, distinct movement paces, real resource and fishing rewards during animations, construction, manual reduced motion, and procedure timing. `test:abstract` audits all 24 authored pigment bases, proves independent tree and branch motion with planted roots, and checks reduced motion and responsive presentation.
 
 `npm run test:layout` audits physical navigation through all twelve regions and nine interiors. With the dev server running, `npm run test:browser` checks movement, world interactions, inventory, maps, saves, migration, and touch controls. `npm run test:widgets` checks all 52 puzzle solutions and saved casebook inputs inside the gameplay window. `test:case-save`, `test:quests`, and `test:waypoints` check the controller’s saved investigations, physical resource requirements, permits, castle access, and room destinations on global maps. `test:production` checks a built game at a nested URL; set `GAME_URL` to its served address. These scripts use `/usr/bin/chromium`; change the executable path to use a different local installation. The older narrative-page browser scripts are retained as historical checks and are superseded by the open-world checks.
+
+`npm run test:single` copies only the generated HTML into an isolated folder, opens it with internet access disabled, checks movement, puzzles, investigations, audio, responsive menus, and persistent progress, and verifies both website download buttons and save transfer. Set `GAME_URL` to a served production build and `BROWSER_TYPE=firefox` to use Playwright Firefox; install that test browser with `npx playwright install firefox` if needed. `HTML_FILE` selects a different generated file. The default transport opens the actual local `file://` document.
