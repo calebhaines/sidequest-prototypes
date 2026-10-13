@@ -33,11 +33,11 @@ The friends' final offer is emotionally central. It also presents a puzzle whose
 
 ## Pacing
 
-The finished standard campaign is paced for approximately five hours across six acts. It includes six mandatory, six-stage investigations alongside sixteen shorter story puzzles. The investigations contain new accounts, witnesses, clues, discoveries, and consequences; they are story work rather than resource repetition or enforced waiting.
+The standard story is paced for approximately five hours across six acts. It includes six mandatory, six-stage investigations alongside sixteen shorter story challenges, including fish caught in the actual lake. The investigations contain new accounts, witnesses, clues, discoveries, and consequences. The walkable world adds exploration, gathering, crafting, fishing, and Aristobat encounters; these are playable systems and can extend a leisurely playthrough.
 
 The route-based audit counts approximately 22,000 required reader words. At 220 words per minute, reading takes about 102 minutes; standard investigation thinking takes about 184 minutes; shorter story puzzles take about 29 minutes; navigation and decisions add about 15 minutes. The central estimate is approximately 330 minutes, or five and a half hours. Standard assumptions give a range of approximately 4¾–6¼ hours. Optional branches add time; hints, assistance, skipped prose, and puzzle experience reduce it. These are reasoned estimates, not a timed human playtest. The reproducible inputs and results are in `scripts/pacing-report.json`.
 
-Player time and fictional time are separate. Reading, consulting the journal, considering a clue, and walking on the map are free. Choices show meaningful costs. Exhaustion leads to care and debt, not a erased playthrough. This keeps the subject of scarcity present without making accessibility or reading speed a disadvantage.
+Player time and fictional time are separate. Reading, consulting the journal, and considering a clue are free; active travel and Aristobats can spend borrowed time. All menus pause the world. The map sets a compass destination, and the traveller walks there. Exhaustion leads to care and debt, not an erased playthrough. This keeps scarcity present without charging for reading speed.
 
 ## The six casebooks
 
@@ -57,6 +57,6 @@ Every case uses six distinct forms of reasoning: a cross-referenced ledger, an e
 
 ## Art direction, temporarily
 
-An illustrated storybook in parchment, moss, stone, old gold, and dark green ink. Layered hills feel more distant than they should. Trees hold long, delicate questions in their branches. Buildings are proud, crooked, or both. The initial entrance assembles in layers, echoing the note's image of a world arriving around you.
+A top-down pixel world in moss, stone, old gold, and dark green, with parchment reading interfaces contained in the gameplay window. Water ripples, willow branches move, lanterns glow, creatures blink and walk, and wings open against the evening. Buildings are proud, crooked, or both. The world arrives through depth and movement while preserving the note’s bureaucratic unease and tenderness.
 
-The SVG placeholders establish composition and palette without locking in permanent character designs. The scenery, character portraits, and mark can be replaced independently after visual inspiration arrives.
+The procedural pixel art and matching dialogue portraits establish composition and palette without locking in permanent character designs. Replacement sprite sheets can be registered without changing the game systems; scenery and portraits can be replaced independently after visual inspiration arrives. Earlier SVG illustrations remain as references.
