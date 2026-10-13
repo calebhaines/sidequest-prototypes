@@ -14,6 +14,31 @@ Clear is one self-contained HTML file, with no external assets or runtime depend
 
 For browser checks, serve `docs/` locally and run `node scripts/check-cognitive.cjs`, `node scripts/check-cognitive-upgrade.cjs`, and `node scripts/check-cognitive-progress.cjs` with Playwright available. The default URL is `http://127.0.0.1:8765/cognitive/`; set `CLEAR_QA_URL` to override it and `CHROMIUM_PATH` to choose a browser. The checks cover actual n-back and complex-span scoring, processing-gated difficulty, saved metrics, history compatibility, settings filters, weekly rate aggregation, missing response times, backup handling, background interruption, small-screen layouts, and the downloaded standalone file.
 
+### Mental math
+
+[**Open the mental-math playground**](https://calebhaines.github.io/sidequest-prototypes/cognitive/#math) for **166 procedural exercise types**, each with eight difficulty settings. Search the catalog, filter by topic or tag, save favorites, or build a custom mix. Five suggested routes cover gentle arithmetic, algebra, calculus, professor-level challenges, and interactive visual practice.
+
+| Topic | Exercise types | Examples |
+| --- | ---: | --- |
+| Arithmetic | 14 | Whole and signed numbers, precedence, powers, roots, compensation and missing numbers |
+| Fractions & ratios | 14 | Rational operations, decimals, percentages, compound change, proportions and shared work |
+| Estimation & everyday | 7 | Rounding, scientific notation, units, time, money and weighted mixtures |
+| Geometry & measurement | 12 | Areas, perimeters, angle chasing, similarity, sectors, volumes and surface areas |
+| Algebra & functions | 21 | Linear and quadratic equations, systems, factoring, polynomials, composition and inverses |
+| Sequences & series | 8 | Arithmetic and geometric sequences, sums, recurrences and interpolation |
+| Trigonometry | 6 | Exact angles, radians, identities, phase shifts and triangle relationships |
+| Calculus | 23 | Limits, derivative rules, tangents, optimization, integrals, Taylor coefficients and convergence |
+| Multivariable & differential equations | 7 | Gradients, Hessians, curl, Laplacians, double integrals and elementary ODEs |
+| Number theory | 10 | Modular powers, inverses, CRT, totients, valuations, digits and base conversion |
+| Probability & counting | 10 | Combinations, conditional probability, Bayes, expectation, variance and waiting problems |
+| Linear algebra & complex | 10 | Determinants, rank, eigenvalues, matrix powers, transformations and roots of unity |
+| Discrete mathematics | 10 | Graphs, recurrences, generating-function coefficients and invariants |
+| Visual playground | 14 | Fraction painting, number lines, slopes, unit circles, signed integrals, modular clocks and complex planes |
+
+Practice is untimed, sprints run for 60/90/180 seconds, and daily sets are reproducible for the same configuration. Choose typed numerical answers or multiple choice; symbolic questions use choices. A safe numerical parser supports fractions, parentheses, powers, π/e and numerical functions without evaluating JavaScript. Every question includes a strategy hint and a worked solution. Hints mark answers as assisted, reveals/skips count as misses, and only unassisted sessions adjust difficulty. Daily replays keep the original daily result and cannot change difficulty.
+
+Math scores integrate with Clear’s same-setting progress charts. Favorites, session settings, daily records and existing cognitive scores remain compatible with version-1 backups. The app remains one self-contained HTML file with no external scripts or assets. Run `node scripts/check-cognitive-math.cjs` for seeded question checks, real typed/choice/visual sessions, assistance rules, daily determinism, sprint deadlines, saved math data, backups and mobile controls. Generator answers were additionally checked with independent arithmetic, algebraic, combinatorial, symbolic and numerical methods during development.
+
 ## Graph Theory
 
 [**Explore The shape of connection**](https://calebhaines.github.io/sidequest-prototypes/graph-theory/), an independent visual companion to Chapter 1 of Reinhard Diestel’s *Graph Theory*, sixth edition (2025). All ten sections include interactive graph labs, 113 illustrated concept entries, all 27 numbered results with original proof ideas, and 190 original practice questions: 90 quick checks, 40 interactive graph tasks, and 60 proof questions. Filter by type and difficulty, reveal graduated hints, and compare arguments with complete model proofs and self-assessment checklists. Search concepts and questions; answers, graph attempts, proof drafts, and exploration progress are saved in the browser. Revealed solutions count as reviewed rather than solved. The page works offline and on mobile; its text and diagrams are original.
