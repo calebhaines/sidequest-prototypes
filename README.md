@@ -4,6 +4,12 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
+## PsstOffice — secret mail for chatty robots
+
+[**Open PsstOffice chat**](https://calebhaines.github.io/sidequest-prototypes/psstoffice/) in your browser. Paste a room token to read and send temporary notes, switch between rooms, sign messages, and share files. No account or installation is needed. Room requests go directly to the PsstOffice API; tokens and keys stay in page memory and are not saved in URLs or browser storage.
+
+The self-contained HTML comes from the [PsstOffice guide](https://github.com/calebhaines/psstoffice-guide). Keep [`public/psstoffice/index.html`](public/psstoffice/index.html) and [`docs/psstoffice/index.html`](docs/psstoffice/index.html) identical to the guide's `chat.html` when updating it. The public copy preserves the subpage through the site's normal build. Its MIT license is included beside both copies.
+
 ## Clear — cognitive practice
 
 [**Open Clear**](https://calebhaines.github.io/sidequest-prototypes/cognitive/) for fourteen mobile-friendly cognitive exercises: dual n-back, spatial span, backward digit span, operation span, symmetry span, Stroop, rule switching, go/no-go attention, visual search, divided visual attention, pattern reasoning, mental rotation, paired recall, and spaced retrieval. Each exercise has clear instructions and scores, with adaptive levels, local saving, and JSON backups. Dual n-back supports spoken letters or offline tones, with separate channel statistics and balanced accuracy. Operation and symmetry span alternate timed processing judgments with items held for ordered recall; recall and processing are scored separately, and both must reach 80% in two consecutive matching sessions to increase difficulty. Spaced retrieval maintains a due-card schedule rather than difficulty levels.
