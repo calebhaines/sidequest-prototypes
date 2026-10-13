@@ -11,21 +11,23 @@ async function begin() { await page.waitForFunction(() => Boolean(window.__ladyS
 async function reveal() { while (await page.locator('.ow-dialogue').getByRole('button', { name: /^Continue/ }).isVisible()) await page.locator('.ow-dialogue').getByRole('button', { name: /^Continue/ }).click(); }
 async function checkMapProjection(data, room) {
   await page.evaluate(() => {
-    window.__qaMapStroke = [];
-    if (window.__qaOriginalStrokeRect) return;
-    window.__qaOriginalStrokeRect = CanvasRenderingContext2D.prototype.strokeRect;
-    CanvasRenderingContext2D.prototype.strokeRect = function (x, y, width, height) {
-      if (this.canvas.classList.contains('ow-world-map-canvas') && width === 6 && height === 6) window.__qaMapStroke.push({ x, y, width, height });
-      return window.__qaOriginalStrokeRect.call(this, x, y, width, height);
+    window.__qaMapMarkers = [];
+    if (window.__qaOriginalEllipse) return;
+    window.__qaOriginalEllipse = CanvasRenderingContext2D.prototype.ellipse;
+    CanvasRenderingContext2D.prototype.ellipse = function (x, y, ...args) {
+      // Observe the ink marker's projected location instead of depending on the
+      // old six-pixel square used before the hand-drawn map was introduced.
+      if (this.canvas.classList.contains('ow-world-map-canvas') && this.strokeStyle === '#7a4755') window.__qaMapMarkers.push({ x, y });
+      return window.__qaOriginalEllipse.call(this, x, y, ...args);
     };
   });
   await page.getByRole('button', { name: 'Open map', exact: true }).first().click();
-  await page.waitForFunction(() => window.__qaMapStroke.length > 0);
+  await page.waitForFunction(() => window.__qaMapMarkers.length > 0);
   const result = await page.evaluate(({ data, room }) => {
     const canvas = document.querySelector('.ow-world-map-canvas');
-    return { stroke: window.__qaMapStroke.at(-1), expected: { x: room.exit.position.x * canvas.clientWidth / data.overworld.width - 3, y: room.exit.position.y * canvas.clientHeight / data.overworld.height - 3 } };
+    return { marker: window.__qaMapMarkers.at(-1), expected: { x: room.exit.position.x * canvas.clientWidth / data.overworld.width, y: room.exit.position.y * canvas.clientHeight / data.overworld.height } };
   }, { data, room });
-  assert.ok(Math.abs(result.stroke.x - result.expected.x) < .05 && Math.abs(result.stroke.y - result.expected.y) < .05, 'The global map must project a room waypoint to its outside building entrance');
+  assert.ok(Math.hypot(result.marker.x - result.expected.x, result.marker.y - result.expected.y) < 1, 'The hand-drawn global map must project a room waypoint to its outside building entrance');
   await page.keyboard.press('Escape'); await page.waitForTimeout(80);
 }
 try {

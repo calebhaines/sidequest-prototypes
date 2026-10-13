@@ -1,7 +1,27 @@
 import { freshGame, isGameSave, SAVE_KEY, type GameState } from '../data/game';
+import { SCENES } from '../data/campaign';
+import { INVESTIGATIONS } from '../data/investigations';
+import { sceneForId } from './story';
 import type { AdventureSave, WorldData, WorldSave } from './types';
 
 export const WORLD_SAVE_KEY = 'lady-supine-open-world-v2';
+export function refreshJournal(story: GameState, data?: WorldData): GameState {
+  const currentText = new Map(Object.values(SCENES).map(scene => [scene.id, scene.text.join('\n\n')]));
+  for (const investigation of INVESTIGATIONS) {
+    currentText.set(`case_${investigation.id}_premise`, investigation.premise.join('\n\n'));
+    currentText.set(`case_${investigation.id}_conclusion`, investigation.conclusion.join('\n\n'));
+    for (const challenge of investigation.challenges) currentText.set(`case_${investigation.id}_${challenge.id}`, [...challenge.narrative, ...challenge.evidence.map(evidence => `${evidence.title}\n${evidence.text}`), ...challenge.resolution].join('\n\n'));
+  }
+  if (data) for (const world of [data.overworld, ...Object.values(data.interiors)]) {
+    for (const actor of world.actors) if (actor.dialogue) currentText.set(`world_actor_${actor.id}`, actor.dialogue);
+    for (const object of world.objects) if (object.text && !object.text.startsWith('scene:')) currentText.set(`world_object_${object.id}`, object.text.split('\n').filter(Boolean).join('\n\n'));
+  }
+  return { ...story, journal: story.journal.map(entry => {
+    const scene = sceneForId(entry.scene);
+    const text = currentText.get(entry.scene) || (scene.id === entry.scene ? scene.text.join('\n\n') : entry.text);
+    return { ...entry, text };
+  }) };
+}
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(item => typeof item === 'string');
 export function isWorldSave(value: unknown): value is WorldSave {
@@ -24,12 +44,12 @@ export function isAdventureSave(value: unknown): value is AdventureSave {
   const v = value as AdventureSave;
   return v.version === 2 && isGameSave(v.story) && isWorldSave(v.world) && finite(v.savedAt);
 }
-export function loadAdventure(): { story: GameState; world?: WorldSave; migrated: boolean } {
+export function loadAdventure(data?: WorldData): { story: GameState; world?: WorldSave; migrated: boolean } {
   try {
     const current = JSON.parse(localStorage.getItem(WORLD_SAVE_KEY) || 'null');
-    if (isAdventureSave(current)) return { story: { ...freshGame(), ...current.story }, world: current.world, migrated: false };
+    if (isAdventureSave(current)) return { story: refreshJournal({ ...freshGame(), ...current.story }, data), world: current.world, migrated: false };
     const legacy = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (isGameSave(legacy)) return { story: { ...freshGame(), ...legacy, investigations: legacy.investigations || {} }, migrated: true };
+    if (isGameSave(legacy)) return { story: refreshJournal({ ...freshGame(), ...legacy, investigations: legacy.investigations || {} }, data), migrated: true };
   } catch { /* Play remains available if browser storage is unavailable. */ }
   return { story: freshGame(), migrated: false };
 }

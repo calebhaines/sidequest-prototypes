@@ -77,10 +77,10 @@ try {
   if (wantPuzzles) for (const id of ids) {
     await mount('puzzle', id);
     await contained('.puzzle-modal');
-    await page.getByRole('button', { name: /A gentle hint/ }).click();
-    await page.getByRole('button', { name: /A little more help/ }).click();
-    await page.getByRole('button', { name: /A little more help/ }).click();
-    await page.getByRole('button', { name: /Solve with a little help/ }).click();
+    await page.getByRole('button', { name: /Request a hint/ }).click();
+    await page.getByRole('button', { name: /Another hint/ }).click();
+    await page.getByRole('button', { name: /Another hint/ }).click();
+    await page.getByRole('button', { name: /Use the margin notes/ }).click();
     assert.equal(await page.evaluate(() => window.__widgetCompletes), 0);
     await page.getByRole('button', { name: 'Return to the story', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__widgetCompletes), 1);

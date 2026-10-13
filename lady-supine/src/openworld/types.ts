@@ -46,13 +46,16 @@ export type WorldSave = {
 export type WorldSnapshot = WorldSave & {
   region: Region; nearby: InteractTarget | null; fishing: FishingState | null; enemies: number;
   paused: boolean; saving: boolean; areaNotice: string;
+  sequence?: WorldSequence | null;
 };
+export type WorldSequence = { kind: 'exchange' | 'restore'; elapsed: number; duration: number; from: Vec; to: Vec };
 export type RenderFrame = {
   scene: WorldScene; data: WorldData; player: PlayerFrame; actors: ActorFrame[];
   objects: WorldObject[]; harvested: Record<string, number>; particles: Particle[]; floating: FloatingText[];
   camera: Vec; zoom: number; time: number; dayTime: number; flags: string[];
   selected: string; nearby: InteractTarget | null; fishing: FishingState | null; waypoint: Vec | null;
   reducedMotion: boolean; buildPreview?: { kind: ObjectKind; position: Vec; valid: boolean } | null;
+  sequence?: WorldSequence | null;
 };
 export type EngineCallbacks = {
   onInteract: (target: InteractTarget) => void;
@@ -61,6 +64,7 @@ export type EngineCallbacks = {
   onArea: (location: string) => void;
   onRecovery: () => void;
   onSound: (sound: string) => void;
+  onSequenceComplete?: () => void;
 };
 export interface GameEngine {
   start(): void; destroy(): void; setPaused(paused: boolean): void;
@@ -71,5 +75,7 @@ export interface GameEngine {
   setOptions(options: Partial<WorldOptions>): void; setTouchDirection(direction: Vec): void;
   interact(): void; primaryAction(): void; teleport(scene: string, position?: Vec): void;
   addResource(id: string, amount: number): void; load(save: WorldSave): void;
+  startMindExchange(kind: 'exchange' | 'restore'): void;
+  finishMindExchange(): void;
 }
 export type AdventureSave = { version: 2; story: GameState; world: WorldSave; savedAt: number };

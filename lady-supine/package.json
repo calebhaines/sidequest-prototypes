@@ -18,7 +18,9 @@
     "test:puzzles": "node scripts/open-world-widget-check.mjs --puzzles",
     "test:story": "node scripts/open-world-story-check.mjs",
     "test:investigations": "node scripts/open-world-widget-check.mjs --cases",
-    "test:pacing": "node scripts/validate-investigations.mjs"
+    "test:pacing": "node scripts/validate-investigations.mjs",
+    "test:marker": "node scripts/marker-and-mind-check.mjs",
+    "test:marker-viewports": "node scripts/marker-viewport-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

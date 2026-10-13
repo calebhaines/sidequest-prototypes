@@ -3,7 +3,7 @@ import { ArrowRight, Clock3, Puzzle, X } from 'lucide-react';
 import type { Choice, Scene } from '../data/campaign';
 import type { GameState } from '../data/game';
 import { matchesRequirement } from '../data/game';
-import { actorPortraitDataUrl } from '../openworld/sprites';
+import { actorPortraitDataUrl, itemIconDataUrl, type ActorDrawingState } from '../openworld/sprites';
 import type { ActorKind } from '../openworld/types';
 
 export type DialogueBoxProps = {
@@ -50,7 +50,12 @@ export default function DialogueBox({ scene, story, choices, onChoice, onClose }
   const closeRef = useRef<HTMLButtonElement>(null);
   const pages = useMemo(() => pagesOf(scene.text), [scene.text]);
   const finalPage = pageIndex >= pages.length - 1;
-  const portrait = portraitFor(scene.speaker);
+  const portrait = scene.id === 'world_supine_in_ada' ? 'hare' : ['castle_changed', 'ada_supine', 'world_supine_empty_body'].includes(scene.id) ? 'lady' : portraitFor(scene.speaker);
+  const portraitState: ActorDrawingState = {
+    mindChanged: ['castle_changed', 'ada_supine', 'world_supine_in_ada'].includes(scene.id),
+    brainAbsent: scene.id === 'world_supine_empty_body',
+  };
+  const jarPortrait = scene.id === 'supine_jar' || (portrait === 'lady' && story.items.includes('supine_brain') && (scene.location === 'infinite' || scene.id.includes('return')));
   const canChoose = (choice: Choice) => matchesRequirement(choice.requires, story.flags) && (!choice.item || story.items.includes(choice.item));
   useEffect(() => { setPageIndex(0); closeRef.current?.focus(); }, [scene.id]);
   useEffect(() => {
@@ -75,16 +80,16 @@ export default function DialogueBox({ scene, story, choices, onChoice, onClose }
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   }}>
-    <div className="ow-dialogue-portrait">{portrait ? <img src={actorPortraitDataUrl(portrait, 96)} alt="" /> : <span>{scene.speaker === 'You' ? '✦' : '✧'}</span>}<i /></div>
+    <div className="ow-dialogue-portrait">{jarPortrait ? <img src={itemIconDataUrl('supine_brain', 96)} alt="" /> : portrait ? <img src={actorPortraitDataUrl(portrait, 96, portraitState)} alt="" /> : <span>{scene.speaker === 'You' ? '✦' : '✧'}</span>}<i /></div>
     <div className="ow-dialogue-main">
       <header className="ow-dialogue-header"><div><h2>{scene.speaker}</h2>{scene.role && <span>{scene.role}</span>}</div><button ref={closeRef} onClick={onClose} aria-label="Close conversation" title="Return to the world · Escape"><X size={18} /></button></header>
       <div className="ow-dialogue-reading" key={`${scene.id}-${pageIndex}`}>{pages[pageIndex]?.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
       {finalPage ? <div className="ow-dialogue-choices">{choices.map((choice, index) => {
         const cost = (choice.effects || []).reduce((sum, effect) => sum + (effect.time || 0), 0);
         const enabled = canChoose(choice);
-        return <button key={`${scene.id}-${index}`} onClick={() => onChoice(choice)} disabled={!enabled} title={!enabled ? choice.item ? 'You are still missing something for this.' : 'There is another small beginning to make first.' : undefined}><kbd>{index + 1}</kbd><span>{choice.label}</span>{choice.puzzle && <Puzzle size={13} />}{cost !== 0 && <small className={cost < 0 ? 'ow-choice-cost' : 'ow-choice-gain'}><Clock3 size={11} />{cost > 0 ? '+' : '−'}{Math.abs(cost)}m</small>}<ArrowRight size={14} /></button>;
+        return <button key={`${scene.id}-${index}`} onClick={() => onChoice(choice)} disabled={!enabled} title={!enabled ? choice.item ? 'The required object is missing.' : 'An earlier obligation remains unresolved.' : undefined}><kbd>{index + 1}</kbd><span>{choice.label}</span>{choice.puzzle && <Puzzle size={13} />}{cost !== 0 && <small className={cost < 0 ? 'ow-choice-cost' : 'ow-choice-gain'}><Clock3 size={11} />{cost > 0 ? '+' : '−'}{Math.abs(cost)}m</small>}<ArrowRight size={14} /></button>;
       })}{choices.length === 0 && <button onClick={onClose}><span>Return to the world</span><ArrowRight size={14} /></button>}</div> : <div className="ow-dialogue-page-controls"><span>{pageIndex + 1} / {pages.length}</span><button onClick={() => setPageIndex(index => Math.min(pages.length - 1, index + 1))}>Continue <kbd>Space</kbd><ArrowRight size={15} /></button></div>}
-      <footer className="ow-dialogue-footer"><span>Time waits while you listen.</span><span>{finalPage ? 'Choose a reply' : 'There is a little more to hear'}</span></footer>
+      <footer className="ow-dialogue-footer"><span>The clock is suspended while you listen.</span><span>{finalPage ? 'Choose a reply' : 'The statement continues'}</span></footer>
     </div>
   </section>;
 }

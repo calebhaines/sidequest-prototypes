@@ -1,6 +1,6 @@
 import { ITEMS, RECIPES } from './items';
 import { renderWorld } from './renderer';
-import { TILE_SIZE, type ActorFrame, type EngineCallbacks, type FishingState, type FloatingText, type GameEngine, type InteractTarget, type ObjectKind, type Particle, type PlayerFrame, type Region, type Vec, type WorldData, type WorldObject, type WorldSave, type WorldScene, type WorldSnapshot } from './types';
+import { TILE_SIZE, type ActorFrame, type EngineCallbacks, type FishingState, type FloatingText, type GameEngine, type InteractTarget, type ObjectKind, type Particle, type PlayerFrame, type Region, type Vec, type WorldData, type WorldObject, type WorldSave, type WorldScene, type WorldSnapshot, type WorldSequence } from './types';
 
 const TWO_PI = Math.PI * 2;
 const CHUNK = 8;
@@ -44,6 +44,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   let floating: FloatingText[] = [];
   let floatingId = 0;
   let fishing: FishingState | null = null;
+  let sequence: WorldSequence | null = null;
   let building: string | null = null;
   let buildPreview: { kind: ObjectKind; position: Vec; valid: boolean } | null = null;
   let camera: Vec = { x: player.x, y: player.y };
@@ -186,6 +187,24 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   }
 
   function ensureFollowers() {
+    const occupied = actors.find(actor => actor.id === 'supine-in-ada');
+    const occupiedPosition = occupied ? { x: occupied.x, y: occupied.y } : null;
+    if (!flags.includes('mind_changed') || flags.includes('ada_restored')) {
+      actors = actors.filter(actor => actor.id !== 'supine-in-ada');
+      followers.delete('supine-in-ada');
+    } else {
+      const ada = actors.find(actor => actor.id === 'ada');
+      actors = actors.filter(actor => actor.id !== 'ada');
+      followers.delete('ada');
+      if (!occupied) {
+        actors.push({ id: 'supine-in-ada', name: 'Lady Supine, in Ada', kind: 'hare', role: 'A ruler inside the body she despises', location: region.id, scene: '', x: ada?.x ?? player.x - 1, y: ada?.y ?? player.y + 1, facing: player.facing, moving: false, animation: 0, health: 100, attacking: false, hurt: 0, color: '#6d5357', dialogue: '“These hands are filthy,” she says, looking at the hands that kept your watch running. “Find somebody useful to clean them.” The voice is Ada’s. The contempt is not.' });
+      }
+      followers.add('supine-in-ada');
+    }
+    for (const actor of actors) if (actor.kind === 'lady') {
+      actor.name = flags.includes('ada_restored') ? 'Supine’s body' : flags.includes('mind_changed') ? 'Ada, in Supine' : 'Lady Supine';
+      actor.role = flags.includes('mind_changed') ? 'The head remains open' : 'Ruler of the Land of Limited Time';
+    }
     for (const [id, friendFlag] of Object.entries(FRIEND_FLAGS)) {
       if (!flags.includes(friendFlag)) continue;
       if (id === 'ada' && flags.includes('mind_changed') && !flags.includes('ada_restored')) {
@@ -203,7 +222,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       if (!existing) {
         const original = [data.overworld, ...Object.values(data.interiors)].flatMap((room) => room.actors).find((actor) => actor.id === id);
         if (original) {
-          actors.push({ ...original, x: player.x - 1 - followers.size * 0.4, y: player.y + 1, facing: player.facing, moving: false, animation: 0, health: 100, attacking: false, hurt: 0 });
+          actors.push({ ...original, x: id === 'ada' && occupiedPosition ? occupiedPosition.x : player.x - 1 - followers.size * 0.4, y: id === 'ada' && occupiedPosition ? occupiedPosition.y : player.y + 1, facing: player.facing, moving: false, animation: 0, health: 100, attacking: false, hurt: 0 });
           followers.add(id);
         }
       }
@@ -214,7 +233,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     return {
       ...save(), region: { ...region, landmark: { ...region.landmark } }, nearby: nearby ? clone(nearby) : null,
       fishing: fishing ? clone(fishing) : null, enemies: actors.filter((actor) => actor.hostile && actor.health > 0 && distance(actor, player) < 18).length,
-      paused, saving: false, areaNotice: areaNoticeTime > 0 ? areaNotice : '',
+      paused, saving: false, areaNotice: areaNoticeTime > 0 ? areaNotice : '', sequence: sequence ? clone(sequence) : null,
     };
   }
 
@@ -255,7 +274,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       player.maxStamina += 5;
       player.stamina = player.maxStamina;
       addFloating(`Level ${player.level}`, '#f4db95');
-      notify(`A little more yourself. Level ${player.level}: health and stamina increased.`, 'success');
+      notify(`Your body has learned to endure it. Level ${player.level}: health and stamina increased.`, 'success');
       callbacks.onSound('level');
     }
   }
@@ -278,14 +297,14 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     if (ITEMS[id].kind === 'food') {
       const health = id === 'soup' ? 38 : id === 'tea' ? 20 : 12;
       if (player.health >= player.maxHealth && player.stamina >= player.maxStamina) {
-        notify('You are already well rested. Save it for a hungry hour.');
+        notify('You can still stand. Keep the food for when you cannot.');
         return false;
       }
       inventory[id]--;
       player.health = Math.min(player.maxHealth, player.health + health);
       player.stamina = player.maxStamina;
       addFloating(`+${health} health`, '#a8dca0');
-      burst(player, '#bedfa5', 'heart');
+      burst(player, '#969080', 'smoke');
       callbacks.onSound('eat');
     } else if (ITEMS[id].kind === 'time') {
       inventory[id]--;
@@ -293,7 +312,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       addFloating('+3:00 borrowed time', '#ebcf80');
       burst(player, '#ead185', 'time', 18);
       callbacks.onSound('coupon');
-      notify('The coupon blows a kiss. Three minutes settle into your hands.', 'success');
+      notify('The printed mouth blows a kiss. The paper dissolves; the face lasts longest. Three minutes credited.', 'success');
     } else if (ITEMS[id].kind === 'placeable') {
       beginBuild(id);
     } else {
@@ -407,10 +426,10 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
         gainXP(12);
         burst(fishing.position, '#98d8d5', 'splash', 10);
         callbacks.onSound('fish');
-        notify(`Caught ${count === 1 ? 'a tasteful fish' : 'two very tasteful fish'}.`, 'success');
+        notify(`Caught ${count === 1 ? 'one fish' : 'two fish'}. There is very little flesh on the bones.`, 'success');
         if (Math.random() < 0.18) {
           addResource('timeglass', 1);
-          notify('A bright grain of time came up with the line.', 'success');
+          notify('A grain of confiscated time came up with the line.', 'success');
         }
         fishing.phase = 'caught';
         fishing.elapsed = 0;
@@ -468,7 +487,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       return;
     }
     if (player.stamina < 7) {
-      notify('Catch your breath before swinging again.');
+      notify('Your arm will not lift. Wait until the shaking stops.');
       return;
     }
     player.facing = aimAngle();
@@ -585,10 +604,10 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       const healing = object.kind === 'bed' ? player.maxHealth : 20;
       player.health = Math.min(player.maxHealth, player.health + healing);
       player.stamina = player.maxStamina;
-      addFloating('A little rest', '#c4d6ac');
-      burst(player, '#bdce9b', 'heart', 7);
+      addFloating('Still breathing', '#c4d6ac');
+      burst(player, '#8c8877', 'smoke', 7);
       if (object.kind !== 'campfire') {
-        notify(object.text ?? 'You rest a moment. Health and stamina return.', 'success');
+        notify(object.text ?? 'The frame creaks beneath you. Your pulse eventually settles.', 'success');
         publish();
         return;
       }
@@ -647,7 +666,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     else teleport(data.overworld.id, data.overworld.spawn);
     callbacks.onTimeChange(-60);
     callbacks.onRecovery();
-    notify('The Hospital of Borrowed Time has put you back on your feet.', 'warning');
+    notify('You wake under a stained sheet. Your name has been added to the Hospital account.', 'warning');
   }
 
   function scanExploration() {
@@ -799,7 +818,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
         publish();
       } else if (fishing.phase === 'bite' && fishing.elapsed > 1.8) {
         fishing = null;
-        notify('The fish leaves with its remaining dignity. Cast again.');
+        notify('The line slackens. Nothing to eat. Cast again.');
       } else if (fishing.phase === 'caught' && fishing.elapsed > 0.75) fishing = null;
     }
     for (const particle of particles) {
@@ -847,18 +866,22 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     const dt = Math.min(0.05, lastFrame ? (timestamp - lastFrame) / 1000 : 0);
     lastFrame = timestamp;
     const costStart = performance.now();
-    if (!paused && !document.hidden) update(dt);
+    if (sequence && !document.hidden) {
+      sequence.elapsed += dt;
+      if (sequence.elapsed >= sequence.duration) finishMindExchange();
+    }
+    if (!paused && !document.hidden && !sequence) update(dt);
     const cameraRate = options.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
     camera.x += (player.x - camera.x) * cameraRate;
     camera.y += (player.y - camera.y) * cameraRate;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
     renderWorld(ctx, {
       scene, data, player, actors: actors.filter((actor) => actor.health > 0), objects: sceneObjects,
       harvested, particles, floating, camera, zoom: options.zoom, time: elapsed, dayTime, flags,
       selected: hotbar[selected], nearby, fishing,
       waypoint: !waypoint ? null : waypointScene === scene.id ? waypoint : scene.outdoors ? data.interiors[waypointScene]?.exit?.position || waypoint : scene.exit?.positionInRoom || null,
-      reducedMotion: options.reducedMotion, buildPreview,
+      reducedMotion: options.reducedMotion, buildPreview, sequence,
     }, width, height);
     publishTimer += dt;
     if (publishTimer > 0.1) { publishTimer = 0; publish(); }
@@ -935,6 +958,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   window.addEventListener('resize', resize);
 
   function load(value: WorldSave) {
+    sequence = null;
     scene = value.sceneId === data.overworld.id || value.sceneId === 'overworld' ? data.overworld : data.interiors[value.sceneId] ?? data.overworld;
     player = { ...player, ...value.player, moving: false, attacking: 0, hurt: 0 };
     inventory = { ...value.inventory };
@@ -971,6 +995,23 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   }
   resize();
 
+  function finishMindExchange() {
+    if (!sequence) return;
+    sequence = null;
+    publish();
+    callbacks.onSequenceComplete?.();
+  }
+  function startMindExchange(kind: 'exchange' | 'restore') {
+    const recipient = actors.find(actor => actor.id === 'supine-in-ada') || actors.find(actor => actor.id === 'ada');
+    const lady = actors.find(actor => actor.kind === 'lady');
+    const from = kind === 'exchange' ? recipient || { x: player.x - 1, y: player.y + 1 } : { x: player.x - 3, y: player.y - 1 };
+    const to = kind === 'exchange' ? lady || { x: player.x + 2, y: player.y - 2 } : recipient || { x: player.x + 1, y: player.y };
+    sequence = { kind, elapsed: 0, duration: options.reducedMotion ? 4.5 : 9, from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y } };
+    clearInput();
+    callbacks.onSound('exchange');
+    publish();
+  }
+
   return {
     start() { if (running || disposed) return; running = true; lastFrame = 0; raf = requestAnimationFrame(frame); publish(); },
     destroy() {
@@ -990,6 +1031,6 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     setWaypoint(position, sceneId = data.overworld.id) { waypoint = position ? { ...position } : null; waypointScene = sceneId; publish(); },
     setOptions(value) { options = { ...options, ...value }; options.zoom = clamp(options.zoom, 0.85, 2.5); publish(); },
     setTouchDirection(direction) { touchDirection = { x: clamp(direction.x, -1, 1), y: clamp(direction.y, -1, 1) }; },
-    interact, primaryAction, teleport, addResource, load,
+    interact, primaryAction, teleport, addResource, load, startMindExchange, finishMindExchange,
   };
 }

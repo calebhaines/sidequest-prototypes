@@ -2,7 +2,7 @@
 
 ## The kingdom
 
-The Land of Limited Time is not short of hours. It is short of permission to use them. Lady Supine's face appears on coupons, portraits, permits, and Channel 9. Every kiss on a coupon dissolves into a little more life. Every official repeats her promise: **Be Yourself. Be Divine.**
+The Land of Limited Time is not short of hours. It is short of permission to use them. Its settlement grew from parked trailers and temporary offices that were never replaced. Wire is spliced around dead meters, window plastic is taped over older plastic, and the rain travels through layers of repairs. Lady Supine's face appears on coupons, portraits, permits, and Channel 9. Every kiss on a coupon dissolves into a little more life. Every official repeats her promise: **Be Yourself. Be Divine.**
 
 The inhabitants are part beast. Their supposed animal natures are used to excuse how little freedom they receive. A moth can be a poet, an ox a thoughtful porter, a hare a clockmender; the kingdom's forms contain no boxes for these things. The traveller and Supine appear entirely human. That distinction grants the traveller access while revealing the cruelty of the distinction itself.
 
@@ -12,7 +12,9 @@ Time is a currency, a ration, and a verdict. Timelessness is a crime because a p
 
 The prose takes official absurdities seriously. A gate really is unenterable. An island really can be a hole. A ruler really can change her mind by replacing it. Bureaucratic language conceals something frightening, while personal language makes room for tenderness. Humour arises from precise, unreasonable rules rather than from characters mocking the world.
 
-Supine's vanity is powerful and lonely. Her aesthetic doctrine denies the humanity of her subjects while asking every moment of their attention. She offers generosity most freely when it brings an audience. Asking for time reveals what her compliments have bought and what they never could buy.
+Supine is a real living human ruler. Her head is disproportionately large, with a visible opening in the top through which a physical brain can be removed and replaced. The telescreens show her actual body; they do not constitute her existence. Her vanity is powerful and lonely. Her aesthetic doctrine denies the humanity of her subjects while asking every moment of their attention. She offers generosity most freely when it brings an audience. Asking for time reveals what her compliments have bought and what they never could buy.
+
+The writing is materially bleak. Hunger, wet bedding, damaged hands, absent neighbours, and institutional neglect have consequences. The three friends remain kind, but kindness costs food and minutes they cannot comfortably spare. An ending can return an account balance; it cannot return the people who died while the account was withheld.
 
 ## Six acts
 
@@ -31,11 +33,13 @@ Pip, Brindle, and Ada have work, tastes, fears, and small pleasures independent 
 
 The friends' final offer is emotionally central. It also presents a puzzle whose solution preserves a reserve for each friend. The traveller may seek infinite time, change the finite kingdom, or remain with the people they have met. No ending makes the friends' existence disposable.
 
+The exchange is literal and visible. Ada’s brain travels into the hole in Supine’s head while Supine’s brain enters Ada’s hare body. That body adopts Supine’s cruelty and must be taken to the hospital. The return procedure visibly removes the ruler’s brain into a jar and restores Ada’s own mind. The original body is recognizable throughout; no abstract personality icon substitutes for the organs.
+
 ## Pacing
 
 The standard story is paced for approximately five hours across six acts. It includes six mandatory, six-stage investigations alongside sixteen shorter story challenges, including fish caught in the actual lake. The investigations contain new accounts, witnesses, clues, discoveries, and consequences. The walkable world adds exploration, gathering, crafting, fishing, and Aristobat encounters; these are playable systems and can extend a leisurely playthrough.
 
-The route-based audit counts approximately 22,000 required reader words. At 220 words per minute, reading takes about 102 minutes; standard investigation thinking takes about 184 minutes; shorter story puzzles take about 29 minutes; navigation and decisions add about 15 minutes. The central estimate is approximately 330 minutes, or five and a half hours. Standard assumptions give a range of approximately 4¾–6¼ hours. Optional branches add time; hints, assistance, skipped prose, and puzzle experience reduce it. These are reasoned estimates, not a timed human playtest. The reproducible inputs and results are in `scripts/pacing-report.json`.
+The route-based audit counts 27,309 required reader words after the expanded narrative rewrite. At 220 words per minute, reading takes about 124 minutes; standard investigation thinking takes about 184 minutes; shorter story puzzles take about 29 minutes; navigation and decisions add about 15 minutes. The central estimate is approximately 352 minutes, or 5.9 hours. Standard assumptions give a range of approximately 5.1–6.7 hours. Optional branches add time; hints, assistance, skipped prose, and puzzle experience reduce it. These are reasoned estimates, not a timed human playtest. The reproducible inputs and results are in `scripts/pacing-report.json`.
 
 Player time and fictional time are separate. Reading, consulting the journal, and considering a clue are free; active travel and Aristobats can spend borrowed time. All menus pause the world. The map sets a compass destination, and the traveller walks there. Exhaustion leads to care and debt, not an erased playthrough. This keeps scarcity present without charging for reading speed.
 
@@ -57,6 +61,8 @@ Every case uses six distinct forms of reasoning: a cross-referenced ledger, an e
 
 ## Art direction, temporarily
 
-A top-down pixel world in moss, stone, old gold, and dark green, with parchment reading interfaces contained in the gameplay window. Water ripples, willow branches move, lanterns glow, creatures blink and walk, and wings open against the evening. Buildings are proud, crooked, or both. The world arrives through depth and movement while preserving the note’s bureaucratic unease and tenderness.
+A top-down world drawn with uneven marker contours, translucent pigment, scuffed ink, and stained paper. Dirt, cold grey-green water, brittle vegetation, faded cloth, and bruised brown dominate the palette. The old trailer park has been repeatedly extended using salvaged sheet metal, tarpaulins, signs, blocks, and stolen cable. Civic buildings retain those origins; Supine’s castle conceals them beneath an oversized facade. Water ripples, smoke moves, branches lean, and tired people still walk. No pixel art is used.
 
-The procedural pixel art and matching dialogue portraits establish composition and palette without locking in permanent character designs. Replacement sprite sheets can be registered without changing the game systems; scenery and portraits can be replaced independently after visual inspiration arrives. Earlier SVG illustrations remain as references.
+The original marker-style drawings and matching dialogue portraits establish composition and palette without locking in final artwork. Replacement illustrations can be registered without changing the game systems; scenery and portraits can be replaced independently after visual inspiration arrives.
+
+Philip Guston, Cy Twombly, and Paul Klee guide the visual vocabulary: corporeal weight and soot outlines, nervous scrawls and erasure, brittle geometry and muted colour. These references describe the artwork rather than artists who exist in the game world.

@@ -14,6 +14,10 @@ page.on('pageerror', error => errors.push(error.message));
 const world = () => page.evaluate(() => window.__ladySupine.getWorld());
 const story = () => page.evaluate(() => window.__ladySupine.getStory());
 const engine = (method, ...args) => page.evaluate(({ method, args }) => window.__ladySupine.getEngine()[method](...args), { method, args });
+async function waitForSimulation(seconds = .5) {
+  const started = (await world()).elapsed;
+  await page.waitForFunction(({ started, seconds }) => window.__ladySupine.getWorld().elapsed - started >= seconds, { started, seconds }, { timeout: 8000 });
+}
 
 async function enterGame() {
   await page.locator('.ow-game').waitFor();
@@ -136,13 +140,15 @@ try {
   async function prepare(position, selected = 0, facing = -Math.PI / 2) {
     const current = await engine('getSave');
     await engine('load', { ...current, sceneId: data.overworld.id, selected, player: { ...current.player, ...position, facing, stamina: current.player.maxStamina } });
-    await page.waitForTimeout(450);
+    // Tool cooldowns run on simulation time. Waiting only on wall time flakes
+    // when another headless painting suite competes for the same CPU.
+    await waitForSimulation();
   }
   const tree = data.overworld.objects.find(object => object.kind === 'tree' && object.resource && object.x > 10 && object.x < 40 && object.y > 110);
   assert.ok(tree, 'The world needs reachable trees for harvesting');
   await prepare({ x: tree.x, y: tree.y + 1.1 }, 1);
   const timber = (await world()).inventory.wood || 0;
-  for (let hit = 0; hit < tree.resource.health; hit++) { await page.keyboard.press('Space'); await page.waitForTimeout(460); }
+  for (let hit = 0; hit < tree.resource.health; hit++) { await page.keyboard.press('Space'); await waitForSimulation(); }
   assert.equal((await world()).inventory.wood, timber + tree.resource.amount, 'Axe swings must add timber from a real tree');
   assert.ok((await world()).harvested[tree.id], 'A harvested tree must leave the world and regrow later');
 
@@ -163,7 +169,7 @@ try {
   const bat = data.overworld.actors.find(actor => actor.hostile);
   await prepare({ x: bat.x, y: bat.y + 1.3 }, 0);
   const timeglassBefore = (await world()).inventory.timeglass || 0;
-  for (let hit = 0; hit < 3 && !((await world()).harvested[`enemy:${data.overworld.id}:${bat.id}`]); hit++) { await page.keyboard.press('Space'); await page.waitForTimeout(460); }
+  for (let hit = 0; hit < 3 && !((await world()).harvested[`enemy:${data.overworld.id}:${bat.id}`]); hit++) { await page.keyboard.press('Space'); await waitForSimulation(); }
   assert.ok((await world()).harvested[`enemy:${data.overworld.id}:${bat.id}`], 'Cane swings must repel an actual Aristobat');
   assert.ok((await world()).inventory.timeglass > timeglassBefore, 'Defeated Aristobats must return timeglass');
 
