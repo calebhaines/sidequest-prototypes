@@ -2,6 +2,7 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -101,9 +102,18 @@ html = html.replace(/\s*<script\b[^>]*\bsrc\s*=\s*["'][^"']+["'][^>]*>\s*<\/scri
 if (scriptsReplaced !== 1) throw new Error(`Expected one generated script tag, found ${scriptsReplaced}.`);
 // Vite puts its module entry in the head. A classic inline script must run
 // after the root element exists, so the self-contained entry goes last.
-html = html.replace('</body>', `<script>${escapeScript(chunks[0].code)}</script>\n</body>`);
+const inlineScript = escapeScript(chunks[0].code);
+// Minified identifiers and strings can contain $$, $&, $` or $'. Replacement
+// callbacks preserve those characters instead of interpreting them as tokens.
+html = html.replace('</body>', () => `<script>${inlineScript}</script>\n</body>`);
 const css = `${fontCss}\n${styles.map(asset => asText(asset.source)).join('\n')}`;
-html = html.replace('</head>', `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${favicon.toString('base64')}" />\n<style>${escapeStyle(css)}</style>\n<!-- ${licenseNotice} -->\n</head>`);
+html = html.replace('</head>', () => `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${favicon.toString('base64')}" />\n<style>${escapeStyle(css)}</style>\n<!-- ${licenseNotice} -->\n</head>`);
+
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+if (scripts.length !== 1 || scripts[0][1] !== inlineScript) {
+  throw new Error('The HTML assembly changed the embedded game script.');
+}
+new Script(scripts[0][1], { filename: 'lady-supine-inline.js' });
 
 // Reject accidental future asset references instead of shipping a download
 // that appears to work online but fails when opened from disk.

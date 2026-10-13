@@ -4,6 +4,10 @@ import { TILE_SIZE, type ActorFrame, type EngineCallbacks, type FishingState, ty
 
 const TWO_PI = Math.PI * 2;
 const CHUNK = 8;
+// Scale the painted world independently of CSS-sized controls and map navigation.
+// A Retina desktop should not repaint a 15-million-pixel sheet every frame.
+const MAX_WORLD_PIXELS = 2_500_000;
+const DRAW_INTERVAL = 1000 / 60;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const distance = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.y - b.y);
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -64,6 +68,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   let disposed = false;
   let raf = 0;
   let lastFrame = 0;
+  let lastDraw: number | null = null;
+  let drawDirty = true;
   let publishTimer = 0;
   let scanTimer = 0;
   let regrowTimer = 0;
@@ -77,7 +83,6 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   const listeners = new Set<(snapshot: WorldSnapshot) => void>();
   let objectCells = new Map<string, WorldObject[]>();
   let sceneObjects: WorldObject[] = [];
-  const frameCost: number[] = [];
 
   function regionFor(currentScene: WorldScene, position: Vec): Region {
     if (!currentScene.outdoors) return data.regions.find((r) => r.id === currentScene.location) ?? data.regions[0];
@@ -251,6 +256,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   }
 
   function publish() {
+    drawDirty = true;
     if (!listeners.size) return;
     const value = snapshot();
     for (const listener of listeners) listener(value);
@@ -882,14 +888,16 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
 
   function resize() {
     const box = canvas.getBoundingClientRect();
-    width = Math.max(1, box.width);
-    height = Math.max(1, box.height);
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    const pixelWidth = Math.round(width * dpr);
-    const pixelHeight = Math.round(height * dpr);
+    const nextWidth = Math.max(1, box.width), nextHeight = Math.max(1, box.height);
+    const nextDpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_WORLD_PIXELS / (nextWidth * nextHeight)));
+    if (nextWidth !== width || nextHeight !== height || nextDpr !== dpr) drawDirty = true;
+    width = nextWidth; height = nextHeight; dpr = nextDpr;
+    const pixelWidth = Math.max(1, Math.floor(width * dpr));
+    const pixelHeight = Math.max(1, Math.floor(height * dpr));
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
       canvas.width = pixelWidth;
       canvas.height = pixelHeight;
+      drawDirty = true;
     }
   }
 
@@ -897,7 +905,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     if (!running || disposed) return;
     const dt = Math.min(0.05, lastFrame ? (timestamp - lastFrame) / 1000 : 0);
     lastFrame = timestamp;
-    const costStart = performance.now();
+    if (document.hidden) { raf = requestAnimationFrame(frame); return; }
     if (sequence && !document.hidden) {
       sequence.elapsed += dt;
       if (sequence.elapsed >= sequence.duration) finishMindExchange();
@@ -906,19 +914,31 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     const cameraRate = options.reducedMotion ? 1 : 1 - Math.exp(-dt * 9);
     camera.x += (player.x - camera.x) * cameraRate;
     camera.y += (player.y - camera.y) * cameraRate;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    renderWorld(ctx, {
-      scene, data, player, actors: actors.filter((actor) => actor.health > 0), objects: sceneObjects,
-      harvested, particles, floating, camera, zoom: options.zoom, time: elapsed, dayTime, flags,
-      selected: hotbar[selected], nearby, fishing,
-      waypoint: !waypoint ? null : waypointScene === scene.id ? waypoint : scene.outdoors ? data.interiors[waypointScene]?.exit?.position || waypoint : scene.exit?.positionInRoom || null,
-      reducedMotion: options.reducedMotion, particlesEnabled: options.particles, buildPreview, sequence, playerPace, impacts,
-    }, width, height);
-    publishTimer += dt;
-    if (publishTimer > 0.1) { publishTimer = 0; publish(); }
-    frameCost.push(performance.now() - costStart);
-    if (frameCost.length > 60) frameCost.shift();
+    const cameraMoving = Math.abs(player.x - camera.x) + Math.abs(player.y - camera.y) > .001;
+    if (!cameraMoving) { camera.x = player.x; camera.y = player.y; }
+    // Simulation still advances on every refresh. Drawing has a separate clock,
+    // so 120/240 Hz screens keep the same walking speed and borrowed-time rate.
+    // Browser refresh timestamps have small variations. Accept a near-due
+    // frame without shifting the ideal clock and skipping normal 60 Hz draws.
+    const due = lastDraw === null || timestamp - lastDraw >= DRAW_INTERVAL - 1.5;
+    if (due && (!paused || sequence || drawDirty || cameraMoving)) {
+      lastDraw = lastDraw === null ? timestamp
+        : lastDraw + Math.max(1, Math.floor((timestamp - lastDraw + 1e-6) / DRAW_INTERVAL)) * DRAW_INTERVAL;
+      drawDirty = false;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      renderWorld(ctx, {
+        scene, data, player, actors: actors.filter((actor) => actor.health > 0), objects: sceneObjects,
+        harvested, particles, floating, camera, zoom: options.zoom, time: elapsed, dayTime, flags,
+        selected: hotbar[selected], nearby, fishing,
+        waypoint: !waypoint ? null : waypointScene === scene.id ? waypoint : scene.outdoors ? data.interiors[waypointScene]?.exit?.position || waypoint : scene.exit?.positionInRoom || null,
+        reducedMotion: options.reducedMotion, particlesEnabled: options.particles, buildPreview, sequence, playerPace, impacts,
+      }, width, height);
+    }
+    if (!paused || sequence) {
+      publishTimer += dt;
+      if (publishTimer > 0.1) { publishTimer = 0; publish(); }
+    } else publishTimer = 0;
     raf = requestAnimationFrame(frame);
   }
 
@@ -1048,7 +1068,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
   }
 
   return {
-    start() { if (running || disposed) return; running = true; lastFrame = 0; raf = requestAnimationFrame(frame); publish(); },
+    start() { if (running || disposed) return; running = true; lastFrame = 0; lastDraw = null; raf = requestAnimationFrame(frame); publish(); },
     destroy() {
       running = false; disposed = true; cancelAnimationFrame(raf); resizeObserver.disconnect();
       canvas.removeEventListener('pointermove', pointerMove); canvas.removeEventListener('pointerdown', pointerDown);
@@ -1058,7 +1078,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       listeners.clear();
     },
     setPaused(value) { paused = value; if (value) clearInput(); publish(); },
-    setFlags(value) { if (value.join('|') === flags.join('|')) return; flags = [...value]; applyPatrolPeace(); ensureFollowers(); refreshObjects(); },
+    setFlags(value) { if (value.join('|') === flags.join('|')) return; flags = [...value]; drawDirty = true; applyPatrolPeace(); ensureFollowers(); refreshObjects(); },
     getSnapshot: snapshot,
     getSave: save,
     subscribe(listener) { listeners.add(listener); listener(snapshot()); return () => { listeners.delete(listener); }; },

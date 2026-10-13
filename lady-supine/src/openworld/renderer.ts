@@ -6,10 +6,19 @@ import { PALETTE24 as P, rgba } from './palette';
 
 // The map remains a simulation grid. Its illustration deliberately never shows that grid.
 const CHUNK = 8;
+const GROUND_BLEED = 10;
+const GROUND_CACHE_BYTES = 96 * 1024 * 1024;
+const OBJECT_CACHE_BYTES = 96 * 1024 * 1024;
+const CANOPY_CACHE_BYTES = 16 * 1024 * 1024;
+const ART_DENSITIES = [.5, 1, 1.5, 2];
 const INK: string = P.ink, PAPER: string = P.paper;
 const groundCache = new Map<string, HTMLCanvasElement>();
+let groundCacheBytes = 0;
 const contourCache = new Map<string, Map<TileKind, Path2D>>();
 const objectCache = new Map<string, { canvas: HTMLCanvasElement; left: number; top: number; width: number; height: number }>();
+let objectCacheBytes = 0;
+let objectResolution = 2;
+let protectedObjectKeys = new Set<string>();
 const colors: Record<TileKind, string> = {
   grass: P.sage, darkGrass: P.moss, dirt: P.clay, path: P.sand,
   water: P.water, deepWater: P.deepWater, sand: P.paper, stone: P.ash,
@@ -210,12 +219,38 @@ function groundContours(scene: WorldScene) {
   }
   contourCache.set(scene.id, layers); return layers;
 }
-function groundChunk(scene: WorldScene, cx: number, cy: number) {
-  const key = `${scene.id}:${cx}:${cy}`;
+function groundKey(scene: WorldScene, cx: number, cy: number, resolution: number) {
+  return `${scene.id}:${cx}:${cy}:${resolution}`;
+}
+function trimGroundCache(protectedKeys: Set<string>, incomingBytes = 0) {
+  if (groundCacheBytes + incomingBytes <= GROUND_CACHE_BYTES) return;
+  // Keep the entire visible sheet resident. A fixed entry count used to evict the
+  // next row's tiles whenever a large display showed more than 72 chunks.
+  for (const [key, canvas] of groundCache) {
+    if (protectedKeys.has(key)) continue;
+    groundCacheBytes -= canvas.width * canvas.height * 4;
+    groundCache.delete(key);
+    if (groundCacheBytes + incomingBytes <= GROUND_CACHE_BYTES) break;
+  }
+}
+function artDensity(deviceDensity: number, visibleBytesAtOne: number, budget: number) {
+  // Oversample the marker edge just enough for the actual display, then keep a
+  // little memory for neighbouring tiles as the camera crosses a chunk seam.
+  const desired = Math.min(2, Math.max(.5, Math.ceil(deviceDensity * 2) / 2));
+  const maximum = Math.sqrt(budget * .88 / Math.max(1, visibleBytesAtOne));
+  return ART_DENSITIES.filter(density => density <= desired && density <= maximum).at(-1) || .5;
+}
+function groundChunk(scene: WorldScene, cx: number, cy: number, resolution: number, protectedKeys: Set<string>) {
+  const key = groundKey(scene, cx, cy, resolution);
   const cached = groundCache.get(key);
   if (cached) { groundCache.delete(key); groundCache.set(key, cached); return cached; }
-  const c = document.createElement('canvas'), resolution = 2, bleed = 10, size = CHUNK * TILE_SIZE;
-  c.width = c.height = (size + bleed * 2) * resolution;
+  const bleed = GROUND_BLEED, size = CHUNK * TILE_SIZE;
+  const pixels = Math.round((size + bleed * 2) * resolution);
+  // Evict before allocating the backing surface, including during a density or
+  // room change, so the cache does not briefly duplicate its entire pixel budget.
+  trimGroundCache(protectedKeys, pixels * pixels * 4);
+  const c = document.createElement('canvas');
+  c.width = c.height = pixels;
   const ctx = c.getContext('2d')!; ctx.scale(resolution, resolution); ctx.translate(bleed, bleed);
   ctx.fillStyle = scene.outdoors ? colors.grass : colors.void; ctx.fillRect(-bleed, -bleed, size + bleed * 2, size + bleed * 2);
   ctx.save(); ctx.translate(-cx * size, -cy * size);
@@ -226,7 +261,7 @@ function groundChunk(scene: WorldScene, cx: number, cy: number) {
   ctx.restore();
   for (let y = -1; y <= CHUNK; y++) for (let x = -1; x <= CHUNK; x++) paintGround(ctx, scene, cx * CHUNK + x, cy * CHUNK + y, x * TILE_SIZE, y * TILE_SIZE);
   groundCache.set(key, c);
-  if (groundCache.size > 72) groundCache.delete(groundCache.keys().next().value!);
+  groundCacheBytes += c.width * c.height * 4;
   return c;
 }
 function fire(ctx: CanvasRenderingContext2D, time: number) {
@@ -247,12 +282,21 @@ function fire(ctx: CanvasRenderingContext2D, time: number) {
 }
 type CanopyShard = { canvas: HTMLCanvasElement; x: number; y: number; width: number; height: number };
 const canopyCache = new Map<string, CanopyShard>();
+let canopyCacheBytes = 0;
 function canopyShard(ctx: CanvasRenderingContext2D, index: number, variant: number, seed: number, width: number, height: number, fill: string) {
   const key = `${index}:${variant}:${seed % 7}:${width}:${height}:${fill}`;
   let shard = canopyCache.get(key);
   if (!shard) {
-    const canvas = document.createElement('canvas'), bleed = 5, resolution = 2;
-    canvas.width = (width + bleed * 2) * resolution; canvas.height = (height + bleed * 2) * resolution;
+    const bleed = 5, resolution = 2, pixelsWide = (width + bleed * 2) * resolution, pixelsHigh = (height + bleed * 2) * resolution;
+    const bytes = pixelsWide * pixelsHigh * 4;
+    // All normal tree and willow variants fit together. A small entry-count
+    // limit used to forget moving canopy fragments as a wide view revealed more.
+    while (canopyCache.size && canopyCacheBytes + bytes > CANOPY_CACHE_BYTES) {
+      const oldest = canopyCache.keys().next().value!, removed = canopyCache.get(oldest)!;
+      canopyCacheBytes -= removed.canvas.width * removed.canvas.height * 4; canopyCache.delete(oldest);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelsWide; canvas.height = pixelsHigh;
     const brush = canvas.getContext('2d')!; brush.scale(resolution, resolution); brush.translate(width / 2 + bleed, height / 2 + bleed);
     const ww = width / 2, hh = height / 2;
     // A tree is an arrangement of torn painted planes, with actual open paper between them.
@@ -271,8 +315,8 @@ function canopyShard(ctx: CanvasRenderingContext2D, index: number, variant: numb
     if (index % 2) scribble(brush, -ww * .67, -hh * .56, width * .79, height * .64, seed, rgba(P.ink, .55));
     else line(brush, [-ww * .49, hh * .08, ww * .58, -hh * .19, ww * .24, hh * .4], rgba(P.ink, .67), .85, true);
     shard = { canvas, x: -ww - bleed, y: -hh - bleed, width: width + bleed * 2, height: height + bleed * 2 };
-    canopyCache.set(key, shard); if (canopyCache.size > 160) canopyCache.delete(canopyCache.keys().next().value!);
-  }
+    canopyCache.set(key, shard); canopyCacheBytes += canvas.width * canvas.height * 4;
+  } else { canopyCache.delete(key); canopyCache.set(key, shard); }
   ctx.drawImage(shard.canvas, shard.x, shard.y, shard.width, shard.height);
 }
 function drawTree(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade: number, reducedMotion = false) {
@@ -559,23 +603,54 @@ function secondaryScenery(ctx: CanvasRenderingContext2D, o: WorldObject, time: n
     curve(ctx, rgba(P.lichen, .20), .8, -12, -18 + Math.sin(time * 2 + phase) * 7, 0, -18 + Math.sin(time * 2 + phase) * 7, 12, -17 + Math.sin(time * 2 + phase) * 7); ctx.restore();
   }
 }
+function cachedObjectArt(o: WorldObject) {
+  return !['tree', 'willow', 'campfire', 'reed', 'flower', 'crop'].includes(o.kind);
+}
+function objectArtKey(o: WorldObject, resolution: number) {
+  return `${o.id}:${o.kind}:${o.variant}:${o.color}:${o.width}:${o.height}:${resolution}`;
+}
+function objectArtBounds(o: WorldObject) {
+  const architectural = o.kind === 'building' || o.kind === 'gate' || o.kind === 'portal';
+  const furniture = o.kind === 'bed' || o.kind === 'table' || o.kind === 'rug' || o.kind === 'bookshelf';
+  const left = architectural ? -62 : furniture ? -8 : -48;
+  const top = architectural ? -126 : furniture ? -42 : -111;
+  const right = architectural ? (o.width || 1) * TILE_SIZE + 58 : furniture ? (o.width || 1) * TILE_SIZE + 8 : 48;
+  const bottom = architectural ? (o.height || 1) * TILE_SIZE + 28 : furniture ? Math.max(28, (o.height || 1) * TILE_SIZE + 15) : 27;
+  return { left, top, width: right - left, height: bottom - top };
+}
+function trimObjectCache(incomingBytes = 0) {
+  if (objectCacheBytes + incomingBytes <= OBJECT_CACHE_BYTES) return;
+  for (const [key, art] of objectCache) {
+    if (protectedObjectKeys.has(key)) continue;
+    objectCacheBytes -= art.canvas.width * art.canvas.height * 4; objectCache.delete(key);
+    if (objectCacheBytes + incomingBytes <= OBJECT_CACHE_BYTES) break;
+  }
+}
+function prepareObjectCache(objects: WorldObject[], deviceDensity: number) {
+  const illustrations = new Map<string, WorldObject>();
+  for (const object of objects) if (cachedObjectArt(object)) illustrations.set(object.id, object);
+  let visibleBytesAtOne = 0;
+  for (const object of illustrations.values()) {
+    const bounds = objectArtBounds(object); visibleBytesAtOne += bounds.width * bounds.height * 4;
+  }
+  objectResolution = artDensity(deviceDensity, visibleBytesAtOne, OBJECT_CACHE_BYTES);
+  protectedObjectKeys = new Set([...illustrations.values()].map(object => objectArtKey(object, objectResolution)));
+  trimObjectCache();
+}
 function drawIllustration(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade = 1, reducedMotion = false) {
   if (o.kind === 'tree' || o.kind === 'willow') { drawTree(ctx, o, time, fade, reducedMotion); return; }
-  if (o.kind === 'campfire' || o.kind === 'reed' || o.kind === 'flower' || o.kind === 'crop') { drawObject(ctx, o, time, fade); return; }
-  const key = `${o.id}:${o.kind}:${o.variant}:${o.color}:${o.width}:${o.height}`;
+  if (!cachedObjectArt(o)) { drawObject(ctx, o, time, fade); return; }
+  const key = objectArtKey(o, objectResolution);
   let art = objectCache.get(key);
   if (!art) {
-    const architectural = o.kind === 'building' || o.kind === 'gate' || o.kind === 'portal';
-    const furniture = o.kind === 'bed' || o.kind === 'table' || o.kind === 'rug' || o.kind === 'bookshelf';
-    const left = architectural ? -62 : furniture ? -8 : -48;
-    const top = architectural ? -126 : furniture ? -42 : -111;
-    const right = architectural ? (o.width || 1) * TILE_SIZE + 58 : furniture ? (o.width || 1) * TILE_SIZE + 8 : 48;
-    const bottom = architectural ? (o.height || 1) * TILE_SIZE + 28 : furniture ? Math.max(28, (o.height || 1) * TILE_SIZE + 15) : 27;
-    const width = right - left, height = bottom - top, canvas = document.createElement('canvas'), resolution = 2;
-    canvas.width = width * resolution; canvas.height = height * resolution;
+    const { left, top, width, height } = objectArtBounds(o), resolution = objectResolution;
+    const pixelsWide = Math.ceil(width * resolution), pixelsHigh = Math.ceil(height * resolution);
+    trimObjectCache(pixelsWide * pixelsHigh * 4);
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelsWide; canvas.height = pixelsHigh;
     const brush = canvas.getContext('2d')!; brush.scale(resolution, resolution); brush.translate(-left, -top); drawObject(brush, o, 0);
     art = { canvas, left, top, width, height }; objectCache.set(key, art);
-    if (objectCache.size > 256) objectCache.delete(objectCache.keys().next().value!);
+    objectCacheBytes += canvas.width * canvas.height * 4;
   } else { objectCache.delete(key); objectCache.set(key, art); }
   ctx.save();
   const gust = reducedMotion ? 0 : wind(o.x, o.y, time);
@@ -670,21 +745,27 @@ function roomWalls(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: num
 }
 
 export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number) {
-  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.clearRect(0, 0, width, height); ctx.fillStyle = P.slate; ctx.fillRect(0, 0, width, height);
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; ctx.fillStyle = P.slate; ctx.fillRect(0, 0, width, height);
   const { scene, zoom } = frame, scale = TILE_SIZE * zoom, time = frame.reducedMotion ? 0 : frame.time;
   sceneryDebris = frame.particlesEnabled !== false;
   const hw = width / scale / 2 + 2, hh = height / scale / 2 + 2;
   const heldPose = playerToolPose(frame.player.facing, frame.player.moving, frame.player.animation, time, { reducedMotion: frame.reducedMotion, phaseOffset: 0, pace: frame.playerPace || 1, action: frame.player.attacking, hurt: frame.player.hurt });
   const cx1 = Math.max(0, Math.floor((frame.camera.x - hw) / CHUNK)), cx2 = Math.min(Math.floor((scene.width - 1) / CHUNK), Math.floor((frame.camera.x + hw) / CHUNK));
   const cy1 = Math.max(0, Math.floor((frame.camera.y - hh) / CHUNK)), cy2 = Math.min(Math.floor((scene.height - 1) / CHUNK), Math.floor((frame.camera.y + hh) / CHUNK));
+  const visibleChunks = Math.max(0, cx2 - cx1 + 1) * Math.max(0, cy2 - cy1 + 1);
+  const deviceDensity = zoom * ctx.getTransform().a, groundSize = CHUNK * TILE_SIZE + GROUND_BLEED * 2;
+  const resolution = artDensity(deviceDensity, visibleChunks * groundSize * groundSize * 4, GROUND_CACHE_BYTES);
+  const protectedGround = new Set<string>();
+  for (let cy = cy1; cy <= cy2; cy++) for (let cx = cx1; cx <= cx2; cx++) protectedGround.add(groundKey(scene, cx, cy, resolution));
+  trimGroundCache(protectedGround);
   for (let cy = cy1; cy <= cy2; cy++) for (let cx = cx1; cx <= cx2; cx++) {
-    const p = position(frame, cx * CHUNK, cy * CHUNK, width, height), c = groundChunk(scene, cx, cy);
-    ctx.drawImage(c, 20, 20, CHUNK * 32 * 2, CHUNK * 32 * 2, p.x, p.y, CHUNK * scale, CHUNK * scale);
+    const p = position(frame, cx * CHUNK, cy * CHUNK, width, height), c = groundChunk(scene, cx, cy, resolution, protectedGround);
+    const ratio = c.width / (CHUNK * TILE_SIZE + GROUND_BLEED * 2), bleed = GROUND_BLEED * ratio;
+    ctx.drawImage(c, bleed, bleed, CHUNK * TILE_SIZE * ratio, CHUNK * TILE_SIZE * ratio, p.x, p.y, CHUNK * scale, CHUNK * scale);
   }
   drawWater(ctx, frame, width, height, hw, hh, time);
   if (!scene.outdoors) roomWalls(ctx, frame, width, height);
   const visible = frame.objects.filter(o => !frame.harvested[o.id] && onScreen(o, frame, hw, hh));
-  for (const o of visible.filter(o => o.kind === 'rug')) { const p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); drawIllustration(ctx, o, time, 1, frame.reducedMotion); ctx.restore(); }
   type Entry = { depth: number; object?: WorldObject; actor?: ActorFrame; player?: true; impact?: VisualImpact };
   const entries: Entry[] = visible.filter(o => o.kind !== 'rug').map(o => ({ depth: o.y + ((o.width || 1) >= 2 || (o.height || 1) >= 2 ? (o.height || 1) : 0), object: o }));
   for (const impact of frame.impacts || []) if (impact.destroyed && impact.object && impact.age < .58 && onScreen(impact.object, frame, hw, hh) && !visible.some(o => o.id === impact.object!.id)) {
@@ -692,6 +773,8 @@ export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, w
   }
   for (const a of frame.actors) if (Math.abs(a.x - frame.camera.x) < hw + 2 && Math.abs(a.y - frame.camera.y) < hh + 2 && a.health > 0) entries.push({ depth: a.y, actor: a });
   entries.push({ depth: frame.player.y, player: true }); entries.sort((a, b) => a.depth - b.depth);
+  prepareObjectCache([...visible, ...entries.filter(entry => entry.impact && entry.object).map(entry => entry.object!)], deviceDensity);
+  for (const o of visible.filter(o => o.kind === 'rug')) { const p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom); drawIllustration(ctx, o, time, 1, frame.reducedMotion); ctx.restore(); }
   for (const e of entries) {
     if (e.object) {
       const o = e.object, p = position(frame, o.x, o.y, width, height); ctx.save(); ctx.translate(p.x, p.y); ctx.scale(zoom, zoom);

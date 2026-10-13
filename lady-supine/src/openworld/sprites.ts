@@ -466,7 +466,7 @@ function bat(ctx: CanvasRenderingContext2D, time: number, back: boolean, state: 
 }
 
 export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, xScreen: number, yScreen: number, facing: number, moving: boolean, animation: number, time: number, scale = 1, color?: string, state: ActorDrawingState = {}): void {
-  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
   const angle = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const back = angle > Math.PI * 1.18 && angle < Math.PI * 1.82;
   const side = Math.abs(Math.cos(angle)) > .72;
@@ -715,7 +715,7 @@ function makeItemCanvas(id: string): HTMLCanvasElement {
 }
 export function drawItemIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number): void {
   if (!id) return;
-  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(makeItemCanvas(id), x, y, size, size); ctx.restore();
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; ctx.drawImage(makeItemCanvas(id), x, y, size, size); ctx.restore();
 }
 export function itemIconDataUrl(id: string, size = 32): string {
   if (typeof document === 'undefined') return '';

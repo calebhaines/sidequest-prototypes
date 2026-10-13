@@ -144,17 +144,17 @@ try {
 
   // Match the previously measured 1440×900 scenes without concurrent suites.
   await page.evaluate(() => {
-    window.__qaWorldDraws = 0; window.__qaOriginalClear = CanvasRenderingContext2D.prototype.clearRect;
-    CanvasRenderingContext2D.prototype.clearRect = function (...args) {
+    window.__qaWorldDraws = 0; window.__qaOriginalTransform = CanvasRenderingContext2D.prototype.setTransform;
+    CanvasRenderingContext2D.prototype.setTransform = function (...args) {
       if (this.canvas.classList.contains('ow-canvas')) window.__qaWorldDraws++;
-      return window.__qaOriginalClear.call(this, ...args);
+      return window.__qaOriginalTransform.call(this, ...args);
     };
   });
   await performanceSample('shanty', shanty.landmark);
   await performanceSample('lake', data.regions.find(region => region.id === 'lake').landmark);
   const lady = data.interiors['castle-room'].actors.find(actor => actor.kind === 'lady');
   await performanceSample('castle-room', { x: lady.x, y: lady.y + 1.7 }, 'castle-room');
-  await page.evaluate(() => { CanvasRenderingContext2D.prototype.clearRect = window.__qaOriginalClear; });
+  await page.evaluate(() => { CanvasRenderingContext2D.prototype.setTransform = window.__qaOriginalTransform; });
 
   // The manual setting must work even when the OS has no reduced-motion preference.
   await engine('teleport', 'overworld', { x: 72.5, y: 110.5 }); await waitSimulation(.7);

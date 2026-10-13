@@ -1,0 +1,456 @@
+{
+  "method": "One isolated headless Chromium, default full animations and particles, actual engine frames and canvas draws after warmup. CDP TaskDuration includes main-thread work; callback cost measures engine JavaScript and canvas submission, not GPU execution.",
+  "note": "Comparative isolated headless Chromium measurements on this machine; frame rates vary with device and graphics configuration.",
+  "comparisons": [
+    {
+      "viewport": "desktop-1080p",
+      "scene": "entrance",
+      "beforeFps": 24.43,
+      "afterFps": 55.31,
+      "beforeCallbackMs": 2.66,
+      "afterCallbackMs": 2.47,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "forest",
+      "beforeFps": 16.74,
+      "afterFps": 27.1,
+      "beforeCallbackMs": 36.94,
+      "afterCallbackMs": 5.71,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "lake",
+      "beforeFps": 19.33,
+      "afterFps": 43.65,
+      "beforeCallbackMs": 31.6,
+      "afterCallbackMs": 3.34,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "shanty",
+      "beforeFps": 19.46,
+      "afterFps": 43.08,
+      "beforeCallbackMs": 24.13,
+      "afterCallbackMs": 3.15,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "entrance",
+      "beforeFps": 5.47,
+      "afterFps": 36.83,
+      "beforeCallbackMs": 2.87,
+      "afterCallbackMs": 2.32,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "forest",
+      "beforeFps": 4.88,
+      "afterFps": 21.89,
+      "beforeCallbackMs": 149.31,
+      "afterCallbackMs": 25.66,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "lake",
+      "beforeFps": 5.9,
+      "afterFps": 30.06,
+      "beforeCallbackMs": 123.63,
+      "afterCallbackMs": 18.42,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "shanty",
+      "beforeFps": 4.83,
+      "afterFps": 26.2,
+      "beforeCallbackMs": 127.14,
+      "afterCallbackMs": 18.21,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "entrance",
+      "beforeFps": 3.69,
+      "afterFps": 34.15,
+      "beforeCallbackMs": 151.07,
+      "afterCallbackMs": 3.12,
+      "beforeBackingPixels": 14745600,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "forest",
+      "beforeFps": 2.9,
+      "afterFps": 17.51,
+      "beforeCallbackMs": 155.55,
+      "afterCallbackMs": 7.18,
+      "beforeBackingPixels": 14745600,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "lake",
+      "beforeFps": 3.47,
+      "afterFps": 27.08,
+      "beforeCallbackMs": 152.29,
+      "afterCallbackMs": 29.24,
+      "beforeBackingPixels": 14745600,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "shanty",
+      "beforeFps": 3.15,
+      "afterFps": 22.06,
+      "beforeCallbackMs": 170.9,
+      "afterCallbackMs": 32.04,
+      "beforeBackingPixels": 14745600,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "mobile",
+      "scene": "entrance",
+      "beforeFps": 26.67,
+      "afterFps": 53.74,
+      "beforeCallbackMs": 1.39,
+      "afterCallbackMs": 1.25,
+      "beforeBackingPixels": 1316640,
+      "afterBackingPixels": 1316640,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "mobile",
+      "scene": "forest",
+      "beforeFps": 26.85,
+      "afterFps": 59.81,
+      "beforeCallbackMs": 2.15,
+      "afterCallbackMs": 2.12,
+      "beforeBackingPixels": 1316640,
+      "afterBackingPixels": 1316640,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "mobile",
+      "scene": "lake",
+      "beforeFps": 28.93,
+      "afterFps": 59.45,
+      "beforeCallbackMs": 1.63,
+      "afterCallbackMs": 1.6,
+      "beforeBackingPixels": 1316640,
+      "afterBackingPixels": 1316640,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "mobile",
+      "scene": "shanty",
+      "beforeFps": 23.76,
+      "afterFps": 56.43,
+      "beforeCallbackMs": 1.9,
+      "afterCallbackMs": 1.77,
+      "beforeBackingPixels": 1316640,
+      "afterBackingPixels": 1316640,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": null
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "entrance",
+      "beforeFps": 9.45,
+      "afterFps": 21.22,
+      "beforeCallbackMs": 63.5,
+      "afterCallbackMs": 4.79,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "forest",
+      "beforeFps": 2.62,
+      "afterFps": 15.41,
+      "beforeCallbackMs": 406.36,
+      "afterCallbackMs": 9.85,
+      "beforeBackingPixels": 8294400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 616
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "entrance",
+      "beforeFps": 15.33,
+      "afterFps": 47.77,
+      "beforeCallbackMs": 28.69,
+      "afterCallbackMs": 3.49,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "forest",
+      "beforeFps": 9.74,
+      "afterFps": 19.77,
+      "beforeCallbackMs": 66.62,
+      "afterCallbackMs": 7.59,
+      "beforeBackingPixels": 2073600,
+      "afterBackingPixels": 2073600,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "entrance",
+      "beforeFps": 9.85,
+      "afterFps": 25.61,
+      "beforeCallbackMs": 60.86,
+      "afterCallbackMs": 5.32,
+      "beforeBackingPixels": 3686400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "forest",
+      "beforeFps": 2.57,
+      "afterFps": 12.88,
+      "beforeCallbackMs": 408.21,
+      "afterCallbackMs": 12.49,
+      "beforeBackingPixels": 3686400,
+      "afterBackingPixels": 2497980,
+      "afterWarmTerrainAllocations": 0,
+      "beforeWarmTerrainAllocations": 616
+    }
+  ],
+  "refreshRateChecks": [
+    {
+      "hz": 59.94,
+      "jitterMs": 0,
+      "elapsed": 3.203203203203213,
+      "movedTiles": 10.57057057057083,
+      "animationPhase": 3.203203203203213,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2032032032032034
+    },
+    {
+      "hz": 59.94,
+      "jitterMs": 0.75,
+      "elapsed": 3.2032032032032065,
+      "movedTiles": 10.570570570570627,
+      "animationPhase": 3.2032032032032065,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2032032032032034
+    },
+    {
+      "hz": 60,
+      "jitterMs": 0,
+      "elapsed": 3.200000000000011,
+      "movedTiles": 10.559999999999945,
+      "animationPhase": 3.200000000000011,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 60,
+      "jitterMs": 0.75,
+      "elapsed": 3.2000000000000033,
+      "movedTiles": 10.56000000000002,
+      "animationPhase": 3.2000000000000033,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 120,
+      "jitterMs": 0,
+      "elapsed": 3.199999999999982,
+      "movedTiles": 10.56000000000006,
+      "animationPhase": 3.199999999999982,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 120,
+      "jitterMs": 0.75,
+      "elapsed": 3.1999999999999975,
+      "movedTiles": 10.559999999999931,
+      "animationPhase": 3.1999999999999975,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 144,
+      "jitterMs": 0,
+      "elapsed": 3.2013888888888715,
+      "movedTiles": 10.564583333333552,
+      "animationPhase": 3.2013888888888715,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.201388888888889
+    },
+    {
+      "hz": 144,
+      "jitterMs": 0.75,
+      "elapsed": 3.201388888888888,
+      "movedTiles": 10.564583333333353,
+      "animationPhase": 3.201388888888888,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.201388888888889
+    },
+    {
+      "hz": 240,
+      "jitterMs": 0,
+      "elapsed": 3.199999999999957,
+      "movedTiles": 10.560000000000809,
+      "animationPhase": 3.199999999999957,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 240,
+      "jitterMs": 0.75,
+      "elapsed": 3.200000000000001,
+      "movedTiles": 10.560000000000098,
+      "animationPhase": 3.200000000000001,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    }
+  ],
+  "regressionChecks": {
+    "desktop-1080p": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.55,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": false,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1080p-retina": {
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1440p-retina": {
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.57,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "mobile": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.53,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": null
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    }
+  },
+  "samplingStages": {
+    "baseline": "Before the rendering changes.",
+    "cacheResolutionFiltering": "The full 22-scenario comparison after the cache, canvas budget, filtering, pause and draw-clock changes.",
+    "finalFramePacing": "The final timestamp-tolerance correction was sampled separately at the 1080p entrance and verified at 59.94, 60, 120, 144 and 240 Hz with and without jitter. That entrance sample and the final clock checks are included here."
+  }
+}

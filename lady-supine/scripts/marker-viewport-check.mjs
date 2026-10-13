@@ -50,17 +50,17 @@ try {
   // Count actual world-canvas draws, rather than browser animation callbacks.
   await page.evaluate(() => {
     window.__qaWorldDraws = 0;
-    window.__qaClearRect = CanvasRenderingContext2D.prototype.clearRect;
-    CanvasRenderingContext2D.prototype.clearRect = function (...args) {
+    window.__qaSetTransform = CanvasRenderingContext2D.prototype.setTransform;
+    CanvasRenderingContext2D.prototype.setTransform = function (...args) {
       if (this.canvas.classList.contains('ow-canvas')) window.__qaWorldDraws++;
-      return window.__qaClearRect.call(this, ...args);
+      return window.__qaSetTransform.call(this, ...args);
     };
     window.__qaDrawStart = performance.now();
   });
   await page.waitForTimeout(2500);
   report.framesPerSecond = await page.evaluate(() => {
     const fps = window.__qaWorldDraws / ((performance.now() - window.__qaDrawStart) / 1000);
-    CanvasRenderingContext2D.prototype.clearRect = window.__qaClearRect;
+    CanvasRenderingContext2D.prototype.setTransform = window.__qaSetTransform;
     return Number(fps.toFixed(1));
   });
   assert.ok(report.framesPerSecond > 15, 'The actual painted world must continue animating at a playable rate');
