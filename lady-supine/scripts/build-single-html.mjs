@@ -94,7 +94,7 @@ let html = asText(pages[0].source);
 html = html.replace(/<html\b([^>]*)>/i, '<html$1 data-single-html="true">');
 html = html.replace(/\s*<link\b[^>]*\brel\s*=\s*["']stylesheet["'][^>]*>/gi, '');
 let scriptsReplaced = 0;
-html = html.replace(/<script\b[^>]*\bsrc\s*=\s*["'][^"']+["'][^>]*>\s*<\/script>/gi, () => {
+html = html.replace(/\s*<script\b[^>]*\bsrc\s*=\s*["'][^"']+["'][^>]*>\s*<\/script>/gi, () => {
   scriptsReplaced += 1;
   return '';
 });
