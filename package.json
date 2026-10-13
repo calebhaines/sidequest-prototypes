@@ -49,7 +49,9 @@
     "check:marinade-integration": "node marinade/integration-checks.cjs",
     "check:performance-audio": "node scripts/performance-audio-checks.cjs",
     "check:loom-service": "node loom/service-schema-checks.cjs && node loom/service-engine-checks.cjs && node loom/service-note-checks.cjs && node loom/service-capture-checks.cjs && node loom/service-midi-checks.cjs && node loom/service-controller-checks.cjs",
-    "check:loom-service-browser": "node loom/service-browser-checks.cjs"
+    "check:loom-service-browser": "node loom/service-browser-checks.cjs",
+    "lady-supine:build": "npm --prefix lady-supine run build && node scripts/sync-lady-supine.mjs",
+    "lady-supine:sync": "node scripts/sync-lady-supine.mjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

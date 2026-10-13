@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 700" role="img" aria-label="The entrance to the Land of Infinite Time"><defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#e8e5d3"/><stop offset="1" stop-color="#f0ead3"/></linearGradient>
+ <linearGradient id="stone" x2="0.9" y2="1"><stop stop-color="#b8b298"/><stop offset="1" stop-color="#7d8268"/></linearGradient>
+ <linearGradient id="dark" x2="0" y2="1"><stop stop-color="#2c3a2c"/><stop offset="1" stop-color="#192a22"/></linearGradient>
+ <radialGradient id="lamp"><stop stop-color="#ebcf8e" stop-opacity=".65"/><stop offset="1" stop-color="#ebcf8e" stop-opacity="0"/></radialGradient>
+ <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="3" seed="8" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+ <pattern id="wall" width="66" height="32" patternUnits="userSpaceOnUse"><path d="M0 0H66M0 32H66M0 0V32M33 0V17M0 17H66M66 17V32" fill="none" stroke="#485239" stroke-width="1" opacity=".16"/></pattern>
+ </defs><g filter="url(#paper)"><rect width="1400" height="700" fill="url(#sky)"/><path d="M0 335Q159 282 280 322T529 327T822 280T1116 298T1400 300V700H0Z" fill="#dad9c1"/>
+ <path d="M0 367Q150 292 309 378Q407 351 522 385Q650 319 735 351Q813 327 948 381Q1170 306 1400 352V700H0Z" fill="#c6cbb0"/>
+ <path d="M0 423Q156 389 290 427T540 421Q739 386 891 432Q1110 364 1400 425V700H0Z" fill="#aeb99a"/>
+ <path d="M0 478Q120 442 306 478T620 467T890 478T1137 440T1400 472V700H0Z" fill="#8f9e79"/><circle cx="700" cy="297" r="190" fill="#d8c48e" opacity=".65"/>
+ <path d="M0 366q200-90 361-11q257-131 464-10q309-75 575-2v357H0Z" fill="#c9cdb0"/>
+ <path d="M0 483q211-78 432-24q213-98 445-38q214-38 523 71v208H0Z" fill="#acbb97"/>
+ <path d="M0 548q174-36 397-9q290-29 543-23q236-12 460 46v138H0Z" fill="#8caa82"/>
+ <path d="M532 512q-2-149 168-180q170 31 166 180h-65q3-105-101-129q-104 24-103 129z" fill="#d8d4b6"/>
+ <path d="M534 512q-2-146 166-178q170 32 166 178M594 512q-3-109 106-132q109 23 105 132" fill="none" stroke="#b4bea0" stroke-width="5"/>
+ <path d="M648 511q2-52 51-75q52 23 50 75z" fill="#e9e3c7"/>
+ <path d="M650 516q-68 53-38 102q45 50 183 82h326q-229-97-330-119q-105-33-43-65Z" fill="#d1cba8"/>
+ <path d="M0 645q258-92 471-3q199 66 189 58H0zM1104 576q169-43 296 19v105h-215z" fill="#648a68"/>
+ <path d="M123 644q-23-76-4-146q24-42 21-116q27 40 6 95q-12 52 10 105zM1118 623q34-73 5-123q-9-33 7-62q17 7 22 34q19 18 9 74q-10 38 17 79z" fill="#526f4b"/>
+ <g fill="#d5c993"><circle cx="212" cy="624" r="5"/><circle cx="308" cy="647" r="4"/><circle cx="407" cy="672" r="5"/><circle cx="1031" cy="648" r="4"/><circle cx="1296" cy="603" r="5"/></g><path d="M942 211q5 -8 9 0q5 -8 10 0" fill="none" stroke="#676f4f" stroke-width="1.4"/><path d="M970.7 222.1q3.5 -5.6 6.3 0q3.5 -5.6 7.0 0" fill="none" stroke="#676f4f" stroke-width="1.4"/><path d="M998.6 212.8q3.0 -4.8 5.3999999999999995 0q3.0 -4.8 6.0 0" fill="none" stroke="#676f4f" stroke-width="1.4"/></g></svg>

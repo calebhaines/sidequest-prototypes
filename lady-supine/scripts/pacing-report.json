@@ -1,0 +1,298 @@
+{
+  "generatedAt": "2026-10-13T07:52:49.508Z",
+  "status": "Reasoned content estimate; not measured human playtesting",
+  "mandatoryInvestigations": 6,
+  "mandatoryInvestigationChallenges": 36,
+  "existingMainPuzzles": 16,
+  "investigationWords": [
+    {
+      "id": "missing_tomorrow",
+      "act": 1,
+      "core": 1936,
+      "clues": 574,
+      "interfaceText": 372,
+      "total": 2882
+    },
+    {
+      "id": "abundance_audit",
+      "act": 2,
+      "core": 1925,
+      "clues": 569,
+      "interfaceText": 333,
+      "total": 2827
+    },
+    {
+      "id": "portrait_testimony",
+      "act": 3,
+      "core": 2104,
+      "clues": 493,
+      "interfaceText": 386,
+      "total": 2983
+    },
+    {
+      "id": "continuity_patient",
+      "act": 4,
+      "core": 1904,
+      "clues": 521,
+      "interfaceText": 399,
+      "total": 2824
+    },
+    {
+      "id": "listening_castle",
+      "act": 5,
+      "core": 1989,
+      "clues": 487,
+      "interfaceText": 320,
+      "total": 2796
+    },
+    {
+      "id": "common_tomorrow",
+      "act": 6,
+      "core": 2013,
+      "clues": 510,
+      "interfaceText": 337,
+      "total": 2860
+    }
+  ],
+  "investigationWordsTotal": 17172,
+  "campaign": {
+    "steps": 68,
+    "distinctScenes": 64,
+    "proseWords": 4868,
+    "chosenOptionWords": 404,
+    "totalWords": 5272
+  },
+  "mandatoryReadWordsTotal": 22444,
+  "wordCountMethod": "Read-once premise, narrative, evidence, task, board clues, resolution and conclusion; actual guided campaign route prose plus selected option labels. Optional hints, other endings and optional branch prose excluded.",
+  "investigationPuzzleMinutes": {
+    "min": 110,
+    "typical": 184,
+    "max": 324
+  },
+  "mainPuzzleMinutes": {
+    "min": 9.5,
+    "typical": 28.5,
+    "max": 57
+  },
+  "readingMinutes": {
+    "fast240Wpm": 93.51666666666667,
+    "central220Wpm": 102.01818181818182,
+    "deliberate200Wpm": 112.22
+  },
+  "travelAndDecisionMinutes": {
+    "lower": 10,
+    "central": 15,
+    "upper": 20
+  },
+  "standardMinutes": {
+    "lower": 284.14166666666665,
+    "central": 329.5181818181818,
+    "upper": 376.59499999999997
+  },
+  "acceleratedMinutes": 221.01666666666665,
+  "deliberateMinutes": 523.22,
+  "standardHours": {
+    "lower": 4.74,
+    "central": 5.49,
+    "upper": 6.28
+  },
+  "fiveHourTargetDeltaMinutes": 29.5181818181818,
+  "clueReviews": [
+    {
+      "id": "afternoon_ledger",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "harvest_ledger",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "portrait_sources",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "patient_five_continuities",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "palace_ledger",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "last_ledger",
+      "kind": "ledger",
+      "result": "Unique solution independently enumerated from the stated clues",
+      "candidatesTested": 14400
+    },
+    {
+      "id": "palace_sequence",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "last_sequence",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "portrait_washday",
+      "kind": "cipher",
+      "result": "Every coordinate decoded independently using the printed rule",
+      "decoded": [
+        "marta",
+        "companionship"
+      ]
+    },
+    {
+      "id": "patient_window_words",
+      "kind": "cipher",
+      "result": "Every coordinate decoded independently using the printed rule",
+      "decoded": [
+        "morrow",
+        "windowsill"
+      ]
+    },
+    {
+      "id": "palace_cipher",
+      "kind": "cipher",
+      "result": "Every coordinate decoded independently using the printed rule",
+      "decoded": [
+        "unwatched",
+        "welcome"
+      ]
+    },
+    {
+      "id": "last_cipher",
+      "kind": "cipher",
+      "result": "Every coordinate decoded independently using the printed rule",
+      "decoded": [
+        "together",
+        "tomorrow"
+      ]
+    },
+    {
+      "id": "portrait_layers",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "afternoon_sequence",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "harvest_sequence",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "patient_transfer_order",
+      "kind": "sequence",
+      "result": "Unique chronology independently enumerated",
+      "candidatesTested": 5040
+    },
+    {
+      "id": "afternoon_balance",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "elin": 23,
+        "library": 17,
+        "collector": 11,
+        "ward": 29,
+        "gate": 13
+      }
+    },
+    {
+      "id": "harvest_balance",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "workers": 18,
+        "patients": 24,
+        "travellers": 15,
+        "seeds": 9,
+        "buffer": 6
+      }
+    },
+    {
+      "id": "portrait_restoration",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "ink": 7,
+        "wood": 11,
+        "thread": 8,
+        "tea": 6,
+        "light": 10
+      }
+    },
+    {
+      "id": "patient_reserve",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "care": 8,
+        "listening": 5,
+        "warmth": 11,
+        "writing": 7,
+        "observation": 13
+      }
+    },
+    {
+      "id": "palace_balance",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "wall": 8,
+        "bell": 13,
+        "drum": 5,
+        "water": 11,
+        "chair": 7
+      }
+    },
+    {
+      "id": "last_balance",
+      "kind": "balance",
+      "result": "Full-rank linear system independently solved; all stated cross-checks consistent",
+      "values": {
+        "house": 12,
+        "ward": 18,
+        "threshold": 30,
+        "common": 20,
+        "return": 10
+      }
+    },
+    {
+      "id": "afternoon_cipher",
+      "kind": "cipher",
+      "result": "Sorted binding dictionary decoded independently",
+      "decoded": [
+        "READ",
+        "THEWILLOW",
+        "FOOTNOTE"
+      ]
+    },
+    {
+      "id": "harvest_cipher",
+      "kind": "cipher",
+      "result": "Keyed alphabet and reversed words decoded independently",
+      "decoded": "THE HARVEST IS HELD NOT LOST"
+    }
+  ]
+}

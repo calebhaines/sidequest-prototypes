@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Ada">
+<defs>
+ <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency=".6" numOctaves="3" seed="8" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".07"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter>
+</defs>
+<g filter="url(#paper)">
+ <rect width="160" height="160" fill="#dddcc3"/>
+ <circle cx="80" cy="82" r="68" fill="#b8bda0"/>
+ <circle cx="80" cy="82" r="61" fill="none" stroke="#7e8b68" stroke-width="1" opacity=".4"/>
+ <!-- Ada: hare clockmender, with a loop of watchspring over her vest. -->
+ <path d="M22 160q3-39 35-51l40 1q33 11 41 50" fill="#84916a"/>
+ <path d="M55 107l22 15 22-15 19 53H40Z" fill="#6c7651"/>
+ <path d="M66 116l12 12 11-11 1 43H65Z" fill="#cac4a0"/>
+ <path d="M77 124v36" stroke="#a49d7c" stroke-width="2"/>
+ <path d="M54 111l-12 45M103 111l15 46" stroke="#526a45" stroke-width="2" fill="none"/>
+ <path d="M52 112q-13-18-12-41q-5-8-10-25Q20 11 33 9q14-1 29 45q10-4 24-2q5-39 21-47q15 2 5 34l-11 27q20 19 12 36q-10 20-30 22q-19 3-31-12Z" fill="#8e9e78"/>
+ <path d="M49 62Q29 17 33 19q7 5 18 29M94 57q9-39 14-39q3 4-11 31" stroke="#c4c5a2" stroke-width="7" stroke-linecap="round" fill="none"/>
+ <path d="M54 90q25-7 48 5q-6 24-25 25q-19 0-23-17z" fill="#d8d2b1"/>
+ <path d="M78 93l10 1-5 6z" fill="#516548"/>
+ <path d="M83 99v5q-6 9-15 3M83 103q7 8 14 1" fill="none" stroke="#667852" stroke-width="1.8" stroke-linecap="round"/>
+ <circle cx="62" cy="80" r="3.2" fill="#354d34"/><circle cx="95" cy="82" r="3.2" fill="#354d34"/>
+ <path d="M57 72q7-5 13-1M89 73q8-3 13 2" fill="none" stroke="#607450" stroke-width="1.8" stroke-linecap="round"/>
+ <path d="M57 93l-16-4M58 98l-18 2M97 98l17-2M96 104l15 4" fill="none" stroke="#8b9b75" stroke-width="1.4"/>
+ <path d="M99 127q11 1 10 12q-2 8-9 6q-5-2-3-7q3-4 6-1q1 3-2 3" fill="none" stroke="#c9b47b" stroke-width="2.1" stroke-linecap="round"/>
+ <path d="M108 136q8 13-2 21" fill="none" stroke="#c9b47b" stroke-width="1.5"/>
+ <path d="M45 139h13v14H45z" fill="#526a46"/><path d="M46 139h11" stroke="#acb28c" stroke-width="1.3"/>
+ <circle cx="81" cy="138" r="1.3" fill="#697654"/><circle cx="81" cy="150" r="1.3" fill="#697654"/>
+ <path d="M117 136l3-14 4 1-1 13" fill="#b8a777"/>
+
+</g></svg>
