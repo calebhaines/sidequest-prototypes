@@ -2,7 +2,7 @@
 
 [Open the comparison gallery](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/) for side-by-side comparisons of whole sheets or matching subjects, full-size viewing, original PNG downloads, and a saved shortlist.
 
-These are exploratory asset sheets for **Lady Supine: Entering the Unenterable Entrance**. They use the same subjects to compare ten approaches to the game's bleak, handmade world. They have not replaced the playable game's art.
+These are exploratory asset sheets for **Lady Supine: Entering the Unenterable Entrance**. They use the same subjects to compare ten approaches to the game's bleak, handmade world. **Direction 03, Torn paper, has been selected and implemented in the playable game.** The other nine remain alternatives for comparison.
 
 Every sheet has six panels, read left to right:
 

@@ -1,0 +1,2389 @@
+{
+  "method": "One isolated headless Chromium, default full animations and particles, actual engine frames and canvas draws after warmup. CDP TaskDuration includes main-thread work; callback cost measures engine JavaScript and canvas submission, not GPU execution.",
+  "note": "Comparative measurements on this test machine with full animations and particles. Browser rasterization and device hardware affect frame rates. Initial paper measurements precede removal of redundant texture work and exact contour coverage optimizations; the final measurements cover the implemented renderer. No fixed frame rate is promised.",
+  "sourceSha256": {
+    "src/openworld/renderer.ts": "88fe9578cc0b757df91ef989982f51dd9cc9c4fd82b4fbdc11c4f89fd401b6c5",
+    "src/openworld/sprites.ts": "96e6c030e7e1d458f14a8db80a1fa3e7843e3e5eaa176896996e568616eee9ce",
+    "src/openworld/paper.ts": "72717b4726e953fced2f705fce80414279d29bd7b5f771c70b6c80d7a74e6060",
+    "src/openworld/paperAssets.ts": "79ddb53bb66592ad2cb7378d0bedbd29dd0640604621604f92652cc1c49b0a8e",
+    "src/openworld/engine.ts": "3c4c66ac1bc375d377cef6ccd18eba47c5784ec73fee6d0b56db2c838b469c98"
+  },
+  "sampleMs": 3000,
+  "warmupMs": 1200,
+  "comparisons": [
+    {
+      "viewport": "desktop-1080p",
+      "scene": "entrance",
+      "initialPaperFps": 36.62,
+      "finalPaperFps": 56.61,
+      "initialColdFrameMaxMs": 6.2,
+      "finalColdFrameMaxMs": 4,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "forest",
+      "initialPaperFps": 21.84,
+      "finalPaperFps": 30.27,
+      "initialColdFrameMaxMs": 2260.6,
+      "finalColdFrameMaxMs": 455.1,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "lake",
+      "initialPaperFps": 23.12,
+      "finalPaperFps": 44.32,
+      "initialColdFrameMaxMs": 1692.7,
+      "finalColdFrameMaxMs": 464.3,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "shanty",
+      "initialPaperFps": 29.58,
+      "finalPaperFps": 36.23,
+      "initialColdFrameMaxMs": 832.5,
+      "finalColdFrameMaxMs": 140.9,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "entrance",
+      "initialPaperFps": 22.75,
+      "finalPaperFps": 32.36,
+      "initialColdFrameMaxMs": 39.3,
+      "finalColdFrameMaxMs": 26.4,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "forest",
+      "initialPaperFps": 15.66,
+      "finalPaperFps": 21.77,
+      "initialColdFrameMaxMs": 2284.1,
+      "finalColdFrameMaxMs": 402.7,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "lake",
+      "initialPaperFps": 18.56,
+      "finalPaperFps": 26.03,
+      "initialColdFrameMaxMs": 1586,
+      "finalColdFrameMaxMs": 514.8,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "shanty",
+      "initialPaperFps": 20,
+      "finalPaperFps": 26.34,
+      "initialColdFrameMaxMs": 816.4,
+      "finalColdFrameMaxMs": 157.9,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "entrance",
+      "initialPaperFps": 21.7,
+      "finalPaperFps": 28.26,
+      "initialColdFrameMaxMs": 33.8,
+      "finalColdFrameMaxMs": 22.8,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "forest",
+      "initialPaperFps": 15.32,
+      "finalPaperFps": 20.13,
+      "initialColdFrameMaxMs": 3647,
+      "finalColdFrameMaxMs": 584.9,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "lake",
+      "initialPaperFps": 15.56,
+      "finalPaperFps": 25.39,
+      "initialColdFrameMaxMs": 2516.8,
+      "finalColdFrameMaxMs": 704,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "shanty",
+      "initialPaperFps": 15.94,
+      "finalPaperFps": 19.18,
+      "initialColdFrameMaxMs": 771.1,
+      "finalColdFrameMaxMs": 238.3,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "entrance",
+      "initialPaperFps": 60.39,
+      "finalPaperFps": 59.96,
+      "initialColdFrameMaxMs": 3.2,
+      "finalColdFrameMaxMs": 3.5,
+      "backingPixels": 1316640,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "forest",
+      "initialPaperFps": 53.93,
+      "finalPaperFps": 60.02,
+      "initialColdFrameMaxMs": 1001.6,
+      "finalColdFrameMaxMs": 163.2,
+      "backingPixels": 1316640,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "lake",
+      "initialPaperFps": 47.74,
+      "finalPaperFps": 60.32,
+      "initialColdFrameMaxMs": 661.6,
+      "finalColdFrameMaxMs": 223,
+      "backingPixels": 1316640,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "shanty",
+      "initialPaperFps": 47.35,
+      "finalPaperFps": 58.28,
+      "initialColdFrameMaxMs": 1110.7,
+      "finalColdFrameMaxMs": 150.7,
+      "backingPixels": 1316640,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "entrance",
+      "initialPaperFps": 17.07,
+      "finalPaperFps": 28.09,
+      "initialColdFrameMaxMs": 13.5,
+      "finalColdFrameMaxMs": 21.8,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "forest",
+      "initialPaperFps": 12.88,
+      "finalPaperFps": 18,
+      "initialColdFrameMaxMs": 6451.1,
+      "finalColdFrameMaxMs": 893.6,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "lake",
+      "initialPaperFps": 11.5,
+      "finalPaperFps": 20.64,
+      "initialColdFrameMaxMs": 3384.8,
+      "finalColdFrameMaxMs": 966.6,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "shanty",
+      "initialPaperFps": 11.62,
+      "finalPaperFps": 21.15,
+      "initialColdFrameMaxMs": 536.3,
+      "finalColdFrameMaxMs": 114.4,
+      "backingPixels": 2497980,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "entrance",
+      "initialPaperFps": 29.65,
+      "finalPaperFps": 53.13,
+      "initialColdFrameMaxMs": 2460.2,
+      "finalColdFrameMaxMs": 543.2,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "forest",
+      "initialPaperFps": 17.82,
+      "finalPaperFps": 25.95,
+      "initialColdFrameMaxMs": 4078.8,
+      "finalColdFrameMaxMs": 623.5,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "lake",
+      "initialPaperFps": 23.57,
+      "finalPaperFps": 37.84,
+      "initialColdFrameMaxMs": 2999.9,
+      "finalColdFrameMaxMs": 766.8,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "shanty",
+      "initialPaperFps": 23.64,
+      "finalPaperFps": 35.06,
+      "initialColdFrameMaxMs": 949.4,
+      "finalColdFrameMaxMs": 145.2,
+      "backingPixels": 2073600,
+      "warmTerrainAllocations": 0
+    }
+  ],
+  "regressionChecks": {
+    "desktop-1080p": {
+      "playerMovedTiles": 1.7,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": false,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1080p-retina": {
+      "playerMovedTiles": 1.76,
+      "simulatedSeconds": 0.57,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1440p-retina": {
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "mobile": {
+      "playerMovedTiles": 1.6,
+      "simulatedSeconds": 0.52,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": null
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-4k": {
+      "playerMovedTiles": 1.7,
+      "simulatedSeconds": 0.57,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1080p-zoom1": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": false,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    }
+  },
+  "exactContourChecks": {
+    "comparisons": [
+      {
+        "label": "nested outer coast",
+        "cx": 0,
+        "cy": 0,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "nested outer coast",
+        "cx": 0,
+        "cy": 0,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "nested land/water holes",
+        "cx": 2,
+        "cy": 2,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "nested land/water holes",
+        "cx": 2,
+        "cy": 2,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "nested inner island",
+        "cx": 3,
+        "cy": 3,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "nested inner island",
+        "cx": 3,
+        "cy": 3,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "uniform water interior",
+        "cx": 5,
+        "cy": 5,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "inside"
+          }
+        ]
+      },
+      {
+        "label": "uniform water interior",
+        "cx": 5,
+        "cy": 5,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "inside"
+          }
+        ]
+      },
+      {
+        "label": "lake shore and jetty",
+        "cx": 8,
+        "cy": 14,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          },
+          {
+            "kind": "woodFloor",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "lake shore and jetty",
+        "cx": 8,
+        "cy": 14,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          },
+          {
+            "kind": "woodFloor",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "lake deep water",
+        "cx": 10,
+        "cy": 13,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "path",
+            "coverage": "outside"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "inside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          }
+        ]
+      },
+      {
+        "label": "lake deep water",
+        "cx": 10,
+        "cy": 13,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "path",
+            "coverage": "outside"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "inside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          }
+        ]
+      },
+      {
+        "label": "ocean coast",
+        "cx": 0,
+        "cy": 7,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "ocean coast",
+        "cx": 0,
+        "cy": 7,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "ocean corner",
+        "cx": 0,
+        "cy": 0,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "ocean corner",
+        "cx": 0,
+        "cy": 0,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "edge"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "edge"
+          },
+          {
+            "kind": "sand",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "reversion hole",
+        "cx": 7,
+        "cy": 1,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          },
+          {
+            "kind": "void",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "reversion hole",
+        "cx": 7,
+        "cy": 1,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          },
+          {
+            "kind": "void",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "reversion bank",
+        "cx": 6,
+        "cy": 1,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          },
+          {
+            "kind": "void",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "reversion bank",
+        "cx": 6,
+        "cy": 1,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          },
+          {
+            "kind": "void",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "inland forest",
+        "cx": 10,
+        "cy": 7,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "dirt",
+            "coverage": "edge"
+          },
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          }
+        ]
+      },
+      {
+        "label": "inland forest",
+        "cx": 10,
+        "cy": 7,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "darkGrass",
+            "coverage": "edge"
+          },
+          {
+            "kind": "dirt",
+            "coverage": "edge"
+          },
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          }
+        ]
+      },
+      {
+        "label": "shanty ground",
+        "cx": 5,
+        "cy": 13,
+        "resolution": 1,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "dirt",
+            "coverage": "edge"
+          },
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          }
+        ]
+      },
+      {
+        "label": "shanty ground",
+        "cx": 5,
+        "cy": 13,
+        "resolution": 2,
+        "differentChannels": 0,
+        "maxDelta": 0,
+        "coverages": [
+          {
+            "kind": "dirt",
+            "coverage": "edge"
+          },
+          {
+            "kind": "path",
+            "coverage": "edge"
+          },
+          {
+            "kind": "water",
+            "coverage": "outside"
+          },
+          {
+            "kind": "deepWater",
+            "coverage": "outside"
+          },
+          {
+            "kind": "sand",
+            "coverage": "outside"
+          },
+          {
+            "kind": "stone",
+            "coverage": "edge"
+          }
+        ]
+      }
+    ],
+    "coldForest": {
+      "method": "One cold1920\u00d71080 renderer draw plus one-pixel readback per separate empty raster cache; geometry/material stocks precompiled equally; default complete animations and particles.",
+      "beforeMs": 1229.5,
+      "afterMs": 465.1000000014901,
+      "speedup": 2.6435175231048396,
+      "fullDifferentChannels": 0,
+      "fullMaxDelta": 0
+    },
+    "errors": []
+  },
+  "finalMeasurements": [
+    {
+      "viewport": "desktop-1080p",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 92,
+        "nearbyTrees": 19,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 56.61,
+      "engineCallbackFps": 56.61,
+      "engineCallbackMs": {
+        "count": 171,
+        "mean": 2.85,
+        "p50": 2.7,
+        "p95": 3.8,
+        "max": 5.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 170,
+        "mean": 17.84,
+        "p50": 16.7,
+        "p95": 33.3,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 170,
+        "mean": 17.85,
+        "p50": 16.4,
+        "p95": 25.2,
+        "max": 35.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2945.83,
+        "ScriptDuration": 742.08,
+        "LayoutDuration": 0.13,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 3.6,
+        "p50": 3.6,
+        "p95": 4,
+        "max": 4
+      },
+      "warmupCanvasCreates": 3,
+      "warmCanvasCreates": 4,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 175,
+        "nearbyTrees": 90,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 30.27,
+      "engineCallbackFps": 30.27,
+      "engineCallbackMs": {
+        "count": 92,
+        "mean": 4.91,
+        "p50": 4.5,
+        "p95": 7.8,
+        "max": 10.9
+      },
+      "engineFrameIntervalMs": {
+        "count": 91,
+        "mean": 33.52,
+        "p50": 33.3,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 91,
+        "mean": 33.43,
+        "p50": 32.6,
+        "p95": 46.1,
+        "max": 56.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2979.07,
+        "ScriptDuration": 681.21,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 95.3,
+        "p50": 5.3,
+        "p95": 455.1,
+        "max": 455.1
+      },
+      "warmupCanvasCreates": 119,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 100,
+        "nearbyTrees": 18,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 44.32,
+      "engineCallbackFps": 44.32,
+      "engineCallbackMs": {
+        "count": 134,
+        "mean": 4.18,
+        "p50": 3.7,
+        "p95": 7.6,
+        "max": 15.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 133,
+        "mean": 22.68,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 133,
+        "mean": 22.69,
+        "p50": 21.1,
+        "p95": 35.1,
+        "max": 48.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2951.02,
+        "ScriptDuration": 813.62,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 95.92,
+        "p50": 4,
+        "p95": 464.3,
+        "max": 464.3
+      },
+      "warmupCanvasCreates": 117,
+      "warmCanvasCreates": 12,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 125,
+        "nearbyTrees": 27,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 36.23,
+      "engineCallbackFps": 36.23,
+      "engineCallbackMs": {
+        "count": 110,
+        "mean": 4.37,
+        "p50": 4.1,
+        "p95": 6.4,
+        "max": 17.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 109,
+        "mean": 27.98,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 109,
+        "mean": 28.01,
+        "p50": 27.1,
+        "p95": 38.4,
+        "max": 48.7
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2973.67,
+        "ScriptDuration": 716.08,
+        "LayoutDuration": 0.13,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 30.98,
+        "p50": 3.4,
+        "p95": 140.9,
+        "max": 140.9
+      },
+      "warmupCanvasCreates": 33,
+      "warmCanvasCreates": 10,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 92,
+        "nearbyTrees": 19,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 32.36,
+      "engineCallbackFps": 32.36,
+      "engineCallbackMs": {
+        "count": 98,
+        "mean": 23.16,
+        "p50": 21.9,
+        "p95": 28.9,
+        "max": 38.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 97,
+        "mean": 31.27,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 97,
+        "mean": 31.21,
+        "p50": 30.4,
+        "p95": 40.5,
+        "max": 51.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2930.77,
+        "ScriptDuration": 2492.96,
+        "LayoutDuration": 0.16,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 23.32,
+        "p50": 22.2,
+        "p95": 26.4,
+        "max": 26.4
+      },
+      "warmupCanvasCreates": 3,
+      "warmCanvasCreates": 4,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 175,
+        "nearbyTrees": 90,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 21.77,
+      "engineCallbackFps": 21.77,
+      "engineCallbackMs": {
+        "count": 66,
+        "mean": 26.43,
+        "p50": 25.6,
+        "p95": 32.6,
+        "max": 35.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 65,
+        "mean": 46.66,
+        "p50": 50,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 65,
+        "mean": 46.44,
+        "p50": 46,
+        "p95": 57.7,
+        "max": 62.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2968.7,
+        "ScriptDuration": 1936.78,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 102.54,
+        "p50": 27.6,
+        "p95": 402.7,
+        "max": 402.7
+      },
+      "warmupCanvasCreates": 119,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 100,
+        "nearbyTrees": 18,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 26.03,
+      "engineCallbackFps": 26.03,
+      "engineCallbackMs": {
+        "count": 79,
+        "mean": 20.33,
+        "p50": 19.7,
+        "p95": 29,
+        "max": 32.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 78,
+        "mean": 38.89,
+        "p50": 33.4,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 78,
+        "mean": 38.87,
+        "p50": 38.4,
+        "p95": 50,
+        "max": 78
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2925.99,
+        "ScriptDuration": 1835.65,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 118.54,
+        "p50": 18.4,
+        "p95": 514.8,
+        "max": 514.8
+      },
+      "warmupCanvasCreates": 117,
+      "warmCanvasCreates": 12,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 125,
+        "nearbyTrees": 27,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 26.34,
+      "engineCallbackFps": 26.34,
+      "engineCallbackMs": {
+        "count": 80,
+        "mean": 17.11,
+        "p50": 16.4,
+        "p95": 22.7,
+        "max": 35.2
+      },
+      "engineFrameIntervalMs": {
+        "count": 79,
+        "mean": 38.61,
+        "p50": 33.4,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 79,
+        "mean": 38.47,
+        "p50": 38.4,
+        "p95": 49.2,
+        "max": 63.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2939.15,
+        "ScriptDuration": 1563.97,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 45.36,
+        "p50": 16.7,
+        "p95": 157.9,
+        "max": 157.9
+      },
+      "warmupCanvasCreates": 33,
+      "warmCanvasCreates": 10,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 127,
+        "nearbyTrees": 24,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 28.26,
+      "engineCallbackFps": 28.26,
+      "engineCallbackMs": {
+        "count": 85,
+        "mean": 26.09,
+        "p50": 26.1,
+        "p95": 35.4,
+        "max": 40.4
+      },
+      "engineFrameIntervalMs": {
+        "count": 84,
+        "mean": 36.11,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 84,
+        "mean": 35.93,
+        "p50": 33.3,
+        "p95": 50.6,
+        "max": 56.5
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2952.66,
+        "ScriptDuration": 2498.67,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 21.92,
+        "p50": 21.9,
+        "p95": 22.8,
+        "max": 22.8
+      },
+      "warmupCanvasCreates": 4,
+      "warmCanvasCreates": 7,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 268,
+        "nearbyTrees": 127,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 20.13,
+      "engineCallbackFps": 20.13,
+      "engineCallbackMs": {
+        "count": 62,
+        "mean": 7.27,
+        "p50": 7.3,
+        "p95": 9.9,
+        "max": 13.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 61,
+        "mean": 50.54,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 66.8
+      },
+      "drawIntervalMs": {
+        "count": 61,
+        "mean": 50.57,
+        "p50": 49.3,
+        "p95": 65.8,
+        "max": 69.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3006.78,
+        "ScriptDuration": 650.81,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0.13
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 121.98,
+        "p50": 6.2,
+        "p95": 584.9,
+        "max": 584.9
+      },
+      "warmupCanvasCreates": 169,
+      "warmCanvasCreates": 6,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 168,
+        "nearbyTrees": 31,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 25.39,
+      "engineCallbackFps": 25.39,
+      "engineCallbackMs": {
+        "count": 77,
+        "mean": 31.22,
+        "p50": 31,
+        "p95": 35.6,
+        "max": 37.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 76,
+        "mean": 39.91,
+        "p50": 33.4,
+        "p95": 50,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 76,
+        "mean": 39.87,
+        "p50": 39.7,
+        "p95": 48.6,
+        "max": 49.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2963.31,
+        "ScriptDuration": 2648.25,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 167.62,
+        "p50": 35.7,
+        "p95": 704,
+        "max": 704
+      },
+      "warmupCanvasCreates": 117,
+      "warmCanvasCreates": 12,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 177,
+        "nearbyTrees": 40,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 19.18,
+      "engineCallbackFps": 19.18,
+      "engineCallbackMs": {
+        "count": 58,
+        "mean": 36.36,
+        "p50": 36,
+        "p95": 44.4,
+        "max": 45.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 57,
+        "mean": 53.21,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 66.8
+      },
+      "drawIntervalMs": {
+        "count": 57,
+        "mean": 53.16,
+        "p50": 52.4,
+        "p95": 66.7,
+        "max": 69.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2978.34,
+        "ScriptDuration": 2322.91,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 72.48,
+        "p50": 32.1,
+        "p95": 238.3,
+        "max": 238.3
+      },
+      "warmupCanvasCreates": 29,
+      "warmCanvasCreates": 9,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 30,
+        "nearbyTrees": 8,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 59.96,
+      "engineCallbackFps": 59.96,
+      "engineCallbackMs": {
+        "count": 182,
+        "mean": 1.59,
+        "p50": 1.5,
+        "p95": 2.1,
+        "max": 2.9
+      },
+      "engineFrameIntervalMs": {
+        "count": 181,
+        "mean": 16.76,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.3
+      },
+      "drawIntervalMs": {
+        "count": 181,
+        "mean": 16.78,
+        "p50": 16.6,
+        "p95": 22.2,
+        "max": 29
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2681.78,
+        "ScriptDuration": 538.52,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 2.76,
+        "p50": 2.8,
+        "p95": 3.5,
+        "max": 3.5
+      },
+      "warmupCanvasCreates": 3,
+      "warmCanvasCreates": 1,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 48,
+        "nearbyTrees": 26,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.02,
+      "engineCallbackFps": 60.02,
+      "engineCallbackMs": {
+        "count": 181,
+        "mean": 2,
+        "p50": 1.9,
+        "p95": 2.6,
+        "max": 6.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 180,
+        "mean": 16.76,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.3
+      },
+      "drawIntervalMs": {
+        "count": 180,
+        "mean": 16.76,
+        "p50": 16.6,
+        "p95": 23.3,
+        "max": 27.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2785.53,
+        "ScriptDuration": 610.4,
+        "LayoutDuration": 0.17,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 34.68,
+        "p50": 2.5,
+        "p95": 163.2,
+        "max": 163.2
+      },
+      "warmupCanvasCreates": 62,
+      "warmCanvasCreates": 1,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 39,
+        "nearbyTrees": 6,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.32,
+      "engineCallbackFps": 60.32,
+      "engineCallbackMs": {
+        "count": 182,
+        "mean": 2,
+        "p50": 2,
+        "p95": 2.5,
+        "max": 9.5
+      },
+      "engineFrameIntervalMs": {
+        "count": 181,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 16.8
+      },
+      "drawIntervalMs": {
+        "count": 181,
+        "mean": 16.67,
+        "p50": 16.6,
+        "p95": 21.4,
+        "max": 27.8
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2776.42,
+        "ScriptDuration": 593.34,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 48.38,
+        "p50": 5.5,
+        "p95": 223,
+        "max": 223
+      },
+      "warmupCanvasCreates": 32,
+      "warmCanvasCreates": 3,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 27,
+        "nearbyTrees": 2,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 58.28,
+      "engineCallbackFps": 58.28,
+      "engineCallbackMs": {
+        "count": 176,
+        "mean": 2,
+        "p50": 2,
+        "p95": 2.7,
+        "max": 4.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 175,
+        "mean": 17.33,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 175,
+        "mean": 17.33,
+        "p50": 15.9,
+        "p95": 23.6,
+        "max": 30.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2936.32,
+        "ScriptDuration": 592.43,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 31.52,
+        "p50": 1.8,
+        "p95": 150.7,
+        "max": 150.7
+      },
+      "warmupCanvasCreates": 91,
+      "warmCanvasCreates": 14,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 194,
+        "nearbyTrees": 44,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 28.09,
+      "engineCallbackFps": 28.09,
+      "engineCallbackMs": {
+        "count": 85,
+        "mean": 5.87,
+        "p50": 5.5,
+        "p95": 7.6,
+        "max": 20.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 84,
+        "mean": 36.11,
+        "p50": 33.3,
+        "p95": 50.1,
+        "max": 66.6
+      },
+      "drawIntervalMs": {
+        "count": 84,
+        "mean": 36.03,
+        "p50": 34.6,
+        "p95": 47.3,
+        "max": 59.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2891.09,
+        "ScriptDuration": 734.7,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 10.42,
+        "p50": 7.8,
+        "p95": 21.8,
+        "max": 21.8
+      },
+      "warmupCanvasCreates": 10,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 484,
+        "nearbyTrees": 180,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 18,
+      "engineCallbackFps": 18,
+      "engineCallbackMs": {
+        "count": 55,
+        "mean": 10.33,
+        "p50": 9.6,
+        "p95": 13.8,
+        "max": 16.4
+      },
+      "engineFrameIntervalMs": {
+        "count": 54,
+        "mean": 56.17,
+        "p50": 50.1,
+        "p95": 66.7,
+        "max": 66.8
+      },
+      "drawIntervalMs": {
+        "count": 54,
+        "mean": 56.34,
+        "p50": 55.7,
+        "p95": 74.2,
+        "max": 78.7
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3014.43,
+        "ScriptDuration": 759.04,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0.89
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 189.2,
+        "p50": 12.8,
+        "p95": 893.6,
+        "max": 893.6
+      },
+      "warmupCanvasCreates": 299,
+      "warmCanvasCreates": 3,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 340,
+        "nearbyTrees": 91,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 20.64,
+      "engineCallbackFps": 20.64,
+      "engineCallbackMs": {
+        "count": 63,
+        "mean": 9.36,
+        "p50": 8.1,
+        "p95": 12.4,
+        "max": 51.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 62,
+        "mean": 49.19,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 83.4
+      },
+      "drawIntervalMs": {
+        "count": 62,
+        "mean": 49.24,
+        "p50": 47.7,
+        "p95": 60,
+        "max": 99.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2998.94,
+        "ScriptDuration": 761.43,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 201.36,
+        "p50": 11.8,
+        "p95": 966.6,
+        "max": 966.6
+      },
+      "warmupCanvasCreates": 115,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 344,
+        "nearbyTrees": 87,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 21.15,
+      "engineCallbackFps": 21.15,
+      "engineCallbackMs": {
+        "count": 64,
+        "mean": 36.82,
+        "p50": 35,
+        "p95": 46.8,
+        "max": 63.2
+      },
+      "engineFrameIntervalMs": {
+        "count": 63,
+        "mean": 48.15,
+        "p50": 50,
+        "p95": 66.6,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 63,
+        "mean": 47.84,
+        "p50": 46.3,
+        "p95": 59.3,
+        "max": 78.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2992.58,
+        "ScriptDuration": 2548.68,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 47.76,
+        "p50": 31.1,
+        "p95": 114.4,
+        "max": 114.4
+      },
+      "warmupCanvasCreates": 17,
+      "warmCanvasCreates": 11,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 143,
+        "nearbyTrees": 30,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 53.13,
+      "engineCallbackFps": 53.13,
+      "engineCallbackMs": {
+        "count": 161,
+        "mean": 4.25,
+        "p50": 3.9,
+        "p95": 5.8,
+        "max": 16.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 160,
+        "mean": 18.96,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 160,
+        "mean": 18.94,
+        "p50": 17.4,
+        "p95": 25.9,
+        "max": 36.5
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2967.57,
+        "ScriptDuration": 923.3,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 113.44,
+        "p50": 6.5,
+        "p95": 543.2,
+        "max": 543.2
+      },
+      "warmupCanvasCreates": 157,
+      "warmCanvasCreates": 12,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 310,
+        "nearbyTrees": 140,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 25.95,
+      "engineCallbackFps": 25.95,
+      "engineCallbackMs": {
+        "count": 79,
+        "mean": 7.5,
+        "p50": 6.9,
+        "p95": 11.5,
+        "max": 19.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 78,
+        "mean": 39.1,
+        "p50": 33.4,
+        "p95": 66.6,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 78,
+        "mean": 39.03,
+        "p50": 38,
+        "p95": 51.9,
+        "max": 55.9
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2992.12,
+        "ScriptDuration": 805.15,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 131.02,
+        "p50": 7,
+        "p95": 623.5,
+        "max": 623.5
+      },
+      "warmupCanvasCreates": 195,
+      "warmCanvasCreates": 6,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 211,
+        "nearbyTrees": 46,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 37.84,
+      "engineCallbackFps": 37.84,
+      "engineCallbackMs": {
+        "count": 115,
+        "mean": 6.34,
+        "p50": 6.1,
+        "p95": 8.9,
+        "max": 21.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 114,
+        "mean": 26.61,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 114,
+        "mean": 26.61,
+        "p50": 25.9,
+        "p95": 34.6,
+        "max": 43.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2962.36,
+        "ScriptDuration": 968.54,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 157.62,
+        "p50": 5.4,
+        "p95": 766.8,
+        "max": 766.8
+      },
+      "warmupCanvasCreates": 100,
+      "warmCanvasCreates": 7,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 218,
+        "nearbyTrees": 51,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 35.06,
+      "engineCallbackFps": 35.06,
+      "engineCallbackMs": {
+        "count": 107,
+        "mean": 5.88,
+        "p50": 5.5,
+        "p95": 7.9,
+        "max": 17.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 106,
+        "mean": 28.62,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 106,
+        "mean": 28.72,
+        "p50": 28,
+        "p95": 38.3,
+        "max": 45.5
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2977.04,
+        "ScriptDuration": 858.96,
+        "LayoutDuration": 0.13,
+        "RecalcStyleDuration": 0.05
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 33.32,
+        "p50": 5.2,
+        "p95": 145.2,
+        "max": 145.2
+      },
+      "warmupCanvasCreates": 36,
+      "warmCanvasCreates": 10,
+      "warmTerrainCanvasCreates": 0
+    }
+  ]
+}

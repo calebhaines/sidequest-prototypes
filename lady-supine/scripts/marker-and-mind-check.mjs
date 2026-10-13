@@ -62,6 +62,8 @@ try {
   });
   await page.waitForTimeout(450);
   await page.evaluate(() => window.__ladySupine.getEngine().setTouchDirection({ x: 0, y: 0 }));
+  // A cold scene may draw before its first nearby-actor simulation rescan.
+  await page.waitForFunction(() => window.__ladySupine.getWorld().nearby?.actor?.id === 'supine-in-ada', null, { timeout: 10000 });
   assert.equal((await world()).nearby?.actor?.id, 'supine-in-ada', 'The occupied body travels into another physical scene');
   assert.match((await world()).nearby.actor.name, /Supine/);
   await page.keyboard.press('e'); await page.locator('.ow-dialogue').waitFor();

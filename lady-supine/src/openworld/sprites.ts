@@ -1,8 +1,10 @@
 import type { ActorKind, Vec } from './types';
 import { PALETTE as P, pigment } from './palette';
+import { paperShape, paperPath, paperTexture, paperSeam } from './paper';
+import { drawPaperAsset, drawPaperAssetRegion, paperAssetAspect, paperAssetsRevision } from './paperAssets';
 
-/** Temporary, original marker drawings. Coordinates are continuous; actors are anchored at their feet.
- * Replacement sheets remain optional so finished artwork can be supplied without changing the world. */
+/** Torn-paper inhabitants are assembled from separately articulated scraps. Coordinates are continuous
+ * and feet anchored; generated faces and procedural clothes use the same ragged paper material. */
 export type SpriteSheetOptions = { frameWidth: number; frameHeight: number; columns?: number; rows?: number; feetX?: number; feetY?: number };
 export type ActorDrawingState = {
   asleep?: boolean; mindChanged?: boolean; brainAbsent?: boolean;
@@ -10,6 +12,7 @@ export type ActorDrawingState = {
   phaseOffset?: number; billboard?: boolean;
 };
 const replacementSheets = new Map<ActorKind, { image: HTMLImageElement; options: SpriteSheetOptions }>();
+let assetRevision = -1;
 const iconCache = new Map<string, string>();
 const itemCanvasCache = new Map<string, HTMLCanvasElement>();
 const portraitCache = new Map<string, string>();
@@ -17,16 +20,17 @@ type PaintedPart = { canvas: HTMLCanvasElement; x: number; y: number; width: num
 const partCache = new Map<string, PaintedPart>();
 const PART_CACHE_BYTES = 20 * 1024 * 1024;
 let paintedBytes = 0;
+let nativeBatWing = false;
 const INK: string = P.ink;
 const PAPER = P.paper;
 
 type Palette = { coat: string; shade: string; trim: string; face: string; faceShade: string; hair: string };
 const palettes: Record<ActorKind, Palette> = {
-  human: { coat: P.slate, shade: P.ink, trim: P.paper, face: P.ash, faceShade: P.clay, hair: P.charcoal },
-  lady: { coat: P.bruise, shade: P.ink, trim: P.straw, face: P.chalk, faceShade: P.flesh, hair: P.ink },
+  human: { coat: P.deepWater, shade: P.charcoal, trim: P.sand, face: P.paper, faceShade: P.clay, hair: P.umbra },
+  lady: { coat: P.ink, shade: P.charcoal, trim: P.paper, face: P.chalk, faceShade: P.flesh, hair: P.ink },
   gatekeeper: { coat: P.bark, shade: P.umbra, trim: P.paper, face: P.sand, faceShade: P.clay, hair: P.charcoal },
   moth: { coat: P.smoke, shade: P.charcoal, trim: P.paper, face: P.paper, faceShade: P.ash, hair: P.ink },
-  hare: { coat: P.pine, shade: P.charcoal, trim: P.paper, face: P.ash, faceShade: P.sand, hair: P.umbra },
+  hare: { coat: P.fog, shade: P.deepWater, trim: P.paper, face: P.paper, faceShade: P.sand, hair: P.umbra },
   ox: { coat: P.clay, shade: P.umbra, trim: P.sand, face: P.bark, faceShade: P.umbra, hair: P.ink },
   tortoise: { coat: P.paper, shade: P.smoke, trim: P.ash, face: P.sage, faceShade: P.pine, hair: P.moss },
   otter: { coat: P.deepWater, shade: P.ink, trim: P.sand, face: P.clay, faceShade: P.bark, hair: P.umbra },
@@ -44,7 +48,7 @@ const palettes: Record<ActorKind, Palette> = {
 
 /** Where a real organ enters the head, in unscaled drawing coordinates relative to the feet. */
 export function actorHeadAnchor(kind: ActorKind): Vec {
-  return kind === 'lady' ? { x: -.7, y: -53 } : kind === 'hare' ? { x: 0, y: -43 } : { x: 0, y: -42 };
+  return kind === 'lady' ? { x: -.7, y: -53 } : kind === 'hare' ? { x: 0, y: -48 } : { x: 0, y: -42 };
 }
 
 export function registerSpriteSheet(kind: ActorKind, source: string, options: SpriteSheetOptions): void {
@@ -61,50 +65,51 @@ function random(seed: number): () => number {
   let value = seed;
   return () => { value = Math.imul(value ^ value >>> 16, 0x45d9f3b); value = Math.imul(value ^ value >>> 16, 0x45d9f3b); return ((value ^= value >>> 16) >>> 0) / 4294967296; };
 }
-const loosePaths = new Map<string, Path2D>();
-function loosePath(path: string, amount = .32): Path2D {
-  const key = `${amount}:${path}`;
-  const found = loosePaths.get(key); if (found) return found;
-  const rng = random(hash(path) + amount * 10000);
-  const drawn = new Path2D(path.replace(/-?\d*\.?\d+/g, value => String(Number(value) + (rng() - .5) * amount)));
-  if (loosePaths.size > 1400) loosePaths.delete(loosePaths.keys().next().value!);
-  loosePaths.set(key, drawn); return drawn;
+const paperPaths = new Map<string, Path2D>();
+function shapePath(path: string): Path2D {
+  let found = paperPaths.get(path);
+  if (!found) { found = new Path2D(path); if (paperPaths.size > 1400) paperPaths.delete(paperPaths.keys().next().value!); paperPaths.set(path, found); }
+  return found;
 }
+/** Fine ink remains for eyes, print and equipment wires. It never outlines a whole paper scrap. */
 function pen(ctx: CanvasRenderingContext2D, path: string, color = INK, width = .8): void {
-  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(loosePath(path, .32));
-  ctx.save(); ctx.translate(.21, -.2); ctx.globalAlpha *= .27; ctx.lineWidth = width * .58; ctx.stroke(loosePath(path, .6)); ctx.restore();
-}
-function wash(ctx: CanvasRenderingContext2D, path: string, color: string, texture = false, weight = 1): void {
-  const p = loosePath(path, .44);
-  ctx.fillStyle = color; ctx.fill(p);
-  ctx.save(); ctx.globalAlpha *= .16; ctx.strokeStyle = INK; ctx.lineWidth = weight * 3.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(p); ctx.restore();
-  ctx.save(); ctx.globalAlpha *= .83; ctx.strokeStyle = INK; ctx.lineWidth = weight * 1.08; ctx.stroke(p); ctx.restore();
-  ctx.save(); ctx.translate(-.3, .3); ctx.globalAlpha *= .36; ctx.lineWidth = weight * .65; ctx.setLineDash([3.8, .7, 7.2, 1.3]); ctx.stroke(loosePath(path, .82)); ctx.restore();
-  // Broad overlapping nib marks, pressure scratches and rubbed-out patches stay inside the silhouette.
-  if (texture) {
-    const rng = random(hash(path));
-    const values = path.match(/-?\d*\.?\d+/g)?.map(Number) || [-26, -60, 26, 4];
-    const xs = values.filter((_, i) => i % 2 === 0), ys = values.filter((_, i) => i % 2 === 1);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-    ctx.save(); ctx.clip(p);
-    ctx.strokeStyle = P.ink; ctx.lineCap = 'round';
-    for (let i = 0; i < 17; i++) {
-      const x = minX + rng() * (maxX - minX), y = minY + rng() * (maxY - minY);
-      ctx.globalAlpha = .04 + rng() * .095; ctx.lineWidth = .6 + rng() * 3.6;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.bezierCurveTo(x + 1.4, y + 3, x - .8, y + 5, x + rng() * 3, y + 5 + rng() * 6); ctx.stroke();
+  if (width >= 1.2 && /^[ML0-9.\s,-]+$/.test(path)) {
+    let previous: number[] | null = null, segment = 0;
+    for (const command of path.match(/[ML][^ML]*/g) || []) {
+      const point = command.slice(1).match(/-?\d*\.?\d+/g)?.map(Number);
+      if (!point || point.length !== 2) continue;
+      if (command[0] === 'L' && previous) {
+        const dx = point[0] - previous[0], dy = point[1] - previous[1], length = Math.hypot(dx, dy);
+        if (length > .01) {
+          const nx = -dy / length * width / 2, ny = dx / length * width / 2;
+          paperShape(ctx, [previous[0] + nx, previous[1] + ny, point[0] + nx, point[1] + ny, point[0] - nx, point[1] - ny, previous[0] - nx, previous[1] - ny], color, hash(path) + segment++, Math.min(.18, width * .065));
+        }
+      }
+      previous = point;
     }
-    ctx.globalAlpha = .16; ctx.strokeStyle = P.chalk; ctx.lineWidth = .45;
-    for (let i = 0; i < 22; i++) {
-      const x = minX + rng() * (maxX - minX), y = minY + rng() * (maxY - minY);
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + rng() * 4, y + rng() * 2 - 1); ctx.stroke();
-    }
-    ctx.restore();
+    return;
   }
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.lineJoin = 'miter'; ctx.stroke(shapePath(path)); ctx.restore();
 }
-function oval(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, fill: string, stroke = true): void {
-  const outline = `M${x - rx} ${y} C${x - rx * 1.14} ${y - ry * .7} ${x - rx * .3} ${y - ry * 1.12} ${x + rx * .24} ${y - ry} C${x + rx * .98} ${y - ry * .9} ${x + rx * 1.13} ${y - ry * .2} ${x + rx} ${y + ry * .18} C${x + rx * .84} ${y + ry * .84} ${x + rx * .32} ${y + ry * 1.03} ${x - rx * .12} ${y + ry} C${x - rx * .78} ${y + ry * 1.03} ${x - rx * 1.05} ${y + ry * .45} ${x - rx} ${y}Z`;
-  const p = loosePath(outline, rx > 1.8 ? .42 : .1); ctx.fillStyle = fill; ctx.fill(p);
-  if (stroke) { ctx.strokeStyle = INK; ctx.lineWidth = .83; ctx.stroke(p); }
+function wash(ctx: CanvasRenderingContext2D, path: string, color: string, _texture = false, weight = 1): void {
+  const values = path.match(/-?\d*\.?\d+/g)?.map(Number) || [-1, -1, 1, 1];
+  // Every polygon is genuinely torn along its perimeter, rather than enclosed by a sketchy ink contour.
+  if (/^[MLZ0-9.\s,-]+$/.test(path) && values.length >= 6) {
+    paperShape(ctx, values, color, hash(path), Math.max(.16, Math.min(.68, weight * .4)));
+    return;
+  }
+  const xs = values.filter((_, i) => i % 2 === 0), ys = values.filter((_, i) => i % 2 === 1);
+  const x = Math.min(...xs), y = Math.min(...ys), width = Math.max(...xs) - x, height = Math.max(...ys) - y;
+  paperPath(ctx, shapePath(path), color, [x - 1, y - 1, width + 2, height + 2], hash(path), weight * .42);
+}
+function oval(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, fill: string, _stroke = true): void {
+  const count = rx < 2 ? 8 : 17, points: number[] = [];
+  const rng = random(hash(`${x}:${y}:${rx}:${ry}:${fill}`));
+  for (let i = 0; i < count; i++) {
+    const angle = i / count * Math.PI * 2, irregular = 1 + (rng() - .5) * .085;
+    points.push(x + Math.cos(angle) * rx * irregular, y + Math.sin(angle) * ry * irregular);
+  }
+  paperShape(ctx, points, fill, hash(`${x}:${y}:${fill}`), rx < 2 ? .1 : .28);
 }
 function stitch(ctx: CanvasRenderingContext2D, d: string, color: string = P.ash): void {
   ctx.save(); ctx.setLineDash([1.1, 1.8]); pen(ctx, d, color, .55); ctx.restore();
@@ -114,6 +119,13 @@ function patch(ctx: CanvasRenderingContext2D, x: number, y: number, color: strin
   wash(ctx, `M${-size / 2} -2.4 L${size / 2 + .2} -2 L${size / 2} 2.6 L${-size / 2 - .3} 2.2 Z`, color);
   stitch(ctx, `M${-size / 2 - .5} -2.2 L${size / 2 + .4} -2 L${size / 2 + .4} 2.9 L${-size / 2 - .7} 2.6 Z`);
   ctx.restore();
+}
+
+function refreshPaperCaches(): void {
+  const next = paperAssetsRevision();
+  if (next === assetRevision) return;
+  assetRevision = next; partCache.clear(); paintedBytes = 0; nativeBatWing = false;
+  iconCache.clear(); itemCanvasCache.clear(); portraitCache.clear();
 }
 
 function paintedPart(ctx: CanvasRenderingContext2D, key: string, bounds: [number, number, number, number], paint: (ctx: CanvasRenderingContext2D) => void): void {
@@ -148,6 +160,10 @@ function wingsAndTails(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palett
     for (const side of [-1, 1]) {
       if (wingSide && side !== wingSide) continue;
       ctx.save(); ctx.scale(side, 1); ctx.translate(2.5, -29); ctx.rotate(.035 + Math.sin(time * 2.3) * .035);
+      if (drawPaperAsset(ctx, 'moth-wing', -1, -12, 27, 34)) {
+        if (side < 0) patch(ctx, 11, -5, P.chalk, 3.2);
+        ctx.restore(); continue;
+      }
       // Fractured paper wings: incomplete trapezoids, ragged missing wedges, nervous ink diagrams.
       wash(ctx, side < 0 ? 'M0 0 L20 -12 L25 -5 L20 -2 L24 1 L17 4 L20 7 L15 8 L16 14 L11 11 L10 20 L4 10Z' : 'M0 0 L21 -10 L25 -4 L20 4 L23 11 L16 9 L12 19 L4 11Z', P.paper, true);
       wash(ctx, 'M2 2 L18 -9 L20 -4 L7 8Z', P.sand);
@@ -196,50 +212,166 @@ function leg(ctx: CanvasRenderingContext2D, side: number, gait: number, kind: Ac
 }
 
 function torso(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, back: boolean): void {
-  if (kind === 'lady') {
-    // The ruler alone wears an intentional, composed silhouette among everyone else's patched fragments.
-    wash(ctx, 'M-5 -32 L5 -32 L8 -27 L5 -20 L10 -1 L-10 -.5 L-5 -20 L-8 -27Z', P.ink, true, .82);
-    wash(ctx, 'M-4 -31 L3 -31 L3 -21 L7.8 -1 L-1 -1 L-3 -20Z', P.bruise);
-    wash(ctx, 'M3 -31 L6 -27 L3 -20 L7 -2 L2 -3 L0 -22Z', P.charcoal);
-    pen(ctx, 'M-5 -31 L-2 -25 L1 -25 L5 -31 M-6 -4 L7 -4', P.straw, .65);
-    pen(ctx, 'M-1 -24 L-.5 -10', P.paper, .45);
-    wash(ctx, 'M-.8 -27 L1.5 -26 L.4 -23 L-1.3 -25Z', P.straw, false, .5);
+  const nativeWide = kind === 'ox' || kind === 'boar', nativeLong = kind === 'hare' || kind === 'moth' || kind === 'merchant';
+  const nativeWidth = kind === 'lady' ? 32 : nativeWide ? 28 : kind === 'heron' ? 18 : 22;
+  const garment = kind === 'lady' ? 'gown' : kind === 'hare' ? 'ada-coat' : 'worker-coat';
+  const nativeHeight = kind === 'lady' ? 36 : nativeLong ? 30 : 25;
+  if (drawPaperAssetRegion(ctx, garment, 0, 0, 1, 1, -nativeWidth / 2, -34, nativeWidth, nativeHeight)) {
+    if (kind === 'lady') {
+      // Folded pale scraps in the reference gown are covered so only her live jointed hands remain.
+      wash(ctx, 'M-2.8 -26 L2.9 -25.3 L3.8 -22.1 L-.2 -23.5 L-2.9 -24Z', P.ink, true, .12);
+      wash(ctx, 'M-.9 -23.8 L3.1 -22.3 L3.3 -20.7 L-.3 -22 L-1.5 -23Z', P.charcoal, true, .12);
+      if (back) wash(ctx, 'M-4 -29 L3 -30 L5 -24 L-1 -21 L-5 -23Z', P.ink, true, .18);
+      return;
+    }
+    const seed = hash(kind), sign = seed % 2 ? -1 : 1;
+    if (back) {
+      patch(ctx, 0, -24, p.coat, 8.7);
+      wash(ctx, 'M-6.4 -19 L4.9 -20.1 L6.2 -14.8 L-3 -13.4Z', p.shade, true, .24);
+    } else if (kind !== 'hare') {
+      // A shared salvaged garment receives each inhabitant's own mismatched repairs and insignia.
+      wash(ctx, `M${sign * 2.5} -25.3 L${sign * 7.1} -23.8 L${sign * 8.2} -12.6 L${sign * 3.4} -13.3Z`, p.coat, true, .24);
+      patch(ctx, -sign * 4.7, -13.8, p.trim, kind === 'moth' ? 3.4 : 4.9);
+      if (kind === 'ox') {
+        wash(ctx, 'M-6.4 -31 L-4.9 -30 L-3.3 -16 L-4.7 -16Z', P.rust, true, .13);
+        wash(ctx, 'M4.4 -30 L6.3 -30 L4.1 -16 L2.8 -16Z', P.rust, true, .13);
+      }
+      if (kind === 'tortoise') { wash(ctx, 'M-5.1 -21.5 L1.8 -21.5 L1.8 -19.4 L-5.1 -19.4Z', P.chalk, true, .1); wash(ctx, 'M-2.7 -24 L-.8 -24 L-.8 -17 L-2.7 -17Z', P.chalk, true, .1); }
+      if (kind === 'moth') wash(ctx, 'M-7 -30 L4 -31 L7 -27 L-2 -26 L-6 -17 L-9 -19Z', P.sand, true, .2);
+    }
     return;
   }
-  const wide = kind === 'ox' || kind === 'boar';
-  const w = wide ? 12.7 : kind === 'heron' ? 7.3 : 9;
-  const hem = kind === 'moth' ? -9.5 : -11;
-  wash(ctx, `M${-w + 1} -32 L${w - 2.4} -30 L${w + 1.2} -21 L${w - .7} -16 L${w + 2} ${hem} L${-w - 1} ${hem + 1} L${-w + .5} -20 L${-w - 1.6} -26Z`, p.coat, true, 1.05);
-  wash(ctx, `M-1.8 -31 L${w - 2.4} -30 L${w + .5} -23 L${w - 2} ${hem + .8} L.6 ${hem + 1.7} L2 -22Z`, p.shade);
+  if (kind === 'lady') {
+    // A composed long black gown is split into exposed angular paper folds, not a tiny fantasy robe.
+    wash(ctx, 'M-4.4 -33 L4.2 -33 L8 -29 L5.1 -21 L10.8 1 L-11.1 1 L-6 -20 L-8.2 -29Z', P.ink, true, .7);
+    wash(ctx, 'M-7.5 -29 L-3.8 -32 L-1.8 -26 L-4.4 -20 L-8.9 .2 L-10.3 1Z', P.charcoal, true, .32);
+    wash(ctx, 'M2 -32 L7 -29 L3.4 -20 L8.7 .7 L2.2 -.2 L.1 -23Z', P.bruise, true, .27);
+    wash(ctx, 'M-3.9 -31.9 L-.1 -28.5 L4.5 -32 L1.6 -35 L-1.5 -34.7Z', P.paper, true, .16);
+    wash(ctx, 'M-3.7 -21 L-2.8 -12 L-6.8 -.3 L-4.5 -10Z', P.slate, true, .14);
+    wash(ctx, 'M4.1 -17 L6.1 -9 L6.8 -2 L3.6 -8Z', P.charcoal, true, .17);
+    pen(ctx, 'M-.6 -27.8 L.5 -26.1 M-6.2 -.5 L6.6 -.3', P.smoke, .32);
+    return;
+  }
+  const wide = kind === 'ox' || kind === 'boar', long = kind === 'hare' || kind === 'moth' || kind === 'merchant';
+  const w = wide ? 12.7 : kind === 'heron' ? 7.3 : 9, hem = long ? -5 : -11;
+  wash(ctx, `M${-w + 1} -32 L-3 -33 L${w - 2.4} -30 L${w + 1.2} -21 L${w - .7} -16 L${w + 2} ${hem} L4 ${hem + 1} L-1 ${hem - .5} L${-w - 1} ${hem + 1} L${-w + .5} -20 L${-w - 1.6} -26Z`, p.coat, true, .9);
+  wash(ctx, `M-1.8 -31 L${w - 2.4} -30 L${w + .5} -23 L${w - 2} ${hem + .8} L.6 ${hem + 1.7} L2 -22Z`, p.shade, true, .4);
+  wash(ctx, `M${-w + 1.1} -27 L-4.5 -23 L-5.8 ${hem + 2} L${-w -.4} ${hem + .2} L${-w + 1} -19Z`, kind === 'hare' ? P.sand : p.coat, true, .22);
   if (back) {
-    patch(ctx, -1, -23, p.trim, 8); pen(ctx, 'M-6 -19 L7 -17 M-2 -26 L3 -21', P.ink, .8);
+    patch(ctx, -1, -23, p.trim, 8);
+    wash(ctx, 'M-6 -19 L3 -21 L6 -16 L-4 -14Z', p.coat, true, .18);
+    pen(ctx, 'M-2 -27 L.5 -23 L-.3 -19', p.shade, .45);
   } else {
-    wash(ctx, 'M-6 -31 L1 -27 L-4 -23 L-8 -28Z', p.trim);
-    wash(ctx, 'M3 -30 L6 -27 L1 -22Z', P.charcoal);
-    pen(ctx, `M-.8 -24 L.5 ${hem + .5} M4 -20 L7 -18 L3 -16`, P.ink, .9);
-    patch(ctx, -5, -15.5, P.paper, 6.5);
-    pen(ctx, 'M-7 -16 L-3 -14 M-6 -17 l.2 4 M-4 -17 l.2 4', P.umbra, .45);
+    wash(ctx, 'M-6 -31 L1 -27 L-4 -23 L-8 -28Z', p.trim, true, .2);
+    wash(ctx, 'M3 -30 L6 -27 L1 -22Z', P.charcoal, true, .2);
+    wash(ctx, `M-1.6 -25 L-.2 -23 L.5 ${hem + .4} L-.8 ${hem + .5}Z`, p.trim, true, .08);
+    wash(ctx, 'M2.9 -20.6 L7.2 -20 L6.8 -17.2 L2.8 -17.8Z', p.coat, true, .2);
+    patch(ctx, -5, hem + 4.2, P.paper, 6.5);
+    pen(ctx, `M-6.3 ${hem + 2.8} L-3.1 ${hem + 4.9} M-4.5 ${hem + 2.9} L-5.1 ${hem + 5.5}`, P.umbra, .35);
   }
   stitch(ctx, `M${-w + 1} ${hem - .1} L-2 ${hem + 1} L${w} ${hem - .5}`, P.ash);
-  pen(ctx, `M${-w + 1.4} ${hem + .3} l-.8 2 M${w - 1.6} ${hem + .3} l.8 1.7`, P.ink, .6);
-  if (kind === 'ox') { pen(ctx, 'M-7 -31 L-4 -12 M6 -30 L4 -12', P.rust, 2.6); wash(ctx, 'M-5 -21 L3 -22 L7 -14 L-6 -12Z', P.bark); }
-  if (kind === 'moth') { wash(ctx, 'M-8 -30 L4 -31 L7 -27 L-2 -26 L-6 -17 L-9 -19Z', P.sand, true); pen(ctx, 'M-7 -19 L-3 -18', P.umbra, .8); }
-  if (kind === 'hare') { wash(ctx, 'M-5 -24 L5 -25 L7 -12 L-7 -11Z', P.clay, true); pen(ctx, 'M-5 -22 L-5 -16 L3 -14 M-2 -30 L-4 -24 M4 -30 L4 -25', P.ink, .8); pen(ctx, 'M-4 -15 L1 -14 M2 -19 L4 -17', P.rust, 1.6); }
-  if (kind === 'deer') { wash(ctx, 'M-7 -32 L6 -30 L3 -26 L-5 -27Z', P.charcoal); pen(ctx, 'M3 -28 L7 -17', P.charcoal, 2.7); }
-  if (kind === 'peacock') { pen(ctx, 'M-6 -30 L-8 -24 L-5 -19 M5 -30 L8 -21 L5 -18', P.straw, 1.1); }
-  if (kind === 'tortoise') { pen(ctx, 'M-5 -22 L2 -22 M-1.5 -26 L-1.5 -18', P.chalk, 2); pen(ctx, 'M5 -25 L7 -20 L5 -15', P.smoke, .65); }
+  if (kind === 'ox') { wash(ctx, 'M-7.7 -31 L-6.1 -31 L-3.1 -12 L-4.8 -12Z', P.rust); wash(ctx, 'M5.5 -30 L7.1 -30 L4.8 -12 L3.2 -12Z', P.rust); wash(ctx, 'M-5 -21 L3 -22 L7 -14 L-6 -12Z', P.bark); }
+  if (kind === 'moth') { wash(ctx, 'M-8 -30 L4 -31 L7 -27 L-2 -26 L-6 -17 L-9 -19Z', P.sand, true); wash(ctx, 'M-4 -26 L-.5 -25 L-3.2 -13 L-6 -12Z', P.paper, true, .24); }
+  if (kind === 'hare') {
+    // Ada's borrowed coat consists of long mismatched scraps, with tender adult proportions.
+    wash(ctx, 'M-4.8 -25 L4.8 -26 L7.4 -7 L2.6 -5 L-.4 -12 L-4.8 -5 L-7 -8Z', P.clay, true, .38);
+    wash(ctx, 'M-4 -23 L.4 -22.2 L-1 -13 L-5.7 -10.5Z', P.rust, true, .28);
+    wash(ctx, 'M2 -20 L6 -18 L5.5 -11 L1.1 -12Z', P.flesh, true, .25);
+    wash(ctx, 'M-8 -14 L-4 -13.2 L-5.4 -6 L-8.8 -5.4Z', P.deepWater, true, .24);
+    patch(ctx, 4.1, -9, P.sand, 3.6);
+    pen(ctx, 'M-2.8 -30 L-4.3 -24 M4 -30 L4.4 -25 M-3.8 -18 L-2.2 -15', P.umbra, .4);
+  }
+  if (kind === 'deer') { wash(ctx, 'M-7 -32 L6 -30 L3 -26 L-5 -27Z', P.charcoal); wash(ctx, 'M3 -28 L4.6 -27.7 L7.1 -17.3 L5.8 -17Z', P.charcoal); }
+  if (kind === 'peacock') { wash(ctx, 'M-6 -30 L-5.1 -29 L-7 -24 L-4.8 -19 L-6 -19Z', P.straw); wash(ctx, 'M5 -30 L6 -29.5 L8 -21 L5 -18 L4.4 -19Z', P.straw); }
+  if (kind === 'tortoise') { wash(ctx, 'M-5 -23 L2.2 -23 L2 -21 L-5 -21Z', P.chalk); wash(ctx, 'M-2.5 -26 L-.5 -26 L-.5 -18 L-2.5 -18Z', P.chalk); }
+}
+const headAssetIds: Record<ActorKind, string> = {
+  lady: 'lady-head', human: 'human-head', hare: 'hare-head', moth: 'moth-head', ox: 'ox-head', bat: 'bat-head',
+  gatekeeper: 'gatekeeper-head', tortoise: 'tortoise-head', otter: 'otter-head', deer: 'deer-head', mole: 'mole-head', peacock: 'peacock-head',
+  boar: 'boar-head', mouse: 'mouse-head', fox: 'fox-head', heron: 'heron-head', merchant: 'merchant-head', salamander: 'salamander-head',
+};
+/** The painted face stays attached to the neck. Tiny additional paper lids/lips carry its expression. */
+function generatedHead(ctx: CanvasRenderingContext2D, kind: ActorKind, side: boolean, blink: boolean, state: ActorDrawingState, kiss: boolean): boolean {
+  const id = headAssetIds[kind]; if (!id) return false;
+  const lady = kind === 'lady', wide = kind === 'ox';
+  const bounds: [number, number, number, number] = lady ? [-20, -19, 40, 35] : wide ? [-14, -14, 28, 27] : [-11, -14, 23, 27];
+  ctx.save();
+  if (side && !lady) ctx.scale(.83, 1);
+  const drawn = drawPaperAsset(ctx, id, ...bounds);
+  if (!drawn) { ctx.restore(); return false; }
+  const aspect = paperAssetAspect(id), drawnWidth = Math.min(bounds[2], bounds[3] * aspect), drawnHeight = Math.min(bounds[3], bounds[2] / aspect);
+  const left = bounds[0] + (bounds[2] - drawnWidth) / 2, top = bounds[1] + bounds[3] - drawnHeight;
+  const eyes: [number, number][] = kind === 'lady' ? [[.18, .473], [.61, .456]]
+    : kind === 'hare' ? [[.54, .375], [.91, .385]]
+      : kind === 'moth' ? [[.56, .59], [.9, .56]]
+        : kind === 'ox' ? [[.33, .5], [.65, .5]]
+          : kind === 'deer' ? [[.27, .57], [.49, .55]]
+            : kind === 'gatekeeper' ? [[.17, .435], [.46, .41]]
+              : kind === 'tortoise' ? [[.19, .4], [.51, .435]]
+                : kind === 'mole' ? [[.63, .42], [.91, .365]]
+                  : kind === 'otter' ? [[.2, .365], [.55, .355]]
+                    : kind === 'peacock' ? [[.59, .505], [.92, .51]] : [[.35, .48], [.69, .47]];
+  if (blink || state.asleep) {
+    eyes.forEach(([u, v], index) => {
+      const x = left + u * drawnWidth, y = top + v * drawnHeight, half = drawnWidth * (lady ? .11 : .095);
+      const lid = lady ? (index ? P.clay : P.sand) : P.sand;
+      const path = `M${x - half -.2} ${y -.1} Q${x - half * .35} ${y - 1.3} ${x} ${y - 1.05} Q${x + half * .55} ${y - 1.5} ${x + half + .15} ${y -.35} L${x + half -.1} ${y + .7} Q${x} ${y + 1.5} ${x - half} ${y + .7}Z`;
+      paperPath(ctx, shapePath(path), lid, [x - half - 1, y - 2, half * 2 + 2, 4], hash(path), .06);
+      pen(ctx, `M${x - half} ${y -.05} Q${x} ${y + .75} ${x + half} ${y -.35}`, P.umbra, .38);
+    });
+  }
+  if (state.mindChanged) {
+    // Supine's mind in Ada sharpens the actual face; a friend's mind softens the ruler's attention.
+    eyes.forEach(([u, v], index) => {
+      const x = left + u * drawnWidth, y = top + v * drawnHeight, half = drawnWidth * .105;
+      pen(ctx, kind === 'hare'
+        ? `M${x - half} ${y - (index ? .6 : 2)} L${x + half} ${y - (index ? 2 : .6)}`
+        : `M${x - half} ${y - 1.8} Q${x} ${y - 3} ${x + half} ${y - 1.7}`, kind === 'hare' ? P.umbra : P.clay, .4);
+    });
+    if (kind === 'hare') {
+      const x = left + drawnWidth * .82, y = top + drawnHeight * .66;
+      pen(ctx, `M${x - 1.7} ${y + .5} L${x + .4} ${y -.15} L${x + 1.6} ${y + .1}`, P.umbra, .4);
+    }
+  }
+  if (lady) {
+    // Preserve the generated irregular, tilted skull rim exactly. The actual brain sits in its dark cavity.
+    if (!state.brainAbsent) pen(ctx, 'M-7.6 -12.9 L-4.1 -14.5 L-2.1 -13.1 L1.1 -15 L3.6 -13.7 L6.5 -14.1', P.bruise, .44);
+    if (kiss) {
+      const x = left + drawnWidth * .37, y = top + drawnHeight * .72;
+      wash(ctx, `M${x - 4} ${y - 1.8} L${x + 4} ${y - 2.2} L${x + 4.3} ${y + 2.7} L${x - 4.2} ${y + 3}Z`, P.sand, true, .05);
+      wash(ctx, `M${x - .9} ${y -.7} L${x + 1.2} ${y - 1.3} L${x + 3} ${y -.3} L${x + 2.5} ${y + 1.7} L${x + .2} ${y + 2.2} L${x - 1} ${y + .9}Z`, P.bruise, true, .07);
+      pen(ctx, `M${x + .3} ${y + .5} L${x + 1.8} ${y + .4}`, P.ink, .3);
+    }
+  } else if (kind === 'hare' && state.brainAbsent) {
+    wash(ctx, 'M-4.9 -11.9 L-1 -13 L4.7 -11.8 L4 -9.5 L-.4 -8.7 L-4.4 -9.5Z', P.paper, true, .14);
+    wash(ctx, 'M-3.7 -11.6 L-.7 -12.1 L3.3 -11.4 L2.9 -10 L-.3 -9.5 L-3.4 -10Z', P.ink, true, .08);
+  }
+  ctx.restore(); return true;
 }
 
 function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: boolean, back: boolean, blink: boolean, _time: number, state: ActorDrawingState, gaze = 0, kiss = false, _detached = false): void {
   const lady = kind === 'lady', wide = kind === 'ox' || kind === 'boar';
   const cy = kind === 'heron' ? -42 : lady ? -40 : kind === 'human' ? -38.4 : -37;
   ctx.save(); ctx.translate(side && !lady ? 1.2 : 0, cy); ctx.rotate(lady ? 0 : .06);
+  if (!back && generatedHead(ctx, kind, side, blink, state, kiss)) { ctx.restore(); return; }
   if (lady) {
+    if (back) {
+      wash(ctx, 'M-15 -16 L-20 -8 L-19 9 L-14 17 L-5 12 L1 14 L13 9 L15 16 L20 4 L19 -10 L11 -17Z', P.ink, true, .7);
+      wash(ctx, 'M-14 -12 L-2 -17 L4 -6 L-2 6 L-11 12 L-18 4Z', P.charcoal, true, .24);
+      wash(ctx, 'M8 -13 L17 -9 L18 3 L13 12 L6 7 L9 -3Z', P.bruise, true, .2);
+      oval(ctx, -.7, -13, 13, 4.2, P.paper); oval(ctx, -.7, -13, 11.5, 3.4, P.ink);
+      ctx.restore(); return;
+    }
     // Her beauty is deliberate and adult. The unadorned aperture belongs to a living human skull.
     wash(ctx, 'M-15 -16 L-20 -8 L-19 9 L-14 17 L-13 9 L13 8 L15 16 L20 4 L19 -10 L11 -17Z', P.ink, true, .82);
-    wash(ctx, 'M-13 -15 C-17 -12 -18 -5 -16 2 L-12 8 L-5 13 C-2 15 1 15 5 13 L13 7 L17 -2 C18 -10 10 -17 1 -17Z', P.chalk, false, .68);
+    wash(ctx, 'M-13 -15 L-17 -10 L-18 -5 L-16 2 L-12 8 L-5 13 L1 15 L5 13 L13 7 L17 -2 L16 -10 L10 -16 L1 -17Z', P.chalk, true, .58);
+    wash(ctx, 'M-13 -15 L-1 -16 L-2 -6 L-11 -6 L-15 -1 L-18 -5Z', P.sand, true, .22);
+    wash(ctx, 'M-11 -6 L-2 -6 L-.1 0 L-8 2 L-14 -.1Z', P.ash, true, .18);
+    wash(ctx, 'M3 -15 L11 -13 L16 -7 L10 -5 L3 -7Z', P.clay, true, .22);
+    wash(ctx, 'M-11 4 L-4 1 L-2 8 L1 12 L-5 13 L-12 8Z', P.flesh, true, .18);
     wash(ctx, 'M-16 -1 L-9 5 L-5 13 L-12 8Z', P.paper, false, .25);
-    wash(ctx, 'M13 -9 L17 -2 L13 7 L5 13 L8 4Z', P.flesh, false, .25);
+    wash(ctx, 'M13 -9 L17 -2 L13 7 L5 13 L8 4Z', P.flesh, true, .25);
+    wash(ctx, 'M10 3 L13 2 L11 8 L5 13 L3 10Z', P.clay, true, .16);
     pen(ctx, 'M-16 -7 L-16 5 M16 -8 L17 2', P.charcoal, .7);
     if (state.asleep || blink) {
       pen(ctx, 'M-12 -.4 Q-8 1.5 -4 -.3 M4 -.5 Q8 1.4 12 -.6', P.ink, .95);
@@ -267,7 +399,7 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
     pen(ctx, 'M-16 4 L-16 9 L-14.5 11 M17 4 L17 9 L15.5 11', P.straw, .8);
     ctx.restore(); return;
   }
-  // Every ordinary inhabitant is assembled from misregistered mask planes, never a tidy rounded mascot.
+  // Every ordinary inhabitant is assembled from torn mask planes and exposed fiber joins.
   if (kind === 'deer' || kind === 'ox') {
     pen(ctx, kind === 'deer' ? 'M-8 -5 L-13 -13 L-12 -22 M-13 -14 L-18 -20 M-12 -17 L-7 -23 M8 -5 L13 -14 L12 -21 M13 -15 L18 -18' : 'M-9 -4 L-17 -5 L-18 -12 M9 -4 L18 -7 L16 -14', P.paper, kind === 'deer' ? 1.8 : 3.1);
     pen(ctx, 'M-13 -13 l-1 3 M13 -14 l1 3', P.ink, .5);
@@ -282,7 +414,9 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
     : wide ? 'M-12 -8 L-7 -12 L12 -9 L13 7 L5 11 L-11 8Z'
       : kind === 'moth' ? 'M-9 -11 L5 -13 L10 -5 L7 10 L-7 8Z'
         : kind === 'tortoise' ? 'M-8 -10 L7 -9 L11 2 L3 10 L-9 7Z' : 'M-8 -11 L7 -10 L10 1 L5 11 L-9 7 L-11 -2Z';
-  wash(ctx, face, p.face, true, 1.02);
+  wash(ctx, face, p.face, true, .8);
+  wash(ctx, wide ? 'M-12 -8 L-3 -11 L1 -3 L-6 2 L-12 1Z' : 'M-8 -11 L1 -12 L-.8 -3 L-7 1 L-10 -2Z', P.sand, true, .22);
+  wash(ctx, kind === 'moth' ? 'M-8 1 L-.8 -1 L2 6 L-7 8Z' : 'M-8 1 L-.8 -1 L-1 8 L-5 10 L-9 7Z', p.faceShade, true, .19);
   wash(ctx, wide ? 'M3 -10 L12 -9 L13 7 L5 11 L1 3Z' : 'M2 -11 L7 -10 L10 1 L5 11 L1 7 L4 2Z', p.faceShade);
   pen(ctx, 'M-9 -5 L-5 -7 L-6 -1 M7 5 l-2 3', P.ink, .65);
   if (kind === 'human') {
@@ -303,6 +437,7 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: 
   if (['heron', 'peacock', 'gatekeeper'].includes(kind)) { wash(ctx, side ? 'M3 0 L19 5 L4 8Z' : 'M-2 1 L4 2 L1 9 L-4 5Z', P.ochre); pen(ctx, side ? 'M5 4 L17 5' : 'M-1 4 L1 6', P.umbra, .7); }
   if (kind === 'mole') wash(ctx, 'M-2 1 L6 5 L1 10 L-5 6Z', P.clay);
   if (kind === 'salamander') wash(ctx, 'M-6 2 L7 3 L2 9 L-7 7Z', P.sage);
+  if (kind === 'hare' && state.brainAbsent) { oval(ctx, 0, -11, 4.5, 1.8, P.paper); oval(ctx, 0, -11, 3.5, 1.1, P.ink); }
   const cruel = kind === 'hare' && state.mindChanged;
   for (const [i, eye] of (side ? [4.9] : [-4.7, 3.7]).entries()) {
     const y = i ? .1 : -1.1;
@@ -345,6 +480,11 @@ function smooth(low: number, high: number, value: number): number {
 /** Separate sleeve and wrist layers make gestures bend at an elbow instead of rotating a cutout. */
 function sleeve(ctx: CanvasRenderingContext2D, p: Palette, lower: boolean): void {
   const elegant = p.face === P.chalk;
+  if (lower && !elegant) {
+    ctx.save(); ctx.translate(-1.17, 2.85); ctx.rotate(.95);
+    const nativeArm = drawPaperAssetRegion(ctx, 'arm', .07, .44, .93, .56, -5.1, -3, 12, 7);
+    ctx.restore(); if (nativeArm) return;
+  }
   if (!lower) {
     wash(ctx, elegant ? 'M-1.4 -.8 L1.3 -.8 L1.9 6.6 L-1.8 7.7Z' : 'M-3 -.7 L2.1 -1 L3.2 4.7 L1 8.8 L-4.2 7.2Z', p.shade, !elegant, elegant ? .5 : .85);
     pen(ctx, elegant ? 'M-1.1 1 L-.7 6' : 'M-3 3.5 L1.6 4.1', elegant ? P.bruise : p.coat, elegant ? .4 : 1.1);
@@ -363,7 +503,7 @@ function bentArm(ctx: CanvasRenderingContext2D, key: string, p: Palette, x: numb
   ctx.save(); ctx.translate(x, y); ctx.rotate(upper);
   paintedPart(ctx, `${key}:upper-sleeve`, [-7, -3, 14, 14], brush => sleeve(brush, p, false));
   ctx.translate(-.4, 7.3); ctx.rotate(lower);
-  paintedPart(ctx, `${key}:wrist`, [-7, -2, 14, 15], brush => sleeve(brush, p, true)); ctx.restore();
+  paintedPart(ctx, `${key}:wrist`, [-8, -6, 16, 21], brush => sleeve(brush, p, true)); ctx.restore();
 }
 function armToPoint(x: number, y: number, goalX: number, goalY: number): { upper: number; lower: number } {
   const dx = goalX - x, dy = goalY - y;
@@ -407,9 +547,13 @@ export function playerToolPose(facing: number, moving: boolean, animation: numbe
 
 function feature(ctx: CanvasRenderingContext2D, kind: ActorKind, p: Palette, side: number): void {
   if (kind === 'hare') {
-    wash(ctx, side < 0 ? 'M-2 1 L-7 -21 L-3 -23 L2 -2Z' : 'M-2 0 L1 -18 L6 -15 L4 -9 L3 1Z', p.face, true);
-    pen(ctx, side < 0 ? 'M-3 -2 L-4 -17' : 'M1 -2 L3 -12', P.clay, 1.2);
-    if (side < 0) stitch(ctx, 'M-5 -11 L-1 -10', P.umbra); else pen(ctx, 'M4 -12 L6 -11 L4 -10', P.ink, .65);
+    // Her ears fold down like the long rose-coloured scraps in the approved collage study.
+    const outline = side < 0 ? 'M0 1 L-4 -6 L-7 -9 L-11 -8 L-16 2 L-15 13 L-9 25 L-5 21 L-9 12 L-8 4 L-4 -1 L1 7Z'
+      : 'M0 0 L2 -8 L6 -10 L9 -5 L11 7 L11 21 L7 29 L3 27 L5 19 L6 8 L3 1Z';
+    wash(ctx, outline, P.clay, true, .5);
+    wash(ctx, side < 0 ? 'M-8 -6 L-12 1 L-11 12 L-7 22 L-6 19 L-9 10 L-6 -.5Z' : 'M5 -7 L7 -3 L9 8 L8 22 L5 27 L6 18 L7 8 L4 1Z', P.flesh, true, .26);
+    wash(ctx, side < 0 ? 'M-13 1 L-15 5 L-14 13 L-10 23 L-9 20 L-12 11Z' : 'M9 6 L11 10 L10 21 L7 28 L6 25 L8 18Z', P.rust, true, .18);
+    paperSeam(ctx, side < 0 ? [-8, -5, -11, 2, -10, 10, -7, 19] : [5, -5, 7, 5, 8, 14, 6, 23], P.umbra, .34);
   } else if (kind === 'moth') {
     pen(ctx, `M0 0 L${side * 6} -14 L${side * 11} -10`, P.umbra, 1);
     pen(ctx, `M${side * 11} -10 l${side * -2} 2`, P.paper, 1.4);
@@ -429,43 +573,93 @@ function expressiveFeatures(ctx: CanvasRenderingContext2D, key: string, kind: Ac
   const cycle = (clock + hash(kind) % 7) % 8.6;
   const twitch = (smooth(4.3, 4.42, cycle) - smooth(4.7, 4.88, cycle)) * Math.sin(clock * 23);
   for (const s of [-1, 1]) {
-    const x = kind === 'hare' ? s * 5 : kind === 'moth' ? s * 4 : kind === 'fox' ? s * 6 : kind === 'mouse' ? s * 8 : s * 7;
-    const y = kind === 'mouse' ? -7.8 : kind === 'fox' ? -5 : kind === 'salamander' ? -3 : -7;
+    const x = kind === 'hare' ? s * 7 : kind === 'moth' ? s * 4 : kind === 'fox' ? s * 6 : kind === 'mouse' ? s * 8 : s * 7;
+    const y = kind === 'hare' ? -9 : kind === 'mouse' ? -7.8 : kind === 'fox' ? -5 : kind === 'salamander' ? -3 : -7;
     const movement = kind === 'hare' ? Math.sin(clock * 1.45 + s * .6) * .08 + twitch * (s < 0 ? .28 : .12) + gait * .065
       : kind === 'moth' ? Math.sin(clock * 2.8 + s) * .085 + twitch * .12
       : kind === 'salamander' ? Math.sin(clock * 3.6 + s) * .07
       : Math.sin(clock * 1.8 + s) * .025 + twitch * .11 + gait * .035;
-    articulatedPart(ctx, `${key}:feature:${s}`, [-20, -34, 40, 47], brush => {
+    articulatedPart(ctx, `${key}:feature:${s}`, [-28, -34, 56, 59], brush => {
       brush.translate(x, y); feature(brush, kind, p, s);
     }, x, y, movement * decoration);
   }
   ctx.restore();
 }
 
+function batWing(ctx: CanvasRenderingContext2D, outer: boolean): void {
+  ctx.save();
+  if (!outer) ctx.translate(3, -7);
+  ctx.rotate(-1.1);
+  const native = outer
+    ? drawPaperAssetRegion(ctx, 'bat-wing', 0, .44, 1, .56, -17.3, 0, 32, 18.48)
+    : drawPaperAssetRegion(ctx, 'bat-wing', 0, 0, 1, .44, -17.3, -1, 32, 14.52);
+  ctx.restore();
+  if (native) { if (!outer) nativeBatWing = true; return; }
+  if (outer) {
+    wash(ctx, 'M0 0 L14 9 L6 15 L11 25 L2 22 L1 33 L-6 25 L-7 14Z', P.charcoal, true, .58);
+    wash(ctx, 'M.5 1 L10 8 L3 14 L5 23 L-1 19 L-4 26 L-5 14Z', P.bruise, true, .32);
+    wash(ctx, 'M1 1 L6 5 L3 14 L1 18 L-.8 10Z', P.slate, true, .13);
+    paperSeam(ctx, [0, 0, 14, 9, 6, 15, 11, 25], P.smoke, .4);
+    paperSeam(ctx, [0, 0, 1, 18, 1, 33], P.smoke, .36);
+  } else {
+    wash(ctx, 'M3 -8 L16 -26 L21 -16 L14 -8 L9 3 L5 12 L1 0Z', P.ink, true, .57);
+    wash(ctx, 'M3 -5 L16 -23 L16 -14 L9 -3 L6 8Z', P.bruise, true, .3);
+    wash(ctx, 'M4 -6 L8 -12 L7 -3 L4 2Z', P.charcoal, true, .17);
+    paperSeam(ctx, [3, -6, 16, -24, 17, -17], P.smoke, .45);
+  }
+}
 function bat(ctx: CanvasRenderingContext2D, time: number, back: boolean, state: ActorDrawingState): void {
   const decoration = state.reducedMotion ? .16 : 1, flight = state.reducedMotion ? .55 : 1;
   const attack = Math.sin(Math.min(1, (state.action || 0) / .26) * Math.PI);
+  const asleep = !!state.asleep;
+  const flap = asleep ? 0 : Math.sin(time * 15.6), follow = asleep ? 0 : Math.sin(time * 15.6 - .62);
   ctx.save(); ctx.translate(Math.sin(time * 2.7) * .8 * decoration, -21 + Math.sin(time * 4.2) * 2.6 * decoration - attack * 2.3);
   ctx.rotate(Math.sin(time * 2.7) * .055 * decoration + attack * .16);
+  // Each wing has shoulder and outer folds; texture is painted once, while its paper joints flap live.
   for (const side of [-1, 1]) {
-    const lift = Math.sin(time * 15.6 + side * .1) * 8.5 * flight;
-    ctx.save(); ctx.scale(side, 1); ctx.translate(3, -7); ctx.rotate(Math.sin(time * 15.6 - .3 + side * .1) * .045 * flight); ctx.translate(-3, 7);
-    wash(ctx, `M3 -8 L16 ${-26 + lift} L30 ${-15 + lift} L21 ${-9 + lift} L26 ${1 + lift} L17 ${-1 + lift} L17 ${9 + lift * .4} L9 3 L5 12 L1 0Z`, P.charcoal, true, .95);
-    wash(ctx, `M3 -5 L16 ${-22 + lift} L23 ${-15 + lift} L13 ${-4 + lift} L7 6Z`, P.bruise);
-    pen(ctx, `M3 -5 L16 ${-22 + lift} L30 ${-15 + lift} M3 -3 L13 ${-12 + lift} L26 ${1 + lift} M3 -2 L9 ${-2 + lift} L17 ${9 + lift * .4}`, P.smoke, .7); ctx.restore();
+    ctx.save(); ctx.scale(side, 1); ctx.translate(3, -7);
+    ctx.rotate((flap * .23 + side * .025) * flight); ctx.scale(1, 1 - (flap + 1) * .09 * flight); ctx.translate(-3, 7);
+    paintedPart(ctx, 'bat:inner-wing', [-8, -29, 36, 43], brush => batWing(brush, false));
+    ctx.translate(nativeBatWing ? 15.05 : 16, nativeBatWing ? -.86 : -26); ctx.rotate((follow * .22 - .06) * flight);
+    paintedPart(ctx, 'bat:outer-wing', [-13, -18, 40, 47], brush => batWing(brush, true)); ctx.restore();
   }
-  wash(ctx, 'M-5 -9 L6 -8 L8 1 L4 12 L-3 11 L-7 4Z', P.bruise, true);
-  wash(ctx, 'M-7 -9 L-10 -25 L-2 -14 L3 -13 L10 -23 L7 -8Z', P.ash, true);
-  wash(ctx, 'M-8 -14 L-1 -18 L7 -14 L8 -5 L-1 2 L-8 -5Z', P.fog, true);
-  if (!back) {
-    pen(ctx, 'M-6 -9 L-2 -8 M2 -8 L6 -10 M-4 -3 L0 -4 L4 -3', P.ink, 1.3);
-    wash(ctx, 'M-3 -3 L-2 1 L-1 -3Z', P.paper); wash(ctx, 'M2 -3 L3 .7 L4 -3Z', P.paper);
-    wash(ctx, 'M-3 2 L3 2 L4 8 L-3 8Z', P.ochre); pen(ctx, 'M0 3 L0 6 L2 7', P.ink, .65);
-  }
-  pen(ctx, 'M-4 10 L-6 14 L-3 13 M4 10 L6 14 L3 13', P.smoke, 1.3); ctx.restore();
+  paintedPart(ctx, `bat:body:${back}`, [-13, -16, 26, 34], brush => {
+    wash(brush, 'M-5 -9 L6 -8 L8 1 L4 12 L-3 11 L-7 4Z', P.ink, true, .55);
+    wash(brush, 'M-5 -9 L.1 -7 L-1.6 7 L-5 10 L-7 4Z', P.bruise, true, .28);
+    wash(brush, 'M-3.6 -7 L.5 -3 L4.2 -8 L1.9 2 L-.5 2Z', P.paper, true, .16);
+    wash(brush, 'M1.3 -1 L3.2 -.3 L3.7 7.4 L1.6 9 L.6 5Z', P.umbra, true, .11);
+    wash(brush, 'M-3 2 L3 2 L4 8 L-3 8Z', P.ochre, true, .22);
+    pen(brush, 'M0 3 L0 6 L2 7', P.ink, .5);
+    wash(brush, 'M-4 10 L-6.2 14.6 L-2.7 13.4 L-2.9 11Z', P.smoke, true, .15);
+    wash(brush, 'M4 10 L6.2 14.6 L2.7 13.4 L2.9 11Z', P.smoke, true, .15);
+  });
+  const blink = state.asleep || (time % 5.9 > 4.82 && time % 5.9 < 4.96);
+  ctx.save(); ctx.translate(0, -9); ctx.rotate(Math.sin(time * 2.1) * .028 * decoration);
+  paintedPart(ctx, `bat:face:${back}:${blink}:${!!state.mindChanged}`, [-15, -21, 30, 26], brush => {
+    if (!back && drawPaperAsset(brush, 'bat-head', -11, -19, 22, 23)) {
+      if (blink) {
+        const aspect = paperAssetAspect('bat-head'), width = Math.min(22, 23 * aspect), height = Math.min(23, 22 / aspect), left = -11 + (22 - width) / 2, top = 4 - height;
+        for (const [u, v] of [[.28, .64], [.58, .605]]) {
+          const x = left + u * width, y = top + v * height, half = width * .11;
+          const lid = `M${x - half} ${y -.1} Q${x} ${y - 1.6} ${x + half} ${y -.3} L${x + half -.2} ${y + .8} Q${x} ${y + 1.3} ${x - half} ${y + .7}Z`;
+          paperPath(brush, shapePath(lid), P.clay, [x - half - 1, y - 2, half * 2 + 2, 4], hash(lid), .05);
+          pen(brush, `M${x - half} ${y -.05} Q${x} ${y + .7} ${x + half} ${y -.3}`, P.umbra, .38);
+        }
+      }
+      return;
+    }
+    wash(brush, 'M-7 -.5 L-10 -17 L-2 -6 L3 -5 L10 -15 L7 1Z', P.ash, true, .55);
+    wash(brush, 'M-8 -6 L-1 -10 L7 -6 L8 3 L-1 10 L-8 3Z', P.fog, true, .53);
+    wash(brush, 'M-8 -6 L-1 -10 L-1 -2 L-5 1 L-8 3Z', P.sand, true, .21);
+    wash(brush, 'M1 -8 L7 -6 L8 3 L1 7 L-.5 .3Z', P.slate, true, .2);
+    if (!back) {
+      pen(brush, blink ? 'M-6 -1 L-2 -.6 M2 -.6 L6 -2' : 'M-6 -1 L-2 0 L-4 1 M2 0 L6 -2 L4 1 M-4 5 L0 4 L4 5', P.ink, .7);
+      wash(brush, 'M-3 5 L-2 9 L-1 5Z', P.paper, true, .1); wash(brush, 'M2 5 L3 8.7 L4 5Z', P.paper, true, .1);
+    }
+  }); ctx.restore(); ctx.restore();
 }
-
 export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, xScreen: number, yScreen: number, facing: number, moving: boolean, animation: number, time: number, scale = 1, color?: string, state: ActorDrawingState = {}): void {
+  refreshPaperCaches();
   ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
   const angle = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const back = angle > Math.PI * 1.18 && angle < Math.PI * 1.82;
@@ -553,6 +747,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   ctx.rotate(fixed ? 0 : posture + gait * .025 * weight + (side ? running * .09 - sneaking * .045 : 0) + action * .13 - recoil * .1);
   ctx.translate(0, 15);
   const wide = kind === 'ox' || kind === 'boar';
+  const shoulderWidth = kind === 'lady' ? 5.5 : wide ? 11 : 8;
   const armGait = moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration;
   const elbowGait = moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration;
   const leftUpper = -.07 + armGait * (.28 + running * .17) + action * .28;
@@ -561,19 +756,19 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   let rightLower = .07 - elbowGait * .12 - running * .2 + action * .4;
   if (kind === 'lady' && kissRaise > 0) {
     const lift = kissRaise * decoration;
-    const target = armToPoint(8, -28, 3.5 + kissRelease * 15, -30 - kissRelease * 1.5);
+    const target = armToPoint(shoulderWidth, -28, -3.3 + kissRelease * 17, -33.5 + kissRelease * 1.5);
     rightUpper += (target.upper - rightUpper) * lift;
     rightLower += (target.lower - rightLower) * lift;
   }
-  bentArm(ctx, key, p, -(wide ? 11 : 8), -28, leftUpper, leftLower);
+  bentArm(ctx, key, p, -shoulderWidth, -28, leftUpper, leftLower);
   ctx.save(); ctx.translate(0, -24);
   const chestBreath = state.asleep ? Math.sin(clock * 1.1) * .4 : breath;
   ctx.scale(1 + chestBreath * (kind === 'ox' || kind === 'lady' ? .022 : .012), 1 + chestBreath * .009);
   ctx.translate(0, 24); paintedPart(ctx, `${key}:coat:${back}`, [-19, -38, 38, 41], brush => torso(brush, kind, p, back)); ctx.restore();
   const foregroundArm = kind === 'lady' && kissRaise > .1;
-  if (!foregroundArm) bentArm(ctx, key, p, wide ? 11 : 8, -28, rightUpper, rightLower);
+  if (!foregroundArm) bentArm(ctx, key, p, shoulderWidth, -28, rightUpper, rightLower);
   if (kind === 'heron') { wash(ctx, 'M-3 -28 Q-5 -36 -2 -41 L3 -40 Q1 -33 3 -28Z', p.face); }
-  const detached = ['hare', 'moth', 'fox', 'mouse', 'salamander'].includes(kind);
+  const detached = ['hare', 'fox', 'mouse', 'salamander'].includes(kind) || kind === 'moth' && !paperAssetsRevision();
   const headY = kind === 'lady' ? -40 : kind === 'heron' ? -42 : kind === 'human' ? -38.4 : -37;
   ctx.save(); ctx.translate(fixed ? 0 : glance * .8 * decoration, fixed ? 0 : moving ? Math.sin(phase - .35) * .28 : Math.sin(clock * .85) * (kind === 'lady' ? .1 : .25) * decoration);
   ctx.translate(0, headY);
@@ -582,7 +777,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   if (detached) expressiveFeatures(ctx, key, kind, p, side, clock, gait, decoration);
   const expression = `${side}:${back}:${blink}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}:${gaze}:${isKissing}`;
   paintedPart(ctx, `${key}:head:${expression}`, [-28, -71, 56, 56], brush => head(brush, kind, p, side, back, blink, 0, state, gaze, isKissing, detached)); ctx.restore();
-  if (foregroundArm) bentArm(ctx, key, p, 8, -28, rightUpper, rightLower);
+  if (foregroundArm) bentArm(ctx, key, p, shoulderWidth, -28, rightUpper, rightLower);
   if (kind === 'lady' && state.billboard && decoration > .8) {
     const release = kissCycle - 4.8;
     if (release > 0 && release < 1.6) {
@@ -598,7 +793,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
     if (!(kind === 'lady' && state.billboard)) {
       const heldLeft = kind === 'human';
       const upper = heldLeft ? leftUpper : rightUpper, lower = heldLeft ? leftLower : rightLower;
-      const shoulder = (heldLeft ? -1 : 1) * (wide ? 11 : 8);
+      const shoulder = (heldLeft ? -1 : 1) * shoulderWidth;
       const handX = shoulder - Math.sin(upper) * 7.3 - Math.sin(upper + lower) * 9.4 - Math.cos(upper) * .4;
       const handY = -28 + Math.cos(upper) * 7.3 + Math.cos(upper + lower) * 9.4 - Math.sin(upper) * .4;
       ctx.save(); ctx.translate(handX - (heldLeft ? -8.4 : 7.6), handY + 11.3);
@@ -671,16 +866,34 @@ function itemDrawing(ctx: CanvasRenderingContext2D, id: string): void {
   } else if (id.includes('brain') && !id.includes('protocol')) {
     const brain = id.includes('blank') ? P.ash : id.includes('ada') ? P.paper : P.flesh;
     const inJar = id.includes('supine'); ctx.save(); if (inJar) { ctx.translate(0, -.5); ctx.scale(.67, .67); }
-    // Cortical planes remain two actual hemispheres even in the fractured drawing language.
-    wash(ctx, 'M-13 -2 L-14 -7 L-9 -11 L-3 -12 L0 -9 L4 -12 L11 -9 L15 -3 L12 5 L6 9 L1 7 L-4 10 L-11 7Z', brain, true, .85);
-    wash(ctx, 'M-12 -4 L-7 -9 L-1 -7 L-5 -1 L-10 1Z', P.paper, false, .25);
-    pen(ctx, 'M0 -10 L-1 -4 L1 1 L0 7 M-10 -6 L-5 -4 L-8 0 L-3 3 L-6 6 M6 -7 L3 -3 L8 0 L4 3 L7 5', P.bruise, .9);
-    pen(ctx, 'M-2 9 L-1 13 L2 13 L1 9', P.umbra, 1.3); ctx.restore();
-    if (inJar) { pen(ctx, 'M-9 -10 L-11 -4 L-10 9 L0 13 L10 9 L11 -4 L9 -10Z', P.water, 1.2); wash(ctx, 'M-10 -13 L10 -13 L10 -9 L-10 -9Z', P.slate); pen(ctx, 'M-6 -6 L-7 0 L-6 6 M4 7 L7 5', P.chalk, 1); pen(ctx, 'M10 3 L15 2 L15 7 L13 11', P.clay, 1.1); }
+    // Two recognizable, irregular hemispheres replace the old angular token-like organ.
+    wash(ctx, 'M-.6 -9.1 C-3.3 -13.2 -8.6 -11.6 -10 -9.2 C-13.7 -10.1 -16 -5.7 -13.7 -2.7 C-15.1 1.8 -12.3 5 -9.7 5.3 C-8.4 9.4 -2.5 9.5 -.5 6.2 L-.6 -9.1Z', brain, true, .55);
+    wash(ctx, 'M.6 -9.4 C3.7 -13 8.9 -11.5 10.3 -8.8 C14.2 -8.9 16 -4.5 13.5 -1.5 C15.1 2.8 11.8 6.3 8.8 6.2 C6.8 10 2.4 9.6 .7 6.1 L.6 -9.4Z', id.includes('blank') ? P.fog : P.flesh, true, .55);
+    wash(ctx, 'M-10 -7 L-6 -10 L-1.5 -8.4 L-4.6 -3.1 L-9.4 -2.3Z', P.paper, true, .18);
+    wash(ctx, 'M3 -8 L8 -9 L11 -5 L7 -2 L2.7 -3Z', P.clay, true, .17);
+    wash(ctx, 'M-10 1 L-7 -.3 L-3 3 L-5 7 L-8 6Z', id.includes('blank') ? P.ash : P.flesh, true, .16);
+    pen(ctx, 'M-.2 -9 Q-1.4 -6 -.3 -2 Q1.2 1 .2 6', P.bruise, .7);
+    pen(ctx, 'M-10 -8 Q-7 -7.1 -8 -4.8 Q-10.8 -3.2 -8.6 -1.5 Q-4.9 -.8 -6 1.8 Q-9 3.2 -6.7 5.3 M-5.7 -8.4 Q-3.3 -7.7 -4 -5.1 Q-6.3 -3.4 -3.1 -1.9 Q-1.7 -.3 -3.5 1.7 Q-5 3.1 -2.8 5', P.bruise, .64);
+    pen(ctx, 'M5 -8.2 Q2.9 -6.8 4 -4.5 Q7.5 -3.4 5.4 -.9 Q3.2 1 5.3 2.7 Q8.2 3.8 5.4 6.3 M10 -6.1 Q7.7 -4.9 10 -2.8 Q12.5 -.4 9.4 1.6 Q7.5 3.3 10 4.5', P.bruise, .64);
+    wash(ctx, 'M-1.8 6.4 L1.8 6.7 L1.7 10.1 L3 13 L-.5 13.8 L-2 10.2Z', P.clay, true, .18); ctx.restore();
+    if (inJar) {
+      ctx.save(); ctx.globalAlpha *= .17; wash(ctx, 'M-9.7 -9.9 L9.6 -10 L11 -4 L10.5 8.8 L0 13 L-10.5 9 L-11 -3Z', P.water, true, .3); ctx.restore();
+      paperSeam(ctx, [-9, -10, -11, -4, -10, 9, 0, 13, 10, 9, 11, -4, 9, -10], P.deepWater, .65);
+      wash(ctx, 'M-10.4 -13 L10.5 -13 L10.3 -9.4 L-10.1 -9.2Z', P.slate, true, .23);
+      wash(ctx, 'M-7.7 -7.9 L-5.9 -7.1 L-6.8 5.8 L-8.1 6.4Z', P.paper, true, .09);
+      pen(ctx, 'M4 7 L7 5 M10 3 L15 2 L15 7 L13 11', P.clay, .65);
+    }
   } else if (id.includes('switch')) {
     wash(ctx, 'M-12 -2 L7 -5 L12 9 L-9 12Z', P.slate, true); pen(ctx, 'M-1 2 L2 -11', P.sand, 2.2); wash(ctx, 'M-2 -14 L7 -13 L6 -8 L-3 -9Z', P.bruise);
     pen(ctx, 'M-8 5 L-4 4 M4 3 L8 4 M-8 9 L6 7', P.paper, 1.1); pen(ctx, 'M-10 -1 L-13 -8 L-8 -12 M8 0 L14 -8 L9 -11', P.umbra, 1.1);
-  } else if (id.includes('coupon')) { paper(P.bruise); wash(ctx, 'M-4 -9 L2 -10 L5 -6 L3 -2 L-3 -3Z', P.chalk); pen(ctx, 'M-2 -6 L-.7 -5 M1 -6 L2 -5 M-1 -3 L1 -3', P.bruise, .65); }
+  } else if (id.includes('coupon')) {
+    paper(P.bruise);
+    if (!drawPaperAsset(ctx, 'lady-head', -5.2, -10.2, 10.5, 11)) {
+      wash(ctx, 'M-4 -9 L2 -10 L5 -6 L3 -2 L-3 -3Z', P.chalk, true, .25);
+      wash(ctx, 'M-3.7 -9.1 L2 -9.6 L3.5 -8 L-2.5 -7.7Z', P.ink, true, .1);
+      pen(ctx, 'M-2 -6 L-.7 -5 M1 -6 L2 -5 M-1 -3 L1 -3', P.bruise, .45);
+    }
+  }
   else if (id.includes('time_glass') || id.includes('timeglass') || id === 'time') {
     pen(ctx, 'M-8 -12 L8 -12 M-8 12 L8 12', P.ochre, 2.2);
     wash(ctx, 'M-6 -11 L6 -11 L3 -3 L0 0 L5 6 L6 11 L-6 11 L-5 6 L0 0 L-3 -3Z', P.water, true);
@@ -715,37 +928,36 @@ function makeItemCanvas(id: string): HTMLCanvasElement {
 }
 export function drawItemIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, size: number): void {
   if (!id) return;
+  refreshPaperCaches();
   ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; ctx.drawImage(makeItemCanvas(id), x, y, size, size); ctx.restore();
 }
 export function itemIconDataUrl(id: string, size = 32): string {
   if (typeof document === 'undefined') return '';
-  const key = `${id}:${size}`; const cached = iconCache.get(key); if (cached) return cached;
+  refreshPaperCaches();
+  const key = `${paperAssetsRevision()}:${id}:${size}`; const cached = iconCache.get(key); if (cached) return cached;
   const canvas = document.createElement('canvas'); canvas.width = size * 3; canvas.height = size * 3;
   drawItemIcon(canvas.getContext('2d')!, id, 0, 0, canvas.width);
   const url = canvas.toDataURL('image/png'); iconCache.set(key, url); return url;
 }
 
-/** High-resolution mixed-media portraits; the same drawn inhabitants appear in the world and the conversation. */
+/** The same cut-paper faces and clothing appear in the world, billboard and conversations. */
 export function actorPortraitDataUrl(kind: ActorKind, size = 64, state: ActorDrawingState = {}): string {
   if (typeof document === 'undefined') return '';
-  const key = `${kind}:${size}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}`; const cached = portraitCache.get(key); if (cached) return cached;
+  refreshPaperCaches();
+  const key = `${paperAssetsRevision()}:${kind}:${size}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}:${!!state.reducedMotion}`; const cached = portraitCache.get(key); if (cached) return cached;
   const canvas = document.createElement('canvas'); canvas.width = size * 3; canvas.height = size * 3;
   const ctx = canvas.getContext('2d')!; ctx.scale(3, 3);
-  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, size, size);
-  const rng = random(hash(kind));
+  paperTexture(ctx, 0, 0, size, size, PAPER, hash(kind));
   ctx.save(); ctx.translate(size / 2, size / 2); ctx.scale(size / 60, size / 60);
-  wash(ctx, 'M-28 -24 L-7 -29 L18 -26 L29 -19 L26 16 L20 29 L-21 27 L-30 14Z', P.ash, true, .65);
-  ctx.globalAlpha = .17;
-  for (let i = 0; i < 27; i++) {
-    const x = rng() * 60 - 30, y = rng() * 60 - 30;
-    pen(ctx, `M${x} ${y} q${rng() * 12 - 4} ${rng() * 6} ${rng() * 13} ${rng() * 11 - 5}`, P.umbra, .3 + rng() * .5);
-  }
+  wash(ctx, 'M-28 -24 L-7 -29 L18 -26 L29 -19 L26 16 L20 29 L-21 27 L-30 14Z', P.ash, true, .62);
+  wash(ctx, 'M-29 -16 L-7 -27 L-5 -12 L-15 -3 L-28 5Z', P.sand, true, .5);
+  wash(ctx, 'M7 -26 L24 -21 L29 -8 L17 12 L5 4Z', P.fog, true, .5);
+  wash(ctx, 'M-27 13 L-15 6 L-4 13 L-10 29 L-24 25Z', P.smoke, true, .44);
   ctx.restore();
   const zoom = size / (kind === 'lady' ? 43 : 31);
   const faceOffset = kind === 'lady' ? 39 : kind === 'bat' ? 34 : 37;
   drawActorSprite(ctx, kind, size * .5, size * .55 + faceOffset * zoom, Math.PI / 2, false, 0, 2, zoom, undefined,
     { asleep: state.asleep, mindChanged: state.mindChanged, brainAbsent: state.brainAbsent, reducedMotion: true, phaseOffset: 0 });
-  ctx.strokeStyle = P.bark; ctx.lineWidth = size / 80;
-  ctx.beginPath(); ctx.moveTo(size * .035, size * .06); ctx.lineTo(size * .97, size * .025); ctx.lineTo(size * .94, size * .95); ctx.lineTo(size * .03, size * .975); ctx.closePath(); ctx.stroke();
+  paperSeam(ctx, [size * .035, size * .06, size * .97, size * .025, size * .94, size * .95, size * .03, size * .975], P.bark, size / 160);
   const url = canvas.toDataURL('image/png'); portraitCache.set(key, url); return url;
 }

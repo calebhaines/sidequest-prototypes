@@ -3,6 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { challengeSolved, toggleCircuit } from '../data/investigationTypes';
 import type { ChallengeProgress, Investigation, InvestigationBoard, InvestigationProgress } from '../data/investigationTypes';
 import '../styles/investigations.css';
+import PaperMotif from './PaperMotif';
 
 type Props = {
   investigation: Investigation;
@@ -36,7 +37,7 @@ function CheckMark() {
 }
 
 function LeafMark() {
-  return <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M10 26c0-7 2-12 10-20M11 21C4 18 5 12 7 9c5 1 10 7 4 12Zm2-5c-2-7 3-12 9-12 2 7-3 12-9 12Zm3-4c7-2 12 0 13 4-4 6-13 6-13-4Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <PaperMotif id="willow" size={38} />;
 }
 
 function BookMark({ children = <LeafMark /> }: { children?: ReactNode }) {

@@ -71,7 +71,8 @@ async function fillBoard(board) {
 
 try {
   await page.goto(process.env.GAME_URL || 'http://localhost:5173');
-  await page.locator('.ow-game').waitFor();
+  // The loading screen also owns an .ow-game; attach harnesses after it is replaced.
+  await page.waitForFunction(() => Boolean(window.__ladySupine?.getEngine()));
   const cases = await page.evaluate(async () => (await import('/src/data/investigations.ts')).INVESTIGATIONS);
   const ids = ['entrance', 'rhyme', 'fishing', 'blocks', 'catalog', 'coupons', 'forest', 'artwork', 'casino', 'permit', 'reversion', 'brain', 'switch', 'minder', 'lullaby', 'final_gate'];
   if (wantPuzzles) for (const id of ids) {

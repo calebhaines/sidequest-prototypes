@@ -278,35 +278,103 @@
   .puzzle-modal *, .puzzle-modal *::before, .puzzle-modal *::after { transition: none !important; }
 }
 
-/* Reused notices and handwritten diagrams, dense ink on smoke-stained stock. */
-.puzzle-overlay{background:rgba(var(--p-ink-rgb),0.6588);backdrop-filter:blur(4px)}
-.puzzle-modal{--pzl-paper:var(--p-ash);--pzl-ink:var(--p-ink);--pzl-moss:var(--p-umbra);--pzl-muted:var(--p-slate);--pzl-line:var(--p-sage);--pzl-sage:var(--p-ash);border:1.5px solid var(--p-umbra);border-radius:0;background-color:var(--p-ash);background-image:radial-gradient(ellipse at 91% 13%,rgba(var(--p-bark-rgb),0.1294),transparent 38%),radial-gradient(ellipse at 8% 82%,rgba(var(--p-slate-rgb),0.1373),transparent 42%),linear-gradient(103deg,var(--p-ash),var(--p-paper) 45%,var(--p-ash));box-shadow:0 20px 85px rgba(var(--p-ink-rgb),0.5294);color:var(--p-ink)}
-.puzzle-header{background:rgba(var(--p-ash-rgb),0.3686);border-bottom:1px solid rgba(var(--p-smoke-rgb),0.451)}.puzzle-header h2{font-family:var(--hand,'Kalam',cursive);font-weight:700;letter-spacing:-.3px;line-height:1.2}.puzzle-eyebrow,.puzzle-place,.pzl-clue-label,.pzl-clock-caption,.pzl-permit-heading>span{font-family:var(--hand,'Kalam',cursive);font-weight:700;color:var(--p-umbra);letter-spacing:.4px}.puzzle-close{border-color:rgba(var(--p-smoke-rgb),0.5098);border-radius:0;color:var(--p-charcoal)}.puzzle-close:hover{background:var(--p-fog)}.puzzle-aside{background:rgba(var(--p-lichen-rgb),0.3137);border-color:rgba(var(--p-smoke-rgb),0.4314)}.puzzle-aside p,.puzzle-aside-note,.puzzle-hint,.puzzle-hint-button small,.puzzle-footer,.puzzle-success p{color:var(--p-charcoal)}.puzzle-aside p{font-size:14px;line-height:1.75}.puzzle-aside-note{font-size:13px}.puzzle-emblem,.puzzle-success-mark{border-color:var(--p-bruise);color:var(--p-slate);background:rgba(var(--p-fog-rgb),0.2824);border-radius:0;transform:rotate(-3deg)}.puzzle-success h3{font-family:var(--hand,'Kalam',cursive);font-weight:700}.puzzle-hint-button,.puzzle-assist{color:var(--p-charcoal);border-color:rgba(var(--p-smoke-rgb),0.5059);border-radius:0}.puzzle-feedback{color:var(--p-charcoal)}.puzzle-feedback-visible{border-color:var(--p-slate)}.puzzle-footer{font-family:var(--hand,'Kalam',cursive);font-size:11px}.pzl-clue{background:rgba(var(--p-lichen-rgb),0.3882);border:1px solid rgba(var(--p-water-rgb),0.6588);border-left:3px solid var(--p-smoke);border-radius:0;transform:rotate(-.3deg)}.pzl-clue p,.pzl-clue strong{color:var(--p-ink)}.pzl-clue p{font-size:15px;line-height:1.75}.pzl-primary{font-family:var(--hand,'Kalam',cursive)!important;font-size:15px!important;background:var(--p-umbra);border-color:var(--p-charcoal);color:var(--p-paper);border-radius:0}.pzl-primary:hover{background:var(--p-bruise);border-color:var(--p-slate)}.pzl-small,.pzl-center,.pzl-text-button{color:var(--p-umbra)}.pzl-order-card,.pzl-symbol-choice,.pzl-wire-terminal,.pzl-allocation>label,.pzl-permit,.pzl-inscription,.pzl-account{border-radius:0;background:rgba(var(--p-ash-rgb),0.3804);border-color:rgba(var(--p-smoke-rgb),0.5216);box-shadow:none}.pzl-order-card{border-left-width:3px;transform:rotate(.2deg)}.pzl-order-card:nth-child(even){transform:rotate(-.4deg)}.pzl-order-card strong,.pzl-order-card div>span,.pzl-order-number,.pzl-order-mark,.pzl-symbol-choice,.pzl-symbol-choice small,.pzl-account,.pzl-wire-terminal,.pzl-wire-column h3,.pzl-allocation label>strong,.pzl-allocation small{color:var(--p-charcoal)}.pzl-order-card strong,.pzl-symbol-choice strong,.pzl-symbol-choice>span:first-child{font-family:var(--hand,'Kalam',cursive);font-size:18px;font-weight:700}.pzl-order-card div>span{font-size:12px}.pzl-order-controls button,.pzl-clock-wheels select,.pzl-poem select,.pzl-permit input,.pzl-permit select,.pzl-allocation input,.pzl-coupon select{background:var(--p-paper);color:var(--p-ink);border-color:rgba(var(--p-smoke-rgb),0.6118);border-radius:0;box-shadow:none}.pzl-clock-face{background:var(--p-fog);border:3px solid var(--p-slate);box-shadow:none;border-radius:0}.pzl-clock-wheels select{font-family:var(--hand,'Kalam',cursive)}.pzl-poem{background:rgba(var(--p-ash-rgb),0.3804);transform:rotate(-.3deg);border-radius:0}.pzl-poem p{color:var(--p-ink);font-family:var(--hand,'Kalam',cursive);font-size:24px;line-height:1.6}.pzl-coupon,.pzl-coupon:nth-child(2),.pzl-coupon:nth-child(3){background:rgba(var(--p-lichen-rgb),0.4902);border:1.5px dashed var(--p-bruise);border-radius:0;transform:rotate(-1deg)}.pzl-coupon:nth-child(2){background:rgba(var(--p-fog-rgb),0.5216);transform:rotate(1deg)}.pzl-coupon:nth-child(3){background:rgba(var(--p-fog-rgb),0.4902);transform:rotate(-.4deg)}.pzl-coupon-face,.pzl-coupon>strong,.pzl-coupon>span:not(.pzl-coupon-face){color:var(--p-charcoal)}.pzl-coupon-face{font-family:var(--hand,'Kalam',cursive);transform:rotate(-5deg)}.pzl-symbol-choice:hover,.pzl-symbol-choice.pzl-selected,.pzl-wire-terminal.pzl-selected,.pzl-wire-terminal.pzl-connected{background:rgba(var(--p-fog-rgb),0.6118);border-color:rgba(var(--p-slate-rgb),0.5333);box-shadow:none}.pzl-casino-board{background:var(--p-smoke);border:2px solid var(--p-slate);border-radius:0}.pzl-casino-board .pzl-symbol-choice{background:var(--p-ash);border-color:var(--p-smoke)}.pzl-casino-board .pzl-symbol-choice.pzl-selected{background:var(--p-fog);border-color:var(--p-bruise);box-shadow:none}.pzl-permit-heading strong,.pzl-permit label,.pzl-permit-stamp,.pzl-brain-center>span,.pzl-brain-center>small,.pzl-path-map span,.pzl-path-map small{color:var(--p-charcoal)}.pzl-permit-stamp{color:var(--p-bruise);border-color:var(--p-bruise);opacity:.65}.pzl-forest-scene{background:linear-gradient(var(--p-fog),var(--p-smoke));border-radius:0}.pzl-forest-scene>span,.pzl-forest-scene>span:nth-child(2),.pzl-forest-scene>span:nth-child(4){color:var(--p-charcoal);font-family:var(--hand,'Kalam',cursive)}.pzl-forest-scene>strong{color:var(--p-ash)}.pzl-pond{background:linear-gradient(var(--p-umbra) 52%,var(--p-slate) 53%,var(--p-sage));border-radius:0}.pzl-pond-ripple{color:var(--p-ash)}.pzl-pond-moon{color:var(--p-ash)}.pzl-meter{background:var(--p-fog);border-color:var(--p-smoke)}.pzl-meter-target{background:var(--p-smoke);border-color:var(--p-umbra)}.pzl-meter-float{color:var(--p-charcoal);text-shadow:none}.pzl-switch-machine,.pzl-minders{background:rgba(var(--p-fog-rgb),0.4902);border:1px solid rgba(var(--p-smoke-rgb),0.5216);border-radius:0;box-shadow:none}.pzl-lamps{border-color:rgba(var(--p-smoke-rgb),0.4667)}.pzl-lamps small,.pzl-switches small,.pzl-switches>button,.pzl-minders small,.pzl-minders strong,.pzl-minders>span{color:var(--p-charcoal)}.pzl-lamp{background:var(--p-water);border-color:var(--p-smoke);color:var(--p-ash)}.pzl-lamp.pzl-lit{color:var(--p-umbra);background:var(--p-sand);border-color:var(--p-bark);box-shadow:0 0 12px rgba(var(--p-clay-rgb),0.1608)}.pzl-lever{background:var(--p-water);border-color:var(--p-smoke)}.pzl-lever>i{background:var(--p-ash);border-color:var(--p-smoke)}.pzl-lever-active .pzl-lever{background:var(--p-slate)}.pzl-piano{background:var(--p-slate);border-radius:0}.pzl-piano button{background:var(--p-ash);box-shadow:0 3px 6px rgba(var(--p-charcoal-rgb),0.3137);color:var(--p-charcoal);border-radius:0}.pzl-piano button:hover{background:var(--p-ash)}.pzl-piano strong{font-family:var(--hand,'Kalam',cursive)}.pzl-piano small,.pzl-sound-toggle,.pzl-sound-toggle span{color:var(--p-umbra)}.pzl-music-staff>span{background:var(--p-ash);color:var(--p-smoke)}.pzl-music-staff>.pzl-note-played{color:var(--p-charcoal)}
-@media(max-width:760px){.puzzle-aside p{font-size:13px}.pzl-clue p{font-size:14px}.puzzle-footer{font-size:10px}.pzl-poem p{font-size:22px}}
-@media(max-width:460px){.puzzle-header h2{font-size:25px}.pzl-primary{font-size:14px!important}.pzl-order-card strong{font-size:16px}.pzl-order-card div>span{font-size:11px}.pzl-symbol-choice strong{font-size:14px}.pzl-poem p{font-size:20px}}
-.puzzle-modal{background-image:var(--ink-tracing),radial-gradient(ellipse at 91% 13%,rgba(var(--p-bark-rgb),0.1294),transparent 38%),radial-gradient(ellipse at 8% 82%,rgba(var(--p-slate-rgb),0.1373),transparent 42%),linear-gradient(103deg,var(--p-ash),var(--p-paper) 45%,var(--p-ash));background-size:100% 100%}.pzl-switches>button,.pzl-casino-board,.pzl-piano{border-radius:0}.pzl-lamps small,.pzl-minders small,.pzl-coupon>span:not(.pzl-coupon-face){font-family:var(--hand,'Kalam',cursive)}
-/* The fishing instructions refer to this green band; preserve that useful cue. */
-.pzl-meter-target{background:var(--p-sage);border-left-color:var(--p-pine);border-right-color:var(--p-pine)}
-
-/* Puzzle mechanisms are paper silhouettes in the same small set of inks. */
-.puzzle-overlay{background:rgba(var(--p-charcoal-rgb),.68);backdrop-filter:none}
-.puzzle-modal{--pzl-paper:var(--p-paper);--pzl-ink:var(--p-ink);--pzl-moss:var(--p-pine);--pzl-muted:var(--p-slate);--pzl-line:var(--p-smoke);--pzl-sage:var(--p-lichen);background:var(--p-paper);background-image:var(--ink-tracing);border-radius:0;box-shadow:6px 7px 0 rgba(var(--p-ink-rgb),.25)}
-.puzzle-header{background:var(--p-ash);border-bottom-color:var(--p-smoke);border-left:7px solid var(--p-bruise)}
-.puzzle-aside{background:rgba(var(--p-ash-rgb),.36)}
-.pzl-clue,.pzl-order-card,.pzl-symbol-choice,.pzl-wire-terminal,.pzl-allocation>label,.pzl-permit,.pzl-inscription,.pzl-account{background:var(--p-ash);border-radius:0;border-color:var(--p-smoke);box-shadow:none}
-.pzl-clue{border-left:3px solid var(--p-bruise)}
-.pzl-order-card{background:var(--p-chalk);border-left-color:var(--p-bruise)}
-.pzl-symbol-choice:hover,.pzl-symbol-choice.pzl-selected,.pzl-wire-terminal.pzl-selected,.pzl-wire-terminal.pzl-connected{background:var(--p-chalk);border-color:var(--p-bruise)}
-.pzl-order-controls button,.pzl-clock-wheels select,.pzl-poem select,.pzl-permit input,.pzl-permit select,.pzl-allocation input,.pzl-coupon select{background:var(--p-chalk);color:var(--p-ink);border-color:var(--p-smoke)}
-.pzl-primary{background:var(--p-charcoal);color:var(--p-chalk);border-color:var(--p-ink)}
-.pzl-primary:hover{background:var(--p-ink);color:var(--p-chalk)}
-.pzl-forest-scene{background:var(--p-pine)}.pzl-forest-scene>span,.pzl-forest-scene>span:nth-child(2),.pzl-forest-scene>span:nth-child(4){color:var(--p-ink)}.pzl-forest-scene>strong{color:var(--p-lichen)}
-.pzl-pond{background:var(--p-deepWater)}.pzl-pond-ripple{color:var(--p-water)}.pzl-pond-moon{color:var(--p-straw)}
-.pzl-switch-machine,.pzl-minders{background:var(--p-ash);border-color:var(--p-slate)}
-.pzl-lamp{background:var(--p-smoke);border-color:var(--p-slate);color:var(--p-chalk)}
-.pzl-lamp.pzl-lit{background:var(--p-straw);border-color:var(--p-ochre);color:var(--p-umbra);box-shadow:none}
-.pzl-casino-board{background:var(--p-bruise);border-color:var(--p-ink)}
-.pzl-casino-board .pzl-symbol-choice{background:var(--p-paper);border-color:var(--p-slate)}
-.pzl-casino-board .pzl-symbol-choice.pzl-selected{background:var(--p-flesh);border-color:var(--p-ink)}
-.pzl-piano{background:var(--p-ink)}.pzl-piano button{background:var(--p-paper);box-shadow:0 3px 0 var(--p-ash)}
-.pzl-permit-stamp{color:var(--p-bruise);border-color:var(--p-bruise)}
+/* Every mechanism is a collection of pasted scraps, not a separate art style. */
+.puzzle-overlay { background: rgba(var(--p-charcoal-rgb), .72); backdrop-filter: none; }
+.puzzle-modal { --pzl-paper: var(--p-paper); --pzl-ink: var(--p-ink); --pzl-moss: var(--p-pine); --pzl-muted: var(--p-slate); --pzl-line: var(--p-clay); --pzl-sage: var(--p-ash); background: var(--p-paper); background-image: var(--paper-grain); color: var(--p-ink); border: 1px solid var(--p-umbra); box-shadow: 5px 6px 0 rgba(var(--p-ink-rgb), .25); }
+.puzzle-header { background: var(--p-ash); background-image: var(--paper-grain); border-left: 6px solid var(--p-rust); border-bottom-color: var(--p-clay); }
+.puzzle-header h2, .puzzle-success h3 { font-family: var(--serif, Georgia, serif); font-weight: 400; letter-spacing: -.025em; line-height: 1.4; color: var(--p-ink); }
+.puzzle-header h2 { font-size: clamp(25px, 2.5vw, 34px); }
+.puzzle-eyebrow, .puzzle-place, .pzl-clue-label, .pzl-clock-caption, .pzl-permit-heading>span { font-family: var(--ui-font, Arial, sans-serif); color: var(--p-umbra); letter-spacing: .1em; }
+.puzzle-close { background: var(--p-paper); color: var(--p-ink); border-color: var(--p-umbra); border-radius: 0; }
+.puzzle-close:hover { background: var(--p-chalk); }
+.puzzle-aside { background: rgba(var(--p-ash-rgb), .38); border-color: var(--p-clay); }
+.puzzle-aside p, .puzzle-aside-note, .puzzle-hint, .puzzle-hint-button small, .puzzle-footer, .puzzle-success p { color: var(--p-charcoal); }
+.puzzle-aside p { font-size: 13px; line-height: 1.8; }
+.puzzle-emblem, .puzzle-success-mark { background: var(--p-ash); background-image: var(--paper-grain); color: var(--p-pine); border: 1px solid var(--p-clay); border-radius: 0; box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .13); transform: rotate(-2deg); }
+.puzzle-emblem img { width: 52px; height: 52px; object-fit: contain; }
+.puzzle-hint-button { background: var(--p-paper); background-image: var(--paper-grain); border-color: var(--p-clay); color: var(--p-charcoal); }
+.puzzle-hint-button:hover:not(:disabled) { background-color: var(--p-chalk); }
+.puzzle-assist, .puzzle-feedback { color: var(--p-charcoal); border-color: var(--p-clay); }
+.puzzle-feedback-visible { border-color: var(--p-rust); }
+.puzzle-footer { background: var(--p-ash); background-image: var(--paper-grain); border-color: var(--p-clay); font-family: var(--ui-font, Arial, sans-serif); font-size: 10px; }
+.pzl-clue { background: var(--p-ash); background-image: var(--paper-grain); border: 1px solid var(--p-clay); border-left: 3px solid var(--p-rust); box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .11); transform: none; }
+.pzl-clue p { color: var(--p-ink); font-size: 15px; line-height: 1.8; }
+.pzl-clue strong { color: var(--p-ink); }
+.pzl-primary { background: var(--p-charcoal); color: var(--p-paper); border-color: var(--p-charcoal); font-family: var(--ui-font, Arial, sans-serif) !important; font-size: 13px !important; box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .16); }
+.pzl-primary:hover { background: var(--p-ink); border-color: var(--p-ink); color: var(--p-chalk); }
+.pzl-small, .pzl-center, .pzl-text-button { color: var(--p-charcoal); }
+.pzl-order-card, .pzl-symbol-choice, .pzl-wire-terminal, .pzl-allocation>label, .pzl-permit, .pzl-inscription, .pzl-account { background: var(--p-ash); background-image: var(--paper-grain); border-color: var(--p-clay); box-shadow: 2px 2px 0 rgba(var(--p-ink-rgb), .1); border-radius: 0; }
+.pzl-order-card { background-color: var(--p-paper); border-left: 3px solid var(--p-rust); }
+.pzl-order-card:nth-child(even) { background-position: 55px 20px; }
+.pzl-order-card strong, .pzl-order-card div>span, .pzl-order-number, .pzl-order-mark,
+.pzl-symbol-choice, .pzl-symbol-choice small, .pzl-account, .pzl-wire-terminal,
+.pzl-wire-column h3, .pzl-allocation label>strong, .pzl-allocation small { color: var(--p-ink); }
+.pzl-order-card strong { font-family: Georgia, serif; font-size: 16px; font-weight: 400; }
+.pzl-order-card div>span { font-size: 11px; line-height: 1.7; }
+.pzl-order-controls button, .pzl-clock-wheels select, .pzl-poem select,
+.pzl-permit input, .pzl-permit select, .pzl-allocation input, .pzl-coupon select { background: var(--p-paper); color: var(--p-ink); border-color: var(--p-umbra); border-radius: 0; box-shadow: none; }
+.pzl-clock-face { background: var(--p-ash); background-image: var(--paper-grain); border: 5px solid var(--p-umbra); box-shadow: 3px 4px 0 rgba(var(--p-ink-rgb), .15); }
+.pzl-clock-wheels select { font-family: Georgia, serif; background-image: var(--paper-grain); }
+.pzl-poem { background: var(--p-ash); background-image: var(--paper-grain); box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .12); }
+.pzl-poem p { color: var(--p-ink); font-family: Georgia, serif; font-size: 22px; line-height: 1.8; }
+.pzl-coupon, .pzl-coupon:nth-child(2), .pzl-coupon:nth-child(3) { background: var(--p-paper); background-image: var(--paper-grain); border: 1px dashed var(--p-umbra); border-radius: 0; transform: rotate(-1deg); box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .12); }
+.pzl-coupon:nth-child(2) { background-color: var(--p-ash); transform: rotate(.7deg); }
+.pzl-coupon:nth-child(3) { background-color: var(--p-fog); transform: rotate(-.4deg); }
+.pzl-coupon-face { display: block; width: 64px; height: 76px; margin: 0 auto 10px; object-fit: contain; }
+.pzl-coupon>strong, .pzl-coupon>span:not(.pzl-coupon-face) { color: var(--p-ink); }
+.pzl-symbol-choice:hover { background-color: var(--p-paper); border-color: var(--p-umbra); }
+.pzl-symbol-choice.pzl-selected, .pzl-wire-terminal.pzl-selected, .pzl-wire-terminal.pzl-connected { background-color: var(--p-chalk); border-color: var(--p-bruise); box-shadow: inset 0 -3px 0 var(--p-bruise); }
+.pzl-symbol-choice>.paper-motif, .pzl-symbol>.paper-motif { width: 48px; height: 48px; }
+.pzl-symbol-choice strong { font-family: var(--ui-font, Arial, sans-serif); font-size: 13px; font-weight: 600; }
+.pzl-choice-tick { color: var(--p-bruise); }
+.pzl-casino-board { background: var(--p-bruise); background-image: var(--paper-grain); border: 3px solid var(--p-charcoal); }
+.pzl-casino-board .pzl-symbol-choice { background: var(--p-paper); background-image: var(--paper-grain); border-color: var(--p-clay); }
+.pzl-casino-board .pzl-symbol-choice.pzl-selected { background: var(--p-flesh); border-color: var(--p-ink); box-shadow: inset 0 -3px 0 var(--p-ink); }
+.pzl-permit-heading strong, .pzl-permit label, .pzl-brain-center>small, .pzl-path-map small { color: var(--p-ink); }
+.pzl-permit-stamp { color: var(--p-bruise); border-color: var(--p-bruise); opacity: .85; }
+.pzl-path-map>div>.paper-motif { display: block; width: 50px; height: 50px; margin: 0 auto 12px; }
+.pzl-forest-scene { position: relative; background: var(--p-ash); background-image: var(--paper-grain); padding: 0 16px 4px; }
+.pzl-forest-scene>img { width: 18%; max-width: 90px; height: 135px; object-fit: contain; transform: rotate(-5deg); }
+.pzl-forest-scene>img:nth-child(even) { transform: rotate(4deg) scale(.86); }
+.pzl-forest-scene>.paper-motif { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); }
+.pzl-pond { background: var(--p-deepWater); background-image: var(--paper-grain); }
+.pzl-pond:before { content: ''; position: absolute; left: -2%; right: -2%; bottom: -10px; height: 73px; background: var(--p-water); background-image: var(--paper-grain); transform: rotate(-1.8deg); pointer-events: none; }
+.pzl-pond-moon { color: var(--p-straw); }
+.pzl-pond-ripple { color: var(--p-paper); }
+.pzl-reeds { color: var(--p-umbra); }
+.pzl-fish-count>img { width: 30px; height: 30px; object-fit: contain; opacity: .42; }
+.pzl-fish-count>.pzl-fish-caught { opacity: 1; }
+.pzl-meter { background: var(--p-ash); border-color: var(--p-clay); }
+/* The written instructions name this green window. */
+.pzl-meter-target { background: var(--p-sage); border-left-color: var(--p-pine); border-right-color: var(--p-pine); }
+.pzl-meter-float { color: var(--p-ink); text-shadow: none; }
+.pzl-brain-center>img { width: 54px; height: 70px; object-fit: contain; display: block; margin: 0 auto 5px; }
+.pzl-switch-machine, .pzl-minders { background: var(--p-ash); background-image: var(--paper-grain); border: 1px solid var(--p-clay); box-shadow: 2px 3px 0 rgba(var(--p-ink-rgb), .12); }
+.pzl-lamps { border-color: var(--p-clay); }
+.pzl-lamps small, .pzl-switches small, .pzl-switches>button, .pzl-minders small, .pzl-minders strong { color: var(--p-ink); }
+.pzl-lamp { background: var(--p-smoke); border-color: var(--p-charcoal); color: var(--p-paper); border-radius: 38% 45% 42% 46%; box-shadow: none; }
+.pzl-lamp.pzl-lit { background: var(--p-straw); color: var(--p-umbra); border-color: var(--p-ochre); box-shadow: none; }
+.pzl-lever { background: var(--p-water); border-color: var(--p-umbra); }
+.pzl-lever>i { background: var(--p-paper); border-color: var(--p-clay); border-radius: 0; box-shadow: 1px 2px 0 rgba(var(--p-ink-rgb), .2); }
+.pzl-lever-active .pzl-lever { background: var(--p-charcoal); }
+.pzl-minders>img { width: 90px; height: 116px; object-fit: contain; transition: transform 220ms ease; }
+.pzl-minders>.pzl-distracted { transform: rotate(14deg); }
+.pzl-piano { background: var(--p-charcoal); background-image: var(--paper-grain); }
+.pzl-piano button { background: var(--p-paper); background-image: var(--paper-grain); box-shadow: 2px 3px 0 var(--p-umbra); color: var(--p-ink); border-radius: 0; }
+.pzl-piano button:hover { background-color: var(--p-chalk); }
+.pzl-piano strong { font-family: Georgia, serif; }
+.pzl-piano small, .pzl-sound-toggle, .pzl-sound-toggle span { color: var(--p-umbra); }
+.pzl-music-staff>span { background: var(--p-paper); color: var(--p-clay); }
+.pzl-music-staff>.pzl-note-played { color: var(--p-ink); }
+.pzl-allocation>label>img { display: block; width: 54px; height: 64px; object-fit: contain; margin: 0 auto 10px; }
+@media(max-width:760px) { .pzl-clue p { font-size: 14px; } .puzzle-footer { font-size: 9px; } }
+@media(max-width:460px) {
+  .puzzle-header h2 { font-size: 24px; }
+  .pzl-poem p { font-size: 20px; }
+  .pzl-order-card strong { font-size: 15px; }
+  .pzl-order-card div>span { font-size: 10px; }
+  .pzl-coupon-face { width: 44px; height: 55px; }
+  .pzl-brain-center>img { width: 34px; height: 49px; }
+  .pzl-minders>img { width: 60px; height: 84px; }
+  .pzl-symbol-choice>.paper-motif, .pzl-symbol>.paper-motif { width: 40px; height: 40px; }
+}

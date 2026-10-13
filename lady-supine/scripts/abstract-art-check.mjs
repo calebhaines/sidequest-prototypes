@@ -70,22 +70,6 @@ try {
     const width = 480, height = 420, root = { x: 240, y: 338 };
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d');
-    let drawnPath = [], rootPaths = [], feet = [];
-    const original = Object.fromEntries(['beginPath', 'moveTo', 'lineTo', 'stroke', 'fill'].map(method => [method, ctx[method].bind(ctx)]));
-    ctx.beginPath = (...args) => { drawnPath = []; return original.beginPath(...args); };
-    for (const method of ['moveTo', 'lineTo']) ctx[method] = (x, y) => {
-      const transformed = new DOMPoint(x, y).matrixTransform(ctx.getTransform());
-      drawnPath.push({ local: [x, y], world: [transformed.x, transformed.y] });
-      return original[method](x, y);
-    };
-    ctx.stroke = (...args) => {
-      if (drawnPath.length === 5 && JSON.stringify(drawnPath.map(point => point.local)) === JSON.stringify([[-6, 2], [-15, 6], [-9, 2], [4, 2], [16, 4]])) rootPaths.push(drawnPath.map(point => point.world));
-      return original.stroke(...args);
-    };
-    ctx.fill = (...args) => {
-      if (drawnPath.length === 8 && drawnPath[0].local[0] === -6 && drawnPath[0].local[1] === 3 && drawnPath[7].local[0] === 8 && drawnPath[7].local[1] === 3) feet.push([drawnPath[0].world, drawnPath[7].world]);
-      return original.fill(...args);
-    };
     const scene = { id: 'qa-abstract-tree-motion', name: 'Isolated tree', location: 'forest', width: 32, height: 32,
       tiles: Array(32 * 32).fill('grass'), objects: [], actors: [], spawn: { x: 12, y: 12 }, outdoors: false };
     const object = { id: 'qa-tree', kind: 'tree', x: 12, y: 12, variant: 0, solid: true };
@@ -93,8 +77,8 @@ try {
       harvested: {}, particles: [], floating: [], camera: { x: 12, y: 10 }, zoom: 2, time: 0, dayTime: .5, flags: [], selected: '', nearby: null,
       fishing: null, waypoint: null, reducedMotion: false, particlesEnabled: false, sequence: null, impacts: [] };
     const draw = (kind, time, reducedMotion = false) => {
-      frame.objects = [{ ...object, kind }]; frame.time = time; frame.reducedMotion = reducedMotion; rootPaths = []; feet = [];
-      renderWorld(ctx, frame, width, height); return { pixels: ctx.getImageData(0, 0, width, height).data.slice(), rootPaths, feet };
+      frame.objects = [{ ...object, kind }]; frame.time = time; frame.reducedMotion = reducedMotion;
+      renderWorld(ctx, frame, width, height); return { pixels: ctx.getImageData(0, 0, width, height).data.slice() };
     };
     const changed = (a, b, box) => {
       let pixels = 0;
@@ -106,13 +90,19 @@ try {
     };
     const boxes = { canopy: { x: root.x - 110, y: root.y - 210, width: 220, height: 150 },
       branches: { x: root.x - 45, y: root.y - 85, width: 90, height: 55 },
-      roots: { x: root.x - 45, y: root.y + 8, width: 90, height: 12 } };
+      roots: { x: root.x - 45, y: root.y - 18, width: 90, height: 18 } };
     const result = {};
     for (const kind of ['tree', 'willow']) {
       const a = draw(kind, 0), b = draw(kind, 2.7), quietA = draw(kind, 0, true), quietB = draw(kind, 2.7, true);
+      renderWorld(ctx, { ...frame, objects: [], time: 0 }, width, height);
+      const bare = { pixels: ctx.getImageData(0, 0, width, height).data.slice() };
+      // Compare the visible rooted bark with an empty scene, then across time.
+      // This checks the native cutout's position without depending on old pen path vertices.
       result[kind] = { canopyPixelsChanged: changed(a, b, boxes.canopy), branchPixelsChanged: changed(a, b, boxes.branches),
-        rootsDetected: a.rootPaths.length > 0 && a.feet.length > 0,
-        rootAnchorsStayFixed: JSON.stringify(a.rootPaths) === JSON.stringify(b.rootPaths) && JSON.stringify(a.feet) === JSON.stringify(b.feet),
+        rootsDetected: changed(a, bare, boxes.roots) > 10,
+        visibleRootPixels: changed(a, bare, boxes.roots),
+        rootPixelsChanged: changed(a, b, boxes.roots),
+        rootAnchorsStayFixed: changed(a, b, boxes.roots) === 0,
         reducedMotionPixelsChanged: changed(quietA, quietB, { x: 0, y: 0, width, height }) };
     }
     return result;
@@ -120,7 +110,7 @@ try {
   for (const [kind, result] of Object.entries(report.trees)) {
     assert.ok(result.canopyPixelsChanged > 100, `${kind}: canopy facets must visibly move`);
     assert.ok(result.branchPixelsChanged > 30, `${kind}: branches must bend separately from the canopy`);
-    assert.ok(result.rootsDetected, `${kind}: the actual root and foot paths must be captured`);
+    assert.ok(result.rootsDetected, `${kind}: the rooted bark must visibly occupy the ground band`);
     assert.ok(result.rootAnchorsStayFixed, `${kind}: trunk foot and root geometry must stay planted while fronds can pass in front`);
     assert.equal(result.reducedMotionPixelsChanged, 0, `${kind}: reduced motion must freeze all decorative tree motion`);
   }
