@@ -3,6 +3,7 @@ import { Backpack, BookOpen, ChevronRight, Clock3, Heart, Map, Menu, Moon, Sun, 
 import type { GameState } from '../data/game';
 import { formatTime } from '../data/game';
 import { ITEM_DEFS } from '../openworld/items';
+import { PALETTE24 as P, rgba as mapWash } from '../openworld/palette';
 import { actorPortraitDataUrl, itemIconDataUrl } from '../openworld/sprites';
 import type { TileKind, Vec, WorldData, WorldSnapshot } from '../openworld/types';
 
@@ -15,6 +16,7 @@ export type GameHUDProps = {
 };
 
 const terrainMaps = new WeakMap<WorldData, HTMLCanvasElement>();
+
 
 function simplifyLine(points: Vec[], tolerance = 1.5): Vec[] {
   if (points.length <= 3) return points;
@@ -91,28 +93,35 @@ function terrainMap(data: WorldData) {
   const context = map.getContext('2d');
   if (context) {
     const scene = data.overworld;
-    context.fillStyle = '#b4b8a5'; context.fillRect(0, 0, map.width, map.height);
-    // Woodland is a field of curved marker washes, not individual tile squares.
+    context.fillStyle = P.sage; context.fillRect(0, 0, map.width, map.height);
+    // A spare collage sets out districts; continuous contours retain the actual geography.
     context.save(); context.scale(3, 3);
     for (const region of data.regions) {
       if (!['forest', 'fields', 'shanty', 'pit'].includes(region.id)) continue;
-      context.fillStyle = region.id === 'forest' ? '#8e97877d' : '#9c9f8b50';
-      context.beginPath(); context.ellipse(region.x + region.width * .54, region.y + region.height * .52, region.width * .42, region.height * .38, -.17, 0, Math.PI * 2); context.fill();
-      context.strokeStyle = '#59674c39'; context.lineWidth = .27;
-      for (let i = 0; i < 9; i++) {
-        const x = region.x + region.width * (.2 + i * .065), y = region.y + region.height * (.3 + Math.sin(i * 1.1) * .14);
-        context.beginPath(); context.moveTo(x, y + 3); context.bezierCurveTo(x - 3, y - 3, x + 2, y - 6, x + 3, y + 2); context.stroke();
+      const pigment = region.id === 'forest' ? P.pine : region.id === 'shanty' ? P.rust : region.id === 'pit' ? P.bruise : P.ochre;
+      context.fillStyle = mapWash(pigment, region.id === 'forest' ? .36 : .23);
+      // Fragile, irregular paper fields frame the traced, navigable banks below.
+      const x = region.x, y = region.y, w = region.width, h = region.height;
+      context.beginPath(); context.moveTo(x + w * .08, y + h * .24);
+      context.lineTo(x + w * .64, y + h * .1); context.lineTo(x + w * .9, y + h * .34);
+      context.lineTo(x + w * .82, y + h * .9); context.lineTo(x + w * .2, y + h * .84);
+      context.closePath(); context.fill();
+      context.strokeStyle = mapWash(P.ink, .18); context.lineWidth = .27;
+      for (let i = 0; i < 6; i++) {
+        const sx = x + w * (.23 + i * .085), sy = y + h * (.33 + Math.sin(i * 1.1) * .11);
+        context.beginPath(); context.moveTo(sx - 1.7, sy + 3); context.lineTo(sx, sy - 4);
+        context.lineTo(sx + 2.6, sy + .3); context.moveTo(sx, sy - 4); context.lineTo(sx + .5, sy + 5); context.stroke();
       }
     }
     context.restore();
-    washContours(context, data, ['dirt', 'tilled'], '#a59681');
-    washContours(context, data, ['sand'], '#c1b496');
-    washContours(context, data, ['water', 'deepWater'], '#809795', '#536d68');
-    washContours(context, data, ['deepWater'], '#6d8986');
-    washContours(context, data, ['stone', 'stoneFloor'], '#9f9f94', '#62685b77');
-    washContours(context, data, ['path', 'woodFloor'], '#c6b9a3', '#6c705b55');
+    washContours(context, data, ['dirt', 'tilled'], P.clay);
+    washContours(context, data, ['sand'], P.sand);
+    washContours(context, data, ['water', 'deepWater'], P.water, P.deepWater);
+    washContours(context, data, ['deepWater'], P.deepWater);
+    washContours(context, data, ['stone', 'stoneFloor'], P.ash, mapWash(P.ink, .34));
+    washContours(context, data, ['path', 'woodFloor'], P.paper, mapWash(P.umbra, .28));
     // Sparse hatching makes the plan feel drawn on a discarded work order.
-    context.save(); context.strokeStyle = '#4d574918'; context.lineWidth = .6;
+    context.save(); context.strokeStyle = mapWash(P.ink, .08); context.lineWidth = .6;
     for (let index = 0; index < 230; index++) {
       const x = ((index * 719) % map.width), y = ((index * 419) % map.height);
       context.beginPath(); context.moveTo(x, y); context.quadraticCurveTo(x + 5, y - 1, x + 11, y + 4); context.stroke();
@@ -122,13 +131,14 @@ function terrainMap(data: WorldData) {
       if (object.kind !== 'building') continue;
       const x = object.x * 3, y = object.y * 3, w = (object.width || 2) * 3, h = (object.height || 2) * 3;
       context.beginPath(); context.moveTo(x - .3, y + .4); context.lineTo(x + w, y); context.lineTo(x + w - .5, y + h); context.lineTo(x + .2, y + h - .7); context.closePath();
-      context.fillStyle = '#8f7874'; context.fill(); context.strokeStyle = '#4e5145'; context.lineWidth = .8; context.stroke();
+      context.fillStyle = P.bruise; context.fill(); context.strokeStyle = P.ink; context.lineWidth = .8; context.stroke();
       context.beginPath(); context.moveTo(x + w * .35, y); context.lineTo(x + w * .4, y + h); context.stroke();
     }
-    // A barely visible paper wash has no visible pixel texture.
-    const stain = context.createRadialGradient(map.width * .7, map.height * .25, 0, map.width * .7, map.height * .25, map.width * .8);
-    stain.addColorStop(0, '#80656e00'); stain.addColorStop(1, '#6c605429');
-    context.fillStyle = stain; context.fillRect(0, 0, map.width, map.height);
+    // Two displaced ink rules imply a discarded form without a shaded vignette.
+    context.strokeStyle = mapWash(P.umbra, .28); context.lineWidth = .8;
+    context.beginPath(); context.moveTo(map.width * .025, map.height * .965);
+    context.lineTo(map.width * .86, map.height * .974);
+    context.moveTo(map.width * .95, map.height * .055); context.lineTo(map.width * .94, map.height * .73); context.stroke();
   }
   terrainMaps.set(data, map);
   return map;
@@ -158,7 +168,7 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(map, 0, 0, width, height);
-    ctx.fillStyle = '#474b45b0';
+    ctx.fillStyle = mapWash(P.charcoal, .73);
     ctx.fillRect(0, 0, width, height);
     ctx.save(); ctx.beginPath();
     for (const key of world.explored) {
@@ -172,10 +182,12 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
       const discovered = world.discovered.includes(region.id) || region.id === world.region.id;
       const px = region.landmark.x * scaleX;
       const py = region.landmark.y * scaleY;
-      ctx.strokeStyle = discovered ? '#424939' : '#8f9281';
-      ctx.fillStyle = discovered ? '#bfa59e' : '#989c87';
+      ctx.strokeStyle = discovered ? P.ink : P.smoke;
+      ctx.fillStyle = discovered ? P.flesh : P.fog;
       ctx.lineWidth = large ? 1.3 : .7;
-      ctx.beginPath(); ctx.ellipse(px, py, large ? 4 : 1.7, large ? 3.5 : 1.5, .2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const radius = large ? 4 : 1.8;
+      ctx.beginPath(); ctx.moveTo(px - radius, py + radius * .35); ctx.lineTo(px - radius * .25, py - radius);
+      ctx.lineTo(px + radius, py - radius * .15); ctx.lineTo(px + radius * .7, py + radius); ctx.closePath(); ctx.fill(); ctx.stroke();
       if (large) {
         ctx.font = '13px "Kalam", cursive';
         ctx.textAlign = 'center';
@@ -184,9 +196,9 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
         const labelX = Math.max(65, Math.min(width - 65, px));
         const labelY = py > height - 25 ? py - 20 : py + 7;
         const textWidth = ctx.measureText(label).width;
-        ctx.fillStyle = '#c4c2b1db';
+        ctx.fillStyle = mapWash(P.paper, .93);
         ctx.fillRect(labelX - textWidth / 2 - 4, labelY - 1, textWidth + 8, 17);
-        ctx.fillStyle = discovered ? '#293122' : '#535c49';
+        ctx.fillStyle = discovered ? P.ink : P.charcoal;
         ctx.fillText(label, labelX, labelY);
       }
     }
@@ -194,18 +206,18 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
       const waypoint = world.waypointScene && world.waypointScene !== data.overworld.id ? data.interiors[world.waypointScene]?.exit?.position || world.waypoint : world.waypoint;
       const x = waypoint.x * scaleX;
       const y = waypoint.y * scaleY;
-      ctx.strokeStyle = '#7a4755';
+      ctx.strokeStyle = P.bruise;
       ctx.lineWidth = large ? 2 : 1;
       ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(x + .4, y - .2, 5, 4.5, -.25, 0, Math.PI * 2); ctx.stroke();
     }
     const player = world.sceneId === data.overworld.id ? world.player : world.region.landmark;
     const px = player.x * scaleX, py = player.y * scaleY;
-    ctx.fillStyle = '#c1b6a7';
+    ctx.fillStyle = P.chalk;
     ctx.beginPath(); ctx.arc(px, py, large ? 6 : 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#39343c';
+    ctx.fillStyle = P.ink;
     ctx.beginPath(); ctx.arc(px, py, large ? 3.5 : 2.4, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#535b498c'; ctx.lineWidth = 1.1;
+    ctx.strokeStyle = mapWash(P.ink, .58); ctx.lineWidth = 1.1;
     ctx.beginPath(); ctx.moveTo(1.2, 2); ctx.lineTo(width - 1, 1); ctx.lineTo(width - 2, height - 1); ctx.lineTo(1, height - 2); ctx.closePath(); ctx.stroke();
   }, [data, world.player.x, world.player.y, world.sceneId, world.discovered, world.explored, world.waypoint, world.waypointScene, world.region, large]);
   return <canvas ref={ref} width={large ? 900 : 192} height={large ? Math.round(900 * data.overworld.height / data.overworld.width) : Math.round(192 * data.overworld.height / data.overworld.width)} className={large ? 'ow-world-map-canvas' : 'ow-minimap-canvas'} aria-label={large ? 'Map of the Land of Limited Time' : 'Minimap'} onClick={event => {

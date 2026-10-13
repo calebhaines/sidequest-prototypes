@@ -1,10 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-  <rect width="96" height="96" rx="19" fill="#cec6af"/>
-  <path d="M17 76c-8-24-8-46 5-56 14-11 40-9 54 3 10 9 12 31 3 53-20 9-40 8-62 0Z" fill="#ac8179" stroke="#35322e" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M18 72c-5-18-5-39 6-47M27 18c14-7 34-5 46 5" fill="none" stroke="#e0b5a2" stroke-width="6" stroke-linecap="round" opacity=".48"/>
-  <path d="M23 25c12-10 36-10 49 1-3 10-13 13-26 12-13 0-20-4-23-13Z" fill="#34322c" stroke="#655049" stroke-width="3"/>
-  <path d="M27 24c11-5 31-6 40 1" fill="none" stroke="#b6a086" stroke-width="3" stroke-linecap="round"/>
-  <path d="m28 51 11 1m19-1 12-1M48 50l-2 14 8 2M32 77c10 3 22 4 33-1" fill="none" stroke="#302d29" stroke-width="3" stroke-linecap="round"/>
-  <path d="m23 57 7 3m-8 5 7 2m39-9 8-3m-8 10 8-2M20 79l15 5m30-1 12-4" fill="none" stroke="#6f5750" stroke-width="1.4" opacity=".85"/>
-  <path d="M12 88c15-2 13-1 30 0s17-1 34-1" fill="none" stroke="#48433b" stroke-width="1.2" opacity=".5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Lady Supine, a beautiful woman with an immense open head">
+  <rect width="96" height="96" rx="16" fill="#ddd2ba"/>
+  <path d="m5 10 34-7 11 24-31 21ZM63 8l27 8-8 45-25-18ZM7 68l34-10 47 26-10 9H14Z" fill="#725b70" opacity=".23"/>
+  <path d="m25 91 11-14 1-9 22-1 1 11 15 13Z" fill="#c9968f" stroke="#27252a" stroke-width="2"/>
+  <path d="m12 91 20-16 16 12 17-13 20 17Z" fill="#3e393d"/>
+  <path d="m16 27 7-13 25-6 27 9 7 18-6 22-9 17-20 9-19-10-10-22Z" fill="#c9968f" stroke="#27252a" stroke-width="2.6" stroke-linejoin="bevel"/>
+  <path d="m24 38 23-6 25 8-6 26-19 12-16-11Z" fill="#efe5cf"/>
+  <path d="m17 29 9 4-3 26 10 15-13-8-5-20ZM74 29l7 4-6 30-13 12 8-23Z" fill="#725b70"/>
+  <path d="m23 21 24-7 24 9 3 9-13 8-27-1-14-9Z" fill="#27252a" stroke="#564a3d" stroke-width="2.5" stroke-linejoin="bevel"/>
+  <path d="m25 21 21-5 21 7" fill="none" stroke="#ddd2ba" stroke-width="2" stroke-linecap="round"/>
+  <path d="m25 42 14-3m18 1 14 3" fill="none" stroke="#3e393d" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="m25 48 8-3 8 4-8 2Zm30 1 8-4 9 3-9 3Z" fill="#ddd2ba" stroke="#27252a" stroke-width="1.1" stroke-linejoin="bevel"/>
+  <path d="m33 45 1 6m29-6-1 6M48 43l-3 17 7 2" fill="none" stroke="#27252a" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="m38 69 6-3 4 2 4-2 6 3-10 4Z" fill="#a45d47"/>
+  <path d="m40 69 15 0m-25-12 5 2m27-2-5 2" fill="none" stroke="#725b70" stroke-width=".9" stroke-linecap="round"/>
+  <path d="m6 28 11-6M7 78l17-3m51-64 12 6M80 68l9-4m-24 23 14 3" fill="none" stroke="#27252a" stroke-width=".8" opacity=".6"/>
 </svg>

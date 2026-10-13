@@ -1,27 +1,30 @@
 import { actorHeadAnchor } from './sprites';
+import { PALETTE as P, rgba } from './palette';
 import { TILE_SIZE, type RenderFrame, type Vec } from './types';
 
-const ink = '#292822';
+const ink = P.ink;
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const ease = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 const phase = (time: number, start: number, end: number) => ease((time - start) / (end - start));
 
 function organ(ctx: CanvasRenderingContext2D, size: number, colour: string, pulse: number) {
   ctx.save(); ctx.scale(size * (1 + pulse * .028), size * (1 - pulse * .018));
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'bevel';
   ctx.fillStyle = colour; ctx.strokeStyle = ink; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(-11, 2); ctx.bezierCurveTo(-17, -4, -10, -11, -6, -9); ctx.bezierCurveTo(-4, -14, 2, -12, 4, -9); ctx.bezierCurveTo(9, -12, 16, -6, 12, -2); ctx.bezierCurveTo(17, 5, 10, 11, 5, 8); ctx.bezierCurveTo(0, 12, -5, 8, -8, 8); ctx.bezierCurveTo(-15, 9, -17, 3, -11, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Rubbed pigment and folds keep these unmistakably physical organs.
-  ctx.save(); ctx.globalAlpha *= .32; ctx.strokeStyle = '#e3d2b9'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(-9, -6); ctx.bezierCurveTo(-4, -11, 5, -5, 8, -8); ctx.stroke(); ctx.restore();
-  ctx.strokeStyle = '#5b4542'; ctx.lineWidth = .8;
-  for (let i = 0; i < 5; i++) {
-    const ox = i * 4.1 - 9;
-    ctx.beginPath(); ctx.moveTo(ox, -7 + Math.sin(i) * 2); ctx.bezierCurveTo(ox + 4, -2, ox - 2, 1, ox + 2, 6); ctx.stroke();
-  }
-  ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(-2, -3, 3, 1, 0, 8); ctx.stroke();
-  ctx.save(); ctx.globalAlpha *= .45; ctx.strokeStyle = '#793f42'; ctx.lineWidth = .65;
-  ctx.beginPath(); ctx.moveTo(-7, 4); ctx.lineTo(-4, 1); ctx.lineTo(-3, -3); ctx.moveTo(-4, 1); ctx.lineTo(-8, -1); ctx.moveTo(6, 5); ctx.lineTo(7, 1); ctx.lineTo(4, -2); ctx.stroke(); ctx.restore();
+  // The two hemispheres remain corporeal; their cortex is drawn as folded ink planes.
+  ctx.beginPath(); ctx.moveTo(-13, 1); ctx.lineTo(-15, -5); ctx.lineTo(-9, -10); ctx.lineTo(-3, -11); ctx.lineTo(0, -8); ctx.lineTo(4, -11); ctx.lineTo(11, -8); ctx.lineTo(15, -2); ctx.lineTo(12, 4); ctx.lineTo(6, 9); ctx.lineTo(1, 7); ctx.lineTo(-4, 10); ctx.lineTo(-11, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.globalAlpha *= .42; ctx.fillStyle = P.chalk;
+  ctx.beginPath(); ctx.moveTo(-12, -4); ctx.lineTo(-7, -9); ctx.lineTo(-1, -7); ctx.lineTo(-5, -1); ctx.lineTo(-10, 1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(3, -8); ctx.lineTo(10, -6); ctx.lineTo(11, -1); ctx.lineTo(7, -3); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.globalAlpha *= .36; ctx.fillStyle = P.bruise;
+  ctx.beginPath(); ctx.moveTo(-10, 2); ctx.lineTo(-5, -1); ctx.lineTo(-1, 2); ctx.lineTo(-4, 8); ctx.lineTo(-10, 6); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(8, -2); ctx.lineTo(12, 3); ctx.lineTo(6, 8); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = P.charcoal; ctx.lineWidth = .8;
+  ctx.beginPath(); ctx.moveTo(-10, -6); ctx.lineTo(-5, -4); ctx.lineTo(-8, 0); ctx.lineTo(-3, 3); ctx.lineTo(-6, 6);
+  ctx.moveTo(6, -7); ctx.lineTo(3, -3); ctx.lineTo(8, 0); ctx.lineTo(4, 3); ctx.lineTo(7, 5);
+  ctx.moveTo(0, -9); ctx.lineTo(-1, -4); ctx.lineTo(1, 1); ctx.lineTo(0, 7); ctx.stroke();
+  ctx.save(); ctx.globalAlpha *= .55; ctx.strokeStyle = P.rust; ctx.lineWidth = .65;
+  ctx.beginPath(); ctx.moveTo(-11, 4); ctx.lineTo(-8, 2); ctx.lineTo(-7, -2); ctx.moveTo(-8, 2); ctx.lineTo(-12, 0); ctx.moveTo(9, 3); ctx.lineTo(10, 0); ctx.lineTo(7, -3); ctx.stroke(); ctx.restore();
   ctx.restore();
 }
 
@@ -38,10 +41,10 @@ function tube(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, sag: number, zo
     }
     ctx.stroke();
   };
-  ctx.strokeStyle = '#292b27'; ctx.lineWidth = 4 * zoom; trace(0, 1);
-  ctx.strokeStyle = '#8e8371'; ctx.lineWidth = 1.7 * zoom; trace(0, 1);
+  ctx.strokeStyle = P.ink; ctx.lineWidth = 4 * zoom; trace(0, 1);
+  ctx.strokeStyle = P.clay; ctx.lineWidth = 1.7 * zoom; trace(0, 1);
   if (pressure > 0) {
-    ctx.save(); ctx.globalAlpha *= pressure * .7; ctx.strokeStyle = reverse ? '#b79587' : '#bdb394'; ctx.lineWidth = 2 * zoom;
+    ctx.save(); ctx.globalAlpha *= pressure * .7; ctx.strokeStyle = reverse ? P.flesh : P.straw; ctx.lineWidth = 2 * zoom;
     // Separated pressure packets run through the tubing in opposite directions.
     for (let i = 0; i < 3; i++) {
       const moving = (time * .28 + i / 3) % 1;
@@ -60,27 +63,32 @@ function apparatus(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, zoom: numb
   const centre = tubePoint(from, to, .5, sag);
   ctx.save(); ctx.translate(centre.x, centre.y); ctx.scale(zoom, zoom);
   ctx.rotate(Math.sin(elapsed * 17) * .012 * pressure * motion);
-  ctx.fillStyle = '#655f50'; ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(-18, -11); ctx.lineTo(16, -12); ctx.lineTo(18, 11); ctx.lineTo(-17, 13); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = '#a69c80'; ctx.lineWidth = .8; ctx.strokeRect(-15, -8, 12, 15);
-  ctx.fillStyle = '#b3ab95'; ctx.beginPath(); ctx.arc(7, 0, 7, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = ink; ctx.stroke();
+  ctx.fillStyle = P.umbra; ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-20, -9); ctx.lineTo(-5, -14); ctx.lineTo(17, -10); ctx.lineTo(19, 8); ctx.lineTo(4, 14); ctx.lineTo(-18, 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = P.clay;
+  ctx.beginPath(); ctx.moveTo(-18, -7); ctx.lineTo(-6, -10); ctx.lineTo(-4, 10); ctx.lineTo(-17, 8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = P.slate;
+  ctx.beginPath(); ctx.moveTo(-3, -11); ctx.lineTo(16, -8); ctx.lineTo(17, 6); ctx.lineTo(3, 11); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = P.sand; ctx.lineWidth = .8;
+  ctx.beginPath(); ctx.moveTo(-16, -5); ctx.lineTo(-8, -7); ctx.lineTo(-7, 7); ctx.lineTo(-15, 6); ctx.stroke();
+  ctx.fillStyle = P.paper; ctx.beginPath(); ctx.moveTo(7, -7); ctx.lineTo(14, -1); ctx.lineTo(8, 7); ctx.lineTo(0, 1); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ink; ctx.stroke();
   const needle = -2.35 + pressure * 2.6 + Math.sin(elapsed * 8) * .045 * pressure * motion;
   ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(7 + Math.cos(needle) * 5.4, Math.sin(needle) * 5.4); ctx.stroke();
   ctx.strokeStyle = ink; ctx.lineWidth = 2.2;
   const lever = -.9 + phase(progress, .055, .16) * 1.4 - phase(progress, .91, .99) * .9;
   ctx.beginPath(); ctx.moveTo(-9, 4); ctx.lineTo(-9 + Math.sin(lever) * 12, 4 - Math.cos(lever) * 12); ctx.stroke();
-  ctx.fillStyle = '#3c3932'; ctx.beginPath(); ctx.ellipse(-9 + Math.sin(lever) * 12, 4 - Math.cos(lever) * 12, 2.8, 4, -lever, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#2d2b26';
+  ctx.fillStyle = P.charcoal; ctx.beginPath(); ctx.ellipse(-9 + Math.sin(lever) * 12, 4 - Math.cos(lever) * 12, 2.8, 4, -lever, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = P.ink;
   for (const [x, y] of [[-15, -8], [14, -8], [-14, 10], [14, 8]]) { ctx.beginPath(); ctx.arc(x, y, .9, 0, Math.PI * 2); ctx.fill(); }
   ctx.restore();
   // The small clamps close before extraction, then withdraw after insertion.
   const closed = phase(progress, .06, .19) * (1 - phase(progress, .85, .98));
   for (const point of [from, to]) {
     ctx.save(); ctx.translate(point.x, point.y); ctx.scale(zoom, zoom);
-    ctx.strokeStyle = '#b4a690'; ctx.lineWidth = 2.2;
+    ctx.strokeStyle = P.sand; ctx.lineWidth = 2.2;
     for (const side of [-1, 1]) {
       ctx.beginPath(); ctx.moveTo(side * (18 - closed * 3), 8); ctx.lineTo(side * (15 - closed * 3), -4); ctx.lineTo(side * (12 - closed * 5), -7); ctx.stroke();
-      ctx.strokeStyle = ink; ctx.lineWidth = .6; ctx.stroke(); ctx.strokeStyle = '#b4a690'; ctx.lineWidth = 2.2;
+      ctx.strokeStyle = ink; ctx.lineWidth = .6; ctx.stroke(); ctx.strokeStyle = P.sand; ctx.lineWidth = 2.2;
     }
     ctx.restore();
   }
@@ -103,11 +111,11 @@ function transfer(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, time: numbe
   ctx.translate(0, settled * 1.4 * zoom);
   organ(ctx, size * zoom, colour, Math.sin(elapsed * 3.5) * motion);
   if (insertion < .9) {
-    ctx.strokeStyle = '#554947'; ctx.lineWidth = .75 * zoom;
+    ctx.strokeStyle = P.bruise; ctx.lineWidth = .75 * zoom;
     const tail = (9 + Math.sin(Math.PI * extraction) * 7 + airborne * 8) * zoom;
     ctx.beginPath(); ctx.moveTo(1 * zoom, 8 * zoom); ctx.bezierCurveTo(-6 * zoom, 10 * zoom + tail * .3, (4 + Math.sin(elapsed * 3) * motion * 2) * zoom, 10 * zoom + tail * .75, 2 * zoom, 8 * zoom + tail); ctx.stroke();
     // Two subdued drops detach during extraction; deterministic motion survives pause.
-    ctx.save(); ctx.globalAlpha *= .5 * airborne * motion; ctx.fillStyle = '#76504b';
+    ctx.save(); ctx.globalAlpha *= .5 * airborne * motion; ctx.fillStyle = P.rust;
     for (let i = 0; i < 2; i++) {
       const fall = (elapsed * .43 + i * .48) % 1;
       ctx.beginPath(); ctx.ellipse((i * 4 - 3) * zoom, (13 + fall * 22) * zoom, (1 - fall * .65) * zoom, (1.7 - fall) * zoom, -.1, 0, Math.PI * 2); ctx.fill();
@@ -120,24 +128,24 @@ function transfer(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, time: numbe
 function receivingJar(ctx: CanvasRenderingContext2D, at: Vec, zoom: number, time: number, motion: number, front: boolean) {
   ctx.save(); ctx.translate(at.x, at.y); ctx.scale(zoom, zoom);
   const settled = phase(time, .78, .96);
-  ctx.strokeStyle = '#3b3b33'; ctx.lineWidth = 1.35;
+  ctx.strokeStyle = P.charcoal; ctx.lineWidth = 1.35;
   if (!front) {
-    ctx.fillStyle = '#756d59';
+    ctx.fillStyle = P.bark;
     ctx.beginPath(); ctx.moveTo(-28, 35); ctx.lineTo(30, 35); ctx.lineTo(26, 43); ctx.lineTo(-27, 42); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#999e8b70';
-    ctx.beginPath(); ctx.moveTo(-20, -5); ctx.bezierCurveTo(-26, 15, -19, 33, -16, 34); ctx.bezierCurveTo(-3, 39, 15, 37, 19, 31); ctx.lineTo(21, -5); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#78807055'; ctx.beginPath(); ctx.ellipse(0, 23, 19, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = rgba('fog', .44);
+    ctx.beginPath(); ctx.moveTo(-20, -5); ctx.lineTo(-23, 7); ctx.lineTo(-18, 33); ctx.lineTo(-3, 37); ctx.lineTo(18, 32); ctx.lineTo(21, -5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = rgba('sage', .34); ctx.beginPath(); ctx.moveTo(-20, 20); ctx.lineTo(-3, 27); ctx.lineTo(19, 20); ctx.lineTo(17, 32); ctx.lineTo(-1, 35); ctx.lineTo(-18, 31); ctx.closePath(); ctx.fill();
   } else {
-    ctx.save(); ctx.globalAlpha *= .5; ctx.fillStyle = '#b3b6a330';
-    ctx.beginPath(); ctx.moveTo(-19, 7); ctx.lineTo(-17, 31); ctx.quadraticCurveTo(1, 37, 18, 30); ctx.lineTo(19, 7); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.globalAlpha *= .5; ctx.fillStyle = rgba('lichen', .2);
+    ctx.beginPath(); ctx.moveTo(-19, 7); ctx.lineTo(-17, 31); ctx.lineTo(1, 36); ctx.lineTo(18, 30); ctx.lineTo(19, 7); ctx.closePath(); ctx.fill(); ctx.restore();
     ctx.beginPath(); ctx.ellipse(0, -5, 21, 8, -.035, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = '#dbd7bd'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(-16, 3); ctx.bezierCurveTo(-18, 13, -15, 25, -13, 29); ctx.stroke();
-    ctx.save(); ctx.globalAlpha *= settled * (1 - phase(time, .93, 1)) * .65; ctx.strokeStyle = '#c7c2a5'; ctx.lineWidth = .8;
+    ctx.strokeStyle = P.chalk; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-16, 3); ctx.lineTo(-17, 13); ctx.lineTo(-13, 29); ctx.stroke();
+    ctx.save(); ctx.globalAlpha *= settled * (1 - phase(time, .93, 1)) * .65; ctx.strokeStyle = P.paper; ctx.lineWidth = .8;
     for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(0, 21, 8 + settled * (7 + i * 2) * motion, 2 + i, -.035, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
     const lid = phase(time, .86, .99);
-    ctx.strokeStyle = '#655f50'; ctx.lineWidth = 4;
+    ctx.strokeStyle = P.umbra; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.ellipse((1 - lid) * 33, 23 - lid * 30 - Math.sin(Math.PI * lid) * 14 * motion, 22, 6.2, (1 - lid) * -.25, 0, Math.PI * 2); ctx.stroke();
   }
   ctx.restore();
@@ -158,9 +166,9 @@ export function drawMindExchange(ctx: CanvasRenderingContext2D, frame: RenderFra
   ctx.globalAlpha = phase(time, 0, .07) * (1 - phase(time, .96, 1));
   apparatus(ctx, from, to, zoom, time, sequence.elapsed, motion);
   if (sequence.kind === 'restore') receivingJar(ctx, from, zoom, time, motion, false);
-  transfer(ctx, from, to, time, sequence.elapsed, zoom, (frame.reducedMotion ? 15 : 43) * zoom, .86, '#a59681', motion, false);
+  transfer(ctx, from, to, time, sequence.elapsed, zoom, (frame.reducedMotion ? 15 : 43) * zoom, .86, P.sand, motion, false);
   // The return line lags the first extraction, making two separate physical transfers legible.
-  transfer(ctx, to, from, clamp((time - .035) / .965), sequence.elapsed + .5, zoom, (frame.reducedMotion ? -8 : -27) * zoom, 1.07, '#8a6461', motion, sequence.kind === 'restore');
+  transfer(ctx, to, from, clamp((time - .035) / .965), sequence.elapsed + .5, zoom, (frame.reducedMotion ? -8 : -27) * zoom, 1.07, P.flesh, motion, sequence.kind === 'restore');
   if (sequence.kind === 'restore') receivingJar(ctx, from, zoom, time, motion, true);
   ctx.restore();
 }

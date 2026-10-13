@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T10:41:07.255Z",
+  "generatedAt": "2026-10-13T19:48:33.891Z",
   "status": "Reasoned content estimate; not measured human playtesting",
   "mandatoryInvestigations": 6,
   "mandatoryInvestigationChallenges": 36,
@@ -58,11 +58,11 @@
   "campaign": {
     "steps": 68,
     "distinctScenes": 64,
-    "proseWords": 7267,
+    "proseWords": 7328,
     "chosenOptionWords": 404,
-    "totalWords": 7671
+    "totalWords": 7732
   },
-  "mandatoryReadWordsTotal": 27309,
+  "mandatoryReadWordsTotal": 27370,
   "wordCountMethod": "Read-once premise, narrative, evidence, task, board clues, resolution and conclusion; actual guided campaign route prose plus selected option labels. Optional hints, other endings and optional branch prose excluded.",
   "investigationPuzzleMinutes": {
     "min": 110,
@@ -75,9 +75,9 @@
     "max": 57
   },
   "readingMinutes": {
-    "fast240Wpm": 113.7875,
-    "central220Wpm": 124.13181818181818,
-    "deliberate200Wpm": 136.545
+    "fast240Wpm": 114.04166666666667,
+    "central220Wpm": 124.4090909090909,
+    "deliberate200Wpm": 136.85
   },
   "travelAndDecisionMinutes": {
     "lower": 10,
@@ -85,18 +85,18 @@
     "upper": 20
   },
   "standardMinutes": {
-    "lower": 304.4125,
-    "central": 351.6318181818182,
-    "upper": 400.91999999999996
+    "lower": 304.6666666666667,
+    "central": 351.9090909090909,
+    "upper": 401.22499999999997
   },
-  "acceleratedMinutes": 241.2875,
-  "deliberateMinutes": 547.545,
+  "acceleratedMinutes": 241.54166666666669,
+  "deliberateMinutes": 547.85,
   "standardHours": {
-    "lower": 5.07,
-    "central": 5.86,
-    "upper": 6.68
+    "lower": 5.08,
+    "central": 5.87,
+    "upper": 6.69
   },
-  "fiveHourTargetDeltaMinutes": 51.631818181818176,
+  "fiveHourTargetDeltaMinutes": 51.90909090909088,
   "clueReviews": [
     {
       "id": "afternoon_ledger",

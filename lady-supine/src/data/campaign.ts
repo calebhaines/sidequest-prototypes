@@ -306,7 +306,7 @@ const campaign: Scene[] = [
     { label: "Thank Vellum and leave", next: "shanty_arrival" },
   ]),
   scene("library_record", "library", "A book with an unfinished spine", "A past revised until it will support the present", [
-    "The earliest portrait shows a human woman with an unusually large head standing beside an ordinary doorway. Its caption reads SHE HAD TIME FOR EVERYONE. The top of her head has been concealed by a pasted strip. Under the strip, a pencilled circle marks an opening. The next page is painted so heavily that it barely bends.",
+    "The earliest portrait shows an extraordinarily beautiful human woman with an unusually large head standing beside an ordinary doorway. Her face is delicate enough to make the doorway seem badly made. Its caption reads SHE HAD TIME FOR EVERYONE. The top of her head has been concealed by a pasted strip. Under the strip, a pencilled circle marks an opening. The next page is painted so heavily that it barely bends.",
     "Later pictures show gates, counters, screens, and the woman held upright among them. A note in old ink reads: She feared being ordinary. We assured her she was unique. She asked for a machine that could ensure it. The final page repeats DIVINE until the nib pierced the paper. On the back, somebody kept an account of the first confiscated hours.",
   ], [
     { label: "Remember the woman beside the ordinary door", next: "library_arrival", requires: "!history_read", effects: [{ flag: "history_read" }] },
@@ -428,7 +428,7 @@ const campaign: Scene[] = [
 
   scene("museum_arrival", "museum", "Museum of the Supine", "Divinity over the old workers' shelter", [
     "The Museum resembles a reclining woman from the road. Up close, its body is scaffolding covered in patched plaster, with rainwater trapped beneath the paint. You enter under a wrist so large it blocks the workers' shelter's original doorway. The ticket booth is built from that doorway's glass.",
-    "Inside, Channel 9 blooms on a telescreen with rounded corners. EXPERIENCE THE DIVINE. Lady Supine's real human face appears beneath a head much larger than the shoulders supporting it. The top is cut off by the camera frame. Her room has been dressed in velvet to hide the wires. One strip has fallen, and a servant's hand keeps trying to pin it back unseen.",
+    "Inside, Channel 9 blooms on a telescreen with rounded corners. EXPERIENCE THE DIVINE. Lady Supine's real human face is exquisitely beautiful beneath a head much larger than the shoulders supporting it. The camera makes her stillness seem merciful. The top is cut off by the frame. Her room has been dressed in velvet to hide the wires. One strip has fallen, and a servant's hand keeps trying to pin it back unseen.",
   ], [
     { label: "Answer the voice on Channel 9", next: "supine_telescreen", requires: "willow_gathered" },
     { label: "Find the curly willow named in the Museum's inscription", next: "forest_arrival", requires: "!willow_gathered" },
@@ -738,14 +738,14 @@ const campaign: Scene[] = [
     { label: "Check that the minders remain distracted", next: "castle_arrival" },
   ]),
   scene("castle_bedroom", "castle", "Lady Supine", "The living woman behind Channel 9", [
-    "Supine sits erect. Her enormous human head leans against a brace fixed to the chair. At its top is a round, uncovered hole. You can see the pale folded brain below the rim, wet in the lamplight. A tray of cloths waits beside it. This is a body that has required care while claiming nobody else's work mattered.",
+    "Supine sits erect. Her enormous human head leans against a brace fixed to the chair. The living face is more beautiful than any broadcast could hold: fine eyes, a patient mouth, the terrible ease of somebody who has never needed permission to be looked at. At its top is a round, uncovered hole. Pale folded brain shines below the rim. Your gaze keeps returning to her face when you ask it not to. The tray of damp cloths is work she has never counted.",
     "“I told you never to see me again.” Her eyes keep closing against the order. “Did you finish the rhyme?” Brindle begins his mother's tune. The camera bells fall out of step. To let her sleep, you must carry the room's rhythm away from the chair. Supine grips its arms while the great weight of her head pulls toward the pillow.",
   ], [
     { label: "Finish the lullaby and put the watching room to sleep", puzzle: "lullaby", next: "castle_asleep", requires: "!supine_asleep", item: "lullaby", effects: [{ flag: "supine_asleep", time: -3 }] },
     { label: "Return to the corridor and breathe", next: "castle_corridor" },
   ]),
   scene("castle_asleep", "castle", "A woman asleep", "An open skull on an ordinary pillow", [
-    "Her head lies across the pillow, much larger than any head has a right to be. The hole at its crown remains exposed. The brain moves faintly with the body's pulse. No one dies from seeing her. The servants who kept her damp cloths ready must have stood this near every day, though the broadcasts never counted them among the witnesses.",
+    "Her head lies across the pillow, much larger than any head has a right to be. Asleep, she is so beautiful that for a moment the room's cruelties appear to belong to somebody else. Then your breathing misses a beat. Ada takes your hand and makes you look at the doctor's written sequence. There are records of people whose hearts stopped while looking at the Lady. The servants work through tilted mirrors. Above the lovely face, the uncovered hole remains; the brain moves faintly with the body's pulse.",
     "Beneath the bedside table is a child's drawing of an open gate. Its paper is older than the billboards. Ada checks both lights and the doctor's signature. The Switch's lined channel will meet the opening at the top of Supine's head. There is nothing figurative about the organ it is going to move.",
   ], [
     { label: "Ask Ada whether she is still sure", next: "castle_consent" },

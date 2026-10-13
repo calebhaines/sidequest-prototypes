@@ -1,0 +1,26 @@
+:root {
+  --p-ink: #27252a; --p-ink-rgb: 39,37,42;
+  --p-charcoal: #3e393d; --p-charcoal-rgb: 62,57,61;
+  --p-slate: #545350; --p-slate-rgb: 84,83,80;
+  --p-smoke: #757a78; --p-smoke-rgb: 117,122,120;
+  --p-fog: #9da59e; --p-fog-rgb: 157,165,158;
+  --p-paper: #ddd2ba; --p-paper-rgb: 221,210,186;
+  --p-chalk: #efe5cf; --p-chalk-rgb: 239,229,207;
+  --p-ash: #beb7a4; --p-ash-rgb: 190,183,164;
+  --p-umbra: #564a3d; --p-umbra-rgb: 86,74,61;
+  --p-bark: #78634a; --p-bark-rgb: 120,99,74;
+  --p-clay: #a28766; --p-clay-rgb: 162,135,102;
+  --p-sand: #c1ad87; --p-sand-rgb: 193,173,135;
+  --p-rust: #a45d47; --p-rust-rgb: 164,93,71;
+  --p-ochre: #c29559; --p-ochre-rgb: 194,149,89;
+  --p-ember: #c57c50; --p-ember-rgb: 197,124,80;
+  --p-straw: #d5bd78; --p-straw-rgb: 213,189,120;
+  --p-pine: #465951; --p-pine-rgb: 70,89,81;
+  --p-moss: #637c61; --p-moss-rgb: 99,124,97;
+  --p-sage: #8e9b71; --p-sage-rgb: 142,155,113;
+  --p-lichen: #b0b894; --p-lichen-rgb: 176,184,148;
+  --p-deepWater: #445e68; --p-deepWater-rgb: 68,94,104;
+  --p-water: #708a8c; --p-water-rgb: 112,138,140;
+  --p-bruise: #725b70; --p-bruise-rgb: 114,91,112;
+  --p-flesh: #c9968f; --p-flesh-rgb: 201,150,143;
+}

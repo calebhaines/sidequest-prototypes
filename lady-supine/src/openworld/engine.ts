@@ -187,7 +187,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     if (!object.resource || !canHarvest(object)) return;
     harvested[object.id] = elapsed + 150;
     addResource(object.resource.item, object.resource.amount);
-    gainXP(3); impact('gather', object, object, true); burst(object, '#a0a586', 'leaf', 6); callbacks.onSound('gather'); refreshObjects(); publish();
+    gainXP(3); impact('gather', object, object, true); burst(object, '#9da59e', 'leaf', 6); callbacks.onSound('gather'); refreshObjects(); publish();
   }
 
   function ensureFollowers() {
@@ -201,7 +201,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       actors = actors.filter(actor => actor.id !== 'ada');
       followers.delete('ada');
       if (!occupied) {
-        actors.push({ id: 'supine-in-ada', name: 'Lady Supine, in Ada', kind: 'hare', role: 'A ruler inside the body she despises', location: region.id, scene: '', x: ada?.x ?? player.x - 1, y: ada?.y ?? player.y + 1, facing: player.facing, moving: false, animation: 0, health: 100, attacking: false, hurt: 0, color: '#6d5357', dialogue: '“These hands are filthy,” she says, looking at the hands that kept your watch running. “Find somebody useful to clean them.” The voice is Ada’s. The contempt is not.' });
+        actors.push({ id: 'supine-in-ada', name: 'Lady Supine, in Ada', kind: 'hare', role: 'A ruler inside the body she despises', location: region.id, scene: '', x: ada?.x ?? player.x - 1, y: ada?.y ?? player.y + 1, facing: player.facing, moving: false, animation: 0, health: 100, attacking: false, hurt: 0, color: '#725b70', dialogue: '“These hands are filthy,” she says, looking at the hands that kept your watch running. “Find somebody useful to clean them.” The voice is Ada’s. The contempt is not.' });
       }
       followers.add('supine-in-ada');
     }
@@ -285,7 +285,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       player.health = Math.min(player.maxHealth, player.health + 30);
       player.maxStamina += 5;
       player.stamina = player.maxStamina;
-      addFloating(`Level ${player.level}`, '#f4db95');
+      addFloating(`Level ${player.level}`, '#ddd2ba');
       notify(`Your body has learned to endure it. Level ${player.level}: health and stamina increased.`, 'success');
       callbacks.onSound('level');
     }
@@ -315,15 +315,15 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       inventory[id]--;
       player.health = Math.min(player.maxHealth, player.health + health);
       player.stamina = player.maxStamina;
-      addFloating(`+${health} health`, '#a8dca0');
-      burst(player, '#969080', 'smoke');
+      addFloating(`+${health} health`, '#b0b894');
+      burst(player, '#8e9b71', 'smoke');
       impact('eat', player, undefined, false, player.facing, id);
       callbacks.onSound('eat');
     } else if (ITEMS[id].kind === 'time') {
       inventory[id]--;
       callbacks.onTimeChange(180);
-      addFloating('+3:00 borrowed time', '#ebcf80');
-      burst(player, '#ead185', 'time', 18);
+      addFloating('+3:00 borrowed time', '#d5bd78');
+      burst(player, '#ddd2ba', 'time', 18);
       impact('coupon', player, undefined, false, player.facing, id);
       callbacks.onSound('coupon');
       notify('The printed mouth blows a kiss. The paper dissolves; the face lasts longest. Three minutes credited.', 'success');
@@ -404,7 +404,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     inventory[building]--;
     placed.push(object);
     impact('build', object, object);
-    burst(object, '#c3b887', 'dust');
+    burst(object, '#c1ad87', 'dust');
     gainXP(5);
     callbacks.onSound('build');
     notify(`Placed ${ITEMS[building].name.toLowerCase()}.`, 'success');
@@ -440,7 +440,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
         const count = Math.random() < 0.2 ? 2 : 1;
         addResource('fish', count);
         gainXP(12);
-        burst(fishing.position, '#98d8d5', 'splash', 10);
+        burst(fishing.position, '#b0b894', 'splash', 10);
         callbacks.onSound('fish');
         notify(`Caught ${count === 1 ? 'one fish' : 'two fish'}. There is very little flesh on the bones.`, 'success');
         if (Math.random() < 0.18) {
@@ -462,7 +462,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
     }
     player.facing = Math.atan2(water.y - player.y, water.x - player.x);
     fishing = { position: water, phase: 'waiting', elapsed: 0, biteAt: random(2.8, 5.3) };
-    burst(water, '#a6d5ce', 'splash', 5);
+    burst(water, '#b0b894', 'splash', 5);
     callbacks.onSound('cast');
     notify('Line cast. Watch the float; reel when it dips.');
     publish();
@@ -518,8 +518,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       enemy.hurt = 0.22;
       impact('hit', enemy);
       move(enemy, Math.cos(player.facing) * 0.6, Math.sin(player.facing) * 0.6, false);
-      addFloating(`−${amount}`, '#f2a494', enemy);
-      burst(enemy, '#d0b2e9', 'spark');
+      addFloating(`−${amount}`, '#c9968f', enemy);
+      burst(enemy, '#beb7a4', 'spark');
       callbacks.onSound('hit');
       if (enemy.health <= 0) {
         harvested[`enemy:${scene.id}:${enemy.id}`] = elapsed + 140;
@@ -543,14 +543,14 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
           notify(hint);
           announcedTools.add(hint);
         }
-        burst(target, '#cbc5a9', 'dust', 3);
+        burst(target, '#beb7a4', 'dust', 3);
         return;
       }
       const damage = (damageToObject.get(target.id) ?? 0) + 1;
       damageToObject.set(target.id, damage);
       impact(wantsPick ? 'stone' : 'wood', target, target, damage >= target.resource.health);
-      burst(target, wantsPick ? '#c3c5b7' : '#afc395', wantsPick ? 'spark' : 'leaf', 6);
-      addFloating(`${Math.max(0, target.resource.health - damage)} / ${target.resource.health}`, '#d3d7b0', target);
+      burst(target, wantsPick ? '#beb7a4' : '#b0b894', wantsPick ? 'spark' : 'leaf', 6);
+      addFloating(`${Math.max(0, target.resource.health - damage)} / ${target.resource.health}`, '#ddd2ba', target);
       callbacks.onSound(wantsPick ? 'stone' : 'wood');
       if (damage >= target.resource.health) {
         const duration = target.kind === 'tree' || target.kind === 'willow' ? 240 : target.kind === 'rock' || target.kind === 'ore' ? 300 : 150;
@@ -623,8 +623,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       const healing = object.kind === 'bed' ? player.maxHealth : 20;
       player.health = Math.min(player.maxHealth, player.health + healing);
       player.stamina = player.maxStamina;
-      addFloating('Still breathing', '#c4d6ac');
-      burst(player, '#8c8877', 'smoke', 7);
+      addFloating('Still breathing', '#ddd2ba');
+      burst(player, '#a28766', 'smoke', 7);
       if (object.kind !== 'campfire') {
         notify(object.text ?? 'The frame creaks beneath you. Your pulse eventually settles.', 'success');
         publish();
@@ -759,8 +759,8 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
           enemyCooldowns.set(actor.id, 1.4);
           callbacks.onTimeChange(-15);
           callbacks.onSound('hurt');
-          addFloating('−15 seconds', '#e4b1c8');
-          burst(player, '#d8b2d8', 'time', 8);
+          addFloating('−15 seconds', '#beb7a4');
+          burst(player, '#beb7a4', 'time', 8);
           if (player.health <= 0) { recover(); return; }
         }
       } else if (followers.has(actor.id)) {
@@ -830,7 +830,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       const step = Math.floor(player.animation * 10 / Math.PI);
       if (step !== footstepIndex && !options.reducedMotion) {
         const side = step % 2 ? 1 : -1;
-        burst({ x: player.x + Math.cos(player.facing + Math.PI / 2) * side * .13, y: player.y + Math.sin(player.facing + Math.PI / 2) * side * .13 }, '#a2987f', 'dust', sprinting ? 2 : 1);
+        burst({ x: player.x + Math.cos(player.facing + Math.PI / 2) * side * .13, y: player.y + Math.sin(player.facing + Math.PI / 2) * side * .13 }, '#8e9b71', 'dust', sprinting ? 2 : 1);
       }
       footstepIndex = step;
     }
@@ -842,7 +842,7 @@ export function createEngine(canvas: HTMLCanvasElement, data: WorldData, callbac
       if (fishing.phase === 'waiting' && fishing.elapsed >= fishing.biteAt) {
         fishing.phase = 'bite';
         fishing.elapsed = 0;
-        burst(fishing.position, '#e7deb3', 'splash', 8);
+        burst(fishing.position, '#ddd2ba', 'splash', 8);
         callbacks.onSound('bite');
         notify('A bite! Reel in now.', 'success');
         publish();

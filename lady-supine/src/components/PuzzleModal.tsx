@@ -90,10 +90,10 @@ function Ordering({ initial, solution, clue, checkLabel, onPass, feedback, botto
 }
 
 const blocks: OrderItem[] = [
-  { id: 'sun', title: 'Sun', detail: 'The stained yellow block', mark: '☀', color: '#c6a959' },
-  { id: 'earth', title: 'Earth', detail: 'The patient ochre block', mark: '▰', color: '#9d7658' },
-  { id: 'leaf', title: 'Leaf', detail: 'The worn green block', mark: '❧', color: '#749174' },
-  { id: 'bark', title: 'Bark', detail: 'The dark brown block', mark: '≋', color: '#6c6658' },
+  { id: 'sun', title: 'Sun', detail: 'The stained yellow block', mark: '☀', color: '#c29559' },
+  { id: 'earth', title: 'Earth', detail: 'The patient ochre block', mark: '▰', color: '#a28766' },
+  { id: 'leaf', title: 'Leaf', detail: 'The worn green block', mark: '❧', color: '#708a8c' },
+  { id: 'bark', title: 'Bark', detail: 'The dark brown block', mark: '≋', color: '#78634a' },
 ];
 const catalog: OrderItem[] = [
   { id: 'decree', title: 'The Royal Decree', detail: 'In the nineteenth year, timelessness became a crime.', mark: '§' },
