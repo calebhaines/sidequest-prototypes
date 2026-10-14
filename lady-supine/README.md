@@ -35,7 +35,7 @@ The six investigations recover a missing afternoon in the Library, expose artifi
 
 ## Replace the temporary art
 
-[Compare ten exploratory art directions](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/). Each sheet includes characters, a settlement exterior, two interiors, and outdoor assets, with original PNG downloads. **Direction 03, Torn paper, is now implemented in the playable game.**
+[Compare the art studies](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/). The original ten directions are joined by ten new design variations: eight in the torn-paper family and two photographic cut-out collages. Each sheet includes characters, a settlement exterior, two interiors, and outdoor assets, with original PNG downloads. **Direction 03, Torn paper, is implemented in the playable game; the new sheets are concepts for comparison.**
 
 The characters, scenery, portraits, icons, map, menus, and puzzle boards closely follow the selected torn-paper study: faceted adult faces, ragged pale fibers, flat overlapping scraps, and visibly pasted repairs. Five native transparent sheets supply all 18 faces, articulated clothing and wings, patched trailers, willow, furniture, the brain machine, and Supine's billboard. Their unmodified PNGs live in `src/assets/torn-paper`; `src/openworld/paperAssets.ts` loads them before the world starts and draws their separate parts. `src/openworld/paper.ts` supplies matching cached grain and torn silhouettes for the world and map; CSS paper textures and `PaperMotif.tsx` carry the material into menus and puzzle diagrams.
 
