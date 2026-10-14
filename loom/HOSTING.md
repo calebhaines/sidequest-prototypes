@@ -64,6 +64,10 @@ integration boundary for instruments chosen by the user. Custom URLs stay on
 the studio’s site; external app assets need their usual browser access. A
 self-contained HTML app makes offline hosting straightforward.
 
+Fragment links such as `href="#sound"` scroll and focus a section inside the
+loaded editor. They keep its bridge, audio routing, and unsaved edits intact;
+other links open outside the editor, while download links keep their behavior.
+
 Native pattern lengths and swing are preserved against GALLEY’s shared bar/beat
 clock. Registered note adapters let the host schedule discrete notes and silence
 the app’s autonomous sequencer, preventing duplicate playback. Continuous apps
