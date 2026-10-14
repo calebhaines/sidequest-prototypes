@@ -35,7 +35,7 @@ print(f'Built HAZE: {len(html.encode()):,} bytes, all assets embedded.')
 if (root.parent / 'music' / 'README.md').exists():
     archive = root.parent / 'music' / 'haze' / 'HAZE-source.zip'
     archive.parent.mkdir(parents=True, exist_ok=True)
-    files = [root / name for name in ['app.html', 'styles.css', 'schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'build.py', 'README.md']]
+    files = [root / name for name in ['app.html', 'styles.css', 'schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'build.py', 'README.md', 'sequence-checks.cjs']]
     files += sorted((root / 'fonts').glob('*'))
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for path in files:

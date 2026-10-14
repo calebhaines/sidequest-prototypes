@@ -21,8 +21,11 @@ visible; controls have larger touch targets. Every original processor, source,
 modulator, routing control, project format and preset remains unchanged.
 
 
-- Four source lanes feed a 16-step pattern into four processing nodes. Audition
+- Four source lanes feed a 16- or 32-step pattern into four processing nodes. Audition
   sources with the trigger buttons or keys 1–4. Space starts/stops the pattern.
+  Length switches between 16 and 32 steps; Steps opens 1–16 or 17–32 in the same
+  grid. Shortening the pattern keeps the second page, including its probability
+  and ratchet edits. Earlier projects open at 16 steps.
 - Each node offers tape echo, string, diffuser, singing bowl, spring or cloud.
   Time sets its echo length; Pitch tunes pitched models; Tone, Decay, Resonance,
   Drift, Pan and Level shape the return. Synced delay times follow tempo.
@@ -43,7 +46,7 @@ modulator, routing control, project format and preset remains unchanged.
 - Record output captures the live stereo performance, up to three minutes.
   Export WAV renders a fresh performance of the current patch with a chosen tail;
   it does not copy the live delay buffers or include microphone input. A frozen
-  export first feeds one bar into the network, then captures the held texture.
+  export first feeds one full pattern (one or two bars) into the network, then captures the held texture.
   Offline renders are 48 kHz, 16-bit stereo WAVs, with up to sixteen bars and a
   thirty-second tail. Live recordings use the audio context's sample rate.
 

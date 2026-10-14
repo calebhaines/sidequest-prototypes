@@ -483,6 +483,7 @@
     const swing = clamp(state.swing || 0, 0, 0.6);
     return seconds * (step % 2 === 0 ? 1 + swing : 1 - swing);
   }
+  function sequenceLength(state) { return state.stepCount === 32 ? 32 : 16; }
 
   function playStep(environment, state, step, time) {
     const tracks = Array.isArray(state.tracks) ? state.tracks : [];
@@ -611,7 +612,7 @@
       let skipped = 0;
       while (this.nextNoteTime < currentTime - 0.035 && skipped < 4096) {
         this.nextNoteTime += stepLength(this.state, this.currentStep);
-        this.currentStep = (this.currentStep + 1) % 16;
+        this.currentStep = (this.currentStep + 1) % sequenceLength(this.state);
         skipped++;
       }
       if (skipped >= 4096) this.nextNoteTime = currentTime + 0.025;
@@ -629,7 +630,7 @@
           this.displayTimers.add(displayTimer);
         }
         this.nextNoteTime += stepLength(this.state, step);
-        this.currentStep = (step + 1) % 16;
+        this.currentStep = (step + 1) % sequenceLength(this.state);
       }
     }
 
@@ -728,7 +729,7 @@
       const hasSolo = tracks.some(track => track.solo);
       let longest = 0;
       tracks.forEach(data => {
-        if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return;
+        if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.slice(0, sequenceLength(snapshot)).some(Boolean)) return;
         const track = readTrack(data);
         if (track.level <= 0) return;
         const settings = readSynth(data, track);
@@ -751,7 +752,7 @@
           if (options.signal) await new Promise(resolve => setTimeout(resolve, 0));
           checkCancelled();
         }
-        const step = i % 16;
+        const step = i % sequenceLength(snapshot);
         playStep(environment, snapshot, step, time);
         time += stepLength(snapshot, step);
       }

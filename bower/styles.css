@@ -88,3 +88,9 @@ body[data-kitchen-app="skewer"] :is(button,select,input):focus-visible{outline:2
 body[data-kitchen-app="skewer"] .lane-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}
 body[data-kitchen-app="skewer"] .lane-card,body[data-kitchen-app="skewer"] .steps{min-width:0;max-width:100%}
 @media(max-width:1000px){body[data-kitchen-app="skewer"] .lane-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Sequence choices reuse the existing sixteen-column grids. */
+.sequence-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 12px;font-size:11px;color:var(--muted,#a7b2b5)}
+.sequence-toolbar label{display:flex;align-items:center;gap:6px}.sequence-toolbar select{font:inherit;min-height:32px;padding:4px 22px 4px 7px}.sequence-toolbar [hidden]{display:none}
+
+.euclidean-row[hidden],.growth-row[hidden]{display:none}

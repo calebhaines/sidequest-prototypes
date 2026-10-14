@@ -1,9 +1,14 @@
 """Build RAVEL's standalone HTML and reproducible editable source download."""
 from pathlib import Path
 import base64
+import argparse
 import runpy
 import zipfile
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--output', type=Path, help='Build an isolated standalone preview.')
+parser.add_argument('--archive', type=Path, help='Optional editable source ZIP destination.')
+args = parser.parse_args()
 root = Path(__file__).resolve().parent
 exchange_dir = root / 'shared' if (root / 'shared' / 'bundle_audio_exchange.py').exists() else root.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
@@ -29,13 +34,16 @@ if any(template.count(slot) != 1 for slot in ['<!-- STYLES -->', '<!-- SCRIPTS -
 html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
 html = exchange_helpers['embed_exchange'](html, 'ravel', root)
-(root / 'index.html').write_text(html)
+target = args.output or root / 'index.html'
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(html)
 print(f'Built RAVEL: {len(html.encode()):,} bytes, all assets embedded.')
 
-if (root.parent / 'music' / 'README.md').exists():
-    archive = root.parent / 'music' / 'ravel' / 'RAVEL-source.zip'
+if args.archive is not None or args.output is None and (root.parent / 'music' / 'README.md').exists():
+    archive = args.archive or root.parent / 'music' / 'ravel' / 'RAVEL-source.zip'
     archive.parent.mkdir(parents=True, exist_ok=True)
     files = [root / name for name in ['app.html', 'styles.css', 'schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'build.py', 'README.md']]
+    files += sorted(root.glob('*checks.cjs'))
     files += sorted((root / 'fonts').glob('*'))
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for path in files:

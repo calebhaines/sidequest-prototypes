@@ -83,7 +83,7 @@ function createRouxDSP(){
 const DSP=createRouxDSP();window.RouxDSP=DSP;
 function wav(chunks,sampleRate){let frames=0;for(const c of chunks)frames+=c.length/2;const bytes=new ArrayBuffer(44+frames*4),v=new DataView(bytes),text=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i));};text(0,'RIFF');v.setUint32(4,36+frames*4,true);text(8,'WAVE');text(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);text(36,'data');v.setUint32(40,frames*4,true);let at=44;for(const c of chunks)for(const x of c){const a=Math.max(-1,Math.min(1,Number.isFinite(x)?x:0));v.setInt16(at,Math.round(a<0?a*32768:a*32767),true);at+=2;}return new Blob([bytes],{type:'audio/wav'});}
 function nativeScore(state){
- if(!state.musicLabPattern)return window.RouxSchema.compileRecipe(state,{cycles:4});
+ if(!state.musicLabPattern)return window.RouxSchema.compileRecipe(state,{cycles:state.sequenceMode==='pattern'?1:4});
  const p=state.musicLabPattern.pattern,notes=[];let seed=(p.seed??1)>>>0||1;
  const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;seed=seed>>>0||1;return seed/4294967296;};
  const ordered=p.notes.map(n=>{const tick=n.beat*4,swung=Math.abs(tick-Math.round(tick))<1e-7&&Math.round(tick)%2===1,beat=Math.min(p.lengthBeats-1/1024,n.beat+(swung?p.swing/4:0));return {...n,beat,duration:Math.min(n.duration,p.lengthBeats-beat)};}).sort((a,b)=>a.beat-b.beat||a.id.localeCompare(b.id));

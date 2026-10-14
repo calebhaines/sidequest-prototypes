@@ -95,6 +95,16 @@ async function check(name, callback) { state = S.defaultState(); calls.length = 
     assert.equal(JSON.stringify(state.musicLabPattern), before);
     await adapter.clearImportedPattern(); assert(!state.musicLabPattern); assert.equal(await adapter.clearImportedPattern(), false);
   });
+  await check('Thirty-two-step native export and hosted snapshots retain the complete second page', async () => {
+    state.swing=0;state.sequence.division='1/16';state.sequence.length=32;state.sequence.steps.forEach(step=>step.on=false);
+    Object.assign(state.sequence.steps[20],{on:true,note:67});Object.assign(state.sequence.steps[31],{on:true,note:79});
+    const part=adapter.exportPattern();assert.equal(part.lengthBeats,8);assert.deepEqual(copy(part.notes.map(note=>[note.beat,note.pitch])),[[5,67],[7.75,79]]);
+    const snapshot=registered.getState();await registered.setState(snapshot);assert.equal(state.sequence.length,32);assert.equal(state.sequence.steps[31].note,79);
+    const result=await adapter.renderPattern({pattern:part,state:snapshot,tempo:120,tailSeconds:0,voiceMap:{synth:'synth'}});
+    assert.equal(result.pcm.length/2,192000);const request=calls.find(call=>call[0]==='render')[1];assert(request.events.some(note=>note.startBeat===7.75&&note.note===79));
+    state.sequence.length=16;await registered.setState(registered.getState());assert.equal(adapter.exportPattern().notes.length,0);
+    assert.equal(state.sequence.steps[31].note,79);state.sequence.length=32;assert.equal(adapter.exportPattern().notes.length,2);
+  });
   await check('Malformed notes and timestamps never reach the scheduler; valid sources remain independent', async () => {
     await adapter.prepare(); assert.equal(engine.context.state, 'running'); calls.length = 0;
     const valid = { pitch: 60, voice: 'synth', velocity: .7, when: 3.25, durationSeconds: .8, source: 'clip-one' };

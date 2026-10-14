@@ -4,7 +4,7 @@ A self-contained, noise-powered drum machine with a compact commercial kitchen i
 
 **Double-click `index.html` to open it in a modern browser, then press Play.** It works offline. No installation, server, account, external fonts, libraries, or samples are needed. All sound is synthesized in the browser.
 
-- Eight individually editable voices and a 16-step sequencer.
+- Eight individually editable voices and a 16/32-step sequencer.
 - Twelve sources: white, pink, brown, blue, violet, grey, velvet, crackle, metallic, digital, dust, and radio noise.
 - The original six curated grooves, four additional specialist noise kits (Prep surface, Short-order static, Radio misdemeanour, and Crumb counter), four pattern banks, swing, accents, mute, solo, randomization, and undo.
 - Separate BODY and NOISE layer levels, voice level, and stereo pan.
@@ -18,6 +18,10 @@ A self-contained, noise-powered drum machine with a compact commercial kitchen i
 
 Click a step to toggle it. Shift + click adds an accent; on touchscreens, press and hold. Select a voice to blend its BODY and NOISE levels, then click Synthesis to open Drum body, Noise shaper, and Modulation. Each section edits that voice independently; Hear voice auditions the result. Body can also be added to hats, claps, and textures by raising BODY. Modulation restarts on each hit. Older saved projects load into the new synthesis controls automatically. Drag a knob vertically, or focus it and use arrow keys. Hold Shift for fine adjustments. Press Space to play or pause, 1–8 to audition voices, and Ctrl / Cmd + Z to undo. The question-mark button has the full guide.
 
+The compact **16 STEPS / 32 STEPS** chooser in the existing sequence heading changes the loop length. At 32, **1–16 / 17–32** switches the same grid between its two halves; arrow-key navigation crosses between halves. The second half starts empty. Choosing 16 temporarily excludes steps 17–32 from playback and export without deleting them, including in all four pattern banks. Clear and Randomize edit the active length. Undo, browser saving, JSON projects, native playback, and shared patterns include the chosen length. Factory grooves and older projects still start at 16 steps with their original sounds and timing.
+
+Projects now save as version 3; versions 1 and 2 migrate to a 16-step loop. Export lengths are musical bars: use two or more bars to hear a complete 32-step pattern. The existing Export WAV button still renders four bars.
+
 ## Noise bench (v1.2)
 
 The familiar sequencer, four BODY/NOISE/LEVEL/PAN controls, twelve-source palette, and full Synthesis station remain available. The default groove and the original six presets are unchanged.
@@ -28,7 +32,7 @@ Its six quick controls directly edit the existing cutoff, decay, attack, saturat
 
 Four new complete **Kit + groove** presets append the original bank. Loading one follows the original preset behavior: it changes all eight voices, the rhythm, tempo, swing, and master effects; master output level stays unchanged. These new kits combine authored sixteen-step rhythms with noise-only contact sounds, electrical backbeats, resonant interference, sparse impulses, and a supporting low pulse.
 
-The refresh retains project version 2, existing storage keys and integration APIs. Interface disclosure/recipe selection is excluded from musical projects. Header controls wrap on phones; sequencer lanes retain their names while you scroll to the remaining steps.
+The Noise bench refresh retained project version 2; the 32-step addition saves version 3 with the same storage keys and integration APIs. Interface disclosure/recipe selection is excluded from musical projects. Header controls wrap on phones; sequencer lanes retain their names while you scroll to the remaining steps.
 
 ## Sharing samples
 
@@ -39,6 +43,8 @@ Integrations can call `GrainApp.exportAudio({scope, bars, tailSeconds, signal})`
 The deliverable is `index.html`; all of its assets are embedded. The other root files are editable sources. To rebuild after editing, run `python build.py`. It embeds the locally available font files when present and falls back to system sans-serif otherwise.
 
 Browser verification covers playback, step editing, sound controls, envelope displays, modulation sync, section reset, keyboard focus, version 1 migration, version 2 save/import, invalid-settings rejection, undo, WAV export, persistence, and all synthesis tabs at 320/390 px. The audio engine was also checked at maximum levels with every noise source and effect.
+
+Run `node grain/pattern-length-checks.cjs` from the repository root for the SIZZLE and CLATTER length regression. It serves the maintained sources directly, compares every factory groove's state and native WAV to the rollback checkpoint, and exercises 32-step playback, accents, exports, paging, banks, migration, persistence, malformed-project rejection, and 320/390 px controls. `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` select an installed browser; `KITCHEN_PATTERN_CHECKPOINT` overrides the comparison tag.
 
 ## Site integration
 

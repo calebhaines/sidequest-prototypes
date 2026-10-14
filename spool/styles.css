@@ -115,3 +115,19 @@ select,.preset-control select{min-height:36px}
 @media(prefers-reduced-motion:reduce){.station-nav a{transition:none}}
 /* Keep Help as easy to touch on tablets as it is on phones. */
 .app-shell .masthead #help-button{width:40px;min-width:40px;height:40px;min-height:40px;padding:0;flex:0 0 40px}
+
+/* Optional patterns use the existing controls and remain hidden in the original mode. */
+.step-pattern-panel{padding:12px 16px;border-bottom:1px solid var(--line,#3c4549);background:#22292c}
+.step-pattern-panel[hidden]{display:none}
+.step-pattern-controls{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.step-pattern-controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:#c5cfd1}
+.step-pattern-controls select,.step-pattern-controls input{max-width:170px;min-height:34px;padding:5px 7px;background:#171e21;color:#f0ece0;border:1px solid #536167;border-radius:3px;font:inherit}
+.step-pattern-controls input{width:60px}
+.step-pattern-grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;min-width:0}
+.pattern-step{min-width:0;min-height:36px;padding:4px 0;background:#182126;color:#aab6bc;border:1px solid #536167;border-radius:3px;font-size:11px}
+.pattern-step:nth-child(4n+1){border-left:2px solid #b88763}
+.pattern-step[aria-pressed=true]{background:#ff8d4525;color:#ffad77;border-color:#bf7847}
+.pattern-step.playing{outline:2px solid #effce9;outline-offset:-2px}
+.pattern-step:focus-visible{outline:2px solid #f1ead8;outline-offset:2px}
+@media(max-width:650px){.step-pattern-panel{padding:10px 12px}.step-pattern-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step-pattern-controls label{flex-wrap:wrap}.step-pattern-controls select{max-width:130px}}
+.sequence-mode-field{max-width:160px}.sequence-mode-field select{min-height:34px}.step-pattern-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;margin-top:6px}.pattern-deck-label{padding:0;min-width:0;background:transparent;border:0;color:#f1ead8;font-weight:bold}.step-pattern-panel .panel-hint{margin:10px 0 0}

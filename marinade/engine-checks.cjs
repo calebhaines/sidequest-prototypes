@@ -181,6 +181,18 @@ function validPacket() {return{format:'musiclab-pattern',version:1,name:'Exact b
       const basic=S.defaultState();basic.swing=0;basic.sequence.division='1/16';basic.sequence.steps.forEach(s=>{s.probability=1;s.ratchet=4;s.chord='major';});assert.equal(sequence.events(basic,{startBeat:0,lengthBeats:4}).length,16*4*3);
       basic.sequence.steps.forEach(s=>s.probability=0);assert.equal(sequence.events(basic,{startBeat:0,lengthBeats:4}).length,0);return{realizedEvents:whole.length,seeded:true};
     });
+    await check('Thirty-two-step native phrases preserve later notes, portable state and legacy timing',()=>{
+      const state=S.defaultState(),legacy=S.copy(state);legacy.sequence.steps=legacy.sequence.steps.slice(0,16);
+      const old=S.parseProject(legacy);assert.equal(old.sequence.length,16);assert.equal(old.sequence.steps.length,32);assert(old.sequence.steps.slice(16).every(step=>!step.on));
+      assert.deepEqual(plain(sequence.events(old)),plain(sequence.events(legacy)));
+      state.swing=0;state.sequence.division='1/16';state.sequence.length=32;state.sequence.steps.forEach(step=>step.on=false);
+      Object.assign(state.sequence.steps[20],{on:true,note:67,ratchet:2});Object.assign(state.sequence.steps[31],{on:true,note:79});
+      const events=sequence.events(state);assert.equal(sequence.patternLength(state),8);assert.deepEqual(plain(events.map(event=>[event.step,event.startBeat,event.note])),[[20,5,67],[20,5.125,67],[31,7.75,79]]);
+      assert.equal(sequence.tickEvents(state,63)[0].step,31);state.sequence.length=16;const saved=S.parseProject(S.serialize(state));
+      assert.deepEqual(plain(saved.sequence.steps[31]),plain(state.sequence.steps[31]));assert.equal(sequence.events(saved).length,0);saved.sequence.length=32;assert.equal(sequence.events(S.parseProject(S.serialize(saved))).length,3);
+      const incomplete=S.copy(saved);incomplete.sequence.steps=incomplete.sequence.steps.slice(0,16);assert.throws(()=>S.parseProject(incomplete));
+      return{lengthBeats:8,laterSteps:[21,32],legacyTiming:true,hiddenStepsRetained:true};
+    });
     await check('Imported fractional notes stay exact, swing applies once, and chance changes only realization',()=>{
       const state=S.defaultState(),packet=validPacket();packet.swing=.4;packet.notes[0].beat=.17;packet.notes[0].duration=.31;packet.notes[1].beat=.25;
       state.musicLabPattern={pattern:packet,voiceMap:{donor:'synth'}};const events=sequence.events(state,{startBeat:0,lengthBeats:4});assert.equal(events[0].startBeat,.17);assert.equal(events[0].durationBeats,.31);assert.equal(events[1].startBeat,.35);
@@ -251,6 +263,15 @@ function validPacket() {return{format:'musiclab-pattern',version:1,name:'Exact b
       const state=S.defaultState(),models=await analysis.prepare(state),outputs=[];state.synth.lfo.sync='1/8T';state.synth.lfo.depth=.7;state.fx.delay=.55;
       for(const size of[128,1024,257]){const core=new DSP.Core(sr,state,models);core.start({beat:0,frame:0});core.setTransport({beat:1.5,tempo:173,playing:true,revision:1,frame:15013});core.setTransport({beat:5.1,tempo:67,playing:true,revision:2,frame:42017});outputs.push(render(core,1.4,size));}
       assert.equal(difference(outputs[0],outputs[1]).maximum,0);assert.equal(difference(outputs[0],outputs[2]).maximum,0);assert(stats(outputs[0]).rms>.0001);return{frames:outputs[0].left.length,peak:stats(outputs[0]).peak};
+    });
+    await check('Thirty-two-step live DSP and WAV render the final step with exact sample timing',async()=>{
+      const state=analyticState();state.tempo=120;state.swing=0;state.sequence.division='1/16';state.sequence.length=32;state.sequence.steps.forEach(step=>step.on=false);
+      Object.assign(state.sequence.steps[31],{on:true,note:69,velocity:.8});const event=sequence.events(state)[0];assert.equal(event.startBeat,7.75);
+      const native=await factory(state),direct=await factory(state);native.start({beat:0,frame:0});direct.scheduleNote({note:event.note,velocity:event.velocity,frame:186000,duration:event.durationBeats*.5,source:'direct'});
+      const played=render(native,4.1),scheduled=render(direct,4.1);assert.equal(difference(played,scheduled).maximum,0);assert.equal(stats(played,0,186000).peak,0);assert(stats(played,186000,192000).rms>.001);
+      const audio=new scope.MarinadeAudio(state),before=S.serialize(audio.state),result=await audio.renderWav({bars:2,tailSeconds:0}),wave=new DataView(await result.blob.arrayBuffer());
+      assert.equal(wave.getUint32(40,true),192000*4);let peak=0;for(let at=44+186000*4;at<wave.byteLength;at+=2)peak=Math.max(peak,Math.abs(wave.getInt16(at,true)/32768));assert(peak>.001);assert.equal(S.serialize(audio.state),before);
+      return{lastStepFrame:186000,wavFrames:192000,latePeak:peak};
     });
     await check('Host clock does not start native sequencing or duplicate direct note playback',async()=>{
       const core=await factory(dryState());core.setTransport({beat:0,tempo:120,playing:true,revision:1,frame:0});const silent=render(core,.5);assert.equal(stats(silent).peak,0);assert.equal(core.playing,false);core.scheduleNote({note:60,velocity:.8,frame:core.frame,duration:.3,source:'host'});assert(stats(render(core,.4)).rms>.0001);assert.equal(core.playing,false);

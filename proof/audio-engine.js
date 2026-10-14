@@ -98,7 +98,7 @@
         if(pattern&&Array.isArray(pattern.notes)&&pattern.lengthBeats>0){
           this.importLength=pattern.lengthBeats;this.importCycle=Math.floor(Math.max(0,beat)/this.importLength);this.importCursor=0;this._importCycleNotes();
           while(this.importCursor<this.importNotes.length&&this.importNotes[this.importCursor].startBeat<beat-1e-8)this.importCursor++;
-        }else{this.importNotes=null;this.nextTick=Math.max(0,Math.floor((beat+1e-8)/(divisions[this.state.arp?.division]||.25)));}
+        }else{this.importNotes=null;this.nextTick=Math.max(0,Math.floor((beat+1e-8)/(divisions[this.state.sequenceMode==='pattern'?this.state.notePatterns[this.state.selectedPattern||0].division:this.state.arp?.division]||.25)));}
       }
       _importCycleNotes() {
         const startBeat=this.importCycle*this.importLength;
@@ -159,7 +159,7 @@
       }
       _sequence() {
         if(!this.playing||this.frame<this.originFrame)return;
-        const beat=this.beatAt(this.frame),lookahead=divisions[this.state.arp?.division]||.25;
+        const beat=this.beatAt(this.frame),lookahead=divisions[this.state.sequenceMode==='pattern'?this.state.notePatterns[this.state.selectedPattern||0].division:this.state.arp?.division]||.25;
         if(this.importNotes){
           const importAhead=32*this.tempo/(60*this.sr);let count=0;
           while(count++<MAX_QUEUE){if(this.importCursor>=this.importNotes.length){if((this.importCycle+1)*this.importLength>beat+importAhead)break;this.importCursor=0;this.importCycle++;this._importCycleNotes();if(!this.importNotes.length)continue;}

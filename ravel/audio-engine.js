@@ -53,14 +53,14 @@ function buildRavelDSP() {
     panic() { this.stop(); this.voices = []; this.echo.forEach(x => x.fill(0)); this.rooms.forEach(r => r.forEach(x => x.fill(0))); this.low.fill(0); this.low2.fill(0); this.hp.fill(0); this.prev.fill(0); this.hold.fill(0); this.crushFrame=0; this.meters={peak:0,rms:0,step:-1,pattern:this.pattern,bar:0,voices:0}; }
     scheduleBar() {
       if (this.pending !== null) { this.pattern = this.pending; this.pending = null; } else if (this.state.chain && this.bar > 0) this.pattern = (this.pattern + 1) % 4;
-      const duration = this.sr * 60 / this.state.tempo / 4, start = this.nextBar, steps = this.state.patterns[this.pattern].steps;
-      for (let i = 0; i < 16; i++) {
+      const duration = this.sr * 60 / this.state.tempo / 4, start = this.nextBar, pattern = this.state.patterns[this.pattern], steps = pattern.steps, length = pattern.length || 16;
+      for (let i = 0; i < length; i++) {
         const s = steps[i], target = start + (i + (i % 2 ? this.state.swing * .5 : 0) + s.micro) * duration;
         this.events.push({ frame: Math.max(start, Math.round(target)), step:i, marker:true });
         if (!s.on || this.rng() > s.probability) continue;
         for (let r = 0; r < s.ratchet; r++) this.events.push({ frame: Math.max(start, Math.round(target + r * duration / s.ratchet)), step:i, settings:{ ...s, duration:duration / this.sr * s.gate / s.ratchet } });
       }
-      this.events.sort((a,b) => a.frame - b.frame); this.nextBar += Math.round(duration * 16); this.bar++;
+      this.events.sort((a,b) => a.frame - b.frame); this.nextBar += Math.round(duration * length); this.bar++;
     }
     triggerSlice(slice, options = {}) {
       const a = this.state.sample, total = this.sample.length / 2, trim = a.trimEnd - a.trimStart;

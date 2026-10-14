@@ -91,8 +91,9 @@
       let lengthBeats=4, counter=0;
       const add=(voice,beat,duration,velocity,pitch,probability=1)=>notes.push({id:'note-'+counter++,voice:voice.id,pitch,beat:Math.max(0,beat),duration:Math.min(duration,lengthBeats-Math.max(0,beat)),velocity,probability});
       if(id==='grain'||id==='tine') {
+        const stepCount=s.stepCount===32?32:16;lengthBeats=stepCount/4;
         const solo=s.tracks.some(track=>track.solo);
-        s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,4-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
+        s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.slice(0,stepCount).forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,lengthBeats-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
       } else if(id==='form') {
         lengthBeats=s.steps[0].length/4;
         const finite=(value,fallback)=>typeof value==='number'&&Number.isFinite(value)?value:fallback;
@@ -115,8 +116,12 @@
           });
         });
       } else if(id==='ravel') {
-        const steps=s.patterns[s.selectedPattern].steps;
-        steps.forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<4)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),4-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
+        const pattern=s.patterns[s.selectedPattern],stepCount=pattern.length===32?32:16;lengthBeats=stepCount/4;
+        pattern.steps.slice(0,stepCount).forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<lengthBeats)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),lengthBeats-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
+      } else if(s.sequenceMode==='pattern') {
+        const bank=s.patternBanks[s.selectedPattern],stepCount=bank.length;lengthBeats=stepCount/4;
+        const solo=s.decks.some(deck=>deck.solo);
+        s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;bank.score[index].slice(0,stepCount).forEach((velocity,step)=>{if(velocity>0)add(all[index],step/4,bank.gate/4,velocity,all[index].pitch);});});
       } else {
         lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
         s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
@@ -145,7 +150,7 @@
       scheduledState={pattern,map,s};startTime=(engine().context||engine().audioContext).currentTime+.055;cursor=0;display=onStep;
       const draw=()=>{
         if(!scheduledState)return;const audio=engine(),context=audio.context||audio.audioContext;
-        const tempo=tempoOf(viewState()),seconds=60/tempo,length=pattern.lengthBeats*seconds;
+        const currentState=viewState(),tempo=tempoOf(currentState),seconds=60/tempo,length=pattern.lengthBeats*seconds;
         if(context.state!=='running')return;
         const current=context.currentTime;
         let budget=0;
@@ -157,14 +162,15 @@
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
           adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
         }
-        if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%16);
+        const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
+        if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
       };
       pattern.notes.sort((a,b)=>id==='form'?eventBeat(pattern,a)-eventBeat(pattern,b):a.beat-b.beat);draw();timer=setInterval(draw,25);
     }
     const adapter={
       app:id,
-      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
-      get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
+      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'&&s.sequenceMode!=='pattern'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
       get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
       validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
       exportPattern(options={}){return packetFromNative(viewState(),options);},

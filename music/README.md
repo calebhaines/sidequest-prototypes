@@ -6,6 +6,12 @@ Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
 GALLEY studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
+Optional A–D conventional patterns now complement ROUX, LEAVEN, SKEWER,
+STEAM, and ROTISSERIE's original sequencers. All Kitchen instruments offer
+32-step sequences; sixteen-cell grids use a compact second page. Original modes
+and sounds remain the defaults. See [SEQUENCING.md](./SEQUENCING.md) for controls,
+verification, and the rollback checkpoint.
+
 Two-minute GALLEY session: https://calebhaines.github.io/sidequest-prototypes/music/listen/
 
 **The Cupboard at Low Tide** is the original two-minute arrangement made in the

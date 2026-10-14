@@ -8,9 +8,13 @@ Open `index.html` in a browser. It is a complete standalone HTML application wit
 
 ## Sequence
 
-Sixteen circular stops each choose Move, Root, Hold, or Rest. Movement changes the previous pitch by scale degrees; Root returns to the circuit’s home note, Hold extends the previous note, and Rest creates space. Stops have octave offset, velocity, gate, probability, accent, and slide. Recipe length, division, direction, stride, starting rotation, global gate, swing, and circuit drift shape traversal.
+Up to thirty-two circular stops each choose Move, Root, Hold, or Rest. Movement changes the previous pitch by scale degrees; Root returns to the circuit’s home note, Hold extends the previous note, and Rest creates space. Stops have octave offset, velocity, gate, probability, accent, and slide. Recipe length, division, direction, stride, starting rotation, global gate, swing, and circuit drift shape traversal.
 
 Accent and slide have independent Euclidean pulse cycles. Their lengths, pulse counts, and rotations create changing intersections with the pitch recipe. Circuit drift transposes each turn by scale degrees. The complete four-turn phrase repeats, and the seed makes probability reproducible between playback and rendering. Shared Patterns exports either the complete four-turn phrase or a single turn as exact notes.
+
+Choose **Pattern** in the small **Sequencer** selector to store an absolute **Note** at each step. The same ring and inspector edit the pattern, and banks **A–D** keep four independent patterns. Notes play in numbered order; **Hold**, **Rest**, velocity, gate, probability, accent, and slide still work. Pattern length, division, and global gate belong to its selected bank. The circular recipe, traversal controls, and independent accent/slide clocks remain saved separately when you switch back to **Circular recipe**. Both modes use the existing monophonic bass engine and sharing/export paths.
+
+The existing **Recipe length** control now reaches 32. Above sixteen steps, a compact **01–16 / 17–32** page selector shows the second half in the same ring. Shortening a sequence keeps its hidden steps. Legacy sixteen-stop projects open with silent stops 17–32 and retain their original playback.
 
 ## Synthesis
 
@@ -20,9 +24,9 @@ Amplitude and filter have independent ADSR envelopes. Filter-envelope depth is m
 
 ## Keep and share
 
-Save recipe downloads the complete patch and recipe as `.roux.json`. Open restores it. Current state is stored under the stable `roux-project-v1` browser storage key. Undo and Redo restore musical edits. Export WAV renders a fresh stereo 48 kHz file, including the decay tail, without changing playback. Samples shares a rendered recipe or selected bass note through the shared pantry; Patterns shares exact notes through the order book.
+Save recipe downloads the complete patch and recipe as `.roux.json`. Open restores it. Current state is stored under the stable `roux-project-v1` browser storage key. Undo and Redo restore musical edits. In Pattern mode, exports use the selected note bank; circular recipes retain their four-turn phrase. Export WAV renders a fresh stereo 48 kHz file, including the decay tail, without changing playback. Samples shares a rendered recipe or selected bass note through the shared pantry; Patterns shares exact notes through the order book.
 
-Imported patterns remain exact and are saved with the patch. Sound controls and tempo changes preserve the imported pattern. Editing a native recipe parameter, or choosing Use native recipe, returns to the circular recipe. Undo can restore the imported pattern.
+Imported patterns remain exact and are saved with the patch. Sound controls and tempo changes preserve the imported pattern. Editing a native recipe parameter, or changing Sequencer or a native bank returns to the selected native sequence. **Use native recipe / pattern** also clears the imported overlay. Undo can restore the imported pattern.
 
 GALLEY hosts ROUX as an instrument, with full patch snapshots, note scheduling, shared transport, reversible note printing, and sample/pattern sharing. ROUX supports one pitched bass voice; overlapping imported notes are handled with monophonic last-note priority.
 

@@ -28,3 +28,18 @@ body{background:radial-gradient(ellipse at 75% 0,#ff8d450a,transparent 43%),#151
 .shell .masthead nav .ml-ex-launcher,.shell .masthead nav .ml-pat-launcher{min-height:40px!important;height:40px!important}
 /* Keep Help above the legacy tablet icon sizing. */
 .shell .masthead #help-button{min-height:40px;min-width:40px;height:40px;width:40px}
+
+/* Optional patterns use the existing controls and remain hidden in the original mode. */
+.step-pattern-panel{padding:12px 16px;border-bottom:1px solid var(--line,#3c4549);background:#22292c}
+.step-pattern-panel[hidden]{display:none}
+.step-pattern-controls{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.step-pattern-controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:#c5cfd1}
+.step-pattern-controls select,.step-pattern-controls input{max-width:170px;min-height:34px;padding:5px 7px;background:#171e21;color:#f0ece0;border:1px solid #536167;border-radius:3px;font:inherit}
+.step-pattern-controls input{width:60px}
+.step-pattern-grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;min-width:0}
+.pattern-step{min-width:0;min-height:36px;padding:4px 0;background:#182126;color:#aab6bc;border:1px solid #536167;border-radius:3px;font-size:11px}
+.pattern-step:nth-child(4n+1){border-left:2px solid #b88763}
+.pattern-step[aria-pressed=true]{background:#ff8d4525;color:#ffad77;border-color:#bf7847}
+.pattern-step.playing{outline:2px solid #effce9;outline-offset:-2px}
+.pattern-step:focus-visible{outline:2px solid #f1ead8;outline-offset:2px}
+@media(max-width:650px){.step-pattern-panel{padding:10px 12px}.step-pattern-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step-pattern-controls label{flex-wrap:wrap}.step-pattern-controls select{max-width:130px}}

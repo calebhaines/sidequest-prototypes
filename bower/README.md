@@ -11,11 +11,21 @@ needed to play the standalone HTML.
 ## Playing
 
 Press Play to run a pattern, or pluck and strum the strings yourself.
-Each lane has sixteen visible steps and its own pattern length, clock division
-and direction. Shape step notes, velocity and probability; generate Euclidean
+Each lane has sixteen visible steps and its own pattern length (up to 32), clock
+division and direction. The compact Steps selector opens steps 17–32. Shape step notes, velocity and probability; generate Euclidean
 rhythms and choose a scale. Pluck position, damping, brightness, dispersion and
 body controls change the physical string model. Seven playable recipes and an
 empty station are included.
+
+Choose **Pattern** in the Sequencer selector for conventional note patterns on the
+same four rows. Banks **A–D** each hold a separate 16- or 32-step sequence; the
+length and page selectors sit beside the mode control. Edit absolute notes with
+the existing selected-step editor. All four strings share a forward sixteenth-note
+clock with swing and step probability. Bank A starts from the native notes when
+an earlier score is opened; B–D start empty. Strings keeps the original independent
+clocks, scale degrees, Euclidean generators, Humanize and evolution. Changing
+mode or bank restarts its clock while notes ring out. Pattern notes release at the bank boundary, matching shared note patterns.
+Both modes and all banks are saved, and shortening a sequence keeps its unused steps.
 
 The master effects and performance controls let you shape a live performance.
 Panic stops sound and cancels pending audio actions. Undo restores earlier
