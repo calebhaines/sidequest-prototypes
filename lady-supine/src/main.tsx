@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/palette.css';
 import './styles/openworld.css';
-import { loadPaperAssets, paperAssetPortrait } from './openworld/paperAssets';
+import { loadPaperAssets, paperAssetPortrait, photoMaterialDataUrl } from './openworld/paperAssets';
 
 function PaperBoot() {
   const [state, setState] = React.useState<'loading' | 'ready' | 'error'>('loading');
@@ -12,9 +12,13 @@ function PaperBoot() {
     let active = true;
     loadPaperAssets().then(() => {
       if (!active) return;
-      const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]') || document.createElement('link');
       const portrait = paperAssetPortrait('lady-head', 48);
-      if (icon && portrait) { icon.href = portrait; icon.type = 'image/png'; }
+      if (portrait) { icon.rel = 'icon'; icon.href = portrait; icon.type = 'image/png'; if (!icon.isConnected) document.head.append(icon); }
+      for (const material of ['olive', 'metal', 'wood', 'water', 'gravel', 'grass']) {
+        const url = photoMaterialDataUrl(`material-${material}`);
+        if (url) document.documentElement.style.setProperty(`--photo-${material}`, `url("${url}")`);
+      }
       setState('ready');
     }).catch(() => { if (active) setState('error'); });
     return () => { active = false; };

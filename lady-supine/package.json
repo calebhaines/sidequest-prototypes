@@ -24,9 +24,10 @@
     "test:marker-viewports": "node scripts/marker-viewport-check.mjs",
     "test:animations": "node scripts/animation-check.mjs",
     "test:abstract": "node scripts/abstract-art-check.mjs",
-    "test:paper": "node scripts/torn-paper-check.mjs",
+    "test:paper": "node scripts/photo-collage-check.mjs",
     "test:performance": "node scripts/performance-check.mjs",
-    "test:single": "node scripts/single-html-check.mjs"
+    "test:single": "node scripts/single-html-check.mjs",
+    "test:photo": "node scripts/photo-collage-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -1,0 +1,2028 @@
+{
+  "method": "One isolated headless Chromium, default full animations and particles, actual engine frames and canvas draws after warmup. CDP TaskDuration includes main-thread work; callback cost measures engine JavaScript and canvas submission, not GPU execution.",
+  "base": "http://localhost:5173",
+  "sampleMs": 3000,
+  "warmupMs": 1200,
+  "forceSmoothing": null,
+  "forceEngineDpr": null,
+  "results": [
+    {
+      "viewport": "desktop-1080p",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 92,
+        "nearbyTrees": 19,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.35,
+      "engineCallbackFps": 60.35,
+      "engineCallbackMs": {
+        "count": 182,
+        "mean": 2.31,
+        "p50": 2.2,
+        "p95": 3,
+        "max": 6.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 181,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 16.8
+      },
+      "drawIntervalMs": {
+        "count": 181,
+        "mean": 16.65,
+        "p50": 16.6,
+        "p95": 20.4,
+        "max": 29.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2578.25,
+        "ScriptDuration": 660.12,
+        "LayoutDuration": 0.16,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 3.34,
+        "p50": 3.4,
+        "p95": 3.8,
+        "max": 3.8
+      },
+      "warmupCanvasCreates": 1,
+      "warmCanvasCreates": 2,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 175,
+        "nearbyTrees": 90,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 35.86,
+      "engineCallbackFps": 35.86,
+      "engineCallbackMs": {
+        "count": 109,
+        "mean": 4.61,
+        "p50": 4.7,
+        "p95": 5.9,
+        "max": 12.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 108,
+        "mean": 28.09,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 33.5
+      },
+      "drawIntervalMs": {
+        "count": 108,
+        "mean": 28.16,
+        "p50": 26.9,
+        "p95": 36,
+        "max": 45.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2990.11,
+        "ScriptDuration": 741.3,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 21.16,
+        "p50": 5.2,
+        "p95": 84.9,
+        "max": 84.9
+      },
+      "warmupCanvasCreates": 94,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 100,
+        "nearbyTrees": 18,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 48.6,
+      "engineCallbackFps": 48.6,
+      "engineCallbackMs": {
+        "count": 147,
+        "mean": 12.54,
+        "p50": 12,
+        "p95": 16.3,
+        "max": 28.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 146,
+        "mean": 20.66,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 146,
+        "mean": 20.68,
+        "p50": 18.7,
+        "p95": 31.2,
+        "max": 44.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2964.15,
+        "ScriptDuration": 2068.77,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 25.56,
+        "p50": 13.7,
+        "p95": 74.6,
+        "max": 74.6
+      },
+      "warmupCanvasCreates": 100,
+      "warmCanvasCreates": 9,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 125,
+        "nearbyTrees": 27,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 47.72,
+      "engineCallbackFps": 47.72,
+      "engineCallbackMs": {
+        "count": 144,
+        "mean": 12.4,
+        "p50": 12,
+        "p95": 15.1,
+        "max": 21.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 143,
+        "mean": 21.21,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 143,
+        "mean": 21.12,
+        "p50": 20.3,
+        "p95": 27.9,
+        "max": 39.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2987.2,
+        "ScriptDuration": 2019.86,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 17.48,
+        "p50": 12.9,
+        "p95": 36.4,
+        "max": 36.4
+      },
+      "warmupCanvasCreates": 18,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 92,
+        "nearbyTrees": 19,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 36.36,
+      "engineCallbackFps": 36.36,
+      "engineCallbackMs": {
+        "count": 110,
+        "mean": 20.75,
+        "p50": 19.6,
+        "p95": 29,
+        "max": 35.4
+      },
+      "engineFrameIntervalMs": {
+        "count": 109,
+        "mean": 27.68,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 109,
+        "mean": 27.78,
+        "p50": 27.5,
+        "p95": 38.8,
+        "max": 47.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2973.95,
+        "ScriptDuration": 2525.57,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 20.08,
+        "p50": 20.7,
+        "p95": 21.3,
+        "max": 21.3
+      },
+      "warmupCanvasCreates": 1,
+      "warmCanvasCreates": 2,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 175,
+        "nearbyTrees": 90,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 22.62,
+      "engineCallbackFps": 22.62,
+      "engineCallbackMs": {
+        "count": 69,
+        "mean": 27.75,
+        "p50": 27,
+        "p95": 31.8,
+        "max": 41.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 68,
+        "mean": 45.1,
+        "p50": 50,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 68,
+        "mean": 44.79,
+        "p50": 43.4,
+        "p95": 54.8,
+        "max": 61
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2983.4,
+        "ScriptDuration": 2089.59,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 70.36,
+        "p50": 27.9,
+        "p95": 243.1,
+        "max": 243.1
+      },
+      "warmupCanvasCreates": 94,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 100,
+        "nearbyTrees": 18,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 29.03,
+      "engineCallbackFps": 29.03,
+      "engineCallbackMs": {
+        "count": 88,
+        "mean": 16.57,
+        "p50": 15.7,
+        "p95": 20.9,
+        "max": 29.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 87,
+        "mean": 34.67,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 87,
+        "mean": 34.92,
+        "p50": 33.6,
+        "p95": 45.2,
+        "max": 80.6
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2922.46,
+        "ScriptDuration": 1696.56,
+        "LayoutDuration": 0.14,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 41.68,
+        "p50": 16.7,
+        "p95": 139.1,
+        "max": 139.1
+      },
+      "warmupCanvasCreates": 100,
+      "warmCanvasCreates": 9,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 125,
+        "nearbyTrees": 27,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 31.36,
+      "engineCallbackFps": 31.36,
+      "engineCallbackMs": {
+        "count": 95,
+        "mean": 16.02,
+        "p50": 15.3,
+        "p95": 20.2,
+        "max": 22.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 94,
+        "mean": 32.27,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 94,
+        "mean": 32.36,
+        "p50": 32.3,
+        "p95": 41.1,
+        "max": 42.7
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2985.31,
+        "ScriptDuration": 1727.95,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 24.02,
+        "p50": 15.7,
+        "p95": 54.1,
+        "max": 54.1
+      },
+      "warmupCanvasCreates": 18,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 127,
+        "nearbyTrees": 24,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 37.56,
+      "engineCallbackFps": 37.56,
+      "engineCallbackMs": {
+        "count": 114,
+        "mean": 19.21,
+        "p50": 18.3,
+        "p95": 25.4,
+        "max": 29.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 113,
+        "mean": 26.84,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 113,
+        "mean": 26.85,
+        "p50": 25.9,
+        "p95": 38,
+        "max": 52.6
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2958.21,
+        "ScriptDuration": 2420.95,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 21.84,
+        "p50": 20.9,
+        "p95": 27.6,
+        "max": 27.6
+      },
+      "warmupCanvasCreates": 1,
+      "warmCanvasCreates": 4,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 268,
+        "nearbyTrees": 127,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 20.69,
+      "engineCallbackFps": 20.69,
+      "engineCallbackMs": {
+        "count": 63,
+        "mean": 33.22,
+        "p50": 32,
+        "p95": 38.9,
+        "max": 51.7
+      },
+      "engineFrameIntervalMs": {
+        "count": 62,
+        "mean": 49.19,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 62,
+        "mean": 49.04,
+        "p50": 46.5,
+        "p95": 62.9,
+        "max": 74.6
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3016.87,
+        "ScriptDuration": 2282.03,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 62.94,
+        "p50": 33.9,
+        "p95": 182.9,
+        "max": 182.9
+      },
+      "warmupCanvasCreates": 128,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 168,
+        "nearbyTrees": 31,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 28.51,
+      "engineCallbackFps": 28.51,
+      "engineCallbackMs": {
+        "count": 86,
+        "mean": 19.63,
+        "p50": 19.2,
+        "p95": 24.6,
+        "max": 29.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 85,
+        "mean": 35.49,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 85,
+        "mean": 35.46,
+        "p50": 34.8,
+        "p95": 45.6,
+        "max": 49
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2948.32,
+        "ScriptDuration": 1938.74,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 36.02,
+        "p50": 18.4,
+        "p95": 107.4,
+        "max": 107.4
+      },
+      "warmupCanvasCreates": 96,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 2,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 177,
+        "nearbyTrees": 40,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 29.11,
+      "engineCallbackFps": 29.11,
+      "engineCallbackMs": {
+        "count": 88,
+        "mean": 19.99,
+        "p50": 18.8,
+        "p95": 26.5,
+        "max": 36.8
+      },
+      "engineFrameIntervalMs": {
+        "count": 87,
+        "mean": 34.67,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 83.4
+      },
+      "drawIntervalMs": {
+        "count": 87,
+        "mean": 34.84,
+        "p50": 33.3,
+        "p95": 50.1,
+        "max": 79.6
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2970.28,
+        "ScriptDuration": 1999.48,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 24.12,
+        "p50": 20,
+        "p95": 41.9,
+        "max": 41.9
+      },
+      "warmupCanvasCreates": 17,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 30,
+        "nearbyTrees": 8,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.38,
+      "engineCallbackFps": 60.38,
+      "engineCallbackMs": {
+        "count": 183,
+        "mean": 1.38,
+        "p50": 1.3,
+        "p95": 1.9,
+        "max": 4.2
+      },
+      "engineFrameIntervalMs": {
+        "count": 182,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 16.8
+      },
+      "drawIntervalMs": {
+        "count": 182,
+        "mean": 16.66,
+        "p50": 16.7,
+        "p95": 20,
+        "max": 24.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2335.86,
+        "ScriptDuration": 483.89,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 2.44,
+        "p50": 2.4,
+        "p95": 2.5,
+        "max": 2.5
+      },
+      "warmupCanvasCreates": 1,
+      "warmCanvasCreates": 1,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 48,
+        "nearbyTrees": 26,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.28,
+      "engineCallbackFps": 60.28,
+      "engineCallbackMs": {
+        "count": 181,
+        "mean": 1.83,
+        "p50": 1.7,
+        "p95": 2.4,
+        "max": 4.5
+      },
+      "engineFrameIntervalMs": {
+        "count": 180,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "drawIntervalMs": {
+        "count": 180,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 19.9,
+        "max": 24.7
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2518.18,
+        "ScriptDuration": 551.98,
+        "LayoutDuration": 0.17,
+        "RecalcStyleDuration": 0.07
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 16.28,
+        "p50": 2.7,
+        "p95": 70.8,
+        "max": 70.8
+      },
+      "warmupCanvasCreates": 59,
+      "warmCanvasCreates": 1,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 39,
+        "nearbyTrees": 6,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.35,
+      "engineCallbackFps": 60.35,
+      "engineCallbackMs": {
+        "count": 182,
+        "mean": 1.46,
+        "p50": 1.4,
+        "p95": 1.8,
+        "max": 3.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 181,
+        "mean": 16.67,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 16.8
+      },
+      "drawIntervalMs": {
+        "count": 181,
+        "mean": 16.66,
+        "p50": 16.6,
+        "p95": 20,
+        "max": 21.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2519.73,
+        "ScriptDuration": 486.58,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 10.76,
+        "p50": 1.8,
+        "p95": 46.1,
+        "max": 46.1
+      },
+      "warmupCanvasCreates": 35,
+      "warmCanvasCreates": 3,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "mobile",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 390,
+        "cssHeight": 844,
+        "devicePixelRatio": 3,
+        "pixelWidth": 780,
+        "pixelHeight": 1688,
+        "pixels": 1316640,
+        "nearbyObjects": 27,
+        "nearbyTrees": 2,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 60.3,
+      "engineCallbackFps": 60.3,
+      "engineCallbackMs": {
+        "count": 182,
+        "mean": 1.54,
+        "p50": 1.5,
+        "p95": 2,
+        "max": 5.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 181,
+        "mean": 16.76,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 181,
+        "mean": 16.75,
+        "p50": 16.5,
+        "p95": 21.9,
+        "max": 27.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2826.84,
+        "ScriptDuration": 499.54,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 14.08,
+        "p50": 1.4,
+        "p95": 64.5,
+        "max": 64.5
+      },
+      "warmupCanvasCreates": 74,
+      "warmCanvasCreates": 10,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 194,
+        "nearbyTrees": 44,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 31.5,
+      "engineCallbackFps": 31.5,
+      "engineCallbackMs": {
+        "count": 95,
+        "mean": 19.21,
+        "p50": 18,
+        "p95": 23.9,
+        "max": 65.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 94,
+        "mean": 31.74,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 83.3
+      },
+      "drawIntervalMs": {
+        "count": 94,
+        "mean": 31.76,
+        "p50": 30.6,
+        "p95": 38.4,
+        "max": 78.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2734.68,
+        "ScriptDuration": 2039.33,
+        "LayoutDuration": 0.13,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 19.12,
+        "p50": 18.5,
+        "p95": 22.4,
+        "max": 22.4
+      },
+      "warmupCanvasCreates": 3,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 484,
+        "nearbyTrees": 180,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 19.66,
+      "engineCallbackFps": 19.66,
+      "engineCallbackMs": {
+        "count": 60,
+        "mean": 35.71,
+        "p50": 34.2,
+        "p95": 45.8,
+        "max": 56.5
+      },
+      "engineFrameIntervalMs": {
+        "count": 59,
+        "mean": 52.26,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 83.4
+      },
+      "drawIntervalMs": {
+        "count": 59,
+        "mean": 51.85,
+        "p50": 51.3,
+        "p95": 69.5,
+        "max": 70.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3029.3,
+        "ScriptDuration": 2291.67,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 74.18,
+        "p50": 34.4,
+        "p95": 227.9,
+        "max": 227.9
+      },
+      "warmupCanvasCreates": 217,
+      "warmCanvasCreates": 3,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 340,
+        "nearbyTrees": 91,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 25.82,
+      "engineCallbackFps": 25.82,
+      "engineCallbackMs": {
+        "count": 79,
+        "mean": 21.91,
+        "p50": 20.4,
+        "p95": 30.2,
+        "max": 44.1
+      },
+      "engineFrameIntervalMs": {
+        "count": 78,
+        "mean": 39.1,
+        "p50": 33.4,
+        "p95": 50.1,
+        "max": 66.6
+      },
+      "drawIntervalMs": {
+        "count": 78,
+        "mean": 39.06,
+        "p50": 38.3,
+        "p95": 52.1,
+        "max": 61.8
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3009.44,
+        "ScriptDuration": 1898.55,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 37.74,
+        "p50": 20.7,
+        "p95": 93.3,
+        "max": 93.3
+      },
+      "warmupCanvasCreates": 86,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 3840,
+        "cssHeight": 2160,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 344,
+        "nearbyTrees": 87,
+        "options": {
+          "zoom": 1.5,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 23.67,
+      "engineCallbackFps": 23.67,
+      "engineCallbackMs": {
+        "count": 72,
+        "mean": 27.51,
+        "p50": 25.3,
+        "p95": 34.2,
+        "max": 39.9
+      },
+      "engineFrameIntervalMs": {
+        "count": 71,
+        "mean": 43.19,
+        "p50": 49.9,
+        "p95": 66.6,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 71,
+        "mean": 43.08,
+        "p50": 42.8,
+        "p95": 54.6,
+        "max": 61.7
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2976.8,
+        "ScriptDuration": 2144.31,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 26.32,
+        "p50": 23.6,
+        "p95": 39.2,
+        "max": 39.2
+      },
+      "warmupCanvasCreates": 10,
+      "warmCanvasCreates": 4,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 143,
+        "nearbyTrees": 30,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 57.82,
+      "engineCallbackFps": 57.82,
+      "engineCallbackMs": {
+        "count": 175,
+        "mean": 3.81,
+        "p50": 3.5,
+        "p95": 5.1,
+        "max": 14.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 174,
+        "mean": 17.34,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4
+      },
+      "drawIntervalMs": {
+        "count": 174,
+        "mean": 17.41,
+        "p50": 16.3,
+        "p95": 25.1,
+        "max": 34.1
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2964.87,
+        "ScriptDuration": 920.45,
+        "LayoutDuration": 0.2,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 17.92,
+        "p50": 4.8,
+        "p95": 71.1,
+        "max": 71.1
+      },
+      "warmupCanvasCreates": 115,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 310,
+        "nearbyTrees": 140,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 28.28,
+      "engineCallbackFps": 28.28,
+      "engineCallbackMs": {
+        "count": 86,
+        "mean": 7.02,
+        "p50": 6.4,
+        "p95": 10.4,
+        "max": 15.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 85,
+        "mean": 35.88,
+        "p50": 33.3,
+        "p95": 50.1,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 85,
+        "mean": 35.83,
+        "p50": 33.7,
+        "p95": 48.9,
+        "max": 64.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3018.7,
+        "ScriptDuration": 819.59,
+        "LayoutDuration": 0.18,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 27.88,
+        "p50": 8.1,
+        "p95": 107.3,
+        "max": 107.3
+      },
+      "warmupCanvasCreates": 138,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 211,
+        "nearbyTrees": 46,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 42.66,
+      "engineCallbackFps": 42.66,
+      "engineCallbackMs": {
+        "count": 129,
+        "mean": 5.7,
+        "p50": 4.9,
+        "p95": 7.3,
+        "max": 49
+      },
+      "engineFrameIntervalMs": {
+        "count": 128,
+        "mean": 23.57,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 116.7
+      },
+      "drawIntervalMs": {
+        "count": 128,
+        "mean": 23.6,
+        "p50": 21.1,
+        "p95": 31.5,
+        "max": 108.8
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2980.02,
+        "ScriptDuration": 964.39,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 18.52,
+        "p50": 6,
+        "p95": 69.4,
+        "max": 69.4
+      },
+      "warmupCanvasCreates": 81,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 1920,
+        "cssHeight": 1080,
+        "devicePixelRatio": 1,
+        "pixelWidth": 1920,
+        "pixelHeight": 1080,
+        "pixels": 2073600,
+        "nearbyObjects": 218,
+        "nearbyTrees": 51,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 42.49,
+      "engineCallbackFps": 42.49,
+      "engineCallbackMs": {
+        "count": 128,
+        "mean": 17.23,
+        "p50": 16.7,
+        "p95": 22.8,
+        "max": 28.9
+      },
+      "engineFrameIntervalMs": {
+        "count": 127,
+        "mean": 23.49,
+        "p50": 16.7,
+        "p95": 33.4,
+        "max": 33.5
+      },
+      "drawIntervalMs": {
+        "count": 127,
+        "mean": 23.64,
+        "p50": 22.6,
+        "p95": 31.5,
+        "max": 40.6
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2978.99,
+        "ScriptDuration": 2406.03,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 21.62,
+        "p50": 17.4,
+        "p95": 39.8,
+        "max": 39.8
+      },
+      "warmupCanvasCreates": 23,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "entrance",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 194,
+        "nearbyTrees": 44,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 37.32,
+      "engineCallbackFps": 37.32,
+      "engineCallbackMs": {
+        "count": 113,
+        "mean": 18.1,
+        "p50": 17.1,
+        "p95": 24.1,
+        "max": 34.5
+      },
+      "engineFrameIntervalMs": {
+        "count": 112,
+        "mean": 27.08,
+        "p50": 33.3,
+        "p95": 33.4,
+        "max": 50
+      },
+      "drawIntervalMs": {
+        "count": 112,
+        "mean": 27.09,
+        "p50": 25.6,
+        "p95": 37.4,
+        "max": 42.2
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3000.32,
+        "ScriptDuration": 2259,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 37.56,
+        "p50": 20.4,
+        "p95": 108.3,
+        "max": 108.3
+      },
+      "warmupCanvasCreates": 126,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "forest",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 484,
+        "nearbyTrees": 180,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 20.03,
+      "engineCallbackFps": 20.03,
+      "engineCallbackMs": {
+        "count": 61,
+        "mean": 34.7,
+        "p50": 33.7,
+        "p95": 40.4,
+        "max": 51.2
+      },
+      "engineFrameIntervalMs": {
+        "count": 60,
+        "mean": 50.83,
+        "p50": 50,
+        "p95": 66.7,
+        "max": 66.7
+      },
+      "drawIntervalMs": {
+        "count": 60,
+        "mean": 50.72,
+        "p50": 50.1,
+        "p95": 62.8,
+        "max": 66.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3022.13,
+        "ScriptDuration": 2283.84,
+        "LayoutDuration": 0.18,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 62.74,
+        "p50": 33.1,
+        "p95": 173.9,
+        "max": 173.9
+      },
+      "warmupCanvasCreates": 217,
+      "warmCanvasCreates": 3,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "lake",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 340,
+        "nearbyTrees": 91,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 25.71,
+      "engineCallbackFps": 25.71,
+      "engineCallbackMs": {
+        "count": 78,
+        "mean": 22.48,
+        "p50": 21.7,
+        "p95": 28.6,
+        "max": 32.3
+      },
+      "engineFrameIntervalMs": {
+        "count": 77,
+        "mean": 39.39,
+        "p50": 33.4,
+        "p95": 50.1,
+        "max": 66.6
+      },
+      "drawIntervalMs": {
+        "count": 77,
+        "mean": 39.36,
+        "p50": 38.4,
+        "p95": 48.2,
+        "max": 60.4
+      },
+      "mainThreadMs": {
+        "TaskDuration": 3010.09,
+        "ScriptDuration": 1978.34,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 33.98,
+        "p50": 20.6,
+        "p95": 86.1,
+        "max": 86.1
+      },
+      "warmupCanvasCreates": 86,
+      "warmCanvasCreates": 8,
+      "warmTerrainCanvasCreates": 0
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "shanty",
+      "geometry": {
+        "cssWidth": 2560,
+        "cssHeight": 1440,
+        "devicePixelRatio": 1,
+        "pixelWidth": 2108,
+        "pixelHeight": 1185,
+        "pixels": 2497980,
+        "nearbyObjects": 344,
+        "nearbyTrees": 87,
+        "options": {
+          "zoom": 1,
+          "reducedMotion": false,
+          "particles": true
+        }
+      },
+      "actualDrawFps": 27.85,
+      "engineCallbackFps": 27.85,
+      "engineCallbackMs": {
+        "count": 85,
+        "mean": 23,
+        "p50": 22.5,
+        "p95": 29.4,
+        "max": 33.6
+      },
+      "engineFrameIntervalMs": {
+        "count": 84,
+        "mean": 36.31,
+        "p50": 33.4,
+        "p95": 50,
+        "max": 50.1
+      },
+      "drawIntervalMs": {
+        "count": 84,
+        "mean": 36.33,
+        "p50": 36.1,
+        "p95": 43.1,
+        "max": 52.3
+      },
+      "mainThreadMs": {
+        "TaskDuration": 2999.88,
+        "ScriptDuration": 2120.47,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
+      },
+      "coldFirstFramesMs": {
+        "count": 5,
+        "mean": 23.48,
+        "p50": 22,
+        "p95": 30.7,
+        "max": 30.7
+      },
+      "warmupCanvasCreates": 10,
+      "warmCanvasCreates": 5,
+      "warmTerrainCanvasCreates": 0
+    }
+  ],
+  "regression": {
+    "desktop-1080p": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.53,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": false,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1080p-retina": {
+      "playerMovedTiles": 1.71,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1440p-retina": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.58,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "mobile": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.53,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": null
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-4k": {
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.53,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1080p-zoom1": {
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.55,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": false,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    },
+    "desktop-1440p-zoom1": {
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.57,
+      "menusPauseSimulationAndBorrowedTime": true,
+      "pausedRendering": {
+        "settledDraws": 0,
+        "optionsRedraw": true,
+        "resizeRedraw": true,
+        "sameAspectResizeRedraw": {
+          "backingDimensionsUnchanged": true,
+          "redraw": true
+        }
+      },
+      "saveRoundtrip": true,
+      "scenery": {
+        "treeMoves": true,
+        "reducedMotionRemainsStill": true
+      },
+      "browserErrors": []
+    }
+  },
+  "refreshRates": [
+    {
+      "hz": 59.94,
+      "jitterMs": 0,
+      "elapsed": 3.203203203203213,
+      "movedTiles": 10.57057057057083,
+      "animationPhase": 3.203203203203213,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2032032032032034
+    },
+    {
+      "hz": 59.94,
+      "jitterMs": 0.75,
+      "elapsed": 3.2032032032032065,
+      "movedTiles": 10.570570570570627,
+      "animationPhase": 3.2032032032032065,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2032032032032034
+    },
+    {
+      "hz": 60,
+      "jitterMs": 0,
+      "elapsed": 3.200000000000011,
+      "movedTiles": 10.559999999999945,
+      "animationPhase": 3.200000000000011,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 60,
+      "jitterMs": 0.75,
+      "elapsed": 3.2000000000000033,
+      "movedTiles": 10.56000000000002,
+      "animationPhase": 3.2000000000000033,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 120,
+      "jitterMs": 0,
+      "elapsed": 3.199999999999982,
+      "movedTiles": 10.56000000000006,
+      "animationPhase": 3.199999999999982,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 120,
+      "jitterMs": 0.75,
+      "elapsed": 3.1999999999999975,
+      "movedTiles": 10.559999999999931,
+      "animationPhase": 3.1999999999999975,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 144,
+      "jitterMs": 0,
+      "elapsed": 3.2013888888888715,
+      "movedTiles": 10.564583333333552,
+      "animationPhase": 3.2013888888888715,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.201388888888889
+    },
+    {
+      "hz": 144,
+      "jitterMs": 0.75,
+      "elapsed": 3.201388888888888,
+      "movedTiles": 10.564583333333353,
+      "animationPhase": 3.201388888888888,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.201388888888889
+    },
+    {
+      "hz": 240,
+      "jitterMs": 0,
+      "elapsed": 3.199999999999957,
+      "movedTiles": 10.560000000000809,
+      "animationPhase": 3.199999999999957,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    },
+    {
+      "hz": 240,
+      "jitterMs": 0.75,
+      "elapsed": 3.200000000000001,
+      "movedTiles": 10.560000000000098,
+      "animationPhase": 3.200000000000001,
+      "borrowedTimeChange": -1,
+      "draws": 193,
+      "duration": 3.2
+    }
+  ],
+  "sourceSha256": {
+    "src/openworld/renderer.ts": "48e749e30a5674e7f0fd139c2e7072c6698d22a9210ca640143af4884af5190a",
+    "src/openworld/sprites.ts": "5709ed07a79399ad18c809a6c29292778a7caa4c646fe411eaa1d4fb8c0f50a3",
+    "src/openworld/paper.ts": "499cb9b1e5cc027bf0099ccea117ec44991351521d026ab804e53e8fce1f95cb",
+    "src/openworld/paperAssets.ts": "9d79a2dc948829cecd7380010b4f3f1bafa712ae9cad734e5c110ba739c01668",
+    "src/openworld/engine.ts": "3c4c66ac1bc375d377cef6ccd18eba47c5784ec73fee6d0b56db2c838b469c98"
+  },
+  "previousBuildComparisons": [
+    {
+      "viewport": "desktop-1080p",
+      "scene": "entrance",
+      "previousDrawFps": 56.61,
+      "photoDrawFps": 60.35
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "forest",
+      "previousDrawFps": 30.27,
+      "photoDrawFps": 35.86
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "lake",
+      "previousDrawFps": 44.32,
+      "photoDrawFps": 48.6
+    },
+    {
+      "viewport": "desktop-1080p",
+      "scene": "shanty",
+      "previousDrawFps": 36.23,
+      "photoDrawFps": 47.72
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "entrance",
+      "previousDrawFps": 32.36,
+      "photoDrawFps": 36.36
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "forest",
+      "previousDrawFps": 21.77,
+      "photoDrawFps": 22.62
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "lake",
+      "previousDrawFps": 26.03,
+      "photoDrawFps": 29.03
+    },
+    {
+      "viewport": "desktop-1080p-retina",
+      "scene": "shanty",
+      "previousDrawFps": 26.34,
+      "photoDrawFps": 31.36
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "entrance",
+      "previousDrawFps": 28.26,
+      "photoDrawFps": 37.56
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "forest",
+      "previousDrawFps": 20.13,
+      "photoDrawFps": 20.69
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "lake",
+      "previousDrawFps": 25.39,
+      "photoDrawFps": 28.51
+    },
+    {
+      "viewport": "desktop-1440p-retina",
+      "scene": "shanty",
+      "previousDrawFps": 19.18,
+      "photoDrawFps": 29.11
+    },
+    {
+      "viewport": "mobile",
+      "scene": "entrance",
+      "previousDrawFps": 59.96,
+      "photoDrawFps": 60.38
+    },
+    {
+      "viewport": "mobile",
+      "scene": "forest",
+      "previousDrawFps": 60.02,
+      "photoDrawFps": 60.28
+    },
+    {
+      "viewport": "mobile",
+      "scene": "lake",
+      "previousDrawFps": 60.32,
+      "photoDrawFps": 60.35
+    },
+    {
+      "viewport": "mobile",
+      "scene": "shanty",
+      "previousDrawFps": 58.28,
+      "photoDrawFps": 60.3
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "entrance",
+      "previousDrawFps": 28.09,
+      "photoDrawFps": 31.5
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "forest",
+      "previousDrawFps": 18,
+      "photoDrawFps": 19.66
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "lake",
+      "previousDrawFps": 20.64,
+      "photoDrawFps": 25.82
+    },
+    {
+      "viewport": "desktop-4k",
+      "scene": "shanty",
+      "previousDrawFps": 21.15,
+      "photoDrawFps": 23.67
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "entrance",
+      "previousDrawFps": 53.13,
+      "photoDrawFps": 57.82
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "forest",
+      "previousDrawFps": 25.95,
+      "photoDrawFps": 28.28
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "lake",
+      "previousDrawFps": 37.84,
+      "photoDrawFps": 42.66
+    },
+    {
+      "viewport": "desktop-1080p-zoom1",
+      "scene": "shanty",
+      "previousDrawFps": 35.06,
+      "photoDrawFps": 42.49
+    }
+  ]
+}

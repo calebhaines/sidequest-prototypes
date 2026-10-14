@@ -4,8 +4,10 @@ import type { GameState } from '../data/game';
 import { formatTime } from '../data/game';
 import { ITEM_DEFS } from '../openworld/items';
 import { PALETTE24 as P, rgba as mapWash } from '../openworld/palette';
-import { paperPath, paperRandom, paperSeam, paperShape, paperTexture } from '../openworld/paper';
+import { paperPath, paperShape, paperTexture } from '../openworld/paper';
 import { actorPortraitDataUrl, itemIconDataUrl } from '../openworld/sprites';
+import { drawPaperAsset } from '../openworld/paperAssets';
+import PaperMotif from './PaperMotif';
 import type { TileKind, Vec, WorldData, WorldScene, WorldSnapshot } from '../openworld/types';
 
 export type GameNotice = { id: number | string; text: string; kind?: 'info' | 'success' | 'warning' };
@@ -35,8 +37,8 @@ function simplifyLine(points: Vec[], tolerance = 1.5): Vec[] {
   return [...simplifyLine(points.slice(0, at + 1), tolerance).slice(0, -1), ...simplifyLine(points.slice(at), tolerance)];
 }
 
-// Trace the physical banks/roads, then tear their paper edges gently. Geography stays
-// continuous, including holes in land/water; the chart never paints a pixel grid.
+// The specimen survey follows the actual banks and roads. Smooth scissor cuts
+// retain compound winding and holes, so every destination remains geographically accurate.
 function paperContours(context: CanvasRenderingContext2D, scene: WorldScene, kinds: TileKind[], fill: string, outline?: string, unit = 3) {
   const selected = (x: number, y: number) => x >= 0 && y >= 0 && x < scene.width && y < scene.height && kinds.includes(scene.tiles[y * scene.width + x]);
   const links = new globalThis.Map<string, string[]>();
@@ -72,18 +74,19 @@ function paperContours(context: CanvasRenderingContext2D, scene: WorldScene, kin
   }
   context.save(); context.scale(unit, unit);
   const path = new Path2D();
-  const rng = paperRandom(kinds.join('').length * 197 + scene.width);
   for (const loop of points) {
-    path.moveTo(loop[0].x, loop[0].y);
-    for (let i = 0; i < loop.length; i++) {
-      const a = loop[i], b = loop[(i + 1) % loop.length];
-      const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy);
-      const pieces = Math.max(1, Math.min(60, Math.ceil(length / 1.5)));
-      for (let part = 1; part < pieces; part++) {
-        const t = part / pieces, tear = (rng() - .5) * .24;
-        path.lineTo(a.x + dx * t + dy / length * tear, a.y + dy * t - dx / length * tear);
-      }
-      path.lineTo(b.x, b.y);
+    const corners = loop.map((point, index) => {
+      const previous = loop[(index + loop.length - 1) % loop.length], next = loop[(index + 1) % loop.length];
+      const before = Math.hypot(previous.x - point.x, previous.y - point.y);
+      const after = Math.hypot(next.x - point.x, next.y - point.y);
+      const radius = Math.min(.55, before * .35, after * .35);
+      return { point, incoming: { x: point.x + (previous.x - point.x) / before * radius, y: point.y + (previous.y - point.y) / before * radius },
+        outgoing: { x: point.x + (next.x - point.x) / after * radius, y: point.y + (next.y - point.y) / after * radius } };
+    });
+    path.moveTo(corners[0].incoming.x, corners[0].incoming.y);
+    for (const corner of corners) {
+      path.lineTo(corner.incoming.x, corner.incoming.y);
+      path.quadraticCurveTo(corner.point.x, corner.point.y, corner.outgoing.x, corner.outgoing.y);
     }
     path.closePath();
   }
@@ -102,54 +105,32 @@ function terrainMap(data: WorldData) {
   const context = map.getContext('2d');
   if (context) {
     const scene = data.overworld;
-    paperTexture(context, 0, 0, map.width, map.height, P.ash, 960);
-    context.save(); context.scale(3, 3);
-    const rng = paperRandom(data.seed + 961);
-    // Patched stock makes this a physical field chart, not a smooth green game map.
-    for (let index = 0; index < 32; index++) {
-      const x = rng() * scene.width, y = rng() * scene.height;
-      const w = 9 + rng() * 34, h = 8 + rng() * 24;
-      const colour = [P.paper, P.ash, P.clay, P.sand, P.fog][index % 5];
-      paperShape(context, [x, y, x + w * .8, y - h * .06, x + w, y + h * .72, x + w * .6, y + h, x - w * .06, y + h * .9], colour, 962 + index, .28);
-    }
-    for (const [index, region] of data.regions.entries()) {
-      const pigment = region.id === 'forest' ? P.pine : region.id === 'shanty' ? P.clay : region.id === 'pit' ? P.charcoal : region.id === 'fields' ? P.sage : P.ash;
-      const x = region.x, y = region.y, w = region.width, h = region.height;
-      paperShape(context, [x + w * .08, y + h * .24, x + w * .64, y + h * .1, x + w * .9, y + h * .34, x + w * .82, y + h * .9, x + w * .2, y + h * .84], pigment, 1000 + index, .35);
-      if (region.id === 'forest') {
-        for (let tree = 0; tree < 10; tree++) {
-          const sx = x + w * (.2 + tree * .062), sy = y + h * (.44 + Math.sin(tree * 1.1) * .15);
-          paperShape(context, [sx - 1.8, sy + 1, sx + .2, sy - 4.5, sx + 2.2, sy + .3, sx + .3, sy + 2], tree % 2 ? P.moss : P.umbra, 1020 + tree, .14);
-          paperSeam(context, [sx + .2, sy - 3, sx + .4, sy + 3], P.ink, .23);
-        }
-      }
-    }
-    context.restore();
+    paperTexture(context, 0, 0, map.width, map.height, P.sage, 960);
+    // Actual photographic material swatches fill the traced physical landscape.
     paperContours(context, scene, ['dirt', 'tilled'], P.clay);
     paperContours(context, scene, ['sand'], P.sand);
-    const water = paperContours(context, scene, ['water', 'deepWater'], P.water, mapWash(P.deepWater, .5));
-    // Long overlapping water scraps, clipped to the real shoreline.
-    context.save(); context.scale(3, 3); context.clip(water);
-    for (let index = 0; index < 30; index++) {
-      const y = index * scene.height / 30;
-      paperShape(context, [-2, y, scene.width, y - .9, scene.width + 2, y + 1.5, -1, y + 2.2], index % 3 ? P.water : P.fog, 1060 + index, .12);
-    }
-    context.restore();
+    paperContours(context, scene, ['water', 'deepWater'], P.water, mapWash(P.chalk, .65));
     paperContours(context, scene, ['deepWater'], P.deepWater);
-    paperContours(context, scene, ['stone', 'stoneFloor'], P.slate, mapWash(P.ink, .3));
-    paperContours(context, scene, ['path', 'woodFloor'], P.paper, mapWash(P.umbra, .35));
+    paperContours(context, scene, ['stone', 'stoneFloor'], P.slate, mapWash(P.chalk, .6));
+    paperContours(context, scene, ['path', 'woodFloor'], P.umbra, mapWash(P.umbra, .35));
+    context.save(); context.scale(3, 3);
+    for (const region of data.regions) {
+      if (region.id !== 'forest') continue;
+      for (let tree = 0; tree < 7; tree++) {
+        const x = region.x + region.width * (.19 + tree * .097);
+        const y = region.y + region.height * (.45 + Math.sin(tree * 1.1) * .15);
+        drawPaperAsset(context, 'willow', x - 2.6, y - 8, 5.2, 9.5);
+      }
+    }
     for (const [index, object] of scene.objects.entries()) {
       if (object.kind !== 'building') continue;
-      const x = object.x * 3, y = object.y * 3, w = (object.width || 2) * 3, h = (object.height || 2) * 3;
-      paperShape(context, [x - .3, y + .4, x + w, y, x + w - .5, y + h, x + .2, y + h - .7], P.umbra, 1100 + index, .55);
-      paperShape(context, [x, y, x + w * .64, y + .2, x + w * .6, y + h * .32, x - .2, y + h * .33], P.ash, 1101 + index, .35);
-      paperSeam(context, [x + w * .35, y + h * .4, x + w * .4, y + h], P.ink, .65);
+      const x = object.x, y = object.y, w = object.width || 2, h = object.height || 2;
+      const asset = index % 3 === 0 ? 'blue-trailer' : 'trailer';
+      drawPaperAsset(context, asset, x - .3, y - .5, w + .6, h + 1);
     }
-    // Mended folds in the base sheet stay faint enough for paths to remain clear.
-    context.save(); context.globalAlpha *= .3;
-    paperSeam(context, [map.width * .025, map.height * .965, map.width * .86, map.height * .974], P.umbra, .7);
-    paperSeam(context, [map.width * .95, map.height * .055, map.width * .94, map.height * .73], P.umbra, .7);
     context.restore();
+    context.strokeStyle = P.chalk; context.lineWidth = 1.4;
+    context.strokeRect(1, 1, map.width - 2, map.height - 2);
   }
   terrainMaps.set(data, map);
   return map;
@@ -162,14 +143,20 @@ function roomMap(room: WorldScene) {
   canvas.width = room.width * 4; canvas.height = room.height * 4;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    paperTexture(ctx, 0, 0, canvas.width, canvas.height, P.charcoal, 1200);
-    paperContours(ctx, room, ['woodFloor', 'stoneFloor', 'path', 'dirt', 'grass'], P.paper, undefined, 4);
+    paperTexture(ctx, 0, 0, canvas.width, canvas.height, P.pine, 1200);
+    paperContours(ctx, room, ['woodFloor', 'stoneFloor', 'path', 'dirt', 'grass'], P.umbra, undefined, 4);
     ctx.save(); ctx.scale(4, 4);
     for (const [index, object] of room.objects.entries()) {
-      const w = object.width || 1, h = object.height || 1;
-      const x = object.x, y = object.y;
-      const fill = object.kind === 'bed' ? P.ash : object.kind === 'window' ? P.water : object.kind === 'rug' ? P.rust : P.umbra;
-      paperShape(ctx, [x, y + .1, x + w, y, x + w - .1, y + h, x + .1, y + h], fill, 1220 + index, .13);
+      const w = object.width || 1, h = object.height || 1, x = object.x, y = object.y;
+      const asset = object.kind === 'bed' ? 'bed' : object.kind === 'bookshelf' ? 'shelves'
+        : object.kind === 'machine' ? 'brain-machine' : object.kind === 'workbench' ? 'workbench'
+        : object.kind === 'portrait' ? 'telescreen' : object.kind === 'table' ? 'desk'
+        : object.kind === 'bench' ? 'stools' : object.kind === 'crate' ? 'crate' : 'cabinet';
+      if (object.kind === 'window' || object.kind === 'rug') {
+        paperShape(ctx, [x, y, x + w, y, x + w, y + h, x, y + h], object.kind === 'window' ? P.water : P.rust, 1220 + index, .13);
+      } else {
+        drawPaperAsset(ctx, asset, x, y, w, h);
+      }
     }
     ctx.restore();
   }
@@ -207,7 +194,7 @@ function drawRoomInset(ctx: CanvasRenderingContext2D, width: number, height: num
   }
   const px = mapX + world.player.x * sx, py = mapY + world.player.y * sy;
   const r = large ? 3 : 1.8;
-  paperShape(ctx, [px - r, py, px, py - r, px + r, py, px, py + r], P.chalk, 1242, .14);
+  ctx.fillStyle = P.chalk; ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(px, py, r * .42, 0, Math.PI * 2); ctx.fill();
 }
 
@@ -236,17 +223,14 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(map, 0, 0, width, height);
     ctx.save(); ctx.globalAlpha *= .88;
-    paperTexture(ctx, 0, 0, width, height, P.charcoal, 1260); ctx.restore();
+    ctx.fillStyle = P.pine; ctx.fillRect(0, 0, width, height); ctx.restore();
     ctx.save(); ctx.beginPath();
     for (const key of world.explored) {
       const [x, y] = key.split(':').map(Number);
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-      const rng = paperRandom(x * 149 + y * 257), cx = (x * 8 + 4) * scaleX, cy = (y * 8 + 4) * scaleY;
-      for (let edge = 0; edge < 20; edge++) {
-        const angle = edge / 20 * Math.PI * 2, radius = 6.2 * (.96 + rng() * .1);
-        const px = cx + Math.cos(angle) * scaleX * radius, py = cy + Math.sin(angle) * scaleY * radius;
-        if (!edge) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      }
+      const cx = (x * 8 + 4) * scaleX, cy = (y * 8 + 4) * scaleY;
+      ctx.moveTo(cx + scaleX * 6.5, cy);
+      ctx.ellipse(cx, cy, scaleX * 6.5, scaleY * 6.5, 0, 0, Math.PI * 2);
       ctx.closePath();
     }
     ctx.clip(); ctx.drawImage(map, 0, 0, width, height); ctx.restore();
@@ -255,13 +239,15 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
       const px = region.landmark.x * scaleX;
       const py = region.landmark.y * scaleY;
       const radius = large ? 4 : 1.8;
-      paperShape(ctx, [px - radius, py + radius * .35, px - radius * .25, py - radius, px + radius, py - radius * .15, px + radius * .7, py + radius], discovered ? P.flesh : P.fog, 1280 + region.x, large ? .4 : .2);
-      paperSeam(ctx, [px - radius * .55, py + radius * .35, px + radius * .6, py + radius * .35], discovered ? P.ink : P.smoke, large ? .65 : .4);
+      ctx.fillStyle = discovered ? P.rust : P.fog; ctx.strokeStyle = P.chalk; ctx.lineWidth = large ? 1 : .5;
+      ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       if (large) {
-        ctx.font = '12px "DM Sans", sans-serif';
+        const compact = width < 500;
+        ctx.font = `${compact ? 9 : 12}px "DM Sans", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const label = discovered ? region.name.replace('The ', '').replace('Library of Time Well Spent', 'Library').replace('Entrance to Infinite Time', 'Infinite Time') : '?';
+        const compactNames: Record<string, string> = { entrance: 'Entrance', shanty: 'Shanty', lake: 'Lake', forest: 'Forest', fields: 'Fields', castle: 'Castle', library: 'Library', hospital: 'Hospital', museum: 'Museum', casino: 'Casino', pit: 'Reversion', infinite: 'Infinite Time' };
+        const label = discovered ? compact && compactNames[region.id] || region.name.replace('The ', '').replace('Library of Time Well Spent', 'Library').replace('Entrance to Infinite Time', 'Infinite Time') : '?';
         const textWidth = ctx.measureText(label).width;
         const margin = Math.min(width / 2, textWidth / 2 + 5);
         const labelX = Math.max(margin, Math.min(width - margin, px));
@@ -284,10 +270,10 @@ export function WorldMapCanvas({ data, world, large = false, onWaypoint }: World
     const player = world.sceneId === data.overworld.id ? world.player : data.interiors[world.sceneId]?.exit?.position || world.region.landmark;
     const px = player.x * scaleX, py = player.y * scaleY;
     const radius = large ? 6 : 4;
-    paperShape(ctx, [px - radius, py + radius * .3, px - radius * .45, py - radius, px + radius * .6, py - radius * .8, px + radius, py + radius * .6, px - radius * .3, py + radius], P.chalk, 1340, large ? .45 : .2);
-    paperShape(ctx, [px - radius * .48, py, px + radius * .07, py - radius * .6, px + radius * .55, py + radius * .4, px - radius * .42, py + radius * .42], P.ink, 1341, .14);
-    ctx.save(); ctx.globalAlpha *= .6;
-    paperSeam(ctx, [1.2, 2, width - 1, 1, width - 2, height - 1, 1, height - 2, 1.2, 2], P.umbra, .85); ctx.restore();
+    ctx.fillStyle = P.chalk; ctx.strokeStyle = P.ink; ctx.lineWidth = large ? 1.2 : .7;
+    ctx.beginPath(); ctx.arc(px, py, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(px, py, radius * .38, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = P.chalk; ctx.lineWidth = .9; ctx.strokeRect(1, 1, width - 2, height - 2);
     const room = data.interiors[world.sceneId];
     if (room) drawRoomInset(ctx, width, height, large, room, world);
   }, [data, world.player.x, world.player.y, world.sceneId, world.discovered, world.explored, world.waypoint, world.waypointScene, world.region, large]);
@@ -351,10 +337,10 @@ export default function GameHUD({ story, world, data, quest, onPanel, onSelectSl
       <div className="ow-hud-buttons"><button aria-label="Open inventory" title="Inventory · I" onClick={() => onPanel('inventory')}><Backpack size={17} /></button><button aria-label="Open journal" title="Journal · J" onClick={() => onPanel('journal')}><BookOpen size={17} /></button><button aria-label="Open map" title="Map · M" onClick={() => onPanel('map')}><Map size={17} /></button><button aria-label="Open pause menu" title="Pause menu · Escape" onClick={() => onPanel('menu')}><Menu size={17} /></button></div>
     </div>
 
-    <button className="ow-quest-card" onClick={() => onPanel('journal')} aria-label={`Current objective: ${quest}`}><span className="ow-quest-star">✦</span><div><small>THE NEXT DEBT</small><span>{quest}</span></div><ChevronRight size={14} /></button>
+    <button className="ow-quest-card" onClick={() => onPanel('journal')} aria-label={`Current objective: ${quest}`}><span className="ow-quest-star"><PaperMotif id="book" size={25} /></span><div><small>THE NEXT DEBT</small><span>{quest}</span></div><ChevronRight size={14} /></button>
 
     {world.nearby && !world.paused && <button className="ow-interact-prompt" onClick={onInteract}><kbd>E</kbd><span>{world.nearby.type === 'npc' ? 'Speak to ' : ''}{world.nearby.name}</span></button>}
-    {world.fishing && <div className={`ow-fishing-notice ow-fishing-${world.fishing.phase}`}><span>⌁</span>{world.fishing.phase === 'bite' ? 'A bite! Use the rod again.' : world.fishing.phase === 'caught' ? 'One less thing left in the water.' : 'Waiting beneath the dead water…'}</div>}
+    {world.fishing && <div className={`ow-fishing-notice ow-fishing-${world.fishing.phase}`}><PaperMotif id="fish" size={22} />{world.fishing.phase === 'bite' ? 'A bite! Use the rod again.' : world.fishing.phase === 'caught' ? 'One less thing left in the water.' : 'Waiting beneath the dead water…'}</div>}
 
     <div className="ow-hotbar-wrap"><div className="ow-selected-label">{selectedItem?.name || 'Empty hands'}</div><div className="ow-hotbar" aria-label="Hotbar">{Array.from({ length: 8 }, (_, index) => {
       const id = world.hotbar[index]; const item = ITEM_DEFS[id]; const count = world.inventory[id] || 0;

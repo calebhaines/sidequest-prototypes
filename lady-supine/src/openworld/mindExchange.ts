@@ -1,6 +1,7 @@
 import { actorHeadAnchor } from './sprites';
-import { PALETTE as P, rgba } from './palette';
-import { paperPath, paperSeam, paperShape } from './paper';
+import { PALETTE as P } from './palette';
+import { paperPath, paperShape } from './paper';
+import { drawPaperAsset, drawPaperAssetRegion } from './paperAssets';
 import { TILE_SIZE, type RenderFrame, type Vec } from './types';
 
 const ink = P.ink;
@@ -8,32 +9,10 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const ease = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 const phase = (time: number, start: number, end: number) => ease((time - start) / (end - start));
 
-function organ(ctx: CanvasRenderingContext2D, size: number, colour: string, pulse: number) {
+function organ(ctx: CanvasRenderingContext2D, size: number, _colour: string, pulse: number) {
   ctx.save(); ctx.scale(size * (1 + pulse * .028), size * (1 - pulse * .018));
-  // Cortex is a physical, folded organ made from overlapping torn tissue-coloured stock.
-  // The dark spaces between pieces remain actual folds, rather than thought symbols.
-  paperShape(ctx, [-14, 0, -15, -5, -9, -10, -3, -12, 0, -8, 4, -12, 11, -8, 15, -2, 12, 5, 6, 10, 1, 8, -4, 11, -11, 7], P.bruise, 710, .62);
-  paperShape(ctx, [-13, -4, -8, -10, -2, -10, -1, -5, -3, 0, -1, 6, -5, 9, -11, 5], colour, 711, .5);
-  paperShape(ctx, [2, -8, 5, -10, 11, -6, 14, -1, 10, 5, 5, 8, 1, 5, 2, 0], colour, 712, .45);
-  const folds = [
-    [-12, -3, -8, -7, -3, -6, -5, -4, -9, -4, -10, -1],
-    [-10, 0, -6, -3, -3, -1, -4, 1, -7, 1, -6, 5, -9, 4],
-    [-5, 4, -2, 2, -1, 5, -4, 8, -7, 7, -6, 5],
-    [3, -6, 6, -8, 10, -5, 8, -3, 5, -5],
-    [5, -2, 9, -3, 12, 0, 10, 2, 8, 0, 4, 1],
-    [4, 3, 7, 2, 10, 4, 7, 7, 3, 6],
-  ];
-  ctx.save(); ctx.globalAlpha *= .55;
-  folds.forEach((fold, index) => paperShape(ctx, fold, index % 3 === 2 ? P.clay : P.flesh, 720 + index, .23));
-  ctx.restore();
-  ctx.save(); ctx.globalAlpha *= .46;
-  paperShape(ctx, [-11, -5, -8, -8, -4, -8, -6, -6], P.paper, 731, .18);
-  paperShape(ctx, [4, -7, 7, -8, 10, -5, 7, -5], P.paper, 732, .18);
-  ctx.restore();
-  paperSeam(ctx, [-.2, -8, -1.2, -4, .6, .5, -.2, 7], P.umbra, .55);
-  paperSeam(ctx, [-11, -1, -8, -2, -6, 1, -8, 3], P.umbra, .45);
-  paperSeam(ctx, [8, -4, 6, -2, 9, 0, 7, 3], P.umbra, .45);
-  ctx.restore();
+  // The same non-graphic photographed anatomical specimen is a physical inventory item and traveling organ.
+  drawPaperAsset(ctx, 'item-brain', -15, -13, 30, 26); ctx.restore();
 }
 
 function tubePoint(from: Vec, to: Vec, t: number, sag: number): Vec {
@@ -49,8 +28,8 @@ function tube(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, sag: number, zo
     }
     ctx.stroke();
   };
-  // A rough strip of charcoal paper encloses the repaired tubing. Moving pressure
-  // packets are still directional, and the original sag/transfer timing is preserved.
+  // Smooth photographic-material hose has a narrow reflected edge. Directional pressure packets
+  // retain the physical transfer timing and remain stationary when the simulation is paused.
   const strip = new Path2D();
   for (let i = 0; i <= 24; i++) {
     const p = tubePoint(from, to, i / 24, sag);
@@ -84,12 +63,11 @@ function apparatus(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, zoom: numb
   const centre = tubePoint(from, to, .5, sag);
   ctx.save(); ctx.translate(centre.x, centre.y); ctx.scale(zoom, zoom);
   ctx.rotate(Math.sin(elapsed * 17) * .012 * pressure * motion);
-  paperShape(ctx, [-20, -9, -5, -14, 17, -10, 19, 8, 4, 14, -18, 11], P.umbra, 750, .7);
-  paperShape(ctx, [-18, -7, -6, -10, -4, 10, -17, 8], P.clay, 751, .6);
-  paperShape(ctx, [-3, -11, 16, -8, 17, 6, 3, 11], P.slate, 752, .48);
-  paperShape(ctx, [-15, -5, -8, -7, -7, 7, -15, 6], P.bark, 753, .25);
-  paperSeam(ctx, [-4, -11, -3, 3, 3, 11], P.ink, .75);
-  paperShape(ctx, [7, -7, 14, -1, 8, 7, 0, 1], P.paper, 754, .35);
+  // Crop actual rusty pipework from the hospital apparatus to form its moving control housing.
+  ctx.save(); ctx.beginPath(); ctx.moveTo(-20, -10); ctx.lineTo(18, -10); ctx.lineTo(20, 12); ctx.lineTo(-19, 13); ctx.closePath(); ctx.clip();
+  drawPaperAssetRegion(ctx, 'brain-machine', .02, .70, .95, .29, -21, -11, 42, 26); ctx.restore();
+  paperShape(ctx, [1, -8, 14, -8, 14, 8, 1, 8], P.slate, 752, .18);
+  ctx.fillStyle = P.paper; ctx.beginPath(); ctx.ellipse(7, 0, 6.5, 6.5, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = ink; ctx.lineWidth = .8;
   const needle = -2.35 + pressure * 2.6 + Math.sin(elapsed * 8) * .045 * pressure * motion;
   ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(7 + Math.cos(needle) * 5.4, Math.sin(needle) * 5.4); ctx.stroke();
@@ -123,23 +101,17 @@ function transfer(ctx: CanvasRenderingContext2D, from: Vec, to: Vec, time: numbe
   const swing = Math.sin(elapsed * 4.7) * .036 * motion * airborne;
   ctx.save(); ctx.globalAlpha *= visible; ctx.translate(x, y);
   ctx.rotate(Math.sin(Math.PI * travelling) * .18 * Math.sign(to.x - from.x) * motion + swing);
-  // Tissue compresses at the clamp and opening, rather than sliding at a constant speed.
+  // The specimen compresses at the clamp and opening as it is physically extracted and inserted.
   const squeeze = Math.sin(Math.PI * extraction) * .16 + Math.sin(Math.PI * insertion) * .2;
   ctx.scale(1 - squeeze, 1 + squeeze * .4);
   const settled = jar ? Math.sin((time - .9) * 42) * Math.exp(-Math.max(0, time - .9) * 25) * phase(time, .9, .91) * motion : 0;
   ctx.translate(0, settled * 1.4 * zoom);
   organ(ctx, size * zoom, colour, Math.sin(elapsed * 3.5) * motion);
   if (insertion < .9) {
-    ctx.strokeStyle = P.bruise; ctx.lineWidth = .75 * zoom;
+    // A thin mechanical tether makes the transport legible without adding blood or falling tissue.
+    ctx.strokeStyle = P.umbra; ctx.lineWidth = .65 * zoom;
     const tail = (9 + Math.sin(Math.PI * extraction) * 7 + airborne * 8) * zoom;
     ctx.beginPath(); ctx.moveTo(1 * zoom, 8 * zoom); ctx.bezierCurveTo(-6 * zoom, 10 * zoom + tail * .3, (4 + Math.sin(elapsed * 3) * motion * 2) * zoom, 10 * zoom + tail * .75, 2 * zoom, 8 * zoom + tail); ctx.stroke();
-    // Two subdued drops detach during extraction; deterministic motion survives pause.
-    ctx.save(); ctx.globalAlpha *= .5 * airborne * motion; ctx.fillStyle = P.rust;
-    for (let i = 0; i < 2; i++) {
-      const fall = (elapsed * .43 + i * .48) % 1;
-      ctx.beginPath(); ctx.ellipse((i * 4 - 3) * zoom, (13 + fall * 22) * zoom, (1 - fall * .65) * zoom, (1.7 - fall) * zoom, -.1, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.restore();
   }
   ctx.restore();
 }
@@ -148,28 +120,26 @@ function receivingJar(ctx: CanvasRenderingContext2D, at: Vec, zoom: number, time
   ctx.save(); ctx.translate(at.x, at.y); ctx.scale(zoom, zoom);
   const settled = phase(time, .78, .96);
   if (!front) {
-    paperShape(ctx, [-28, 35, 30, 35, 26, 43, -27, 42], P.bark, 770, .65);
-    // Transparent scraps stand in for patched glass; the returned brain remains
-    // visible behind the front layer once the hospital restoration is complete.
-    paperShape(ctx, [-20, -5, -23, 7, -18, 33, -3, 37, 18, 32, 21, -5], rgba('fog', .38), 771, .4);
-    paperShape(ctx, [-20, 20, -3, 27, 19, 20, 17, 32, -1, 35, -18, 31], rgba('water', .27), 772, .3);
-    paperSeam(ctx, [-20, 1, -21, 10, -17, 31, -2, 35, 18, 30, 20, 1], P.charcoal, .8);
+    // Real brass feet and an empty section of actual amber jar glass form the receiving vessel.
+    // The glass crop is below the source specimen, so the traveling organ is the only brain inside.
+    drawPaperAssetRegion(ctx, 'brain-machine', .12, .84, .76, .15, -28, 34, 56, 10);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-18, -3); ctx.quadraticCurveTo(-22, 1, -22, 7);
+    ctx.lineTo(-19, 30); ctx.quadraticCurveTo(0, 40, 19, 30); ctx.lineTo(22, 7); ctx.quadraticCurveTo(22, 1, 18, -3); ctx.closePath(); ctx.clip();
+    ctx.globalAlpha *= .32;
+    drawPaperAssetRegion(ctx, 'brain-machine', .315, .452, .17, .022, -22, -3, 44, 39); ctx.restore();
   } else {
-    paperShape(ctx, [-19, 7, -17, 31, 1, 36, 18, 30, 19, 7], rgba('paper', .12), 773, .3);
-    paperShape(ctx, [-19, -7, -8, -11, 11, -10, 21, -5, 12, -1, -8, 1], rgba('fog', .28), 774, .35);
-    paperSeam(ctx, [-19, -7, -8, -11, 11, -10, 21, -5, 12, -1, -8, 1, -19, -7], P.charcoal, .9);
-    ctx.save(); ctx.globalAlpha *= .55;
-    paperShape(ctx, [-16, 3, -14, 4, -15, 13, -11, 28, -13, 29, -17, 13], P.chalk, 775, .23);
-    paperShape(ctx, [10, 8, 17, 5, 14, 14, 10, 13], P.paper, 776, .16);
-    ctx.restore();
-    ctx.save(); ctx.globalAlpha *= settled * (1 - phase(time, .93, 1)) * .65; ctx.strokeStyle = P.paper; ctx.lineWidth = .8;
+    // Only the photographed jar's edge reflections pass in front of the newly received model.
+    ctx.save(); ctx.beginPath(); ctx.rect(-22, -5, 3.5, 39); ctx.rect(18.5, -5, 3.5, 39); ctx.rect(-22, 30, 44, 5); ctx.clip();
+    drawPaperAssetRegion(ctx, 'brain-machine', .304, .235, .19, .25, -22, -5, 44, 41); ctx.restore();
+    ctx.strokeStyle = P.sand; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(0, -3, 20, 3.3, -.025, 0, Math.PI * 2); ctx.stroke();
+    ctx.save(); ctx.globalAlpha *= settled * (1 - phase(time, .93, 1)) * .55;
+    ctx.strokeStyle = P.paper; ctx.lineWidth = .55;
     for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(0, 21, 8 + settled * (7 + i * 2) * motion, 2 + i, -.035, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
     const lid = phase(time, .86, .99);
     ctx.save(); ctx.translate((1 - lid) * 33, 23 - lid * 30 - Math.sin(Math.PI * lid) * 14 * motion); ctx.rotate((1 - lid) * -.25);
-    paperShape(ctx, [-22, -2, -11, -6, 13, -5, 22, 0, 11, 5, -13, 5], P.umbra, 778, .5);
-    paperShape(ctx, [-20, -2, -10, -5, 11, -4, 19, -1, 9, 1, -10, 1], P.slate, 779, .25);
-    ctx.restore();
+    ctx.beginPath(); ctx.ellipse(0, -.5, 22, 5.3, -.025, 0, Math.PI * 2); ctx.clip();
+    drawPaperAssetRegion(ctx, 'brain-machine', .295, .204, .205, .067, -22, -6, 44, 11); ctx.restore();
   }
   ctx.restore();
 }

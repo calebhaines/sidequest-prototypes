@@ -1,18 +1,29 @@
-import headsSource from '../assets/torn-paper/heads.png';
-import scenerySource from '../assets/torn-paper/scenery.png';
-import residentsSource from '../assets/torn-paper/heads-residents.png';
-import residentsTwoSource from '../assets/torn-paper/heads-residents-two.png';
-import partsSource from '../assets/torn-paper/parts.png';
-import studySource from '../assets/torn-paper/study.png';
+import headsSource from '../assets/photo-collage/heads.png';
+import scenerySource from '../assets/photo-collage/scenery.png';
+import residentsSource from '../assets/photo-collage/heads-residents.png';
+import residentsTwoSource from '../assets/photo-collage/heads-residents-two.png';
+import partsSource from '../assets/photo-collage/parts.png';
+import studySource from '../assets/photo-collage/study.png';
+import extraSource from '../assets/photo-collage/parts-extra.png';
+import propsSource from '../assets/photo-collage/world-props.png';
+import interiorsSource from '../assets/photo-collage/interiors.png';
+import toolsSource from '../assets/photo-collage/tools.png';
+import suppliesSource from '../assets/photo-collage/supplies.png';
+import specialSource from '../assets/photo-collage/special.png';
+import puzzleSource from '../assets/photo-collage/puzzle-props.png';
+import materialSource from '../assets/photo-collage/materials.png';
+import rearSource from '../assets/photo-collage/heads-rear.png';
 import { PALETTE as P } from './palette';
-import { paperShape } from './paper';
+import { installPhotoMaterials, paperShape } from './paper';
 
-/** Native, replaceable paper cutouts. Vite embeds these same images in the offline HTML. */
+/** Native, replaceable photographic cutouts. Vite embeds these same images in the offline HTML. */
 export const paperStudyUrl = studySource;
+export const photoMaterialSource = materialSource;
 type Cutout = { image: HTMLImageElement; x: number; y: number; width: number; height: number };
 const cutouts = new Map<string, Cutout>();
 const sheets = new Map<string, HTMLImageElement>();
 const portraits = new Map<string, string>();
+const materialUrls = new Map<string, string>();
 let pending: Promise<void> | null = null;
 let revision = 0;
 let ready = false;
@@ -22,6 +33,15 @@ const definitions = [
   { name: 'residents', source: residentsSource, ids: ['gatekeeper-head', 'tortoise-head', 'otter-head', 'deer-head', 'mole-head', 'peacock-head'] },
   { name: 'residents-two', source: residentsTwoSource, ids: ['boar-head', 'mouse-head', 'fox-head', 'heron-head', 'merchant-head', 'salamander-head'] },
   { name: 'parts', source: partsSource, ids: ['gown', 'ada-coat', 'worker-coat', 'arm', 'bat-wing', 'moth-wing'] },
+  { name: 'extra', source: extraSource, ids: ['boot', 'trouser-leg', 'yellow-glove', 'hare-ears', 'fox-tail', 'tortoise-shell'] },
+  { name: 'props', source: propsSource, ids: ['blue-trailer', 'bare-tree', 'rock', 'ore-rock', 'plant', 'workbench'] },
+  { name: 'interiors', source: interiorsSource, ids: ['civic-building', 'telescreen', 'desk', 'stools', 'crate', 'cabinet'] },
+  { name: 'tools', source: toolsSource, ids: ['item-cane', 'item-axe', 'item-pick', 'item-rod', 'item-lantern', 'item-soup'] },
+  { name: 'supplies', source: suppliesSource, ids: ['item-wood', 'item-stone', 'item-ore', 'item-herb', 'item-fish', 'item-willow'] },
+  { name: 'special', source: specialSource, ids: ['item-brain', 'item-key', 'item-glass', 'item-coupon', 'item-sapling', 'item-campfire'] },
+  { name: 'puzzles', source: puzzleSource, ids: ['prop-crown', 'prop-bowl', 'prop-scales', 'prop-chime', 'prop-mirror', 'prop-curtain'] },
+  { name: 'materials', source: materialSource, ids: ['material-olive', 'material-gravel', 'material-metal', 'material-wood', 'material-water', 'material-grass'] },
+  { name: 'rear', source: rearSource, ids: ['lady-back', 'human-back', 'hare-back', 'gray-back', 'red-back', 'mottled-back'] },
 ];
 
 async function imageFrom(name: string, source: string): Promise<HTMLImageElement> {
@@ -31,7 +51,7 @@ async function imageFrom(name: string, source: string): Promise<HTMLImageElement
   image.decoding = 'async';
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve();
-    image.onerror = () => reject(new Error('The paper artwork could not be loaded.'));
+    image.onerror = () => reject(new Error('The photographic clippings could not be loaded.'));
     image.src = source;
   });
   await image.decode();
@@ -41,7 +61,7 @@ async function imageFrom(name: string, source: string): Promise<HTMLImageElement
 
 function registerCutouts(image: HTMLImageElement, ids: string[]): void {
   const width = image.naturalWidth / 3, height = image.naturalHeight / 2;
-  if (!Number.isInteger(width) || !Number.isInteger(height)) throw new Error('The paper sheet has an invalid layout.');
+  if (!Number.isInteger(width) || !Number.isInteger(height)) throw new Error('The photographic sheet has an invalid layout.');
   const measuring = document.createElement('canvas');
   measuring.width = width; measuring.height = height;
   const context = measuring.getContext('2d', { willReadFrequently: true })!;
@@ -57,7 +77,7 @@ function registerCutouts(image: HTMLImageElement, ids: string[]): void {
       left = Math.min(left, x); right = Math.max(right, x);
       top = Math.min(top, y); bottom = Math.max(bottom, y);
     }
-    if (right < left || bottom < top) throw new Error('A paper cutout is missing.');
+    if (right < left || bottom < top) throw new Error('A photographic cutout is missing.');
     const margin = 6;
     left = Math.max(0, left - margin); top = Math.max(0, top - margin);
     right = Math.min(width - 1, right + margin); bottom = Math.min(height - 1, bottom + margin);
@@ -75,7 +95,8 @@ export function loadPaperAssets(): Promise<void> {
       imageFrom('study', studySource),
     ]);
     definitions.forEach((sheet, index) => registerCutouts(images[index], sheet.ids));
-    revision += 1; ready = true; portraits.clear();
+    installPhotoMaterials(images[definitions.findIndex(sheet => sheet.name === 'materials')]);
+    revision += 1; ready = true; portraits.clear(); materialUrls.clear();
   })().catch(error => { pending = null; throw error; });
   return pending;
 }
@@ -120,11 +141,29 @@ export function paperAssetPortrait(id: string, size: number): string | null {
   if (existing) return existing;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = dimension * 2;
   const ctx = canvas.getContext('2d')!; ctx.scale(2, 2);
-  paperShape(ctx, [1, 2, dimension - 2, 0, dimension, dimension - 2, 2, dimension], P.paper, 731, .8);
+  paperShape(ctx, [2, 2, dimension - 2, 2, dimension - 1, dimension - 2, 1, dimension - 1], P.moss, 731, .9);
   drawPaperAsset(ctx, id, dimension * .04, dimension * .02, dimension * .92, dimension * .98);
   const url = canvas.toDataURL('image/png');
   if (portraits.size >= 48) portraits.delete(portraits.keys().next().value!);
   portraits.set(key, url);
+  return url;
+}
+
+export const paperAssetIcon = paperAssetPortrait;
+
+/** Small, seamless native-material tiles for the HTML interface. No portrait mount or rim. */
+export function photoMaterialDataUrl(id: string, size = 128): string | null {
+  const cutout = cutouts.get(id);
+  if (!cutout || !id.startsWith('material-')) return null;
+  const dimension = Math.max(32, Math.min(256, Math.round(size)));
+  const key = `${revision}:${id}:${dimension}`;
+  const existing = materialUrls.get(key);
+  if (existing) return existing;
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = dimension;
+  canvas.getContext('2d')!.drawImage(cutout.image, cutout.x, cutout.y, cutout.width, cutout.height, 0, 0, dimension, dimension);
+  const url = canvas.toDataURL('image/png');
+  if (materialUrls.size >= 12) materialUrls.delete(materialUrls.keys().next().value!);
+  materialUrls.set(key, url);
   return url;
 }
 

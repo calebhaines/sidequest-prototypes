@@ -1,0 +1,1711 @@
+{
+  "schemaVersion": 1,
+  "selectedReference": {
+    "file": "public/style-studies/30-hard-cut-color-specimens.png",
+    "sha256": "83b8eda1081cbb830169fece5151c6683f3e70918c174409f8137e61fc7b39e3"
+  },
+  "study": {
+    "file": "study.png",
+    "sha256": "83b8eda1081cbb830169fece5151c6683f3e70918c174409f8137e61fc7b39e3",
+    "nativeBytesPreserved": true
+  },
+  "generationTool": "image_gen.imagegen",
+  "sourceTreatment": "Native generated PNG bytes copied intact. Source files were not cropped, resized, recoloured, palette-quantized, or edited for transparency. Runtime cell crops and articulation only affect game rendering.",
+  "atlasLayout": {
+    "width": 1536,
+    "height": 1024,
+    "columns": 3,
+    "rows": 2,
+    "cellWidth": 512,
+    "cellHeight": 512,
+    "alphaContentThreshold": 32,
+    "minimumTransparentMargin": 16,
+    "opaqueStockException": "materials.png"
+  },
+  "atlases": [
+    {
+      "file": "heads.png",
+      "registryName": "heads",
+      "sha256": "82f0a3ce4bc8535fb54887ea754f5576b7f023e9471889d08257d334ac91a946",
+      "bytes": 2027388,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-a54fcd0d-aa61-4e02-a539-1bd055e75c31.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7208595275878906,
+      "metadataSource": "head-assets",
+      "generations": [
+        {
+          "prompt": "Create a production game HEAD SPRITE ATLAS, copying the VISUAL MATERIAL and CHARACTER DESIGN of the attached hard-cut photographic specimen collage extremely faithfully. The attached study is a style reference only: create ONLY SIX floating photographic human-hybrid HEAD cutouts, NOT full bodies, scenes or a board.\n\nOUTPUT: landscape 1536x1024 PNG with TRUE TRANSPARENT ALPHA. Exactly 3 columns by 2 rows, six invisible 512x512 cells, one entire head wholly inside each cell. Centers are (256,256), (768,256), (1280,256), (256,768), (768,768), (1280,768). Every head INCLUDING ears/horns/hair must have at least 45 pixels transparent margin on every side of its cell. All six heads appear about 350px high, not big filling the cell. No object ever crosses a cell edge. NO visible grid, checkerboard, green/cream background, frame, labels or text. Nothing exterior but transparency. Only head and a tiny bare neck taper, absolutely NO torso or neck clothing.\n\nSTYLE EXACTLY AS REFERENCE: actual PHOTOGRAPHIC human faces assembled with real photographic animal fragments by clean hard SCISSOR CUTTING. Faces have real skin pores, fine wrinkles, real photographic irises, fine real hair strands, natural photographic lighting, realistically proportioned adult noses and lips. Real animal fur/ear/horn photographs splice into human faces. Hard smooth cut silhouettes with a very thin pale cream cut edge like the reference. This is surreal assemblage of found colour photographs, NOT drawn paper, NOT angular collaged skin facets, NOT painted/illustrated faces, NOT marker, NOT fibrous scraps, NOT geometric art, NOT CGI rendering. Bleak poor working adults, naturally tired and solemn. Almost everyone is part beast, but ALL faces must retain mostly mature HUMAN facial eyes, brows, cheek structure and expression, never complete animal heads. No children or cute mascots.\n\nTOP LEFT CELL: LADY SUPINE, copy the beautiful adult brunette woman face from the reference's top-left enormous head. The same softly wavy short brunette bob, pale realistic freckled skin, large clear grey-green almond eyes and naturally rosy restrained lips. HEAD ONLY, no yellow clothes or glove. A large clean black OPEN-TOP OVAL ELLIPSE occupies the uncovered top of her head, just above her forehead, with a thin believable pale rim as in reference. The ellipse is a non-graphic surreal photo-assembly with black paper insert, no injury, no blood, no wound. Clearly an uncapped head, NOT a crown, hat or painted mark. Both eyes clearly visible. Beautiful AND terrifying through serene stillness and giant hollow head. Copy this face's real photographic quality very closely.\n\nTOP MIDDLE CELL: ADA the adult working hare-human woman from the reference's blue-coat seated woman. Head only: exhausted compassionate adult face, short scruffy brown curls, naturally pale weathered skin, mature green-grey eyes, two REAL PHOTOGRAPHIC hare ears on top with soft brown grey fur. No blue coat or neck scarf. Make her unmistakably human with hare ears, not an animal face.\n\nTOP RIGHT CELL: ARISTOBAT the adult male bat-human from reference beige coat man. Head only: thin gaunt weathered adult HUMAN man's face, deep tired eyes, dark short hair, real brown bat ears rising each side of head, integrated photographic bat-ear fragments. NO wings, no beige clothes. Stern ordinary exhausted bureaucrat with bat anatomy, not a monstrous animal skull.\n\nBOTTOM LEFT CELL: HUMAN PLAYER, disheveled poor ADULT MAN, about 30\u201340, tired warm brown eyes, real olive skin with small blemishes, scruffy dark hair and faint uneven stubble. Fully HUMAN, no animal parts. Serious worn dignity and tentative expression. Bare head only.\n\nBOTTOM MIDDLE CELL: MOTH-HUMAN ADULT WOMAN, about 50, pale mature real human face with tired silver-blue eyes, soft grey short hair, subtly integrated realistic dusty moth fur at temples and two delicate small moth antennae above hair. Her eyes, nose and mouth remain unmistakably adult human photographic features. No insect full face, wings, body or clothing.\n\nBOTTOM RIGHT CELL: OX-HUMAN ADULT MAN, about 55, broad mature real human face, deeply tired brown eyes, weathered tan skin, short greying brown hair, integrate real small rounded ox ears and two short compact worn horns, slight ox-like broad nose blending into human face. No complete ox muzzle or pure animal head, no body.\n\nRich subdued natural photographic colour like reference: olive charcoal sepia ivory dusty blue rust brown cream. Smooth continuous real photographic shading/pores, no posterization or faceted collage shading. Clear hard cut photo silhouettes, minimal thin cream edge, no drop shadows. All entire heads contained in respective cells with generous fully transparent margins.",
+          "originalGeneratedFile": "exec-ba894b60-90d1-4acb-97fa-7221d8c3e90d.png",
+          "status": "revised"
+        },
+        {
+          "prompt": "Correct ONLY SIZE and SPACING of these six exact PHOTOGRAPHIC head cutouts. All face photography, skin, real hair, ears, horns, eyes, mouth, expressions, colors and head designs must remain exactly unchanged. In particular preserve beautiful brunette Supine's open black oval top of her head and identical face from study30, Ada's two real hare ears, the male's bat ears, the human player, the moth woman and ox man. DO NOT DRAW PAPER FACETS or add artwork; keep real photographic fragments and clean scissor cut edges.\n\nOutput 1536x1024 transparent PNG. EACH WHOLE HEAD MUST BE SHRUNK TO SIXTY PERCENT OF ITS CURRENT WIDTH AND HEIGHT. Significant reduction, not subtle. These must be small heads on a big transparent canvas with ample empty gaps. Every ENTIRE HEAD INCLUDING EARS, HORNS, HAIR and small bare NECK fits a 320x320px square. No torso.\n\nStrict 3 columns by 2 rows of INVISIBLE 512x512 cells. Head centers: Supine (256,256), hare (768,256), bat (1280,256), human player (256,768), moth (768,768), ox (1280,768). Place each whole head at that center, maximum320px in either dimension, leaving OVER95PIXELS completely transparent on all four sides of each cell. No head or small ear piece crosses a cell boundary. ALL six head silhouettes isolated.\nTRUE TRANSPARENT ALPHA outside six heads, no green/brown painted background, no shadow, no halo, no checkerboard, no grid, no text, no labels. Preserve the exact photographic face fidelity; empty margins and safe sprite sizing are the ONLY edit.",
+          "originalGeneratedFile": "exec-a54fcd0d-aa61-4e02-a539-1bd055e75c31.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "lady-head",
+          "subject": "lady-head",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            131,
+            160,
+            437,
+            419
+          ],
+          "minimumTransparentMargin": 74,
+          "fullyTransparentFraction": 0.7613868713378906
+        },
+        {
+          "id": "hare-head",
+          "subject": "hare-head",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            102,
+            65,
+            413,
+            435
+          ],
+          "minimumTransparentMargin": 65,
+          "fullyTransparentFraction": 0.6916122436523438
+        },
+        {
+          "id": "bat-head",
+          "subject": "bat-head",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            31,
+            129,
+            424,
+            439
+          ],
+          "minimumTransparentMargin": 31,
+          "fullyTransparentFraction": 0.7292213439941406
+        },
+        {
+          "id": "human-head",
+          "subject": "human-head",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            138,
+            61,
+            419,
+            385
+          ],
+          "minimumTransparentMargin": 61,
+          "fullyTransparentFraction": 0.7242393493652344
+        },
+        {
+          "id": "moth-head",
+          "subject": "moth-head",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            90,
+            69,
+            403,
+            404
+          ],
+          "minimumTransparentMargin": 69,
+          "fullyTransparentFraction": 0.6968765258789062
+        },
+        {
+          "id": "ox-head",
+          "subject": "ox-head",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            58,
+            66,
+            418,
+            394
+          ],
+          "minimumTransparentMargin": 58,
+          "fullyTransparentFraction": 0.7218208312988281
+        }
+      ]
+    },
+    {
+      "file": "scenery.png",
+      "registryName": "scenery",
+      "sha256": "19b25811ece3afc153c26338a570e3796e0c7b7dba4d6b302dcca5fe06ca7a5d",
+      "bytes": 2200485,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-34f65957-b88f-4039-bf9a-1e37eb33719e.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.6642335255940756,
+      "metadataSource": "world-assets",
+      "generations": [
+        {
+          "prompt": "Create a production browser-game PHOTO-COLLAGE ASSET ATLAS by closely recreating the supplied style-30 reference. Native output landscape 1536x1024 pixels, an invisible exact 3-column by 2-row layout with SIX 512x512 cells. Each cell contains ONE complete isolated usable specimen group, comfortably inside its own cell with 16-24px clear margins on every side. NO grid lines, NO captions, NO page background. TRUE TRANSPARENT ALPHA across the whole atlas outside the cutout specimens, including clear space between their limbs/parts. Do not add olive or colored backing, haze, drop-shadow fields, checkerboards, labels or decorative page frame.\n\nSTYLE MUST BE THE REFERENCE'S HARD-CUT REAL COLOR PHOTOGRAPHIC SPECIMENS. Objects retain credible actual-camera wood grain, skin pores, frayed cloth, dents, glass reflections, rusty metal, dust and photographic detail. Rounded scissor-trimmed silhouettes with a very thin warm-cream cut-paper edge. Cutouts are pasted REAL COLOR PHOTOGRAPHS, NOT paintings or drawings, NOT torn polygonal paint facets, NOT marker, NOT watercolor, NOT stylized CGI, NOT a game render, NO pixel art. Quiet diffuse overcast photographic light, materially poor patched trailer-park environment, bleak and weary rather than cozy or fantasy grandeur. Rich natural photographic surface detail with the same olive/cream/aged yellow/blue/rust mood as the reference. Use useful slightly elevated three-quarter gameplay views for physical props.\n\nCELL ORDER: TOP LEFT: one decrepit rounded cream caravan from the reference: oval old trailer body, dirty off-white enamel, repaired taped window, central upright door clearly visible near the center of the complete silhouette, tiny wheels and cinderblock supports, shallow salvaged steps, and a rusted cylindrical boiler with pipes/chimneys jury-rigged onto its right side. Recreate the reference cream caravan's distinctive ROUND silhouette and rusty boiler extension very closely; not a rectangular cottage. Complete single unified freestanding caravan cutout.\nTOP MIDDLE: ONE complete willow tree specimen assembled from photographed cutouts: leaning knotted photographed willow LOG/TRUNK with a clearly rooted broad base, branch arms and a fan of three or four rounded scissor-clipped real willow-leaf PHOTO DISCS, plus long attached natural hanging willow leaf-strand photo cutouts. The leaf-photo discs retain actual photographed leaves, as in the circular leaf samples at the reference's lower right. Assemble all pieces as ONE legible living tree, roots anchored at the bottom and canopy/hanging foliage attached above. No detached samples or lanterns in this cell. Whole tree fits the cell.\nTOP RIGHT: one old clinic basin/recliner-bed inspired by the white porcelain chair in the reference greenhouse: ivory porcelain basin-shaped surgical recliner with worn olive padded seat and reclined back, rusted red metal pipe stand and four small caster wheels. Real chipped enamel and worn cloth camera detail. Entire bed/recliner silhouette, no background room and no brain jars in this cell.\nBOTTOM LEFT: ONE whole library rack specimen group closely matching the reference: aged horizontal iron rail with small support uprights, FOUR strapped bundles of actual photographed battered books hanging separately from short chains and leather straps, and FOUR mismatched separate round stools arranged underneath (chipped white wooden stool, tall rusted round bar stool, stump stool, battered upholstered round stool). Clear transparent gaps between bundles and stools, but all contained as one coherent complete rack cutout in this cell. No conventional bookcase replacement.\nBOTTOM MIDDLE: the reference's exact bizarre brain-exchange clinic assembly as ONE complete specimen: patched curved GREENHOUSE ARCH with greenish corroded ribs, clear cracked glass panes, a white porcelain basin/recliner in the center on a red rusted metal pipe stand with casters, and TWO clear suspended laboratory glass jars above it containing recognisable pink literal HUMAN BRAIN ANATOMICAL MODELS in pale transparent fluid, detailed realistic folds, clean and non-graphic. Old red pipes and small hoses connect jars to the basin stand. Whole complete arch, both jars and foot of the machine visible. It is an impoverished jury-rigged physical apparatus, not an ornate cathedral or polished laboratory.\nBOTTOM RIGHT: ONE complete ROUND bulbed Supine billboard, closely like the reference's circular olive metal portrait sign: aged circular cream/olive metal rim with 12-16 little round cream bulbs, short salvaged iron support legs. Inside is a REAL COLOR photographic beautiful elegant ADULT human woman's head and a yellow-gloved hand blowing a kiss. She is the same beautiful Lady Supine of the supplied reference: clear grey-green eyes, subtle freckles, natural brown hair and graceful adult lips; her enormous real head has a huge oval OPEN HOLE IN ITS TOP with a clean dark-black hollow and fine exposed rim, exactly the reference's disturbing open-topped head silhouette. No crown, no hat, no horns, no gore. The hole is obvious above her beautiful face. Retain actual photographic skin and cloth detail; the portrait is photographic collage, not painted. Entire circular billboard and feet fit inside its cell.\n\nCarefully preserve all six isolated silhouettes and each cell's empty transparent margins. Transparent background means alpha=0 outside every object, not a color-painted background.",
+          "originalGeneratedFile": "exec-ea2028b2-fbd1-4df4-8cc5-549c08fdc923.png",
+          "status": "rejected: specimens crossed cell boundaries"
+        },
+        {
+          "prompt": "Revise the supplied photographic atlas ONLY by making a rigorously equal six-cell layout and truly isolated transparent specimens. Keep the same six photographed specimens, photographic material detail, natural real colors, hard scissor silhouettes and very thin cream cut-paper edges. DO NOT change it into a painting or add any background.\n\nOUTPUT MUST BE NATIVE1536x1024, EXACT THREE EQUAL512px COLUMNS AND TWO EQUAL512px ROWS. The original first caravan and willow spread into neighboring cells, which is incorrect for a game atlas. REDUCE SCALE and reposition all six complete specimens so each is wholly inside its individual512x512 square with at least24px TRANSPARENT ALPHA margin on every side, never touching cell edges. Centers must be top(256,256),(768,256),(1280,256); bottom(256,768),(768,768),(1280,768). Keep specimen width AND height each\u2264460px. First caravan INCLUDING boiler and chimney must fit in x24..488,y24..488. Willow INCLUDING roots, branches and dangling leaves must fit x536..1000,y24..488. Clinic recliner must fit x1048..1512,y24..488. Whole hanging books plus all four stools must fit x24..488,y536..1000. Entire greenhouse arch plus brain jars/clinic chair must fit x536..1000,y536..1000. Round billboard and legs must fit x1048..1512,y536..1000. No part crosses x512 orx1024 ory512. Leave open transparent gaps at all these cell boundaries. No lines or boxes drawn at boundaries.\n\nThe willow should read as a collage of real photographed knotted willow trunk and attached hanging leaf cutouts, with two or three separate rounded leaf-photo discs integrated as canopy samples, rather than painterly leaves. The head hole, photographic freckles and blowing-kiss hand inside Supine's circular billboard remain exactly recognizable. Retain full photographic detail for all objects. True alpha=0 outside cutouts, not a brown/olive/colored backdrop, haze, glow or checkerboard. No labels, no grids, no pageframe. The six objects can be smaller than before; correct isolated equal-cell placement is mandatory.",
+          "originalGeneratedFile": "exec-7ee8a194-962f-4291-9693-20b09ce5596f.png",
+          "status": "rejected: caravan and willow still crossed cell boundaries"
+        },
+        {
+          "prompt": "Make a SMALL-SPECIMEN GAME PHOTO-COLLAGE ATLAS, faithfully matching the supplied photographic collage reference's actual-camera objects and hard rounded scissor-cut outlines with very thin cream rims. This is a technical atlas, not a full illustration. Six small isolated cutouts float on TRUE TRANSPARENT ALPHA with LOTS OF EMPTY SPACE. Landscape1536x1024. EXACT invisible3x2 grid of512x512 cells. Every specimen must be AT MOST384PIXELS WIDE AND384PIXELS HIGH. Center each specimen in its own cell. This leaves64px EMPTY TRANSPARENT MARGINS on EVERY side of each cell. NO specimen approaches a cell edge. Top centers(256,256),(768,256),(1280,256),bottom centers(256,768),(768,768),(1280,768). Correct atlas placement is more important than filling the image. No dividing lines, titles, labels, checkerboards, colored backdrops, haze, glow or shadows in the transparent empty space.\n\nTOP LEFT small complete CREAM ROUNDED CARAVAN with central door, taped window, steps, wheel/cinderblocks and a rusty cylindrical boiler extension attached at right. SAME round cream caravan and boiler as reference. The ENTIRE composite trailer+boiler+chimney must be \u2264384px wide; do not enlarge caravan into neighboring cell.\nTOP MIDDLE small complete rooted WILLOW TREE assembled as a photographic collage: real gnarly photographed LOG/TRUNK/roots, attached branch arms, THREE visibly rounded hard-scissor-cut willow-leaf PHOTO DISCS fanning above it, plus hanging willow-leaf strands below the discs. It is one whole tree with a fixed rooted base, not detached leaf sample photos. Keep the full tree INCLUDING all roots, discs and leaf tips \u2264384px in width and height.\nTOP RIGHT small complete worn WHITE PORCELAIN CLINIC RECLINER with olive padded seat/back, chipped enamel, a rusty red pipe stand and casters; match reference's greenhouse chair. \u2264384px.\nBOTTOM LEFT small complete hanging BOOK-BUNDLE RACK with4 battered actual-photo book bundles suspended from straps/chains on a rusted horizontal iron rail, and4 mismatched ROUND stools below. Exactly reference's bundle rack/stools, one coherent cutout group; WHOLE GROUP \u2264384px width/height.\nBOTTOM MIDDLE small complete BRAIN-EXCHANGE GREENHOUSE: rounded patched glass/green corroded metal arch, white porcelain basin/clinic chair on rusty red pipe frame, and2 suspended clear jars containing pink HUMAN BRAIN ANATOMICAL MODELS (literal recognizable brain folds, clean, non-graphic), hoses connecting jars to the stand. Closely match reference lower-left apparatus. Entire arch/machine \u2264384px width/height.\nBOTTOM RIGHT small complete ROUND SUPINE PHOTO BILLBOARD with cream bulbs around an olive rusty rim, two support legs. Inside, beautiful adult real human woman's photographic face, freckles and gray-green eyes, brown hair, yellow glove blowing kiss, and a huge open black oval HOLE IN THE TOP OF HER HEAD; exactly the reference Supine. No crown/hat/gore. Entire sign+legs \u2264384px width/height.\n\nUse only actual REAL COLOR photographic skin, cloth, aged metal, chipped enamel, glass, books, bark and leaves with crisp real camera detail. NOT painting, NOT marker, NOT torn painted facets, NOT CGI, NO pixel art. Bleak poor repeatedly patched trailer-park mood, not cozy fantasy. All six WHOLE cutouts must fit their equal cells with64px or greater transparent margins. Keep every object smaller rather than risk crossing a512px cell boundary.",
+          "originalGeneratedFile": "exec-e8343906-feca-4e5a-bd64-ffa576ebf7cf.png",
+          "status": "revised: complete equal-cell layout but several margins below16px"
+        },
+        {
+          "prompt": "Keep this exact SIX-specimen photo-collage atlas and its photographic appearance unchanged, including the THREE circular leaf-photo discs integrated into the complete rooted willow tree, the anatomical model brain jars, the rounded cream caravan with boiler, clinic recliner, hanging books with4stools, and round Supine billboard with open black head hole. Make ONE technical layout correction: SHRINK EACH OF THE SIX WHOLE SPECIMEN GROUPS BY20% around the center of its own512x512cell, keeping every part together. Do not change their angle, material, content, relative internal positions or photographic colors. They must be noticeably smaller than in the supplied atlas, not merely nudged. Each entire cutout must lie at least48pixels from EVERY boundary of its cell. Native1536x1024 with3equal512px columns and2equal512px rows. Centers remain(256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). Scale the ENTIRE caravan including its boiler/chimney, ENTIRE tree including circular leaf discs/roots/tips, ENTIRE bed including feet, ENTIRE book rack including all stools, ENTIRE greenhouse including caster legs, and ENTIRE billboard including feet. True transparent alpha outside the six cutouts. No added background/haze/checkerboards/gridlines/captions. Keep crisp actual-camera photographic detail and the thin cream hard-scissor outline. The current atlas has9\u201312px margins in some cells; correct them to at least48px. Do not enlarge any object.",
+          "originalGeneratedFile": "exec-34f65957-b88f-4039-bf9a-1e37eb33719e.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "trailer",
+          "subject": "trailer",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            81,
+            146,
+            454,
+            414
+          ],
+          "minimumTransparentMargin": 57,
+          "fullyTransparentFraction": 0.7020683288574219
+        },
+        {
+          "id": "willow",
+          "subject": "willow",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            102,
+            77,
+            450,
+            459
+          ],
+          "minimumTransparentMargin": 52,
+          "fullyTransparentFraction": 0.5526008605957031
+        },
+        {
+          "id": "bed",
+          "subject": "bed",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            128,
+            140,
+            432,
+            441
+          ],
+          "minimumTransparentMargin": 70,
+          "fullyTransparentFraction": 0.7944221496582031
+        },
+        {
+          "id": "shelves",
+          "subject": "shelves",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            91,
+            71,
+            436,
+            401
+          ],
+          "minimumTransparentMargin": 71,
+          "fullyTransparentFraction": 0.6388053894042969
+        },
+        {
+          "id": "brain-machine",
+          "subject": "brain-machine",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            106,
+            54,
+            419,
+            414
+          ],
+          "minimumTransparentMargin": 54,
+          "fullyTransparentFraction": 0.60797119140625
+        },
+        {
+          "id": "billboard",
+          "subject": "billboard",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            121,
+            77,
+            416,
+            398
+          ],
+          "minimumTransparentMargin": 77,
+          "fullyTransparentFraction": 0.6895332336425781
+        }
+      ]
+    },
+    {
+      "file": "heads-residents.png",
+      "registryName": "residents",
+      "sha256": "5ed15f03642a2e580292c43defda69b24592f40c81317c237c9b9f0c68689481",
+      "bytes": 1696083,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-8bc7f9dc-5524-470d-88f5-eeea351ffcde.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.821539560953776,
+      "metadataSource": "head-assets",
+      "generations": [
+        {
+          "prompt": "Create SIX MORE ADULT HUMAN-BEAST PHOTOGRAPHIC HEAD CUTOUTS for the same game. FIRST attached image is the chosen style reference: copy its actual colour photographs, realistic face/eye/skin/fur texture and hard scissor cut silhouette with tiny thin cream rim. SECOND image is the finished game head atlas: match its miniature scale, exact 3x2 arrangement and transparent empty spaces. Replace all six heads with the new residents below, not copies of Supine or hare.\n\nOUTPUT1536x1024 real transparent alpha PNG. Six invisible 512x512 cells, 3 columns x2 rows. Entire head centers at (256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). Every head INCLUDING beaks, hair, antlers, crests and tiny ears fits under350px wide and350px high, with at least65px empty transparent margin all sides. TINY CUTOUTS ON A BIG EMPTY CANVAS as in second image. Head only, tiny bare neck taper, NO body or neck clothing. No checkerboard, colored background, cell borders, labels, paper backing or shadow. No object crosses a cell.\n\nPHOTOGRAPHIC FOUND-IMAGE ASSEMBLAGE, not drawn or painted collage. Real continuous photographed skin shading, human mature eyes, pores and wrinkles, real hair/feather/fur strands and natural muted colour. Animal fragments are actual photograph snippets hard-cut onto REAL HUMAN FACES. Every face remains at least mostly adult-human facial anatomy with human brow/cheeks/mouth and expression. Not complete animal heads, no cartoon mascots, no CGI, no fibrous torn-paper facets, no illustrated polygons, no posterization. Poor tired working residents of bleak rationed-time land, different adult ages/sexes/hair. Smooth cut outlines and a very thin off-white scissor cut edge like study30.\n\nTOP LEFT: GATEKEEPER, stern tired adult CROW/RAVEN-HUMAN MAN age55 with real weathered pale male face, shrewd mature human eyes, short dark hair, thin black-grey crow beak fragment replacing nose/mouth area modestly, tiny real black feathers at temples. A compact patched cap on top okay if safely fits. This is HUMAN man plus beak/feather photo-fragments, not a bird head.\n\nTOP MIDDLE: TORTOISE DOCTOR, gentle old HUMAN WOMAN age65 with photographed olive skin, silver short hair, round delicate worn spectacles, wise tired human eyes. Subtle real tortoise skin pieces at forehead and cheeks, small tortoise-like nose, human restrained soft lips. No carapace/body, not fully reptile head.\n\nTOP RIGHT: OTTER FISHER, kind tired ADULT HUMAN MAN age45 with real brown weathered skin, short dark hair, dark human eyes, small real rounded otter ears and delicate fur snippets at cheek edges, slightly short rounded otter muzzle nose integrated into HUMAN face. Humane dignified fisherman, no child.\n\nBOTTOM LEFT: DEER WOMAN, wistful adult HUMAN WOMAN age35, warm medium-brown real skin, deeply tired dark adult human eyes, shoulder-short dark hair, two small real deer ears and compact ragged antlers on top. Subtle deer fur edges and short delicate nose but keep recognisably human photographic face. ALL antlers included inside350px height.\n\nBOTTOM MIDDLE: MOLE MINER WOMAN age55, near-sighted real HUMAN WOMAN face, modest worn round spectacles, cropped grey-brown messy hair, small mole nose and real dark fur at temples, small human eyes, exhausted gentle expression. No complete mole head.\n\nBOTTOM RIGHT: PEACOCK MAN, haughty tired HUMAN MAN age40, pale real mature angular male face and sharp adult eyes, dark swept hair, small curved bird beak replacing nose subtly, a sparse compact crest with two or three real peacock feathers and a few muted teal feather fragments at temples. No tail fan, no whole bird head. Clear human cheeks/eyes/expression.\n\nUse real subdued natural photo colours like reference30: olive sepia charcoal ivory dusty blue rust pale skin warm brown. Smooth photographic colour gradients, no drawn texture. Completely isolated transparent silhouettes, every cutout fully inside its cell.",
+          "originalGeneratedFile": "exec-e628b05d-9450-4139-b5ce-b7f425e13219.png",
+          "status": "revised"
+        },
+        {
+          "prompt": "Correct ONLY SIZE and SPACING of these six exact PHOTOGRAPHIC head cutouts. All photographic face skin/real hair/ears/horns/feathers/beaks/glasses/eyes/mouth/colors/designs remain precisely unchanged. Preserve the six positions: top crow man / tortoise woman / otter man; bottom deer woman / mole woman / peacock man. Keep photographic hard-scissor cut collage, no drawing or paper facets.\n\nOutput1536x1024 transparent PNG. EACH WHOLE HEAD MUST SHRINK TO SIXTY PERCENT OF ITS CURRENT WIDTH AND HEIGHT. Significant reduction, not subtle. Small heads on a big transparent canvas, lots of empty gaps. Each ENTIRE HEAD INCLUDING HORNS, EARS, BEAKS, HAIR, CAP, FEATHER CREST and small bare NECK fits within320x320px. No torso.\n\nStrict3columns x2rows of INVISIBLE512x512cells. Centers: crow (256,256), tortoise (768,256), otter (1280,256), deer (256,768), mole (768,768), peacock (1280,768). Each centered at those points, maximum320px width OR height, OVER95PIXELS empty transparent margin on every cell side. All antlers and peacock feathers must have wide empty space above them before the row boundary. No appendage crosses a cell edge.\nTRUE TRANSPARENT ALPHA exterior, no green/brown background, shadow, halo, checkerboard, grid or labels. Preserve actual photo face fidelity exactly. Empty margins and sprite scale are the ONLY edit.",
+          "originalGeneratedFile": "exec-8bc7f9dc-5524-470d-88f5-eeea351ffcde.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "gatekeeper-head",
+          "subject": "gatekeeper-head",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            159,
+            163,
+            387,
+            409
+          ],
+          "minimumTransparentMargin": 102,
+          "fullyTransparentFraction": 0.8335800170898438
+        },
+        {
+          "id": "tortoise-head",
+          "subject": "tortoise-head",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            145,
+            158,
+            372,
+            412
+          ],
+          "minimumTransparentMargin": 99,
+          "fullyTransparentFraction": 0.8304367065429688
+        },
+        {
+          "id": "otter-head",
+          "subject": "otter-head",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            136,
+            151,
+            368,
+            413
+          ],
+          "minimumTransparentMargin": 98,
+          "fullyTransparentFraction": 0.830352783203125
+        },
+        {
+          "id": "deer-head",
+          "subject": "deer-head",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            144,
+            99,
+            407,
+            376
+          ],
+          "minimumTransparentMargin": 99,
+          "fullyTransparentFraction": 0.8034400939941406
+        },
+        {
+          "id": "mole-head",
+          "subject": "mole-head",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            135,
+            133,
+            378,
+            374
+          ],
+          "minimumTransparentMargin": 133,
+          "fullyTransparentFraction": 0.8210563659667969
+        },
+        {
+          "id": "peacock-head",
+          "subject": "peacock-head",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            149,
+            80,
+            376,
+            377
+          ],
+          "minimumTransparentMargin": 80,
+          "fullyTransparentFraction": 0.8103713989257812
+        }
+      ]
+    },
+    {
+      "file": "heads-residents-two.png",
+      "registryName": "residents-two",
+      "sha256": "2602024ee2761871e1860771db8998d560a74eb99b16142d67fcb19ea7a1555d",
+      "bytes": 1981495,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-6f78380c-7c49-4eef-9924-9c245ca3a75f.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7375520070393881,
+      "metadataSource": "head-assets",
+      "generations": [
+        {
+          "prompt": "Make a NEW production sprite atlas in EXACTLY the small-head layout and actual photographic style of the FIRST attached image. Preserve the same huge empty transparent margins and same tiny head scale. The SECOND attached image is the chosen game's photographic collage style. Only new HEAD CUTOUTS. REPLACE each of the first image's six heads with the following six different adult HUMAN-BEAST residents.\n\nVERY IMPORTANT LAYOUT BEFORE ALL ELSE: 1536x1024 real transparent PNG, invisible3columns\u00d72rows of512px squares. Each WHOLE head INCLUDING ears/beak/hair fits ONLY280px wide\u00d7280px high, centered at(256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). At least110px TRANSPARENT margin each cell side. They are SMALL MINIATURE floating heads on a LARGE empty canvas, exactly like first attached image. NO torso, no neck clothes, only tiny bare neck taper. NO colored backdrop, no checkerboard, no border, grid, labels or shadow. No part crosses any cell boundary.\n\nTOP LEFT: BOAR-HUMAN MAN age60. Real photographic wrinkled human man's face, greying bristly short hair, tired grown human eyes, small boar nose photo-fragment and two compact worn tusks, tiny real boar ears. Human face+animal snippets, no complete pig/boar animal head. Exhausted worker dignity.\nTOP MIDDLE: MOUSE-HUMAN WOMAN age45. Real photographic pale tired adult human woman face, short straight dark hair, thin cheeks and dark human eyes. Small real mouse nose, very small rounded mouse ear fragments and fine whiskers. Clearly grown woman not cute mouse, no pure animal head.\nTOP RIGHT: FOX-HUMAN WOMAN age35. Real photographic warm-brown grown human woman face, short messy reddish brown hair, shrewd tired dark human eyes, small fox fur cheek fragments and compact real fox ears, subtly slender fox nose. Wear small real photographed reading spectacles. Retain adult human eyes/mouth/cheekbone anatomy.\nBOTTOM LEFT: HERON-HUMAN MAN age75. Real photographic very thin old human man face, aged pale skin, sparse white hair, hollow tired human eyes, modest long narrow REAL heron beak as photo-fragment on lower-face/nose area, tiny compact pale crest. Beak ENTIRELY inside280px silhouette. No long neck/body, never entire bird head.\nBOTTOM MIDDLE: RACCOON/WEASEL-HUMAN ITINERANT MERCHANT MAN age50. Real photographic olive-brown adult human face, scruffy dark stubbled hair, weary bright human eyes, small real folded ears, subtle raccoon fur mask photo-pieces at cheek/eye edges and narrow small animal nose. Humane human smile barely suggested, not cartoon animal.\nBOTTOM RIGHT: SALAMANDER-HUMAN ADULT PERSON age40, androgynous mature photographed human face, green-brown real eyes, short dark hair, subtle real mottled olive amphibian-skin photograph pieces spliced along forehead/temples and wide flat small salamander nose. Human eyes/brow/cheeks/mouth stay clear, no complete reptile head. No external gills, the game animates them separately.\n\nFACE MATERIAL must be ACTUAL real photographic pores/wrinkles/hair/irises and continuous natural lighting, genuine animal fur/skin/feather fragments, hard smooth SCISSOR-CUT silhouettes with thin cream rim like reference30. NOT illustrations, paper facets, marker, painterly skin, fibers, CGI or fantasy cartoon. Bleak poor working adults. Realistic subdued color photography in olive sepia dusty blue cream rust. At least70% adult HUMAN face anatomy in every head, species discernible from photo snippets. Tiny heads in six cells, TRUEtransparent alpha exterior.",
+          "originalGeneratedFile": "exec-6f78380c-7c49-4eef-9924-9c245ca3a75f.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "boar-head",
+          "subject": "boar-head",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            139,
+            131,
+            449,
+            438
+          ],
+          "minimumTransparentMargin": 62,
+          "fullyTransparentFraction": 0.7340202331542969
+        },
+        {
+          "id": "mouse-head",
+          "subject": "mouse-head",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            125,
+            144,
+            404,
+            442
+          ],
+          "minimumTransparentMargin": 69,
+          "fullyTransparentFraction": 0.740692138671875
+        },
+        {
+          "id": "fox-head",
+          "subject": "fox-head",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            127,
+            131,
+            413,
+            440
+          ],
+          "minimumTransparentMargin": 71,
+          "fullyTransparentFraction": 0.7211341857910156
+        },
+        {
+          "id": "heron-head",
+          "subject": "heron-head",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            123,
+            76,
+            393,
+            386
+          ],
+          "minimumTransparentMargin": 76,
+          "fullyTransparentFraction": 0.7351341247558594
+        },
+        {
+          "id": "merchant-head",
+          "subject": "merchant-head",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            134,
+            84,
+            414,
+            389
+          ],
+          "minimumTransparentMargin": 84,
+          "fullyTransparentFraction": 0.7362174987792969
+        },
+        {
+          "id": "salamander-head",
+          "subject": "salamander-head",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            130,
+            96,
+            397,
+            391
+          ],
+          "minimumTransparentMargin": 96,
+          "fullyTransparentFraction": 0.7581138610839844
+        }
+      ]
+    },
+    {
+      "file": "parts.png",
+      "registryName": "parts",
+      "sha256": "a50d09c9bcf5719fb3e78e1e6ac4265f7b00a86ee008dfd82d17485df3cddfc0",
+      "bytes": 1923303,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-a51825a6-cf60-4ac9-94c5-34c3bea40232.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7804654439290365,
+      "metadataSource": "parts-items",
+      "generations": [
+        {
+          "prompt": "Create a PRODUCTION game asset atlas matching the attached style30, HARD-CUT COLOUR PHOTOGRAPHIC SPECIMENS. Every subject must look like an actual detailed colour camera photograph scissor-cut from a found-object photograph, with smooth contour, a very thin ivory clipping rim, real tiny material texture. NOT illustrated, NOT faceted, NOT painted, NOT torn-paper texture, NOT marker, NOT cartoon or videogame pixels, NOT CGI or plastic dolls. The reference's human skin pores, yellow rubberized raincoat gloss, faded real denim, worn cloth, and batwing membranes are essential. Colour natural muted yellow/blue/beige/gray/brown like the reference; neutral naturallight. Fine photographictexture and volumetric material remain inside hardcut silhouette.\n\nNative PNG1536\u00d71024, EXACT3columns\u00d72rows six512\u00d7512cells; no visiblegrid. EXACTLY ONE isolated specimen per cell, centered; allparts/tipsentirelywithin their cell with at least32px FULLY TRANSPARENT SPACE on everycellside. Maximumwidth448px/height448px. NO labels, NO scene, NO checkerboard, NO coloredbacking, NO background shadows, NO rectangles around pieces, NO layouts from reference. Actual ALPHA TRANSPARENCY behind and between allobjects. Flat photographic specimen presentation, full complete cutout components for articulated animation, never a whole person. \nTOP LEFT cellcenter256,256: ONLY a headless and completely SLEEVELESS goldenYELLOW glossy worn rubberized raincoat TORSO. The tiny body of LadySupine fromreference, narrow elegantly adult shoulders/waist and longcoat downbelowknees; opennecktopping, modestfoldedcollar, belt, realyellowrubber shine, wrinkles andscuffedhem. 190pxwide/400pxhigh. NO head, NO neck, NO face, NO hair, NO hands, NO arms, no attached boots/legs. Shoulderarmholes are empty; this must not secretly contain dangling sleeves. Fullcoat torso alone.\n\nTOP MIDDLE cellcenter768,256: ONLY headless completely SLEEVELESS blue denim WORK COAT TORSO for Ada, front-facing, adultwoman's small slumpedshoulders, lapels and patched realfadedblue denim with occasional beige sewnrepairspatches, waistbelt, thigh-length batteredhem. About240pxwide/370pxhigh. NO head, NO rabbit ears, NO neck, NO arms orhands, NO legs/boots, no humanbehind. Cloth is photographed and sewn asrealclothes, notpaperpatchwork.\n\nTOP RIGHT cellcenter1280,256: ONLY headless completely SLEEVELESS LONG BEIGE TRENCHCOAT TORSO, adultworker orAristobat like reference, worncrease-creasedcream/tan realfabric, collar/openfront andoldbuttons, hangingbelowknees, browninnerwaistcoat visible front, slightlyslumped adultshape. About230pxwide/400pxhigh. NO head, NO neck, NO bat ears, NO arms/sleeves/hands, nolegs/boots andnowings.\n\nBOTTOM LEFT cellcenter256,768: ONE isolated realadult HUMAN BARE FOREARM and HAND, straightdown vertically, adultnatural light skin texture andpores, top edge simply cut atelbow (not injury), full forearmto wrist then relaxedhandwith FIVE distinctnatural fingerspointingdown. Palm/palm-sidevisible, subtle knuckle folds, realistic fingernails, slightfingerseparation. About145pxwide/420pxhigh. NO glove, NO sleeve, no torso/head/upperarm, nosecondhand. Photographic isolatedanimationpart, anatomy calmnotgory.\n\nBOTTOM MIDDLE cellcenter768,768: ONE real bat WING ONLY, spread out, leatherythin brown/black membrane stretchedon angledbonelikefingerstruts, naturalreal photographedfolds, translucentscarredskintexture, shoulderattachmentatleftupperedge andfarpointedwingtip toright. About420pxwide/380pxhigh. NO batbody/head/ears andno otherwing. Nothingcutoff.\n\nBOTTOM RIGHT cellcenter1280,768: ONE real MOTH WING ONLY, isolated, delicate cream/ashgray/brown powderyscaletexture, subtlypatterned veins andfadedpatches, photographic realadultmothwing, shoulderattachmentatleft andbroad roundedwingtipatright, longthinforewing shape. About360pxwide/410pxhigh. NO mothbody/head/legs, NO secondwing. NO butterflyfairy/paintedpatterns. All edges clear smoothscissorcut fineivoryrim.\nAgain: photographed natural specimens, nottornpaper illustrations; truealpha.",
+          "originalGeneratedFile": "exec-be431155-7da9-451d-ac06-c839612cad09.png",
+          "status": "revised",
+          "inputReferences": [
+            "public/style-studies/30-hard-cut-color-specimens.png"
+          ]
+        },
+        {
+          "prompt": "Preserve this exact excellent photographic specimen art and its real transparent PNG background; correct ONLY spacing and size so the components can safely be used in a game animation atlas.\n\nOutput1536\u00d71024, six equal512px square invisible cells in3columns\u00d72rows. SHRINK EVERY specimen by25% relative to current size and CENTER EACH inside its own cell. The6 component bounding boxes must all fit within localx70..442 andy70..442; maximumwidth372,height372px. This means each torso neckline is well below the topofitscell, each hemwellabovebottom, barearmfullyinsidebottomleft, andbatwing's leftshoulder no longer spills into the neighboring arm cell. Leave WIDE truealpha transparent gaps between all six objects. STRICTLY no crossing x512/x1024/y512. Not even one wingtip orfinger may cross a cell boundary.\n\nCenters (256,256),(768,256),(1280,256)/(256,768),(768,768),(1280,768). SAME exact objects and order: yellow sleeveless Supine raincoat torso; sleeveless blue Ada coat torso; sleeveless long beige worker/Aristobat coat torso; straight vertical barehumanforearmandfive-fingerhand palmfront/down; one real batwing; one real mothwing. No heads, arms orlegs on coats, no bodies withwings. Keep original photographicallyreal skin/cloth/gloss/membranes, smoothscissorcut edges andverythincreamclippingrim. NO tornpaper facets, no paintedillustration, no CGI. Native RGBA alpha background: no brownbackdrop, no checkerboard, no panel boxes, no frames, no scene, no shadowsoutsideobjects. Onlysixsmallerphotographiccutouts withlots oftransparentemptyspace aroundeach.",
+          "originalGeneratedFile": "exec-a51825a6-cf60-4ac9-94c5-34c3bea40232.png",
+          "status": "accepted",
+          "inputReferences": [
+            "generated_images/exec-be431155-7da9-451d-ac06-c839612cad09.png"
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "id": "gown",
+          "subject": "supine-raincoat",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            157,
+            110,
+            381,
+            479
+          ],
+          "minimumTransparentMargin": 32,
+          "fullyTransparentFraction": 0.7807235717773438
+        },
+        {
+          "id": "ada-coat",
+          "subject": "ada-workcoat",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            140,
+            117,
+            371,
+            477
+          ],
+          "minimumTransparentMargin": 34,
+          "fullyTransparentFraction": 0.7697677612304688
+        },
+        {
+          "id": "worker-coat",
+          "subject": "worker-trenchcoat",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            133,
+            94,
+            355,
+            484
+          ],
+          "minimumTransparentMargin": 27,
+          "fullyTransparentFraction": 0.7606086730957031
+        },
+        {
+          "id": "arm",
+          "subject": "bare-forearm-hand",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            195,
+            62,
+            332,
+            424
+          ],
+          "minimumTransparentMargin": 62,
+          "fullyTransparentFraction": 0.8752822875976562
+        },
+        {
+          "id": "bat-wing",
+          "subject": "bat-wing",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            75,
+            97,
+            451,
+            388
+          ],
+          "minimumTransparentMargin": 60,
+          "fullyTransparentFraction": 0.7681388854980469
+        },
+        {
+          "id": "moth-wing",
+          "subject": "moth-wing",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            76,
+            105,
+            430,
+            393
+          ],
+          "minimumTransparentMargin": 76,
+          "fullyTransparentFraction": 0.728271484375
+        }
+      ]
+    },
+    {
+      "file": "parts-extra.png",
+      "registryName": "extra",
+      "sha256": "60d1563df7e33d7f657a87b1ce1bd03c04e79c6f379d9412b24a9fbd51cdda96",
+      "bytes": 1906796,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-79d435d9-53eb-4ebd-a912-312bdeb8831c.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7937386830647787,
+      "metadataSource": "parts-items",
+      "generations": [
+        {
+          "prompt": "Generate SIX SMALL photographic cutout COMPONENTS on a completely TRANSPARENT production atlas. Landscape1536\u00d71024 pixels, exactly3columns\u00d72rows of invisible512-square cells. Each specimen must be entirely contained in its owncell, centered, no morethan360px wide or360px tall, so there is expansive clearalpha space around every object. Minimum60px clearalpha margins in allcells. Never touchorcrosscellboundariesx512,x1024,y512. No labels, no frames/grid, no backingcard/paper, no castshadowsoutsideobjects, no scene, no background. TRUE nativealpha transparency.\n\nClosely match photographic hard-cut colour specimens of attached style30: actual cameraphotographed cloth/skin/fur/leather/rubber/shell detail, realistic textures and softly naturally lit volumes, smoothscissorcut contour with thin creamclippingrim. NOT painted, NOT facetedpaper, NOT tornpaper, NOT pixelart, NOT CGI/plastictoy. Photograph-like foundspecimens cutfromphotos, natural muted yellow/beige/blue/brown/gray.\n\nTOPLEFT (center256,256): ONE worn real darkbrown lace-up leather workBOOT, side/profileview, toe pointingRIGHT, shortshaft up, completeheel/toe/sole, scuffedleather, dullbrownlaces, creasedtongue, stitchedactualleather. One boot only, nofoot/leg/person. About350wide\u00d7280high.\n\nTOPMIDDLE (center768,256): ONE real trouser LEG ONLY, graybrown worn worktrouserfabric, isolated vertically straight from hip cutedge at top down throughknee toankle cuff atbottom, NO foot orboot, nosecondleg, notwhole trousers. Realfabric weave, kneecrease andsmallrepair. About140wide\u00d7360high. Non-graphic clothing component.\n\nTOPRIGHT (center1280,256): ONE real glossy YELLOW RUBBER GLOVE and its longcuff/forearmsection, orientedstraightvertical with cufftop andhandfingersDOWN, palmfront, FIVE naturaladultfingerforms lightlyseparated. About140wide\u00d7360high. Like Supine's glovefromreference, delicateglovedwomanhand, realcreased yellow rubber, scuffedslightly, not inflatedcartoon mitten. NO barehand, no humanbody/torso, nosecondglove.\n\nBOTTOMLEFT (center256,768): ONE PAIR of real HARE EARS only, sidebyside connectedatshortfurredbase, brown/grayphotographicfur andpink/buffinner ears, gracefullyslanting slightlyapart, longsensitiveear shapes. Nohead/face/eyes, no rabbitbody, noinjury/gore. Photographic costume/natural specimenearcomponent. About210wide\u00d7350high. Alltipsinsidecell.\n\nBOTTOMMIDDLE (center768,768): ONE real long RED FOX TAIL only, slightgentlecurvedverticaldiagonalshape, rustbrown softrealfur, darkrootatupperleft andpalecreamtipatlowerright. About230wide\u00d7350high. Completeisolatedtailwithnohead/body/legs, noinjury/gore. Everyfurhairtipcontainedinsidecell.\n\nBOTTOMRIGHT (center1280,768): ONE real TORTOISE SHELL only, domedovalbrownbeige scutes, naturalweatheredkeratinphototexture, slightlyelevatedthreequarterview showingcompleteovalsilhouette andgentlevolume. About350wide\u00d7290high. Noanimalhead/legs/tail, no body, noinjury/gore. The recognizable shellassetalone.\n\nEverycutout fullyinsidea60pxinset centralbox, maximum360px inanydimension. Allbackingareatruly transparent, no brown/olive background fromreference. ",
+          "originalGeneratedFile": "exec-f8e32873-871d-4ff5-bade-281e1767e4c4.png",
+          "status": "revised",
+          "inputReferences": [
+            "public/style-studies/30-hard-cut-color-specimens.png"
+          ]
+        },
+        {
+          "prompt": "Preserve these exact six excellent PHOTOGRAPHIC objects and actual alpha transparency. ONLY correct their spacing: SHRINK all6 objects to75% of their existing size andCENTER eachobject inside itsown equal512\u00d7512 cell. Finalcanvas remains1536\u00d71024,3columns\u00d72rows. Maximumwidth/height370px for eachcutout andminimum70px truealpha marginson allfourcell sides. Everytip complete, no crosscell boundary atx512/x1024/y512.\n\nSameorder: top ONE wornboot sideviewtoeright, ONE verticalgraytrouserleg, ONE yellowrubberglovedforearm withhandpalmsfrontfingersdown; bottom ONEpairhareearsatconnectedbase, ONElong rustfox tail, ONEdomedreal tortoiseshell. Exact6 isolatedphotographiccutouts, nootherbody/head/limbs. Keeprealcamera textures, leatherlace scuffs, clothweave, rubbergloss, fivefingeranatomy, delicatefur andshellscutes. Smoothscissorcut contour veryfineivoryrim, NO facetedtornpaper, illustration, CGI. Nativealpha transparentbackground, no grids/frames/checkers/backingpapers/scenery/labels, no castshadowsoutsideobjects.\n\nCellcenters(256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). Actual solidobjects must fitcentral[x70..442,y70..442] ofeachcell. Especiallyboottoe andshell edgesneedwidemargins. Lots of empty transparentspace aroundeach.",
+          "originalGeneratedFile": "exec-79d435d9-53eb-4ebd-a912-312bdeb8831c.png",
+          "status": "accepted",
+          "inputReferences": [
+            "generated_images/exec-f8e32873-871d-4ff5-bade-281e1767e4c4.png"
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "id": "boot",
+          "subject": "work-boot",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            123,
+            146,
+            474,
+            405
+          ],
+          "minimumTransparentMargin": 37,
+          "fullyTransparentFraction": 0.7690811157226562
+        },
+        {
+          "id": "trouser-leg",
+          "subject": "trouser-leg",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            197,
+            72,
+            316,
+            456
+          ],
+          "minimumTransparentMargin": 55,
+          "fullyTransparentFraction": 0.8250160217285156
+        },
+        {
+          "id": "yellow-glove",
+          "subject": "yellow-glove",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            188,
+            88,
+            321,
+            451
+          ],
+          "minimumTransparentMargin": 60,
+          "fullyTransparentFraction": 0.8519668579101562
+        },
+        {
+          "id": "hare-ears",
+          "subject": "hare-ears",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            122,
+            77,
+            430,
+            373
+          ],
+          "minimumTransparentMargin": 77,
+          "fullyTransparentFraction": 0.7833175659179688
+        },
+        {
+          "id": "fox-tail",
+          "subject": "fox-tail",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            150,
+            46,
+            386,
+            413
+          ],
+          "minimumTransparentMargin": 46,
+          "fullyTransparentFraction": 0.7880020141601562
+        },
+        {
+          "id": "tortoise-shell",
+          "subject": "tortoise-shell",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            77,
+            117,
+            443,
+            351
+          ],
+          "minimumTransparentMargin": 68,
+          "fullyTransparentFraction": 0.7450485229492188
+        }
+      ]
+    },
+    {
+      "file": "world-props.png",
+      "registryName": "props",
+      "sha256": "3de5ebe043188b2ba90fb9a61dae0f0dc781cff3a8382fd039dbc1fa33fc5c14",
+      "bytes": 2090057,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-445fc40b-917e-43d3-a147-cf345901c1d4.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7408911387125651,
+      "metadataSource": "world-assets",
+      "generations": [
+        {
+          "prompt": "Create a native1536x1024 landscape transparent GAME PHOTO-COLLAGE ASSET ATLAS matching the supplied style-30 reference's REAL COLOR photographed specimens, rounded hard-scissor contours and very thin warm-cream cut-paper rim. Exact invisible3columns\u00d72rows of512x512 cells. EACH of the six WHOLE specimens is SMALL, centered in its own cell, with at least64px EMPTY TRANSPARENT margin on EVERY side; object width and height each\u2264384px. Centers top(256,256),(768,256),(1280,256),bottom(256,768),(768,768),(1280,768). Do not fill cells or allow parts to cross x512,x1024,y512. It is an atlas of six usable isolated whole objects, not a full scene. TRUE alpha=0 outside objects and between their parts. NO grid lines/captions/pageframe/olive backing/haze/glow/checkerboard.\n\nTOP LEFT: ONE small complete ROUNDED BLUE CAMPER/caravan extremely closely matching the reference's little oval blue camper: curved blue rusty enamel body, cream window frame with old curtain, narrow door near the center of the complete silhouette, little wheels, salvaged shallow steps, a small white propane cylinder at right. Poor repeatedly repaired trailer-park dwelling, NOT a rectangular building or shiny modern RV. Whole camper+steps+propane \u2264384px.\nTOP MIDDLE: ONE whole bare old tree from an actual color photograph, gnarly grey-brown bark and clearly rooted ground-touching broad base, crooked thin naked branches reaching above it, no green foliage. Hard scissor-trimmed rounded natural trunk and branch contours with thin cream rim. A complete freestanding specimen, not an illustrated twig or detached trunk. All branches/tips fit in a\u2264384px square.\nTOP RIGHT: ONE whole ordinary rough QUARRY ROCK BOULDER, three-quarter slightly elevated view, actual photographic grey-brown mineral grain, chips/lichen/small weather stains, irregular natural rounded outline. Clear grounded shape, no decorative crystals or drawn facets, no ground background.\nBOTTOM LEFT: ONE whole IRON ORE BOULDER, separate specimen from the quarry rock: dark heavy natural rounded stone with visible reddish rust mineral seams and tiny metallic silver-grey inclusions, actual real-camera mineral detail. No fantasy giant gemstones, no illustrated polygon facets, no pedestal or scenery.\nBOTTOM MIDDLE: ONE coherent small outdoor tuft of WILD HERBS AND REEDS: scruffy sparse real photographed dull-olive medicinal herb leaves attached to stems and3thin rusty-brown reeds/cattails rising from a small root tuft. Entire tuft is one complete cutout group, clear thin stems/leaf shapes and transparent gaps. No lush bouquet/flowers/garden planter/background soil square.\nBOTTOM RIGHT: ONE complete salvaged wooden WORKBENCH, low battered plank tabletop on mismatched simple wooden/metal supports, repaired nails, chipped wood grain, two small worn physical tools on top (hammer and short wrench). Useful slightly elevated three-quarter game view, complete feet/base. Actual photographic wood/metal detail. No luxury carpenter workshop or background room.\n\nAll actual-camera color photographic textures, believable worn materials and lighting, crisp skin-free wood/metal/plant/mineral details. Do NOT make a painting, sketch, marker, torn polygonal painted collage, CGI model or pixel art. The world is bleak and humble, an old trailer park updated with scavenged means, not cozy or magical. All six specimens must remain modestly small with generous true-alpha margins. A continuous dark background is forbidden; isolated transparent cutouts are mandatory.",
+          "originalGeneratedFile": "exec-1b703b06-5e13-42b3-ad13-e6d0bf955347.png",
+          "status": "rejected: objects touched/crossed cell boundaries"
+        },
+        {
+          "prompt": "Keep exactly this six-object photographic atlas, preserving each real photographed object and the hard scissor cutout with thin cream rim. ONLY correct the technical atlas layout: SHRINK EACH WHOLE SPECIMEN BY30% around the CENTER of its own512x512 cell. Scale all parts of each object together, do not merely nudge it. Objects must be visibly smaller than in this image, leaving at least48px transparent margin on EVERY side of EVERY cell. Native1536x1024; EXACT3equal512px columns by2equal512px rows. Top centers(256,256),(768,256),(1280,256); bottom centers(256,768),(768,768),(1280,768). The ENTIRE blue rounded camper including steps and propane must fit cell0; ENTIRE bare tree including all roots/tips cell1; ENTIRE quarry boulder cell2; ENTIRE iron ore boulder cell3; ENTIRE herb/reed tuft including roots/tall tips cell4; ENTIRE workbench including tools/feet cell5. No parts may cross x512,x1024,y512, and no leaves or tools may approach a cell boundary. Keep the scene's TRUE TRANSPARENT ALPHA outside cutouts, no colored or brown background/haze/glow/checkerboards. Keep actual-camera material detail, colors, poses and photography unchanged. No paintings/CGI/pixel art, no gridlines/text/captions. A smaller complete specimen with safe alpha space is mandatory.",
+          "originalGeneratedFile": "exec-445fc40b-917e-43d3-a147-cf345901c1d4.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "blue-trailer",
+          "subject": "blue-camper",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            98,
+            167,
+            464,
+            414
+          ],
+          "minimumTransparentMargin": 47,
+          "fullyTransparentFraction": 0.7225532531738281
+        },
+        {
+          "id": "bare-tree",
+          "subject": "bare-tree",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            112,
+            93,
+            402,
+            440
+          ],
+          "minimumTransparentMargin": 71,
+          "fullyTransparentFraction": 0.7607192993164062
+        },
+        {
+          "id": "rock",
+          "subject": "quarry-rock",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            84,
+            164,
+            430,
+            413
+          ],
+          "minimumTransparentMargin": 81,
+          "fullyTransparentFraction": 0.7404632568359375
+        },
+        {
+          "id": "ore-rock",
+          "subject": "iron-ore",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            112,
+            118,
+            436,
+            385
+          ],
+          "minimumTransparentMargin": 75,
+          "fullyTransparentFraction": 0.7326622009277344
+        },
+        {
+          "id": "plant",
+          "subject": "herbs-reeds",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            115,
+            66,
+            395,
+            404
+          ],
+          "minimumTransparentMargin": 66,
+          "fullyTransparentFraction": 0.7230453491210938
+        },
+        {
+          "id": "workbench",
+          "subject": "workbench",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            85,
+            118,
+            431,
+            393
+          ],
+          "minimumTransparentMargin": 80,
+          "fullyTransparentFraction": 0.7659034729003906
+        }
+      ]
+    },
+    {
+      "file": "interiors.png",
+      "registryName": "interiors",
+      "sha256": "3a244fc96798f2300c1b91a993a8dae3fb9beb299288982a22b09cfdc341c228",
+      "bytes": 2093173,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-efe2b897-640f-44e1-ae5b-1ca1aba0f785.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.6958955128987631,
+      "metadataSource": "world-assets",
+      "generations": [
+        {
+          "prompt": "Create a native1536x1024 transparent PHOTO-COLLAGE GAME ASSET ATLAS faithful to the supplied style-30 reference: REAL COLOR photographed aged objects, visibly actual camera wood/cloth/glass/metal/skin detail, rounded hard-scissor silhouettes with a very thin warm-cream paper rim. Exact invisible3columns\u00d72rows of512x512 cells. Six SMALL isolated complete objects, each centered in its own cell with LARGE EMPTY TRANSPARENT MARGINS. Entire object width and height each\u2264350px, leaving at least80px clear on every cell side. Centers top(256,256),(768,256),(1280,256); bottom(256,768),(768,768),(1280,768). Do not enlarge specimens to fill cells. No part may cross x512,x1024,y512. TRUE alpha=0 outside objects and between their component parts; no colored backing, haze, glow, checkerboard, labels, gridlines or page frame. Preserve a bleak poor trailer-park world repaired with scavenged materials, not a cozy cottage or ornate fantasy.\n\nTOP LEFT: ONE complete low-roof CIVIC SHACK FACADE assembled from actual photographic salvaged greenhouse/corrugated building materials. A wide modest freestanding converted trailer/shack, central upright door unmistakably in the middle, patched greenish corroded metal ribs with dingy clear glass panes at sides, a low curved/shallow roof repaired with cream corrugated sheets and blue-grey tarps, small cinderblock supports and minimal steps. A jury-rigged public office from the humblest means. Whole building including roof, chimneys, supports/steps\u2264350px. No grand castle, immaculate greenhouse, plants/garden, background village, perspectival room interior or rectangular scenery panel. It is one isolated whole usable facade.\nTOP MIDDLE: ONE decrepit old CRT TELEVISION, slightly raised three-quarter camera view, round dark brown/olive bulky casing, convex glass screen, real vents/knobs, crooked rabbit-ear antenna and a short visible plug wire. The screen shows a recognisable REAL COLOR photographic closeup of beautiful ADULT HUMAN LADY SUPINE from the supplied reference: gray-green eyes, freckles, natural brown hair, yellow glove near lips, a large OPEN BLACK OVAL HOLE IN THE TOP OF HER REAL ENORMOUS HEAD, no crown or hat and no gore. She is elegant and terrifying, and the display is photographed, not a drawn portrait or generated text. Entire TV/antenna/wire\u2264350px; no separate billboard or background.\nTOP RIGHT: ONE rickety READING DESK, battered dark actual wooden tabletop with a small stack of worn books, old cream papers and a tiny chipped mug, mismatched spindly metal/wood legs, clear transparent gap under the desk. Actual old camera wood grain/book paper texture; no ornate furniture or room background. Whole desk\u2264350px.\nBOTTOM LEFT: ONE isolated group of FOUR mismatched ROUND STOOLS closely matching the reference lower-middle stools: chipped white wooden round stool, taller round rusty iron bar stool, short stump/round log stool, frayed brown-green upholstered round stool. Four complete stools stand separately in a compact staggered arrangement with clear transparent gaps and every foot visible, entire group\u2264350px. No chairs with rectangular backs, no fifth stool, no background floor.\nBOTTOM MIDDLE: ONE worn wooden-and-metal CRATE/pantry storage box, slightly elevated three-quarter camera view, old splintered brown planks, rusty narrow iron corner straps, battered lid and small latch, humble repaired household storage. Whole grounded crate\u2264350px; no big surrounding piles, ornate treasure chest or painted polygon facets.\nBOTTOM RIGHT: ONE very old METAL FRIDGE/PANTRY CABINET, narrow tall off-white/cream enamel, rounded upper corners, visible dents/rust and taped repaired door seal, two uneven feet and a small dull iron handle, shut doors. Actual camera chipped enamel and tarnished metal surface; no logos, no written labels, no modern glossy appliance, no kitchen background. Whole cabinet\u2264350px.\n\nMake all six objects actual REAL COLOR photographic specimens, not paintings, sketches, marker, torn painted facets, computer game renders/CGI models or pixel art. Quiet diffuse camera light, subdued olive/cream/yellow/rust/blue coloration like the reference. A SMALL complete photographed specimen with generous true-transparent padding is required; never crop feet/antennae/roof or overflow its512px cell.",
+          "originalGeneratedFile": "exec-6ba530a9-3207-408e-b746-7466148009d4.png",
+          "status": "rejected: building, television and stools crossed cell boundaries"
+        },
+        {
+          "prompt": "Keep this exact six-object photographic atlas and its actual-camera surface details, colors, angles and contents. Make ONLY a technical atlas layout correction: SHRINK EVERY WHOLE SPECIMEN GROUP BY35% around its own512x512 CELL CENTER, so it is visibly smaller and surrounded by abundant true-transparent empty space. Native1536x1024, exact3equal512px columns\u00d72equal512px rows. Cellcenters top(256,256),(768,256),(1280,256),bottom(256,768),(768,768),(1280,768). Entire object width/height must be\u2264370px, and every specimen must be at least48px from ALL its cell boundaries. Scaling includes ALL roof/chimneys/steps of civic greenhouse-shack, ALL television/antennae/plug wire, ALL reading desk/legs/books/mug, ALL4roundstools asonegroup, wholecrate/latch, and wholefridge/feet. The top-left shack currently crosses into its neighbor and stools/TV overflow: correct that by scaling them down, not moving or cropping parts. Keep TV's beautiful adult Supine photographic face with huge open black oval head hole and yellow glove. Keep4separate stools withcleartransparentgaps. Keep hard scissor contours withverythin creamrim and actual photographic wood/cloth/glass/metal/enamel. NO paintedfacets/sketch/marker/CGI/pixelart. Truealpha=0 outside cutouts; no colored/brownbackdrop/haze/glow/checkerboard/grid/text/pageframe. Allsixsmallwhole objects must fit safeequalcells.",
+          "originalGeneratedFile": "exec-efe2b897-640f-44e1-ae5b-1ca1aba0f785.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "civic-building",
+          "subject": "civic-shack",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            74,
+            106,
+            469,
+            407
+          ],
+          "minimumTransparentMargin": 42,
+          "fullyTransparentFraction": 0.6274261474609375
+        },
+        {
+          "id": "telescreen",
+          "subject": "television",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            113,
+            60,
+            454,
+            434
+          ],
+          "minimumTransparentMargin": 57,
+          "fullyTransparentFraction": 0.7031402587890625
+        },
+        {
+          "id": "desk",
+          "subject": "reading-desk",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            58,
+            103,
+            446,
+            441
+          ],
+          "minimumTransparentMargin": 58,
+          "fullyTransparentFraction": 0.7436103820800781
+        },
+        {
+          "id": "stools",
+          "subject": "round-stools",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            60,
+            145,
+            483,
+            397
+          ],
+          "minimumTransparentMargin": 28,
+          "fullyTransparentFraction": 0.7196006774902344
+        },
+        {
+          "id": "crate",
+          "subject": "crate",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            93,
+            134,
+            439,
+            414
+          ],
+          "minimumTransparentMargin": 72,
+          "fullyTransparentFraction": 0.6900100708007812
+        },
+        {
+          "id": "cabinet",
+          "subject": "fridge",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            138,
+            70,
+            368,
+            422
+          ],
+          "minimumTransparentMargin": 70,
+          "fullyTransparentFraction": 0.6915855407714844
+        }
+      ]
+    },
+    {
+      "file": "tools.png",
+      "registryName": "tools",
+      "sha256": "ad95d6f0e60dbc5fd775c36c663955f17b7b59f45a0a051fec428e62d98d9b20",
+      "bytes": 1833754,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-bf7e505e-fe4a-4c3d-ad2d-fb14a74cf7d0.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.8122571309407552,
+      "metadataSource": "parts-items",
+      "generations": [
+        {
+          "prompt": "Make SIX SMALL PHOTOGRAPHIC tool specimens floating in large empty transparent cells, matching the real photographic cutout materials and comfortably spaced atlas of the references. These must be actual camera-real objects, woodgrain/metalrust/glass andfood details, smooth rounded scissorcut silhouette with a verythincreamclipping rim. NOT tornpaper/facetedpaint/illustration/CGI/pixelart.\n\nFinalnative PNG1536\u00d71024, exactly3columns\u00d72rows invisible512-squarecells. Each object CENTERED in itsowncell, entirelyinsidecell, no morethan340px in itslongestdimension; minimum70px FULLY TRANSPARENT space fromanycelledge, especially fishingrod/twig/axe. Everyline andtinyobjectcomponentbelongswithitsmainobjectinthe SAME cell. Noobjectcrossesx512,x1024,y512. No labels/grid/frames/cards, no background orground, nooutsidecastshadow, no blackorolivebacking, no checkerboard. TRUEALPHA background. SIX objects only.\n\nTOPLEFT center(256,256): ONE curly willow CANE/STAFF, a bent realbrownbark branch witha naturalcurledhandle, longslender stalk, a coupleoftinycurledtwigs atupperhandle, weatheredhand-wornwood. Completephotographic staff, about320px tall and120wide, verticalslightdiagonal, NO ground/plant/extra branches.\n\nTOPMIDDLE center(768,256): ONE jury-rigged HAND AXE, realshortdarkwoodhandle anddulldentedironhead, handlewrappedwithreusedwire andthinleatherbinding, corrodedmetalhead withplainworkingedge, weatheredpoor peasant tool. Completeaxe diagonallyangled, about300\u00d7260px. Nothingcutoff, no person.\n\nTOPRIGHT center(1280,256): ONE primitive STONE PICK, realroughgraystonehead tightlylashed to a shortcrookedbrownwoodhandle, bluntchippedstonewithsmallpoint, cord/wire lashings, photographednaturalrealstonegrain. Wholepick diagonallyplaced, about300\u00d7260px. No other tools.\n\nBOTTOMLEFT center(256,768): ONE complete BENT FISHING ROD with smalloldrealmetalreel atbase, thinrodarchedintoagentlycurvingC, itswholethin fishinglineandcorkfloat loopcontainedwithin thesame central340\u00d7340pxbox. Roddiagonal/bentsoitsentiretips andline fitinvisiblecell. Scarcity improvised fishingtool, weatheredwood/rustedreel, photograph-likehighdetail. No fishhookoutsidecell, nothingcutoff, no fishingperson/water.\n\nBOTTOMMIDDLE center(768,768): ONE battered copper/iron GLASS LANTERN, fadedrustycopperbody, transparentrealglass chamber, wireguards, curvedmetalcarryinghandle, similar to the outdoor lanterninreference30, unlit orquietwarmwick; completeantiqueobject about260\u00d7320px. No glowhalo or backgroundshadowoutsidecutout.\n\nBOTTOMRIGHT center(1280,768): ONE chippedrealcream enamel/ceramic BOWL containing a verythinpoorvegetable SOUP, threequarterview topvisible, muddyclearbrothonlyfewsmall wiltedleafspecks, crackedchippedrim, slightlyrusted/chippedwhiteoutside. Completewhole bowlabout320wide\u00d7200high, camera-realfood/ceramic, no spoon/steam/background/person. Humble ration looksrealnot cartoonfood.\n\nCritical: smaller specimens than fullpanelreference, withwide actualtransparentclearance on allcell sides. Realphoto specimens, notpaper replicas.",
+          "originalGeneratedFile": "exec-21a0b244-5211-45fe-b95f-c02be6119820.png",
+          "status": "revised",
+          "inputReferences": [
+            "src/assets/photo-collage/parts-extra.png",
+            "public/style-studies/30-hard-cut-color-specimens.png"
+          ]
+        },
+        {
+          "prompt": "Preserve these exact6 photographic tool cutouts and truealpha background. Correctonlysize/position: shrinkEVERY object by15% andcenterit initsown512-squarecell onthe1536\u00d71024,3columns\u00d72rows atlas. MAXobjectheight/width400px, minimum40px truealpha clearance oneverycelledge. Especiallythe bottommiddlelantern handle MUST move downintoitscell; currenttophandle is too close toy512 boundary. Alllanternparts must lieglobaly560..980. Willowcanemustentirelyliey40..472. Noobjectcrossesx512,x1024,y512.\n\nOrder unchanged: curlywillowcane / wirewrappedhandaxe / stonepick; bentwholefishingrodwithreellineandfloat / rustycopperglasslantern / chippedbowlthinsoup. Keepallcamera-realtextures,samephotoobjects,smoothscissorcuts andthincreamrim. No newobjects/noillustration/nofacetedpaper/noCGI. No backing/background/shadows/frames/labels. Fullytransparentemptyspace behindandbetween sixcompleteobjects.",
+          "originalGeneratedFile": "exec-bf7e505e-fe4a-4c3d-ad2d-fb14a74cf7d0.png",
+          "status": "accepted",
+          "inputReferences": [
+            "generated_images/exec-21a0b244-5211-45fe-b95f-c02be6119820.png"
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "id": "item-cane",
+          "subject": "willow-cane",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            185,
+            85,
+            367,
+            494
+          ],
+          "minimumTransparentMargin": 17,
+          "fullyTransparentFraction": 0.9075241088867188
+        },
+        {
+          "id": "item-axe",
+          "subject": "hand-axe",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            72,
+            104,
+            433,
+            471
+          ],
+          "minimumTransparentMargin": 40,
+          "fullyTransparentFraction": 0.8317909240722656
+        },
+        {
+          "id": "item-pick",
+          "subject": "stone-pick",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            52,
+            113,
+            407,
+            486
+          ],
+          "minimumTransparentMargin": 25,
+          "fullyTransparentFraction": 0.8413314819335938
+        },
+        {
+          "id": "item-rod",
+          "subject": "fishing-rod",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            78,
+            24,
+            451,
+            432
+          ],
+          "minimumTransparentMargin": 24,
+          "fullyTransparentFraction": 0.8722801208496094
+        },
+        {
+          "id": "item-lantern",
+          "subject": "copper-lantern",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            154,
+            33,
+            357,
+            449
+          ],
+          "minimumTransparentMargin": 33,
+          "fullyTransparentFraction": 0.7361717224121094
+        },
+        {
+          "id": "item-soup",
+          "subject": "thin-soup",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            60,
+            131,
+            439,
+            402
+          ],
+          "minimumTransparentMargin": 60,
+          "fullyTransparentFraction": 0.6844444274902344
+        }
+      ]
+    },
+    {
+      "file": "supplies.png",
+      "registryName": "supplies",
+      "sha256": "faf19362b455d5fc5d99908a3d806865558b3681dd733c107f8be23a5f7e2948",
+      "bytes": 2323637,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-919397eb-b9f3-4bd7-88db-99fd4968bfe8.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.6669623057047526,
+      "metadataSource": "parts-items",
+      "generations": [
+        {
+          "prompt": "Replace the six tools in the reference atlas with six SMALL PHOTOGRAPHIC resource specimens. Preserve its true transparent background, smooth scissor-cut contours and very fine cream clipping rim. Keep real camera detail: bark, stone grit, metal mineral grain, leaves, fish scales and willow fibers. These are actual photo cutouts, NOT illustrations, torn-paper replicas, facets, marker drawings, pixel art or CGI.\n\nNative1536\u00d71024 PNG, EXACT3columns\u00d72rows six invisible512\u00d7512 cells. One small centered specimen percell, each ENTIRELY inside the central360\u00d7360px area: maximum360px in eitherdimension and at least60px alpha-clear margins on everycellside. All littleleaf/twig/fin/fiber tips contained. STRICTLY no crossingx512/x1024/y512. No visibleframes, labels, typography, collagebacking, checkerboard, ground, background or castshadowoutsideobjects. TRUE nativealpha behind allspecimens.\n\nTOPLEFT center256,256: one compact TIMBER BUNDLE: three short weatheredbrown branches/split smalllogs with visiblewoodgrain andbark, tied together with a simple reused brown cord. Bundle photographed at threequarterangle, completeends visible, about340wide\u00d7230high. No largepile or ground.\n\nTOPMIDDLE center768,256: one SMALL STONE PILE of five ordinaryreal gray/chalk/beige pebbles, rough uneven granular surfaces, compactmound, smallseparatecracks between stones butone groupedisolatedspecimen. About320wide\u00d7220high. All stonesinsidecell. No dramaticfantasy crystals.\n\nTOPRIGHT center1280,256: one GRAY IRON ORE specimen, a compact roughdarkgray rockcluster with dull natural metallic flecks andsome weathering, actualmineral camera closeup, no glowinggems or sparkles. About300wide\u00d7270high. One ore lump only.\n\nBOTTOMLEFT center256,768: one BITTER HERB CLUSTER, small loosebundle of real mattegraygreen wormwood/bitterleaf sprigs withthin brownstems, fine leafserrations andbotanical texture. About280wide\u00d7330high. No flowers,pot,soil orbody; completeclippedplant bundle, everytipinsidecell.\n\nBOTTOMMIDDLE center768,768: one SMALL WHOLE freshwater FISH, completehead/eyes/fins/tail, naturalsilvergray scales andmuted brown back, plainminnow/chub, photographed profile HORIZONTAL withheadLEFT andtailRIGHT. About350wide\u00d7150high. Intactnon-graphicwholefish, noblood, nofilleting/wounds, no plate/water/background.\n\nBOTTOMRIGHT center1280,768: one CURLY WILLOW FIBER BUNDLE, a few thin tan strippedbarkfibers andsupple curly willow strands loosely tiedmidpoint withbrownstring, loopingsoft strandsandcurlingtwigtips, driednaturalplantmaterial andfinefiberdetail. About300wide\u00d7280high. Completebundle insidecell, notlargebranchesthatcrossboundaries.\n\nSix resource thumbnails with generous emptyalpha gaps, all naturalpoor-world materials andphotographic microtexture, samecleanhard-cut style asreference. ",
+          "originalGeneratedFile": "exec-fcd32407-45b8-46b0-947c-835057d5e816.png",
+          "status": "revised",
+          "inputReferences": [
+            "src/assets/photo-collage/tools.png"
+          ]
+        },
+        {
+          "prompt": "Keep exactly these6 excellent actual photographic resource specimens and their native alpha transparency. Onlycorrectatlas spacing by shrinking EACH specimen25% andcentering eachinsidetheirown512\u00d7512cell onthe1536\u00d71024 3column\u00d72rowcanvas.\n\nThe FISH currentlyspills into both adjacentcells: shrinkfish to max370pxwideandputENTIREfishincludingmouth/fins/tailinsidebottomMIDDLE cell (globalx580..956,globaly580..956). Notonefishpixelmaycrossx512 orx1024. HERBtop must move DOWNsoeverytiny leafliesinsidebottomLEFT withglobaly>=580. Logbundlealso needsmargin onrightside. ALL6 objectsolidbounds must fitlocal[x60..452,y60..452] maximum392width/height. Lots ofemptytransparent space betweencells; no visiblegrid.\n\nSameorder top timberbundle/5smallstonepile/grayironore; bottom bitterherbcluster/wholefishheadLEFTtailRIGHT/curlywillowfiberbundle. Keeprealphoto bark,cord, mineralgrain, leaves, silverfishscales anddriedfibers. No painting, no facetedpaper, no CGI. Keep smoothscissorcut thincreamrim, puretransparentbacking, no castshadows/labels/frames/checkers/background/extraobjects. Preserveallcompleteobjects, onlyscaleandposition.",
+          "originalGeneratedFile": "exec-919397eb-b9f3-4bd7-88db-99fd4968bfe8.png",
+          "status": "accepted",
+          "inputReferences": [
+            "generated_images/exec-fcd32407-45b8-46b0-947c-835057d5e816.png"
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "id": "item-wood",
+          "subject": "timber-bundle",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            53,
+            106,
+            479,
+            429
+          ],
+          "minimumTransparentMargin": 32,
+          "fullyTransparentFraction": 0.6765022277832031
+        },
+        {
+          "id": "item-stone",
+          "subject": "stone-pile",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            75,
+            137,
+            447,
+            412
+          ],
+          "minimumTransparentMargin": 64,
+          "fullyTransparentFraction": 0.6941146850585938
+        },
+        {
+          "id": "item-ore",
+          "subject": "iron-ore",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            80,
+            109,
+            443,
+            442
+          ],
+          "minimumTransparentMargin": 68,
+          "fullyTransparentFraction": 0.6606063842773438
+        },
+        {
+          "id": "item-herb",
+          "subject": "bitter-herbs",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            59,
+            39,
+            474,
+            452
+          ],
+          "minimumTransparentMargin": 37,
+          "fullyTransparentFraction": 0.5211067199707031
+        },
+        {
+          "id": "item-fish",
+          "subject": "whole-fish",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            37,
+            146,
+            485,
+            330
+          ],
+          "minimumTransparentMargin": 26,
+          "fullyTransparentFraction": 0.79925537109375
+        },
+        {
+          "id": "item-willow",
+          "subject": "willow-fibers",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            55,
+            72,
+            477,
+            455
+          ],
+          "minimumTransparentMargin": 34,
+          "fullyTransparentFraction": 0.6501884460449219
+        }
+      ]
+    },
+    {
+      "file": "special.png",
+      "registryName": "special",
+      "sha256": "4cee6a8070e72a4c087bb4131c4bca51a2296d351640148884fdc60ca0d6be12",
+      "bytes": 2297040,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-576240c7-2925-4dbd-ad22-eabde092c403.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.6313432057698568,
+      "metadataSource": "parts-items",
+      "generations": [
+        {
+          "prompt": "Create six SMALL photographic special-item cutouts for a browser game's production asset atlas, faithfully matching attached style30 hard-cut colour specimens. ACTUAL CAMERA-REAL PHOTOGRAPH MATERIALS, including the exact beautiful adult LadySupine face fromstyle30 printed on a smallphysicaltoken. Smooth roundedscissorcut contour with veryfinecreamclippingrim. No facetedtornpaper/painting/illustration/marker/pixelart/CGI.\n\nNative1536\u00d71024 PNG, EXACT3columns\u00d72rows invisible512\u00d7512 cells. Exactlyone isolatedcompleteitem percell, centered, eachmax360px wideorhigh, MINIMUM60px clearalpha marginaroundEVERYcellside and everytip. ObjectsNEVERcrossx512/x1024/y512. No labels, visiblegrid/frames/checkers, scenes, backingpaper, castshadowsoutsideobjects or otherbackground. TRUE nativealpha around andbetweenallobjects.\n\nTOPLEFT center256,256: ONE non-graphic EDUCATIONAL HUMAN BRAIN ANATOMICAL MODEL photographed as a dryphysicalteaching specimen. Realisticrecognizable cortex folds andTWOhemispheres, roundedcerebralvolume, finefoldedgyri andcenterhemispherecleft, threequartertopview. Matte paleivory/tan silicone anatomicalmodel, notwetbiologicaltissue. NO blood, noinjury, nogore, no cuthead/body, no jars/stand/base/labels. A cleanliteralbrainshapedmodelonly about320\u00d7270px, withactualphotographicsurface detail, no cartoonbrain.\n\nTOPMIDDLE center768,256: ONE crudeold IRON KEY, darkpittedmetal withslightlybentlongstem, simpleroundbowatTOP andplainbitatBOTTOM, photographer's naturalrealmetaltexture andrust. Completekey about160\u00d7330px, verticalslighttilt, nootherobjects.\n\nTOPRIGHT center1280,256: ONE old TIMEGLASS/HOURGLASS, physicaltworealglassbulbs withnarrowwaist, a littlepale sandrunningbetweenbulbs, plainbattered darkwood/copper frameandthreeuprights, noclockface, noornatefantasydecoration. Wholeobjectabout230\u00d7340px, photorealactualglassreflections androughwood. No extra jar.\n\nBOTTOMLEFT center256,768: ONE ROUND PUNCHED TIME COUPON, a smallrealagedivorycardboard/paperdie-cut circle photographedfront-on, about340pxdiameter. Itsprint is a full-colour photographed CLOSEUP OF THE EXACT LADY SUPINE FROMSTYLE30: beautifuladultwoman, green/hazel eyes, brownshortbobhair, realskinpores, restrainedlips, andlargeclearlyvisible BLACK OVAL VOID at the TOP of her immensehead. Faceprinted centered onthecoupon, justtinyyellowraincoatcollarbelowchin, no wholebody. Theheadopeningisablackprintedvoid, notmessyfacetedpaper. A separatesmallactualholepunchednear thecoupon's11o'clockedge, realthinpaperrim aroundprintedportrait. No writtenlabels/text, nometaljewelryframe, nostring, no photohead stickingoutside circle. Thisisaphysicallyphotographedprintedroundrationtoken, notpaintedcrookedpaperhead.\n\nBOTTOMMIDDLE center768,768: ONE small POTTED WILLOW SAPLING, skinnyrealbrownstemwithfewslenderdroopinggreenleaves in a humble rustedoldfoodtincontainingdarksoil, youngsmallplant, naturallyphotographedleafveins/wood/tintexture. Completepotandfoliageabout240\u00d7340px, no growingground/otherplants, allleavesinsidesamecell.\n\nBOTTOMRIGHT center1280,768: ONE SMALL FIRE-RING CAMPFIRE, completecompactroughgraystonecircle holdingafewshortrealcharredwoodlogs andsubtledullredREAL EMBERS, oneortwotinyrealflame tongues only, elevatedthreequarterphotographedview. About330\u00d7260px. No billowingflame, no smokefield, no castshadow/glow/backinggroundoutsidecutout, no otherprops. Completeisolatedstone/wood/ember specimen.\n\nNaturalactualphototexture, calmcleanobjectpresentation on nativealpha. Brainis an educationaldrymodel, noinjury. The coupon uses actualstyle30 Ladyfaceandphysicalblacktopvoidexactly. All sixsmallobjects havewidecleartransparentmargins. ",
+          "originalGeneratedFile": "exec-b4e2211d-6404-4638-8efd-404b8b650094.png",
+          "status": "revised",
+          "inputReferences": [
+            "public/style-studies/30-hard-cut-color-specimens.png",
+            "src/assets/photo-collage/supplies.png"
+          ]
+        },
+        {
+          "prompt": "Preserve all SIX exact photographed special objects and native alpha transparency. Changeonlycomposition: shrinkallobjects20% andcenterthemintheir own512\u00d7512cells onthe1536\u00d71024 3columns\u00d72rowsatlas, withminimum60px truealpha gaps aroundeachspecimen.\n\nIMPORTANT: The braincurrentlyspillsacrossx512into thekeycell. ENTIRE anatomicalmodelbrain mustbecontainedinsideTOPLEFT globalx60..452,y60..452, MAX392pxwide/high, completebothhemispheres/cortexfolds. No brainpixel inkeycell. TheironkeyremainsTOPMIDDLE; hourglassTOPRIGHT. BottomcircleSupinephotocoupon, willowtinplantsapling andstone/woodembercampfire remaininsamecells. Everyobjectcompleteandnoobjectcrossingx512/x1024/y512. Allsolidboundsfitlocalx60..452/y60..452.\n\nPreserveactualphotographic textures, cleanrealisticnon-graphic dryteachingmodelbrain (noinjury/gore), exact beautifulwoman photograph andblackTOP headvoidprintedonroundpunchedcoupon, keyrust, glassreflections, realleaves/tin andcharredwood/embers. Smoothscissorcut contourwiththincreamrim, nottornpaperfacesorillustrations. No newobjects/background/grid/labels/castshadow/checkerboard/backing. Onlysix smaller centered photoobjects, trulyalpha-transparentaroundthem.",
+          "originalGeneratedFile": "exec-576240c7-2925-4dbd-ad22-eabde092c403.png",
+          "status": "accepted",
+          "inputReferences": [
+            "generated_images/exec-b4e2211d-6404-4638-8efd-404b8b650094.png"
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "id": "item-brain",
+          "subject": "brain-model",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            104,
+            121,
+            472,
+            451
+          ],
+          "minimumTransparentMargin": 39,
+          "fullyTransparentFraction": 0.6137199401855469
+        },
+        {
+          "id": "item-key",
+          "subject": "iron-key",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            163,
+            68,
+            348,
+            468
+          ],
+          "minimumTransparentMargin": 43,
+          "fullyTransparentFraction": 0.8582572937011719
+        },
+        {
+          "id": "item-glass",
+          "subject": "timeglass",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            120,
+            64,
+            362,
+            480
+          ],
+          "minimumTransparentMargin": 31,
+          "fullyTransparentFraction": 0.6817741394042969
+        },
+        {
+          "id": "item-coupon",
+          "subject": "supine-coupon",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            84,
+            30,
+            473,
+            421
+          ],
+          "minimumTransparentMargin": 30,
+          "fullyTransparentFraction": 0.5112953186035156
+        },
+        {
+          "id": "item-sapling",
+          "subject": "potted-willow",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            61,
+            23,
+            452,
+            430
+          ],
+          "minimumTransparentMargin": 23,
+          "fullyTransparentFraction": 0.562652587890625
+        },
+        {
+          "id": "item-campfire",
+          "subject": "ember-campfire",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            21,
+            74,
+            462,
+            426
+          ],
+          "minimumTransparentMargin": 21,
+          "fullyTransparentFraction": 0.5603599548339844
+        }
+      ]
+    },
+    {
+      "file": "puzzle-props.png",
+      "registryName": "puzzles",
+      "sha256": "06aba177e2e6dc2fd4d7a441f44ba9196ec646bdce5b867d3ed73d51ec0ea751",
+      "bytes": 1765081,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-8829bbf5-1410-49a3-b694-1ed61417d5dd.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.8042443593343099,
+      "metadataSource": "head-assets",
+      "generations": [
+        {
+          "prompt": "Create SIX ACTUAL PHOTOGRAPHIC OBJECT CUTOUTS for a game. The FIRST attached image provides ONLY the perfect tiny-cutout 3\u00d72 layout and large transparent spacing: REPLACE ALL HEADS with six objects, no faces or people anywhere. The SECOND attached specimen board is the chosen hard-scissor-cut colour-photo collage style. Copy its photographic object realism, aged material surfaces, smooth hard-cut silhouettes and thin cream edge. Use REAL PHOTOGRAPHIC FOUND OBJECTS, never paintings or drawn paper facets.\n\nOUTPUT landscape1536\u00d71024 PNG, TRUEtransparent alpha. Exactly3columns\u00d72rows, six invisible512\u00d7512cells. Objects centered at(256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). Each WHOLE item occupies maximum320\u00d7320px, leaving at least95pixels empty transparent on every side of each cell. SIX SMALL MINIATURE OBJECTS ON BIG EMPTY CANVAS. All supports/strands/rails must fit the object\u2019s cell. Absolutely no colored background, checkerboard, grid, labels, frame, ground plane or shadow. One isolated object in each cell; no extra items.\n\nTOP LEFT: AN OLD BATTERED CHEAP METAL CROWN, an inherited museum object on its own, not worn by anyone. Modest dented thin tarnished brass ring with a few bent pointed crenellations, simple rivets, small chips, no precious gemstone jewelry or royal glamour. Real photographed humble historical prop, slightly elevated front view; entire hollow ring visible. NO PERSON, no floating face, no skull opening, no hat.\n\nTOP MIDDLE: CHIPPED PLAIN PORCELAIN BOWL, EMPTY. Small shallow ivory-white common kitchen bowl, cracked glaze, one tiny chip at rim, faint grey stains. Slightly elevated view makes empty interior visible. Real photograph, nothing inside, no utensils.\n\nTOP RIGHT: SALVAGED BALANCE SCALES. A whole simple aged iron/brass tabletop balance with thin central post on small worn metal base, horizontal beam, two shallow metal pans suspended by short chains, rusty joints, modest asymmetry. All pans/chains and base fully contained, no hands/table/background.\n\nBOTTOM LEFT: RUSTED WIND CHIME. Entire small hanging wind chime with a simple corroded round metal cap and five slender old hollow metal pipes on short strings, uneven lengths, tiny salvaged striker. Real rust and metal photo texture, bottom pipes entirely inside cell. No tree, no porch/beam/environment. Object only.\n\nBOTTOM MIDDLE: SMALL POLISHED MIRROR with a worn wooden/metal frame, a modest old oval or rectangular handless wall mirror. Pale silver-grey reflective glass with faint room-light sheen and tiny age spots, NO reflection of a person/face/text. Real old scuffed thin frame. Entire mirror isolated, no wall.\n\nBOTTOM RIGHT: HANGING VELVET CURTAIN WITH BAR. A complete small strip of heavy worn dark bruised burgundy/brown velvet draped from a plain thin rusty horizontal metal rod, a few simple rings, uneven stained hem, realistic folds and frayed fabric but smooth hard-cut outer edge. ENTIRE bar and curtain fit maximum320\u00d7320px and inside its cell. No stage, walls or background.\n\nContinuous real photographic shading and material textures, real rust/porcelain/glass/fabric. Clean scissor-cut silhouettes with a hairline cream paper rim as reference30, not torn/fibrous, no illustrated polygons, no CGI. Muted olive sepia charcoal ivory dusty blue rust burgundy photography, bleak repaired possessions. SIX isolated whole objects only; every other pixel true transparent alpha.",
+          "originalGeneratedFile": "exec-60d76704-7d55-4366-bf85-c58ade18b51b.png",
+          "status": "revised"
+        },
+        {
+          "prompt": "Correct ONLY SIZE and SPACING of these SIX exact photographic object cutouts. Preserve ALL real photographic textures, natural shading, object geometry, colors, dents, rust, glass, velvet folds unchanged. Keep order crown/bowl/scales in top row; wind chime/mirror/curtain bottom row. Do not add drawing or paper facets.\n\nOutput1536\u00d71024 PNG true transparent alpha. EACH ENTIRE OBJECT SHRINKS TO SIXTY PERCENT OF CURRENT WIDTH AND HEIGHT. Significant reduction, not subtle. Every whole object INCLUDING chime top ring/all pipe bottoms, balance chains/pans/base, curtain bar/all fabric hem fits within320\u00d7320px. No clipping, preserve all pieces.\n\nStrict3columns\u00d72rows of INVISIBLE512px cells. Centers crown(256,256), bowl(768,256), scales(1280,256), chime(256,768), mirror(768,768), curtain(1280,768). Each whole320pxmax silhouette centered there leaving OVER95pixels empty fully transparent margin on every cell edge. Windchime top ring must be WELL BELOW the row boundary at512, no object crosses a cell.\nSix small isolated miniatures on big empty transparent canvas. No shadow, halo, background, green/brown field, checkerboard, labels or grid. Preserve real PHOTOGRAPHIC object fidelity; the ONLY change is scale and spacing.",
+          "originalGeneratedFile": "exec-8829bbf5-1410-49a3-b694-1ed61417d5dd.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "prop-crown",
+          "subject": "prop-crown",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            115,
+            172,
+            400,
+            380
+          ],
+          "minimumTransparentMargin": 111,
+          "fullyTransparentFraction": 0.8454742431640625
+        },
+        {
+          "id": "prop-bowl",
+          "subject": "prop-bowl",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            128,
+            203,
+            385,
+            389
+          ],
+          "minimumTransparentMargin": 122,
+          "fullyTransparentFraction": 0.848480224609375
+        },
+        {
+          "id": "prop-scales",
+          "subject": "prop-scales",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            62,
+            124,
+            418,
+            421
+          ],
+          "minimumTransparentMargin": 62,
+          "fullyTransparentFraction": 0.8271903991699219
+        },
+        {
+          "id": "prop-chime",
+          "subject": "prop-chime",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            192,
+            52,
+            321,
+            411
+          ],
+          "minimumTransparentMargin": 52,
+          "fullyTransparentFraction": 0.8688583374023438
+        },
+        {
+          "id": "prop-mirror",
+          "subject": "prop-mirror",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            142,
+            78,
+            366,
+            395
+          ],
+          "minimumTransparentMargin": 78,
+          "fullyTransparentFraction": 0.7719612121582031
+        },
+        {
+          "id": "prop-curtain",
+          "subject": "prop-curtain",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            61,
+            81,
+            420,
+            393
+          ],
+          "minimumTransparentMargin": 61,
+          "fullyTransparentFraction": 0.6635017395019531
+        }
+      ]
+    },
+    {
+      "file": "materials.png",
+      "registryName": "materials",
+      "sha256": "4e9922920b2fcf22dcc1cd03341c3ccc850853a58703ff07b61b8e95bfa4ae3b",
+      "bytes": 4032589,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGB",
+      "originalGeneratedFile": "exec-46d2831c-f34a-4bef-aa08-adb20244c709.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": false,
+      "alphaRange": [
+        255,
+        255
+      ],
+      "fullyTransparentFraction": 0,
+      "metadataSource": "world-assets",
+      "generations": [
+        {
+          "prompt": "Create a native1536x1024 opaque REAL PHOTOGRAPHIC TEXTURE ATLAS, six exactly512x512 flat texture swatches in3equalcolumns\u00d72equalrows. There are NO gutters, NO outlines, NO borders, NO visible gridlines and NO labels. Every cell's photograph extends edge-to-edge and fully covers every pixel of its512x512 square. The supplied style-30 image is a reference ONLY for subdued olive/cream/blue/rust color and believable camera material detail; do not copy any people, caravans, furniture, discs or other objects from it. This is only photographed MATERIAL CLOSEUPS.\n\nTOP LEFT: plain muted olive colored PAPER stock photographed straight down at close distance; understated real paper pulp/fibers and tiny natural mottling, nearly uniform illumination, no writing, no torn edges, no visible page edge.\nTOP MIDDLE: muddy gravel road photographed straight down; dark earthy wet mud and small irregular grey/brown pebbles, believable poor trailer-park ground, uniform detail across swatch, no large standout boulder, no tire mark or central landmark.\nTOP RIGHT: old rust-stained corrugated sheet metal photographed front-on with a flat parallel plane; weathered dull blue-grey/cream metal and reddish rust along subtle vertical ribs, real scratches and grain, no panel edge or machinery, ribs parallel and regular, little lighting gradient.\nBOTTOM LEFT: dark weathered WOOD photographed straight down; old brown wood grain, small cracks, softly varied planks/fibers without bright highlights, no large objects and no board perimeter.\nBOTTOM MIDDLE: grey-blue WATER seen straight down very close, real small photographic ripples across the entire square, flat diffuse light, NO horizon, NO sky, NO shoreline, NO reflection of buildings or tree, no large dominant splash.\nBOTTOM RIGHT: dry straw/poor GRASS photographed straight down; thin flattened dull ochre straw and sparse olive-green blades filling the square uniformly, patchy impoverished ground rather than lush cheerful lawn, no flowers or insects.\n\nAll six swatches must be ACTUAL REAL COLOR camera textures, with clear natural fine detail, no painting, no illustrated brush strokes, no torn painted facets, no marker, no CGI, no pixel art. Avoid directional spotlights/vignettes/strong gradients. Composition is a grid ONLY because six textures meet directly at x512,x1024,y512; do not draw separation lines or put margins anywhere. Make textures as seamless/tileable as practical by keeping brightness, scale and texture density consistent at opposite edges. Output opaque RGB-like fully covered photograph, no transparent pixels.",
+          "originalGeneratedFile": "exec-46d2831c-f34a-4bef-aa08-adb20244c709.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "material-olive",
+          "subject": "olive-paper",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        },
+        {
+          "id": "material-gravel",
+          "subject": "muddy-gravel",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        },
+        {
+          "id": "material-metal",
+          "subject": "corrugated-metal",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        },
+        {
+          "id": "material-wood",
+          "subject": "weathered-wood",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        },
+        {
+          "id": "material-water",
+          "subject": "water",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        },
+        {
+          "id": "material-grass",
+          "subject": "dry-grass",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            0,
+            0,
+            511,
+            511
+          ],
+          "minimumTransparentMargin": 0,
+          "fullyTransparentFraction": 0.0
+        }
+      ]
+    },
+    {
+      "file": "heads-rear.png",
+      "registryName": "rear",
+      "sha256": "7d0c7a380edbd77aafdd1731cc3444cd8eb26dbf9db8a72a198036a3d42eaff5",
+      "bytes": 1871984,
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "originalGeneratedFile": "exec-1a7b5373-6107-4850-8d79-a4acb04794e8.png",
+      "nativeBytesPreserved": true,
+      "transparentBackground": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "fullyTransparentFraction": 0.7901109059651693,
+      "metadataSource": "head-assets",
+      "generations": [
+        {
+          "prompt": "Make a SIX REAR-VIEW HEAD SPRITE ATLAS in the exact ACTUAL PHOTOGRAPHIC hard-cut collage material of the attached reference30. ONLY BACKS OF HEADS, seen from DIRECTLY BEHIND at180degrees. NO FACES ANYWHERE: no visible eye, eyebrow, cheek, nose, mouth or lips. Every person faces away from camera. Not front portraits, not side profiles or three-quarter faces.\n\nLandscape1536x1024 PNG with TRUEtransparent alpha. Six invisible512x512cells,3columns\u00d72rows. Whole heads centered at(256,256),(768,256),(1280,256),(256,768),(768,768),(1280,768). Each head ONLY300x300px maximum including hair and tiny bare nape/neck. Very SMALL miniature cutouts on LARGE empty canvas; over100px empty transparent margins all sides. No torso, neck clothing, labels, grid, paper background, colored backdrop, checkerboard, shadows. Only six separate photographic head backs.\n\nTOP LEFT: LADY SUPINE BACK. EXACT SAME brunette short wavy bob hair as the giant beautiful woman's head in reference top left, viewed from behind. Same enormous head silhouette, cutout hair locks, clean broad OPEN-TOP black oval ellipse with thin pale realistic skin/paper rim. The OPEN TOP remains visible above hair from behind, a completely black paper insert, clean non-graphic surreal assemblage, no injury/blood/brains. All area below ellipse is the BACK of her wavy brunette hair with small nape at bottom, absolutely no face showing. No hat/crown, no ordinary closed scalp. Open black top MUST be unmistakable.\n\nTOP MIDDLE: HUMAN BACK. Rear of an adult man's head, actual photographed short messy dark nearly-black curls, naturally irregular hair silhouette, very small weathered bare nape/neck at bottom. Looking straight away. No eyes/ears extending out, no face, no torso.\n\nTOP RIGHT: ADA HARE-WOMAN BACK. Rear of the reference seated blue-coat woman's head, adult shoulder-short messy brown curls with loose tangled strands. NO HARE EARS \u2014 they are separately animated photo pieces. Head/nape only, no blue coat. Direct180degree rear, no face.\n\nBOTTOM LEFT: GRAY BACK. Rear of an old adult man's head with thin silver-grey soft messy hair, some thinning patches and short real bare nape, subtle warm neutral photo lighting. No front features, no ears or glasses, no face.\n\nBOTTOM MIDDLE: RED BACK. Rear of an adult's head with short textured ginger/auburn curls and a tiny bare nape. NO FOX EARS or other animal parts. Straight back view only, no face.\n\nBOTTOM RIGHT: MOTTLED BACK. Rear of a mature adult's head with short dark salt-and-pepper hair, tiny olive mottled amphibian-skin photograph patch below hair on the bare nape. No gills, frills, ears or external features. No face.\n\nREAL photographic hair locks and skin texture, natural continuous photographed shading, clean smooth SCISSOR-CUT silhouettes with tiny thin pale cream rim like reference30. NO drawn paper facets, brush lines, pixel art, illustrations, CGI or polygon collage. The Lady's hair/scalp opening must match reference closely despite rear direction. SIX HEAD BACKS ONLY, no face visible in any cell. TRUE alpha transparent surrounding everything.",
+          "originalGeneratedFile": "exec-7021ae7c-20c6-4e4c-bfe6-15f5a58f5bd3.png",
+          "status": "revised"
+        },
+        {
+          "prompt": "ONLY SHRINK AND RECENTER these SIX EXACT PHOTOGRAPHIC BACKS OF HEADS. Every original hair texture, nape, colors, locks and Lady's clean black OPEN-TOP ellipse remain exactly unchanged. All six remain DIRECT REAR VIEW180degrees, NO faces/eyes/nose/lips added. No new artistic style. Preserve precise real photo fidelity.\n\n1536\u00d71024 transparent PNG. Reduce every whole silhouette to SIXTY PERCENT of its present width AND height. Six SMALL miniature cutouts on a big empty canvas. Strict invisible3columns\u00d72rows of512cells. Centers: Lady(256,256), darkmale(768,256), Adacurls(1280,256), gray(256,768), red(768,768), mottled(1280,768). Each ENTIRE head/hair/nape fits under300\u00d7300px and has over100px completely transparent margins to all four cell edges. LADY'S BIG HAIR MUST NO LONGER BE NEAR RIGHT CELL EDGE. No hair or neck fragment crosses any boundary. No torso, no clothes, no grid, labels, background, shadow or halo. TRUE transparent alpha exterior. The ONLY edit is significant shrinking and clean spacing of the same six photographic heads.",
+          "originalGeneratedFile": "exec-1a7b5373-6107-4850-8d79-a4acb04794e8.png",
+          "status": "accepted"
+        }
+      ],
+      "cells": [
+        {
+          "id": "lady-back",
+          "subject": "lady-back",
+          "column": 0,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            139,
+            178,
+            426,
+            407
+          ],
+          "minimumTransparentMargin": 85,
+          "fullyTransparentFraction": 0.7916793823242188
+        },
+        {
+          "id": "human-back",
+          "subject": "human-back",
+          "column": 1,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            143,
+            153,
+            363,
+            407
+          ],
+          "minimumTransparentMargin": 104,
+          "fullyTransparentFraction": 0.8196372985839844
+        },
+        {
+          "id": "hare-back",
+          "subject": "hare-back",
+          "column": 2,
+          "row": 0,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            84,
+            149,
+            389,
+            411
+          ],
+          "minimumTransparentMargin": 84,
+          "fullyTransparentFraction": 0.7486228942871094
+        },
+        {
+          "id": "gray-back",
+          "subject": "gray-back",
+          "column": 0,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            155,
+            105,
+            404,
+            372
+          ],
+          "minimumTransparentMargin": 105,
+          "fullyTransparentFraction": 0.79302978515625
+        },
+        {
+          "id": "red-back",
+          "subject": "red-back",
+          "column": 1,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            135,
+            110,
+            401,
+            372
+          ],
+          "minimumTransparentMargin": 110,
+          "fullyTransparentFraction": 0.7882766723632812
+        },
+        {
+          "id": "mottled-back",
+          "subject": "mottled-back",
+          "column": 2,
+          "row": 1,
+          "boundsLocalInclusiveAlphaAtLeast32": [
+            121,
+            109,
+            361,
+            372
+          ],
+          "minimumTransparentMargin": 109,
+          "fullyTransparentFraction": 0.7994194030761719
+        }
+      ]
+    }
+  ]
+}

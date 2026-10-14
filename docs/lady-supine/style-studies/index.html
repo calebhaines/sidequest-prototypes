@@ -161,7 +161,7 @@
       <details class="brief">
         <summary>The shared brief</summary>
         <p>A bleak, jury-rigged trailer park under a beautiful and terrifying ruler. Things have been repaired too often and replaced too rarely. Lady Supine is human, with an enormous head and a hole in the top of her head. Ada and the other residents are part beast. The new studies vary the shapes, construction, clothing, and equipment while keeping that world intact.</p>
-        <p>Concepts 21–28 explore paper, folds, wire, print, and fabric with the game's muted pigments as their color direction. Concepts 29–30 use generated photographic fragments arranged as clipped stock-image collages. These are design studies for comparison; direction 03 is currently implemented in the game.</p>
+        <p>Concepts 21–28 explore paper, folds, wire, print, and fabric with the game's muted pigments as their color direction. Concepts 29–30 use generated photographic fragments arranged as clipped stock-image collages. Direction 30, Hard-cut color specimens, is now implemented throughout the game; the other sheets remain comparison studies.</p>
         <ul class="palette" aria-label="The game's 24 pigment colors">
           <li style="--swatch:var(--p-ink)" title="Ink" aria-label="Ink"></li><li style="--swatch:var(--p-charcoal)" title="Charcoal" aria-label="Charcoal"></li><li style="--swatch:var(--p-slate)" title="Slate" aria-label="Slate"></li><li style="--swatch:var(--p-smoke)" title="Smoke" aria-label="Smoke"></li><li style="--swatch:var(--p-fog)" title="Fog" aria-label="Fog"></li><li style="--swatch:var(--p-paper)" title="Paper" aria-label="Paper"></li><li style="--swatch:var(--p-chalk)" title="Chalk" aria-label="Chalk"></li><li style="--swatch:var(--p-ash)" title="Ash" aria-label="Ash"></li><li style="--swatch:var(--p-umbra)" title="Umbra" aria-label="Umbra"></li><li style="--swatch:var(--p-bark)" title="Bark" aria-label="Bark"></li><li style="--swatch:var(--p-clay)" title="Clay" aria-label="Clay"></li><li style="--swatch:var(--p-sand)" title="Sand" aria-label="Sand"></li><li style="--swatch:var(--p-rust)" title="Rust" aria-label="Rust"></li><li style="--swatch:var(--p-ochre)" title="Ochre" aria-label="Ochre"></li><li style="--swatch:var(--p-ember)" title="Ember" aria-label="Ember"></li><li style="--swatch:var(--p-straw)" title="Straw" aria-label="Straw"></li><li style="--swatch:var(--p-pine)" title="Pine" aria-label="Pine"></li><li style="--swatch:var(--p-moss)" title="Moss" aria-label="Moss"></li><li style="--swatch:var(--p-sage)" title="Sage" aria-label="Sage"></li><li style="--swatch:var(--p-lichen)" title="Lichen" aria-label="Lichen"></li><li style="--swatch:var(--p-deepWater)" title="Deep water" aria-label="Deep water"></li><li style="--swatch:var(--p-water)" title="Water" aria-label="Water"></li><li style="--swatch:var(--p-bruise)" title="Bruise" aria-label="Bruise"></li><li style="--swatch:var(--p-flesh)" title="Flesh" aria-label="Flesh"></li>
         </ul>
@@ -229,7 +229,7 @@
         </noscript>
       </section>
     </main>
-    <footer><p>Exploratory art for Lady Supine: Entering the Unenterable Entrance. Direction 03, Torn paper, is currently implemented. New concepts 21–30 are comparison studies.</p><p><a href="../">Return to the game</a> · To share a preference, use the number and title shown on each card.</p></footer>
+    <footer><p>Exploratory art for Lady Supine: Entering the Unenterable Entrance. Direction 30, Hard-cut color specimens, is now implemented throughout the playable game.</p><p><a href="../">Return to the game</a> · To share a preference, use the number and title shown on each card.</p></footer>
   </div>
   <dialog class="viewer" id="viewer" aria-labelledby="viewer-title" aria-describedby="viewer-instructions">
     <div class="viewer-shell">
@@ -307,7 +307,7 @@
     if (Array.from(collectionSelect.options).some(option => option.value === preferences.collection)) collectionSelect.value = preferences.collection;
     if (Array.from(subjectSelect.options).some(option => option.value === preferences.subject)) subjectSelect.value = preferences.subject;
     function category(study) {
-      if (study.id === '03') return 'Original direction · In the game';
+      if (study.id === '30') return 'Photographic collage · In the game';
       const id = Number(study.id);
       if (id <= 10) return 'Original direction';
       if (id <= 20) return id >= 19 ? 'Earlier concept · Photographic collage' : 'Earlier concept · Torn paper';
@@ -425,7 +425,7 @@
         const optgroup = document.createElement('optgroup'); optgroup.label = group.name;
         studies.forEach((study, index) => {
           if (!group.matches(study)) return;
-          const option = document.createElement('option'); option.value = String(index); option.textContent = study.id + ' · ' + study.name + (study.id === '03' ? ' · In the game' : ''); optgroup.append(option);
+          const option = document.createElement('option'); option.value = String(index); option.textContent = study.id + ' · ' + study.name + (study.id === '30' ? ' · In the game' : ''); optgroup.append(option);
         });
         select.append(optgroup);
       });

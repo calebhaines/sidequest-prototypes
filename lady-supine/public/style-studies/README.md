@@ -2,7 +2,7 @@
 
 [Open the comparison gallery](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/) for side-by-side comparisons of whole sheets or matching subjects, full-size viewing, original PNG downloads, and a saved shortlist.
 
-**Direction 03, Torn paper, is implemented in the playable game.** Concepts **21–30** are ten new design worlds: **eight paper and scrap constructions and two photographic cut-ups**. They vary the proportions, silhouettes, construction, spatial arrangement, and clothing of the entire world while retaining the bleak, jury-rigged Land of Limited Time. All thirty original images remain available. These are design studies for comparison.
+**Direction 30, Hard-cut color specimens, is implemented throughout the playable game.** Concepts **21–30** are ten new design worlds: **eight paper and scrap constructions and two photographic cut-ups**. They vary the proportions, silhouettes, construction, spatial arrangement, and clothing of the entire world while retaining the bleak, jury-rigged Land of Limited Time. All thirty original images remain available. The other sheets remain design studies for comparison.
 
 The gallery opens with **21, Round-ended caravans**, beside **22, Knife-edge tenements**, and shows the ten new concepts first. Collection filters separate new concepts 21–30, new photographic collages 29–30, earlier concepts 11–20, original directions 01–10, or all thirty sheets. The shortlist applies within the selected collection. Existing shortlisted IDs are preserved. Comparison choices for this collection are saved separately in the same browser.
 
@@ -45,7 +45,7 @@ The handmade studies use the game's muted base pigments as their color direction
 
 1. [Heavy marker](01-heavy-marker.png) — dragged contours, dirty fills, and restless scratches.
 2. [Drypoint and ink](02-drypoint-ink.png) — wiry incisions, rubbed plate tone, and restrained color.
-3. [Torn paper](03-torn-paper.png) — flat fragments, ragged edges, and visible pasted repairs; the current game direction.
+3. [Torn paper](03-torn-paper.png) — flat fragments, ragged edges, and visible pasted repairs; the earlier game direction.
 4. [Geometric gouache](04-geometric-gouache.png) — opaque crooked planes and dry brush texture.
 5. [Stained watercolor](05-stained-watercolor.png) — damp washes, tide marks, and thin ink.
 6. [Linocut](06-linocut.png) — heavy silhouettes and rough carved negative lines.
