@@ -2,9 +2,9 @@
 
 [Open the comparison gallery](https://calebhaines.github.io/sidequest-prototypes/lady-supine/style-studies/) for side-by-side comparisons of whole sheets or matching subjects, full-size viewing, original PNG downloads, and a saved shortlist.
 
-**Direction 03, Torn paper, is implemented in the playable game.** Concepts **11–20** are ten new comparison studies: **eight related torn-paper object designs and two photographic collages**. They vary the construction of buildings, furniture, equipment, clothing, and everyday objects while retaining the bleak, jury-rigged Land of Limited Time. The original ten directions remain available without altering their images. These are design studies for comparison.
+**Direction 03, Torn paper, is implemented in the playable game.** Concepts **21–30** are ten new design worlds: **eight paper and scrap constructions and two photographic cut-ups**. They vary the proportions, silhouettes, construction, spatial arrangement, and clothing of the entire world while retaining the bleak, jury-rigged Land of Limited Time. All thirty original images remain available. These are design studies for comparison.
 
-The gallery opens with the current torn-paper study beside **11, Office cast-offs**, and shows the ten new concepts first. Collection filters separate new concepts, photographic collages, original directions, or all twenty sheets. The shortlist applies within the selected collection. Existing shortlisted IDs from the original gallery are preserved, and comparison choices are saved in the same browser.
+The gallery opens with **21, Round-ended caravans**, beside **22, Knife-edge tenements**, and shows the ten new concepts first. Collection filters separate new concepts 21–30, new photographic collages 29–30, earlier concepts 11–20, original directions 01–10, or all thirty sheets. The shortlist applies within the selected collection. Existing shortlisted IDs are preserved. Comparison choices for this collection are saved separately in the same browser.
 
 Every sheet has six panels, read left to right:
 
@@ -13,9 +13,22 @@ Every sheet has six panels, read left to right:
 | Top | Lady Supine, the beautiful and terrifying human ruler with an immense head and a hole in the top | Ada, a tired hare friend, and an Aristobat | Shanty Hours: poor, repeatedly repaired trailers and Supine's billboard |
 | Bottom | Hospital interior and improvised brain-exchange equipment | Library of Time Well Spent interior | Curly willow, poor lakeshore, lantern, fishing float, and time coupon |
 
-The torn-paper studies use the game's 24 base pigments as their color direction, with texture and natural blends. The two photographic concepts are generated images that **resemble clipped and cut-up stock photographs**. Their photographic texture, irregular cut edges, mismatched scales, and pasted backing distinguish them from the torn-paper illustrations. The original generated PNGs are preserved without resizing or pixel-art conversion.
+The handmade studies use the game's muted base pigments as their color direction, with paper, fabric, print, and natural texture. Photographic concepts use generated images that **resemble clipped and cut-up stock photographs**. Concepts 29–30 explore extreme changes of scale and hard-cut color specimens. The original generated PNGs are preserved without resizing or pixel-art conversion.
 
-## New object design concepts
+## New design worlds
+
+21. [Round-ended caravans](21-round-ended-caravans.png) — broad oval bodies, low rounded caravans, a seated Supine in rust, globe brain jars, and hammock-like bookshelves.
+22. [Knife-edge tenements](22-knife-edge-tenements.png) — thin vertical strip bodies and cabins, blade-like furniture, and upright angles.
+23. [Slumped soft bodies](23-slumped-soft-bodies.png) — blunt papier-mâché forms, a pink coat, sagging treatment furniture, and bundled records.
+24. [Accordion bureaucracy](24-accordion-bureaucracy.png) — folded ledger-paper fans, an ivory pleated gown, a folded treatment bed, and accordion shelves.
+25. [Sunken bowl settlement](25-sunken-bowl-settlement.png) — overhead concentric hollows, a sunken caravan park, and ring-shaped hospital, library, and lakeshore spaces.
+26. [Wire-lashed stilts](26-wire-lashed-stilts.png) — sparse wire frameworks, empty pale paper, a cable-supported treatment hammock, and basket-like record storage.
+27. [Lost fairground](27-lost-fairground.png) — scuffed printed rust-colored circles, discarded ride gondolas as homes, a salvaged ride-seat chair, and rotating record racks.
+28. [Quilted burrows](28-quilted-burrows.png) — frayed stitched felt, low domed homes, a gray-green housecoat, and a cloth-pocket archive.
+29. [Wrong-scale photomontage](29-wrong-scale-photomontage.png) — sparse black-and-white photographic cut-ups, huge hands and lamps, tiny homes, a typewriter, and red blocks.
+30. [Hard-cut color specimens](30-hard-cut-color-specimens.png) — full-color scissor-cut photographic ovals on olive paper, a seated Supine in a yellow raincoat, and a greenhouse hospital.
+
+## Earlier object design concepts
 
 11. [Office cast-offs](11-office-cast-offs.png) — filing-cabinet walls, a dental-chair exchange station, pigeonhole records, and secondhand formal clothing.
 12. [Laundry-line settlement](12-laundry-line-settlement.png) — staggered trailers, shared clothesline corridors, drying racks, and patched domestic fabrics.
