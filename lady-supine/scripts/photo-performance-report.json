@@ -24,41 +24,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 60.35,
-      "engineCallbackFps": 60.35,
+      "actualDrawFps": 60.39,
+      "engineCallbackFps": 60.39,
       "engineCallbackMs": {
         "count": 182,
-        "mean": 2.31,
-        "p50": 2.2,
+        "mean": 2.37,
+        "p50": 2.3,
         "p95": 3,
-        "max": 6.6
+        "max": 5.2
       },
       "engineFrameIntervalMs": {
         "count": 181,
         "mean": 16.67,
         "p50": 16.7,
-        "p95": 16.8,
+        "p95": 16.7,
         "max": 16.8
       },
       "drawIntervalMs": {
         "count": 181,
         "mean": 16.65,
         "p50": 16.6,
-        "p95": 20.4,
-        "max": 29.3
+        "p95": 20.6,
+        "max": 26.9
       },
       "mainThreadMs": {
-        "TaskDuration": 2578.25,
-        "ScriptDuration": 660.12,
-        "LayoutDuration": 0.16,
+        "TaskDuration": 2594.14,
+        "ScriptDuration": 665.52,
+        "LayoutDuration": 0.12,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 3.34,
-        "p50": 3.4,
-        "p95": 3.8,
-        "max": 3.8
+        "mean": 2.86,
+        "p50": 2.8,
+        "p95": 3.3,
+        "max": 3.3
       },
       "warmupCanvasCreates": 1,
       "warmCanvasCreates": 2,
@@ -82,43 +82,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 35.86,
-      "engineCallbackFps": 35.86,
+      "actualDrawFps": 34.66,
+      "engineCallbackFps": 34.66,
       "engineCallbackMs": {
-        "count": 109,
-        "mean": 4.61,
-        "p50": 4.7,
-        "p95": 5.9,
-        "max": 12.7
+        "count": 105,
+        "mean": 4.72,
+        "p50": 4.5,
+        "p95": 6,
+        "max": 8.6
       },
       "engineFrameIntervalMs": {
-        "count": 108,
-        "mean": 28.09,
+        "count": 104,
+        "mean": 29.17,
         "p50": 33.3,
         "p95": 33.4,
-        "max": 33.5
+        "max": 50
       },
       "drawIntervalMs": {
-        "count": 108,
-        "mean": 28.16,
-        "p50": 26.9,
-        "p95": 36,
-        "max": 45.1
+        "count": 104,
+        "mean": 29.18,
+        "p50": 27.9,
+        "p95": 36.1,
+        "max": 47.9
       },
       "mainThreadMs": {
-        "TaskDuration": 2990.11,
-        "ScriptDuration": 741.3,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2991.46,
+        "ScriptDuration": 712.92,
+        "LayoutDuration": 0.16,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 21.16,
-        "p50": 5.2,
-        "p95": 84.9,
-        "max": 84.9
+        "mean": 10.42,
+        "p50": 4.7,
+        "p95": 31.9,
+        "max": 31.9
       },
-      "warmupCanvasCreates": 94,
+      "warmupCanvasCreates": 97,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -140,43 +140,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 48.6,
-      "engineCallbackFps": 48.6,
+      "actualDrawFps": 52.21,
+      "engineCallbackFps": 52.21,
       "engineCallbackMs": {
-        "count": 147,
-        "mean": 12.54,
-        "p50": 12,
-        "p95": 16.3,
-        "max": 28.8
+        "count": 158,
+        "mean": 11.34,
+        "p50": 11,
+        "p95": 14.8,
+        "max": 24.1
       },
       "engineFrameIntervalMs": {
-        "count": 146,
-        "mean": 20.66,
+        "count": 157,
+        "mean": 19.21,
         "p50": 16.7,
-        "p95": 33.4,
+        "p95": 33.3,
         "max": 33.4
       },
       "drawIntervalMs": {
-        "count": 146,
-        "mean": 20.68,
-        "p50": 18.7,
-        "p95": 31.2,
-        "max": 44.2
+        "count": 157,
+        "mean": 19.26,
+        "p50": 18,
+        "p95": 27.2,
+        "max": 34.9
       },
       "mainThreadMs": {
-        "TaskDuration": 2964.15,
-        "ScriptDuration": 2068.77,
-        "LayoutDuration": 0.15,
+        "TaskDuration": 2969.05,
+        "ScriptDuration": 1992.91,
+        "LayoutDuration": 0.14,
         "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 25.56,
-        "p50": 13.7,
-        "p95": 74.6,
-        "max": 74.6
+        "mean": 20.14,
+        "p50": 11.5,
+        "p95": 51.7,
+        "max": 51.7
       },
-      "warmupCanvasCreates": 100,
+      "warmupCanvasCreates": 97,
       "warmCanvasCreates": 9,
       "warmTerrainCanvasCreates": 0
     },
@@ -198,41 +198,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 47.72,
-      "engineCallbackFps": 47.72,
+      "actualDrawFps": 49.47,
+      "engineCallbackFps": 49.47,
       "engineCallbackMs": {
-        "count": 144,
-        "mean": 12.4,
-        "p50": 12,
-        "p95": 15.1,
-        "max": 21.3
+        "count": 150,
+        "mean": 10.92,
+        "p50": 10.7,
+        "p95": 12.5,
+        "max": 19.2
       },
       "engineFrameIntervalMs": {
-        "count": 143,
-        "mean": 21.21,
+        "count": 149,
+        "mean": 20.36,
         "p50": 16.7,
         "p95": 33.4,
-        "max": 33.4
+        "max": 33.5
       },
       "drawIntervalMs": {
-        "count": 143,
-        "mean": 21.12,
-        "p50": 20.3,
-        "p95": 27.9,
-        "max": 39.4
+        "count": 149,
+        "mean": 20.3,
+        "p50": 18.6,
+        "p95": 26.1,
+        "max": 29.5
       },
       "mainThreadMs": {
-        "TaskDuration": 2987.2,
-        "ScriptDuration": 2019.86,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2960.35,
+        "ScriptDuration": 1852.5,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.41
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 17.48,
-        "p50": 12.9,
-        "p95": 36.4,
-        "max": 36.4
+        "mean": 13.62,
+        "p50": 10.9,
+        "p95": 21.1,
+        "max": 21.1
       },
       "warmupCanvasCreates": 18,
       "warmCanvasCreates": 5,
@@ -256,41 +256,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 36.36,
-      "engineCallbackFps": 36.36,
+      "actualDrawFps": 37.73,
+      "engineCallbackFps": 37.73,
       "engineCallbackMs": {
-        "count": 110,
-        "mean": 20.75,
-        "p50": 19.6,
-        "p95": 29,
-        "max": 35.4
+        "count": 114,
+        "mean": 19.24,
+        "p50": 18.3,
+        "p95": 23.6,
+        "max": 38
       },
       "engineFrameIntervalMs": {
-        "count": 109,
-        "mean": 27.68,
+        "count": 113,
+        "mean": 26.69,
         "p50": 33.3,
         "p95": 33.4,
         "max": 50
       },
       "drawIntervalMs": {
-        "count": 109,
-        "mean": 27.78,
-        "p50": 27.5,
-        "p95": 38.8,
-        "max": 47.2
+        "count": 113,
+        "mean": 26.71,
+        "p50": 25,
+        "p95": 36.6,
+        "max": 43
       },
       "mainThreadMs": {
-        "TaskDuration": 2973.95,
-        "ScriptDuration": 2525.57,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2960.78,
+        "ScriptDuration": 2439.5,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 20.08,
-        "p50": 20.7,
-        "p95": 21.3,
-        "max": 21.3
+        "mean": 21.16,
+        "p50": 19.6,
+        "p95": 26.6,
+        "max": 26.6
       },
       "warmupCanvasCreates": 1,
       "warmCanvasCreates": 2,
@@ -314,43 +314,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 22.62,
-      "engineCallbackFps": 22.62,
+      "actualDrawFps": 24.51,
+      "engineCallbackFps": 24.51,
       "engineCallbackMs": {
-        "count": 69,
-        "mean": 27.75,
-        "p50": 27,
-        "p95": 31.8,
-        "max": 41.7
+        "count": 74,
+        "mean": 25.44,
+        "p50": 24.9,
+        "p95": 29.1,
+        "max": 40.9
       },
       "engineFrameIntervalMs": {
-        "count": 68,
-        "mean": 45.1,
-        "p50": 50,
+        "count": 73,
+        "mean": 41.09,
+        "p50": 33.4,
         "p95": 50.1,
-        "max": 66.7
+        "max": 66.6
       },
       "drawIntervalMs": {
-        "count": 68,
-        "mean": 44.79,
-        "p50": 43.4,
-        "p95": 54.8,
-        "max": 61
+        "count": 73,
+        "mean": 41.31,
+        "p50": 39.7,
+        "p95": 49.9,
+        "max": 59.1
       },
       "mainThreadMs": {
-        "TaskDuration": 2983.4,
-        "ScriptDuration": 2089.59,
-        "LayoutDuration": 0,
-        "RecalcStyleDuration": 0
+        "TaskDuration": 2962.27,
+        "ScriptDuration": 2129.13,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.06
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 70.36,
-        "p50": 27.9,
-        "p95": 243.1,
-        "max": 243.1
+        "mean": 40.8,
+        "p50": 31.4,
+        "p95": 86.2,
+        "max": 86.2
       },
-      "warmupCanvasCreates": 94,
+      "warmupCanvasCreates": 97,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -372,43 +372,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 29.03,
-      "engineCallbackFps": 29.03,
+      "actualDrawFps": 31.05,
+      "engineCallbackFps": 31.05,
       "engineCallbackMs": {
-        "count": 88,
-        "mean": 16.57,
-        "p50": 15.7,
-        "p95": 20.9,
-        "max": 29.7
+        "count": 94,
+        "mean": 16.7,
+        "p50": 17.2,
+        "p95": 19.8,
+        "max": 22
       },
       "engineFrameIntervalMs": {
-        "count": 87,
-        "mean": 34.67,
+        "count": 93,
+        "mean": 32.62,
         "p50": 33.3,
-        "p95": 50,
-        "max": 66.7
+        "p95": 33.5,
+        "max": 50
       },
       "drawIntervalMs": {
-        "count": 87,
-        "mean": 34.92,
-        "p50": 33.6,
-        "p95": 45.2,
-        "max": 80.6
+        "count": 93,
+        "mean": 32.51,
+        "p50": 31.1,
+        "p95": 40.3,
+        "max": 42.4
       },
       "mainThreadMs": {
-        "TaskDuration": 2922.46,
-        "ScriptDuration": 1696.56,
-        "LayoutDuration": 0.14,
+        "TaskDuration": 2956.07,
+        "ScriptDuration": 1813.75,
+        "LayoutDuration": 0.2,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 41.68,
-        "p50": 16.7,
-        "p95": 139.1,
-        "max": 139.1
+        "mean": 25.62,
+        "p50": 16.9,
+        "p95": 64,
+        "max": 64
       },
-      "warmupCanvasCreates": 100,
+      "warmupCanvasCreates": 97,
       "warmCanvasCreates": 9,
       "warmTerrainCanvasCreates": 0
     },
@@ -430,41 +430,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 31.36,
-      "engineCallbackFps": 31.36,
+      "actualDrawFps": 30.06,
+      "engineCallbackFps": 30.06,
       "engineCallbackMs": {
-        "count": 95,
-        "mean": 16.02,
-        "p50": 15.3,
-        "p95": 20.2,
-        "max": 22.6
+        "count": 91,
+        "mean": 27.16,
+        "p50": 26.4,
+        "p95": 31.8,
+        "max": 39
       },
       "engineFrameIntervalMs": {
-        "count": 94,
-        "mean": 32.27,
+        "count": 90,
+        "mean": 33.52,
         "p50": 33.3,
-        "p95": 50,
-        "max": 50
+        "p95": 49.9,
+        "max": 50.1
       },
       "drawIntervalMs": {
-        "count": 94,
-        "mean": 32.36,
-        "p50": 32.3,
-        "p95": 41.1,
-        "max": 42.7
+        "count": 90,
+        "mean": 33.64,
+        "p50": 33.1,
+        "p95": 43.9,
+        "max": 47.8
       },
       "mainThreadMs": {
-        "TaskDuration": 2985.31,
-        "ScriptDuration": 1727.95,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 2967.22,
+        "ScriptDuration": 2666.54,
+        "LayoutDuration": 0.23,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 24.02,
-        "p50": 15.7,
-        "p95": 54.1,
-        "max": 54.1
+        "mean": 34.74,
+        "p50": 30.4,
+        "p95": 51,
+        "max": 51
       },
       "warmupCanvasCreates": 18,
       "warmCanvasCreates": 5,
@@ -488,41 +488,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 37.56,
-      "engineCallbackFps": 37.56,
+      "actualDrawFps": 38.78,
+      "engineCallbackFps": 38.78,
       "engineCallbackMs": {
-        "count": 114,
-        "mean": 19.21,
-        "p50": 18.3,
-        "p95": 25.4,
-        "max": 29.7
+        "count": 118,
+        "mean": 18.6,
+        "p50": 17.4,
+        "p95": 24.6,
+        "max": 26.9
       },
       "engineFrameIntervalMs": {
-        "count": 113,
-        "mean": 26.84,
+        "count": 117,
+        "mean": 25.92,
         "p50": 33.3,
         "p95": 33.4,
-        "max": 50
+        "max": 49.9
       },
       "drawIntervalMs": {
-        "count": 113,
-        "mean": 26.85,
-        "p50": 25.9,
-        "p95": 38,
-        "max": 52.6
+        "count": 117,
+        "mean": 25.91,
+        "p50": 24.8,
+        "p95": 38.2,
+        "max": 39
       },
       "mainThreadMs": {
-        "TaskDuration": 2958.21,
-        "ScriptDuration": 2420.95,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2971.06,
+        "ScriptDuration": 2402.99,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 21.84,
-        "p50": 20.9,
-        "p95": 27.6,
-        "max": 27.6
+        "mean": 17.56,
+        "p50": 17.2,
+        "p95": 18.8,
+        "max": 18.8
       },
       "warmupCanvasCreates": 1,
       "warmCanvasCreates": 4,
@@ -546,43 +546,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 20.69,
-      "engineCallbackFps": 20.69,
+      "actualDrawFps": 19.03,
+      "engineCallbackFps": 19.03,
       "engineCallbackMs": {
-        "count": 63,
-        "mean": 33.22,
-        "p50": 32,
-        "p95": 38.9,
-        "max": 51.7
+        "count": 58,
+        "mean": 35.47,
+        "p50": 34.9,
+        "p95": 46.3,
+        "max": 53.5
       },
       "engineFrameIntervalMs": {
-        "count": 62,
-        "mean": 49.19,
+        "count": 57,
+        "mean": 53.51,
         "p50": 50,
         "p95": 66.7,
-        "max": 66.7
+        "max": 66.8
       },
       "drawIntervalMs": {
-        "count": 62,
-        "mean": 49.04,
-        "p50": 46.5,
-        "p95": 62.9,
-        "max": 74.6
+        "count": 57,
+        "mean": 53.42,
+        "p50": 51.4,
+        "p95": 73.3,
+        "max": 77.8
       },
       "mainThreadMs": {
-        "TaskDuration": 3016.87,
-        "ScriptDuration": 2282.03,
+        "TaskDuration": 2992.56,
+        "ScriptDuration": 2238.16,
         "LayoutDuration": 0,
         "RecalcStyleDuration": 0
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 62.94,
-        "p50": 33.9,
-        "p95": 182.9,
-        "max": 182.9
+        "mean": 39.8,
+        "p50": 32,
+        "p95": 69,
+        "max": 69
       },
-      "warmupCanvasCreates": 128,
+      "warmupCanvasCreates": 130,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -604,43 +604,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 28.51,
-      "engineCallbackFps": 28.51,
+      "actualDrawFps": 28.08,
+      "engineCallbackFps": 28.08,
       "engineCallbackMs": {
-        "count": 86,
-        "mean": 19.63,
-        "p50": 19.2,
-        "p95": 24.6,
-        "max": 29.3
+        "count": 85,
+        "mean": 18.77,
+        "p50": 17.3,
+        "p95": 25.2,
+        "max": 34.7
       },
       "engineFrameIntervalMs": {
-        "count": 85,
-        "mean": 35.49,
+        "count": 84,
+        "mean": 36.11,
         "p50": 33.3,
-        "p95": 50,
-        "max": 50.1
+        "p95": 50.1,
+        "max": 66.6
       },
       "drawIntervalMs": {
-        "count": 85,
-        "mean": 35.46,
-        "p50": 34.8,
-        "p95": 45.6,
-        "max": 49
+        "count": 84,
+        "mean": 36.04,
+        "p50": 35.5,
+        "p95": 46.3,
+        "max": 55.2
       },
       "mainThreadMs": {
-        "TaskDuration": 2948.32,
-        "ScriptDuration": 1938.74,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 2943.52,
+        "ScriptDuration": 1787.92,
+        "LayoutDuration": 0.11,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 36.02,
-        "p50": 18.4,
-        "p95": 107.4,
-        "max": 107.4
+        "mean": 32.28,
+        "p50": 24.7,
+        "p95": 71.3,
+        "max": 71.3
       },
-      "warmupCanvasCreates": 96,
+      "warmupCanvasCreates": 94,
       "warmCanvasCreates": 8,
       "warmTerrainCanvasCreates": 0
     },
@@ -662,41 +662,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 29.11,
-      "engineCallbackFps": 29.11,
+      "actualDrawFps": 27.02,
+      "engineCallbackFps": 27.02,
       "engineCallbackMs": {
-        "count": 88,
-        "mean": 19.99,
-        "p50": 18.8,
-        "p95": 26.5,
-        "max": 36.8
+        "count": 82,
+        "mean": 19.74,
+        "p50": 18.6,
+        "p95": 24.9,
+        "max": 37.6
       },
       "engineFrameIntervalMs": {
-        "count": 87,
-        "mean": 34.67,
-        "p50": 33.3,
-        "p95": 50,
-        "max": 83.4
+        "count": 81,
+        "mean": 37.65,
+        "p50": 33.4,
+        "p95": 50.1,
+        "max": 50.1
       },
       "drawIntervalMs": {
-        "count": 87,
-        "mean": 34.84,
-        "p50": 33.3,
-        "p95": 50.1,
-        "max": 79.6
+        "count": 81,
+        "mean": 37.51,
+        "p50": 36.9,
+        "p95": 48,
+        "max": 61.8
       },
       "mainThreadMs": {
-        "TaskDuration": 2970.28,
-        "ScriptDuration": 1999.48,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2967.31,
+        "ScriptDuration": 1803.36,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 24.12,
-        "p50": 20,
-        "p95": 41.9,
-        "max": 41.9
+        "mean": 20.34,
+        "p50": 17.8,
+        "p95": 31.6,
+        "max": 31.6
       },
       "warmupCanvasCreates": 17,
       "warmCanvasCreates": 5,
@@ -720,39 +720,39 @@
           "particles": true
         }
       },
-      "actualDrawFps": 60.38,
-      "engineCallbackFps": 60.38,
+      "actualDrawFps": 60.51,
+      "engineCallbackFps": 60.51,
       "engineCallbackMs": {
-        "count": 183,
-        "mean": 1.38,
-        "p50": 1.3,
-        "p95": 1.9,
-        "max": 4.2
+        "count": 182,
+        "mean": 1.49,
+        "p50": 1.4,
+        "p95": 2,
+        "max": 3.8
       },
       "engineFrameIntervalMs": {
-        "count": 182,
+        "count": 181,
         "mean": 16.67,
         "p50": 16.7,
-        "p95": 16.8,
+        "p95": 16.7,
         "max": 16.8
       },
       "drawIntervalMs": {
-        "count": 182,
-        "mean": 16.66,
-        "p50": 16.7,
-        "p95": 20,
-        "max": 24.1
+        "count": 181,
+        "mean": 16.61,
+        "p50": 16.6,
+        "p95": 21.8,
+        "max": 29.4
       },
       "mainThreadMs": {
-        "TaskDuration": 2335.86,
-        "ScriptDuration": 483.89,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 2692.2,
+        "ScriptDuration": 537.63,
+        "LayoutDuration": 0.13,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 2.44,
-        "p50": 2.4,
+        "mean": 2.22,
+        "p50": 2.2,
         "p95": 2.5,
         "max": 2.5
       },
@@ -778,43 +778,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 60.28,
-      "engineCallbackFps": 60.28,
+      "actualDrawFps": 60.27,
+      "engineCallbackFps": 60.27,
       "engineCallbackMs": {
-        "count": 181,
-        "mean": 1.83,
-        "p50": 1.7,
-        "p95": 2.4,
-        "max": 4.5
+        "count": 182,
+        "mean": 2.07,
+        "p50": 1.9,
+        "p95": 2.9,
+        "max": 5.7
       },
       "engineFrameIntervalMs": {
-        "count": 180,
+        "count": 181,
         "mean": 16.67,
         "p50": 16.7,
-        "p95": 16.7,
+        "p95": 16.8,
         "max": 16.8
       },
       "drawIntervalMs": {
-        "count": 180,
-        "mean": 16.67,
-        "p50": 16.7,
-        "p95": 19.9,
-        "max": 24.7
+        "count": 181,
+        "mean": 16.7,
+        "p50": 16.4,
+        "p95": 22.9,
+        "max": 28.1
       },
       "mainThreadMs": {
-        "TaskDuration": 2518.18,
-        "ScriptDuration": 551.98,
-        "LayoutDuration": 0.17,
-        "RecalcStyleDuration": 0.07
+        "TaskDuration": 2850.92,
+        "ScriptDuration": 622.54,
+        "LayoutDuration": 0.11,
+        "RecalcStyleDuration": 0.06
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 16.28,
-        "p50": 2.7,
-        "p95": 70.8,
-        "max": 70.8
+        "mean": 9.82,
+        "p50": 4,
+        "p95": 28.9,
+        "max": 28.9
       },
-      "warmupCanvasCreates": 59,
+      "warmupCanvasCreates": 58,
       "warmCanvasCreates": 1,
       "warmTerrainCanvasCreates": 0
     },
@@ -836,43 +836,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 60.35,
-      "engineCallbackFps": 60.35,
+      "actualDrawFps": 60.23,
+      "engineCallbackFps": 60.23,
       "engineCallbackMs": {
         "count": 182,
-        "mean": 1.46,
-        "p50": 1.4,
-        "p95": 1.8,
-        "max": 3.1
+        "mean": 1.58,
+        "p50": 1.6,
+        "p95": 2.1,
+        "max": 3
       },
       "engineFrameIntervalMs": {
         "count": 181,
-        "mean": 16.67,
+        "mean": 16.76,
         "p50": 16.7,
         "p95": 16.8,
-        "max": 16.8
+        "max": 33.3
       },
       "drawIntervalMs": {
         "count": 181,
-        "mean": 16.66,
-        "p50": 16.6,
-        "p95": 20,
-        "max": 21.4
+        "mean": 16.73,
+        "p50": 16.4,
+        "p95": 22.4,
+        "max": 33.7
       },
       "mainThreadMs": {
-        "TaskDuration": 2519.73,
-        "ScriptDuration": 486.58,
+        "TaskDuration": 2789.2,
+        "ScriptDuration": 530.89,
         "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.04
+        "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 10.76,
-        "p50": 1.8,
-        "p95": 46.1,
-        "max": 46.1
+        "mean": 7.8,
+        "p50": 1.6,
+        "p95": 32.3,
+        "max": 32.3
       },
-      "warmupCanvasCreates": 35,
+      "warmupCanvasCreates": 32,
       "warmCanvasCreates": 3,
       "warmTerrainCanvasCreates": 0
     },
@@ -894,41 +894,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 60.3,
-      "engineCallbackFps": 60.3,
+      "actualDrawFps": 54.78,
+      "engineCallbackFps": 54.78,
       "engineCallbackMs": {
-        "count": 182,
+        "count": 166,
         "mean": 1.54,
         "p50": 1.5,
-        "p95": 2,
-        "max": 5.1
+        "p95": 2.2,
+        "max": 4.4
       },
       "engineFrameIntervalMs": {
-        "count": 181,
-        "mean": 16.76,
+        "count": 165,
+        "mean": 18.38,
         "p50": 16.7,
-        "p95": 16.8,
-        "max": 33.4
+        "p95": 33.4,
+        "max": 49.9
       },
       "drawIntervalMs": {
-        "count": 181,
-        "mean": 16.75,
-        "p50": 16.5,
-        "p95": 21.9,
-        "max": 27.4
+        "count": 165,
+        "mean": 18.36,
+        "p50": 17.2,
+        "p95": 25,
+        "max": 35.6
       },
       "mainThreadMs": {
-        "TaskDuration": 2826.84,
-        "ScriptDuration": 499.54,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2948.97,
+        "ScriptDuration": 484.12,
+        "LayoutDuration": 0.16,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 14.08,
-        "p50": 1.4,
-        "p95": 64.5,
-        "max": 64.5
+        "mean": 8.44,
+        "p50": 2.2,
+        "p95": 34.7,
+        "max": 34.7
       },
       "warmupCanvasCreates": 74,
       "warmCanvasCreates": 10,
@@ -952,41 +952,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 31.5,
-      "engineCallbackFps": 31.5,
+      "actualDrawFps": 31.6,
+      "engineCallbackFps": 31.6,
       "engineCallbackMs": {
         "count": 95,
-        "mean": 19.21,
-        "p50": 18,
-        "p95": 23.9,
-        "max": 65.3
+        "mean": 16.25,
+        "p50": 15.7,
+        "p95": 22.3,
+        "max": 25.9
       },
       "engineFrameIntervalMs": {
         "count": 94,
         "mean": 31.74,
         "p50": 33.3,
         "p95": 33.4,
-        "max": 83.3
+        "max": 50
       },
       "drawIntervalMs": {
         "count": 94,
-        "mean": 31.76,
-        "p50": 30.6,
-        "p95": 38.4,
-        "max": 78.1
+        "mean": 31.73,
+        "p50": 31.1,
+        "p95": 37.6,
+        "max": 39.4
       },
       "mainThreadMs": {
-        "TaskDuration": 2734.68,
-        "ScriptDuration": 2039.33,
-        "LayoutDuration": 0.13,
-        "RecalcStyleDuration": 0.04
+        "TaskDuration": 2574.11,
+        "ScriptDuration": 1765.79,
+        "LayoutDuration": 0.12,
+        "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 19.12,
-        "p50": 18.5,
-        "p95": 22.4,
-        "max": 22.4
+        "mean": 23.12,
+        "p50": 23.8,
+        "p95": 27.7,
+        "max": 27.7
       },
       "warmupCanvasCreates": 3,
       "warmCanvasCreates": 5,
@@ -1010,43 +1010,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 19.66,
-      "engineCallbackFps": 19.66,
+      "actualDrawFps": 20.15,
+      "engineCallbackFps": 20.15,
       "engineCallbackMs": {
-        "count": 60,
-        "mean": 35.71,
-        "p50": 34.2,
-        "p95": 45.8,
-        "max": 56.5
+        "count": 61,
+        "mean": 35.09,
+        "p50": 32.1,
+        "p95": 45.2,
+        "max": 53.9
       },
       "engineFrameIntervalMs": {
-        "count": 59,
-        "mean": 52.26,
+        "count": 60,
+        "mean": 50.55,
         "p50": 50,
         "p95": 66.7,
-        "max": 83.4
+        "max": 66.7
       },
       "drawIntervalMs": {
-        "count": 59,
-        "mean": 51.85,
-        "p50": 51.3,
-        "p95": 69.5,
-        "max": 70.4
+        "count": 60,
+        "mean": 50.61,
+        "p50": 49.2,
+        "p95": 64.9,
+        "max": 68.2
       },
       "mainThreadMs": {
-        "TaskDuration": 3029.3,
-        "ScriptDuration": 2291.67,
+        "TaskDuration": 3029.48,
+        "ScriptDuration": 2305.96,
         "LayoutDuration": 0,
         "RecalcStyleDuration": 0
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 74.18,
-        "p50": 34.4,
-        "p95": 227.9,
-        "max": 227.9
+        "mean": 47.06,
+        "p50": 39.4,
+        "p95": 85.2,
+        "max": 85.2
       },
-      "warmupCanvasCreates": 217,
+      "warmupCanvasCreates": 219,
       "warmCanvasCreates": 3,
       "warmTerrainCanvasCreates": 0
     },
@@ -1068,43 +1068,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 25.82,
-      "engineCallbackFps": 25.82,
+      "actualDrawFps": 24.5,
+      "engineCallbackFps": 24.5,
       "engineCallbackMs": {
-        "count": 79,
-        "mean": 21.91,
-        "p50": 20.4,
-        "p95": 30.2,
-        "max": 44.1
+        "count": 74,
+        "mean": 23.29,
+        "p50": 21.9,
+        "p95": 31.5,
+        "max": 34.3
       },
       "engineFrameIntervalMs": {
-        "count": 78,
-        "mean": 39.1,
+        "count": 73,
+        "mean": 41.78,
         "p50": 33.4,
         "p95": 50.1,
-        "max": 66.6
+        "max": 66.8
       },
       "drawIntervalMs": {
-        "count": 78,
-        "mean": 39.06,
-        "p50": 38.3,
-        "p95": 52.1,
-        "max": 61.8
+        "count": 73,
+        "mean": 41.62,
+        "p50": 40,
+        "p95": 55.1,
+        "max": 62.4
       },
       "mainThreadMs": {
-        "TaskDuration": 3009.44,
-        "ScriptDuration": 1898.55,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 3016.35,
+        "ScriptDuration": 1921.79,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 37.74,
-        "p50": 20.7,
-        "p95": 93.3,
-        "max": 93.3
+        "mean": 27.18,
+        "p50": 20.9,
+        "p95": 53.6,
+        "max": 53.6
       },
-      "warmupCanvasCreates": 86,
+      "warmupCanvasCreates": 85,
       "warmCanvasCreates": 8,
       "warmTerrainCanvasCreates": 0
     },
@@ -1126,41 +1126,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 23.67,
-      "engineCallbackFps": 23.67,
+      "actualDrawFps": 26.34,
+      "engineCallbackFps": 26.34,
       "engineCallbackMs": {
-        "count": 72,
-        "mean": 27.51,
-        "p50": 25.3,
-        "p95": 34.2,
-        "max": 39.9
+        "count": 80,
+        "mean": 23.51,
+        "p50": 22.3,
+        "p95": 32.8,
+        "max": 46.9
       },
       "engineFrameIntervalMs": {
-        "count": 71,
-        "mean": 43.19,
-        "p50": 49.9,
-        "p95": 66.6,
+        "count": 79,
+        "mean": 38.61,
+        "p50": 33.4,
+        "p95": 50,
         "max": 66.7
       },
       "drawIntervalMs": {
-        "count": 71,
-        "mean": 43.08,
-        "p50": 42.8,
-        "p95": 54.6,
-        "max": 61.7
+        "count": 79,
+        "mean": 38.57,
+        "p50": 37,
+        "p95": 52.1,
+        "max": 59.1
       },
       "mainThreadMs": {
-        "TaskDuration": 2976.8,
-        "ScriptDuration": 2144.31,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 3008.94,
+        "ScriptDuration": 2054.03,
+        "LayoutDuration": 0.15,
         "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 26.32,
-        "p50": 23.6,
-        "p95": 39.2,
-        "max": 39.2
+        "mean": 27.66,
+        "p50": 22.2,
+        "p95": 43.4,
+        "max": 43.4
       },
       "warmupCanvasCreates": 10,
       "warmCanvasCreates": 4,
@@ -1184,43 +1184,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 57.82,
-      "engineCallbackFps": 57.82,
+      "actualDrawFps": 60.31,
+      "engineCallbackFps": 60.31,
       "engineCallbackMs": {
-        "count": 175,
-        "mean": 3.81,
-        "p50": 3.5,
-        "p95": 5.1,
-        "max": 14.3
+        "count": 182,
+        "mean": 3.49,
+        "p50": 3.3,
+        "p95": 4.7,
+        "max": 12.6
       },
       "engineFrameIntervalMs": {
-        "count": 174,
-        "mean": 17.34,
+        "count": 181,
+        "mean": 16.76,
         "p50": 16.7,
         "p95": 16.8,
         "max": 33.4
       },
       "drawIntervalMs": {
-        "count": 174,
-        "mean": 17.41,
-        "p50": 16.3,
-        "p95": 25.1,
-        "max": 34.1
+        "count": 181,
+        "mean": 16.68,
+        "p50": 16.5,
+        "p95": 22.4,
+        "max": 32.3
       },
       "mainThreadMs": {
-        "TaskDuration": 2964.87,
-        "ScriptDuration": 920.45,
+        "TaskDuration": 2814.53,
+        "ScriptDuration": 881.36,
         "LayoutDuration": 0.2,
-        "RecalcStyleDuration": 0.04
+        "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 17.92,
-        "p50": 4.8,
-        "p95": 71.1,
-        "max": 71.1
+        "mean": 11.1,
+        "p50": 4.2,
+        "p95": 39.2,
+        "max": 39.2
       },
-      "warmupCanvasCreates": 115,
+      "warmupCanvasCreates": 114,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -1242,43 +1242,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 28.28,
-      "engineCallbackFps": 28.28,
+      "actualDrawFps": 30.55,
+      "engineCallbackFps": 30.55,
       "engineCallbackMs": {
-        "count": 86,
-        "mean": 7.02,
-        "p50": 6.4,
-        "p95": 10.4,
-        "max": 15.6
+        "count": 93,
+        "mean": 6.72,
+        "p50": 6.2,
+        "p95": 8.5,
+        "max": 19.2
       },
       "engineFrameIntervalMs": {
-        "count": 85,
-        "mean": 35.88,
+        "count": 92,
+        "mean": 32.97,
         "p50": 33.3,
-        "p95": 50.1,
-        "max": 66.7
+        "p95": 33.4,
+        "max": 50
       },
       "drawIntervalMs": {
-        "count": 85,
-        "mean": 35.83,
-        "p50": 33.7,
-        "p95": 48.9,
-        "max": 64.2
+        "count": 92,
+        "mean": 33.16,
+        "p50": 32.6,
+        "p95": 39.2,
+        "max": 50.5
       },
       "mainThreadMs": {
-        "TaskDuration": 3018.7,
-        "ScriptDuration": 819.59,
-        "LayoutDuration": 0.18,
-        "RecalcStyleDuration": 0.04
+        "TaskDuration": 3015.68,
+        "ScriptDuration": 822.37,
+        "LayoutDuration": 0.11,
+        "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 27.88,
-        "p50": 8.1,
-        "p95": 107.3,
-        "max": 107.3
+        "mean": 15.34,
+        "p50": 9.3,
+        "p95": 41.6,
+        "max": 41.6
       },
-      "warmupCanvasCreates": 138,
+      "warmupCanvasCreates": 141,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -1300,43 +1300,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 42.66,
-      "engineCallbackFps": 42.66,
+      "actualDrawFps": 45.79,
+      "engineCallbackFps": 45.79,
       "engineCallbackMs": {
-        "count": 129,
-        "mean": 5.7,
-        "p50": 4.9,
-        "p95": 7.3,
-        "max": 49
+        "count": 139,
+        "mean": 9.94,
+        "p50": 9.5,
+        "p95": 12.6,
+        "max": 23.5
       },
       "engineFrameIntervalMs": {
-        "count": 128,
-        "mean": 23.57,
+        "count": 138,
+        "mean": 21.98,
         "p50": 16.7,
         "p95": 33.4,
-        "max": 116.7
+        "max": 33.4
       },
       "drawIntervalMs": {
-        "count": 128,
-        "mean": 23.6,
-        "p50": 21.1,
-        "p95": 31.5,
-        "max": 108.8
+        "count": 138,
+        "mean": 21.99,
+        "p50": 20.6,
+        "p95": 28.7,
+        "max": 42.9
       },
       "mainThreadMs": {
-        "TaskDuration": 2980.02,
-        "ScriptDuration": 964.39,
-        "LayoutDuration": 0.15,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2990.85,
+        "ScriptDuration": 1583.72,
+        "LayoutDuration": 0.13,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 18.52,
-        "p50": 6,
-        "p95": 69.4,
-        "max": 69.4
+        "mean": 16.38,
+        "p50": 10.8,
+        "p95": 40.9,
+        "max": 40.9
       },
-      "warmupCanvasCreates": 81,
+      "warmupCanvasCreates": 79,
       "warmCanvasCreates": 8,
       "warmTerrainCanvasCreates": 0
     },
@@ -1358,41 +1358,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 42.49,
-      "engineCallbackFps": 42.49,
+      "actualDrawFps": 44.15,
+      "engineCallbackFps": 44.15,
       "engineCallbackMs": {
-        "count": 128,
-        "mean": 17.23,
-        "p50": 16.7,
-        "p95": 22.8,
-        "max": 28.9
+        "count": 134,
+        "mean": 13.2,
+        "p50": 12.9,
+        "p95": 14.5,
+        "max": 28.1
       },
       "engineFrameIntervalMs": {
-        "count": 127,
-        "mean": 23.49,
+        "count": 133,
+        "mean": 22.81,
         "p50": 16.7,
         "p95": 33.4,
-        "max": 33.5
+        "max": 50
       },
       "drawIntervalMs": {
-        "count": 127,
-        "mean": 23.64,
-        "p50": 22.6,
-        "p95": 31.5,
-        "max": 40.6
+        "count": 133,
+        "mean": 22.82,
+        "p50": 21.2,
+        "p95": 29.3,
+        "max": 40.5
       },
       "mainThreadMs": {
-        "TaskDuration": 2978.99,
-        "ScriptDuration": 2406.03,
-        "LayoutDuration": 0.15,
+        "TaskDuration": 2972.95,
+        "ScriptDuration": 1958.08,
+        "LayoutDuration": 0.14,
         "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 21.62,
-        "p50": 17.4,
-        "p95": 39.8,
-        "max": 39.8
+        "mean": 15.62,
+        "p50": 13.8,
+        "p95": 23.2,
+        "max": 23.2
       },
       "warmupCanvasCreates": 23,
       "warmCanvasCreates": 5,
@@ -1416,43 +1416,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 37.32,
-      "engineCallbackFps": 37.32,
+      "actualDrawFps": 35.12,
+      "engineCallbackFps": 35.12,
       "engineCallbackMs": {
-        "count": 113,
-        "mean": 18.1,
-        "p50": 17.1,
-        "p95": 24.1,
-        "max": 34.5
+        "count": 106,
+        "mean": 17.71,
+        "p50": 16.5,
+        "p95": 22.8,
+        "max": 30.7
       },
       "engineFrameIntervalMs": {
-        "count": 112,
-        "mean": 27.08,
+        "count": 105,
+        "mean": 28.73,
         "p50": 33.3,
         "p95": 33.4,
-        "max": 50
+        "max": 50.1
       },
       "drawIntervalMs": {
-        "count": 112,
-        "mean": 27.09,
-        "p50": 25.6,
-        "p95": 37.4,
-        "max": 42.2
+        "count": 105,
+        "mean": 28.74,
+        "p50": 28.6,
+        "p95": 39.3,
+        "max": 48.1
       },
       "mainThreadMs": {
-        "TaskDuration": 3000.32,
-        "ScriptDuration": 2259,
-        "LayoutDuration": 0.12,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 2996.1,
+        "ScriptDuration": 2131.15,
+        "LayoutDuration": 0.15,
+        "RecalcStyleDuration": 0.04
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 37.56,
-        "p50": 20.4,
-        "p95": 108.3,
-        "max": 108.3
+        "mean": 26.86,
+        "p50": 23.6,
+        "p95": 51.8,
+        "max": 51.8
       },
-      "warmupCanvasCreates": 126,
+      "warmupCanvasCreates": 124,
       "warmCanvasCreates": 5,
       "warmTerrainCanvasCreates": 0
     },
@@ -1474,43 +1474,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 20.03,
-      "engineCallbackFps": 20.03,
+      "actualDrawFps": 19.26,
+      "engineCallbackFps": 19.26,
       "engineCallbackMs": {
-        "count": 61,
-        "mean": 34.7,
-        "p50": 33.7,
-        "p95": 40.4,
-        "max": 51.2
+        "count": 59,
+        "mean": 36.25,
+        "p50": 35.6,
+        "p95": 44.1,
+        "max": 53.1
       },
       "engineFrameIntervalMs": {
-        "count": 60,
-        "mean": 50.83,
+        "count": 58,
+        "mean": 52.87,
         "p50": 50,
         "p95": 66.7,
-        "max": 66.7
+        "max": 83.4
       },
       "drawIntervalMs": {
-        "count": 60,
-        "mean": 50.72,
-        "p50": 50.1,
-        "p95": 62.8,
-        "max": 66.3
+        "count": 58,
+        "mean": 52.86,
+        "p50": 52.1,
+        "p95": 65.9,
+        "max": 67.9
       },
       "mainThreadMs": {
-        "TaskDuration": 3022.13,
-        "ScriptDuration": 2283.84,
-        "LayoutDuration": 0.18,
-        "RecalcStyleDuration": 0.03
+        "TaskDuration": 3041.68,
+        "ScriptDuration": 2285.64,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 62.74,
-        "p50": 33.1,
-        "p95": 173.9,
-        "max": 173.9
+        "mean": 47.28,
+        "p50": 35,
+        "p95": 98.3,
+        "max": 98.3
       },
-      "warmupCanvasCreates": 217,
+      "warmupCanvasCreates": 219,
       "warmCanvasCreates": 3,
       "warmTerrainCanvasCreates": 0
     },
@@ -1532,43 +1532,43 @@
           "particles": true
         }
       },
-      "actualDrawFps": 25.71,
-      "engineCallbackFps": 25.71,
+      "actualDrawFps": 27.55,
+      "engineCallbackFps": 27.55,
       "engineCallbackMs": {
-        "count": 78,
-        "mean": 22.48,
-        "p50": 21.7,
-        "p95": 28.6,
-        "max": 32.3
+        "count": 84,
+        "mean": 20.18,
+        "p50": 19.2,
+        "p95": 27.1,
+        "max": 31.9
       },
       "engineFrameIntervalMs": {
-        "count": 77,
-        "mean": 39.39,
-        "p50": 33.4,
-        "p95": 50.1,
-        "max": 66.6
+        "count": 83,
+        "mean": 36.95,
+        "p50": 33.3,
+        "p95": 50,
+        "max": 50.1
       },
       "drawIntervalMs": {
-        "count": 77,
-        "mean": 39.36,
-        "p50": 38.4,
-        "p95": 48.2,
-        "max": 60.4
+        "count": 83,
+        "mean": 36.84,
+        "p50": 35.4,
+        "p95": 47.8,
+        "max": 63.2
       },
       "mainThreadMs": {
-        "TaskDuration": 3010.09,
-        "ScriptDuration": 1978.34,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 3022.64,
+        "ScriptDuration": 1876.53,
+        "LayoutDuration": 0.11,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 33.98,
-        "p50": 20.6,
-        "p95": 86.1,
-        "max": 86.1
+        "mean": 34.44,
+        "p50": 28,
+        "p95": 68.5,
+        "max": 68.5
       },
-      "warmupCanvasCreates": 86,
+      "warmupCanvasCreates": 85,
       "warmCanvasCreates": 8,
       "warmTerrainCanvasCreates": 0
     },
@@ -1590,41 +1590,41 @@
           "particles": true
         }
       },
-      "actualDrawFps": 27.85,
-      "engineCallbackFps": 27.85,
+      "actualDrawFps": 27.28,
+      "engineCallbackFps": 27.28,
       "engineCallbackMs": {
-        "count": 85,
-        "mean": 23,
-        "p50": 22.5,
-        "p95": 29.4,
-        "max": 33.6
+        "count": 83,
+        "mean": 22.58,
+        "p50": 21.7,
+        "p95": 30.7,
+        "max": 40.5
       },
       "engineFrameIntervalMs": {
-        "count": 84,
-        "mean": 36.31,
-        "p50": 33.4,
-        "p95": 50,
-        "max": 50.1
+        "count": 82,
+        "mean": 36.99,
+        "p50": 33.3,
+        "p95": 50.1,
+        "max": 66.7
       },
       "drawIntervalMs": {
-        "count": 84,
-        "mean": 36.33,
-        "p50": 36.1,
-        "p95": 43.1,
-        "max": 52.3
+        "count": 82,
+        "mean": 37.1,
+        "p50": 36.7,
+        "p95": 47.9,
+        "max": 60.7
       },
       "mainThreadMs": {
-        "TaskDuration": 2999.88,
-        "ScriptDuration": 2120.47,
-        "LayoutDuration": 0.12,
+        "TaskDuration": 2976.37,
+        "ScriptDuration": 2035.11,
+        "LayoutDuration": 0.11,
         "RecalcStyleDuration": 0.03
       },
       "coldFirstFramesMs": {
         "count": 5,
-        "mean": 23.48,
-        "p50": 22,
-        "p95": 30.7,
-        "max": 30.7
+        "mean": 22.6,
+        "p50": 22.1,
+        "p95": 26.3,
+        "max": 26.3
       },
       "warmupCanvasCreates": 10,
       "warmCanvasCreates": 5,
@@ -1633,8 +1633,8 @@
   ],
   "regression": {
     "desktop-1080p": {
-      "playerMovedTiles": 1.65,
-      "simulatedSeconds": 0.53,
+      "playerMovedTiles": 1.6,
+      "simulatedSeconds": 0.55,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
         "settledDraws": 0,
@@ -1653,8 +1653,8 @@
       "browserErrors": []
     },
     "desktop-1080p-retina": {
-      "playerMovedTiles": 1.71,
-      "simulatedSeconds": 0.58,
+      "playerMovedTiles": 1.65,
+      "simulatedSeconds": 0.57,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
         "settledDraws": 0,
@@ -1673,8 +1673,8 @@
       "browserErrors": []
     },
     "desktop-1440p-retina": {
-      "playerMovedTiles": 1.65,
-      "simulatedSeconds": 0.58,
+      "playerMovedTiles": 1.76,
+      "simulatedSeconds": 0.57,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
         "settledDraws": 0,
@@ -1710,8 +1710,8 @@
       "browserErrors": []
     },
     "desktop-4k": {
-      "playerMovedTiles": 1.65,
-      "simulatedSeconds": 0.53,
+      "playerMovedTiles": 1.59,
+      "simulatedSeconds": 0.52,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
         "settledDraws": 0,
@@ -1730,7 +1730,7 @@
       "browserErrors": []
     },
     "desktop-1080p-zoom1": {
-      "playerMovedTiles": 1.59,
+      "playerMovedTiles": 1.65,
       "simulatedSeconds": 0.55,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
@@ -1750,7 +1750,7 @@
       "browserErrors": []
     },
     "desktop-1440p-zoom1": {
-      "playerMovedTiles": 1.59,
+      "playerMovedTiles": 1.6,
       "simulatedSeconds": 0.57,
       "menusPauseSimulationAndBorrowedTime": true,
       "pausedRendering": {
@@ -1873,9 +1873,9 @@
     }
   ],
   "sourceSha256": {
-    "src/openworld/renderer.ts": "48e749e30a5674e7f0fd139c2e7072c6698d22a9210ca640143af4884af5190a",
-    "src/openworld/sprites.ts": "5709ed07a79399ad18c809a6c29292778a7caa4c646fe411eaa1d4fb8c0f50a3",
-    "src/openworld/paper.ts": "499cb9b1e5cc027bf0099ccea117ec44991351521d026ab804e53e8fce1f95cb",
+    "src/openworld/renderer.ts": "b6faf181e2cacfceac0dca19fcda62bf6d8deea6fde1ef35ec661d99eed092ac",
+    "src/openworld/sprites.ts": "2585af5836abbce4dc3877ff79543ce5ea1346760f48fc258d8e6533931e3f7a",
+    "src/openworld/paper.ts": "e6487f924fabb80278603372144afe8590bbd784b4ba3a73c7725b8b3d9206c3",
     "src/openworld/paperAssets.ts": "9d79a2dc948829cecd7380010b4f3f1bafa712ae9cad734e5c110ba739c01668",
     "src/openworld/engine.ts": "3c4c66ac1bc375d377cef6ccd18eba47c5784ec73fee6d0b56db2c838b469c98"
   },
@@ -1883,146 +1883,170 @@
     {
       "viewport": "desktop-1080p",
       "scene": "entrance",
-      "previousDrawFps": 56.61,
-      "photoDrawFps": 60.35
+      "previousDrawFps": 60.35,
+      "correctedDrawFps": 60.39
     },
     {
       "viewport": "desktop-1080p",
       "scene": "forest",
-      "previousDrawFps": 30.27,
-      "photoDrawFps": 35.86
+      "previousDrawFps": 35.86,
+      "correctedDrawFps": 34.66
     },
     {
       "viewport": "desktop-1080p",
       "scene": "lake",
-      "previousDrawFps": 44.32,
-      "photoDrawFps": 48.6
+      "previousDrawFps": 48.6,
+      "correctedDrawFps": 52.21
     },
     {
       "viewport": "desktop-1080p",
       "scene": "shanty",
-      "previousDrawFps": 36.23,
-      "photoDrawFps": 47.72
+      "previousDrawFps": 47.72,
+      "correctedDrawFps": 49.47
     },
     {
       "viewport": "desktop-1080p-retina",
       "scene": "entrance",
-      "previousDrawFps": 32.36,
-      "photoDrawFps": 36.36
+      "previousDrawFps": 36.36,
+      "correctedDrawFps": 37.73
     },
     {
       "viewport": "desktop-1080p-retina",
       "scene": "forest",
-      "previousDrawFps": 21.77,
-      "photoDrawFps": 22.62
+      "previousDrawFps": 22.62,
+      "correctedDrawFps": 24.51
     },
     {
       "viewport": "desktop-1080p-retina",
       "scene": "lake",
-      "previousDrawFps": 26.03,
-      "photoDrawFps": 29.03
+      "previousDrawFps": 29.03,
+      "correctedDrawFps": 31.05
     },
     {
       "viewport": "desktop-1080p-retina",
       "scene": "shanty",
-      "previousDrawFps": 26.34,
-      "photoDrawFps": 31.36
+      "previousDrawFps": 31.36,
+      "correctedDrawFps": 30.06
     },
     {
       "viewport": "desktop-1440p-retina",
       "scene": "entrance",
-      "previousDrawFps": 28.26,
-      "photoDrawFps": 37.56
+      "previousDrawFps": 37.56,
+      "correctedDrawFps": 38.78
     },
     {
       "viewport": "desktop-1440p-retina",
       "scene": "forest",
-      "previousDrawFps": 20.13,
-      "photoDrawFps": 20.69
+      "previousDrawFps": 20.69,
+      "correctedDrawFps": 19.03
     },
     {
       "viewport": "desktop-1440p-retina",
       "scene": "lake",
-      "previousDrawFps": 25.39,
-      "photoDrawFps": 28.51
+      "previousDrawFps": 28.51,
+      "correctedDrawFps": 28.08
     },
     {
       "viewport": "desktop-1440p-retina",
       "scene": "shanty",
-      "previousDrawFps": 19.18,
-      "photoDrawFps": 29.11
+      "previousDrawFps": 29.11,
+      "correctedDrawFps": 27.02
     },
     {
       "viewport": "mobile",
       "scene": "entrance",
-      "previousDrawFps": 59.96,
-      "photoDrawFps": 60.38
+      "previousDrawFps": 60.38,
+      "correctedDrawFps": 60.51
     },
     {
       "viewport": "mobile",
       "scene": "forest",
-      "previousDrawFps": 60.02,
-      "photoDrawFps": 60.28
+      "previousDrawFps": 60.28,
+      "correctedDrawFps": 60.27
     },
     {
       "viewport": "mobile",
       "scene": "lake",
-      "previousDrawFps": 60.32,
-      "photoDrawFps": 60.35
+      "previousDrawFps": 60.35,
+      "correctedDrawFps": 60.23
     },
     {
       "viewport": "mobile",
       "scene": "shanty",
-      "previousDrawFps": 58.28,
-      "photoDrawFps": 60.3
+      "previousDrawFps": 60.3,
+      "correctedDrawFps": 54.78
     },
     {
       "viewport": "desktop-4k",
       "scene": "entrance",
-      "previousDrawFps": 28.09,
-      "photoDrawFps": 31.5
+      "previousDrawFps": 31.5,
+      "correctedDrawFps": 31.6
     },
     {
       "viewport": "desktop-4k",
       "scene": "forest",
-      "previousDrawFps": 18,
-      "photoDrawFps": 19.66
+      "previousDrawFps": 19.66,
+      "correctedDrawFps": 20.15
     },
     {
       "viewport": "desktop-4k",
       "scene": "lake",
-      "previousDrawFps": 20.64,
-      "photoDrawFps": 25.82
+      "previousDrawFps": 25.82,
+      "correctedDrawFps": 24.5
     },
     {
       "viewport": "desktop-4k",
       "scene": "shanty",
-      "previousDrawFps": 21.15,
-      "photoDrawFps": 23.67
+      "previousDrawFps": 23.67,
+      "correctedDrawFps": 26.34
     },
     {
       "viewport": "desktop-1080p-zoom1",
       "scene": "entrance",
-      "previousDrawFps": 53.13,
-      "photoDrawFps": 57.82
+      "previousDrawFps": 57.82,
+      "correctedDrawFps": 60.31
     },
     {
       "viewport": "desktop-1080p-zoom1",
       "scene": "forest",
-      "previousDrawFps": 25.95,
-      "photoDrawFps": 28.28
+      "previousDrawFps": 28.28,
+      "correctedDrawFps": 30.55
     },
     {
       "viewport": "desktop-1080p-zoom1",
       "scene": "lake",
-      "previousDrawFps": 37.84,
-      "photoDrawFps": 42.66
+      "previousDrawFps": 42.66,
+      "correctedDrawFps": 45.79
     },
     {
       "viewport": "desktop-1080p-zoom1",
       "scene": "shanty",
-      "previousDrawFps": 35.06,
-      "photoDrawFps": 42.49
+      "previousDrawFps": 42.49,
+      "correctedDrawFps": 44.15
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "entrance",
+      "previousDrawFps": 37.32,
+      "correctedDrawFps": 35.12
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "forest",
+      "previousDrawFps": 20.03,
+      "correctedDrawFps": 19.26
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "lake",
+      "previousDrawFps": 25.71,
+      "correctedDrawFps": 27.55
+    },
+    {
+      "viewport": "desktop-1440p-zoom1",
+      "scene": "shanty",
+      "previousDrawFps": 27.85,
+      "correctedDrawFps": 27.28
     }
   ]
 }

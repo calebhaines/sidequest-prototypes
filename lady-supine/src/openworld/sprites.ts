@@ -20,8 +20,20 @@ type PaintedPart = { canvas: HTMLCanvasElement; x: number; y: number; width: num
 const partCache = new Map<string, PaintedPart>();
 const PART_CACHE_BYTES = 20 * 1024 * 1024;
 let paintedBytes = 0;
-let nativeBatWing = false;
 const INK: string = P.ink;
+
+type BodyAnatomy = { garment: string; coatTop: number; coatWidth: number; coatHeight: number; shoulderY: number; shoulderX: number; upperArm: number; lowerArm: number; hand: number; hipY: number; legLength: number; legSpacing: number; pivot: number };
+/** The Lady alone has the specimen's enormous head and deliberately miniature body.
+ * The other inhabitants keep a continuous adult silhouette beneath their animal fragments. */
+function anatomy(kind: ActorKind): BodyAnatomy {
+  if (kind === 'lady') return { garment: 'gown', coatTop: -32, coatWidth: 20, coatHeight: 23, shoulderY: -28, shoulderX: 5.5, upperArm: 7.3, lowerArm: 9.4, hand: 6.8, hipY: -13, legLength: 14, legSpacing: 3.8, pivot: -15 };
+  const wide = kind === 'ox' || kind === 'boar', tall = kind === 'heron';
+  const shoulderY = tall ? -48 : kind === 'tortoise' ? -42 : -44;
+  return { garment: kind === 'hare' || kind === 'human' || kind === 'moth' ? 'ada-coat' : 'worker-coat',
+    coatTop: shoulderY - 4, coatWidth: wide ? 29 : tall ? 23 : 25, coatHeight: tall ? 41 : 37,
+    shoulderY, shoulderX: wide ? 8.5 : 6.9, upperArm: 11.6, lowerArm: 13, hand: 10.5,
+    hipY: -27, legLength: 28, legSpacing: wide ? 5.6 : 4.1, pivot: -26 };
+}
 
 type Palette = { coat: string; shade: string; trim: string; face: string; faceShade: string; hair: string };
 const palettes: Record<ActorKind, Palette> = {
@@ -47,15 +59,10 @@ const palettes: Record<ActorKind, Palette> = {
 
 /** Where a real organ enters the head, in unscaled drawing coordinates relative to the feet. */
 export function actorHeadAnchor(kind: ActorKind): Vec {
-  if (kind === 'lady') {
-    const h = Math.min(42, 54 / Math.max(.5, paperAssetAspect('lady-head')));
-    return { x: 0, y: -27 - h * .87 };
-  }
-  if (kind === 'hare') {
-    const h = Math.min(38, 26 / Math.max(.5, paperAssetAspect('hare-head')));
-    return { x: 0, y: -28 - h * .61 };
-  }
-  return { x: 0, y: -42 };
+  const layout = faceLayout(kind), [left, top, width, height] = layout.bounds;
+  const aspect = Math.max(.5, paperAssetAspect(headAssetIds[kind]));
+  const w = Math.min(width, height * aspect), h = Math.min(height, width / aspect);
+  return { x: left + (width - w) / 2 + w * .5, y: headCentre(kind) + top + height - h + h * layout.crown };
 }
 
 export function registerSpriteSheet(kind: ActorKind, source: string, options: SpriteSheetOptions): void {
@@ -82,7 +89,7 @@ function pen(ctx: CanvasRenderingContext2D, path: string, color = INK, width = .
 function refreshPaperCaches(): void {
   const next = paperAssetsRevision();
   if (next === assetRevision) return;
-  assetRevision = next; partCache.clear(); paintedBytes = 0; nativeBatWing = false;
+  assetRevision = next; partCache.clear(); paintedBytes = 0;
   iconCache.clear(); itemCanvasCache.clear(); portraitCache.clear();
 }
 
@@ -117,11 +124,11 @@ function wingsAndTails(ctx: CanvasRenderingContext2D, kind: ActorKind, _p: Palet
   if (kind === 'moth') {
     for (const side of [-1, 1]) {
       if (wingSide && side !== wingSide) continue;
-      ctx.save(); ctx.scale(side, 1); ctx.translate(2.5, -29);
-      drawPaperAsset(ctx, 'moth-wing', -1, -13, 27, 35); ctx.restore();
+      ctx.save(); ctx.scale(side, 1); ctx.translate(2.5, -43);
+      drawPaperAsset(ctx, 'moth-wing', -1, -14, 33, 43); ctx.restore();
     }
   } else if (kind === 'tortoise') {
-    drawPaperAsset(ctx, 'tortoise-shell', -18, -34, 36, 29);
+    drawPaperAsset(ctx, 'tortoise-shell', -18, -48, 36, 32);
   } else if (kind === 'fox') {
     ctx.save(); ctx.translate(5, -9); ctx.rotate(-.18);
     drawPaperAsset(ctx, 'fox-tail', 0, -19, 27, 30); ctx.restore();
@@ -140,26 +147,24 @@ function wingsAndTails(ctx: CanvasRenderingContext2D, kind: ActorKind, _p: Palet
 }
 
 function leg(ctx: CanvasRenderingContext2D, side: number, gait: number, kind: ActorKind): void {
-  const thin = kind === 'heron', wide = kind === 'ox' || kind === 'boar';
-  const w = thin ? 3 : kind === 'lady' ? 4.2 : wide ? 6 : 5;
-  ctx.save(); ctx.translate(side * (wide ? 5.6 : 3.8), -13); ctx.rotate(gait * side * .2);
+  const body = anatomy(kind), small = kind === 'lady', wide = kind === 'ox' || kind === 'boar';
+  const w = kind === 'heron' ? 4.2 : small ? 4.2 : wide ? 7 : 5.9;
+  ctx.save(); ctx.translate(side * body.legSpacing, body.hipY); ctx.rotate(gait * side * .2);
   if (side < 0) ctx.scale(-1, 1);
-  drawPaperAssetRegion(ctx, 'trouser-leg', 0, 0, 1, 1, -w / 2, -1, w, 11.5);
-  drawPaperAsset(ctx, 'boot', -w / 2 - 1, 8.3, w + 3.1, 6.2); ctx.restore();
+  drawPaperAssetRegion(ctx, 'trouser-leg', 0, 0, 1, 1, -w / 2, -1, w, small ? 11.5 : 22);
+  drawPaperAssetRegion(ctx, 'boot', 0, 0, 1, 1, -w / 2 - 1, small ? 8.3 : 18.5, w + (small ? 3.1 : 4), small ? 6.2 : 9.5); ctx.restore();
 }
 
 function torso(ctx: CanvasRenderingContext2D, kind: ActorKind, _p: Palette, back: boolean): void {
-  const wide = kind === 'ox' || kind === 'boar';
-  const garment = kind === 'lady' ? 'gown' : kind === 'hare' || kind === 'human' || kind === 'moth' ? 'ada-coat' : 'worker-coat';
-  const width = kind === 'lady' ? 20 : wide ? 28 : kind === 'heron' ? 17 : 22;
-  const height = kind === 'lady' ? 23 : kind === 'hare' || kind === 'merchant' || kind === 'moth' ? 29 : 25;
-  if (!back) drawPaperAssetRegion(ctx, garment, 0, 0, 1, 1, -width / 2, -32, width, height);
+  const { garment, coatWidth: width, coatHeight: height, coatTop: top } = anatomy(kind);
+  if (!back) drawPaperAsset(ctx, garment, -width / 2, top, width, height);
   else {
     // The rear is a smooth cut from the same photographed fabric. Front buttons never float on a back.
     ctx.save(); ctx.beginPath();
-    ctx.moveTo(-width * .37, -32); ctx.lineTo(width * .37, -32);
-    ctx.lineTo(width * .48, -32 + height); ctx.lineTo(-width * .48, -32 + height); ctx.closePath(); ctx.clip();
-    drawPaperAssetRegion(ctx, garment, .30, .48, .32, .39, -width / 2, -32, width, height); ctx.restore();
+    ctx.moveTo(-width * .20, top); ctx.quadraticCurveTo(-width * .40, top + 2, -width * .38, top + 7);
+    ctx.lineTo(-width * .47, top + height - 1); ctx.quadraticCurveTo(0, top + height + .6, width * .47, top + height - 1);
+    ctx.lineTo(width * .38, top + 7); ctx.quadraticCurveTo(width * .40, top + 2, width * .20, top); ctx.closePath(); ctx.clip();
+    drawPaperAssetRegion(ctx, garment, garment === 'worker-coat' ? .20 : .16, garment === 'worker-coat' ? .44 : .56, garment === 'worker-coat' ? .20 : .24, garment === 'worker-coat' ? .48 : .33, -width / 2, top, width, height); ctx.restore();
   }
 }
 
@@ -192,9 +197,12 @@ const faceLayouts: Partial<Record<ActorKind, FaceLayout>> = {
 
 };
 function faceLayout(kind: ActorKind): FaceLayout {
-  return faceLayouts[kind] || { bounds: [-12, -18, 24, 31], eyes: [[.365, .46], [.65, .47]], mouth: [.51, .77], crown: .1 };
+  const layout = faceLayouts[kind] || { bounds: [-12, -18, 24, 31] as [number, number, number, number], eyes: [[.365, .46], [.65, .47]] as [number, number][], mouth: [.51, .77] as [number, number], crown: .1 };
+  if (kind === 'lady' || kind === 'bat') return layout;
+  const scale = kind === 'hare' ? .8 : .75;
+  return { ...layout, bounds: layout.bounds.map(value => value * scale) as [number, number, number, number] };
 }
-function headCentre(kind: ActorKind): number { return kind === 'lady' ? -45 : kind === 'heron' ? -42 : kind === 'human' ? -38.4 : -37; }
+function headCentre(kind: ActorKind): number { return kind === 'lady' ? -45 : kind === 'bat' ? -58 : kind === 'heron' ? -56 : kind === 'hare' ? -51 : kind === 'tortoise' ? -50 : -52; }
 function rearHeadId(kind: ActorKind): string {
   if (kind === 'lady') return 'lady-back';
   if (kind === 'hare' || kind === 'deer' || kind === 'mole' || kind === 'moth') return 'hare-back';
@@ -274,9 +282,9 @@ function head(ctx: CanvasRenderingContext2D, kind: ActorKind, _p: Palette, side:
 }
 
 function prop(ctx: CanvasRenderingContext2D, kind: ActorKind, gait: number, _p: Palette): void {
-  ctx.save(); ctx.translate(kind === 'human' ? 11.2 : 9.5, -13 + gait * .65); ctx.rotate(gait * .08);
+  ctx.save(); ctx.rotate(gait * .08);
   const id = kind === 'human' ? 'item-lantern' : kind === 'gatekeeper' ? 'item-cane' : kind === 'tortoise' ? 'item-glass' : kind === 'hare' ? 'item-coupon' : kind === 'lady' ? 'item-key' : 'item-coupon';
-  drawPaperAsset(ctx, id, -4, kind === 'gatekeeper' ? -21 : -7, 9, kind === 'gatekeeper' ? 31 : 13); ctx.restore();
+  drawPaperAsset(ctx, id, -3, kind === 'gatekeeper' ? -8 : -2, kind === 'gatekeeper' ? 8 : 9, kind === 'gatekeeper' ? 35 : 13); ctx.restore();
 }
 
 function smooth(low: number, high: number, value: number): number {
@@ -286,24 +294,25 @@ function smooth(low: number, high: number, value: number): number {
 
 /** Cloth, a real forearm and a glove bend at separate elbow joints. */
 function sleeve(ctx: CanvasRenderingContext2D, kind: ActorKind, lower: boolean): void {
-  const lady = kind === 'lady', garment = lady ? 'gown' : kind === 'hare' || kind === 'human' || kind === 'moth' ? 'ada-coat' : 'worker-coat';
+  const lady = kind === 'lady', body = anatomy(kind), garment = body.garment;
   if (!lower) {
-    const w = lady ? 4.5 : 6.8;
-    ctx.save(); ctx.beginPath(); ctx.moveTo(-w / 2, -.8); ctx.lineTo(w / 2, -.8); ctx.lineTo(w * .43, 7.7); ctx.lineTo(-w * .49, 7.9); ctx.closePath(); ctx.clip();
-    drawPaperAssetRegion(ctx, garment, .07, .19, .27, .42, -w / 2, -1, w, 9); ctx.restore();
+    const w = lady ? 4.5 : 5.7, length = body.upperArm + 1.1;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-w / 2, -.8); ctx.lineTo(w / 2, -.8); ctx.lineTo(w * .43, length); ctx.lineTo(-w * .49, length); ctx.closePath(); ctx.clip();
+    drawPaperAssetRegion(ctx, garment, .07, .19, .27, .42, -w / 2, -1, w, length + 1); ctx.restore();
   } else if (lady) {
     drawPaperAssetRegion(ctx, 'yellow-glove', 0, 0, 1, 1, -2.7, -.2, 5.6, 11.5);
   } else {
-    ctx.save(); ctx.beginPath(); ctx.moveTo(-2.8, -.5); ctx.lineTo(2.6, -.2); ctx.lineTo(2.7, 4); ctx.lineTo(-2.6, 4.5); ctx.closePath(); ctx.clip();
-    drawPaperAssetRegion(ctx, garment, .11, .4, .22, .3, -3, -1, 6, 6); ctx.restore();
-    drawPaperAssetRegion(ctx, 'arm', 0, .49, 1, .51, -3.9, 3.3, 8, 7.4);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-2.7, -.5); ctx.lineTo(2.6, -.2); ctx.lineTo(2.4, 5.3); ctx.lineTo(-2.4, 5.5); ctx.closePath(); ctx.clip();
+    drawPaperAssetRegion(ctx, garment, .11, .4, .22, .3, -2.9, -1, 5.8, 7); ctx.restore();
+    drawPaperAssetRegion(ctx, 'arm', 0, .39, 1, .61, -2.9, 3.5, 5.8, 10.6);
   }
 }
 function bentArm(ctx: CanvasRenderingContext2D, key: string, _p: Palette, x: number, y: number, upper: number, lower: number): void {
   const kind = key.split(':')[0] as ActorKind;
+  const body = anatomy(kind);
   ctx.save(); ctx.translate(x, y); ctx.rotate(upper);
-  paintedPart(ctx, `${key}:upper-sleeve`, [-7, -3, 14, 14], brush => sleeve(brush, kind, false));
-  ctx.translate(-.4, 7.3); ctx.rotate(lower);
+  paintedPart(ctx, `${key}:upper-sleeve`, [-7, -3, 14, 19], brush => sleeve(brush, kind, false));
+  ctx.translate(-.4, body.upperArm); ctx.rotate(lower);
   paintedPart(ctx, `${key}:wrist`, [-8, -6, 16, 21], brush => sleeve(brush, kind, true)); ctx.restore();
 }
 
@@ -318,6 +327,7 @@ function armToPoint(x: number, y: number, goalX: number, goalY: number): { upper
 /** The actual right palm and forearm direction, in continuous, unscaled feet-relative coordinates.
  * Tool art can attach here throughout anticipation, contact and recovery instead of orbiting the torso. */
 export function playerToolPose(facing: number, moving: boolean, animation: number, time: number, state: ActorDrawingState = {}): { x: number; y: number; angle: number } {
+  const body = anatomy('human');
   const facingAngle = ((facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const mirror = Math.cos(facingAngle) < -.35 ? -1 : 1;
   const side = Math.abs(Math.cos(facingAngle)) > .72;
@@ -334,15 +344,15 @@ export function playerToolPose(facing: number, moving: boolean, animation: numbe
     : progress < .16 / .26 ? .55 - smooth(.07 / .26, .16 / .26, progress) * 1.65
       : -1.1 * (1 - smooth(.16 / .26, 1, progress));
   const recoil = state.asleep ? 0 : Math.min(1, Math.max(0, state.hurt || 0) / .3);
-  const upper = .07 - (moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration) * (.28 + running * .17) + strike;
-  const lower = .07 - (moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration) * .12 - running * .2 + action * .4;
-  const handX = 8 - Math.sin(upper) * 7.3 - Math.cos(upper) * .4 - Math.sin(upper + lower) * 6.8 - Math.cos(upper + lower) * .6;
-  const handY = -28 + Math.cos(upper) * 7.3 - Math.sin(upper) * .4 + Math.cos(upper + lower) * 6.8 - Math.sin(upper + lower) * .6;
+  const upper = -.07 - (moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration) * (.28 + running * .17) + strike;
+  const lower = -.06 - (moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration) * .12 - running * .2 + action * .4;
+  const handX = body.shoulderX - Math.sin(upper) * body.upperArm - Math.cos(upper) * .4 - Math.sin(upper + lower) * body.hand - Math.cos(upper + lower) * .6;
+  const handY = body.shoulderY + Math.cos(upper) * body.upperArm - Math.sin(upper) * .4 + Math.cos(upper + lower) * body.hand - Math.sin(upper + lower) * .6;
   const bodyAngle = state.asleep ? 0 : .037 + gait * .025 + (side ? running * .09 - sneaking * .045 : 0) + action * .13 - recoil * .1;
   const shift = state.asleep ? 0 : moving ? gait * (.9 + running * .55) : Math.sin(clock * .72) * .35 * decoration;
   const bob = state.asleep ? 0 : moving ? -Math.abs(Math.cos(phase)) * (.7 + running * 1.05) + sneaking * 2.2 : breath * .6;
-  const x = handX * Math.cos(bodyAngle) - (handY + 15) * Math.sin(bodyAngle) + shift + action * .7 - recoil * 1.7;
-  const y = handX * Math.sin(bodyAngle) + (handY + 15) * Math.cos(bodyAngle) - 15 + bob - action * .8;
+  const x = handX * Math.cos(bodyAngle) - (handY - body.pivot) * Math.sin(bodyAngle) + shift + action * .7 - recoil * 1.7;
+  const y = handX * Math.sin(bodyAngle) + (handY - body.pivot) * Math.cos(bodyAngle) + body.pivot + bob - action * .8;
   const armAngle = Math.PI / 2 + upper + lower + bodyAngle;
   return { x: x * mirror, y, angle: mirror > 0 ? armAngle : Math.PI - armAngle };
 }
@@ -362,32 +372,33 @@ function expressiveFeatures(ctx: CanvasRenderingContext2D, _key: string, kind: A
   ctx.restore();
 }
 
-function batWing(ctx: CanvasRenderingContext2D, outer: boolean): void {
-  ctx.save(); if (!outer) ctx.translate(3, -7); ctx.rotate(-1.1);
-  const native = outer
-    ? drawPaperAssetRegion(ctx, 'bat-wing', 0, .44, 1, .56, -17.3, 0, 32, 18.48)
-    : drawPaperAssetRegion(ctx, 'bat-wing', 0, 0, 1, .44, -17.3, -1, 32, 14.52);
-  ctx.restore(); if (native && !outer) nativeBatWing = true;
-}
 function bat(ctx: CanvasRenderingContext2D, time: number, back: boolean, state: ActorDrawingState): void {
-  const decoration = state.reducedMotion ? .16 : 1, flight = state.reducedMotion ? .55 : 1;
+  const decoration = state.reducedMotion ? .16 : 1;
   const attack = Math.sin(Math.min(1, (state.action || 0) / .26) * Math.PI), asleep = !!state.asleep;
-  const flap = asleep ? 0 : Math.sin(time * 15.6), follow = asleep ? 0 : Math.sin(time * 15.6 - .62);
-  ctx.save(); ctx.translate(Math.sin(time * 2.7) * .8 * decoration, -21 + Math.sin(time * 4.2) * 2.6 * decoration - attack * 2.3);
-  ctx.rotate(Math.sin(time * 2.7) * .055 * decoration + attack * .16);
+  const flap = asleep ? 0 : Math.sin(time * 3.7);
+  ctx.save(); ctx.translate(Math.sin(time * 2.7) * .55 * decoration, asleep ? 0 : -2.3 + Math.sin(time * 2.1) * 1.2 * decoration - attack * 2.3);
+  ctx.rotate(asleep ? 0 : Math.sin(time * 2.7) * .018 * decoration + attack * .08);
+  // Membranes descend alongside the full coat as in specimen 30. A quiet hinge flex
+  // and an attack spread keep them alive without turning the Aristobat into a tiny flying mascot.
   for (const side of [-1, 1]) {
-    ctx.save(); ctx.scale(side, 1); ctx.translate(3, -7);
-    ctx.rotate((flap * .23 + side * .025) * flight); ctx.scale(1, 1 - (flap + 1) * .09 * flight); ctx.translate(-3, 7);
-    paintedPart(ctx, 'bat:inner-wing', [-8, -29, 36, 43], brush => batWing(brush, false));
-    ctx.translate(nativeBatWing ? 15.05 : 16, nativeBatWing ? -.86 : -26); ctx.rotate((follow * .22 - .06) * flight);
-    paintedPart(ctx, 'bat:outer-wing', [-13, -18, 40, 47], brush => batWing(brush, true)); ctx.restore();
+    ctx.save(); ctx.scale(side, 1); ctx.translate(6, -48);
+    ctx.rotate(.09 + flap * .045 * decoration - attack * .32);
+    ctx.scale(1 + flap * .03 * decoration + attack * .12, 1);
+    paintedPart(ctx, 'bat:hanging-wing', [-3, -3, 29, 48], brush => drawPaperAssetRegion(brush, 'bat-wing', 0, 0, 1, 1, -2, -2, 26, 45)); ctx.restore();
   }
-  paintedPart(ctx, `bat:body:${back}`, [-13, -22, 26, 39], brush => {
-    drawPaperAssetRegion(brush, 'worker-coat', back ? .30 : 0, back ? .48 : 0, back ? .32 : 1, back ? .39 : 1, -8, -19, 16, 30);
-    drawPaperAsset(brush, 'boot', -7, 9, 7, 6); drawPaperAsset(brush, 'boot', 1, 9, 7, 6);
+  paintedPart(ctx, 'bat:legs', [-15, -29, 30, 33], brush => { leg(brush, -1, 0, 'bat'); leg(brush, 1, 0, 'bat'); });
+  const arms = asleep ? 0 : flap * .035 * decoration;
+  bentArm(ctx, 'bat', palettes.bat, -6.9, -49, -.03 - arms, .04);
+  paintedPart(ctx, `bat:body:${back}`, [-15, -55, 30, 49], brush => {
+    if (!back) drawPaperAsset(brush, 'worker-coat', -13, -53, 26, 45);
+    else {
+      brush.save(); brush.beginPath(); brush.moveTo(-5.2, -53); brush.quadraticCurveTo(-10.4, -51, -9.8, -46); brush.lineTo(-12, -9); brush.quadraticCurveTo(0, -7.4, 12, -9); brush.lineTo(9.8, -46); brush.quadraticCurveTo(10.4, -51, 5.2, -53); brush.closePath(); brush.clip();
+      drawPaperAssetRegion(brush, 'worker-coat', .20, .44, .20, .48, -13, -53, 26, 45); brush.restore();
+    }
   });
+  bentArm(ctx, 'bat', palettes.bat, 6.9, -49, .03 + arms, -.04);
   const blink = state.asleep || (time % 5.9 > 4.82 && time % 5.9 < 4.96);
-  ctx.save(); ctx.translate(0, -13); ctx.rotate(Math.sin(time * 2.1) * .028 * decoration);
+  ctx.save(); ctx.translate(0, headCentre('bat')); ctx.rotate(asleep ? 0 : Math.sin(time * 2.1) * .012 * decoration);
   paintedPart(ctx, `bat:face:${back}:${blink}:${!!state.mindChanged}`, [-18, -23, 36, 33], brush => generatedHead(brush, 'bat', false, back, blink, state, false)); ctx.restore(); ctx.restore();
 }
 
@@ -410,6 +421,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   const clock = time + (state.phaseOffset ?? hash(kind) % 17 * .43);
   if (kind === 'bat') { bat(ctx, clock, back, state); ctx.restore(); return; }
   const p: Palette = { ...palettes[kind], ...(color ? { coat: pigment(color) } : {}) };
+  const body = anatomy(kind);
   const key = `${kind}:${color || ''}`;
   const pace = Math.min(1.65, Math.max(.55, state.pace ?? 1));
   const running = smooth(1.03, 1.42, pace), sneaking = 1 - smooth(.66, .96, pace);
@@ -443,11 +455,11 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   if (['moth', 'fox', 'otter', 'mouse', 'salamander', 'tortoise', 'peacock'].includes(kind)) {
     if (kind === 'moth') {
       for (const s of [-1, 1]) {
-        ctx.save(); ctx.translate(s * 2.5, -29);
+        ctx.save(); ctx.translate(s * 2.5, -43);
         ctx.rotate(s * (Math.sin(clock * 2.8 + s * .22) * .15 + gait * .075) * decoration);
         ctx.scale(1 - (1 + Math.sin(clock * 2.8 - .3 + s * .22)) * .08 * decoration, 1);
-        ctx.translate(-s * 2.5, 29);
-        paintedPart(ctx, `${key}:wing:${s}`, [-33, -51, 66, 53], brush => wingsAndTails(brush, kind, p, 0, 0, s)); ctx.restore();
+        ctx.translate(-s * 2.5, 43);
+        paintedPart(ctx, `${key}:wing:${s}`, [-40, -62, 80, 71], brush => wingsAndTails(brush, kind, p, 0, 0, s)); ctx.restore();
       }
     } else {
       const tail = kind === 'fox' || kind === 'mouse' || kind === 'otter' || kind === 'salamander';
@@ -458,7 +470,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
       if (kind === 'peacock') ctx.scale(1 + Math.sin(clock * .95) * .055 * decoration, 1);
       if (kind === 'tortoise') ctx.translate(gait * .45, breath * .3);
       ctx.translate(-pivotX, -pivotY);
-      paintedPart(ctx, `${key}:silhouette`, [-33, -51, 66, 53], brush => wingsAndTails(brush, kind, p, 0, 0)); ctx.restore();
+      paintedPart(ctx, `${key}:silhouette`, [-40, -62, 80, 71], brush => wingsAndTails(brush, kind, p, 0, 0)); ctx.restore();
     }
   }
   {
@@ -467,8 +479,8 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
       const angle = step * stride * (side ? 1.25 : .75);
       const lift = Math.max(0, step) * (2.3 + running * 1.8 - sneaking * .8);
       // Compensating the thigh's arc keeps the planted boot on the ground while the other foot clears it.
-      const plant = 14 * (1 - Math.cos(angle)) - lift;
-      articulatedPart(ctx, `${key}:leg:${s}`, [-18, -17, 36, 22], brush => leg(brush, s, 0, kind), s * (kind === 'ox' || kind === 'boar' ? 5.6 : 3.8), -13, angle, plant);
+      const plant = body.legLength * (1 - Math.cos(angle)) - lift;
+      articulatedPart(ctx, `${key}:leg:${s}`, [-18, -30, 36, 35], brush => leg(brush, s, 0, kind), s * body.legSpacing, body.hipY, angle, plant);
     }
   }
   const fixed = !!state.asleep;
@@ -476,31 +488,32 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   const bob = fixed ? 0 : moving ? -Math.abs(Math.cos(phase)) * (.7 + running * 1.05) + sneaking * 2.2 : breath * (kind === 'lady' ? .3 : .6);
   ctx.save(); ctx.translate(shift + action * .7 - recoil * 1.7, bob - action * .8);
   const posture = kind === 'moth' ? -.055 : kind === 'human' ? .037 : kind === 'ox' ? -.028 : kind === 'tortoise' ? .048 : 0;
-  ctx.translate(0, -15);
+  ctx.translate(0, body.pivot);
   ctx.rotate(fixed ? 0 : posture + gait * .025 * weight + (side ? running * .09 - sneaking * .045 : 0) + action * .13 - recoil * .1);
-  ctx.translate(0, 15);
-  const wide = kind === 'ox' || kind === 'boar';
-  const shoulderWidth = kind === 'lady' ? 5.5 : wide ? 11 : 8;
+  ctx.translate(0, -body.pivot);
+  const shoulderWidth = body.shoulderX;
   const armGait = moving ? Math.sin(phase - .22) : Math.sin(clock * 1.25) * .06 * decoration;
   const elbowGait = moving ? Math.sin(phase - .7) : Math.sin(clock * 1.25 - .3) * .06 * decoration;
-  const leftUpper = -.07 + armGait * (.28 + running * .17) + action * .28;
-  const leftLower = -.06 + elbowGait * .12 - running * .2;
-  let rightUpper = .07 - armGait * (.28 + running * .17) + armStrike;
-  let rightLower = .07 - elbowGait * .12 - running * .2 + action * .4;
+  const leftUpper = (kind === 'lady' ? -.07 : .07) + armGait * (.28 + running * .17) + action * .28;
+  const leftLower = (kind === 'lady' ? -.06 : .06) + elbowGait * .12 - running * .2;
+  let rightUpper = (kind === 'lady' ? .07 : -.07) - armGait * (.28 + running * .17) + armStrike;
+  let rightLower = (kind === 'lady' ? .07 : -.06) - elbowGait * .12 - running * .2 + action * .4;
   if (kind === 'lady' && kissRaise > 0) {
     const lift = kissRaise * decoration;
-    const target = armToPoint(shoulderWidth, -28, .2 + kissRelease * 17, -39.4 + kissRelease * 6);
+    const target = armToPoint(shoulderWidth, body.shoulderY, .2 + kissRelease * 17, -39.4 + kissRelease * 6);
     rightUpper += (target.upper - rightUpper) * lift;
     rightLower += (target.lower - rightLower) * lift;
   }
-  bentArm(ctx, key, p, -shoulderWidth, -28, leftUpper, leftLower);
-  ctx.save(); ctx.translate(0, -24);
+  if (back || side) bentArm(ctx, key, p, -shoulderWidth, body.shoulderY, leftUpper, leftLower);
+  const chest = body.shoulderY + body.coatHeight * .35;
+  ctx.save(); ctx.translate(0, chest);
   const chestBreath = state.asleep ? Math.sin(clock * 1.1) * .4 : breath;
   ctx.scale(1 + chestBreath * (kind === 'ox' || kind === 'lady' ? .022 : .012), 1 + chestBreath * .009);
-  ctx.translate(0, 24); paintedPart(ctx, `${key}:coat:${back}`, [-19, -38, 38, 41], brush => torso(brush, kind, p, back)); ctx.restore();
+  ctx.translate(0, -chest); paintedPart(ctx, `${key}:coat:${back}`, [-21, -56, 42, 59], brush => torso(brush, kind, p, back)); ctx.restore();
+  if (!back && !side) bentArm(ctx, key, p, -shoulderWidth, body.shoulderY, leftUpper, leftLower);
   const foregroundArm = kind === 'lady' && kissRaise > .1;
-  if (!foregroundArm) bentArm(ctx, key, p, shoulderWidth, -28, rightUpper, rightLower);
-  if (kind === 'heron') drawPaperAssetRegion(ctx, 'arm', .25, .12, .4, .38, -2.5, -42, 5, 15);
+  if (!foregroundArm) bentArm(ctx, key, p, shoulderWidth, body.shoulderY, rightUpper, rightLower);
+  if (kind === 'heron') drawPaperAssetRegion(ctx, 'arm', .25, .12, .4, .38, -2.3, -52, 4.6, 12);
   const detached = kind === 'hare';
   const headY = headCentre(kind);
   ctx.save(); ctx.translate(fixed ? 0 : glance * .8 * decoration, fixed ? 0 : moving ? Math.sin(phase - .35) * .28 : Math.sin(clock * .85) * (kind === 'lady' ? .1 : .25) * decoration);
@@ -510,7 +523,7 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
   const expression = `${side}:${back}:${blink}:${!!state.asleep}:${!!state.mindChanged}:${!!state.brainAbsent}:${isKissing}`;
   if (detached) expressiveFeatures(ctx, key, kind, p, side, clock, gait, decoration);
   paintedPart(ctx, `${key}:head:${expression}`, [-33, -78, 66, 64], brush => head(brush, kind, p, side, back, blink, 0, state, gaze, isKissing, detached)); ctx.restore();
-  if (foregroundArm) bentArm(ctx, key, p, shoulderWidth, -28, rightUpper, rightLower);
+  if (foregroundArm) bentArm(ctx, key, p, shoulderWidth, body.shoulderY, rightUpper, rightLower);
   if (kind === 'lady' && state.billboard && decoration > .8) {
     const release = kissCycle - 4.8;
     if (release > 0 && release < 1.6) {
@@ -526,11 +539,11 @@ export function drawActorSprite(ctx: CanvasRenderingContext2D, kind: ActorKind, 
       const heldLeft = kind === 'human';
       const upper = heldLeft ? leftUpper : rightUpper, lower = heldLeft ? leftLower : rightLower;
       const shoulder = (heldLeft ? -1 : 1) * shoulderWidth;
-      const handX = shoulder - Math.sin(upper) * 7.3 - Math.sin(upper + lower) * 9.4 - Math.cos(upper) * .4;
-      const handY = -28 + Math.cos(upper) * 7.3 + Math.cos(upper + lower) * 9.4 - Math.sin(upper) * .4;
-      ctx.save(); ctx.translate(handX - (heldLeft ? -8.4 : 7.6), handY + 11.3);
+      const handX = shoulder - Math.sin(upper) * body.upperArm - Math.sin(upper + lower) * body.hand - Math.cos(upper) * .4;
+      const handY = body.shoulderY + Math.cos(upper) * body.upperArm + Math.cos(upper + lower) * body.hand - Math.sin(upper) * .4;
+      ctx.save(); ctx.translate(handX, handY);
       if (heldLeft) ctx.scale(-1, 1);
-      articulatedPart(ctx, `${key}:prop`, [-3, -38, 27, 36], brush => prop(brush, kind, 0, p), kind === 'human' ? 11.2 : 9.5, -13, moving ? Math.sin(phase - .9) * .18 : breath * .025, 0); ctx.restore();
+      articulatedPart(ctx, `${key}:prop`, [-8, -12, 20, 42], brush => prop(brush, kind, 0, p), 0, 0, moving ? Math.sin(phase - .9) * .18 : breath * .025, 0); ctx.restore();
     }
   }
   ctx.restore(); ctx.restore();

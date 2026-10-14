@@ -159,9 +159,9 @@ export function drawMindExchange(ctx: CanvasRenderingContext2D, frame: RenderFra
   ctx.globalAlpha = phase(time, 0, .07) * (1 - phase(time, .96, 1));
   apparatus(ctx, from, to, zoom, time, sequence.elapsed, motion);
   if (sequence.kind === 'restore') receivingJar(ctx, from, zoom, time, motion, false);
-  transfer(ctx, from, to, time, sequence.elapsed, zoom, (frame.reducedMotion ? 15 : 43) * zoom, .86, P.sand, motion, false);
+  transfer(ctx, from, to, time, sequence.elapsed, zoom, (frame.reducedMotion ? 15 : 43) * zoom, .62, P.sand, motion, false);
   // The return line lags the first extraction, making two separate physical transfers legible.
-  transfer(ctx, to, from, clamp((time - .035) / .965), sequence.elapsed + .5, zoom, (frame.reducedMotion ? -8 : -27) * zoom, 1.07, P.flesh, motion, sequence.kind === 'restore');
+  transfer(ctx, to, from, clamp((time - .035) / .965), sequence.elapsed + .5, zoom, (frame.reducedMotion ? -8 : -27) * zoom, .96, P.flesh, motion, sequence.kind === 'restore');
   if (sequence.kind === 'restore') receivingJar(ctx, from, zoom, time, motion, true);
   ctx.restore();
 }

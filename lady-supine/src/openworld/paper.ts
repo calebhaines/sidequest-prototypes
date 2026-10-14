@@ -53,7 +53,9 @@ function photoTile(ctx: CanvasRenderingContext2D, fill: string, seed: number): C
     const inset = variant * 8;
     brush.drawImage(materialImage, cell % 3 * width + inset, Math.floor(cell / 3) * height + inset,
       width - inset * 2, height - inset * 2, 0, 0, TILE_SIZE, TILE_SIZE);
-    brush.globalAlpha = cell === 0 ? .43 : .22;
+    // Stock is a quiet mount for the photographic specimens. Full-strength
+    // gravel/metal repeated across panels competed with the reference's cutouts.
+    brush.globalAlpha = cell === 4 ? .22 : cell === 0 ? .72 : .86;
     brush.fillStyle = colour; brush.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
     tile = { canvas, pattern: null };
     while (tiles.size >= TILE_LIMIT) tiles.delete(tiles.keys().next().value!);

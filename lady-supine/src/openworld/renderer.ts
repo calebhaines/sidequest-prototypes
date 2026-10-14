@@ -98,23 +98,38 @@ function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number
   ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3.2;
   ctx.strokeStyle = rgba(P.ink, .79); ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y);
 }
+function mountStock(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, kind: TileKind = 'grass') {
+  // Idea 30 mounts individual camera-real specimens on quiet olive stock. Salvage
+  // textures belong to those specimens, never to the whole floor or building plot.
+  ctx.save(); ctx.fillStyle = P.sage; ctx.fillRect(x, y, width, height);
+  ctx.globalAlpha *= .22; ctx.fillStyle = P.umbra; ctx.fillRect(x, y, width, height); ctx.restore();
+  const tint: Partial<Record<TileKind, [string, number]>> = {
+    darkGrass: [P.pine, .12], dirt: [P.sand, .18], path: [P.paper, .27],
+    sand: [P.sand, .36], stone: [P.paper, .11], woodFloor: [P.paper, .1],
+    stoneFloor: [P.paper, .13], void: [P.ink, .14], tilled: [P.umbra, .24],
+  };
+  const overlay = tint[kind];
+  if (overlay) { ctx.save(); ctx.globalAlpha *= overlay[1]; ctx.fillStyle = overlay[0]; ctx.fillRect(x, y, width, height); ctx.restore(); }
+}
+function groundStock(ctx: CanvasRenderingContext2D, kind: TileKind, bounds: [number, number, number, number], seed: number, outdoors = false) {
+  if (outdoors && kind === 'void') { ctx.save(); ctx.fillStyle = P.ink; ctx.fillRect(...bounds); ctx.restore(); }
+  else if (wet(kind)) paperTexture(ctx, ...bounds, colors[kind], seed);
+  else mountStock(ctx, ...bounds, kind);
+}
+function mountedGround(ctx: CanvasRenderingContext2D, path: Path2D, kind: TileKind, bounds: [number, number, number, number], seed: number, outdoors: boolean) {
+  ctx.save(); ctx.clip(path); groundStock(ctx, kind, bounds, seed, outdoors); ctx.restore();
+  // The coast has a visible photograph rim; a path has a fine clean cut. There
+  // are no printed cell borders inside either continuous contour.
+  const rim = wet(kind) ? .92 : kind === 'path' || kind === 'sand' ? .42 : outdoors ? .16 : .34;
+  ctx.save(); ctx.strokeStyle = P.chalk; ctx.globalAlpha *= rim;
+  ctx.lineJoin = 'round'; ctx.lineWidth = wet(kind) ? 1.45 : .65; ctx.stroke(path); ctx.restore();
+}
 function paintGround(ctx: CanvasRenderingContext2D, scene: WorldScene, tx: number, ty: number, px: number, py: number) {
-  const kind = tileAt(scene, tx, ty) || 'void', seed = tx * 31 + ty * 79;
-  if (wet(kind) || kind === 'void') return;
-  surfaceSeed = seed;
-  if (kind === 'woodFloor' && (tx + ty % 2) % 4 === 0) {
-    ctx.save(); ctx.globalAlpha *= .2;
-    panel(ctx, px - 6, py + noise(1, seed) * 3, TILE_SIZE * 4 + 4, 15, P.clay, seed);
-    panel(ctx, px + 29, py + 21, TILE_SIZE * 3, 10, P.umbra, seed + 3); ctx.restore();
-  } else if (kind === 'tilled') {
-    // Rounded cut strips of photographed mud identify worked earth.
-    panel(ctx, px - 3, py + 4, 37, 7, P.umbra, seed, false);
-    panel(ctx, px - 3, py + 23, 37, 6, P.bark, seed + 2, false);
-  } else if ((tx + ty * 3) % 7 === 0 && noise(5, seed) > .48) {
-    const fill = kind === 'path' || kind === 'dirt' ? P.sand : P.lichen;
-    ctx.save(); ctx.globalAlpha *= .09;
-    blob(ctx, px + 37, py + 18, 55 + noise(9, seed) * 19, 19 + noise(7, seed) * 10, fill, seed, true); ctx.restore();
-  }
+  const kind = tileAt(scene, tx, ty);
+  if (kind !== 'tilled' || (tx + ty) % 3 !== 0) return;
+  // Sparse real soil strips identify worked earth; open mounting stock stays calm.
+  ctx.save(); ctx.globalAlpha *= .26;
+  panel(ctx, px + 3, py + 9, 24, 3, P.umbra, tx * 31 + ty * 79, false); ctx.restore();
 }
 type ContourPoint = { x: number; y: number };
 function simplifyContour(points: ContourPoint[], tolerance: number): ContourPoint[] {
@@ -176,7 +191,7 @@ function groundContours(scene: WorldScene) {
       // Reduce a long run of simulation edges to one illustrated contour.
       const corners = points.filter((p, n) => { const a = points[(n + points.length - 1) % points.length], b = points[(n + 1) % points.length]; return (p.x - a.x) * (b.y - p.y) !== (p.y - a.y) * (b.x - p.x); });
       // Remove the simulation grid's short horizontal/vertical terrace pairs before drawing pigment.
-      const tolerance = wet(kind) || kind === 'sand' ? 24 : kind === 'darkGrass' ? 20 : kind === 'dirt' ? 13 : kind === 'path' ? 8 : 2;
+      const tolerance = wet(kind) || kind === 'sand' ? 24 : kind === 'darkGrass' ? 20 : kind === 'dirt' ? 17 : kind === 'path' || kind === 'stone' ? 12 : 4;
       const reduced = simplifyContour(corners, tolerance);
       if (reduced.length < 3) continue;
       const loop = new Path2D(), outline: number[] = [];
@@ -191,7 +206,7 @@ function groundContours(scene: WorldScene) {
       for (let n = 0; n < reduced.length; n++) {
         const previous = reduced[(n + reduced.length - 1) % reduced.length], p = reduced[n], next = reduced[(n + 1) % reduced.length];
         const before = Math.hypot(previous.x - p.x, previous.y - p.y), after = Math.hypot(next.x - p.x, next.y - p.y);
-        const radius = Math.min(wet(kind) || kind === 'sand' ? 13 : kind === 'path' ? 5 : 9, before * .24, after * .24);
+        const radius = Math.min(wet(kind) || kind === 'sand' ? 17 : kind === 'path' ? 12 : 15, before * .3, after * .3);
         const ax = p.x + (previous.x - p.x) * radius / Math.max(1, before), ay = p.y + (previous.y - p.y) * radius / Math.max(1, before);
         const bx = p.x + (next.x - p.x) * radius / Math.max(1, after), by = p.y + (next.y - p.y) * radius / Math.max(1, after);
         point(ax, ay, n === 0);
@@ -271,50 +286,22 @@ function artDensity(deviceDensity: number, visibleBytesAtOne: number, budget: nu
   const maximum = Math.sqrt(budget * .88 / Math.max(1, visibleBytesAtOne));
   return ART_DENSITIES.filter(density => density <= desired && density <= maximum).at(-1) || .5;
 }
-function paintInteriorRoof(ctx: CanvasRenderingContext2D, scene: WorldScene, cx: number, cy: number, size: number) {
+function paintInteriorRoof(ctx: CanvasRenderingContext2D, scene: WorldScene, _cx: number, cy: number, size: number) {
   if (scene.outdoors) return;
   const left = TILE_SIZE, right = (scene.width - 1) * TILE_SIZE, roomW = right - left;
   const top = cy * size - GROUND_BLEED, bottom = (cy + 1) * size + GROUND_BLEED;
-  const hospital = scene.id.includes('hospital'), seed = scene.width * 17 + scene.height * 29;
-  surfaceSeed = seed;
-  // Narrow side cladding and low roof spars remain part of the cached background;
-  // the actor walks underneath them without hidden scenery changing collision.
-  for (const xx of [left - 5, right - 6]) {
-    panel(ctx, xx, top, 11, bottom - top, P.umbra, seed + xx);
-    for (let yy = Math.floor(top / 81) * 81; yy < bottom; yy += 81) panel(ctx, xx - 1, yy, 13, 26, hospital ? P.ash : P.clay, seed + yy);
-  }
-  for (let n = 0, ty = 5.2; ty < scene.height - 2; ty += 6.2, n++) {
+  // Thin boundaries and one sagging wire keep the room readable without replacing
+  // the olive backing with repeated boards, tin sheets or theatrical floor fabric.
+  for (const xx of [left, right]) line(ctx, [xx, top, xx, bottom], rgba(P.paper, .38), .8);
+  for (let n = 0, ty = 7.8; ty < scene.height - 2; ty += 12.5, n++) {
     const yy = ty * TILE_SIZE;
-    if (yy + 53 < top || yy - 47 > bottom) continue;
-    ctx.save(); ctx.globalAlpha *= .1;
-    shape(ctx, [left, yy + 7, right, yy + 9, right, yy + 23, left, yy + 18], P.ink, '', 0);
-    const patchX = left + (n % 2 ? roomW * .58 : roomW * .09);
-    panel(ctx, patchX, yy - 42, roomW * .22, 43, hospital ? P.paper : P.ash, seed + n + 1);
-    ctx.restore();
-    panel(ctx, left, yy - 3, roomW, 6, P.umbra, seed + n + 7);
-    panel(ctx, left + roomW * .12, yy - 1, roomW * .27, 2, P.clay, seed + n + 9, false);
-    // Joined scraps of old conduit carry two weak, improvised hanging bulbs.
-    curve(ctx, P.ink, .65, left + 7, yy + 4, left + roomW * .46, yy + 30, right - 7, yy + 8);
+    if (yy + 30 < top || yy - 3 > bottom) continue;
+    curve(ctx, rgba(P.ink, .32), .55, left + 6, yy, left + roomW * .5, yy + 22, right - 6, yy + 1);
     for (const ratio of [.27, .73]) {
       const x = left + roomW * ratio;
-      line(ctx, [x, yy + 10, x + 1, yy + 27], P.ink, .8, true);
-      shape(ctx, [x - 4, yy + 25, x + 5, yy + 25, x + 7, yy + 31, x - 6, yy + 31], P.bark);
-      blob(ctx, x + .5, yy + 32, 2, 3, P.ochre, seed + n);
+      line(ctx, [x, yy + 7, x, yy + 17], rgba(P.ink, .38), .6);
+      ctx.save(); ctx.globalAlpha *= .6; drawPaperAsset(ctx, 'item-lantern', x - 4, yy + 13, 8, 14); ctx.restore();
     }
-    // Actual tape and replacement tin identify repairs, rather than decorative patterns.
-    for (let k = 0; k < 4; k++) {
-      const xx = left + roomW * (.12 + k * .24);
-      panel(ctx, xx, yy - 6, 18, 10, k % 2 ? P.smoke : P.clay, seed + n * 17 + k);
-      panel(ctx, xx + 3, yy - 7, 9, 3, P.paper, seed + n * 29 + k, false);
-    }
-  }
-  // One wet, irregular repair reaches the lower wall beside the true exit opening.
-  const lowerY = (scene.height - 3.8) * TILE_SIZE;
-  if (lowerY > top - 80 && lowerY < bottom + 80) {
-    ctx.save(); ctx.globalAlpha *= .12;
-    shape(ctx, [left + 8, lowerY, left + roomW * .16, lowerY - 13, left + roomW * .19, lowerY + 31, left + roomW * .12, lowerY + 68, left + 5, lowerY + 45], P.umbra);
-    shape(ctx, [right - 6, lowerY - 9, right - roomW * .16, lowerY + 2, right - roomW * .21, lowerY + 38, right - roomW * .09, lowerY + 67, right - 3, lowerY + 43], P.bark);
-    ctx.restore();
   }
 }
 function groundChunk(scene: WorldScene, cx: number, cy: number, resolution: number, protectedKeys: Set<string>) {
@@ -329,22 +316,20 @@ function groundChunk(scene: WorldScene, cx: number, cy: number, resolution: numb
   const c = document.createElement('canvas');
   c.width = c.height = pixels;
   const ctx = c.getContext('2d')!; ctx.scale(resolution, resolution); ctx.translate(bleed, bleed);
-  paperTexture(ctx, -bleed, -bleed, size + bleed * 2, size + bleed * 2, scene.outdoors ? colors.grass : colors.void, cx * 17 + cy * 29);
+  mountStock(ctx, -bleed, -bleed, size + bleed * 2, size + bleed * 2, scene.outdoors ? 'grass' : 'void');
   ctx.save(); ctx.translate(-cx * size, -cy * size);
   for (const [kind, path] of localGroundContours(scene, cx, cy, size)) {
+    // Nonfunctional soil/grass zoning is simulation data, not a visible grid of
+    // giant specimen cards. Paths, water, the jetty and the pit retain their cuts.
+    if (scene.outdoors && ['darkGrass', 'dirt', 'stone'].includes(kind)) continue;
     const originX = cx * size - bleed, originY = cy * size - bleed;
     const coverage = groundCoverage(ctx, scene, kind, path, cx, cy, size);
     if (coverage === 'outside') continue;
     if (coverage === 'inside') {
       // Authored ground stocks are opaque: their full-sheet texture completely
       // covers the old pre-fill overlap shadow, and no distant edge is visible.
-      paperTexture(ctx, originX, originY, size + bleed * 2, size + bleed * 2, colors[kind], cx * 17 + cy * 29);
-    } else paperPath(ctx, path, colors[kind], [originX, originY, size + bleed * 2, size + bleed * 2], cx * 17 + cy * 29, scene.outdoors ? .9 : .3);
-    if (!scene.outdoors && kind === 'stoneFloor') {
-      ctx.save(); if (coverage === 'edge') ctx.clip(path);
-      ctx.globalAlpha *= scene.id.includes('hospital') ? .42 : .24;
-      ctx.fillStyle = P.paper; ctx.fillRect(originX, originY, size + bleed * 2, size + bleed * 2); ctx.restore();
-    }
+      groundStock(ctx, kind, [originX, originY, size + bleed * 2, size + bleed * 2], cx * 17 + cy * 29, scene.outdoors);
+    } else mountedGround(ctx, path, kind, [originX, originY, size + bleed * 2, size + bleed * 2], cx * 17 + cy * 29, scene.outdoors);
   }
   ctx.restore();
   for (let y = -2; y <= CHUNK; y++) for (let x = -4; x <= CHUNK; x++) paintGround(ctx, scene, cx * CHUNK + x, cy * CHUNK + y, x * TILE_SIZE, y * TILE_SIZE);
@@ -442,64 +427,70 @@ function trailerWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 }
 function drawSealedBuildingPhoto(ctx: CanvasRenderingContext2D, id: string, x: number, y: number, width: number, height: number) {
   drawPaperAsset(ctx, id, x, y, width, height);
-  // Reused photographic facades must not advertise an inaccessible second door.
-  // Cover the source door with a real matching salvage panel, then draw the one
-  // central playable threshold separately. No source PNG or collider is edited.
+  // Keep the actual camera-real facade intact. A thin locked brace makes its
+  // secondary doors read as closed instead of smearing a tiny metal crop over it.
   const aspect = paperAssetAspect(id), dw = Math.min(width, height * aspect), dh = dw / aspect;
   const left = x + (width - dw) / 2, top = y + height - dh;
-  const region = id === 'blue-trailer' ? [.575, .1, .18, .64] : id === 'civic-building' ? [.46, .3, .23, .54] : [.35, .18, .16, .64];
-  const patch = id === 'blue-trailer' ? [.2, .26, .085, .35] : id === 'civic-building' ? [.12, .3, .23, .35] : [.13, .54, .19, .17];
-  drawPaperAssetRegion(ctx, id, patch[0], patch[1], patch[2], patch[3],
-    left + dw * region[0], top + dh * region[1], dw * region[2], dh * region[3]);
+  const doorX = id === 'blue-trailer' ? .64 : id === 'civic-building' ? .55 : .44;
+  const doorY = id === 'civic-building' ? .59 : .44;
+  line(ctx, [left + dw * (doorX - .055), top + dh * (doorY - .07), left + dw * (doorX + .055), top + dh * (doorY + .07)], rgba(P.ink, .78), .8);
+  line(ctx, [left + dw * (doorX - .055), top + dh * (doorY + .07), left + dw * (doorX + .055), top + dh * (doorY - .07)], rgba(P.ink, .78), .8);
+}
+function specimenFootprint(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  // A fine cataloguing outline makes the unchanged physical footprint legible
+  // when a properly proportioned object occupies only part of its reserved space.
+  if (w < 60 && h < 60) return;
+  ctx.save(); ctx.globalAlpha *= .19; ctx.strokeStyle = P.paper; ctx.lineWidth = .55;
+  ctx.beginPath(); ctx.roundRect(1, 1, Math.max(1, w - 2), Math.max(1, h - 2), Math.min(12, h * .2)); ctx.stroke(); ctx.restore();
 }
 function drawBuilding(ctx: CanvasRenderingContext2D, o: WorldObject, _time: number) {
   const w = (o.width || 5) * TILE_SIZE, h = (o.height || 4) * TILE_SIZE, variant = o.variant || 0, seed = o.x * 13 + o.y * 37;
   const civic = variant > 0, castle = variant === 4;
-  shadow(ctx, w / 2 + 12, h + 8, w / 2 + 10, 11, .2);
+  specimenFootprint(ctx, w, h);
+  shadow(ctx, w / 2 + 5, h + 5, w / 2 - 4, 7, .12);
   if (!civic) {
     const id = noise(8, seed) > .53 ? 'blue-trailer' : 'trailer';
-    drawSealedBuildingPhoto(ctx, id, -13, -34, w + 26, h + 47);
-    // Every house retains the central playable threshold. The source's real
-    // rounded door photograph is remounted there as a readable physical cutout.
-    const dw = Math.min(34, w * .17), dh = Math.min(57, h * .43);
-    panel(ctx, w / 2 - dw / 2 - 2, h - dh - 7, dw + 4, dh + 4, P.chalk, seed + 61);
-    drawPaperAssetRegion(ctx, 'trailer', .37, .18, .145, .61, w / 2 - dw / 2, h - dh - 5, dw, dh);
+    const artH = Math.min(151, Math.max(126, h * .78 + 22)), artW = Math.min(w, artH * paperAssetAspect(id));
+    // Align the native photograph's own door with the real central entrance,
+    // preserving the intact rounded caravan, its windows, wheels and staircase.
+    const doorX = id === 'blue-trailer' ? .64 : .44;
+    drawPaperAsset(ctx, id, w / 2 - artW * doorX, h + 8 - artH, artW, artH);
   } else {
-    const modules = castle ? 5 : Math.max(2, Math.ceil(w / 215)), moduleW = w / modules;
-    // Civic grandeur is assembled from poor real greenhouses, rusty caravans
-    // and boiler fragments. Overlapping modules fill the actual collision footprint.
-    panel(ctx, 2, h * .42, w - 4, h * .57, variant === 3 ? P.rust : P.slate, seed, true);
-    for (let n = 0; n < modules; n++) {
-      const center = n === Math.floor(modules / 2), elevation = castle && (n === 0 || n === modules - 1) ? 100 : 0;
-      const id = variant === 3 && !center ? 'trailer' : 'civic-building';
-      drawSealedBuildingPhoto(ctx, id, n * moduleW - 15, -24 - elevation, moduleW + 30, h + 30 + elevation);
-      if (castle) {
-        // Stacked greenhouse modules and boilers make the castle occupy its real
-        // tall footprint without stretching one little caravan into a painted wall.
-        drawSealedBuildingPhoto(ctx, 'civic-building', n * moduleW - 12, -20 - elevation,
-          moduleW + 24, h * .57 + elevation);
-        drawPaperAssetRegion(ctx, 'trailer', .73, .05, .23, .8,
-          n * moduleW + moduleW * .7, h * .24 - elevation, moduleW * .25, h * .69 + elevation);
+    // Greatness is a cluster of humble camera-real specimens, not a stretched
+    // metal backboard. Each greenhouse retains an adult-scale door and glazing.
+    const columns = castle ? 6 : Math.max(2, Math.ceil(w / 210));
+    const rows = castle ? 3 : h > 300 ? 2 : 1;
+    const spacing = w / columns, frontH = castle ? 184 : 173;
+    for (let row = rows - 1; row >= 0; row--) {
+      const inset = row * spacing * .34, rowW = w - inset * 2;
+      const count = Math.max(1, columns - (castle ? row : 0)), step = rowW / count;
+      const baseline = h + 8 - row * Math.max(95, (h - frontH) / Math.max(1, rows - 1));
+      const artH = frontH - row * 15;
+      for (let n = 0; n < count; n++) {
+        const id = variant === 3 && (n + row) % 2 ? 'trailer' : 'civic-building';
+        const center = inset + (n + .5) * step;
+        const artW = Math.min(step + 17, artH * paperAssetAspect(id));
+        drawSealedBuildingPhoto(ctx, id, center - artW / 2, baseline - artH, artW, artH);
+        if (castle && row === 0 && (n === 0 || n === count - 1))
+          drawPaperAssetRegion(ctx, 'trailer', .73, .05, .23, .8, center + artW * .3, baseline - 87, 25, 87);
       }
     }
-    const dw = Math.min(64, w * .15), dh = Math.min(106, h * .4);
-    panel(ctx, w / 2 - dw / 2 - 5, h - dh - 5, dw + 10, dh + 8, P.chalk, seed + 62);
-    panel(ctx, w / 2 - dw / 2, h - dh - 2, dw, dh + 3, P.charcoal, seed + 63, false);
-    drawPaperAssetRegion(ctx, 'trailer', .37, .18, .145, .61, w / 2 - dw / 2 + 2, h - dh, dw - 4, dh - 3);
-    if (variant === 2) {
-      // An actual white porcelain basin and red pipe mark the Hospital.
-      drawPaperAsset(ctx, 'bed', w * .08, h * .39, Math.min(83, w * .17), Math.min(100, h * .31));
-    }
+    if (variant === 2) drawPaperAsset(ctx, 'bed', w * .09, h - 56, 43, 61);
   }
-  for (let n = 0; n < 2; n++) panel(ctx, w / 2 - 23 - n * 4, h + n * 5, 46 + n * 8, 5, n % 2 ? P.ash : P.bark, seed + n + 66);
+  // There is exactly one usable threshold, centred at the original collider.
+  const dw = 37, dh = civic ? 75 : 64;
+  if (civic) {
+    panel(ctx, w / 2 - dw / 2 - 2, h - dh - 5, dw + 4, dh + 4, P.chalk, seed + 61);
+    drawPaperAssetRegion(ctx, 'trailer', .37, .18, .145, .61, w / 2 - dw / 2, h - dh - 3, dw, dh);
+  }
+  for (let n = 0; n < 2; n++) panel(ctx, w / 2 - 19 - n * 3, h + n * 3, 38 + n * 6, 3, P.ash, seed + n + 66);
   if (o.label) {
     const text = o.label.replace('Library of ', '').replace('Hospital for Those ', 'Hospital: ');
-    const labelW = Math.min(w - 14, Math.max(99, text.length * 6));
-    panel(ctx, w / 2 - labelW / 2, Math.max(12, h * .43), labelW, 23, P.chalk, seed + 68);
-    ctx.font = '11px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = P.ink;
-    ctx.fillText(text, w / 2, Math.max(12, h * .43) + 11.5);
+    const labelW = Math.min(w - 10, Math.max(99, text.length * 5.5));
+    panel(ctx, w / 2 - labelW / 2, h - dh - 31, labelW, 20, P.chalk, seed + 68);
+    ctx.font = '10px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = P.ink;
+    ctx.fillText(text, w / 2, h - dh - 21);
   }
-  curve(ctx, P.ink, .8, -15, h * .31, w / 2, h * .48, w + 15, h * .32);
 }
 function drawVegetation(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, seed: number) {
   const reed = o.kind === 'reed', crop = o.kind === 'crop', bush = o.kind === 'bush';
@@ -514,10 +505,10 @@ function drawVegetation(ctx: CanvasRenderingContext2D, o: WorldObject, time: num
 }
 function shelfLayout(o: WorldObject) {
   const w = (o.width || 1) * TILE_SIZE, h = (o.height || 1) * TILE_SIZE;
-  const boxH = Math.max(84, h + 38), aspect = paperAssetAspect('shelves');
+  const boxH = Math.min(98, Math.max(82, h + 38)), aspect = paperAssetAspect('shelves');
   const columns = Math.max(1, Math.ceil(w / (boxH * aspect))), cellW = w / columns;
   const artW = Math.min(cellW + 2, boxH * aspect), artH = artW / aspect;
-  return { boxH, columns, cellW, artW, artH, top: -38 + boxH - artH };
+  return { boxH, columns, cellW, artW, artH, top: h + 5 - artH };
 }
 function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, fade = 1) {
   const v = o.variant || 0, seed = o.x * 29 + o.y * 73, w = (o.width || 1) * 32, h = (o.height || 1) * 32;
@@ -534,11 +525,17 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       drawVegetation(ctx, o, time, seed); break;
     case 'campfire': shadow(ctx, 0, 4, 20, 6, .17); fire(ctx, time + noise(5, seed) * 13); break;
     case 'lantern': shadow(ctx, 3, 3, 9, 3, .14); drawPaperAsset(ctx, 'item-lantern', -13, -41, 26, 47); break;
-    case 'bench':
-      shadow(ctx, 3, 4, 22, 5, .15);
-      drawPaperAsset(ctx, 'stools', -27, -31, 54, 38); break;
-    case 'workbench':
-      shadow(ctx, 2, 3, 26, 6, .17); drawPaperAsset(ctx, 'workbench', -30, -43, 60, 51); break;
+    case 'bench': {
+      const crop = [[.015, .24, .32, .76], [.22, .01, .35, .91], [.43, .58, .3, .42], [.635, .2, .34, .79]][v % 4];
+      const stoolH = v % 4 === 2 ? 19 : 29, stoolW = v % 4 === 2 ? 23 : 23;
+      shadow(ctx, 2, 3, 12, 3, .13);
+      drawPaperAssetRegion(ctx, 'stools', crop[0], crop[1], crop[2], crop[3], -stoolW / 2, 5 - stoolH, stoolW, stoolH); break;
+    }
+    case 'workbench': {
+      const x = o.width ? w / 2 : 0, y = o.height ? h : 5;
+      specimenFootprint(ctx, w, h); shadow(ctx, x + 2, y + 2, 35, 5, .14);
+      drawPaperAsset(ctx, 'workbench', x - 41, y - 61, 82, 67); break;
+    }
     case 'well':
       shadow(ctx, 3, 3, 25, 7, .16);
       // The communal well is a recovered porcelain wash basin under rusty pipe.
@@ -573,7 +570,7 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       ctx.font = '5px "DM Sans", sans-serif'; ctx.fillStyle = P.ink; ctx.textAlign = 'center'; ctx.fillText('TIME SERVED', 0, -19);
       break;
     case 'altar': {
-      drawPaperAsset(ctx, 'stools', -21, -31, 42, 40);
+      drawPaperAssetRegion(ctx, 'stools', .43, .58, .3, .42, -12, -16, 24, 22);
       if (v === 1) {
         drawActorSprite(ctx, 'lady', 0, -21, Math.PI / 2, false, 0, 0, 1, undefined, { reducedMotion: true });
       } else if (v === 2) {
@@ -589,8 +586,11 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       }
       break;
     }
-    case 'bed':
-      shadow(ctx, w * .52, h + 5, w * .55, 7, .16); drawPaperAsset(ctx, 'bed', -4, -14, w + 8, h + 24); break;
+    case 'bed': {
+      const artH = o.width && o.width >= 5 ? 88 : 75, artW = Math.min(102, w);
+      specimenFootprint(ctx, w, h); shadow(ctx, w * .5 + 3, h + 3, artW * .42, 5, .14);
+      drawPaperAsset(ctx, 'bed', w * .5 - artW / 2, h + 6 - artH, artW, artH); break;
+    }
     case 'bookshelf': {
       const { columns, cellW, artW, artH, top } = shelfLayout(o);
       // The real iron rail and stools are fixed; separate suspended bundles
@@ -603,19 +603,24 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
       break;
     }
     case 'table': {
-      shadow(ctx, w * .5 + 4, h + 7, w * .5 + 3, 7, .15);
-      drawPaperAsset(ctx, 'desk', -3, -20, w + 6, h + 30);
+      const artW = Math.min(w + 4, 149), artH = 76, left = w / 2 - artW / 2, top = h + 5 - artH;
+      specimenFootprint(ctx, w, h); shadow(ctx, w * .5 + 3, h + 3, artW * .47, 5, .13);
+      drawPaperAsset(ctx, 'desk', left, top, artW, artH);
       if (v === 1) {
-        panel(ctx, w * .1, h * .21, w * .8, h * .43, P.pine, seed, true);
-        for (let n = 0; n < 3; n++) drawItemIcon(ctx, 'time_coupon', w * (.24 + n * .23) - 6, h * .33 - 7, 15);
+        ctx.save(); ctx.globalAlpha *= .9;
+        panel(ctx, left + artW * .12, top + 19, artW * .76, 18, P.pine, seed, true); ctx.restore();
+        for (let n = 0; n < 3; n++) drawItemIcon(ctx, 'time_coupon', left + artW * (.24 + n * .23) - 5, top + 22, 11);
       }
       break;
     }
-    case 'rug':
-      // A rounded catalogued swatch of old salvaged fabric on the floor.
-      panel(ctx, 0, 0, w, h, P.chalk, seed);
-      drawPaperAssetRegion(ctx, 'prop-curtain', .16, .14, .68, .74, 3, 3, w - 6, h - 6);
-      break;
+    case 'rug': {
+      // A narrow quiet mount marks a dais or walkway. Velvet remains on the
+      // actual hanging curtains; no fabric photograph is stretched across a room.
+      const mountW = Math.min(w, h > w ? 78 : 116), left = (w - mountW) / 2;
+      const path = new Path2D(); path.roundRect(left, 2, mountW, Math.max(1, h - 4), Math.min(23, mountW * .25));
+      ctx.save(); ctx.globalAlpha *= .08; ctx.fillStyle = P.chalk; ctx.fill(path); ctx.restore();
+      ctx.save(); ctx.globalAlpha *= .25; ctx.strokeStyle = P.paper; ctx.lineWidth = .65; ctx.stroke(path); ctx.restore(); break;
+    }
     case 'window': trailerWindow(ctx, -13, -37, 26, 31, seed); break;
     case 'portrait':
       drawPaperAsset(ctx, 'billboard', -28, -65, 56, 63);
@@ -660,15 +665,21 @@ function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, time: number,
 function secondaryScenery(ctx: CanvasRenderingContext2D, o: WorldObject, time: number, reducedMotion: boolean) {
   const seed = o.x * 29 + o.y * 73, phase = noise(3, seed) * 15, gust = reducedMotion ? 0 : wind(o.x, o.y, time);
   if (o.kind === 'building') {
-    const w = (o.width || 5) * TILE_SIZE, h = (o.height || 4) * TILE_SIZE, px = w * .83;
+    const w = (o.width || 5) * TILE_SIZE, h = (o.height || 4) * TILE_SIZE, civic = (o.variant || 0) > 0;
+    const id = civic ? 'civic-building' : noise(8, o.x * 13 + o.y * 37) > .53 ? 'blue-trailer' : 'trailer';
+    const artH = civic ? o.variant === 4 ? 184 : 173 : Math.min(151, Math.max(126, h * .78 + 22));
+    const artW = Math.min(civic ? w / Math.max(2, Math.ceil(w / 210)) : w, artH * paperAssetAspect(id));
+    const dh = artW / paperAssetAspect(id), left = civic ? w * .75 - artW / 2 : w / 2 - artW * (id === 'blue-trailer' ? .64 : .44);
+    const nativeTop = h + 8 - dh, chimneyX = left + artW * .9, chimneyY = nativeTop + dh * (id === 'blue-trailer' ? .32 : .09);
     for (let n = 0; n < 4; n++) {
       const age = ((reducedMotion ? 0 : time) * (6.4 + n * .3) + n * 17 + phase) % 85;
-      blob(ctx, px + age * .13 + gust * age * .23, h * .17 - 25 - age,
-        4 + age * .12, 3 + age * .08, rgba(P.charcoal, .11 * (1 - age / 85)), n + seed);
+      blob(ctx, chimneyX + age * .13 + gust * age * .23, chimneyY - age,
+        3 + age * .09, 2 + age * .07, rgba(P.charcoal, .07 * (1 - age / 85)), n + seed);
     }
-    // A salvaged photographic metal/tarp strip lifts without moving the house.
-    ctx.save(); ctx.translate(w * .72, h * .43); ctx.rotate(gust * .035);
-    panel(ctx, 0, 0, Math.min(44, w * .16), 7, P.water, seed + 9); ctx.restore();
+    // A small crop from this very roof lifts at its physical seam. It cannot
+    // float beside a resized facade or become an unrelated blue material bar.
+    ctx.save(); ctx.translate(left + artW * .44, nativeTop + dh * .06); ctx.rotate(gust * .035);
+    drawPaperAssetRegion(ctx, id, .4, .035, .12, .075, 0, 0, 13, 5); ctx.restore();
   } else if (o.kind === 'bookshelf') {
     const { columns, cellW, artW, artH, top } = shelfLayout(o);
     const bundles = [[0, .285], [.295, .23], [.535, .225], [.775, .225]];
@@ -790,6 +801,9 @@ function drawIllustration(ctx: CanvasRenderingContext2D, o: WorldObject, time: n
   } else ctx.drawImage(art.canvas, art.left, art.top, art.width, art.height);
   secondaryScenery(ctx, o, time, reducedMotion); ctx.restore();
 }
+function actorLabelHeight(kind: string) {
+  return kind === 'lady' ? 83 : kind === 'bat' ? 89 : ['hare', 'deer', 'peacock'].includes(kind) ? 80 : kind === 'heron' ? 78 : 74;
+}
 function onScreen(o: WorldObject, f: RenderFrame, hw: number, hh: number) { return o.x + (o.width || 1) + 3 > f.camera.x - hw && o.x - 3 < f.camera.x + hw && o.y + (o.height || 1) + 2 > f.camera.y - hh && o.y - 5 < f.camera.y + hh; }
 function position(f: RenderFrame, x: number, y: number, width: number, height: number) { return { x: (x - f.camera.x) * TILE_SIZE * f.zoom + width / 2, y: (y - f.camera.y) * TILE_SIZE * f.zoom + height / 2 }; }
 function drawImpact(ctx: CanvasRenderingContext2D, impact: VisualImpact, frame: RenderFrame, width: number, height: number) {
@@ -860,33 +874,26 @@ function drawWater(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: num
 }
 function roomWalls(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number) {
   const z = frame.zoom, scale = TILE_SIZE * z, top = position(frame, 1, 1, width, height), rw = (frame.scene.width - 2) * scale;
-  // The clean cream cut rim extends only a few pixels beyond these mounted panels.
-  // Culling leaves all visible geometry untouched and avoids generating paper
-  // for the north wall while the player is elsewhere inside a long trailer.
   const margin = 8 + z * 4;
   const visible = (x: number, y: number, w: number, h: number) => x + w + margin > 0 && x - margin < width && y + h + margin > 0 && y - margin < height;
-  if (visible(top.x, top.y - 3 * z, rw, scale * 1.3 + 3 * z)) {
-    panel(ctx, top.x, top.y, rw, scale * 1.3, P.umbra, 22);
-    // Photographed rust, wood and glass wall panels share the outdoor salvage materials.
-    for (let n = 0, xx = top.x; xx < top.x + rw - 3; xx += 49 * z, n++) {
-      const sheetW = Math.min(51 * z, top.x + rw - xx), offset = noise(n, 22) * 3 * z;
-      if (!visible(xx, top.y, sheetW, scale * 1.3)) continue;
-      panel(ctx, xx, top.y + offset, sheetW, scale * 1.2 - offset, [P.ash, P.clay, P.paper, P.fog][n % 4], n + 40);
-      if (n % 3 === 0) panel(ctx, xx + 6 * z, top.y + 17 * z, Math.min(26 * z, sheetW - 9 * z), 13 * z, P.smoke, n + 43);
-      if (n % 4 === 0) panel(ctx, xx + 3 * z, top.y + 2 * z, Math.min(25 * z, sheetW - 5 * z), 4 * z, P.paper, n + 45, false);
-    }
-    panel(ctx, top.x - 2 * z, top.y - 3 * z, rw + 4 * z, 7 * z, P.bark, 52);
-    curve(ctx, P.ink, 1.2 * z, top.x + 3, top.y + scale * .32, top.x + rw / 2, top.y + scale * .57, top.x + rw - 3, top.y + scale * .28);
-    for (const ratio of [.18, .7]) {
+  if (visible(top.x, top.y, rw, scale * 1.1)) {
+    // This is a mounted room plan with actual clipped windows and furniture.
+    // A restrained header rim, two salvage patches and a wire define its wall.
+    ctx.save(); ctx.globalAlpha *= .48; ctx.strokeStyle = P.paper; ctx.lineWidth = 1.1 * z;
+    ctx.beginPath(); ctx.roundRect(top.x, top.y, rw, scale * 1.05, 12 * z); ctx.stroke(); ctx.restore();
+    curve(ctx, rgba(P.ink, .36), .65 * z, top.x + 8 * z, top.y + 7 * z, top.x + rw / 2, top.y + 20 * z, top.x + rw - 8 * z, top.y + 5 * z);
+    for (const ratio of [.19, .74]) {
       const xx = top.x + rw * ratio;
-      if (!visible(xx - 5 * z, top.y + 4 * z, 14 * z, 19 * z)) continue;
-      panel(ctx, xx, top.y + 4 * z, 4 * z, 12 * z, P.ink, Math.floor(ratio * 71), false);
-      shape(ctx, [xx - 2 * z, top.y + 15 * z, xx + 6 * z, top.y + 15 * z, xx + 9 * z, top.y + 22 * z, xx - 5 * z, top.y + 22 * z], P.ochre);
+      if (!visible(xx, top.y + 5 * z, 24 * z, 12 * z)) continue;
+      ctx.save(); ctx.globalAlpha *= .44;
+      drawPaperAssetRegion(ctx, 'blue-trailer', .25, .22, .12, .18, xx, top.y + 5 * z, 24 * z, 12 * z); ctx.restore();
     }
   }
   const bottom = position(frame, 1, frame.scene.height - 1.3, width, height), gap = 2.4 * scale;
-  if (visible(bottom.x, bottom.y, rw / 2 - gap / 2, scale * .36)) panel(ctx, bottom.x, bottom.y, rw / 2 - gap / 2, scale * .36, P.slate, 35);
-  if (visible(bottom.x + rw / 2 + gap / 2, bottom.y, rw / 2 - gap / 2, scale * .36)) panel(ctx, bottom.x + rw / 2 + gap / 2, bottom.y, rw / 2 - gap / 2, scale * .36, P.slate, 37);
+  ctx.save(); ctx.globalAlpha *= .58; ctx.strokeStyle = P.paper; ctx.lineWidth = .85 * z;
+  if (visible(bottom.x, bottom.y, rw / 2 - gap / 2, 2)) line(ctx, [bottom.x, bottom.y, bottom.x + rw / 2 - gap / 2, bottom.y], P.paper, .85 * z);
+  if (visible(bottom.x + rw / 2 + gap / 2, bottom.y, rw / 2 - gap / 2, 2)) line(ctx, [bottom.x + rw / 2 + gap / 2, bottom.y, bottom.x + rw, bottom.y], P.paper, .85 * z);
+  ctx.restore();
   if (frame.scene.exit) {
     const p = position(frame, frame.scene.exit.positionInRoom.x, frame.scene.exit.positionInRoom.y, width, height);
     if (visible(p.x - 50, p.y + 10 * z - 10, 100, 20)) label(ctx, '↓ Outside', p.x, p.y + 10 * z, P.paper, '12px "Libre Baskerville", serif');
@@ -894,7 +901,7 @@ function roomWalls(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: num
 }
 
 export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, width: number, height: number) {
-  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; ctx.fillStyle = P.slate; ctx.fillRect(0, 0, width, height);
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; mountStock(ctx, 0, 0, width, height);
   const { scene, zoom } = frame, scale = TILE_SIZE * zoom, time = frame.reducedMotion ? 0 : frame.time;
   sceneryDebris = frame.particlesEnabled !== false;
   const hw = width / scale / 2 + 2, hh = height / scale / 2 + 2;
@@ -956,8 +963,8 @@ export function renderWorld(ctx: CanvasRenderingContext2D, frame: RenderFrame, w
           for (const side of [-1, 1]) { ctx.beginPath(); ctx.arc(p.x + side * 8 * zoom, p.y - 37 * zoom, 7 * zoom, side < 0 ? 2.1 : -1.05, side < 0 ? 4.1 : 1.05); ctx.stroke(); } ctx.restore();
         }
       }
-      if (!a.hostile && dist < 5.4) { label(ctx, a.name, p.x, p.y - (a.kind === 'lady' ? 83 : a.kind === 'hare' ? 64 : a.kind === 'ox' || a.kind === 'bat' ? 60 : 55) * zoom, a.id === frame.nearby?.id ? P.paper : P.paper, `${Math.max(10, 10 * zoom)}px "DM Sans", sans-serif`); if (frame.flags.includes(`${a.id}_friend`)) { ctx.save(); ctx.fillStyle = P.lichen; ctx.beginPath(); ctx.arc(p.x + 15 * zoom, p.y - 36 * zoom, 2 * zoom, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
-      else if (a.hostile && dist < 5) { line(ctx, [p.x - 13 * zoom, p.y - 40 * zoom, p.x + 13 * zoom, p.y - 40 * zoom], P.umbra, 4 * zoom, true); line(ctx, [p.x - 13 * zoom, p.y - 40 * zoom, p.x - 13 * zoom + Math.min(1, a.health / 42) * 26 * zoom, p.y - 40 * zoom], P.clay, 2.5 * zoom, true); }
+      if (!a.hostile && dist < 5.4) { label(ctx, a.name, p.x, p.y - actorLabelHeight(a.kind) * zoom, a.id === frame.nearby?.id ? P.paper : P.paper, `${Math.max(10, 10 * zoom)}px "DM Sans", sans-serif`); if (frame.flags.includes(`${a.id}_friend`)) { ctx.save(); ctx.fillStyle = P.lichen; ctx.beginPath(); ctx.arc(p.x + 15 * zoom, p.y - 36 * zoom, 2 * zoom, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+      else if (a.hostile && dist < 5) { line(ctx, [p.x - 13 * zoom, p.y - (actorLabelHeight(a.kind) - 3) * zoom, p.x + 13 * zoom, p.y - (actorLabelHeight(a.kind) - 3) * zoom], P.umbra, 4 * zoom, true); line(ctx, [p.x - 13 * zoom, p.y - (actorLabelHeight(a.kind) - 3) * zoom, p.x - 13 * zoom + Math.min(1, a.health / 42) * 26 * zoom, p.y - (actorLabelHeight(a.kind) - 3) * zoom], P.clay, 2.5 * zoom, true); }
     } else {
       const a = frame.player, p = position(frame, a.x, a.y, width, height); shadow(ctx, p.x + 4 * zoom, p.y + 2 * zoom, 11 * zoom, 4 * zoom, .21); ctx.save(); if (a.hurt > 0) ctx.globalAlpha = frame.reducedMotion ? .83 : .68 + Math.max(0, .35 - a.hurt) * .5; drawActorSprite(ctx, 'human', p.x, p.y, a.facing, a.moving, a.animation, time, zoom, undefined, { reducedMotion: frame.reducedMotion, phaseOffset: 0, pace: frame.playerPace || 1, action: a.attacking, hurt: a.hurt }); ctx.restore();
       if (a.attacking > 0 || ['walking_cane', 'willow_axe', 'stone_pick', 'fishing_rod'].includes(frame.selected)) {

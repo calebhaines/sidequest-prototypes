@@ -1,6 +1,6 @@
 # Replaceable photographic collage artwork
 
-The playable game follows [direction 30, Hard-cut color specimens](../style-studies/30-hard-cut-color-specimens.png): actual photographic fragments, rounded scissor-cut edges, thin cream rims, and muted olive mounts. World, characters, portraits, tools, map, menus, and puzzle boards share that material.
+The playable game follows [direction 30, Hard-cut color specimens](../style-studies/30-hard-cut-color-specimens.png): actual photographic fragments, rounded scissor-cut edges, thin cream rims, and muted olive mounts. World, characters, portraits, tools, map, menus, and puzzle boards share that material. Broad surfaces are quiet olive mounting stock with restrained terrain contours. Intact photographic figures and objects lead the composition; gravel, metal and velvet must not become large repeated background fields.
 
 Fourteen native 1536×1024 atlases in `src/assets/photo-collage/` have three columns and two rows of 512-pixel cells:
 
@@ -23,7 +23,7 @@ Fourteen native 1536×1024 atlases in `src/assets/photo-collage/` have three col
 
 Cutout atlases retain native transparency; material cells are opaque photographs. `study.png` preserves the selected reference byte for byte. Source PNGs are never rewritten or filtered. `paperAssets.ts` measures transparent margins once, crops specimens at runtime, and finishes loading before world caches are created. Vite packages the same originals into the website and downloadable HTML. The fifteen loaded native images use 90 MiB of decoded pixels.
 
-`paper.ts` supplies cached photographic material tiles, smooth scissor-cut silhouettes, cream rims, and small pasted shadows. The material tile cache is bounded to 4.5 MiB. Small native tiles also texture the HTML interface. `sprites.ts` articulates individual heads, coats, arms, gloves, boots, ears, tails, and wings. `renderer.ts` assembles native buildings, trees, furniture, resources, and effects. Existing terrain and object byte budgets, desktop pixel budget, and drawing cap remain in place.
+`paper.ts` supplies cached photographic material tiles, smooth scissor-cut silhouettes, cream rims, and small pasted shadows. The material tile cache is bounded to 4.5 MiB. Small native tiles also texture the HTML interface. `sprites.ts` articulates coherent full photographic figures from individual heads, long coats, arms, gloves, trousers, boots, ears, tails, and wings. Aristobat wings hang alongside the long coat rather than spreading above the torso. `renderer.ts` assembles native buildings, trees, furniture, resources, and effects. Existing terrain and object byte budgets, desktop pixel budget, and drawing cap remain in place.
 
 The 24 authored base pigments remain in `palette.ts` and `palette.css`; [the swatch sheet](palette-24.svg) gives their values. Photographs retain their natural tones. Use smooth sampling throughout.
 

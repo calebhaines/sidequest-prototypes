@@ -4,7 +4,7 @@ import type { GameState } from '../data/game';
 import { formatTime } from '../data/game';
 import { ITEM_DEFS } from '../openworld/items';
 import { PALETTE24 as P, rgba as mapWash } from '../openworld/palette';
-import { paperPath, paperShape, paperTexture } from '../openworld/paper';
+import { paperPath, paperShape } from '../openworld/paper';
 import { actorPortraitDataUrl, itemIconDataUrl } from '../openworld/sprites';
 import { drawPaperAsset } from '../openworld/paperAssets';
 import PaperMotif from './PaperMotif';
@@ -90,7 +90,11 @@ function paperContours(context: CanvasRenderingContext2D, scene: WorldScene, kin
     }
     path.closePath();
   }
-  paperPath(context, path, fill, [0, 0, scene.width, scene.height], kinds.join('').length * 19, .19);
+  if (kinds.includes('water') || kinds.includes('deepWater')) {
+    paperPath(context, path, fill, [0, 0, scene.width, scene.height], kinds.join('').length * 19, .19);
+  } else {
+    context.fillStyle = fill; context.fill(path);
+  }
   if (outline) { context.strokeStyle = outline; context.lineWidth = .14; context.lineJoin = 'bevel'; context.stroke(path); }
   context.restore();
   return path;
@@ -105,14 +109,15 @@ function terrainMap(data: WorldData) {
   const context = map.getContext('2d');
   if (context) {
     const scene = data.overworld;
-    paperTexture(context, 0, 0, map.width, map.height, P.sage, 960);
-    // Actual photographic material swatches fill the traced physical landscape.
-    paperContours(context, scene, ['dirt', 'tilled'], P.clay);
-    paperContours(context, scene, ['sand'], P.sand);
+    context.fillStyle = P.moss; context.fillRect(0, 0, map.width, map.height);
+    // Quiet stock carries the survey; actual water photographs and mounted
+    // buildings remain distinct specimens on the geographically accurate chart.
+    paperContours(context, scene, ['dirt', 'tilled'], mapWash(P.bark, .2));
+    paperContours(context, scene, ['sand'], mapWash(P.sand, .28));
     paperContours(context, scene, ['water', 'deepWater'], P.water, mapWash(P.chalk, .65));
     paperContours(context, scene, ['deepWater'], P.deepWater);
-    paperContours(context, scene, ['stone', 'stoneFloor'], P.slate, mapWash(P.chalk, .6));
-    paperContours(context, scene, ['path', 'woodFloor'], P.umbra, mapWash(P.umbra, .35));
+    paperContours(context, scene, ['stone', 'stoneFloor'], mapWash(P.fog, .23), mapWash(P.chalk, .38));
+    paperContours(context, scene, ['path', 'woodFloor'], mapWash(P.sand, .28), mapWash(P.chalk, .28));
     context.save(); context.scale(3, 3);
     for (const region of data.regions) {
       if (region.id !== 'forest') continue;
@@ -143,8 +148,8 @@ function roomMap(room: WorldScene) {
   canvas.width = room.width * 4; canvas.height = room.height * 4;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    paperTexture(ctx, 0, 0, canvas.width, canvas.height, P.pine, 1200);
-    paperContours(ctx, room, ['woodFloor', 'stoneFloor', 'path', 'dirt', 'grass'], P.umbra, undefined, 4);
+    ctx.fillStyle = P.pine; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    paperContours(ctx, room, ['woodFloor', 'stoneFloor', 'path', 'dirt', 'grass'], P.moss, undefined, 4);
     ctx.save(); ctx.scale(4, 4);
     for (const [index, object] of room.objects.entries()) {
       const w = object.width || 1, h = object.height || 1, x = object.x, y = object.y;
