@@ -42,3 +42,6 @@ body{background:radial-gradient(ellipse at 76% 0,#ff8d4509,transparent 38%),#151
 .app-shell .masthead .masthead-actions .ml-ex-launcher,.app-shell .masthead .masthead-actions .ml-pat-launcher{min-height:40px!important;height:40px!important}
 /* Keep Help above the legacy tablet icon sizing. */
 .app-shell .masthead #help-button{min-height:40px;min-width:40px;height:40px;width:40px}
+
+/* Keep the original sixteen-column source grid at both sequence lengths. */
+.sequence-choice{display:flex;align-items:center;gap:6px;font:10px var(--font);color:var(--muted)}.sequence-choice select{font:inherit;min-height:32px;padding:4px 20px 4px 7px}

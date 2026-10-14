@@ -156,6 +156,26 @@ const soundPaths = ['synth.morph', 'synth.pitchBlend', 'synth.texture', 'synth.t
     await page.locator('#redoButton').click();assert.equal((await state(page)).tempo,117);const music=await state(page);
     await page.locator('#clearPatternButton').click();assert((await state(page)).sequence.steps.every(s=>!s.on));await page.locator('#undoButton').click();assert.deepEqual((await state(page)).sequence,music.sequence);
   });
+  await check('Thirty-two-step page editing, Undo, hidden-note recovery and live playback retain the compact grid',async()=>{
+    await fresh(page);await page.locator('#patternLength').fill('32');await page.locator('#patternLength').press('Tab');
+    assert.equal((await state(page)).sequence.length,32);assert.equal(await page.locator('#steps .step-cell').count(),16);
+    const before=await state(page);await page.locator('[data-step-page="1"]').click();assert.deepEqual((await state(page)).sequence,before.sequence);
+    await page.locator('#steps [data-step="31"]').click();assert.equal(await page.locator('#stepIndex').textContent(),'32');
+    await page.locator('#stepNote').selectOption('79');await page.locator('#stepToggle').click();assert.equal((await state(page)).sequence.steps[31].note,79);assert((await state(page)).sequence.steps[31].on);
+    await page.locator('#undoButton').click();assert(!(await state(page)).sequence.steps[31].on);await page.locator('#redoButton').click();
+    const hidden=(await state(page)).sequence.steps.slice(16);await page.locator('#patternLength').fill('16');await page.locator('#patternLength').press('Tab');
+    assert(!(await page.locator('#stepPages').isVisible()));await page.locator('#clearPatternButton').click();await page.locator('#recipeButton').click();await page.locator('#mutateButton').click();assert.deepEqual((await state(page)).sequence.steps.slice(16),hidden);
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('marinade-project-v1')||'{}').state?.sequence.steps[31]?.note===79);await page.reload();await page.waitForFunction(()=>!!window.MarinadeApp);
+    assert.deepEqual((await state(page)).sequence.steps.slice(16),hidden);await page.locator('#patternLength').fill('32');await page.locator('#patternLength').press('Tab');
+    const saved=await download(page,'#saveButton','thirty-two-step.marinade.json');const portable=JSON.parse(saved.bytes.toString());assert.equal(portable.state.sequence.length,32);assert.equal(portable.state.sequence.steps[31].note,79);
+    await fresh(page);await page.locator('#projectFile').setInputFiles(path.join(artifacts,'thirty-two-step.marinade.json'));await page.waitForFunction(()=>MarinadeApp.getState().sequence.length===32);assert.deepEqual((await state(page)).sequence.steps.slice(16),hidden);
+    for(const width of[320,390,768,1440]){await page.setViewportSize({width,height:1000});await page.locator('[data-step-page="1"]').click();const fit=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1);assert(fit,'32-step pages fit '+width+'px');await page.screenshot({path:path.join(artifacts,'marinade-32-'+width+'.png'),fullPage:true});}
+    await page.setViewportSize({width:1440,height:1000});await page.evaluate(async()=>{const s=MarinadeApp.getState();s.tempo=400;s.swing=0;s.sequence.division='1/32';s.sequence.steps.forEach(step=>step.on=false);s.sequence.steps[31].on=true;await MarinadeApp.loadState(s);MarinadeApp.selectStep(31);});
+    await page.locator('#playButton').click();await page.waitForFunction(()=>MarinadeApp.engine.getMeters().step===31&&MarinadeApp.engine.getMeters().peak>.001,null,{timeout:20000});
+    await page.waitForFunction(()=>document.querySelector('#steps [data-step="31"]').classList.contains('playing'));await page.locator('#panicButton').click();
+    const fallback=await newPage(context,url,1440,{fallback:true});await fallback.evaluate(async()=>{const s=MarinadeSchema.defaultState();s.tempo=400;s.swing=0;s.sequence.division='1/32';s.sequence.length=32;s.sequence.steps.forEach(step=>step.on=false);Object.assign(s.sequence.steps[31],{on:true,note:79});await MarinadeApp.loadState(s);MarinadeApp.selectStep(31);});await fallback.locator('#playButton').click();await fallback.waitForFunction(()=>MarinadeApp.engine.getMeters().step===31&&MarinadeApp.engine.getMeters().peak>.001,null,{timeout:20000});assert.match(await fallback.evaluate(()=>MarinadeApp.engine.mode),/script|fallback/i);await fallback.locator('#panicButton').click();await fallback.close();
+    return{visibleCells:16,activeLength:32,lastStep:32,project:true,recovery:true,liveAudio:true,fallback:true};
+  });
   await check('A path drawing is one undoable gesture, including actual touch input',async()=>{
     await fresh(page);const before=await state(page),canvas=page.locator('#pathCanvas');await canvas.scrollIntoViewIfNeeded();const box=await canvas.boundingBox();
     await page.mouse.move(box.x+12,box.y+box.height*.8);await page.mouse.down();await page.mouse.move(box.x+box.width*.8,box.y+box.height*.2,{steps:12});await page.mouse.up();const drawn=await state(page);assert.notDeepEqual(drawn.morphPath.points,before.morphPath.points);await page.locator('#undoButton').click();assert.deepEqual((await state(page)).morphPath,before.morphPath);await page.locator('#redoButton').click();assert.deepEqual((await state(page)).morphPath,drawn.morphPath);

@@ -20,24 +20,24 @@
   ];
   const modes = ['kick', 'snare', 'hat', 'clap', 'rim', 'perc', 'texture', 'bass'];
   const engine = new window.NoiseEngine();
-  let state = { ...clone(window.NOISE_PRESETS[0]), master: 0.78 };
+  let state = { ...clone(window.NOISE_PRESETS[0]), master: 0.78, stepCount: 16 };
   state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
   let voiceLab;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
-  let bank = 0, selected = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
+  let bank = 0, selected = 0, sequencePage = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let history = [], toastTimer, saveTimer, exporting = false;
   // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
-  let playheadColumns = Array.from({ length: 16 }, () => []);
+  let playheadColumns = Array.from({ length: 32 }, () => []);
   const storageKey = 'grain-drum-machine-v2';
   const icon = (name) => '<svg aria-hidden="true"><use href="#i-' + name + '"/></svg>';
   const pretty = (str) => str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
   function project() {
     banks[bank] = state.tracks.map((t) => [...t.steps]);
-    return { format: 'grain-project', version: 2, state: clone(state), banks: clone(banks), bank, selected };
+    return { format: 'grain-project', version: 3, state: clone(state), banks: clone(banks), bank, selected };
   }
   function validateProject(data) {
-    if (!data || data.format !== 'grain-project' || ![1, 2].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
+    if (!data || data.format !== 'grain-project' || ![1, 2, 3].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
     const s = data.state;
     if (s.musicLabPattern !== undefined) {
       const overlay = s.musicLabPattern;
@@ -48,10 +48,12 @@
     if (typeof s.name !== 'string' || !s.name.trim() || s.name.length > 80) throw new Error('The project needs a valid name.');
     const isNumber = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
     if (!isNumber(s.bpm, 40, 240) || !isNumber(s.swing, 0, .6) || !['master', 'drive', 'space'].every((key) => isNumber(s[key], 0, 1))) throw new Error('The project contains invalid sound settings.');
-    const validSteps = (steps) => Array.isArray(steps) && steps.length === 16 && steps.every((v) => v === 0 || v === 1 || v === 2);
+    if (data.version === 3 && ![16, 32].includes(s.stepCount)) throw new Error('The project contains an invalid sequence length.');
+    const stepLengths = data.version === 3 ? (s.stepCount === 32 ? [32] : [16, 32]) : [16];
+    const validSteps = (steps) => Array.isArray(steps) && stepLengths.includes(steps.length) && Array.from(steps).every((v) => v === 0 || v === 1 || v === 2);
     s.tracks.forEach((track) => {
       if (!track || typeof track.name !== 'string' || track.name.length > 40 || !sources.some((n) => n.id === track.noise) || !modes.includes(track.mode) || !validSteps(track.steps) || !['level', 'tone', 'decay', 'pitch'].every((key) => isNumber(track[key], 0, 1)) || !isNumber(track.pan, -1, 1) || typeof track.mute !== 'boolean' || typeof track.solo !== 'boolean') throw new Error('The project contains an invalid voice.');
-      if ((data.version === 2 || track.synth !== undefined) && !window.GrainSynth.validate(track.synth)) throw new Error('The project contains invalid synthesis settings.');
+      if ((data.version >= 2 || track.synth !== undefined) && !window.GrainSynth.validate(track.synth)) throw new Error('The project contains invalid synthesis settings.');
     });
     if (!Array.isArray(data.banks) || data.banks.length !== 4 || !data.banks.every((b) => Array.isArray(b) && b.length === 8 && b.every(validSteps))) throw new Error('The project contains an invalid pattern.');
     if (!Number.isInteger(data.bank) || data.bank < 0 || data.bank > 3 || !Number.isInteger(data.selected) || data.selected < 0 || data.selected > 7) throw new Error('The project contains invalid bank settings.');
@@ -59,7 +61,8 @@
   }
   function restore(data) {
     const valid = validateProject(data);
-    state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    state = { ...clone(valid.state), stepCount: valid.version === 3 ? valid.state.stepCount : 16 }; banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    if (state.stepCount === 16) sequencePage = 0;
     state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; window.GrainSynth.ensureTrack(t); });
   }
   for (const key of [storageKey, 'grain-drum-machine-v1']) {
@@ -108,9 +111,9 @@
       currentBar = 0;
       await engine.start(state, (step) => {
         if (!playing) return;
-        if (step === 0) currentBar = currentBar % 4 + 1;
+        if (step % 16 === 0) currentBar = currentBar % 4 + 1;
         setPlayhead(step);
-        $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step / 4) + 1) + ' . ' + (step % 4 + 1);
+        $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step % 16 / 4) + 1) + ' . ' + (step % 4 + 1);
       });
       if (generation !== playGeneration || !engine.running) return;
       playing = true;
@@ -151,7 +154,20 @@
     texture: 'M1 14h2l2-6 2 13 2-9 2 3 2-9 2 14 2-11 2 9 2-3 2-9 2 12 2-5h4',
     bass: 'M1 14q3-12 6 0t6 0t6 0t6 0h6'
   };
+  function renderSequenceControls() {
+    $('sequence-length').value = state.stepCount;
+    $('sequence-page').hidden = state.stepCount === 16;
+    $('sequence-page').value = sequencePage;
+    $('step-numbers').replaceChildren();
+    for (let index = 0; index < 16; index++) {
+      const step = sequencePage * 16 + index;
+      const label = document.createElement('span');
+      label.className = 'step-number' + (step % 4 === 0 ? ' beat' : '') + (currentStep === step ? ' current' : '');
+      label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label);
+    }
+  }
   function renderRows() {
+    renderSequenceControls();
     const container = $('track-rows');
     const focused = container.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null;
     container.replaceChildren();
@@ -170,6 +186,7 @@
       row.append(nameButton);
       const steps = document.createElement('div'); steps.className = 'step-buttons'; steps.setAttribute('role', 'group'); steps.setAttribute('aria-label', pretty(track.name) + ' steps');
       track.steps.forEach((value, stepIndex) => {
+        if (Math.floor(stepIndex / 16) !== sequencePage) return;
         const button = document.createElement('button'); button.dataset.step = stepIndex; button.dataset.track = index;
         button.dataset.focusKey = 'step-' + index + '-' + stepIndex;
         updateStep(button, index, stepIndex);
@@ -197,7 +214,8 @@
           const delta = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key];
           if (!delta) return;
           event.preventDefault();
-          const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + 16) % 16;
+          const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + state.stepCount) % state.stepCount;
+          if (Math.floor(nextStep / 16) !== sequencePage) { sequencePage = Math.floor(nextStep / 16); renderRows(); }
           container.querySelector('[data-track="' + nextRow + '"][data-step="' + nextStep + '"]').focus();
         });
         steps.append(button);
@@ -214,7 +232,7 @@
       });
       row.append(mix); container.append(row);
     });
-    playheadColumns = Array.from({ length: 16 }, () => []);
+    playheadColumns = Array.from({ length: 32 }, () => []);
     document.querySelectorAll('[data-step]').forEach((el) => playheadColumns[Number(el.dataset.step)].push(el));
     if (focused) { const replacement = container.querySelector('[data-focus-key="' + focused + '"]'); if (replacement) replacement.focus({ preventScroll: true }); }
   }
@@ -329,7 +347,9 @@
   function random() {
     remember();
     state.tracks.forEach((track, row) => {
-      track.steps = Array.from({ length: 16 }, (_, step) => {
+      const hidden = track.steps.slice(state.stepCount);
+      track.steps = Array.from({ length: state.stepCount }, (_, index) => {
+        const step = index % 16;
         let chance = [.12, .04, .14, .06, .04, .02, .12, .06][row];
         if (row === 0 && (step === 0 || step === 8)) return 2;
         if ((row === 1 || row === 5) && (step === 4 || step === 12)) return row === 1 ? 2 : 1;
@@ -339,7 +359,7 @@
         if (row === 6 && step % 4 === 3) chance = .5;
         if (row === 7 && step === 0) return 1;
         return Math.random() < chance ? (Math.random() < .15 ? 2 : 1) : 0;
-      });
+      }).concat(hidden);
     });
     renderRows(); persist(); toast('New groove. The crumbs have rearranged themselves.');
   }
@@ -453,7 +473,6 @@
     panel.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
   });
   const customOption = document.createElement('option'); customOption.value = 'custom'; customOption.textContent = 'Custom groove'; customOption.hidden = true; $('preset-select').append(customOption);
-  for (let i = 0; i < 16; i++) { const label = document.createElement('span'); label.className = 'step-number' + (i % 4 === 0 ? ' beat' : ''); label.dataset.step = i; label.textContent = String(i + 1).padStart(2, '0'); $('step-numbers').append(label); }
   sources.forEach((source) => {
     const button = document.createElement('button'); button.className = 'noise-source'; button.dataset.noise = source.id; button.style.setProperty('--noise-color', source.color); button.innerHTML = '<span aria-hidden="true"></span>' + source.name;
     button.title = source.name + ' noise — ' + source.description; button.setAttribute('aria-label', 'Use ' + source.name.toLowerCase() + ' noise');
@@ -474,7 +493,7 @@
   $('preset-select').addEventListener('change', () => {
     const preset = window.NOISE_PRESETS[Number($('preset-select').value)]; if (!preset) return;
     remember(); const wasPlaying = playing || busy; if (wasPlaying) stop();
-    state = { ...clone(preset), master: state.master }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0;
+    state = { ...clone(preset), master: state.master, stepCount: 16 }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
     state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
     renderAll(); persist(); toast(preset.tagline); if (wasPlaying) play();
   });
@@ -483,7 +502,17 @@
     banks[bank] = state.tracks.map((t) => [...t.steps]); bank = next; state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; }); renderRows(); renderBanks(); persist();
   }));
   $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((t) => [...t.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = Array(16).fill(0); }); renderRows(); persist(); toast('Pattern cleared.'); });
+  $('sequence-length').addEventListener('change', () => {
+    const length = Number($('sequence-length').value); if (length === state.stepCount) return;
+    remember(); const resume = playing || busy; if (resume) stop(); state.stepCount = length;
+    if (length === 32) {
+      const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
+      state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
+    } else sequencePage = 0;
+    renderRows(); persist(); if (resume) play();
+  });
+  $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
+  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared.'); });
   $('random-button').addEventListener('click', random);
   $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'sizzle-' + safeName() + '.json'); toast('Project saved.'); });

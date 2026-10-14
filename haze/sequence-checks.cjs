@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const scope={Blob,DOMException,AbortController,URL,setTimeout,clearTimeout,console};scope.window=scope;vm.createContext(scope);
+for(const file of ['schema.js','audio-engine.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,file),'utf8'),scope,{filename:file});
+const S=scope.HazeSchema,Core=scope.HazeDSP.Core,rate=8000;
+function run(core,frames){let peak=0;while(frames){const n=Math.min(128,frames),l=new Float32Array(n),r=new Float32Array(n);core.processBlock(l,r);for(const value of l)peak=Math.max(peak,Math.abs(value));frames-=n;}return peak;}
+const pattern=()=>{const s=S.defaultState();s.sequenceMode='pattern';s.tempo=240;s.freeze=true;s.direction='reverse';s.attack=2;s.release=10;s.echo=0;s.room=0;s.drift=0;s.patternBanks.forEach(bank=>bank.score.forEach(row=>row.fill(0)));return s;};
+(async()=>{
+  const legacy=S.defaultState();delete legacy.sequenceMode;delete legacy.selectedPattern;delete legacy.patternBanks;
+  const restored=S.normalize(legacy);assert.equal(restored.sequenceMode,'native');assert.equal(restored.patternBanks.length,4);assert.equal(restored.patternBanks[0].length,16);assert.deepEqual(JSON.parse(JSON.stringify(restored.score)),JSON.parse(JSON.stringify(legacy.score)));
+  assert.equal(S.parseProject(JSON.stringify({format:'haze-project',formatVersion:1,state:legacy})).sequenceMode,'native','Legacy projects still open');
+  const s=pattern();s.patternBanks[0].length=32;s.patternBanks[0].score[2][31]=.9;s.patternBanks[1].score[5][4]=.6;
+  const roundtrip=S.parseProject(S.serializeProject(s));assert.equal(roundtrip.patternBanks[0].score[2][31],.9);assert.equal(roundtrip.patternBanks[1].score[5][4],.6);assert.equal(roundtrip.freeze,true);
+  for(const corrupt of [value=>value.sequenceMode='unknown',value=>value.selectedPattern=.5,value=>value.selectedPattern=4,value=>value.patternBanks.pop(),value=>delete value.patternBanks[0].score,value=>value.patternBanks[0].score.pop(),value=>value.patternBanks[0].score[0].pop(),value=>value.patternBanks[0].score[0][0]=null,value=>value.patternBanks[0].score[0][0]=1.1,value=>value.patternBanks[0].length=24,value=>value.patternBanks[0].gate=0,value=>value.patternBanks[0].gate=null]){const project=JSON.parse(S.serializeProject(s));corrupt(project.state);assert.throws(()=>S.parseProject(JSON.stringify(project)),/step patterns/,'Malformed authored sequencing data must be rejected');}
+  const reduced=S.normalize({...s,patternBanks:s.patternBanks.map((b,i)=>i?b:{...b,length:16})});assert.equal(reduced.patternBanks[0].score[2][31],.9);assert.equal(S.normalize({...reduced,patternBanks:reduced.patternBanks.map((b,i)=>i?b:{...b,length:32})}).patternBanks[0].score[2][31],.9);
+  const core=new Core(s,rate);core.start();assert.equal(run(core,31*500),0,'Step 32 waits through all 31 preceding sixteenths');assert.ok(run(core,100)>.005,'Step 32 uses the existing additive engine');assert.ok(core.targets[2]>.8);run(core,450);assert.equal(core.targets[2],0,'Gate closes before the next step');core.stop();run(core,500);assert.ok(core.env[2]<.001,'Stop releases the native pattern');assert.equal(core.noteEvents.length,0);
+  const bank=new Core({...s,selectedPattern:1},rate);bank.start();run(bank,4*500);run(bank,100);assert.ok(bank.targets[5]>.5);assert.equal(bank.targets[2],0,'Selected banks play independently');bank.panic();assert.equal(run(bank,1000),0,'Panic cancels pattern sound');
+  const external=new Core(s,rate);external.scheduleNote(1,.8,0,100);run(external,32*500);assert.equal(external.running,false);assert.equal(external.env[2],0,'External notes do not start the native pattern');
+  const audio=new scope.HazeAudio(s),controller=new AbortController();controller.abort();await assert.rejects(audio.renderWav(1,0,{signal:controller.signal}),e=>e.name==='AbortError');const blob=await audio.renderWav(2,0);assert.ok(blob.size>44,'WAV export renders the selected pattern');
+  console.log('STEAM pattern checks passed: strict project validation, legacy migration, four-bank persistence, 16/32 retention, timed step 32, gate/Stop/Panic, external-note isolation, export cancellation.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

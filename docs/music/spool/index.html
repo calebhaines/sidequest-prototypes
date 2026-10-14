@@ -380,6 +380,22 @@ select,.preset-control select{min-height:36px}
 /* Keep Help as easy to touch on tablets as it is on phones. */
 .app-shell .masthead #help-button{width:40px;min-width:40px;height:40px;min-height:40px;padding:0;flex:0 0 40px}
 
+/* Optional patterns use the existing controls and remain hidden in the original mode. */
+.step-pattern-panel{padding:12px 16px;border-bottom:1px solid var(--line,#3c4549);background:#22292c}
+.step-pattern-panel[hidden]{display:none}
+.step-pattern-controls{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.step-pattern-controls label{display:flex;align-items:center;gap:6px;font-size:11px;color:#c5cfd1}
+.step-pattern-controls select,.step-pattern-controls input{max-width:170px;min-height:34px;padding:5px 7px;background:#171e21;color:#f0ece0;border:1px solid #536167;border-radius:3px;font:inherit}
+.step-pattern-controls input{width:60px}
+.step-pattern-grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;min-width:0}
+.pattern-step{min-width:0;min-height:36px;padding:4px 0;background:#182126;color:#aab6bc;border:1px solid #536167;border-radius:3px;font-size:11px}
+.pattern-step:nth-child(4n+1){border-left:2px solid #b88763}
+.pattern-step[aria-pressed=true]{background:#ff8d4525;color:#ffad77;border-color:#bf7847}
+.pattern-step.playing{outline:2px solid #effce9;outline-offset:-2px}
+.pattern-step:focus-visible{outline:2px solid #f1ead8;outline-offset:2px}
+@media(max-width:650px){.step-pattern-panel{padding:10px 12px}.step-pattern-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step-pattern-controls label{flex-wrap:wrap}.step-pattern-controls select{max-width:130px}}
+.sequence-mode-field{max-width:160px}.sequence-mode-field select{min-height:34px}.step-pattern-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;margin-top:6px}.pattern-deck-label{padding:0;min-width:0;background:transparent;border:0;color:#f1ead8;font-weight:bold}.step-pattern-panel .panel-hint{margin:10px 0 0}
+
 </style>
 
 <style>
@@ -584,7 +600,7 @@ body {
       <section class="hero" aria-labelledby="hero-title"><div class="hero-wordmark"><span class="eyebrow">KEEP TURNING. CHEF IS STILL THINKING.</span><h1 id="hero-title">ROTISSERIE<span>.</span></h1><div class="hero-rule"><span>FOUR DECKS. CONTINUOUS ROTATION.</span><span>STEREO / TYPE ∞</span></div></div><div class="hero-copy"><h2>The special keeps <br><em>coming round.</em></h2><p>Record a batch. Let it turn. <br>Each revolution develops more character.</p><div class="edition-tag"><span>005</span><div>RECIRCULATING AUDIO<br>PREPARATION STATION</div></div><svg class="rotation-engraving" viewBox="0 0 340 82" aria-hidden="true"><rect x="2" y="2" width="336" height="78" rx="3"/><path d="M21 20h243v42H21zM35 41h216m-13-11 13 11-13 11M48 29l12 24m13-24 12 24m13-24 12 24m13-24 12 24m13-24 12 24m13-24 12 24m13-24 12 24M14 29h7m-7 24h7M274 20h53v42h-53z"/><circle cx="292" cy="35" r="7"/><path d="m292 35 4-4m-9 23h31"/><circle cx="314" cy="35" r="2" fill="currentColor"/></svg></div></section>
       <section class="transport" aria-label="Playback and project controls"><div class="transport-play"><button id="play-button" class="play-button" aria-label="Play loops" title="Play or stop (Space)"><svg><use href="#i-play"/></svg><span>Play</span></button><button id="rewind-button" class="icon-button" aria-label="Rewind all loops" title="Rewind all loops to their starts"><svg><use href="#i-reset"/></svg></button></div><div class="tempo-control"><label for="tempo" class="control-label">TEMPO</label><div><input id="tempo" type="number" min="40" max="180" step="1" value="84"><span>BPM</span></div></div><div class="preset-control"><label for="preset-select" class="control-label">HOUSE RECIPE</label><select id="preset-select"></select></div><div class="transport-actions"><button id="save-button" class="button" title="Download project with all loop audio"><svg><use href="#i-save"/></svg><span>Save project</span></button><button id="open-button" class="icon-button" aria-label="Open project" title="Open project"><svg><use href="#i-open"/></svg></button><button id="export-button" class="button"><svg><use href="#i-download"/></svg><span>Export WAV</span></button><button id="panic-button" class="panic-button" title="Stop playback and recording immediately">Panic <span>×</span></button></div></section>
 <nav class="station-nav" aria-label="ROTISSERIE workspace"><a href="#spool-decks">Decks</a><a href="#spool-editor">Edit deck</a><a href="#spool-performance">Perform</a><a href="#spool-output">Output</a></nav>
-            <section id="spool-decks" tabindex="-1" class="decks-section" aria-labelledby="decks-title"><div class="section-heading"><div class="heading-group"><span class="section-index">01</span><h2 id="decks-title">THE ROTATING LINE</h2><span class="tag">4 INDEPENDENT LOOPS</span></div><div class="heading-actions"><span id="transport-position" class="transport-position">01 : 01 : 00</span><button id="new-tapes-button" class="text-button" title="Regenerate built-in loops while keeping imported and recorded audio"><svg><use href="#i-spark"/></svg>Fresh batch</button><button id="undo-button" class="text-button" disabled title="Undo last edit (Ctrl / Cmd + Z)"><svg><use href="#i-undo"/></svg>Undo</button></div></div><div id="deck-grid" class="deck-grid" role="group" aria-label="Tape decks"></div><div class="deck-bottomline"><span><i></i>SELECT A DECK TO EDIT · LOOPS KEEP THEIR OWN TIME</span><span>COOKING TIMES MAY VARY.</span></div></section>
+            <section id="spool-decks" tabindex="-1" class="decks-section" aria-labelledby="decks-title"><div class="section-heading"><div class="heading-group"><span class="section-index">01</span><h2 id="decks-title">THE ROTATING LINE</h2><span class="tag">4 INDEPENDENT LOOPS</span></div><div class="heading-actions"><label class="field-label sequence-mode-field">Sequencing<select id="sequence-mode"><option value="native">Continuous loops</option><option value="pattern">Step patterns</option></select></label><span id="transport-position" class="transport-position">01 : 01 : 00</span><button id="new-tapes-button" class="text-button" title="Regenerate built-in loops while keeping imported and recorded audio"><svg><use href="#i-spark"/></svg>Fresh batch</button><button id="undo-button" class="text-button" disabled title="Undo last edit (Ctrl / Cmd + Z)"><svg><use href="#i-undo"/></svg>Undo</button></div></div><div id="deck-grid" class="deck-grid" role="group" aria-label="Tape decks"></div><div id="step-pattern-panel" class="step-pattern-panel" hidden><div class="step-pattern-controls"><label>Pattern<select id="pattern-bank"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label><label>Steps<select id="pattern-length"><option value="16">16</option><option value="32">32</option></select></label><label>Velocity<input id="pattern-velocity" type="number" min="0.05" max="1" step="0.05" value="0.8"></label><label>Gate<input id="pattern-gate" type="number" min="5" max="100" step="5" value="80"><span>%</span></label><button id="clear-pattern-button" class="text-button">Clear pattern</button></div><div id="pattern-grid" role="group" aria-label="Deck pattern steps"></div><p class="panel-hint">Toggle sixteenth-note steps to restart each deck at its loop start. Gate controls the played slice; each deck keeps its tape sound and speed. Continuous loops remain available.</p></div><div class="deck-bottomline"><span><i></i>SELECT A DECK TO EDIT · LOOPS KEEP THEIR OWN TIME</span><span>COOKING TIMES MAY VARY.</span></div></section>
       <section id="spool-editor" tabindex="-1" class="workbench" aria-labelledby="deck-editor-title"><div class="editor-sidebar"><div class="editor-heading"><span id="selected-deck-label" class="control-label">DECK A / SELECTED</span><h2 id="deck-editor-title">The first<br>rotation.</h2><label class="sr-only" for="deck-name">Deck name</label><input id="deck-name" class="deck-name-input" type="text" maxlength="48" aria-label="Deck name" hidden><p id="deck-description">A loop taking another turn on the line.</p></div><div class="deck-tools"><button id="import-button" class="button"><svg><use href="#i-open"/></svg>Import audio</button><button id="duplicate-button" class="button"><svg><use href="#i-copy"/></svg>Duplicate deck</button><button id="deck-export-button" class="button"><svg><use href="#i-download"/></svg>Export deck WAV</button><button id="clear-deck-button" class="text-button danger-button">Erase loop</button></div><div class="tape-note"><span class="tape-note-number">∞</span><p>KEEP THE BATCH<br>TURNING UNTIL<br>FURTHER NOTICE.</p></div></div><div class="editor-main"><div class="editor-tabs" role="tablist" aria-label="Deck editor"><button class="editor-tab active" data-tab="loop" role="tab" aria-selected="true" aria-controls="loop-panel">Loop &amp; motion</button><button class="editor-tab" data-tab="tape" role="tab" aria-selected="false" aria-controls="tape-panel">Tape character</button><button class="editor-tab" data-tab="record" role="tab" aria-selected="false" aria-controls="record-panel">Record &amp; overdub</button></div><div id="loop-panel" class="editor-panel" role="tabpanel"><div class="panel-topline"><h3>Set the rotation.</h3><span id="loop-duration" class="tag">STEREO LOOP</span></div><div id="loop-controls" class="parameter-grid"></div><div id="seed-controls" class="seed-controls"></div><div class="loop-switches"><button id="reverse-button" class="toggle-button" aria-pressed="false"><svg><use href="#i-reverse"/></svg>Reverse</button><label class="switch-control"><input id="sync-toggle" type="checkbox">Tempo match</label><button id="reset-region-button" class="text-button">Reset region</button><button id="reset-phase-button" class="text-button">Reset phase</button></div><p class="panel-hint">Trim the region to make a new loop. Speed changes pitch; tempo match follows the project tempo.</p></div><div id="tape-panel" class="editor-panel" role="tabpanel" hidden><div class="panel-topline"><h3>Season the mechanism.</h3><span class="tag">PER-DECK CHARACTER</span></div><div id="tape-controls" class="parameter-grid"></div><p class="panel-hint">Wow wanders slowly. Flutter trembles quickly. Wear, hiss, and dropouts season the tape.</p></div><div id="record-panel" class="editor-panel" role="tabpanel" hidden><div class="panel-topline"><h3>Prepare another layer.</h3><span id="deck-record-status" class="tag">READY TO RECORD</span></div><div class="record-settings"><label class="field-label" for="record-source">Record source<select id="record-source"><option value="keys">Built-in keys</option><option value="mic">Microphone</option><option value="both">Keys + microphone</option><option value="resample">Other decks + keys</option></select></label><label class="field-label" for="record-mode">Mode<select id="record-mode"><option value="replace">Replace loop</option><option value="overdub">Overdub loop</option></select></label><label class="field-label" for="record-bars">Length<select id="record-bars"><option value="1">1 bar</option><option value="2" selected>2 bars</option><option value="4">4 bars</option><option value="0">Manual stop</option></select></label><label class="switch-control record-quantize"><input id="record-quantize" type="checkbox" checked>Start on next bar</label></div><div class="record-strip"><button id="mic-button" class="button"><svg><use href="#i-mic"/></svg><span>Enable microphone</span></button><button id="deck-record-button" class="button record-button"><i></i><span>Record loop</span></button><span id="deck-record-time" class="record-time">00:00</span><div id="input-meter" class="small-meter"><i></i></div></div><div id="overdub-controls" class="overdub-controls"></div><p class="panel-hint">Use the keys below, import a sound, or record your microphone. Overdub adds a layer to the selected loop; Undo restores the previous take.</p></div></div></section>
       <section id="spool-performance" tabindex="-1" class="performance-grid"><div class="instrument-section" aria-labelledby="instrument-title"><div class="mini-heading"><span class="section-index">02</span><h2 id="instrument-title">THE PREP COUNTER</h2><span class="tag">PLAY &amp; RECORD</span></div><p class="section-note">Fresh notes. Ready for the rotating line.</p><div class="instrument-settings"><label class="field-label" for="instrument-type">Voice<select id="instrument-type"></select></label><label class="field-label" for="instrument-octave">Octave<select id="instrument-octave"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label></div><div id="instrument-controls" class="instrument-controls"></div><label class="switch-control instrument-monitor"><input id="instrument-monitor" type="checkbox" checked>Monitor instrument</label><div id="piano" class="piano" role="group" aria-label="Playable keyboard"></div><div class="keyboard-caption"><span>A W S E D F T G Y H U J K</span><span>COMPUTER KEYS OR TOUCH</span></div></div><div class="performance-section" aria-labelledby="performance-title"><div class="mini-heading"><span class="section-index">03</span><h2 id="performance-title">CHEF’S INTERVENTION</h2></div><p class="section-note">Hold a gesture. Adjust the service.</p><div class="performance-buttons"><button id="brake-button" class="performance-button brake-button" aria-pressed="false"><span class="performance-symbol">Ⅱ</span><b>Tape brake</b><small>HOLD TO SLOW TIME</small></button><button id="reverse-all-button" class="performance-button" aria-pressed="false"><span class="performance-symbol">↶</span><b>Reverse all</b><small>HOLD TO TURN BACK</small></button></div><div id="performance-controls" class="performance-controls"></div><div class="performance-note"><span>TIMING IS<br>CHEF’S PREROGATIVE.</span><svg viewBox="0 0 150 30" aria-hidden="true"><path d="M0 15h35c12 0 8-13 18-13s4 26 15 26 5-26 15-26 7 26 17 26 6-13 16-13h34"/></svg></div></div></section>
       <section id="spool-output" tabindex="-1" class="master-section" aria-labelledby="master-title"><div class="section-heading"><div class="heading-group"><span class="section-index">04</span><h2 id="master-title">THE OUTPUT COUNTER</h2><span class="tag">STEREO OUTPUT</span></div><div class="heading-actions"><button id="capture-button" class="button record-button"><i></i><span>Record output</span></button><span id="capture-time" class="record-time">00:00</span></div></div><div class="master-body"><div class="vu-console"><div class="vu-scale"><span>−30</span><span>−20</span><span>−10</span><span>−6</span><span>0</span></div><div class="vu-row"><span>L</span><div class="vu-track"><i id="meter-left"></i></div></div><div class="vu-row"><span>R</span><div class="vu-track"><i id="meter-right"></i></div></div><div class="vu-bottom"><span id="output-level">−∞ dB</span><span>ALLOW ROOM FOR EXPANSION.</span></div></div><div id="master-controls" class="master-controls"></div></div></section>
@@ -592,7 +608,7 @@ body {
     <footer class="footer"><span><i id="audio-status-dot"></i><span id="audio-status">READY WHEN YOU ARE</span></span><span>THE SPECIAL HAS COME ROUND AGAIN.</span><button id="about-button" class="text-button">ROTISSERIE v1.0.1 <span>↗</span></button></footer>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div><input id="audio-file" type="file" accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aiff" hidden><input id="project-file" type="file" accept=".json,.spool,application/json" hidden>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><span class="eyebrow">ROTATION STATION / OPERATING NOTES</span><h2 id="help-title">Load. Rotate. Repeat.</h2></div><button id="close-help" class="icon-button" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>ROTISSERIE mixes four independent stereo loops. Every deck has its own region, speed, direction, tone, tape character, and position. Select a deck to edit it; changing its controls does not stop the other loops.</p><div class="help-grid"><div><h3>Make a loop</h3><p>Choose a house recipe and press Play, or import audio into a deck. Trim Region start and Region end to choose what repeats. Speed changes pitch and length. Tempo match adjusts playback to the project tempo by fitting the selected region to Loop beats at the project tempo.</p></div><div><h3>Record &amp; overdub</h3><p>Choose Built-in keys, Microphone, Keys + microphone, or Other decks + keys. Other decks records the rest of the mix and the playable keys, excluding the selected deck. Choose a length in bars and press Record loop. With Start on next bar enabled, recording waits for the next bar while playing. Overdub adds to the selected loop while following its current speed and direction. Overdub feedback controls how much of the previous layer survives each pass. Stop finishes the current take; Panic cancels it. Undo restores the previous take.</p></div><div><h3>Play the instrument</h3><p>Click or touch the keyboard, or use A W S E D F T G Y H U J K. Choose a voice and shape its envelope. The instrument feeds the output and can be recorded directly without a microphone.</p></div><div><h3>Keep your sounds</h3><p>Save project includes all loop audio and settings. Open project restores them. Export WAV renders the mix or a single deck. Record output captures a live performance, including gestures and the playable instrument. Each imported or recorded loop can contain up to 30 seconds; output recording can run for 3 minutes.</p></div></div><div class="shortcut-list"><span><kbd>Space</kbd> Play / stop</span><span><kbd>1–4</kbd> Select deck</span><span><kbd>Ctrl / ⌘ Z</kbd> Undo</span><span><kbd>Esc</kbd> Panic / close</span></div><p class="help-note">Microphone input requires browser permission and a secure context. On browsers that restrict microphone access from a local HTML file, use the hosted version. Imported audio and the built-in instrument work without microphone access.</p><div class="dialog-links"><a id="download-html" href="./index.html" download="ROTISSERIE.html">Download standalone HTML ↗</a><a id="download-source" href="./SPOOL-source.zip" download="ROTISSERIE-source.zip">Download source ZIP ↗</a></div></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><span class="eyebrow">ROTATION STATION / OPERATING NOTES</span><h2 id="help-title">Load. Rotate. Repeat.</h2></div><button id="close-help" class="icon-button" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>ROTISSERIE mixes four independent stereo loops. Every deck has its own region, speed, direction, tone, tape character, and position. Select a deck to edit it; changing its controls does not stop the other loops.</p><p>Choose <b>Step patterns</b> in Sequencing to trigger the decks on sixteenth-note steps. Patterns A–D each keep 16 or 32 steps. Toggle each deck’s steps; Velocity sets new steps and Gate sets the played slice length. Switch back to Continuous loops to restore the original deck playback. Both modes, all banks and hidden steps are saved and included in Undo. Mix exports follow the chosen mode; Deck WAV still exports one complete loop.</p><div class="help-grid"><div><h3>Make a loop</h3><p>Choose a house recipe and press Play, or import audio into a deck. Trim Region start and Region end to choose what repeats. Speed changes pitch and length. Tempo match adjusts playback to the project tempo by fitting the selected region to Loop beats at the project tempo.</p></div><div><h3>Record &amp; overdub</h3><p>Choose Built-in keys, Microphone, Keys + microphone, or Other decks + keys. Other decks records the rest of the mix and the playable keys, excluding the selected deck. Choose a length in bars and press Record loop. With Start on next bar enabled, recording waits for the next bar while playing. Overdub adds to the selected loop while following its current speed and direction. Overdub feedback controls how much of the previous layer survives each pass. Stop finishes the current take; Panic cancels it. Undo restores the previous take.</p></div><div><h3>Play the instrument</h3><p>Click or touch the keyboard, or use A W S E D F T G Y H U J K. Choose a voice and shape its envelope. The instrument feeds the output and can be recorded directly without a microphone.</p></div><div><h3>Keep your sounds</h3><p>Save project includes all loop audio and settings. Open project restores them. Export WAV renders the mix or a single deck. Record output captures a live performance, including gestures and the playable instrument. Each imported or recorded loop can contain up to 30 seconds; output recording can run for 3 minutes.</p></div></div><div class="shortcut-list"><span><kbd>Space</kbd> Play / stop</span><span><kbd>1–4</kbd> Select deck</span><span><kbd>Ctrl / ⌘ Z</kbd> Undo</span><span><kbd>Esc</kbd> Panic / close</span></div><p class="help-note">Microphone input requires browser permission and a secure context. On browsers that restrict microphone access from a local HTML file, use the hosted version. Imported audio and the built-in instrument work without microphone access.</p><div class="dialog-links"><a id="download-html" href="./index.html" download="ROTISSERIE.html">Download standalone HTML ↗</a><a id="download-source" href="./SPOOL-source.zip" download="ROTISSERIE-source.zip">Download source ZIP ↗</a></div></dialog>
   <dialog id="export-dialog" aria-labelledby="export-title"><div class="dialog-heading"><div><span class="eyebrow">PACK THE FINISHED BATCH</span><h2 id="export-title">Export your loops.</h2></div><button id="close-export" class="icon-button" aria-label="Close export"><svg><use href="#i-close"/></svg></button></div><p>Render the current loops and tape character as a stereo WAV file. Live microphone input is included only in Record output.</p><div class="export-fields"><label class="field-label" for="export-target">Source<select id="export-target"><option value="mix">Stereo mix</option><option value="0">Deck A</option><option value="1">Deck B</option><option value="2">Deck C</option><option value="3">Deck D</option></select></label><label class="field-label" for="export-bars">Length<select id="export-bars"><option value="2">2 bars</option><option value="4" selected>4 bars</option><option value="8">8 bars</option><option value="16">16 bars</option></select></label><label class="field-label" for="export-tail">Effect tail<select id="export-tail"><option value="0">No tail</option><option value="2" selected>2 seconds</option><option value="6">6 seconds</option></select></label></div><button id="render-button" class="button render-button"><svg><use href="#i-download"/></svg><span>Render stereo WAV</span></button><p id="export-status" class="export-status" role="status"></p></dialog>
   <dialog id="confirm-dialog" aria-labelledby="confirm-title"><div class="dialog-heading"><div><span class="eyebrow">CHECK THE ORDER BEFORE REPLACING</span><h2 id="confirm-title">Replace this recipe?</h2></div><button id="close-confirm" class="icon-button" aria-label="Cancel"><svg><use href="#i-close"/></svg></button></div><p id="confirm-message">This will replace your current loops. Save your project first if you want to keep it.</p><div class="confirm-actions"><button id="confirm-cancel" class="button">Cancel</button><button id="confirm-accept" class="button primary-button">Replace recipe</button></div></dialog>
   <script>
@@ -625,6 +641,7 @@ body {
   const str = (v, fallback, length = 64) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, length) || fallback : fallback;
   const pick = (v, values, fallback) => values.includes(v) ? v : fallback;
   const bool = (v, fallback = false) => typeof v === 'boolean' ? v : fallback;
+  function patternBanks(raw) { return Array.from({length:4},(_,bank)=>{const r=raw?.[bank]||{};return {length:r.length===32?32:16,gate:num(r.gate,.05,1,.8),score:Array.from({length:4},(_,deck)=>Array.from({length:32},(_,step)=>num(r.score?.[deck]?.[step],0,1,bank===0&&step%[4,8,8,16][deck]===0?[.85,.75,.6,.5][deck]:0)))};}); }
   function seedAsset(id, name, options = {}) {
     return { kind: 'seed', name, id, seed: options.seed ?? 0x53504f4f, tempo: options.tempo ?? 96, bars: options.bars ?? 2, pitch: options.pitch ?? 48 };
   }
@@ -640,6 +657,7 @@ body {
   function defaultState() {
     return {
       version: VERSION, name: 'The special keeps coming round', tempo: 96,
+      sequenceMode:'native', selectedPattern:0, patternBanks:patternBanks(),
       master: { volume: .70, width: .83, echo: .15, echoDivision: '3/16', feedback: .36, space: .16 },
       decks: Array.from({ length: 4 }, (_, i) => defaultDeck(i)),
       assets: [
@@ -677,6 +695,7 @@ body {
     const m = raw.master || {}, source = raw.source || {}, record = raw.record || {};
     const state = {
       version: VERSION, name: str(raw.name, d.name, 100), tempo: num(raw.tempo, 40, 180, d.tempo),
+      sequenceMode:raw.sequenceMode==='pattern'?'pattern':'native', selectedPattern:int(raw.selectedPattern,0,3,0), patternBanks:patternBanks(raw.patternBanks),
       master: {
         volume: num(m.volume, 0, 1, d.master.volume), width: num(m.width, 0, 1, d.master.width),
         echo: num(m.echo, 0, 1, d.master.echo), echoDivision: pick(m.echoDivision, DIVISIONS, d.master.echoDivision),
@@ -719,6 +738,15 @@ body {
     }
     return state;
   }
+  function validateSequencing(state) {
+    const own=key=>Object.prototype.hasOwnProperty.call(state,key),invalid=()=>{throw new Error('The project contains invalid step patterns.');};
+    if(own('sequenceMode')&&!['native','pattern'].includes(state.sequenceMode))invalid();
+    if(own('selectedPattern')&&(!Number.isInteger(state.selectedPattern)||state.selectedPattern<0||state.selectedPattern>3))invalid();
+    if(own('patternBanks')){
+      if(!Array.isArray(state.patternBanks)||state.patternBanks.length!==4)invalid();
+      for(const bank of state.patternBanks)if(!bank||![16,32].includes(bank.length)||typeof bank.gate!=='number'||!Number.isFinite(bank.gate)||bank.gate<.05||bank.gate>1||!Array.isArray(bank.score)||bank.score.length!==4||bank.score.some(row=>!Array.isArray(row)||row.length!==32||row.some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0||value>1)))invalid();
+    }
+  }
   function parseProject(json) {
     if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a ROTISSERIE project smaller than 32 MB.');
     let project;
@@ -726,7 +754,7 @@ body {
     if (!project || project.format !== 'spool-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a ROTISSERIE project file (.spool.json).');
     const s = project.state;
     if (!Array.isArray(s.decks) || s.decks.length !== 4 || !Array.isArray(s.assets) || s.assets.length !== 4 || !s.master || !s.source || !s.record) throw new Error('This ROTISSERIE project needs four complete decks and their audio assets.');
-    const state = normalize(s);
+    validateSequencing(s);const state = normalize(s);
     for (let i = 0; i < 4; i++) {
       const raw = s.assets[i], asset = state.assets[i];
       if (raw == null) continue;
@@ -880,7 +908,7 @@ body {
     class Core {
       constructor(sampleRate,state,seed=0x53504f4f) {
         this.sr=clamp(sampleRate,8000,192000);this.frame=0;this.transportFrames=0;this.running=false;this.seed=seed>>>0||1;
-        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.patternMode=false;this.noteSequence=0;this.deckGates=Array(4).fill(null);this.sourceCuts=new Map();this.capture=null;this.completed=[];
+        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.patternMode=false;this.noteSequence=0;this.deckGates=Array(4).fill(null);this.sourceCuts=new Map();this.capture=null;this.completed=[];this.lastSequenceStep=-1;this.sequenceBeat=0;
         this.micEnabled=false;this.peak=0;this.rms=0;this.rmsLeft=0;this.rmsRight=0;this.inputRms=0;this.limiter=1;this.volume=.72;this.braking=false;this.brakeRate=1;
         this.echo=[new Float32Array(Math.ceil(this.sr*4)+4),new Float32Array(Math.ceil(this.sr*4)+4)];this.echoWrite=0;this.echoLP=[0,0];this.echoDelay=this.sr*.375;
         this.room=[.0297,.0371,.0411,.0437,.0307,.0383,.0423,.0449].map(s=>({pcm:new Float32Array(Math.round(s*this.sr)),index:0,low:0}));
@@ -888,7 +916,12 @@ body {
       }
       random(){let x=this.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.seed=x>>>0;return this.seed/4294967296;}
       setState(state) {
+        if(this.state&&(state.sequenceMode!==this.state.sequenceMode||state.selectedPattern!==this.state.selectedPattern)){
+          this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);this.lastSequenceStep=-1;
+        }
         this.state=state||{};this.tempo=this.followingClock??clamp(state.tempo||92,40,200);
+        this.nativePattern=state.sequenceMode==='pattern';const bank=state.patternBanks?.[Math.round(clamp(state.selectedPattern||0,0,3))]||{};
+        this.sequence={length:bank.length===32?32:16,gate:clamp(bank.gate??.8,.05,1),score:Array.from({length:4},(_,deck)=>Array.from({length:32},(_,step)=>clamp(bank.score?.[deck]?.[step]||0,0,1)))};
         this.decks.forEach((d,i)=>{const raw=(state.decks||[])[i]||{};const t=Object.assign({},d.target,raw);delete t.asset;
           ['level','pan','rate','start','end','phase','beats','seam','tone','highpass','saturation','wow','flutter','wear','hiss','dropouts'].forEach(k=>{t[k]=finite(t[k],d.target[k]);});
           t.level=clamp(t.level,0,1.5);t.pan=clamp(t.pan,-1,1);t.start=clamp(t.start,0,.999);t.end=clamp(t.end,t.start+.002,1);t.start=Math.min(t.start,t.end-.002);t.rate=clamp(t.rate,.25,2);t.phase=clamp(t.phase,0,1);t.beats=clamp(t.beats,1,64);t.seam=clamp(t.seam,0,250);
@@ -900,15 +933,15 @@ body {
         this.input=Object.assign({voice:'sine',root:48,decay:600,tone:8000,level:.65,monitor:true},state.source||{});this.recordSettings=Object.assign({input:'keys',bars:0,quantize:false,feedback:.85},state.record||{});
       }
       setSample(index,pcm,sampleRate,preserve=false){if(index<0||index>3)return;this.decks[index].setAsset(pcm?.length?{pcm,sampleRate:clamp(sampleRate,8000,96000)}:null,preserve);if(!preserve)this.decks[index].rewind();}
-      start(rewind=false){if(rewind)this.rewind();this.running=true;}
+      start(rewind=false){if(rewind)this.rewind();this.lastSequenceStep=-1;this.running=true;}
       stop(){this.running=false;this.followingClock=null;this.events=[];this.sourceCuts.clear();this.patternMode=false;this.deckGates.fill(null);this.voices.forEach(v=>v.releasing=true);}
-      rewind(){this.transportFrames=0;this.decks.forEach(d=>d.rewind());}
+      rewind(){this.transportFrames=0;this.sequenceBeat=0;this.lastSequenceStep=-1;this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);this.decks.forEach(d=>d.rewind());}
       retrigger(index){this.decks[index]?.transition();this.decks[index]?.rewind();}
       seek(index,ratio){const d=this.decks[index];if(d){d.transition();d.position=clamp(ratio,0,1)*d.region().length;}}
       panic(){this.stop();this.voices=[];this.echo.forEach(x=>x.fill(0));this.echoLP=[0,0];this.room.forEach(x=>{x.pcm.fill(0);x.low=0;});this.decks.forEach(x=>{x.clear();x.crossfade=null;x.gain=0;});if(this.capture)this.cancelCapture();this.micEnabled=false;this.volume=0;this.braking=false;this.brakeRate=1;}
       queueDeck(index, options, frame) {
         if(frame>=(this.sourceCuts.get(options.source)??Infinity))return;
-        const token=++this.noteSequence;this.patternMode=true;
+        const token=++this.noteSequence;if(options.source!=='native-sequence')this.patternMode=true;
         this.events.push({type:'deckOn',index,options,source:options.source,frame,token},{type:'deckOff',index,source:options.source,frame:frame+Math.max(1,Math.round(options.duration*this.sr)),token});
         this.events.sort((a,b)=>a.frame-b.frame);return token;
       }
@@ -922,19 +955,20 @@ body {
       clearClockEvents(){this.events=this.events.filter(event=>event.type!=='clock');}
       queueClock(beat,tempo,playing,frame){this.events.push({type:'clock',beat,tempo,playing,frame});this.events.sort((a,b)=>a.frame-b.frame);}
       clockSeek(beat,tempo,playing){
-        this.tempo=clamp(tempo,20,400);this.followingClock=playing?this.tempo:null;this.transportFrames=Math.max(0,beat)*60/this.tempo*this.sr;this.running=playing;
-        this.decks.forEach(d=>{d.transition();d.prepare(this.tempo,playing,this.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;d.position=wrap(d.target.phase*d.region().length+Math.max(0,beat)*60/this.tempo*(d.asset?.sampleRate||this.sr)*d.targetRate,d.region().length);});
+        this.tempo=clamp(tempo,20,400);this.followingClock=playing?this.tempo:null;this.transportFrames=Math.max(0,beat)*60/this.tempo*this.sr;this.sequenceBeat=Math.max(0,beat);this.running=playing;
+        this.lastSequenceStep=-1;this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);
+        this.decks.forEach(d=>{d.transition();d.prepare(this.tempo,playing&&!this.nativePattern,this.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;d.position=wrap(d.target.phase*d.region().length+Math.max(0,beat)*60/this.tempo*(d.asset?.sampleRate||this.sr)*d.targetRate,d.region().length);});
       }
       applyEvent(event){
         if(event.type==='cancel'){
-          this.decks.forEach(deck=>{if(this.deckGates[deck.index]?.source===event.source){this.deckGates[deck.index]=null;deck.targetGain=this.running&&this.followingClock!=null?clamp(deck.target.level,0,1.5):0;}});return;
+          this.decks.forEach(deck=>{if(this.deckGates[deck.index]?.source===event.source){this.deckGates[deck.index]=null;deck.targetGain=this.running&&this.followingClock!=null&&!this.nativePattern?clamp(deck.target.level,0,1.5):0;}});return;
         }
         if(event.type==='clock'){this.clockSeek(event.beat,event.tempo,event.playing);return;}
         const deck=this.decks[event.index];if(!deck)return;
         if(event.type==='deckOn'){this.deckGates[event.index]={source:event.source||'native',token:event.token,velocity:event.options.velocity,pitch:event.options.pitch||0};deck.transition();deck.rewind();}
         else if(this.deckGates[event.index]?.token===event.token)this.deckGates[event.index]=null;
-        const continuous=this.running&&this.followingClock!=null;
-        deck.prepare(this.tempo,!!this.deckGates[event.index]||continuous,false,1);deck.targetGain*=this.deckGates[event.index]?.velocity??(continuous?1:0);deck.targetRate*=Math.pow(2,(this.deckGates[event.index]?.pitch||0)/12);if(event.type==='deckOn')deck.rate=deck.targetRate;
+        const continuous=this.running&&this.followingClock!=null&&!this.nativePattern;
+        deck.prepare(this.tempo,!!this.deckGates[event.index]||continuous,this.decks.some(d=>d.target.solo),1);deck.targetGain*=this.deckGates[event.index]?.velocity??(continuous?1:0);deck.targetRate*=Math.pow(2,(this.deckGates[event.index]?.pitch||0)/12);if(event.type==='deckOn')deck.rate=deck.targetRate;
       }
       noteOn(note,velocity=1){note=clamp(note,24,108)|0;this.noteOff(note);if(this.voices.length>=20)this.voices.shift();this.voices.push({note,frequency:midi(note),phase:0,age:0,envelope:0,releasing:false,velocity:clamp(velocity,.01,1),type:this.input.voice||'sine',low:0});}
       noteOff(note){this.voices.forEach(v=>{if(v.note===note)v.releasing=true;});}
@@ -979,17 +1013,18 @@ body {
       }
       cancelCapture(){if(this.capture?.original)this.decks[this.capture.index].asset.pcm=this.capture.original;this.capture=null;}
       processBlock(left,right,inputLeft,inputRight,clockFrame=this.frame) {
-        const n=left.length,solo=this.decks.some(d=>d.target.solo);this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{const gate=this.deckGates[d.index],continuous=this.running&&this.followingClock!=null;d.prepare(this.tempo,this.patternMode?!!gate||continuous:this.running,solo,n);if(this.patternMode){d.targetGain*=gate?.velocity??(continuous?1:0);d.targetRate*=Math.pow(2,(gate?.pitch||0)/12);}d.targetRate*=this.brakeRate;});
+        const n=left.length,solo=this.decks.some(d=>d.target.solo),gated=this.patternMode||this.nativePattern;this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{const gate=this.deckGates[d.index],continuous=this.running&&this.followingClock!=null&&!this.nativePattern;d.prepare(this.tempo,gated?!!gate||continuous:this.running,solo,n);if(gated){d.targetGain*=gate?.velocity??(continuous?1:0);d.targetRate*=Math.pow(2,(gate?.pitch||0)/12);}d.targetRate*=this.brakeRate;});
         const m=this.master,volume=clamp(m.volume,0,1),width=clamp(m.width,0,2),echoMix=clamp(m.echo,0,1),space=clamp(m.space,0,1);
         const divisions={'1/16':.25,'1/8':.5,'3/16':.75,'1/4':1,'3/8':1.5,'1/2':2,'3/4':3,'1/1':4};
         const time=60/this.tempo*(divisions[m.echoDivision]||.5);
         const targetDelay=clamp(time*this.sr,1,this.echo[0].length-2),feedback=clamp(m.feedback,0,.88),roomFeedback=.81;
         for(let i=0;i<n;i++){
+          if(this.running&&this.nativePattern){const step=Math.floor(this.sequenceBeat*4+1e-9);if(step!==this.lastSequenceStep){this.lastSequenceStep=step;for(let deck=0;deck<4;deck++){const velocity=this.sequence.score[deck][step%this.sequence.length];if(velocity>0)this.queueDeck(deck,{velocity,pitch:0,duration:60/this.tempo/4*this.sequence.gate,source:'native-sequence'},clockFrame+i);}}}
           while(this.events.length&&this.events[0].frame<=clockFrame+i)this.applyEvent(this.events.shift());
           const key=this.keyboardTick(),micL=this.micEnabled?(inputLeft?.[i]||0):0,micR=this.micEnabled?(inputRight?.[i]??micL):0;
           const source=this.capture?.options.input||this.recordSettings.input;let il=(source==='mic'?micL:source==='both'?micL+key:key),ir=(source==='mic'?micR:source==='both'?micR+key:key);
           const positions=this.capture?.mode==='overdub'?this.decks[this.capture.index].position:0;
-          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),this.patternMode?!!this.deckGates[d.index]||this.running&&this.followingClock!=null:this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
+          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),gated?!!this.deckGates[d.index]||this.running&&this.followingClock!=null&&!this.nativePattern:this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
           this.captureTick(il,ir,positions);
           if(this.input.monitor){l+=key+(this.micEnabled&&source!=='keys'?micL*.7:0);r+=key+(this.micEnabled&&source!=='keys'?micR*.7:0);}
           const mid=(l+r)*.5,side=(l-r)*.5*width;l=mid+side;r=mid-side;
@@ -1005,10 +1040,10 @@ body {
           l=Math.tanh(l*this.limiter);r=Math.tanh(r*this.limiter);if(!Number.isFinite(l)||!Number.isFinite(r)){l=r=0;this.panic();}
           left[i]=l;right[i]=r;this.peak=Math.max(peak,this.peak*.999);this.rmsLeft+=.001*(l*l-this.rmsLeft);this.rmsRight+=.001*(r*r-this.rmsRight);this.rms=(this.rmsLeft+this.rmsRight)*.5;this.inputRms+=.001*((il*il+ir*ir)*.5-this.inputRms);
           if(++this.waveCount>=Math.max(1,Math.floor(this.sr/1024))){this.waveCount=0;this.waveform[this.waveWrite]=(l+r)*.5;this.waveWrite=(this.waveWrite+1)%128;}
-          if(this.running)this.transportFrames++;this.frame++;
+          if(this.running){this.transportFrames++;if(this.nativePattern)this.sequenceBeat+=this.tempo/(60*this.sr);}this.frame++;
         }
       }
-      meters(){const beats=this.transportFrames/this.sr*this.tempo/60,levels=this.decks.map(d=>Math.sqrt(Math.max(0,d.rms)));return{decks:levels,nodes:levels,positions:this.decks.map(d=>wrap(d.position,d.region().length)/d.region().length),peak:this.peak,rms:Math.sqrt(Math.max(0,this.rms)),rmsLeft:Math.sqrt(Math.max(0,this.rmsLeft)),rmsRight:Math.sqrt(Math.max(0,this.rmsRight)),input:Math.sqrt(Math.max(0,this.inputRms)),step:this.running?Math.floor(beats*4)%16:-1,beat:beats,recordSeconds:this.capture?.frames/this.sr||0,recordStatus:this.capture?.status||'idle',recording:this.capture?{index:this.capture.index,mode:this.capture.mode,status:this.capture.status,seconds:this.capture.frames/this.sr,limit:this.capture.maxFrames/this.sr}:null,waveform:Array.from(this.waveform),playing:this.running};}
+      meters(){const beats=this.nativePattern?this.sequenceBeat:this.transportFrames/this.sr*this.tempo/60,levels=this.decks.map(d=>Math.sqrt(Math.max(0,d.rms)));return{decks:levels,nodes:levels,positions:this.decks.map(d=>wrap(d.position,d.region().length)/d.region().length),peak:this.peak,rms:Math.sqrt(Math.max(0,this.rms)),rmsLeft:Math.sqrt(Math.max(0,this.rmsLeft)),rmsRight:Math.sqrt(Math.max(0,this.rmsRight)),input:Math.sqrt(Math.max(0,this.inputRms)),step:this.running?Math.floor(beats*4)%(this.nativePattern?this.sequence.length:16):-1,beat:beats,recordSeconds:this.capture?.frames/this.sr||0,recordStatus:this.capture?.status||'idle',recording:this.capture?{index:this.capture.index,mode:this.capture.mode,status:this.capture.status,seconds:this.capture.frames/this.sr,limit:this.capture.maxFrames/this.sr}:null,waveform:Array.from(this.waveform),playing:this.running};}
     }
     Core.read=read;Core.seamRead=seamRead;return Core;
   }
@@ -1221,7 +1256,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
     }
     async stopRecording(){const token=this._mixToken,startPromise=this._mixStartPromise;if(startPromise)await startPromise;if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);if(this.isRecording&&this.mode==='worklet'){await this.context.resume();if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);await new Promise(resolve=>{this._mixResolve=resolve;this.node.port.postMessage({type:'mixStop',token});});}if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);this.isRecording=false;++this._mixToken;const blob=wavBlob(this._mixChunks,this._mixFrames,this.context?.sampleRate||48000);this._mixChunks=[];this._mixFrames=0;return blob;}
     async renderWav(bars=4,tailSeconds=4,options={}){const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),lengthBars=Math.round(clamp(Number(bars)||4,1,16)),playSeconds=lengthBars*240/clamp(state.tempo,40,180),seconds=playSeconds+clamp(Number(tailSeconds)||0,0,15);return this._render(state,seconds,playSeconds,options);}
-    async renderDeckWav(index,options={}){index=clamp(index,0,3)|0;if(!this._assets[index])throw new Error('This deck has no loop to export.');const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),d=state.decks[index],asset=this._assets[index],regionSeconds=Math.max(.002,d.end-d.start)*asset.pcm.length/2/asset.sampleRate,rate=clamp(d.sync?regionSeconds/(d.beats*60/state.tempo)*d.rate:d.rate,-12,12),seconds=Math.min(120,regionSeconds/Math.max(.02,Math.abs(rate)));state.decks.forEach((deck,i)=>{deck.mute=i!==index;deck.solo=false;});d.level=1;d.pan=0;state.master={volume:.9,width:1,echo:0,feedback:0,space:0};return this._render(state,seconds,seconds,options);}
+    async renderDeckWav(index,options={}){index=clamp(index,0,3)|0;if(!this._assets[index])throw new Error('This deck has no loop to export.');const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),d=state.decks[index],asset=this._assets[index],regionSeconds=Math.max(.002,d.end-d.start)*asset.pcm.length/2/asset.sampleRate,rate=clamp(d.sync?regionSeconds/(d.beats*60/state.tempo)*d.rate:d.rate,-12,12),seconds=Math.min(120,regionSeconds/Math.max(.02,Math.abs(rate)));state.sequenceMode='native';state.decks.forEach((deck,i)=>{deck.mute=i!==index;deck.solo=false;});d.level=1;d.pan=0;state.master={volume:.9,width:1,echo:0,feedback:0,space:0};return this._render(state,seconds,seconds,options);}
     async _render(state,seconds,playSeconds,options={}){const checkCancelled=()=>{if(options.signal?.aborted)throw new DOMException('Audio export cancelled.','AbortError');};checkCancelled();const sampleRate=48000,core=new DSP(sampleRate,state);this._assets.forEach((asset,i)=>{if(asset)core.setSample(i,new Float32Array(asset.pcm),asset.sampleRate);});core.start(true);core.decks.forEach(d=>{d.prepare(core.tempo,true,core.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;});const totalFrames=Math.round(seconds*sampleRate),stopAt=Math.round(playSeconds*sampleRate),chunks=[];let rendered=0;this.onStatus?.('Rendering stereo tape audio…');
       while(rendered<totalFrames){checkCancelled();const count=Math.min(4096,totalFrames-rendered),pcm=new Float32Array(count*2);for(let at=0;at<count;at+=128){if(rendered+at>=stopAt)core.stop();const size=Math.min(128,count-at),l=new Float32Array(size),r=new Float32Array(size);core.processBlock(l,r);for(let i=0;i<size;i++){const frame=rendered+at+i,fade=sampleRate*.012,gain=Math.max(0,Math.min(1,frame/fade,(totalFrames-frame-1)/fade));pcm[(at+i)*2]=l[i]*gain;pcm[(at+i)*2+1]=r[i]*gain;}}chunks.push(pcm);rendered+=count;await new Promise(resolve=>setTimeout(resolve,0));}checkCancelled();return wavBlob(chunks,totalFrames,sampleRate);}
     dispose(){this.panic();this._disposed=true;this.isRecording=false;++this._mixToken;this._mixResolve?.();this._mixResolve=null;this.node?.disconnect();this._output?.disconnect();this.context?.close().catch(()=>{});this._assets=[];this._mixChunks=[];}
@@ -1257,7 +1292,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
   engine = new window.SpoolAudio(state);
 
   function snapshot() {
-    return { ...state, master: { ...state.master }, source: { ...state.source }, record: { ...state.record }, decks: state.decks.map(d => ({ ...d })), assets: state.assets.slice() };
+    return { ...state, master: { ...state.master }, source: { ...state.source }, record: { ...state.record }, decks: state.decks.map(d => ({ ...d })), assets: state.assets.slice(), patternBanks:state.patternBanks.map(bank=>({...bank,score:bank.score.map(row=>row.slice())})) };
   }
   function remember() { const entry = snapshot(); history.push(entry); if (history.length > 28) history.shift(); $('undo-button').disabled = false; return entry; }
   function forget(entry) { if (!entry) return; const i = history.indexOf(entry); if (i >= 0) history.splice(i, 1); $('undo-button').disabled = !history.length || !!engine.deckRecording; }
@@ -1324,6 +1359,24 @@ class SpoolProcessor extends AudioWorkletProcessor {
     $('play-button').querySelector('span').textContent = playing ? 'Stop' : 'Play'; $('play-button').setAttribute('aria-label', playing ? 'Stop loops' : 'Play loops');
     $('audio-status-dot').classList.toggle('active', playing || engine.micEnabled); $('audio-status').textContent = playing ? 'TAPE IN MOTION' : engine.micEnabled ? 'MICROPHONE ENABLED' : 'READY WHEN YOU ARE'; updateDeckReadouts();
   }
+  function patternChanged(){
+    const imported=!!state.musicLabPattern,playing=engine.isPlaying;
+    if(imported){engine.stop();delete state.musicLabPattern;}
+    changed();
+    if(imported){updatePlayback();if(playing)engine.start().then(updatePlayback).catch(error=>toast(errorMessage(error)));}
+  }
+  function renderPattern() {
+    const bank=state.patternBanks[state.selectedPattern];$('sequence-mode').value=state.sequenceMode;$('step-pattern-panel').hidden=state.sequenceMode!=='pattern';$('pattern-bank').value=state.selectedPattern;$('pattern-length').value=bank.length;$('pattern-gate').value=Math.round(bank.gate*100);$('pattern-grid').replaceChildren();
+    for(let deck=0;deck<4;deck++){
+      const row=document.createElement('div');row.className='step-pattern-row';const label=document.createElement('button');label.className='pattern-deck-label';label.type='button';label.textContent=String.fromCharCode(65+deck);label.setAttribute('aria-label',`Select deck ${label.textContent}`);label.addEventListener('click',()=>selectDeck(deck));row.append(label);const grid=document.createElement('div');grid.className='step-pattern-grid';
+      for(let step=0;step<bank.length;step++){const button=document.createElement('button'),velocity=bank.score[deck][step];button.type='button';button.className='pattern-step';button.textContent=step+1;button.dataset.step=step;button.setAttribute('aria-pressed',String(velocity>0));button.setAttribute('aria-label',`Deck ${label.textContent}, step ${step+1}${velocity>0?`, velocity ${Math.round(velocity*100)} percent`:`, off`}`);button.addEventListener('click',()=>{remember();bank.score[deck][step]=bank.score[deck][step]>0?0:clamp(Number($('pattern-velocity').value)||.8,.05,1);patternChanged();renderPattern();});grid.append(button);}row.append(grid);$('pattern-grid').append(row);
+    }
+  }
+  $('sequence-mode').addEventListener('change',()=>{remember();state.sequenceMode=$('sequence-mode').value;patternChanged();renderPattern();toast(state.sequenceMode==='pattern'?'Step patterns trigger your decks. The original continuous loops are preserved.':'Continuous loops restored. Your step patterns are preserved.');});
+  $('pattern-bank').addEventListener('change',()=>{remember();state.selectedPattern=Number($('pattern-bank').value);patternChanged();renderPattern();});
+  $('pattern-length').addEventListener('change',()=>{remember();state.patternBanks[state.selectedPattern].length=Number($('pattern-length').value);patternChanged();renderPattern();});
+  $('pattern-gate').addEventListener('change',()=>{remember();state.patternBanks[state.selectedPattern].gate=clamp((Number($('pattern-gate').value)||80)/100,.05,1);patternChanged();renderPattern();});
+  $('clear-pattern-button').addEventListener('click',()=>{remember();state.patternBanks[state.selectedPattern].score=Array.from({length:4},()=>Array(32).fill(0));patternChanged();renderPattern();});
   function renderDecks() {
     waveformObserver?.disconnect();
     $('deck-grid').innerHTML = state.decks.map((d, i) => `<article class="deck${i === selectedDeck ? ' selected' : ''}${!state.assets[i] ? ' deck-empty' : ''}" data-deck="${i}" style="--deck-color:${colors[i]}"><div class="deck-top"><button class="deck-select" aria-label="Select deck ${String.fromCharCode(65 + i)}: ${esc(displayDeckName(d.name))}" aria-pressed="${i === selectedDeck}"><span class="deck-letter">${String.fromCharCode(65 + i)}</span><span class="deck-title"><b>${esc(displayDeckName(d.name))}</b><small>STEREO TAPE · 0${i + 1}</small></span></button><i class="deck-light" aria-hidden="true"></i></div><div class="reel-stage" aria-hidden="true"><div class="reel left"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><div class="reel right"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><i class="tape-head"></i></div><div class="deck-waveform"><canvas width="512" height="128" role="img" aria-label="Deck ${String.fromCharCode(65 + i)} waveform. Drag region edges to trim the loop."></canvas><span class="wave-label">${state.assets[i] ? 'LOOP REGION' : 'EMPTY TAPE'}</span><span class="wave-duration">${state.assets[i] ? seconds(S.assetDuration(state.assets[i])) : '—'}</span>${state.assets[i] ? '' : '<span class="loop-empty">READY FOR A BATCH</span>'}</div><div class="deck-meta"><strong class="deck-speed">1.00×</strong><span class="deck-mode">FREE LOOP</span><span class="deck-duration">0.00 s</span></div><div class="deck-mix"><div class="deck-level"><label>LEVEL <output>${pct(d.level)}</output></label><input type="range" min="0" max="1.5" step=".01" value="${d.level}" aria-label="Deck ${String.fromCharCode(65 + i)} level" style="--fill:${pct(d.level / 1.5)}"></div><div class="deck-mix-buttons"><button class="deck-mix-button deck-mute" aria-label="Mute deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.mute}" title="Mute">M</button><button class="deck-mix-button deck-solo" aria-label="Solo deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.solo}" title="Solo">S</button></div></div></article>`).join('');
@@ -1423,7 +1476,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
     document.querySelectorAll('.deck').forEach((card, i) => card.classList.toggle('deck-recording', take?.index === i));
     $('capture-button').classList.toggle('recording', engine.isRecording); $('capture-button').querySelector('span').textContent = engine.isRecording ? 'Stop & save' : 'Record output'; $('capture-button').disabled = captureBusy || busy;
   }
-  function renderAll() { renderTransport(); renderDecks(); renderEditor(); renderInstrument(); renderMaster(); updateRecordUI(); }
+  function renderAll() { renderTransport(); renderDecks(); renderEditor(); renderInstrument(); renderMaster(); updateRecordUI(); renderPattern(); }
   function destructiveBlocked() { if (busy || engine.deckRecording) { toast(engine.deckRecording ? 'Finish or cancel the current take before replacing loops.' : 'Please wait for the current action to finish.'); return true; } return false; }
   function setBusy(value) { busy = value; updateRecordUI(); $('render-button').disabled = value; $('deck-export-button').disabled = value; }
   function randomSeed() { const arr = new Uint32Array(1); try { crypto.getRandomValues(arr); return arr[0] || 1; } catch (_) { return Math.floor(Math.random() * 0xfffffffe) + 1; } }
@@ -1551,6 +1604,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
     if (engine.isRecording) $('capture-time').textContent = clock(meters?.mixRecordSeconds ?? Math.max(0, (time - captureStart) / 1000));
     if (engine.deckRecording?.index === selectedDeck) $('deck-record-time').textContent = engine.deckRecording.status === 'armed' ? 'ARMED' : clock(meters?.deckRecordSeconds ?? meters?.recordSeconds ?? Math.max(0, (time - takeStarted) / 1000));
     $('input-meter').firstElementChild.style.width = meter(meters?.input || 0) + '%';
+    if(state.sequenceMode==='pattern')document.querySelectorAll('.pattern-step').forEach(button=>button.classList.toggle('playing',engine.isPlaying&&Number(button.dataset.step)===meters?.step));
     requestAnimationFrame(animate);
   }
 
@@ -2178,9 +2232,9 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
   }
   function sequenceSignature(s) {
     if (appId === 'fable') return JSON.stringify([s.selectedPattern, s.patterns]);
-    if (appId === 'bower') return JSON.stringify([s.evolution, s.lanes.map(l => [l.steps, l.length, l.division, l.direction])]);
-    if (appId === 'mire') return JSON.stringify(s.sources.map(source => source.steps));
-    return JSON.stringify([s.score, s.direction, s.bars]);
+    if (appId === 'bower') return JSON.stringify([s.sequenceMode, s.pattern, s.evolution, s.lanes.map(l => [l.steps, l.length, l.division, l.direction])]);
+    if (appId === 'mire') return JSON.stringify([s.patternLength, s.sources.map(source => source.steps)]);
+    return JSON.stringify([s.sequenceMode, s.selectedPattern, s.patternBanks, s.score, s.direction, s.bars]);
   }
   let importedSignature = state().musicLabPattern ? sequenceSignature(state()) : null;
   const nativeSetState = engine.setState.bind(engine);
@@ -2218,16 +2272,27 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
       return P.normalize(out);
     }
     if (appId === 'mire') {
-      const out = packetBase(s, s.name + ' · source pattern', 4, voicesFor(s)); let beat = 0;
-      for (let step = 0; step < 16; step++) { const interval = .25 * (step % 2 ? 1 - s.swing : 1 + s.swing); for (let i = 0; i < 4; i++) { const source = s.sources[i], hit = source.steps[step]; if (!source.mute && hit.on) for (let r = 0; r < hit.ratchet; r++) addNote(out, source.pitch, beat + interval * r / hit.ratchet, Math.min(source.decay * s.tempo / 60000, interval / hit.ratchet), hit.velocity * (r ? .88 : 1), String(i), hit.probability); } beat += interval; }
+      const stepCount=s.patternLength===32?32:16;
+      const out = packetBase(s, s.name + ' · source pattern', stepCount/4, voicesFor(s)); let beat = 0;
+      for (let step = 0; step < stepCount; step++) { const interval = .25 * (step % 2 ? 1 - s.swing : 1 + s.swing); for (let i = 0; i < 4; i++) { const source = s.sources[i], hit = source.steps[step]; if (!source.mute && hit.on) for (let r = 0; r < hit.ratchet; r++) addNote(out, source.pitch, beat + interval * r / hit.ratchet, Math.min(source.decay * s.tempo / 60000, interval / hit.ratchet), hit.velocity * (r ? .88 : 1), String(i), hit.probability); } beat += interval; }
       return P.normalize(out);
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode==='pattern') {
+        const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
+        for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       const out = packetBase(s, s.name + ' · four-bar phrase', 16, voices), random = randomFor(s.seed);
       const solo = s.lanes.some(l => l.solo);
       for (let i = 0; i < 4; i++) { if (selected !== null && i !== selected) continue; const lane = s.lanes[i]; if (lane.mute || solo && !lane.solo) continue; let beat = 0, count = 0; while (beat < 16 - 1e-8 && count < 1024) { let at = count % lane.length; if (lane.direction === 'reverse') at = lane.length - 1 - at; else if (lane.direction === 'pendulum') { const cycle = Math.max(1, lane.length * 2 - 2), pos = count % cycle; at = pos < lane.length ? pos : cycle - pos; } else if (lane.direction === 'random') at = Math.floor(random() * lane.length); const hit = lane.steps[at], interval = S.DIVISIONS[lane.division] * (1 + (count % 2 === 0 ? 1 : -1) * s.swing * .5); if (hit.on) { let degree = hit.degree; if (s.evolution && random() < lane.evolve) degree += random() < .5 ? -1 : 1; addNote(out, S.degreeMidi(s, i, degree), beat, lane.decay * s.tempo / 60, hit.velocity, String(i), hit.probability); } beat += interval; count++; } }
       out.notes.sort((a, b) => a.beat - b.beat); return P.normalize(out);
+    }
+    if(s.sequenceMode==='pattern') {
+      const bank=s.patternBanks[s.selectedPattern],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.selectedPattern),bank.length/4,voicesFor(s).filter(v=>v.id!=='auto'));
+      for(let step=0;step<bank.length;step++)for(let band=0;band<24;band++){const velocity=bank.score[band][step];if(velocity>0)addNote(out,midi(window.HazeDSP.frequencyForBand(s,band)),step/4,bank.gate/4,velocity,String(band));}
+      return P.normalize(out);
     }
     const cycle = s.bars * 4, length = s.direction === 'pingpong' ? cycle * 2 : cycle;
     const out = packetBase(s, s.name + ' · tuned bands', length, voicesFor(s).filter(v => v.id !== 'auto'));
@@ -2309,7 +2374,8 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
       overlayNext++; if (overlayNext >= notes.length) { overlayNext = 0; overlayCycle++; }
     }
     const beat = Math.max(0, (now - overlayAnchor) / seconds) % packet.lengthBeats;
-    engine.onStep?.(Math.floor(beat * 4) % 16, now);
+    const visibleSteps=appId==='mire'?(s.patternLength===32?32:16):appId==='bower'?(s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length:Math.max(...s.lanes.map(l=>l.length))):appId==='haze'?(s.sequenceMode==='pattern'?s.patternBanks[s.selectedPattern].length:32):16;
+    engine.onStep?.(Math.floor(beat * 4) % visibleSteps, now);
   }
   engine.start = async function (when) {
     if (!(engine.state || state()).musicLabPattern) return nativeStart(when);
@@ -2326,7 +2392,7 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
   let clockRevision = null;
   const adapter = {
     get patternExport() { const scopes = [{ id: 'pattern', label: state().musicLabPattern ? 'Imported performance pattern' : 'Current pattern' }]; if (appId === 'fable') for (let i = 0; i < 4; i++) scopes.push({ id: 'pattern-' + i, label: 'Native pattern ' + String.fromCharCode(65 + i) }); if (appId === 'bower') for (let i = 0; i < 4; i++) scopes.push({ id: 'voice-' + i, label: 'Native string ' + (i + 1) }); return { scopes, defaultScope: 'pattern' }; },
-    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze' ? 'bands' : 'notes', description: appId === 'bower' ? 'SKEWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'REDUCE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
+    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze'&&s.sequenceMode!=='pattern' ? 'bands' : 'notes', description: appId === 'bower' ? 'SKEWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'REDUCE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
     get notes() {const s=state(),sampleRate=engine.context?.sampleRate||48000,voices=voicesFor(s).map(voice=>{let pitchRange=appId==='bower'?[24,100]:[0,127];if(appId==='mire'&&s.sources[Number(voice.id)]?.kind!=='sample')pitchRange=[16,Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)))];if(appId==='haze'&&voice.id==='auto')pitchRange=[Math.max(0,Math.ceil(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,0)/440)-.51)),Math.min(127,Math.floor(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,23)/440)+.51))];return{...voice,pitchRange};});return { voices, polyphonic: true, pitched: appId !== 'haze', scheduledCancel:true, ...(appId==='bower'?{minPitch:24,maxPitch:100,pitchRange:[24,100]}:{pitchRange:[0,127]}) }; },
     get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },
     getImportedPattern() { return this.importedPattern; },
@@ -2431,8 +2497,9 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
       let lengthBeats=4, counter=0;
       const add=(voice,beat,duration,velocity,pitch,probability=1)=>notes.push({id:'note-'+counter++,voice:voice.id,pitch,beat:Math.max(0,beat),duration:Math.min(duration,lengthBeats-Math.max(0,beat)),velocity,probability});
       if(id==='grain'||id==='tine') {
+        const stepCount=s.stepCount===32?32:16;lengthBeats=stepCount/4;
         const solo=s.tracks.some(track=>track.solo);
-        s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,4-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
+        s.tracks.forEach((track,index)=>{if(track.mute||solo&&!track.solo||scope==='voice'&&index!==selected)return;track.steps.slice(0,stepCount).forEach((hit,step)=>{if(hit)add(all[index],step/4+(step%2?s.swing/4:0),Math.min(.25,lengthBeats-step/4-(step%2?s.swing/4:0)),hit>=2?1:.73,all[index].pitch);});});
       } else if(id==='form') {
         lengthBeats=s.steps[0].length/4;
         const finite=(value,fallback)=>typeof value==='number'&&Number.isFinite(value)?value:fallback;
@@ -2455,8 +2522,12 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
           });
         });
       } else if(id==='ravel') {
-        const steps=s.patterns[s.selectedPattern].steps;
-        steps.forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<4)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),4-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
+        const pattern=s.patterns[s.selectedPattern],stepCount=pattern.length===32?32:16;lengthBeats=stepCount/4;
+        pattern.steps.slice(0,stepCount).forEach((step,index)=>{if(!step.on)return;const at=index/4+(index%2?s.swing/8:0)+step.micro/4;for(let ratchet=0;ratchet<step.ratchet;ratchet++){const beat=Math.max(0,at+ratchet/(4*step.ratchet));if(beat<lengthBeats)add(all[step.slice],beat,Math.min(step.gate/(4*step.ratchet),lengthBeats-beat),step.velocity,all[step.slice].pitch+step.pitch,step.probability);}});
+      } else if(s.sequenceMode==='pattern') {
+        const bank=s.patternBanks[s.selectedPattern],stepCount=bank.length;lengthBeats=stepCount/4;
+        const solo=s.decks.some(deck=>deck.solo);
+        s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;bank.score[index].slice(0,stepCount).forEach((velocity,step)=>{if(velocity>0)add(all[index],step/4,bank.gate/4,velocity,all[index].pitch);});});
       } else {
         lengthBeats=Math.max(4,...s.decks.map(deck=>deck.beats));const solo=s.decks.some(deck=>deck.solo);
         s.decks.forEach((deck,index)=>{if(!s.assets[index]||deck.mute||solo&&!deck.solo)return;add(all[index],0,lengthBeats,1,all[index].pitch);});
@@ -2485,7 +2556,7 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
       scheduledState={pattern,map,s};startTime=(engine().context||engine().audioContext).currentTime+.055;cursor=0;display=onStep;
       const draw=()=>{
         if(!scheduledState)return;const audio=engine(),context=audio.context||audio.audioContext;
-        const tempo=tempoOf(viewState()),seconds=60/tempo,length=pattern.lengthBeats*seconds;
+        const currentState=viewState(),tempo=tempoOf(currentState),seconds=60/tempo,length=pattern.lengthBeats*seconds;
         if(context.state!=='running')return;
         const current=context.currentTime;
         let budget=0;
@@ -2497,14 +2568,15 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
           adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
         }
-        if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%16);
+        const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
+        if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
       };
       pattern.notes.sort((a,b)=>id==='form'?eventBeat(pattern,a)-eventBeat(pattern,b):a.beat-b.beat);draw();timer=setInterval(draw,25);
     }
     const adapter={
       app:id,
-      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
-      get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
+      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'&&s.sequenceMode!=='pattern'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
       get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
       validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
       exportPattern(options={}){return packetFromNative(viewState(),options);},
@@ -2605,12 +2677,13 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
     return true;
   }
   function nativePattern(snapshot, cycles = 4) {
+    const stepPattern=snapshot.sequenceMode==='pattern';if(stepPattern)cycles=1;
     const recipe = S.compileRecipe(snapshot, { cycles });
-    if (recipe.lengthBeats < .25) throw new Error('This turn is shorter than the portable-pattern minimum of ¼ beat. Choose the four-turn bass recipe.');
+    if (recipe.lengthBeats < .25) throw new Error(stepPattern?'This step pattern is shorter than the portable-pattern minimum of ¼ beat. Increase its length or choose a slower division.':'This turn is shorter than the portable-pattern minimum of ¼ beat. Choose the four-turn bass recipe.');
     return P.normalize({
-      format: 'musiclab-pattern', version: 1, kind: 'notes', name: snapshot.name + (cycles === 1 ? ' · one-turn bass recipe' : ' · four-turn bass recipe'),
+      format: 'musiclab-pattern', version: 1, kind: 'notes', name: snapshot.name + (stepPattern?' · Pattern '+String.fromCharCode(65+snapshot.selectedPattern):cycles === 1 ? ' · one-turn bass recipe' : ' · four-turn bass recipe'),
       sourceApp: 'ROUX', tempo: snapshot.tempo, swing: 0, lengthBeats: recipe.lengthBeats,
-      meter: [4, 4], seed: snapshot.seed, tags: ['bass', 'roux', 'recipe'],
+      meter: [4, 4], seed: snapshot.seed, tags: ['bass', 'roux', stepPattern?'step-pattern':'recipe'],
       voices: [{ id: 'bass', name: 'ROUX · monophonic bass', pitch: snapshot.root }],
       notes: recipe.notes.map(note => ({ id: note.id, pitch: note.pitch, beat: note.beat, duration: note.duration, velocity: note.velocity, voice: 'bass', probability: note.probability ?? 1 })),
     });
@@ -2621,7 +2694,7 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
     if (scope === 'pattern' && snapshot.musicLabPattern) {
       const packet = P.clone(snapshot.musicLabPattern.pattern); packet.tempo = snapshot.tempo; return packet;
     }
-    return nativePattern(snapshot, scope === 'turn' ? 1 : 4);
+    return nativePattern(scope==='pattern'?snapshot:{...snapshot,sequenceMode:'recipe'}, scope === 'turn' ? 1 : 4);
   }
   async function importPattern({ pattern, options = {}, signal } = {}) {
     abort(signal); const packet = P.parse(pattern), snapshot = state();
@@ -2668,7 +2741,7 @@ MusicLabExchange.register({...{"id":"spool","name":"ROTISSERIE","sourceApp":"SPO
     abort(signal); return { ...result, name: packet.name, tempo: renderTempo, sourceApp: 'ROUX' };
   }
   const adapter = {
-    get patternExport() { return { scopes: [{ id: 'pattern', label: state().musicLabPattern ? 'Imported bass performance' : 'Current bass recipe · four turns' }, { id: 'recipe', label: 'Native circular recipe · four turns' }, { id: 'turn', label: 'Native circular recipe · one turn' }], defaultScope: 'pattern' }; },
+    get patternExport() { const snapshot=state();return { scopes: [{ id: 'pattern', label: snapshot.musicLabPattern ? 'Imported bass performance' : snapshot.sequenceMode==='pattern'?'Current step pattern':'Current bass recipe · four turns' }, { id: 'recipe', label: 'Native circular recipe · four turns' }, { id: 'turn', label: 'Native circular recipe · one turn' }], defaultScope: 'pattern' }; },
     get patternImport() { const snapshot = state(); return { targets: [{ id: 'pattern', name: 'Bass performance · exact portable notes', occupied: !!(snapshot.musicLabPattern ? snapshot.musicLabPattern.pattern.notes.length : nativePattern(snapshot).notes.length) }], voices: voices(), mode: 'notes', description: 'One bass voice, one note onset at a time. Overlapping consecutive notes play legato when enabled in the sound patch. Timing, duration, velocity, probability, and swing stay intact. Native recipe edits return to the circular sequence.' }; },
     get notes() { const [min, max] = range(); return { voices: voices(), polyphonic: false, pitched: true, scheduledCancel: true, pitchRange: [min, max], minPitch: min, maxPitch: max }; },
     get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },

@@ -26,7 +26,7 @@
   engine = new window.SpoolAudio(state);
 
   function snapshot() {
-    return { ...state, master: { ...state.master }, source: { ...state.source }, record: { ...state.record }, decks: state.decks.map(d => ({ ...d })), assets: state.assets.slice() };
+    return { ...state, master: { ...state.master }, source: { ...state.source }, record: { ...state.record }, decks: state.decks.map(d => ({ ...d })), assets: state.assets.slice(), patternBanks:state.patternBanks.map(bank=>({...bank,score:bank.score.map(row=>row.slice())})) };
   }
   function remember() { const entry = snapshot(); history.push(entry); if (history.length > 28) history.shift(); $('undo-button').disabled = false; return entry; }
   function forget(entry) { if (!entry) return; const i = history.indexOf(entry); if (i >= 0) history.splice(i, 1); $('undo-button').disabled = !history.length || !!engine.deckRecording; }
@@ -93,6 +93,24 @@
     $('play-button').querySelector('span').textContent = playing ? 'Stop' : 'Play'; $('play-button').setAttribute('aria-label', playing ? 'Stop loops' : 'Play loops');
     $('audio-status-dot').classList.toggle('active', playing || engine.micEnabled); $('audio-status').textContent = playing ? 'TAPE IN MOTION' : engine.micEnabled ? 'MICROPHONE ENABLED' : 'READY WHEN YOU ARE'; updateDeckReadouts();
   }
+  function patternChanged(){
+    const imported=!!state.musicLabPattern,playing=engine.isPlaying;
+    if(imported){engine.stop();delete state.musicLabPattern;}
+    changed();
+    if(imported){updatePlayback();if(playing)engine.start().then(updatePlayback).catch(error=>toast(errorMessage(error)));}
+  }
+  function renderPattern() {
+    const bank=state.patternBanks[state.selectedPattern];$('sequence-mode').value=state.sequenceMode;$('step-pattern-panel').hidden=state.sequenceMode!=='pattern';$('pattern-bank').value=state.selectedPattern;$('pattern-length').value=bank.length;$('pattern-gate').value=Math.round(bank.gate*100);$('pattern-grid').replaceChildren();
+    for(let deck=0;deck<4;deck++){
+      const row=document.createElement('div');row.className='step-pattern-row';const label=document.createElement('button');label.className='pattern-deck-label';label.type='button';label.textContent=String.fromCharCode(65+deck);label.setAttribute('aria-label',`Select deck ${label.textContent}`);label.addEventListener('click',()=>selectDeck(deck));row.append(label);const grid=document.createElement('div');grid.className='step-pattern-grid';
+      for(let step=0;step<bank.length;step++){const button=document.createElement('button'),velocity=bank.score[deck][step];button.type='button';button.className='pattern-step';button.textContent=step+1;button.dataset.step=step;button.setAttribute('aria-pressed',String(velocity>0));button.setAttribute('aria-label',`Deck ${label.textContent}, step ${step+1}${velocity>0?`, velocity ${Math.round(velocity*100)} percent`:`, off`}`);button.addEventListener('click',()=>{remember();bank.score[deck][step]=bank.score[deck][step]>0?0:clamp(Number($('pattern-velocity').value)||.8,.05,1);patternChanged();renderPattern();});grid.append(button);}row.append(grid);$('pattern-grid').append(row);
+    }
+  }
+  $('sequence-mode').addEventListener('change',()=>{remember();state.sequenceMode=$('sequence-mode').value;patternChanged();renderPattern();toast(state.sequenceMode==='pattern'?'Step patterns trigger your decks. The original continuous loops are preserved.':'Continuous loops restored. Your step patterns are preserved.');});
+  $('pattern-bank').addEventListener('change',()=>{remember();state.selectedPattern=Number($('pattern-bank').value);patternChanged();renderPattern();});
+  $('pattern-length').addEventListener('change',()=>{remember();state.patternBanks[state.selectedPattern].length=Number($('pattern-length').value);patternChanged();renderPattern();});
+  $('pattern-gate').addEventListener('change',()=>{remember();state.patternBanks[state.selectedPattern].gate=clamp((Number($('pattern-gate').value)||80)/100,.05,1);patternChanged();renderPattern();});
+  $('clear-pattern-button').addEventListener('click',()=>{remember();state.patternBanks[state.selectedPattern].score=Array.from({length:4},()=>Array(32).fill(0));patternChanged();renderPattern();});
   function renderDecks() {
     waveformObserver?.disconnect();
     $('deck-grid').innerHTML = state.decks.map((d, i) => `<article class="deck${i === selectedDeck ? ' selected' : ''}${!state.assets[i] ? ' deck-empty' : ''}" data-deck="${i}" style="--deck-color:${colors[i]}"><div class="deck-top"><button class="deck-select" aria-label="Select deck ${String.fromCharCode(65 + i)}: ${esc(displayDeckName(d.name))}" aria-pressed="${i === selectedDeck}"><span class="deck-letter">${String.fromCharCode(65 + i)}</span><span class="deck-title"><b>${esc(displayDeckName(d.name))}</b><small>STEREO TAPE · 0${i + 1}</small></span></button><i class="deck-light" aria-hidden="true"></i></div><div class="reel-stage" aria-hidden="true"><div class="reel left"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><div class="reel right"><i class="reel-hole"></i><i class="reel-hole"></i><i class="reel-hole"></i></div><i class="tape-head"></i></div><div class="deck-waveform"><canvas width="512" height="128" role="img" aria-label="Deck ${String.fromCharCode(65 + i)} waveform. Drag region edges to trim the loop."></canvas><span class="wave-label">${state.assets[i] ? 'LOOP REGION' : 'EMPTY TAPE'}</span><span class="wave-duration">${state.assets[i] ? seconds(S.assetDuration(state.assets[i])) : '—'}</span>${state.assets[i] ? '' : '<span class="loop-empty">READY FOR A BATCH</span>'}</div><div class="deck-meta"><strong class="deck-speed">1.00×</strong><span class="deck-mode">FREE LOOP</span><span class="deck-duration">0.00 s</span></div><div class="deck-mix"><div class="deck-level"><label>LEVEL <output>${pct(d.level)}</output></label><input type="range" min="0" max="1.5" step=".01" value="${d.level}" aria-label="Deck ${String.fromCharCode(65 + i)} level" style="--fill:${pct(d.level / 1.5)}"></div><div class="deck-mix-buttons"><button class="deck-mix-button deck-mute" aria-label="Mute deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.mute}" title="Mute">M</button><button class="deck-mix-button deck-solo" aria-label="Solo deck ${String.fromCharCode(65 + i)}" aria-pressed="${d.solo}" title="Solo">S</button></div></div></article>`).join('');
@@ -192,7 +210,7 @@
     document.querySelectorAll('.deck').forEach((card, i) => card.classList.toggle('deck-recording', take?.index === i));
     $('capture-button').classList.toggle('recording', engine.isRecording); $('capture-button').querySelector('span').textContent = engine.isRecording ? 'Stop & save' : 'Record output'; $('capture-button').disabled = captureBusy || busy;
   }
-  function renderAll() { renderTransport(); renderDecks(); renderEditor(); renderInstrument(); renderMaster(); updateRecordUI(); }
+  function renderAll() { renderTransport(); renderDecks(); renderEditor(); renderInstrument(); renderMaster(); updateRecordUI(); renderPattern(); }
   function destructiveBlocked() { if (busy || engine.deckRecording) { toast(engine.deckRecording ? 'Finish or cancel the current take before replacing loops.' : 'Please wait for the current action to finish.'); return true; } return false; }
   function setBusy(value) { busy = value; updateRecordUI(); $('render-button').disabled = value; $('deck-export-button').disabled = value; }
   function randomSeed() { const arr = new Uint32Array(1); try { crypto.getRandomValues(arr); return arr[0] || 1; } catch (_) { return Math.floor(Math.random() * 0xfffffffe) + 1; } }
@@ -320,6 +338,7 @@
     if (engine.isRecording) $('capture-time').textContent = clock(meters?.mixRecordSeconds ?? Math.max(0, (time - captureStart) / 1000));
     if (engine.deckRecording?.index === selectedDeck) $('deck-record-time').textContent = engine.deckRecording.status === 'armed' ? 'ARMED' : clock(meters?.deckRecordSeconds ?? meters?.recordSeconds ?? Math.max(0, (time - takeStarted) / 1000));
     $('input-meter').firstElementChild.style.width = meter(meters?.input || 0) + '%';
+    if(state.sequenceMode==='pattern')document.querySelectorAll('.pattern-step').forEach(button=>button.classList.toggle('playing',engine.isPlaying&&Number(button.dataset.step)===meters?.step));
     requestAnimationFrame(animate);
   }
 

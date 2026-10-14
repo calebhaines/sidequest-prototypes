@@ -66,7 +66,7 @@ function audible(result) {
 }
 
 (async () => {
-  const html = await fs.readFile(path.join(__dirname, 'index.html'));
+  const html = await fs.readFile(process.env.ROUX_QA_FILE || path.join(__dirname, 'index.html'));
   const server = http.createServer((_, response) => { response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); response.end(html); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
@@ -88,6 +88,28 @@ function audible(result) {
       assert.equal(result.restored, result.saved); assert(result.voices.some(voice => voice.id === 'bass'));
     });
     const nativeState = await page.evaluate(() => RouxApp.getState());
+    await check('Pattern banks and thirty-two stops reuse the ring and keep the circular recipe', async () => {
+      await page.locator('#sequenceMode').selectOption('pattern');
+      assert.equal(await page.locator('.selected-note .tiny-label').textContent(),'NOTE');assert.match(await page.locator('#recipe-length').locator('..').textContent(),/Pattern length/);
+      assert.deepEqual(await page.evaluate(() => RouxApp.getState().recipe), nativeState.recipe);
+      await page.locator('#recipe-length').evaluate(el => { el.value = 32; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+      await page.locator('#stepPage').selectOption('1'); await page.locator('.recipe-step[data-step="31"]').click();
+      await page.locator('[data-mode="note"]').click(); await page.locator('#step-pitch').selectOption('55');
+      const before = await page.evaluate(() => RouxApp.getState());
+      assert.equal(before.patterns[0].length, 32); assert.equal(before.patterns[0].steps[31].pitch, 55);
+      const shared = await page.evaluate(() => MusicLabPatternInstrument.exportPattern({scope:'pattern'})); assert.equal(shared.lengthBeats,16);assert(shared.notes.some(n => n.pitch===55 && n.beat>=15.5));
+      const original=await page.evaluate(()=>MusicLabPatternInstrument.exportPattern({scope:'recipe'}));assert.equal(original.lengthBeats,32);const expected=await page.evaluate(s=>RouxSchema.compileRecipe(s,{cycles:4}).notes,nativeState);assert.deepEqual(original.notes.map(n=>[n.pitch,n.beat]),expected.map(n=>[n.pitch,n.beat]));
+      await page.locator('#patternBanks [data-bank="1"]').click(); assert.equal(await page.locator('#stepPage').isVisible(),false);
+      await page.locator('#patternBanks [data-bank="0"]').click(); assert.equal(await page.evaluate(() => RouxApp.getState().patterns[0].steps[31].pitch),55);
+      await page.locator('#sequenceMode').selectOption('recipe'); assert.deepEqual(await page.evaluate(() => RouxApp.getState().recipe), nativeState.recipe);
+      assert.equal(await page.locator('.selected-note .tiny-label').textContent(),'RESULTING NOTE');assert.match(await page.locator('#recipe-length').locator('..').textContent(),/Recipe length/);
+      await page.locator('#undoButton').click(); assert.equal(await page.evaluate(() => RouxApp.getState().sequenceMode),'pattern');
+      await page.evaluate(() => RouxApp.loadState(RouxSchema.parseProject(RouxSchema.serialize(RouxApp.getState()))));
+      assert.equal(await page.evaluate(() => RouxApp.getState().patterns[0].steps[31].pitch),55);
+      await page.locator('#playButton').click(); await page.waitForFunction(() => RouxApp.engine.getMeters().rms>.001);
+      await page.locator('#patternBanks [data-bank="1"]').click(); assert.equal(await page.evaluate(() => RouxApp.engine.isPlaying),true);
+      await page.locator('#panicButton').click(); await page.evaluate(state => RouxApp.loadState(state),nativeState);
+    });
     await check('Actual ring edits support Undo and Redo', async () => {
       const before = await page.evaluate(() => JSON.stringify(RouxApp.getState()));
       const notesBefore = await page.evaluate(() => RouxSchema.compileRecipe(RouxApp.getState()).notes.length);

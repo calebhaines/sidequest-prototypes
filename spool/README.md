@@ -17,6 +17,26 @@ and depends on the browser's permissions and support for the current origin.
 
 ## Playing
 
+Choose **Step patterns** in the decks' Sequencing menu for traditional trigger
+sequencing. A compact editor reveals patterns A–D, each with 16 or 32
+sixteenth-note steps and a row for every deck. Toggle steps to restart the
+corresponding tape at its region start and phase. Velocity applies to new steps;
+Gate sets the played slice as a percentage of a step. Each trigger uses that
+deck's existing speed, direction, filters and tape character. Each deck remains
+monophonic, and several decks can play together. Reducing to 16 steps keeps
+steps 17–32 for later. Choose **Continuous loops** to resume the original
+playback. Imported and recorded tapes remain the same in both modes.
+
+Projects, browser storage and Undo preserve both modes and all four banks.
+Explicit pattern or sequencing edits return from an imported performance part
+to the visible native sequence; sound and deck controls preserve the imported
+part. Undo restores the received part. Invalid project patterns are rejected.
+Record mix and mix WAV exports follow the chosen mode. Deck WAV still exports
+one complete processed loop, and source export still returns original audio.
+The shared pattern export sends the active bank as deck triggers for
+GALLEY/SERVICE. Step timing uses the existing audio engine and its four decks;
+it adds no parallel tape players or synthesis engines.
+
 - Each stereo deck has an independent loop region, speed, direction and phase.
   Tape speed also changes pitch. Sync fits the selected region to the chosen
   number of beats; Speed then multiplies that matched rate.
@@ -66,6 +86,10 @@ blank for recording from scratch.
 a ScriptProcessor fallback, and offline rendering. It handles interpolated tape
 reads, loop splices, stereo filtering, tape motion and coloration, recording
 heads, echo, room reflections, DC removal and output limiting.
+
+Run `node spool/sequence-checks.cjs` to check bank persistence, 16/32-step
+retention, step timing, gate queues, Stop/Panic, host-note isolation, host-clock
+seeking and export cancellation.
 
 Run `python3 spool/build.py` from the repository root to build `spool/index.html`
 and `music/spool/SPOOL-source.zip`. The source ZIP includes all fonts and their

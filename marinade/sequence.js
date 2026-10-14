@@ -30,7 +30,7 @@ function createMarinadeSequence() {
       // Packet swing has its own 16th-note meaning. Fractional imported positions stay exact.
       const localBeat = note.beat + (offbeat ? (packet.swing || 0) / 4 : 0), start = cycle * length + localBeat, duration = Math.min(note.duration, length - localBeat);
       if (duration <= 0 || start < startBeat || start >= end || note.velocity <= 0 || random(seed, cycle, index + 400) >= note.probability) continue;
-      result.push({ note: note.pitch, velocity: note.velocity, startBeat: start, durationBeats: duration, voiceId: 'synth', step: Math.floor(note.beat / (divisions[state.sequence.division] || .5)) % 16 });
+      result.push({ note: note.pitch, velocity: note.velocity, startBeat: start, durationBeats: duration, voiceId: 'synth', step: Math.floor(note.beat / (divisions[state.sequence.division] || .5)) % state.sequence.length });
     }
     return result.sort((a, b) => a.startBeat - b.startBeat || a.note - b.note);
   }

@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const S=window.HazeSchema;
-  function make(id,name,description,settings,paint){const s=Object.assign(S.defaultState(),settings,{name,score:Array.from({length:24},()=>Array(32).fill(0))});paint(s.score);return {id,name,description,state:S.normalize(s)};}
+  function make(id,name,description,settings,paint){const s=Object.assign(S.defaultState(),settings,{name,score:Array.from({length:24},()=>Array(32).fill(0))});paint(s.score);delete s.patternBanks;return {id,name,description,state:S.normalize(s)};}
   const line=(a,y,x,v)=>{if(y>=0&&y<24&&x>=0&&x<32)a[y][x]=Math.max(a[y][x],v);};
   const presets=[
     make('sky','The extraction fan knows a tune','A small melody. The ventilation joins in slightly behind.',{},a=>{for(let x=0;x<32;x++){const y=[0,2,4,6,4,2,1,3][Math.floor(x/4)];line(a,y,x,x%4===0?.9:.58);if(x%8<6)line(a,8+Math.floor(x/8)%3,x,.22);}}),

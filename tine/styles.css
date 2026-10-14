@@ -1,4 +1,7 @@
 /* FONT_FACES */
+.sequence-select{font:8px var(--mono);letter-spacing:.5px;color:var(--muted,#adb5b3);background:transparent;border:1px solid var(--line,#394246);border-radius:3px;padding:4px 5px;max-width:90px;cursor:pointer;color-scheme:dark}
+.sequence-select[hidden]{display:none}
+@media(max-width:600px){.sequencer>.section-heading{height:auto;min-height:55px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.sequencer>.section-heading .heading-label{flex-wrap:wrap}.sequencer-actions{margin-left:auto}}
 :root {
   color-scheme: dark;
   --bg: #141718;

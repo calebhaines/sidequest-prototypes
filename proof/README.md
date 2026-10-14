@@ -1,6 +1,6 @@
 # LEAVEN
 
-**Let the chord rise.** A Kitchen polyphonic synthesizer and arpeggiator with five distinct oscillator engines, an eight-slot chord progression, four sixteen-step pattern banks, and a visible sound rack. The amber enamel and turquoise display borrow their language from a commercial proofing oven and an eighties instrument panel.
+**Let the chord rise.** A Kitchen polyphonic synthesizer and arpeggiator with five distinct oscillator engines, an eight-slot chord progression, four pattern banks with up to thirty-two steps, and a visible sound rack. The amber enamel and turquoise display borrow their language from a commercial proofing oven and an eighties instrument panel.
 
 Open `index.html` for the self-contained, offline instrument. Developers can open `app.html` from this repository or build a fresh standalone with `python3 build.py`. There are no network dependencies. Sound starts after a playback or keyboard gesture. The technical app ID, globals, project format, and source directory remain `proof` for compatibility; the instrument's display name is LEAVEN.
 
@@ -8,9 +8,13 @@ Open `index.html` for the self-contained, offline instrument. Developers can ope
 
 Choose a factory recipe and press **Play**. Enabled chord slots cycle in order. Select a slot to edit its scale degree, quality, inversion, spread, duration, or enabled state in the adjacent chord inspector. Degree `0` is the root; other degrees follow the selected scale. The note source chooses the progression, the selected chord, or your held keyboard notes.
 
-Select a step in the sixteen-step tray to edit its velocity, gate multiplier, probability, ratchet, timing offset, and octave. Use **On / Off** in its inspector to mute it. Double-clicking a step also toggles it. **Tie previous** carries the previous note instead of retriggering. **Protect step** prevents mutation and Euclidean edits from changing that step. A shorter bank keeps all sixteen stored steps while using only its active length.
+Select a step in the step tray to edit its velocity, gate multiplier, probability, ratchet, timing offset, and octave. Use **On / Off** in its inspector to mute it. Double-clicking a step also toggles it. **Tie previous** carries the previous note instead of retriggering. **Protect step** prevents mutation and Euclidean edits from changing that step. A shorter bank keeps all thirty-two stored steps while using only its active length.
 
 **Spice**, probability, random directions, and mutation use the saved seed. The realized phrase display and MIDI export use the same sequencer as the audio engine. **Cycle fold** reshapes the note order or octave across phrase cycles. Rotation turns the available note order. Exact imported MusicLab notes bypass the native arp; **Use native arp** clears that overlay, with Undo available.
+
+Choose **Pattern** in the compact **Sequencer** selector to edit four separate **A–D** note banks. The same tray and inspector now include a **Note** selector for the selected step. Notes play in numbered order, with the existing On / Off, velocity, gate, chance, ratchet, timing, tie, and protection controls. Each note bank stores its own clock division and global gate. Chord sources and arpeggiator direction, folds, transposition, octave, and spice stay saved for **Arpeggiator** mode and do not change pattern pitches. The original rhythm banks remain independent of the new note banks. Both modes use the same synthesizer and WAV/MIDI/Patterns/GALLEY exports.
+
+The existing **STEPS** field now accepts 1–32 in both modes. Above sixteen steps, **01–16 / 17–32** selects the half shown in the same tray. Older projects retain their original notes and load silent steps 17–32. Shortening a bank keeps its stored notes. Exact imported notes remain authoritative until a native sequence edit, bank change, mode change, or **Use native arp / pattern**; sound and tempo edits preserve them, and Undo can restore them.
 
 ## Shape the sound
 
@@ -34,7 +38,7 @@ The two-octave keyboard scrolls locally on phones. Computer keys begin **A W S E
 
 **Save project** downloads a version 1 `.proof.json` file containing the full recipe. **Open project** validates its structure and numeric controls before applying it; the size limit is 1 MiB. Standalone browser recovery is debounced under `proof-project-v1`. Storage failures appear in the footer; Save project always remains available. Hosted instruments leave recovery to their host.
 
-**Download WAV** renders the actual deterministic DSP to stereo 48 kHz PCM16, with an effect tail. Choose an arp phrase of one to sixteen bars, a single note, or the selected chord. Rendering uses an independent state snapshot, supports cancellation, and leaves live playback and subsequent edits available. **Download MIDI** writes a standard type 0 file with absolute note timing, velocity, tempo, and realized probability decisions for the chosen bar count. Both use the saved recipe name as their filename.
+**Download WAV** renders the actual deterministic DSP to stereo 48 kHz PCM16, with an effect tail. Choose the current arpeggio or pattern bank for one to sixteen bars, a single note, or the selected chord. Rendering uses an independent state snapshot, supports cancellation, and leaves live playback and subsequent edits available. **Download MIDI** writes a standard type 0 file with absolute note timing, velocity, tempo, and realized probability decisions for the chosen bar count. Both use the saved recipe name as their filename.
 
 Shared Audio and Patterns controls are injected into the standalone build. LEAVEN can share a rendered sound or its realized note phrase with compatible Kitchen instruments and GALLEY. An imported phrase preserves exact pitches, timing, durations, and velocities. The native adapter schedules one pitched synth voice directly, with source-aware cancellation, host transport, and independent offline rendering.
 

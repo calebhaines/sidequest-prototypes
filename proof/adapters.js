@@ -76,7 +76,7 @@
       const events = arp.events(value, { startBeat: 0, lengthBeats });
       return P.normalize({ format: 'musiclab-pattern', version: 1, kind: 'notes', name: name || value.name + ' · LEAVEN',
         sourceApp: 'proof', tempo: value.tempo, swing: 0, lengthBeats, meter: [4, 4], seed: value.seed,
-        tags: ['proof', 'arpeggio', value.synth.model], voices: [{ id: 'synth', name: 'LEAVEN · polyphonic synthesizer', pitch: value.root }],
+        tags: ['proof', value.sequenceMode==='pattern'?'step-pattern':'arpeggio', value.synth.model], voices: [{ id: 'synth', name: 'LEAVEN · polyphonic synthesizer', pitch: value.root }],
         notes: events.map((event, index) => ({ id: 'proof-' + (index + 1), voice: 'synth', pitch: event.note,
           beat: event.startBeat, duration: Math.min(event.durationBeats, lengthBeats - event.startBeat), velocity: event.velocity, probability: 1 })) });
     }
@@ -145,7 +145,7 @@
     const adapter = {
       app: 'proof', latency: 0,
       get notes() { return { voices: voices(), polyphonic: true, pitched: true, scheduledCancel: true, pitchRange: [0, 127], minPitch: 0, maxPitch: 127, latency: 0 }; },
-      get patternExport() { return { scopes: [{ id: 'pattern', label: state().musicLabPattern ? 'Received performance · exact notes' : 'Current arpeggio phrase' }, { id: 'native', label: 'Native arpeggio phrase' }], defaultScope: 'pattern' }; },
+      get patternExport() { return { scopes: [{ id: 'pattern', label: state().musicLabPattern ? 'Received performance · exact notes' : state().sequenceMode==='pattern'?'Current step pattern':'Current arpeggio phrase' }, { id: 'native', label: state().sequenceMode==='pattern'?'Native step pattern':'Native arpeggio phrase' }], defaultScope: 'pattern' }; },
       get patternImport() { const value = state(); return { targets: [{ id: 'pattern', name: 'Received performance · exact notes', occupied: !!(value.musicLabPattern ? value.musicLabPattern.pattern.notes.length : nativeEvents(value).length) }], voices: voices(), mode: 'notes', description: 'Map source voices to the polyphonic synth. Timing, pitch, velocity and duration stay intact. Use native arp restores the chord recipe.' }; },
       get importedPattern() { const value = state(); return value.musicLabPattern ? P.clone(value.musicLabPattern.pattern) : null; },
       getImportedPattern() { return this.importedPattern; },

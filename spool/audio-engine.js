@@ -77,7 +77,7 @@
     class Core {
       constructor(sampleRate,state,seed=0x53504f4f) {
         this.sr=clamp(sampleRate,8000,192000);this.frame=0;this.transportFrames=0;this.running=false;this.seed=seed>>>0||1;
-        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.patternMode=false;this.noteSequence=0;this.deckGates=Array(4).fill(null);this.sourceCuts=new Map();this.capture=null;this.completed=[];
+        this.decks=Array.from({length:4},(_,i)=>new Deck(this.sr,i));this.voices=[];this.events=[];this.patternMode=false;this.noteSequence=0;this.deckGates=Array(4).fill(null);this.sourceCuts=new Map();this.capture=null;this.completed=[];this.lastSequenceStep=-1;this.sequenceBeat=0;
         this.micEnabled=false;this.peak=0;this.rms=0;this.rmsLeft=0;this.rmsRight=0;this.inputRms=0;this.limiter=1;this.volume=.72;this.braking=false;this.brakeRate=1;
         this.echo=[new Float32Array(Math.ceil(this.sr*4)+4),new Float32Array(Math.ceil(this.sr*4)+4)];this.echoWrite=0;this.echoLP=[0,0];this.echoDelay=this.sr*.375;
         this.room=[.0297,.0371,.0411,.0437,.0307,.0383,.0423,.0449].map(s=>({pcm:new Float32Array(Math.round(s*this.sr)),index:0,low:0}));
@@ -85,7 +85,12 @@
       }
       random(){let x=this.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.seed=x>>>0;return this.seed/4294967296;}
       setState(state) {
+        if(this.state&&(state.sequenceMode!==this.state.sequenceMode||state.selectedPattern!==this.state.selectedPattern)){
+          this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);this.lastSequenceStep=-1;
+        }
         this.state=state||{};this.tempo=this.followingClock??clamp(state.tempo||92,40,200);
+        this.nativePattern=state.sequenceMode==='pattern';const bank=state.patternBanks?.[Math.round(clamp(state.selectedPattern||0,0,3))]||{};
+        this.sequence={length:bank.length===32?32:16,gate:clamp(bank.gate??.8,.05,1),score:Array.from({length:4},(_,deck)=>Array.from({length:32},(_,step)=>clamp(bank.score?.[deck]?.[step]||0,0,1)))};
         this.decks.forEach((d,i)=>{const raw=(state.decks||[])[i]||{};const t=Object.assign({},d.target,raw);delete t.asset;
           ['level','pan','rate','start','end','phase','beats','seam','tone','highpass','saturation','wow','flutter','wear','hiss','dropouts'].forEach(k=>{t[k]=finite(t[k],d.target[k]);});
           t.level=clamp(t.level,0,1.5);t.pan=clamp(t.pan,-1,1);t.start=clamp(t.start,0,.999);t.end=clamp(t.end,t.start+.002,1);t.start=Math.min(t.start,t.end-.002);t.rate=clamp(t.rate,.25,2);t.phase=clamp(t.phase,0,1);t.beats=clamp(t.beats,1,64);t.seam=clamp(t.seam,0,250);
@@ -97,15 +102,15 @@
         this.input=Object.assign({voice:'sine',root:48,decay:600,tone:8000,level:.65,monitor:true},state.source||{});this.recordSettings=Object.assign({input:'keys',bars:0,quantize:false,feedback:.85},state.record||{});
       }
       setSample(index,pcm,sampleRate,preserve=false){if(index<0||index>3)return;this.decks[index].setAsset(pcm?.length?{pcm,sampleRate:clamp(sampleRate,8000,96000)}:null,preserve);if(!preserve)this.decks[index].rewind();}
-      start(rewind=false){if(rewind)this.rewind();this.running=true;}
+      start(rewind=false){if(rewind)this.rewind();this.lastSequenceStep=-1;this.running=true;}
       stop(){this.running=false;this.followingClock=null;this.events=[];this.sourceCuts.clear();this.patternMode=false;this.deckGates.fill(null);this.voices.forEach(v=>v.releasing=true);}
-      rewind(){this.transportFrames=0;this.decks.forEach(d=>d.rewind());}
+      rewind(){this.transportFrames=0;this.sequenceBeat=0;this.lastSequenceStep=-1;this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);this.decks.forEach(d=>d.rewind());}
       retrigger(index){this.decks[index]?.transition();this.decks[index]?.rewind();}
       seek(index,ratio){const d=this.decks[index];if(d){d.transition();d.position=clamp(ratio,0,1)*d.region().length;}}
       panic(){this.stop();this.voices=[];this.echo.forEach(x=>x.fill(0));this.echoLP=[0,0];this.room.forEach(x=>{x.pcm.fill(0);x.low=0;});this.decks.forEach(x=>{x.clear();x.crossfade=null;x.gain=0;});if(this.capture)this.cancelCapture();this.micEnabled=false;this.volume=0;this.braking=false;this.brakeRate=1;}
       queueDeck(index, options, frame) {
         if(frame>=(this.sourceCuts.get(options.source)??Infinity))return;
-        const token=++this.noteSequence;this.patternMode=true;
+        const token=++this.noteSequence;if(options.source!=='native-sequence')this.patternMode=true;
         this.events.push({type:'deckOn',index,options,source:options.source,frame,token},{type:'deckOff',index,source:options.source,frame:frame+Math.max(1,Math.round(options.duration*this.sr)),token});
         this.events.sort((a,b)=>a.frame-b.frame);return token;
       }
@@ -119,19 +124,20 @@
       clearClockEvents(){this.events=this.events.filter(event=>event.type!=='clock');}
       queueClock(beat,tempo,playing,frame){this.events.push({type:'clock',beat,tempo,playing,frame});this.events.sort((a,b)=>a.frame-b.frame);}
       clockSeek(beat,tempo,playing){
-        this.tempo=clamp(tempo,20,400);this.followingClock=playing?this.tempo:null;this.transportFrames=Math.max(0,beat)*60/this.tempo*this.sr;this.running=playing;
-        this.decks.forEach(d=>{d.transition();d.prepare(this.tempo,playing,this.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;d.position=wrap(d.target.phase*d.region().length+Math.max(0,beat)*60/this.tempo*(d.asset?.sampleRate||this.sr)*d.targetRate,d.region().length);});
+        this.tempo=clamp(tempo,20,400);this.followingClock=playing?this.tempo:null;this.transportFrames=Math.max(0,beat)*60/this.tempo*this.sr;this.sequenceBeat=Math.max(0,beat);this.running=playing;
+        this.lastSequenceStep=-1;this.events=this.events.filter(e=>e.source!=='native-sequence');this.deckGates=this.deckGates.map(g=>g?.source==='native-sequence'?null:g);
+        this.decks.forEach(d=>{d.transition();d.prepare(this.tempo,playing&&!this.nativePattern,this.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;d.position=wrap(d.target.phase*d.region().length+Math.max(0,beat)*60/this.tempo*(d.asset?.sampleRate||this.sr)*d.targetRate,d.region().length);});
       }
       applyEvent(event){
         if(event.type==='cancel'){
-          this.decks.forEach(deck=>{if(this.deckGates[deck.index]?.source===event.source){this.deckGates[deck.index]=null;deck.targetGain=this.running&&this.followingClock!=null?clamp(deck.target.level,0,1.5):0;}});return;
+          this.decks.forEach(deck=>{if(this.deckGates[deck.index]?.source===event.source){this.deckGates[deck.index]=null;deck.targetGain=this.running&&this.followingClock!=null&&!this.nativePattern?clamp(deck.target.level,0,1.5):0;}});return;
         }
         if(event.type==='clock'){this.clockSeek(event.beat,event.tempo,event.playing);return;}
         const deck=this.decks[event.index];if(!deck)return;
         if(event.type==='deckOn'){this.deckGates[event.index]={source:event.source||'native',token:event.token,velocity:event.options.velocity,pitch:event.options.pitch||0};deck.transition();deck.rewind();}
         else if(this.deckGates[event.index]?.token===event.token)this.deckGates[event.index]=null;
-        const continuous=this.running&&this.followingClock!=null;
-        deck.prepare(this.tempo,!!this.deckGates[event.index]||continuous,false,1);deck.targetGain*=this.deckGates[event.index]?.velocity??(continuous?1:0);deck.targetRate*=Math.pow(2,(this.deckGates[event.index]?.pitch||0)/12);if(event.type==='deckOn')deck.rate=deck.targetRate;
+        const continuous=this.running&&this.followingClock!=null&&!this.nativePattern;
+        deck.prepare(this.tempo,!!this.deckGates[event.index]||continuous,this.decks.some(d=>d.target.solo),1);deck.targetGain*=this.deckGates[event.index]?.velocity??(continuous?1:0);deck.targetRate*=Math.pow(2,(this.deckGates[event.index]?.pitch||0)/12);if(event.type==='deckOn')deck.rate=deck.targetRate;
       }
       noteOn(note,velocity=1){note=clamp(note,24,108)|0;this.noteOff(note);if(this.voices.length>=20)this.voices.shift();this.voices.push({note,frequency:midi(note),phase:0,age:0,envelope:0,releasing:false,velocity:clamp(velocity,.01,1),type:this.input.voice||'sine',low:0});}
       noteOff(note){this.voices.forEach(v=>{if(v.note===note)v.releasing=true;});}
@@ -176,17 +182,18 @@
       }
       cancelCapture(){if(this.capture?.original)this.decks[this.capture.index].asset.pcm=this.capture.original;this.capture=null;}
       processBlock(left,right,inputLeft,inputRight,clockFrame=this.frame) {
-        const n=left.length,solo=this.decks.some(d=>d.target.solo);this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{const gate=this.deckGates[d.index],continuous=this.running&&this.followingClock!=null;d.prepare(this.tempo,this.patternMode?!!gate||continuous:this.running,solo,n);if(this.patternMode){d.targetGain*=gate?.velocity??(continuous?1:0);d.targetRate*=Math.pow(2,(gate?.pitch||0)/12);}d.targetRate*=this.brakeRate;});
+        const n=left.length,solo=this.decks.some(d=>d.target.solo),gated=this.patternMode||this.nativePattern;this.brakeRate+=((this.braking?.035:1)-this.brakeRate)*(1-Math.exp(-n/(this.sr*(this.braking?.55:.17))));this.decks.forEach(d=>{const gate=this.deckGates[d.index],continuous=this.running&&this.followingClock!=null&&!this.nativePattern;d.prepare(this.tempo,gated?!!gate||continuous:this.running,solo,n);if(gated){d.targetGain*=gate?.velocity??(continuous?1:0);d.targetRate*=Math.pow(2,(gate?.pitch||0)/12);}d.targetRate*=this.brakeRate;});
         const m=this.master,volume=clamp(m.volume,0,1),width=clamp(m.width,0,2),echoMix=clamp(m.echo,0,1),space=clamp(m.space,0,1);
         const divisions={'1/16':.25,'1/8':.5,'3/16':.75,'1/4':1,'3/8':1.5,'1/2':2,'3/4':3,'1/1':4};
         const time=60/this.tempo*(divisions[m.echoDivision]||.5);
         const targetDelay=clamp(time*this.sr,1,this.echo[0].length-2),feedback=clamp(m.feedback,0,.88),roomFeedback=.81;
         for(let i=0;i<n;i++){
+          if(this.running&&this.nativePattern){const step=Math.floor(this.sequenceBeat*4+1e-9);if(step!==this.lastSequenceStep){this.lastSequenceStep=step;for(let deck=0;deck<4;deck++){const velocity=this.sequence.score[deck][step%this.sequence.length];if(velocity>0)this.queueDeck(deck,{velocity,pitch:0,duration:60/this.tempo/4*this.sequence.gate,source:'native-sequence'},clockFrame+i);}}}
           while(this.events.length&&this.events[0].frame<=clockFrame+i)this.applyEvent(this.events.shift());
           const key=this.keyboardTick(),micL=this.micEnabled?(inputLeft?.[i]||0):0,micR=this.micEnabled?(inputRight?.[i]??micL):0;
           const source=this.capture?.options.input||this.recordSettings.input;let il=(source==='mic'?micL:source==='both'?micL+key:key),ir=(source==='mic'?micR:source==='both'?micR+key:key);
           const positions=this.capture?.mode==='overdub'?this.decks[this.capture.index].position:0;
-          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),this.patternMode?!!this.deckGates[d.index]||this.running&&this.followingClock!=null:this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
+          let l=0,r=0,captureL=key,captureR=key;for(const d of this.decks){const out=d.tick(this.random(),gated?!!this.deckGates[d.index]||this.running&&this.followingClock!=null&&!this.nativePattern:this.running);l+=out[0];r+=out[1];if(d.index!==this.capture?.index){captureL+=out[0];captureR+=out[1];}}if(source==='resample'){il=captureL;ir=captureR;}
           this.captureTick(il,ir,positions);
           if(this.input.monitor){l+=key+(this.micEnabled&&source!=='keys'?micL*.7:0);r+=key+(this.micEnabled&&source!=='keys'?micR*.7:0);}
           const mid=(l+r)*.5,side=(l-r)*.5*width;l=mid+side;r=mid-side;
@@ -202,10 +209,10 @@
           l=Math.tanh(l*this.limiter);r=Math.tanh(r*this.limiter);if(!Number.isFinite(l)||!Number.isFinite(r)){l=r=0;this.panic();}
           left[i]=l;right[i]=r;this.peak=Math.max(peak,this.peak*.999);this.rmsLeft+=.001*(l*l-this.rmsLeft);this.rmsRight+=.001*(r*r-this.rmsRight);this.rms=(this.rmsLeft+this.rmsRight)*.5;this.inputRms+=.001*((il*il+ir*ir)*.5-this.inputRms);
           if(++this.waveCount>=Math.max(1,Math.floor(this.sr/1024))){this.waveCount=0;this.waveform[this.waveWrite]=(l+r)*.5;this.waveWrite=(this.waveWrite+1)%128;}
-          if(this.running)this.transportFrames++;this.frame++;
+          if(this.running){this.transportFrames++;if(this.nativePattern)this.sequenceBeat+=this.tempo/(60*this.sr);}this.frame++;
         }
       }
-      meters(){const beats=this.transportFrames/this.sr*this.tempo/60,levels=this.decks.map(d=>Math.sqrt(Math.max(0,d.rms)));return{decks:levels,nodes:levels,positions:this.decks.map(d=>wrap(d.position,d.region().length)/d.region().length),peak:this.peak,rms:Math.sqrt(Math.max(0,this.rms)),rmsLeft:Math.sqrt(Math.max(0,this.rmsLeft)),rmsRight:Math.sqrt(Math.max(0,this.rmsRight)),input:Math.sqrt(Math.max(0,this.inputRms)),step:this.running?Math.floor(beats*4)%16:-1,beat:beats,recordSeconds:this.capture?.frames/this.sr||0,recordStatus:this.capture?.status||'idle',recording:this.capture?{index:this.capture.index,mode:this.capture.mode,status:this.capture.status,seconds:this.capture.frames/this.sr,limit:this.capture.maxFrames/this.sr}:null,waveform:Array.from(this.waveform),playing:this.running};}
+      meters(){const beats=this.nativePattern?this.sequenceBeat:this.transportFrames/this.sr*this.tempo/60,levels=this.decks.map(d=>Math.sqrt(Math.max(0,d.rms)));return{decks:levels,nodes:levels,positions:this.decks.map(d=>wrap(d.position,d.region().length)/d.region().length),peak:this.peak,rms:Math.sqrt(Math.max(0,this.rms)),rmsLeft:Math.sqrt(Math.max(0,this.rmsLeft)),rmsRight:Math.sqrt(Math.max(0,this.rmsRight)),input:Math.sqrt(Math.max(0,this.inputRms)),step:this.running?Math.floor(beats*4)%(this.nativePattern?this.sequence.length:16):-1,beat:beats,recordSeconds:this.capture?.frames/this.sr||0,recordStatus:this.capture?.status||'idle',recording:this.capture?{index:this.capture.index,mode:this.capture.mode,status:this.capture.status,seconds:this.capture.frames/this.sr,limit:this.capture.maxFrames/this.sr}:null,waveform:Array.from(this.waveform),playing:this.running};}
     }
     Core.read=read;Core.seamRead=seamRead;return Core;
   }
@@ -418,7 +425,7 @@ class SpoolProcessor extends AudioWorkletProcessor {
     }
     async stopRecording(){const token=this._mixToken,startPromise=this._mixStartPromise;if(startPromise)await startPromise;if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);if(this.isRecording&&this.mode==='worklet'){await this.context.resume();if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);await new Promise(resolve=>{this._mixResolve=resolve;this.node.port.postMessage({type:'mixStop',token});});}if(token!==this._mixToken||this._disposed)return wavBlob([],0,this.context?.sampleRate||48000);this.isRecording=false;++this._mixToken;const blob=wavBlob(this._mixChunks,this._mixFrames,this.context?.sampleRate||48000);this._mixChunks=[];this._mixFrames=0;return blob;}
     async renderWav(bars=4,tailSeconds=4,options={}){const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),lengthBars=Math.round(clamp(Number(bars)||4,1,16)),playSeconds=lengthBars*240/clamp(state.tempo,40,180),seconds=playSeconds+clamp(Number(tailSeconds)||0,0,15);return this._render(state,seconds,playSeconds,options);}
-    async renderDeckWav(index,options={}){index=clamp(index,0,3)|0;if(!this._assets[index])throw new Error('This deck has no loop to export.');const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),d=state.decks[index],asset=this._assets[index],regionSeconds=Math.max(.002,d.end-d.start)*asset.pcm.length/2/asset.sampleRate,rate=clamp(d.sync?regionSeconds/(d.beats*60/state.tempo)*d.rate:d.rate,-12,12),seconds=Math.min(120,regionSeconds/Math.max(.02,Math.abs(rate)));state.decks.forEach((deck,i)=>{deck.mute=i!==index;deck.solo=false;});d.level=1;d.pan=0;state.master={volume:.9,width:1,echo:0,feedback:0,space:0};return this._render(state,seconds,seconds,options);}
+    async renderDeckWav(index,options={}){index=clamp(index,0,3)|0;if(!this._assets[index])throw new Error('This deck has no loop to export.');const state=JSON.parse(JSON.stringify(stateForDSP(this.state))),d=state.decks[index],asset=this._assets[index],regionSeconds=Math.max(.002,d.end-d.start)*asset.pcm.length/2/asset.sampleRate,rate=clamp(d.sync?regionSeconds/(d.beats*60/state.tempo)*d.rate:d.rate,-12,12),seconds=Math.min(120,regionSeconds/Math.max(.02,Math.abs(rate)));state.sequenceMode='native';state.decks.forEach((deck,i)=>{deck.mute=i!==index;deck.solo=false;});d.level=1;d.pan=0;state.master={volume:.9,width:1,echo:0,feedback:0,space:0};return this._render(state,seconds,seconds,options);}
     async _render(state,seconds,playSeconds,options={}){const checkCancelled=()=>{if(options.signal?.aborted)throw new DOMException('Audio export cancelled.','AbortError');};checkCancelled();const sampleRate=48000,core=new DSP(sampleRate,state);this._assets.forEach((asset,i)=>{if(asset)core.setSample(i,new Float32Array(asset.pcm),asset.sampleRate);});core.start(true);core.decks.forEach(d=>{d.prepare(core.tempo,true,core.decks.some(x=>x.target.solo),128);d.rate=d.targetRate;});const totalFrames=Math.round(seconds*sampleRate),stopAt=Math.round(playSeconds*sampleRate),chunks=[];let rendered=0;this.onStatus?.('Rendering stereo tape audio…');
       while(rendered<totalFrames){checkCancelled();const count=Math.min(4096,totalFrames-rendered),pcm=new Float32Array(count*2);for(let at=0;at<count;at+=128){if(rendered+at>=stopAt)core.stop();const size=Math.min(128,count-at),l=new Float32Array(size),r=new Float32Array(size);core.processBlock(l,r);for(let i=0;i<size;i++){const frame=rendered+at+i,fade=sampleRate*.012,gain=Math.max(0,Math.min(1,frame/fade,(totalFrames-frame-1)/fade));pcm[(at+i)*2]=l[i]*gain;pcm[(at+i)*2+1]=r[i]*gain;}}chunks.push(pcm);rendered+=count;await new Promise(resolve=>setTimeout(resolve,0));}checkCancelled();return wavBlob(chunks,totalFrames,sampleRate);}
     dispose(){this.panic();this._disposed=true;this.isRecording=false;++this._mixToken;this._mixResolve?.();this._mixResolve=null;this.node?.disconnect();this._output?.disconnect();this.context?.close().catch(()=>{});this._assets=[];this._mixChunks=[];}

@@ -47,12 +47,13 @@
     return true;
   }
   function nativePattern(snapshot, cycles = 4) {
+    const stepPattern=snapshot.sequenceMode==='pattern';if(stepPattern)cycles=1;
     const recipe = S.compileRecipe(snapshot, { cycles });
-    if (recipe.lengthBeats < .25) throw new Error('This turn is shorter than the portable-pattern minimum of ¼ beat. Choose the four-turn bass recipe.');
+    if (recipe.lengthBeats < .25) throw new Error(stepPattern?'This step pattern is shorter than the portable-pattern minimum of ¼ beat. Increase its length or choose a slower division.':'This turn is shorter than the portable-pattern minimum of ¼ beat. Choose the four-turn bass recipe.');
     return P.normalize({
-      format: 'musiclab-pattern', version: 1, kind: 'notes', name: snapshot.name + (cycles === 1 ? ' · one-turn bass recipe' : ' · four-turn bass recipe'),
+      format: 'musiclab-pattern', version: 1, kind: 'notes', name: snapshot.name + (stepPattern?' · Pattern '+String.fromCharCode(65+snapshot.selectedPattern):cycles === 1 ? ' · one-turn bass recipe' : ' · four-turn bass recipe'),
       sourceApp: 'ROUX', tempo: snapshot.tempo, swing: 0, lengthBeats: recipe.lengthBeats,
-      meter: [4, 4], seed: snapshot.seed, tags: ['bass', 'roux', 'recipe'],
+      meter: [4, 4], seed: snapshot.seed, tags: ['bass', 'roux', stepPattern?'step-pattern':'recipe'],
       voices: [{ id: 'bass', name: 'ROUX · monophonic bass', pitch: snapshot.root }],
       notes: recipe.notes.map(note => ({ id: note.id, pitch: note.pitch, beat: note.beat, duration: note.duration, velocity: note.velocity, voice: 'bass', probability: note.probability ?? 1 })),
     });
@@ -63,7 +64,7 @@
     if (scope === 'pattern' && snapshot.musicLabPattern) {
       const packet = P.clone(snapshot.musicLabPattern.pattern); packet.tempo = snapshot.tempo; return packet;
     }
-    return nativePattern(snapshot, scope === 'turn' ? 1 : 4);
+    return nativePattern(scope==='pattern'?snapshot:{...snapshot,sequenceMode:'recipe'}, scope === 'turn' ? 1 : 4);
   }
   async function importPattern({ pattern, options = {}, signal } = {}) {
     abort(signal); const packet = P.parse(pattern), snapshot = state();
@@ -110,7 +111,7 @@
     abort(signal); return { ...result, name: packet.name, tempo: renderTempo, sourceApp: 'ROUX' };
   }
   const adapter = {
-    get patternExport() { return { scopes: [{ id: 'pattern', label: state().musicLabPattern ? 'Imported bass performance' : 'Current bass recipe · four turns' }, { id: 'recipe', label: 'Native circular recipe · four turns' }, { id: 'turn', label: 'Native circular recipe · one turn' }], defaultScope: 'pattern' }; },
+    get patternExport() { const snapshot=state();return { scopes: [{ id: 'pattern', label: snapshot.musicLabPattern ? 'Imported bass performance' : snapshot.sequenceMode==='pattern'?'Current step pattern':'Current bass recipe · four turns' }, { id: 'recipe', label: 'Native circular recipe · four turns' }, { id: 'turn', label: 'Native circular recipe · one turn' }], defaultScope: 'pattern' }; },
     get patternImport() { const snapshot = state(); return { targets: [{ id: 'pattern', name: 'Bass performance · exact portable notes', occupied: !!(snapshot.musicLabPattern ? snapshot.musicLabPattern.pattern.notes.length : nativePattern(snapshot).notes.length) }], voices: voices(), mode: 'notes', description: 'One bass voice, one note onset at a time. Overlapping consecutive notes play legato when enabled in the sound patch. Timing, duration, velocity, probability, and swing stay intact. Native recipe edits return to the circular sequence.' }; },
     get notes() { const [min, max] = range(); return { voices: voices(), polyphonic: false, pitched: true, scheduledCancel: true, pitchRange: [min, max], minPitch: min, maxPitch: max }; },
     get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },

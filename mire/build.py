@@ -35,7 +35,7 @@ repository_music = root.parent / 'music'
 if (repository_music / 'README.md').exists():
     archive = repository_music / 'mire' / 'MIRE-source.zip'
     archive.parent.mkdir(parents=True, exist_ok=True)
-    files = [root / name for name in ['app.html', 'styles.css', 'schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'build.py', 'README.md']]
+    files = [root / name for name in ['app.html', 'styles.css', 'schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'build.py', 'README.md', 'sequence-checks.cjs']]
     files += sorted((root / 'fonts').glob('*'))
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for path in files:

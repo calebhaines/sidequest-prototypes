@@ -31,7 +31,7 @@ EXCHANGE_FILES = [
     'kilter-kitchen.css', 'KILTER-FONTS-LICENSE.txt',
     'music-audio-exchange.js', 'music-audio-exchange.css',
     'pattern-schema.js', 'pattern-pitched.js', 'pattern-drums.js', 'pattern-bass.js',
-    'music-patterns.js', 'music-patterns.css', 'pattern-checks.cjs',
+    'music-patterns.js', 'music-patterns.css', 'pattern-checks.cjs', 'sequencing-adapter-checks.cjs',
     'PATTERN-CONTRACT.md', 'bundle_audio_exchange.py', 'bundle_audio_exchange.mjs', 'README.md',
 ]
 

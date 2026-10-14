@@ -35,6 +35,26 @@ edits. Save project downloads the complete instrument state; Open project
 restores it. Browser storage is optional: a project download remains available
 when storage is denied or full.
 
+For conventional sequencing, choose **Step patterns** in the score's Sequencing
+menu. The compact editor reveals four independent patterns, A–D. Each holds
+16 or 32 sixteenth-note steps; select a tuned band and toggle its steps to add
+notes or chords across bands. Velocity applies to new notes; Gate sets their
+duration as a percentage of one step. Bank A starts from the factory painting;
+the other banks start empty. Reducing a pattern to 16 steps keeps steps 17–32
+for later. The original spectral score stays editable and plays again when you
+choose **Spectral painting**. Loop bars, scan direction, Blur and Freeze belong
+to painting; step patterns always play forward. Tuning, synthesis, envelopes
+and effects apply to both modes.
+
+Projects, browser storage and Undo preserve both modes and all four patterns.
+Explicit pattern or sequencing edits return from an imported performance part
+to the visible native sequence; sound controls preserve the imported part. Undo
+restores the received part. Invalid pattern data in a project is rejected.
+Live capture, WAV export and shared audio follow the selected sequencing mode.
+Pattern exports share the active bank as notes for GALLEY/SERVICE. Pattern
+timing runs in the existing audio engine, with the same 48-partial ceiling and
+without a second synthesizer or a timer-based playback engine.
+
 Export WAV renders the current settings as 48 kHz, 16-bit stereo audio.
 Record output captures a live performance, including manual gestures; live
 recording is limited to three minutes. Help explains the controls and keyboard
@@ -64,6 +84,13 @@ tail, and support cancellation without affecting playback.
 controls and validates project files; `presets.js` contains eight studies.
 `audio-engine.js` shares the synthesis engine between AudioWorklet playback,
 a ScriptProcessor fallback and offline WAV rendering.
+
+Run `node haze/sequence-checks.cjs` to check bank persistence, 16/32-step
+retention, step timing, gates, Stop/Panic, host-note isolation and export
+cancellation.
+From the repository, `CHROMIUM_PATH=/usr/bin/chromium node haze/sequence-browser-checks.cjs` also exercises STEAM and ROTISSERIE on
+desktop AudioWorklet and mobile fallback playback, including Undo, reload and
+the original modes. It requires Playwright and Chromium.
 
 Run `python3 haze/build.py` from the repository root to generate
 `haze/index.html` and `music/haze/HAZE-source.zip`. Run `npm run build`

@@ -21,9 +21,9 @@
   }
   function sequenceSignature(s) {
     if (appId === 'fable') return JSON.stringify([s.selectedPattern, s.patterns]);
-    if (appId === 'bower') return JSON.stringify([s.evolution, s.lanes.map(l => [l.steps, l.length, l.division, l.direction])]);
-    if (appId === 'mire') return JSON.stringify(s.sources.map(source => source.steps));
-    return JSON.stringify([s.score, s.direction, s.bars]);
+    if (appId === 'bower') return JSON.stringify([s.sequenceMode, s.pattern, s.evolution, s.lanes.map(l => [l.steps, l.length, l.division, l.direction])]);
+    if (appId === 'mire') return JSON.stringify([s.patternLength, s.sources.map(source => source.steps)]);
+    return JSON.stringify([s.sequenceMode, s.selectedPattern, s.patternBanks, s.score, s.direction, s.bars]);
   }
   let importedSignature = state().musicLabPattern ? sequenceSignature(state()) : null;
   const nativeSetState = engine.setState.bind(engine);
@@ -61,16 +61,27 @@
       return P.normalize(out);
     }
     if (appId === 'mire') {
-      const out = packetBase(s, s.name + ' · source pattern', 4, voicesFor(s)); let beat = 0;
-      for (let step = 0; step < 16; step++) { const interval = .25 * (step % 2 ? 1 - s.swing : 1 + s.swing); for (let i = 0; i < 4; i++) { const source = s.sources[i], hit = source.steps[step]; if (!source.mute && hit.on) for (let r = 0; r < hit.ratchet; r++) addNote(out, source.pitch, beat + interval * r / hit.ratchet, Math.min(source.decay * s.tempo / 60000, interval / hit.ratchet), hit.velocity * (r ? .88 : 1), String(i), hit.probability); } beat += interval; }
+      const stepCount=s.patternLength===32?32:16;
+      const out = packetBase(s, s.name + ' · source pattern', stepCount/4, voicesFor(s)); let beat = 0;
+      for (let step = 0; step < stepCount; step++) { const interval = .25 * (step % 2 ? 1 - s.swing : 1 + s.swing); for (let i = 0; i < 4; i++) { const source = s.sources[i], hit = source.steps[step]; if (!source.mute && hit.on) for (let r = 0; r < hit.ratchet; r++) addNote(out, source.pitch, beat + interval * r / hit.ratchet, Math.min(source.decay * s.tempo / 60000, interval / hit.ratchet), hit.velocity * (r ? .88 : 1), String(i), hit.probability); } beat += interval; }
       return P.normalize(out);
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode==='pattern') {
+        const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
+        for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       const out = packetBase(s, s.name + ' · four-bar phrase', 16, voices), random = randomFor(s.seed);
       const solo = s.lanes.some(l => l.solo);
       for (let i = 0; i < 4; i++) { if (selected !== null && i !== selected) continue; const lane = s.lanes[i]; if (lane.mute || solo && !lane.solo) continue; let beat = 0, count = 0; while (beat < 16 - 1e-8 && count < 1024) { let at = count % lane.length; if (lane.direction === 'reverse') at = lane.length - 1 - at; else if (lane.direction === 'pendulum') { const cycle = Math.max(1, lane.length * 2 - 2), pos = count % cycle; at = pos < lane.length ? pos : cycle - pos; } else if (lane.direction === 'random') at = Math.floor(random() * lane.length); const hit = lane.steps[at], interval = S.DIVISIONS[lane.division] * (1 + (count % 2 === 0 ? 1 : -1) * s.swing * .5); if (hit.on) { let degree = hit.degree; if (s.evolution && random() < lane.evolve) degree += random() < .5 ? -1 : 1; addNote(out, S.degreeMidi(s, i, degree), beat, lane.decay * s.tempo / 60, hit.velocity, String(i), hit.probability); } beat += interval; count++; } }
       out.notes.sort((a, b) => a.beat - b.beat); return P.normalize(out);
+    }
+    if(s.sequenceMode==='pattern') {
+      const bank=s.patternBanks[s.selectedPattern],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.selectedPattern),bank.length/4,voicesFor(s).filter(v=>v.id!=='auto'));
+      for(let step=0;step<bank.length;step++)for(let band=0;band<24;band++){const velocity=bank.score[band][step];if(velocity>0)addNote(out,midi(window.HazeDSP.frequencyForBand(s,band)),step/4,bank.gate/4,velocity,String(band));}
+      return P.normalize(out);
     }
     const cycle = s.bars * 4, length = s.direction === 'pingpong' ? cycle * 2 : cycle;
     const out = packetBase(s, s.name + ' · tuned bands', length, voicesFor(s).filter(v => v.id !== 'auto'));
@@ -152,7 +163,8 @@
       overlayNext++; if (overlayNext >= notes.length) { overlayNext = 0; overlayCycle++; }
     }
     const beat = Math.max(0, (now - overlayAnchor) / seconds) % packet.lengthBeats;
-    engine.onStep?.(Math.floor(beat * 4) % 16, now);
+    const visibleSteps=appId==='mire'?(s.patternLength===32?32:16):appId==='bower'?(s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length:Math.max(...s.lanes.map(l=>l.length))):appId==='haze'?(s.sequenceMode==='pattern'?s.patternBanks[s.selectedPattern].length:32):16;
+    engine.onStep?.(Math.floor(beat * 4) % visibleSteps, now);
   }
   engine.start = async function (when) {
     if (!(engine.state || state()).musicLabPattern) return nativeStart(when);
@@ -169,7 +181,7 @@
   let clockRevision = null;
   const adapter = {
     get patternExport() { const scopes = [{ id: 'pattern', label: state().musicLabPattern ? 'Imported performance pattern' : 'Current pattern' }]; if (appId === 'fable') for (let i = 0; i < 4; i++) scopes.push({ id: 'pattern-' + i, label: 'Native pattern ' + String.fromCharCode(65 + i) }); if (appId === 'bower') for (let i = 0; i < 4; i++) scopes.push({ id: 'voice-' + i, label: 'Native string ' + (i + 1) }); return { scopes, defaultScope: 'pattern' }; },
-    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze' ? 'bands' : 'notes', description: appId === 'bower' ? 'SKEWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'REDUCE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
+    get patternImport() { const s = state(); return { targets: [{ id: 'pattern', name: 'Performance pattern · exact portable notes', occupied: !!(s.musicLabPattern ? s.musicLabPattern.pattern.notes.length : nativePattern(s).notes.length) }], voices: voicesFor(s), mode: appId === 'haze'&&s.sequenceMode!=='pattern' ? 'bands' : 'notes', description: appId === 'bower' ? 'SKEWER’s strings support MIDI notes 24–100. Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' : appId === 'mire' ? 'REDUCE exciters support MIDI notes 16–122 at 48 kHz; sample sources accept 0–127. Import exact notes while preserving the network. Native sequence edits return to the native sequence.' : appId === 'haze' ? 'Timing, velocity, and duration stay editable. Map to a fixed tuned band, or choose nearest bands to quantize pitches. Native score edits return to the native sequence.' : 'Import exact polyphonic notes while preserving the sound patch. Native sequence edits return to the native sequence.' }; },
     get notes() {const s=state(),sampleRate=engine.context?.sampleRate||48000,voices=voicesFor(s).map(voice=>{let pitchRange=appId==='bower'?[24,100]:[0,127];if(appId==='mire'&&s.sources[Number(voice.id)]?.kind!=='sample')pitchRange=[16,Math.min(127,Math.floor(69+12*Math.log2(sampleRate*.2/440)))];if(appId==='haze'&&voice.id==='auto')pitchRange=[Math.max(0,Math.ceil(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,0)/440)-.51)),Math.min(127,Math.floor(69+12*Math.log2(window.HazeDSP.frequencyForBand(s,23)/440)+.51))];return{...voice,pitchRange};});return { voices, polyphonic: true, pitched: appId !== 'haze', scheduledCancel:true, ...(appId==='bower'?{minPitch:24,maxPitch:100,pitchRange:[24,100]}:{pitchRange:[0,127]}) }; },
     get importedPattern() { return state().musicLabPattern ? P.clone(state().musicLabPattern.pattern) : null; },
     getImportedPattern() { return this.importedPattern; },

@@ -14,7 +14,7 @@ Press Play to hear a built-in clip sequenced as a groove, or trigger its
 sixteen slice pads by keyboard or touch. Import your own audio or explicitly
 enable microphone capture. The first twenty seconds become the source clip.
 Edit slice boundaries and sequence slice choices, velocity, probability,
-ratchets, pitch, reverse and gate in four sixteen-step patterns. Eight recipes
+ratchets, pitch, reverse and gate in four 16- or 32-step patterns. Eight recipes
 are included.
 
 The master effects and performance controls let you shape a live performance.
@@ -69,3 +69,20 @@ The Kitchen name is a presentation change. Existing app URLs, project formats, n
 ## Interface refresh · 1.0.1
 
 A compact source → pads → sequence workspace keeps the selected-step controls directly beneath the pattern. Adjacent-slice arrows audition without assigning; adjacent-step arrows move the editor without changing pattern data or Undo history. Sample prep and master effects have labelled expandable panels. All original import, microphone, transient slicing, manual boundaries, presets, pattern tools, capture and export features remain unchanged.
+
+## Longer patterns
+
+Choose 32 in Steps beside the pattern banks, then use 1–16 / 17–32 to edit
+the second page in the same grid and inspector. Each bank keeps its own length;
+queued changes and Chain advance at the end of the playing pattern. The slice
+pads still address the same sixteen cuts. Shortening to 16 retains the second
+page, including through Undo, project saves, browser recovery and GALLEY state.
+Shuffle, Season, Fill and Clear affect only active steps; copying a bank includes
+its length and stored second page. Old sixteen-step projects keep their timing.
+A 32-step phrase lasts two bars, so choose at least two bars for a complete WAV.
+
+Run `node ravel/sequence-checks.cjs` for longer-pattern compatibility, scheduling
+and audio-render checks. `node ravel/browser-checks.cjs` checks the real grids,
+recovery, worklet/fallback playback and GALLEY snapshots using isolated previews
+when Playwright and Chromium are available. `python3 ravel/build.py --output
+/tmp/dicer.html` builds a standalone preview without updating published files.

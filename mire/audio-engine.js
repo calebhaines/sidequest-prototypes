@@ -461,7 +461,7 @@ class MireProcessor extends AudioWorkletProcessor {
       const ctx=this.context,now=ctx.currentTime;
       if(this._nextTime<now-.1){this._nextTime=now+.03;}
       while(this._nextTime<now+.16) {
-        const step=this._step,time=this._nextTime,base=60/Math.max(40,Math.min(200,this.state.tempo||96))/4;
+        const length=this.state.patternLength===32?32:16,step=this._step%length,time=this._nextTime,base=60/Math.max(40,Math.min(200,this.state.tempo||96))/4;
         const interval=base*(step%2?1-(this.state.swing||0):1+(this.state.swing||0));
         (this.state.sources||[]).forEach((source,index)=>{
           const hit=source.steps?.[step];if(!hit?.on||source.mute||Math.random()>=(hit.probability??1))return;
@@ -470,7 +470,7 @@ class MireProcessor extends AudioWorkletProcessor {
         });
         const generation=this._transportGeneration;
         const timer=setTimeout(()=>{this._stepTimers.delete(timer);if(this.isPlaying&&generation===this._transportGeneration){this._displayStep=step;this._meter.step=step;this.onStep?.(step,time);}},Math.max(0,(time-now)*1000));
-        this._stepTimers.add(timer);this._step=(step+1)%16;this._nextTime+=interval;
+        this._stepTimers.add(timer);this._step=(step+1)%length;this._nextTime+=interval;
       }
     }
     stop() {
@@ -543,10 +543,10 @@ class MireProcessor extends AudioWorkletProcessor {
       const frozen=!!source.garden.freeze;if(frozen)source.garden.freeze=false;
       const core=new DSP(sampleRate,source,0x504f4e44);this._samples.forEach((sample,i)=>{if(sample)core.setSample(i,sample.pcm,sample.sampleRate);});
       const schedule=(offset,barsToSchedule)=>{let time=offset;for(let step=0;step<barsToSchedule*16;step++) {
-        const cell=step%16,interval=60/source.tempo/4*(cell%2?1-source.swing:1+source.swing);
+        const cell=step%(source.patternLength===32?32:16),interval=60/source.tempo/4*(cell%2?1-source.swing:1+source.swing);
         source.sources.forEach((track,index)=>{const hit=track.steps[cell];if(!hit.on||track.mute||core.random()>=(hit.probability??1))return;const ratchets=Math.max(1,Math.min(4,hit.ratchet||1));for(let r=0;r<ratchets;r++)core.trigger({index,velocity:hit.velocity*(r?.88:1),frame:Math.round((time+interval*r/ratchets)*sampleRate)});});time+=interval;
       }};
-      if(frozen){schedule(0,1);const frames=Math.round(barSeconds*sampleRate);let done=0;while(done<frames){checkAbort();const count=Math.min(128,frames-done);core.processBlock(new Float32Array(count),new Float32Array(count));done+=count;if(done%32768===0)await new Promise(resolve=>setTimeout(resolve,0));}source.garden.freeze=true;core.setState(source);}
+      if(frozen){const warmupBars=source.patternLength===32?2:1;schedule(0,warmupBars);const frames=Math.round(barSeconds*warmupBars*sampleRate);let done=0;while(done<frames){checkAbort();const count=Math.min(128,frames-done);core.processBlock(new Float32Array(count),new Float32Array(count));done+=count;if(done%32768===0)await new Promise(resolve=>setTimeout(resolve,0));}source.garden.freeze=true;core.setState(source);}
       else schedule(0,lengthBars);
       const totalFrames=Math.round(totalSeconds*sampleRate),chunks=[];let rendered=0;
       this.onStatus?.('Rendering the feedback network…');

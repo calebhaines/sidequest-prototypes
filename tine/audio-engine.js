@@ -258,6 +258,7 @@
   }
   function stopVoices(environment, at) { if (environment) environment.voices.forEach(voice => fadeVoice(voice, at)); }
   function stepLength(state, step) { const seconds = 60 / clamp(state.bpm || 120, 40, 240) / 4, swing = clamp(state.swing || 0, 0, .6); return seconds * (step % 2 === 0 ? 1 + swing : 1 - swing); }
+  function sequenceLength(state) { return state.stepCount === 32 ? 32 : 16; }
   function playStep(environment, state, step, time) { const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); tracks.forEach(track => { const hit = track.steps && track.steps[step]; if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2); }); }
   function encodeWav(audio) {
     const frames = audio.length, left = audio.getChannelData(0), right = audio.getChannelData(1), buffer = new ArrayBuffer(44 + frames * 4), view = new DataView(buffer);
@@ -289,9 +290,9 @@
     _schedule() {
       if (!this.running || !this.context || this.context.state !== 'running') return;
       const currentTime = this.context.currentTime; let skipped = 0;
-      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { this.nextNoteTime += stepLength(this.state, this.currentStep); this.currentStep = (this.currentStep + 1) % 16; skipped++; }
+      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { this.nextNoteTime += stepLength(this.state, this.currentStep); this.currentStep = (this.currentStep + 1) % sequenceLength(this.state); skipped++; }
       if (skipped >= 4096) this.nextNoteTime = currentTime + .025;
-      while (this.nextNoteTime < currentTime + .13) { const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime); playStep(this.environment, this.state, step, when); if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); } this.nextNoteTime += stepLength(this.state, step); this.currentStep = (step + 1) % 16; }
+      while (this.nextNoteTime < currentTime + .13) { const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime); playStep(this.environment, this.state, step, when); if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); } this.nextNoteTime += stepLength(this.state, step); this.currentStep = (step + 1) % sequenceLength(this.state); }
     }
     _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
     stop() { this.generation++; this._stopTransport(); this.currentStep = 0; }
@@ -347,10 +348,10 @@
       checkCancelled();
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4))), duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
-      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
+      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.slice(0, sequenceLength(snapshot)).some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
       const naturalTail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0)), tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail, context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
-      let time = .015; for (let i = 0; i < (hit ? 1 : bars * 16); i++) { if (i % 16 === 0) { checkCancelled(); if (options.signal) await new Promise(resolve => setTimeout(resolve, 0)); checkCancelled(); } const step = i % 16; playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
+      let time = .015; for (let i = 0; i < (hit ? 1 : bars * 16); i++) { if (i % 16 === 0) { checkCancelled(); if (options.signal) await new Promise(resolve => setTimeout(resolve, 0)); checkCancelled(); } const step = i % sequenceLength(snapshot); playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
       graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - .12); graph.master.gain.linearRampToValueAtTime(0, duration + tail); const rendered = await context.startRendering(); checkCancelled(); return encodeWav(rendered);
     }
     async dispose() {

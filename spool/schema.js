@@ -27,6 +27,7 @@
   const str = (v, fallback, length = 64) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, length) || fallback : fallback;
   const pick = (v, values, fallback) => values.includes(v) ? v : fallback;
   const bool = (v, fallback = false) => typeof v === 'boolean' ? v : fallback;
+  function patternBanks(raw) { return Array.from({length:4},(_,bank)=>{const r=raw?.[bank]||{};return {length:r.length===32?32:16,gate:num(r.gate,.05,1,.8),score:Array.from({length:4},(_,deck)=>Array.from({length:32},(_,step)=>num(r.score?.[deck]?.[step],0,1,bank===0&&step%[4,8,8,16][deck]===0?[.85,.75,.6,.5][deck]:0)))};}); }
   function seedAsset(id, name, options = {}) {
     return { kind: 'seed', name, id, seed: options.seed ?? 0x53504f4f, tempo: options.tempo ?? 96, bars: options.bars ?? 2, pitch: options.pitch ?? 48 };
   }
@@ -42,6 +43,7 @@
   function defaultState() {
     return {
       version: VERSION, name: 'The special keeps coming round', tempo: 96,
+      sequenceMode:'native', selectedPattern:0, patternBanks:patternBanks(),
       master: { volume: .70, width: .83, echo: .15, echoDivision: '3/16', feedback: .36, space: .16 },
       decks: Array.from({ length: 4 }, (_, i) => defaultDeck(i)),
       assets: [
@@ -79,6 +81,7 @@
     const m = raw.master || {}, source = raw.source || {}, record = raw.record || {};
     const state = {
       version: VERSION, name: str(raw.name, d.name, 100), tempo: num(raw.tempo, 40, 180, d.tempo),
+      sequenceMode:raw.sequenceMode==='pattern'?'pattern':'native', selectedPattern:int(raw.selectedPattern,0,3,0), patternBanks:patternBanks(raw.patternBanks),
       master: {
         volume: num(m.volume, 0, 1, d.master.volume), width: num(m.width, 0, 1, d.master.width),
         echo: num(m.echo, 0, 1, d.master.echo), echoDivision: pick(m.echoDivision, DIVISIONS, d.master.echoDivision),
@@ -121,6 +124,15 @@
     }
     return state;
   }
+  function validateSequencing(state) {
+    const own=key=>Object.prototype.hasOwnProperty.call(state,key),invalid=()=>{throw new Error('The project contains invalid step patterns.');};
+    if(own('sequenceMode')&&!['native','pattern'].includes(state.sequenceMode))invalid();
+    if(own('selectedPattern')&&(!Number.isInteger(state.selectedPattern)||state.selectedPattern<0||state.selectedPattern>3))invalid();
+    if(own('patternBanks')){
+      if(!Array.isArray(state.patternBanks)||state.patternBanks.length!==4)invalid();
+      for(const bank of state.patternBanks)if(!bank||![16,32].includes(bank.length)||typeof bank.gate!=='number'||!Number.isFinite(bank.gate)||bank.gate<.05||bank.gate>1||!Array.isArray(bank.score)||bank.score.length!==4||bank.score.some(row=>!Array.isArray(row)||row.length!==32||row.some(value=>typeof value!=='number'||!Number.isFinite(value)||value<0||value>1)))invalid();
+    }
+  }
   function parseProject(json) {
     if (typeof json !== 'string' || json.length > 32 * 1024 * 1024) throw new Error('Choose a ROTISSERIE project smaller than 32 MB.');
     let project;
@@ -128,7 +140,7 @@
     if (!project || project.format !== 'spool-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a ROTISSERIE project file (.spool.json).');
     const s = project.state;
     if (!Array.isArray(s.decks) || s.decks.length !== 4 || !Array.isArray(s.assets) || s.assets.length !== 4 || !s.master || !s.source || !s.record) throw new Error('This ROTISSERIE project needs four complete decks and their audio assets.');
-    const state = normalize(s);
+    validateSequencing(s);const state = normalize(s);
     for (let i = 0; i < 4; i++) {
       const raw = s.assets[i], asset = state.assets[i];
       if (raw == null) continue;

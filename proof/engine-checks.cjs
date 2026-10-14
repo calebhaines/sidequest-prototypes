@@ -109,6 +109,26 @@ function validPacket() {
 function projectState(project) { return project.state || project; }
 
 (async () => {
+  await check('Legacy sixteen-step banks migrate silently; both sequencers retain thirty-two stored steps', () => {
+    const legacy = S.defaultState(); delete legacy.sequenceMode; delete legacy.notePatterns; legacy.patterns.forEach(p => p.steps = p.steps.slice(0, 16));
+    const before = events(legacy, 32), restored = S.parseProject({ format: 'proof-project', formatVersion: 1, state: legacy });
+    assert.deepEqual(events(restored, 32), before); assert(restored.patterns.every(p => p.steps.length === 32 && p.steps.slice(16).every(x => !x.on)));
+    restored.patterns[0].length = 32; restored.patterns[0].steps.forEach(x => x.on = false); restored.patterns[0].steps[31].on = true; restored.arp.spice = 0; restored.swing = 0;
+    assert.deepEqual(events(restored, 8).map(e => e.step), [31]); assert.equal(S.euclidean(32, 13).length, 32);
+  });
+  await check('Absolute note banks play late steps and ties independently of the saved chord arpeggiator', () => {
+    const state = S.defaultState(), original = copy(state.patterns), originalArp = copy(state.arp); state.sequenceMode = 'pattern'; state.swing = 0;
+    const p = state.notePatterns[0]; p.length = 32; p.division = '1/16'; p.gate = .75; p.steps.forEach(x => x.on = false);
+    Object.assign(p.steps[0], { on: true, pitch: 43 }); Object.assign(p.steps[1], { on: true, tie: true });
+    Object.assign(p.steps[16], { on: true, pitch: 31 }); Object.assign(p.steps[31], { on: true, pitch: 72, ratchet: 2 });
+    const expected = events(state, 8); assert.deepEqual(expected.map(e => e.note), [43, 31, 72, 72]); assert.deepEqual(expected.map(e => e.startBeat), [0, 4, 7.75, 7.875]); assert.equal(expected[0].durationBeats, .4375);
+    assert.equal(arp.progressionLength(state), 8); state.root = 12; state.arp.direction = 'random'; state.arp.transpose = 36; state.arp.spice = 1; state.source = 'held'; state.heldNotes = [];
+    assert.deepEqual(events(state, 8), expected); assert.deepEqual(Array.from({length:32},(_,tick)=>plain(arp.tickEvents(state,tick))).flat(), expected);
+    state.arp = originalArp; state.notePatterns[3].steps[31].pitch = 127; const restored = S.parseProject(S.serialize(state));
+    assert.deepEqual(plain(restored.patterns), plain(original)); assert.deepEqual(plain(restored.arp), plain(originalArp)); assert.equal(restored.notePatterns[3].steps[31].pitch,127);
+    const invalid = JSON.parse(S.serialize(state)); invalid.state.notePatterns[3].steps[31].pitch = 128; assert.throws(() => S.parseProject(invalid));
+    state.musicLabPattern = { pattern: validPacket(), voiceMap: { felt: 'synth' } }; assert.deepEqual(events(state).map(e=>e.note),[60,64], 'Imported exact notes remain authoritative in Pattern mode');
+  });
   await check('Project JSON restores all controls and rejects malformed, oversized and nonfinite input', () => {
     const state = S.defaultState(); state.synth.model = 'fm'; state.synth.fmRatio = 3; state.patterns[2].steps[5].tie = true;
     const serialized = S.serialize(state); assert.equal(typeof serialized, 'string');

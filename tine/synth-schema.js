@@ -119,7 +119,7 @@
     if (colorIds.includes(input.noiseColor)) result.noiseColor = input.noiseColor;
     for (const key of ['mute', 'solo']) if (typeof input[key] === 'boolean') result[key] = input[key];
     if (Array.isArray(input.steps)) {
-      result.steps = Array.from({ length: 16 }, (_, index) => {
+      result.steps = Array.from({ length: input.steps.length > 16 ? 32 : 16 }, (_, index) => {
         const value = input.steps[index];
         return typeof value === 'number' && Number.isFinite(value) ? clamp(Math.round(value), 0, 2) : 0;
       });
@@ -129,7 +129,7 @@
 
   const exactKeys = (object, keys) => isRecord(object) && Object.keys(object).length === keys.length
     && keys.every((key) => Object.prototype.hasOwnProperty.call(object, key));
-  const validSteps = (steps) => Array.isArray(steps) && steps.length === 16
+  const validSteps = (steps) => Array.isArray(steps) && [16, 32].includes(steps.length)
     && Array.from(steps).every((step) => Number.isInteger(step) && step >= 0 && step <= 2);
 
   function validTrackShape(track, keys, acceptedModels, parameters) {
@@ -149,9 +149,10 @@
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2].includes(project.version)) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2, 3].includes(project.version)) return false;
     const state = project.state;
-    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version === 3 ? ['stepCount'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (project.version === 3 && ![16, 32].includes(state.stepCount)) return false;
     if (state.musicLabPattern !== undefined) {
       try {
         const overlay = state.musicLabPattern;
@@ -165,6 +166,8 @@
     const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
     if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
+    const patterns = [...state.tracks.map((track) => track.steps), ...project.banks.flat()];
+    if ((project.version < 3 && patterns.some((steps) => steps.length !== 16)) || (state.stepCount === 32 && patterns.some((steps) => steps.length !== 32))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
       && Number.isInteger(project.selected) && project.selected >= 0 && project.selected <= 7;
   }
@@ -176,6 +179,7 @@
       upgraded.state.tracks = upgraded.state.tracks.map((track) => Object.assign({}, track, neutralContact));
       upgraded.version = 2;
     }
+    if (upgraded.version === 2) { upgraded.state.stepCount = 16; upgraded.version = 3; }
     return upgraded;
   }
 

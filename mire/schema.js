@@ -38,7 +38,7 @@
 
   function defaultState() {
     return {
-      version: VERSION, name: 'The patient stockpot', tempo: 104, swing: .08,
+      version: VERSION, name: 'The patient stockpot', tempo: 104, swing: .08, patternLength: 16,
       master: { volume: .65, mix: .84, drive: .12, width: .85 },
       garden: { circulation: .70, damping: .25, freeze: false },
       nodes: [
@@ -49,10 +49,10 @@
       ],
       routing: [[.50, .36, .06, 0], [0, .46, .36, .08], [.14, 0, .48, .32], [.32, .12, 0, .48]],
       sources: [
-        { name: 'Droplet', kind: 'drop', pitch: 48, decay: 180, tone: 5200, texture: .25, level: .63, destination: 0, mute: false, steps: Array.from({ length: 16 }, (_, i) => step([0, 6, 10].includes(i), i === 0 ? .95 : .65)) },
-        { name: 'Copper', kind: 'chime', pitch: 67, decay: 450, tone: 8400, texture: .40, level: .36, destination: 2, mute: false, steps: Array.from({ length: 16 }, (_, i) => step([3, 11, 14].includes(i), .65)) },
-        { name: 'Dust', kind: 'dust', pitch: 60, decay: 65, tone: 6300, texture: .55, level: .27, destination: 1, mute: false, steps: Array.from({ length: 16 }, (_, i) => step([2, 7, 12, 15].includes(i), .55)) },
-        { name: 'Reed', kind: 'reed', pitch: 55, decay: 620, tone: 2400, texture: .30, level: .30, destination: 3, mute: false, steps: Array.from({ length: 16 }, (_, i) => step([0, 9].includes(i), .7)) },
+        { name: 'Droplet', kind: 'drop', pitch: 48, decay: 180, tone: 5200, texture: .25, level: .63, destination: 0, mute: false, steps: Array.from({ length: 32 }, (_, i) => step([0, 6, 10].includes(i), i === 0 ? .95 : .65)) },
+        { name: 'Copper', kind: 'chime', pitch: 67, decay: 450, tone: 8400, texture: .40, level: .36, destination: 2, mute: false, steps: Array.from({ length: 32 }, (_, i) => step([3, 11, 14].includes(i), .65)) },
+        { name: 'Dust', kind: 'dust', pitch: 60, decay: 65, tone: 6300, texture: .55, level: .27, destination: 1, mute: false, steps: Array.from({ length: 32 }, (_, i) => step([2, 7, 12, 15].includes(i), .55)) },
+        { name: 'Reed', kind: 'reed', pitch: 55, decay: 620, tone: 2400, texture: .30, level: .30, destination: 3, mute: false, steps: Array.from({ length: 32 }, (_, i) => step([0, 9].includes(i), .7)) },
       ],
       modulators: [
         { shape: 'sine', rate: .09, depth: .16, target: 'n3.time' },
@@ -78,7 +78,7 @@
     const master = raw.master || {}, garden = raw.garden || {};
     const state = {
       version: VERSION, name: text(raw.name, defaults.name, 100),
-      tempo: number(raw.tempo, 40, 200, defaults.tempo), swing: number(raw.swing, 0, .45, defaults.swing),
+      tempo: number(raw.tempo, 40, 200, defaults.tempo), swing: number(raw.swing, 0, .45, defaults.swing), patternLength: choice(raw.patternLength, [16, 32], 16),
       master: Object.fromEntries(['volume', 'mix', 'drive', 'width'].map(k => [k, number(master[k], 0, 1, defaults.master[k])])),
       garden: { circulation: number(garden.circulation, 0, 1, defaults.garden.circulation), damping: number(garden.damping, 0, 1, defaults.garden.damping), freeze: garden.freeze === true },
       nodes: [], sources: [], routing: [], modulators: [], samples: [],
@@ -103,7 +103,7 @@
         name: text(s.name, ds.name, 40), kind: choice(s.kind, SOURCE_KINDS.map(k => k.id), ds.kind),
         pitch: integer(s.pitch, 24, 96, ds.pitch), decay: number(s.decay, 15, 10000, ds.decay), tone: number(s.tone, 120, 18000, ds.tone),
         texture: number(s.texture, 0, 1, ds.texture), level: number(s.level, 0, 1, ds.level), destination: integer(s.destination, 0, 3, ds.destination), mute: s.mute === true,
-        steps: Array.from({ length: 16 }, (_, j) => {
+        steps: Array.from({ length: 32 }, (_, j) => {
           const st = s.steps?.[j], def = ds.steps[j];
           return { on: typeof st?.on === 'boolean' ? st.on : def.on, velocity: number(st?.velocity, .1, 1, def.velocity), probability: number(st?.probability, 0, 1, 1), ratchet: integer(st?.ratchet, 1, 4, 1) };
         }),
@@ -125,7 +125,8 @@
     if (!project || project.format !== 'mire-project' || project.formatVersion !== 1 || !project.state) throw new Error('Choose a REDUCE project file (.mire.json).');
     const s = project.state;
     if (!Array.isArray(s.nodes) || s.nodes.length !== 4 || !Array.isArray(s.sources) || s.sources.length !== 4 || !Array.isArray(s.routing) || s.routing.length !== 4 || !Array.isArray(s.modulators) || s.modulators.length !== 2) throw new Error('This REDUCE project is incomplete.');
-    if (s.sources.some(source => !Array.isArray(source?.steps) || source.steps.length !== 16) || s.routing.some(row => !Array.isArray(row) || row.length !== 4)) throw new Error('The project needs four complete 16-step lanes and a 4 × 4 routing matrix.');
+    if (s.sources.some(source => !Array.isArray(source?.steps) || ![16, 32].includes(source.steps.length)) || s.routing.some(row => !Array.isArray(row) || row.length !== 4)) throw new Error('The project needs four complete 16- or 32-step lanes and a 4 × 4 routing matrix.');
+    if (s.patternLength !== undefined && ![16, 32].includes(s.patternLength)) throw new Error('Choose a 16- or 32-step pattern length.');
     const state = normalize(s);
     if (Array.isArray(s.samples)) {
       for (let i = 0; i < 4; i++) {

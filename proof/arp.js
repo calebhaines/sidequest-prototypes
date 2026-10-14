@@ -16,7 +16,7 @@ function createProofArp() {
     notes = notes.map((n, i) => Math.round(clamp(n + Math.floor(i / 2) * (chord.spread || 0) * 12, 0, 127))); return Array.from(new Set(notes)).sort((a, b) => a - b);
   }
   function chordName(state, chord) { if (typeof chord === 'number') chord = state.chords[chord]; chord = chord || state.chords[state.selectedChord || 0]; if (!chord) return '—'; const degree = chord.degree || 0, root = scaleNote(state, degree); let suffix = { diatonic: '', major: '', minor: 'm', maj7: 'maj7', min7: 'm7', dominant7: '7', add9: 'add9', min9: 'm9', sus2: 'sus2', sus4: 'sus4', dim7: '°7' }[chord.quality] || ''; if (chord.quality === 'diatonic') { const third = mod(scaleNote(state, degree + 2) - root, 12), fifth = mod(scaleNote(state, degree + 4) - root, 12); suffix = third === 3 ? fifth === 6 ? '°' : 'm' : fifth === 8 ? '+' : ''; } return noteName(root).replace(/-?\d+$/, '') + suffix; }
-  function progressionLength(state) { if (state.musicLabPattern?.pattern) return state.musicLabPattern.pattern.lengthBeats; const division = divisions[state.arp?.division] || .25; if (state.source !== 'progression') return (state.patterns?.[state.selectedPattern || 0]?.length || 16) * division; return Math.max(4, (state.chords || []).reduce((sum, chord) => sum + (chord.enabled ? chord.bars * 4 : 0), 0)); }
+  function progressionLength(state) { if (state.musicLabPattern?.pattern) return state.musicLabPattern.pattern.lengthBeats; if (state.sequenceMode === 'pattern') { const p = state.notePatterns[state.selectedPattern || 0]; return p.length * (divisions[p.division] || .25); } const division = divisions[state.arp?.division] || .25; if (state.source !== 'progression') return (state.patterns?.[state.selectedPattern || 0]?.length || 16) * division; return Math.max(4, (state.chords || []).reduce((sum, chord) => sum + (chord.enabled ? chord.bars * 4 : 0), 0)); }
   function sourceAt(state, beat) {
     if (state.source === 'held') return { chord: -1, notes: Array.from(new Set(state.heldNotes || [])).sort((a, b) => a - b) };
     if (state.source === 'single') { const chord = state.selectedChord || 0; return { chord, notes: chordNotes(state, chord) }; }
@@ -54,9 +54,9 @@ function createProofArp() {
   }
   function tickStart(state, tick, x, division) { return Math.max(0, tick * division + (tick % 2 ? state.swing * division : 0) + (x.offset || 0) * division); }
   function nativeTick(state, tick) {
-    const arp = state.arp, division = divisions[arp.division] || .25, pattern = state.patterns[state.selectedPattern || 0], length = pattern.length, stepIndex = mod(tick, length), x = pattern.steps[stepIndex];
+    const fixed = state.sequenceMode === 'pattern', pattern = (fixed ? state.notePatterns : state.patterns)[state.selectedPattern || 0], arp = fixed ? { ...state.arp, division: pattern.division, gate: pattern.gate, spice: 0, transpose: 0 } : state.arp, division = divisions[arp.division] || .25, length = pattern.length, stepIndex = mod(tick, length), x = pattern.steps[stepIndex];
     if (!x.on || x.tie || x.velocity <= 0 || x.probability <= 0) return [];
-    const source = poolAt(state, tick), notes = chooseNotes(state, tick, source.notes); if (!notes.length) return [];
+    const source = fixed ? { chord: -1, notes: [x.pitch] } : poolAt(state, tick), notes = fixed ? [x.pitch] : chooseNotes(state, tick, source.notes); if (!notes.length) return [];
     const ratchet = x.ratchet || 1, result = [], starts = [];
     for (let hit = 0; hit < ratchet; hit++) { if (random(state.seed, tick, 100 + hit) >= x.probability) continue; starts.push(hit); }
     let tieEnd = null;
@@ -67,7 +67,7 @@ function createProofArp() {
       for (let i = 0; i < notes.length; i++) {
         let note = notes[i]; if (arp.spice > 0 && arp.direction !== 'chord' && random(state.seed, tick, 200 + hit) < arp.spice) { const nearest = source.notes.reduce((best, n, at) => Math.abs(n - note) < Math.abs(source.notes[best] - note) ? at : best, 0), neighbor = mod(nearest + (random(state.seed, tick, 210 + hit) < .5 ? -1 : 1), source.notes.length); note += source.notes[neighbor] - source.notes[nearest]; }
         const velocity = clamp(x.velocity * (1 + arp.spice * .22 * (random(state.seed, tick, 300 + hit * 31 + i) * 2 - 1)), 0, 1);
-        result.push({ note: Math.round(clamp(note + arp.transpose + x.octave * 12, 0, 127)), velocity, startBeat, durationBeats, voiceId: 'synth', step: stepIndex, chord: source.chord });
+        result.push({ note: Math.round(clamp(note + arp.transpose + (fixed ? 0 : x.octave * 12), 0, 127)), velocity, startBeat, durationBeats, voiceId: 'synth', step: stepIndex, chord: source.chord });
       }
     }
     return result;
@@ -89,7 +89,7 @@ function createProofArp() {
     const startBeat = options.startBeat === undefined ? 0 : options.startBeat, lengthBeats = options.lengthBeats === undefined ? 16 : options.lengthBeats;
     if (!Number.isFinite(startBeat) || startBeat < 0 || !Number.isFinite(lengthBeats) || lengthBeats <= 0 || lengthBeats > 16384) throw new Error('Choose a finite LEAVEN event range.');
     if (state.musicLabPattern?.pattern) return overlayEvents(state, startBeat, lengthBeats);
-    const division = divisions[state.arp.division] || .25, end = startBeat + lengthBeats, first = Math.max(0, Math.floor(startBeat / division) - 2), last = Math.ceil(end / division) + 1, result = [];
+    const division = divisions[state.sequenceMode === 'pattern' ? state.notePatterns[state.selectedPattern || 0].division : state.arp.division] || .25, end = startBeat + lengthBeats, first = Math.max(0, Math.floor(startBeat / division) - 2), last = Math.ceil(end / division) + 1, result = [];
     for (let tick = first; tick <= last; tick++) for (const event of nativeTick(state, tick)) if (event.startBeat >= startBeat - 1e-9 && event.startBeat < end - 1e-9) result.push(event);
     return result.sort((a, b) => a.startBeat - b.startBeat || a.note - b.note);
   }

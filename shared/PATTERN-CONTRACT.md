@@ -32,6 +32,17 @@ Start/length/fades are arrangement beats; sourceOffset is pattern beats. Rate ch
 
 ## Shared clock and host
 
+Native step sequencing may retain up to 32 stored steps while a shorter selected
+length hides inactive notes. Export only the active length. SIZZLE/CLATTER expose
+`stepCount`, DICER stores a per-bank `length`, and REDUCE exposes `patternLength`.
+SKEWER/ROUX/LEAVEN keep independent original and conventional patterns; export
+the selected mode and bank. STEAM/ROTISSERIE expose `patternBanks` with selected
+bank, length, gate, and scores. Their Pattern mode declares discrete notes/drums
+rather than continuous bands/decks, so GALLEY does not start an autonomous pattern
+alongside its note scheduler. Native-mode changes must explicitly leave an exact
+imported overlay; sound edits preserve that overlay. See `music/SEQUENCING.md` in
+the repository for the interface and rollback instructions.
+
 `audio.getTransport()` returns `{beat,contextTime,tempo,playing,revision,loopEnabled,loopStart,loopEnd,endBeat,countInBeatsRemaining,anchorBeat,anchorTime}`. `audio.subscribeTransport(fn)` returns unsubscribe. Worklet and fallback report context-time anchors; command changes issue new revisions. Future schedules cancel on seek/stop/panic/loop discontinuities and tempo changes.
 
 Host methods: `getPatternAdapter(trackId)`, `exportPattern(trackId,options)`, `importPattern(trackId,pattern,options)`, `scheduleNote(trackId,event)`, `cancelNotes(trackId,options)`, `renderPattern(trackId,request)`. They await readiness where appropriate and use independent lifecycle guards, never the transport command counter for concurrent notes. `capabilities().notes/patternImport/patternExport` are truthful.

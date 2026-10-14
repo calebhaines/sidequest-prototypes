@@ -155,6 +155,23 @@ const soundPaths = ['synth.wave', 'synth.mix', 'synth.sub', 'synth.detune', 'syn
     await page.locator('#clearPatternButton').click(); assert((await state(page)).patterns[0].steps.every(s => !s.on));
     await page.locator('#undoButton').click(); assert.deepEqual((await state(page)).patterns, music.patterns);
   });
+  await check('Pattern mode, four note banks and thirty-two-step pages preserve the native arpeggiator', async () => {
+    await fresh(page); const before = await state(page); await page.locator('#sequenceMode').selectOption('pattern');
+    await page.locator('#patternLength').fill('32'); await page.locator('#patternLength').press('Tab');
+    await page.locator('#stepPage').selectOption('1'); await page.locator('#steps [data-step="31"]').click();
+    await page.locator('#stepToggle').click(); await page.locator('#stepPitch').selectOption('72');
+    const edited = await state(page); assert.equal(edited.notePatterns[0].steps[31].pitch,72); assert(edited.notePatterns[0].steps[31].on);
+    assert.deepEqual(edited.patterns,before.patterns); assert.deepEqual(edited.arp,before.arp);
+    const packet = await page.evaluate(() => MusicLabPatternInstrument.exportPattern()); assert.equal(packet.lengthBeats,8); assert(packet.notes.some(n=>n.pitch===72&&n.beat>=7.75));
+    await page.locator('#patternBanks [data-bank="1"]').click(); assert.equal(await page.locator('#stepPage').isVisible(),false);
+    await page.locator('#patternBanks [data-bank="0"]').click(); assert.equal((await state(page)).notePatterns[0].length,32);
+    await page.locator('#sequenceMode').selectOption('arp'); assert.deepEqual((await state(page)).patterns,before.patterns);
+    await page.locator('#undoButton').click(); assert.equal((await state(page)).sequenceMode,'pattern');
+    await page.evaluate(() => ProofApp.loadState(ProofSchema.parseProject(ProofSchema.serialize(ProofApp.getState())))); assert.equal((await state(page)).notePatterns[0].steps[31].pitch,72);
+    await page.locator('#playButton').click(); await page.waitForFunction(() => ProofApp.engine.getMeters().rms>.001);
+    await page.locator('#patternBanks [data-bank="1"]').click(); assert(await page.evaluate(()=>ProofApp.isPlaying()));
+    await page.locator('#panicButton').click(); await fresh(page);
+  });
   await check('Protected step mutation and Euclidean changes are reversible', async () => {
     await fresh(page); await page.locator('#steps [data-step="0"]').first().click(); await page.locator('#stepProtect').check();
     const protectedStep = (await state(page)).patterns[0].steps[0]; await page.locator('#mutateButton').click(); assert.deepEqual((await state(page)).patterns[0].steps[0], protectedStep);
