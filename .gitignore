@@ -4,3 +4,5 @@ scratch/
 *.log
 .DS_Store
 downloads/
+__pycache__/
+*.py[cod]

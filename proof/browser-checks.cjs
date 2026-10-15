@@ -290,7 +290,8 @@ const soundPaths = ['synth.wave', 'synth.mix', 'synth.sub', 'synth.detune', 'syn
     await host.evaluate(() => LoomApp.loadState(LoomSchema.defaultState())); await host.locator('#playButton').click(); await host.locator('#panicButton').click();
     const summary = await host.evaluate(async () => {
       const app = LoomApp, state = app.getState(); if (state.tracks.length !== 8 || state.tracks.some(t => t.effects.length !== 4)) throw new Error('GALLEY track/insert contract');
-      if (LoomInstrumentManifest.length !== 12 || !LoomInstrumentManifest.some(d => d.id === 'proof' && d.name === 'LEAVEN')) throw new Error('GALLEY catalog missing LEAVEN');
+      const ids = LoomInstrumentManifest.map(item => item.id);
+      if (JSON.stringify(ids) !== JSON.stringify(LoomSchema.BUILT_INS) || JSON.stringify(ids) !== JSON.stringify(Object.keys(LoomEmbeddedInstruments)) || !ids.includes('picnic') || !LoomInstrumentManifest.some(d => d.id === 'proof' && d.name === 'LEAVEN')) throw new Error('GALLEY catalog, schema and embedded instruments must agree and include LEAVEN and PICNIC');
       const context = await app.engine.init(); await context.resume();
       const frame = document.createElement('iframe'); document.body.append(frame); const track = state.tracks[0].id;
       const native = await app.host.load(track, { id: 'proof', name: 'LEAVEN', url: '../proof/index.html' }, frame);

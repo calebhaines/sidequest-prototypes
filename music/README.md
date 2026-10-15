@@ -1,6 +1,6 @@
 # Kitchen
 
-A dedicated, self-contained landing page for thirteen music instruments and the GALLEY browser studio.
+A dedicated, self-contained landing page for fourteen music instruments and the GALLEY browser studio.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
@@ -54,6 +54,8 @@ LEAVEN: https://calebhaines.github.io/sidequest-prototypes/music/proof/
 
 MARINADE: https://calebhaines.github.io/sidequest-prototypes/music/marinade/
 
+PICNIC: https://calebhaines.github.io/sidequest-prototypes/music/picnic/
+
 The music page has its own design and navigation, separate from the Sidequest RPG gallery. All typography and artwork are embedded in `index.html`.
 
 ## Sharing audio
@@ -77,7 +79,7 @@ bar/beat clock. Print retains the source patch and pattern for **Edit source**,
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
 
-GALLEY 1.11 is an eight-track browser DAW with audio and note arrangement, all thirteen Kitchen instruments inside the studio, four effects slots per track, and eleven native effects. SCALES adds a live chromatic tuner, calibrated string guides, stereo meters, gain and phase tools, mono bass, filters, and clip protection. Audio settings select the interface, input channel, output where supported, sample rate, and Live/Balanced/Stable latency mode. Play through BROILER sets up monitoring while stopped, without replacing an occupied rack. Monitor the input through a selected track's effects while recording a dry take, with estimated automatic delay compensation and signed manual adjustment. BROILER adds nine bass amp models (including four Ampeg-inspired characters), three guitar models, eleven cabinets, a clean-low blend, EQ, gate, sag, and microphone shaping. GLAZE supplies a complete practical and creative vocal strip with clear stage descriptions and expandable control guidance, with a microphone shortcut, cleanup, dynamics, tone, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, rhythmic motion, ducked delay and reverb. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the thirteen instruments for offline use, including STOCK's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with GALLEY. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Kitchen studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
+GALLEY 1.11 is an eight-track browser DAW with audio and note arrangement, all fourteen Kitchen instruments inside the studio, four effects slots per track, and eleven native effects. SCALES adds a live chromatic tuner, calibrated string guides, stereo meters, gain and phase tools, mono bass, filters, and clip protection. Audio settings select the interface, input channel, output where supported, sample rate, and Live/Balanced/Stable latency mode. Play through BROILER sets up monitoring while stopped, without replacing an occupied rack. Monitor the input through a selected track's effects while recording a dry take, with estimated automatic delay compensation and signed manual adjustment. BROILER adds nine bass amp models (including four Ampeg-inspired characters), three guitar models, eleven cabinets, a clean-low blend, EQ, gate, sag, and microphone shaping. GLAZE supplies a complete practical and creative vocal strip with clear stage descriptions and expandable control guidance, with a microphone shortcut, cleanup, dynamics, tone, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, rhythmic motion, ducked delay and reverb. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes the fourteen instruments for offline use, including STOCK's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with GALLEY. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Kitchen studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
 SIZZLE's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
@@ -104,6 +106,16 @@ BATTER is a recorded acoustic drum instrument with twelve sample lanes, eight pa
 LEAVEN is an expressive arpeggiator with five distinct 80s-inspired synthesis models: DCO, twin VCO, hard sync, four-operator FM, and spectral vector waves. Its eight-chord rack feeds four sixteen-step pattern banks, ten traversal orders, octave ranges, repeating notes and evolving folds. Each step has velocity, gate, probability, ratchets, timing, octave and ties; protected steps survive mutation. Play a latched chord from the keyboard or MIDI, or write a progression. Oscillators, resonant filters, both envelopes, LFO and stereo effects remain visible. Save portable projects, export WAV or MIDI, send audio to Samples, and exchange exact editable notes through Patterns and GALLEY. Editable sources are in `proof/`; run `python proof/build.py`, then `python loom/build.py` and `npm run build`. The source ZIP includes the complete offline build and checks.
 
 MARINADE turns two recordings into a polyphonic spectral instrument. Separate harmonic and texture blends, frozen source moments, envelopes, modulation, a drawable morph path and a note sequence shape the mixture. The included ingredients and recipes play offline; imported source audio survives portable projects and GALLEY’s revisable Print/Edit source/Restore notes workflow. Both sample bays receive audio through Samples, while Patterns exchanges exact editable notes. Editable sources are in `marinade/`; run `python marinade/build.py`, then `python loom/build.py` and `npm run build`. Its standalone HTML and complete `MARINADE-source.zip` are available from the Kitchen card and app help.
+
+PICNIC is a six-part sampled village ensemble with melody, chords, bass, drums,
+neighbor calls and texture. Its factory sounds play offline, with editable A–D
+16/32-step patterns, a playable keyboard, mixer and a composer shaped by key,
+hour, season and weather. Samples shares rendered audio; Patterns exchanges exact
+editable notes with GALLEY. The studio embeds its complete editor and native
+sample engine for live parts, note clips and revisable prints. Sources live in
+`picnic/`; run `python3 picnic/build.py`, then `python3 loom/build.py` and
+`npm run build`. Kitchen offers the standalone HTML and `PICNIC-source.zip` at
+`./picnic/`.
 
 The instruments include project files, stereo WAV export, and editable source ZIP downloads in their Help panels. Typography, artwork, and audio code are bundled in each standalone HTML file.
 

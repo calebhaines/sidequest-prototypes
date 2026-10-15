@@ -14,7 +14,8 @@
     { id: 'roux', name: 'ROUX', description: 'Circular recipe bass synthesizer', facade: 'RouxApp', storageKey: 'roux-project-v1', color: '#ddbf67' },
     { id: 'batter', name: 'BATTER', description: 'Recorded acoustic drums and intricate rhythms', facade: 'BatterApp', storageKey: 'batter-project-v1', color: '#dcaa6b' },
     { id: 'proof', name: 'LEAVEN', description: 'Five-model polyphonic synth and chord arpeggiator', facade: 'ProofApp', storageKey: 'proof-project-v1', color: '#e6b86e' },
-    { id: 'marinade', name: 'MARINADE', description: 'Two-source spectral morphing instrument', facade: 'MarinadeApp', storageKey: 'marinade-project-v1', color: '#dda775' }
+    { id: 'marinade', name: 'MARINADE', description: 'Two-source spectral morphing instrument', facade: 'MarinadeApp', storageKey: 'marinade-project-v1', color: '#dda775' },
+    { id: 'picnic', name: 'PICNIC', description: 'Six-part sampled village ensemble', facade: 'PicnicApp', storageKey: 'picnic-project-v1', color: '#7eae83' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));

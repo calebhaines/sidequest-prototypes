@@ -6,7 +6,7 @@ An eight-track browser studio for Kitchen. Eight tracks. One increasingly specif
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all thirteen Kitchen instruments,
+The standalone `index.html` bundles all fourteen Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -14,7 +14,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other twelve instruments.
+are available inside GALLEY alongside the other thirteen instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -34,6 +34,13 @@ and uses that same engine for live audio and revisable prints. The complete app 
 embedded for offline use; the studio retains eight tracks and four inserts per track.
 
 **MARINADE** combines two recorded ingredients into a polyphonic spectral morphing instrument. Its full native editor, two sample-import bays, editable note patterns and isolated native renderer are available inside the studio. Printed parts retain the source audio, patch and original notes for Edit source, Update audio or Restore notes.
+
+**PICNIC** is a six-part sampled village ensemble: melody, chords, bass, drums,
+neighbor calls and texture. Choose factory sounds, write A–D 16/32-step patterns,
+or compose an editable tune for the hour, season and weather. Its full keyboard,
+mixer and sample engine are embedded for offline use. Patterns sends exact notes
+between PICNIC and GALLEY; Print keeps the sound patch and part for later edits.
+Open it separately at https://calebhaines.github.io/sidequest-prototypes/music/picnic/.
 
 ## SERVICE · separate performance desk
 
@@ -448,7 +455,7 @@ layouts. The extracted command is `node host-navigation-checks.cjs` and requires
 Playwright and Chromium.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all thirteen standalone instrument pages in
+archive includes all fourteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 
