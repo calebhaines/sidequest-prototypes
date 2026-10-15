@@ -150,7 +150,7 @@ async function reset(page, snapshot, { live = false } = {}) {
     assert.equal(after.stats.nativeScheduled, before.stats.nativeScheduled, 'GALLEY schedules discrete notes without scheduling a native phrase as well');
     assert(after.stats.scheduled > before.stats.scheduled, 'Live arrangement clocks deliver actual notes');
     const routedAudio = await page.evaluate(() => { const values = new Float32Array(window.qaPicnicAnalyser.fftSize); window.qaPicnicAnalyser.getFloatTimeDomainData(values); LoomApp.engine.node.disconnect(window.qaPicnicAnalyser); return { finite: values.every(Number.isFinite), peak: values.reduce((peak, value) => Math.max(peak, Math.abs(value)), 0) }; });
-    assert(routedAudio.finite); await page.locator('#stopButton').click(); return { native, discreteStart: before, discreteEnd: after, routedAudio }; 
+    assert(routedAudio.finite); await page.locator('#stopButton').click(); return { native, discreteStart: before, discreteEnd: after, routedAudio };
   });
   await check('Source-specific scheduled cancellation and clip notes preserve independent sources and project state', async () => {
     frame = await open(page);
