@@ -442,6 +442,10 @@ Run `npm run check:loom-batter` for recorded drum playback, shared-clock timing,
 clip transfers, source revision, offline sample restoration, and shared-library
 exports through the actual embedded BATTER editor. The extracted equivalent is
 `node batter-integration-checks.cjs`, with Playwright and Chromium available.
+Run `npm run check:loom-navigation` for hosted ROUX section links, keyboard focus,
+preserved edits, snapshots, routed audio, and reopening on desktop and phone
+layouts. The extracted command is `node host-navigation-checks.cjs` and requires
+Playwright and Chromium.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all thirteen standalone instrument pages in

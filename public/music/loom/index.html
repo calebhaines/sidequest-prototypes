@@ -5055,7 +5055,18 @@ body {
     window.addEventListener('error', event => notify('error', event.message));
     window.addEventListener('unhandledrejection', event => { if (event.reason?.name !== 'AbortError') notify('error', event.reason?.message || String(event.reason)); });
     document.addEventListener('click', event => {
-      const anchor = event.target.closest?.('a[href]'); if (!anchor || anchor.hasAttribute('download') || anchor.getAttribute('href').startsWith('#')) return;
+      const anchor = event.target.closest?.('a[href]'); if (!anchor || event.defaultPrevented || anchor.hasAttribute('download')) return;
+      const href = anchor.getAttribute('href');
+      if (href.startsWith('#')) {
+        // A srcdoc frame's <base> resolves fragments to the standalone URL.
+        // Scroll locally so section links cannot unload the hosted editor.
+        event.preventDefault();
+        let fragment; try { fragment = decodeURIComponent(href.slice(1)); } catch (_) { return; }
+        if (!fragment) { window.scrollTo(0, 0); return; }
+        const target = document.getElementById(fragment) || document.getElementsByName(fragment)[0];
+        if (target) { target.scrollIntoView(); target.focus?.({ preventScroll: true }); }
+        return;
+      }
       event.preventDefault(); window.open(anchor.href, '_blank', 'noopener');
     });
     document.addEventListener('input', () => notify('change', null), true);
