@@ -153,10 +153,13 @@ async function check(name, callback) { state = S.defaultState(); calls.length = 
     const result = await registered.importAudio(payload); assert.equal(result.target, 'b');
     assert.equal(calls[0][1], payload); assert.equal(calls[0][1].options.replace, true);
   });
-  if (fs.existsSync(path.join(root, 'loom', 'schema.js'))) await check('GALLEY registers thirteen native instruments and keeps exactly eight tracks with four inserts', async () => {
+  if (fs.existsSync(path.join(root, 'loom', 'schema.js'))) await check('GALLEY keeps its native catalog and schema in sync, including PICNIC, with eight tracks and four inserts', async () => {
     for (const file of ['vocal-catalog.js', 'effects-catalog.js', 'schema.js', 'instrument-host.js']) run(path.join(root, 'loom', file));
     const studio = scope.LoomSchema.defaultState(); assert.equal(studio.tracks.length, 8); assert(studio.tracks.every(track => track.effects.length === 4));
-    assert.equal(scope.LoomInstrumentManifest.length, 13); assert(scope.LoomSchema.BUILT_INS.includes('marinade'));
+    const ids = copy(scope.LoomInstrumentManifest.map(item => item.id));
+    assert.deepEqual(ids, copy(scope.LoomSchema.BUILT_INS)); assert.equal(new Set(ids).size, ids.length);
+    assert(ids.includes('marinade')); assert(ids.includes('picnic'));
+    const picnic = scope.LoomInstrumentManifest.find(item => item.id === 'picnic'); assert.equal(picnic.facade, 'PicnicApp'); assert.equal(picnic.storageKey, 'picnic-project-v1');
     const native = scope.LoomInstrumentManifest.find(item => item.id === 'marinade'); assert.equal(native.facade, 'MarinadeApp'); assert.equal(native.storageKey, 'marinade-project-v1');
   });
   console.log(JSON.stringify({ passed: passed.length, checks: passed }, null, 2));

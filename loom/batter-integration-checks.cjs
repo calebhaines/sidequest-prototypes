@@ -22,7 +22,7 @@ async function serve() {
     }
     if (pathname === '/index.html') {
       // Optional discovery of future instruments can read the Kitchen hub;
-      // an empty hub proves the eleven embedded apps do not rely on it.
+      // an empty hub proves the embedded instruments do not rely on it.
       response.writeHead(200, { 'Content-Type': 'text/html' }); response.end('<!doctype html><title>Empty Kitchen discovery fixture</title>'); return;
     }
     // The complete host and starter kit are embedded; integration must not
@@ -81,14 +81,16 @@ async function install(page, url) {
 async function nativeAndClock(page) {
   const frame = await openInstrument(page);
   const inventory = await page.evaluate(() => ({ name: window.qaBatterState(0).name, manifest: window.LoomInstrumentManifest.map(item => item.id), embedded: Object.keys(window.LoomEmbeddedInstruments), schema: window.LoomSchema.BUILT_INS, caps: window.LoomApp.host.capabilities('track-1'), lanes: window.qaBatterState(0).lanes.map(lane => lane.id), hosted: window.qaChild(0).document.querySelector('#audioStatus').textContent, tracks: window.LoomApp.getState().tracks.map(track => track.effects.length) }));
-  assert.deepEqual(inventory.manifest, [...legacy, 'batter']); assert.deepEqual(inventory.embedded, [...legacy, 'batter']); assert.deepEqual(inventory.schema, [...legacy, 'batter']);
+  assert.deepEqual(inventory.manifest, inventory.schema); assert.deepEqual(inventory.manifest, inventory.embedded);
+  assert.equal(new Set(inventory.manifest).size, inventory.manifest.length);
+  for (const id of [...legacy, 'batter', 'proof', 'marinade', 'picnic']) assert(inventory.manifest.includes(id), 'Native catalog retains ' + id);
   assert.deepEqual(inventory.lanes, voices); assert.deepEqual(inventory.caps.notes.voices.map(voice => voice.id), voices); assert(inventory.caps.renderPattern && inventory.caps.patternImport && inventory.caps.patternExport && inventory.caps.importAudio && inventory.caps.exportAudio);
   assert.notEqual(inventory.name, 'Standalone recovery must remain private', 'A hosted instance must not read standalone IndexedDB or local recovery.');
   assert.equal(inventory.tracks.length, 8); assert(inventory.tracks.every(slots => slots === 4));
   await frame.locator('#auditionButton').click();
   let audible = 0; for (let i = 0; i < 12; i++) { audible = Math.max(audible, await page.evaluate(() => window.qaBatterRMS())); await wait(12); }
   assert(audible > .001, 'A real embedded drum audition reaches GALLEY’s actual output.');
-  passed.push('Real UI opens BATTER / all eleven native apps retained / twelve canonical voices / audible native audition / eight tracks × four inserts');
+  passed.push('Real UI opens BATTER / native catalog, schema and embedded instruments agree, including PICNIC / twelve canonical voices / audible native audition / eight tracks × four inserts');
 
   await page.evaluate(() => {
     const child = window.qaChild(0), engine = child.BatterUI.engine, state = engine.getState(), hit = state.patterns[0].lanes[3].steps[6];
