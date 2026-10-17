@@ -1,12 +1,14 @@
 /** Interactive, local-only teaching simulations. No model calls or network access. */
 const C = {
-  ink: "#182e3d",
-  muted: "#718087",
-  accent: "#bd593c",
-  green: "#38776b",
-  blue: "#54859a",
-  pale: "#ede8dc",
-  gold: "#c39545",
+  ink: "#d8e6dd",
+  muted: "#94a79c",
+  accent: "#d9b36c",
+  green: "#8fcf9d",
+  blue: "#82b8cb",
+  pale: "#1a2821",
+  gold: "#d9b36c",
+  dark: "#102119",
+  onBright: "#07110b",
 };
 let serial = 0;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -48,7 +50,7 @@ function metric(label, value) {
   return `<div class="metric"><span class="metric-value">${value}</span><span class="metric-label">${label}</span></div>`;
 }
 function frame(container, id, note) {
-  container.innerHTML = `<div class="lab-note">Interactive illustration · ${note} No Qwen model is running.</div><div class="lab-controls"></div><div class="lab-chart" tabindex="0" role="region" aria-label="Interactive chart; scroll sideways on narrow screens"></div><p class="chart-hint">Swipe across the chart to explore it.</p><div class="lab-result" aria-live="polite" aria-atomic="true"></div><div class="lab-explainer"></div>`;
+  container.innerHTML = `<div class="lab-note">Interactive illustration · ${note} No Qwen model is running.</div><div class="lab-controls"></div><div class="lab-chart" tabindex="0" role="region" aria-label="Interactive chart; scroll sideways on narrow screens"></div><p class="chart-hint">Scroll horizontally to view the full chart.</p><div class="lab-result" aria-live="polite" aria-atomic="true"></div><div class="lab-explainer"></div>`;
   const controls = container.querySelector(".lab-controls");
   return {
     controls,
@@ -96,7 +98,7 @@ function frame(container, id, note) {
   };
 }
 function training(container, id, signal) {
-  const f = frame(container, id, "Fit a tiny synthetic dataset.");
+  const f = frame(container, id, "Fit a synthetic dataset.");
   const slope = f.range("slope", "Slope", -1, 4, 0.05, 0.6);
   const intercept = f.range("intercept", "Intercept", -3, 4, 0.05, 0);
   const fit = f.button("Fit the best line");
@@ -221,13 +223,13 @@ function tokens(container, id, signal) {
           x + 45,
           y + 22,
           p.replaceAll(" ", "·"),
-          `text-anchor="middle" style="fill:${active ? "white" : C.muted}"`,
+          `text-anchor="middle" style="fill:${active ? C.onBright : C.muted}"`,
         );
     });
     body += text(
       310,
       252,
-      "Dark pieces are available to the next prediction.",
+      "Highlighted pieces are available to the next prediction.",
       'text-anchor="middle"',
     );
     f.chart.innerHTML = svg(
@@ -293,7 +295,7 @@ function activations(container, id, signal) {
     body += text(
       310,
       248,
-      "Green: positive · Terracotta: negative · Fade: near zero",
+      "Green: positive · Amber: negative · Fade: near zero",
       'text-anchor="middle"',
     );
     f.chart.innerHTML = svg("Synthetic hidden activation vector", body);
@@ -311,7 +313,7 @@ function probes(container, id, signal) {
   const f = frame(
     container,
     id,
-    "A real tiny classifier is fitted to synthetic two-dimensional data.",
+    "Fit a classifier to synthetic two-dimensional data.",
   );
   const kind = f.select(
     "kind",
@@ -381,7 +383,7 @@ function probes(container, id, signal) {
             clamp(sy(p.y), 15, 250),
             3.6,
             p.label ? C.green : C.accent,
-            'stroke="white" stroke-width="1"',
+            `stroke="${C.dark}" stroke-width="1"`,
           )),
       );
     body += text(
@@ -564,19 +566,39 @@ function lora(container, id, signal) {
       full = a * b,
       small = r * (a + b);
     let body =
-      rect(30, 50, 180, 120, C.ink) +
-      text(120, 92, "Frozen W", 'text-anchor="middle" style="fill:white"') +
-      text(120, 123, `${b} × ${a}`, 'text-anchor="middle" style="fill:white"');
+      rect(30, 50, 180, 120, C.dark, `stroke="${C.muted}"`) +
+      text(120, 92, "Frozen W", 'text-anchor="middle"') +
+      text(120, 123, `${b} × ${a}`, 'text-anchor="middle"');
     body += text(235, 120, "+", 'font-size="30" text-anchor="middle"');
     body +=
       rect(267, 50, 110, 120, C.green) +
-      text(322, 96, "Train B", 'text-anchor="middle" style="fill:white"') +
-      text(322, 123, `${b} × ${r}`, 'text-anchor="middle" style="fill:white"');
+      text(
+        322,
+        96,
+        "Train B",
+        `text-anchor="middle" style="fill:${C.onBright}"`,
+      ) +
+      text(
+        322,
+        123,
+        `${b} × ${r}`,
+        `text-anchor="middle" style="fill:${C.onBright}"`,
+      );
     body +=
       text(400, 120, "×", 'font-size="30" text-anchor="middle"') +
       rect(425, 85, 165, 50, C.accent) +
-      text(507, 105, "Train A", 'text-anchor="middle" style="fill:white"') +
-      text(507, 124, `${r} × ${a}`, 'text-anchor="middle" style="fill:white"');
+      text(
+        507,
+        105,
+        "Train A",
+        `text-anchor="middle" style="fill:${C.onBright}"`,
+      ) +
+      text(
+        507,
+        124,
+        `${r} × ${a}`,
+        `text-anchor="middle" style="fill:${C.onBright}"`,
+      );
     body +=
       text(
         310,
@@ -612,7 +634,7 @@ function rl(container, id, signal) {
   const f = frame(
     container,
     id,
-    "A tiny two-action policy, not an LLM or a reproduction of project results.",
+    "A two-action policy with synthetic rewards. Results do not reproduce the project’s experiments.",
   );
   const delivery = f.select(
     "delivery",
@@ -757,13 +779,8 @@ function memory(container, id, signal) {
     nodes.forEach((k) => {
       let [x, y] = pos[k];
       body +=
-        circle(x, y, 24, C.ink) +
-        text(
-          x,
-          y + 5,
-          k,
-          'text-anchor="middle" style="fill:white;font-size:16px"',
-        );
+        circle(x, y, 24, C.dark, `stroke="${C.green}" stroke-width="1.5"`) +
+        text(x, y + 5, k, 'text-anchor="middle" style="font-size:16px"');
     });
     body += text(
       310,
@@ -870,7 +887,7 @@ function experiment(container, id, signal) {
           x + 55,
           78,
           on ? "Included" : "Missing",
-          `text-anchor="middle" style="fill:${on ? "white" : C.muted}"`,
+          `text-anchor="middle" style="fill:${on ? C.onBright : C.muted}"`,
         ) +
         text(x + 55, 155, label, 'text-anchor="middle"');
     });

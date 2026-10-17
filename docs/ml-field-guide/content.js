@@ -18,28 +18,28 @@ const memoryReport = () =>
 export const lessons = [
   {
     id: "foundations",
-    title: "What learning actually changes",
-    eyebrow: "01 · The foundation",
+    title: "Parameters, activations and state",
+    eyebrow: "01 · Model components",
     minutes: 8,
     lab: "training",
     summary:
-      "Separate the model, its current activity, the text it sees, and the memory you maintain around it.",
+      "Learned parameters, temporary activations, input context and external memory.",
     sections: [
       {
-        title: "A useful machine with adjustable settings",
-        body: `<p>A machine-learning model is a function with adjustable numerical settings called <strong>parameters</strong>. It takes an input and produces a prediction. A tiny model might predict a house price from its size; a language model predicts the next token from the tokens available so far. Training adjusts parameters so predictions improve on examples.</p><p>Imagine an enormous sound mixer: training changes the positions of the controls, while running a song through it produces changing signals. The analogy helps separate lasting settings from temporary activity. It does not mean each control has one tidy human meaning.</p>`,
+        title: "Models and parameters",
+        body: `<p>A machine-learning model is a function with adjustable numerical settings called <strong>parameters</strong>. It takes an input and produces a prediction. A tiny model might predict a house price from its size; a language model predicts the next token from the tokens available so far. Training adjusts parameters so predictions improve on examples.</p><p>A sound mixer provides an analogy: training changes the positions of its controls, while running a song through it produces changing signals. The controls represent lasting settings; the signals represent temporary activity. Individual parameters need not have an interpretable human meaning.</p>`,
       },
       {
-        title: "Four things that must stay distinct",
+        title: "Parameters, activations, context and external state",
         body: `<p><strong>Parameters</strong> are the learned settings. <strong>Activations</strong> are temporary numerical signals computed for the current input. <strong>Context</strong> is the sequence of tokens supplied to the model. <strong>External state</strong> is information stored by surrounding software, such as a table of facts or an emotion-like value.</p><p>These can interact without being interchangeable. Putting a reminder in the prompt changes context. Adding a vector to a hidden layer changes activations. Updating LoRA weights changes parameters. Keeping a sadness value between requests changes external state. Ask which of these changed whenever a result says the model “remembered” or “adapted.”</p>`,
       },
       {
-        title: "Using a model versus teaching it",
+        title: "Inference and training",
         body: `<p><strong>Inference</strong> means running a model to obtain outputs. Its weights usually stay fixed. <strong>Training</strong> uses a loss—a numerical measure of error—to update selected weights. During inference the output can change dramatically because the input changes; that alone is not a new learned skill.</p><p>A pretrained model has already learned from a large collection of text. Your project begins with those existing abilities, rather than teaching language from scratch. <strong>Frozen</strong> means its parameters are held fixed in a particular experiment. A frozen model can still produce different activations and answers for every new input.</p>`,
       },
       {
-        title: "Read the project as four separate jobs",
-        body: `<p>PAFS-LM proposes a perception network that reads activations, a controller that keeps an external state, a modulation network that changes activations, and a language model that may learn to work with that apparatus. Each component needs its own evidence. A good detector does not establish a good controller; a correctly decaying state does not establish better decisions.</p><p>Use the training illustration below to connect predictions, error and weight updates. Its numbers are invented for teaching. The important habit is to name <strong>what is trained, what is frozen, what information is supplied, and what success would mean</strong> before considering an accuracy score.</p><p>Learning can happen in the small predictor, the modulation network, or the language model. A report should identify each trainable component instead of treating the whole system as one learner.</p>`,
+        title: "The four PAFS-LM components",
+        body: `<p>PAFS-LM proposes a perception network that reads activations, a controller that keeps an external state, a modulation network that changes activations, and a language model that may learn to work with that apparatus. Each component needs its own evidence. A good detector does not establish a good controller; a correctly decaying state does not establish better decisions.</p><p>The training lab uses invented numbers to demonstrate predictions, error and weight updates. Before interpreting an accuracy score, specify <strong>what is trained, what is frozen, what information is supplied, and what success would mean</strong> for the experiment.</p><p>Learning can happen in the small predictor, the modulation network, or the language model. A report should identify each trainable component instead of treating the whole system as one learner.</p>`,
       },
     ],
     takeaway:
@@ -66,32 +66,32 @@ export const lessons = [
   },
   {
     id: "language-models",
-    title: "How a language model chooses an answer",
-    eyebrow: "02 · Inside the language model",
+    title: "Tokens, transformers and generation",
+    eyebrow: "02 · Language models",
     minutes: 9,
     lab: "tokens",
     summary:
-      "Follow text through tokens, embeddings, transformer blocks, logits and probabilities.",
+      "Text processing through tokenization, embeddings, transformer blocks and output probabilities.",
     sections: [
       {
-        title: "Text becomes a sequence of tokens",
+        title: "Tokens and embeddings",
         body: `<p>A <strong>tokenizer</strong> breaks text into vocabulary items called tokens. A token may be a word, part of a word, punctuation, or a space combined with text. “One word” and “one token” are different units. Exact tokenization depends on the model.</p><p>Each token ID becomes a numerical vector through an <strong>embedding</strong> lookup. The transformer then repeatedly transforms these vectors. Position information helps distinguish “A follows B” from “B follows A.” The context window limits how much token history the model can process at once; storing information outside that window does not automatically make it accessible inside the model.</p>`,
       },
       {
-        title: "Attention moves information through the context",
-        body: `<p>A transformer block contains <strong>attention</strong> and a feed-forward network. Attention lets a token’s representation draw on relevant earlier tokens. In a causal language model, a position cannot attend to future tokens. Repeating blocks builds richer representations from the same input sequence.</p><p>The <strong>residual stream</strong> is the running vector representation that blocks read and update. Think of a shared working document with many successive revisions. This is an analogy for information flow, not proof that the model reasons in human steps. When PAFS-LM records or changes a layer’s activations, it accesses one stage of this computation.</p>`,
+        title: "Attention and the residual stream",
+        body: `<p>A transformer block contains <strong>attention</strong> and a feed-forward network. Attention lets a token’s representation draw on relevant earlier tokens. In a causal language model, a position cannot attend to future tokens. Repeating blocks builds richer representations from the same input sequence.</p><p>The <strong>residual stream</strong> is the running vector representation that blocks read and update. A shared document undergoing successive revisions provides an analogy for this information flow. It does not establish human-like reasoning steps. When PAFS-LM records or changes a layer’s activations, it accesses one stage of this computation.</p>`,
       },
       {
-        title: "Scores become probabilities",
+        title: "Logits, softmax and temperature",
         body: `<p>The final representation is converted into a score for each vocabulary token. These raw scores are <strong>logits</strong>. A softmax converts them into probabilities that sum to one. Raising a token’s logit relative to alternatives raises its probability.</p><p><strong>Temperature</strong> controls how concentrated the sampling distribution is: lower positive temperatures concentrate probability on high-scoring tokens; higher temperatures spread it out. Greedy decoding chooses the highest-scoring token without sampling. A model may assign a better probability to the correct action without changing its greedy answer. Therefore probability improvement and action improvement deserve separate reporting.</p>`,
       },
       {
-        title: "A forced choice can hide an unusable answer",
-        body: `<p>Suppose the full vocabulary assigns 10% probability to A, 5% to B, and 85% to other tokens. If evaluation considers only A and B and renormalizes, A receives 67%. That is a <strong>conditional</strong> probability among allowed actions. It does not mean the model would normally output A.</p><p>The project’s small decision experiments therefore need both restricted-action scores and <strong>native output validity</strong>: does the unrestricted model actually choose an allowed answer? Check wording, answer order, tokenization, sampling and parsing rules before interpreting differences. The token illustration uses an invented small vocabulary to make these distinctions visible; real Qwen vocabulary distributions are much larger.</p><p>Generation repeats this process after each new token. One early formatting choice can change the context and influence every later token, including the final answer.</p>`,
+        title: "Restricted choices and native output validity",
+        body: `<p>Suppose the full vocabulary assigns 10% probability to A, 5% to B, and 85% to other tokens. If evaluation considers only A and B and renormalizes, A receives 67%. That is a <strong>conditional</strong> probability among allowed actions. It does not mean the model would normally output A.</p><p>The project’s small decision experiments therefore need both restricted-action scores and <strong>native output validity</strong>: does the unrestricted model actually choose an allowed answer? Check wording, answer order, tokenization, sampling and parsing rules before interpreting differences. The token lab uses an invented small vocabulary; Qwen has a much larger vocabulary.</p><p>Generation repeats this process after each new token. One early formatting choice can change the context and influence every later token, including the final answer.</p>`,
       },
     ],
     takeaway:
-      "Check whether a reported score describes normal model output, probabilities within a restricted menu, or sampled actions. They can tell different stories.",
+      "Normal model output, restricted-action probabilities and sampled actions measure different aspects of performance. Report them separately.",
     quiz: {
       question:
         "A model gives A 10%, B 5%, and other tokens 85%. Is it ready to reliably answer an A/B task normally?",
@@ -117,28 +117,28 @@ export const lessons = [
   },
   {
     id: "activations",
-    title: "Reading and changing internal activity",
-    eyebrow: "03 · Observe before you intervene",
+    title: "Activation capture and steering",
+    eyebrow: "03 · Internal representations",
     minutes: 8,
     lab: "activations",
     summary:
-      "Understand hidden vectors, layer selection, pooling and why a detectable feature is not automatically a control knob.",
+      "Hidden vectors, layer selection, pooling and the distinction between detection and causal control.",
     sections: [
       {
-        title: "A hidden vector is a pattern of numbers",
+        title: "Hidden vectors and distributed information",
         body: `<p>At each layer, each token has a hidden vector: a list of numbers describing its current representation. In the project’s Qwen3-4B configuration, the hidden width is 2,560. That means one token representation has 2,560 coordinates, not 2,560 independently named concepts.</p><p>Information is often <strong>distributed</strong>: a useful concept may be readable from a pattern across many coordinates. Different concepts can overlap. Recording a vector is like taking a measurement of the running computation. It does not provide a literal transcript of the model’s thoughts or a direct measurement of a human-style emotion.</p>`,
       },
       {
-        title: "Where and how you measure matter",
+        title: "Layer selection and pooling",
         body: `<p>A model supplies many possible observations: different layers, different tokens, before or after different operations. The planned perception study begins with zero-based layers 8, 12, 16, 20, 24 and 28. “Layer 24” therefore means the twenty-fifth block.</p><p><strong>Pooling</strong> reduces token-level measurements to a representation for the passage. Last-nonpadding-token pooling takes the final real token’s vector. Mean pooling averages chosen token vectors. Neither is universally best. Hold the rule fixed initially so changing layers does not also change the measurement method. Padding tokens should not accidentally become the passage representation.</p>`,
       },
       {
-        title: "Recording and steering are different operations",
+        title: "Capture hooks and steering hooks",
         body: `<p>A capture hook reads a hidden vector without deliberately changing it. A steering hook adds an intervention, often written <code>h′ = h + αv</code>: the original activity plus a chosen direction scaled by a strength. The direction, strength, token positions and injection layer all matter.</p><p>A direction that predicts sadness may capture language associated with sad situations rather than a mechanism that controls decisions. Adding it can change style, answer format, unrelated abilities, or nothing measurable. Demonstrating causality requires applying the intervention and comparing outcomes with appropriate controls; a classifier’s accuracy cannot supply that evidence by itself.</p>`,
       },
       {
-        title: "Why more injection is not a simple solution",
-        body: `<p>A weak intervention may be too small to change the winning action. A strong intervention can move activity into patterns the model handles poorly. There may be no useful strength for a particular direction. Useful steering needs both a task effect and acceptable preservation of ordinary abilities.</p><p>Compare the intervention with zero strength, removal, and multiple random directions of comparable magnitude. Use fresh contexts when testing reversal: old cached computations can preserve effects after a hook is removed. In the illustration, changing the input or selected layer changes a synthetic activation pattern. Its displayed values are teaching examples, not measurements from Qwen.</p><p>Keep readout measurements clean when possible. If steering also changes the detector’s inputs, the controller may respond to its own intervention rather than a new external event.</p>`,
+        title: "Intervention strength and control conditions",
+        body: `<p>A weak intervention may be too small to change the winning action. A strong intervention can move activity into patterns the model handles poorly. There may be no useful strength for a particular direction. Useful steering needs both a task effect and acceptable preservation of ordinary abilities.</p><p>Compare the intervention with zero strength, removal, and multiple random directions of comparable magnitude. Use fresh contexts when testing reversal: old cached computations can preserve effects after a hook is removed. In the activation lab, changing the input or layer changes a synthetic pattern. The displayed values are teaching examples rather than Qwen measurements.</p><p>Capture unsteered readouts when possible. If steering also changes the detector’s inputs, the controller may respond to its own intervention rather than a new external event.</p>`,
       },
     ],
     takeaway:
@@ -165,32 +165,32 @@ export const lessons = [
   },
   {
     id: "probes",
-    title: "Build a small reader of a large model",
+    title: "Linear and nonlinear probes",
     eyebrow: "04 · Probes and embeddings",
     minutes: 9,
     lab: "probes",
     summary:
-      "Learn what a linear probe can establish, what a nonlinear reader adds, and how to tell whether extra layers help.",
+      "Predictors that read frozen representations, combine layers and learn compact embeddings.",
     sections: [
       {
-        title: "A probe learns to read recorded activity",
+        title: "Linear probes",
         body: `<p>A <strong>probe</strong> is a trained predictor that uses a model’s internal representations as inputs. The large model can stay frozen while a much smaller predictor learns to associate recorded vectors with labels. Recording points are the sensors; the trained readout is the probe.</p><p>A linear probe forms weighted sums of the input coordinates, then converts those scores into predictions. It is relatively simple and useful as a baseline. Good performance means the selected representations contain information a simple reader can extract on the evaluation distribution. It does not show that the main model itself uses that information to choose its behavior.</p>`,
       },
       {
-        title: "A small network can combine several observations",
+        title: "Nonlinear probes and shared embeddings",
         body: `<p>A multilayer perceptron, or <strong>MLP</strong>, adds nonlinear transformations. It can combine signals that a single linear boundary cannot separate. For the proposed study, selected layers feed a small network that creates a shared 64-number embedding, followed by separate prediction heads for emotions.</p><p>This embedding is learned to help the prediction task. Its first coordinate need not mean sadness, and its second need not mean anger. Different training runs may organize equivalent information differently. More expressive readers may improve accuracy, but can also memorize dataset quirks. Small size alone does not prevent overfitting.</p>`,
       },
       {
-        title: "Separate more observations from a better reader",
-        body: `<p>Use three comparisons: a single-layer linear reader, a multilayer linear reader, and a multilayer nonlinear reader. The second versus the first tests additional observations. The third versus the second tests whether nonlinearity helps with the same observations. Choosing the best single layer belongs on development data.</p><p>Normalize features using training data only. Otherwise the held-out data influences the fitted pipeline. Keep examples, labels and information about the person identical across methods. Directly asking Qwen to classify the passage provides another important comparison. A probe that beats a weak keyword classifier has not thereby beaten Qwen’s own prompted answers.</p>`,
+        title: "Multilayer and nonlinear comparisons",
+        body: `<p>Use three comparisons: a single-layer linear reader, a multilayer linear reader, and a multilayer nonlinear reader. The second versus the first tests additional observations. The third versus the second tests whether nonlinearity helps with the same observations. Choosing the best single layer belongs on development data.</p><p>Normalize features using training data only. Otherwise the held-out data influences the fitted pipeline. Keep examples, labels and information about the person identical across methods. Direct Qwen classification provides another comparison. A probe that beats a weak keyword classifier has not thereby beaten Qwen’s own prompted answers.</p>`,
       },
       {
-        title: "Small readout does not mean cheap whole system",
-        body: `<p>The reader may have few trainable parameters, but obtaining its inputs still requires running Qwen. Report capture cost as well as predictor cost. For a frozen model, activations can often be cached once and reused across small-reader experiments.</p><p>Test unfamiliar stories rather than random near-duplicates. Include implicit emotion, quotation and different characters. If a detector succeeds only when obvious emotion words appear, its impressive aggregate score may have little value for the intended controller. The probe illustration is a synthetic geometry exercise: it shows how linear and nonlinear boundaries differ, without measuring the project’s actual representations.</p><p>Check learning curves against dataset size. If a sophisticated reader improves only on training data, its added flexibility has not supplied the desired generalization benefit.</p>`,
+        title: "Capture cost and generalization",
+        body: `<p>The reader may have few trainable parameters, but obtaining its inputs still requires running Qwen. Report capture cost as well as predictor cost. For a frozen model, activations can often be cached once and reused across small-reader experiments.</p><p>Test unfamiliar stories rather than random near-duplicates. Include implicit emotion, quotation and different characters. If a detector succeeds only when obvious emotion words appear, its aggregate score may not reflect performance on the inputs the controller will receive. The probe lab uses synthetic geometry to compare linear and nonlinear boundaries. It does not measure the project’s representations.</p><p>Check learning curves against dataset size. If a sophisticated reader improves only on training data, its added flexibility has not supplied the desired generalization benefit.</p>`,
       },
     ],
     takeaway:
-      "Compare one layer versus several, then linear versus nonlinear on the same inputs. This tells you what actually contributed to any improvement.",
+      "Compare one layer with several, then linear with nonlinear prediction on the same inputs. These comparisons separate additional features from additional predictor flexibility.",
     quiz: {
       question: "Which comparison isolates the value of nonlinear prediction?",
       options: [
@@ -212,27 +212,27 @@ export const lessons = [
   },
   {
     id: "emotion-intensity",
-    title: "Measure emotion without confusing strength and certainty",
-    eyebrow: "05 · Your perception study",
+    title: "Emotion presence and intensity",
+    eyebrow: "05 · Emotion measurement",
     minutes: 10,
     lab: "emotion",
     summary:
-      "Design absent/low/medium/high predictions with clear experiencers, human intensity labels and honest handling of missing ratings.",
+      "Absent, low, medium and high predictions, with explicit experiencers and human-rated intensity labels.",
     sections: [
       {
-        title: "Start with whose emotion and what kind",
+        title: "Experiencers and multiple emotions",
         body: `<p>“Maya celebrated while Sam stared at the rejection letter” contains more than one person and potentially more than one emotion. A label must specify the <strong>experiencer</strong>: the writer, Maya, Sam, or another declared target. Otherwise disagreement may reflect different questions rather than poor annotation.</p><p>Predict each emotion separately so high sadness can coexist with low relief. This is a multilabel task. The planned outputs use four ordered levels per emotion: 0 absent, 1 low, 2 medium, 3 high. These are practical rating categories. The numbers do not make emotion a physical quantity with proven equally spaced units.</p>`,
       },
       {
-        title: "Confidence is not intensity",
+        title: "Confidence and intensity",
         body: `<p>Consider “I am a little disappointed.” It may clearly express weak sadness. A detector could be very certain that the correct level is low. Conversely, an ambiguous passage might suggest either absent or high sadness. Uncertainty about the category is different from moderate strength.</p><p>Keep a probability distribution across all four levels for each emotion. Presence confidence is <code>1 − P(absent)</code>. The predicted intensity can be a declared summary of that distribution; for absolute-error scoring, the proposed study uses its median level. Preserve the distribution rather than converting every uncertain case into “medium.”</p>`,
       },
       {
-        title: "The labels define what can be learned",
+        title: "Intensity annotations and missing labels",
         body: `<p>An emotion label alone does not provide an intensity label. Human ratings need anchored definitions and examples for low, medium and high. Preserve disagreement when available. If a dataset uses another scale, justify and freeze the mapping before examining test results.</p><p><strong>Unknown is not absent.</strong> If a person rated sadness only, unmentioned anger may simply be unrated. A mask excludes unsupported targets from the relevant loss and metric. A known-present emotion with unknown strength can support presence learning without supplying a low/medium/high target. Model-generated ratings may be useful research material, but should not be presented as independent human ground truth.</p>`,
       },
       {
-        title: "Use an ordered objective and inspect the failures",
+        title: "Ordinal prediction and evaluation",
         body: `<p>Ordinal learning respects the ordering: high versus medium is a smaller disagreement than high versus absent. One implementation predicts the cumulative events “at least low,” “at least medium,” and “high,” while ensuring ordered probabilities. The final outputs must form a valid distribution.</p><p>Report intensity errors and presence performance separately, including errors among emotions annotated present. Otherwise abundant absent labels can dominate the score. Examine per-emotion confusion matrices and calibration. Accurate recognition of a person’s described sadness would support the perception component; it would not establish the model’s own feelings, goal appraisal, useful steering, or benefits from storing the prediction across decisions.</p><p>For a future controller, perceived emotional strength and event importance may require different quantities. A mildly worded event can have major consequences for an assigned goal.</p>`,
       },
     ],
@@ -254,32 +254,32 @@ export const lessons = [
   },
   {
     id: "training",
-    title: "How an error becomes a weight update",
+    title: "Loss, gradients and optimization",
     eyebrow: "06 · Optimization",
     minutes: 9,
     lab: "optimization",
     summary:
-      "Connect loss, gradients, learning rate, batches and generalization to the project’s training failures.",
+      "Training objectives, update size, data exposure and performance on unfamiliar examples.",
     sections: [
       {
-        title: "Give learning a numerical objective",
+        title: "Supervised targets and loss",
         body: `<p>Supervised training provides inputs and known targets. A classification model outputs probabilities, and <strong>cross-entropy</strong> penalizes assigning little probability to the correct target. For one correct class, the loss is <code>−log P(correct)</code>. Confident errors cost much more than uncertain correct predictions.</p><p>A loss is the goal the optimizer actually follows. If it rewards choosing A or B but says nothing about retaining arithmetic, arithmetic preservation is not automatically guaranteed. Adding a preservation objective can help in principle, but its reference examples, strength and interaction with the main task must be tested rather than assumed effective.</p>`,
       },
       {
-        title: "Gradients point toward a local change",
+        title: "Backpropagation and learning rate",
         body: `<p><strong>Backpropagation</strong> computes how the loss changes with each trainable parameter. These derivatives are gradients. An optimizer such as AdamW uses them to choose updates. The <strong>learning rate</strong> scales the steps; it is neither the number of examples nor the number of trainable weights.</p><p>A large rate may learn quickly, overshoot, collapse to one answer, or disturb existing skills. A small rate may preserve behavior but make slow progress. A short unsuccessful low-rate run does not prove the task cannot be learned. It does establish that the tested budget and recipe did not achieve the declared endpoint.</p>`,
       },
       {
-        title: "Count examples, updates and passes separately",
+        title: "Batches, updates, microbatches and epochs",
         body: `<p>A <strong>batch</strong> is the set of examples contributing to an update. Eight examples per update for 32 updates gives 256 example presentations. They need not be 256 distinct examples. An <strong>epoch</strong> is one pass through a training dataset. Repeating examples increases exposure without increasing the variety of evidence.</p><p>A microbatch is a smaller processing chunk; gradient accumulation can combine several before updating. This helps fit memory limits. Compare data budget, token budget and training time explicitly. Longer prompts can cost more even when the example count matches. Equal update counts do not automatically mean equal compute.</p>`,
       },
       {
-        title: "Training success is not the finish line",
-        body: `<p>A model can fit training examples while failing on new ones: <strong>overfitting</strong>. Use training data to fit weights, development data to select settings or stopping time, and a held-out test set for the final assessment. Regularization and early stopping discourage some overfitting but do not replace a proper split.</p><p>Inspect learning curves, output validity, class balance and unrelated skills. If a model always chooses A, more examples may simply reinforce a bad trajectory. The optimization illustration changes a tiny synthetic objective. Its smooth curve helps build intuition; real neural training has many interacting parameters and less predictable behavior.</p><p>Training loss and evaluation loss should therefore be tracked together. A falling training curve alone cannot establish better performance on unfamiliar passages or preserved reasoning skills.</p>`,
+        title: "Overfitting and held-out evaluation",
+        body: `<p>A model can fit training examples while failing on new ones: <strong>overfitting</strong>. Use training data to fit weights, development data to select settings or stopping time, and a held-out test set for the final assessment. Regularization and early stopping discourage some overfitting but do not replace a proper split.</p><p>Inspect learning curves, output validity, class balance and unrelated skills. If a model always chooses A, more examples may simply reinforce a bad trajectory. The optimization lab changes a small synthetic objective. The objective has a smooth curve; neural training has many interacting parameters and less predictable behavior.</p><p>Training loss and evaluation loss should therefore be tracked together. A falling training curve alone cannot establish better performance on unfamiliar passages or preserved reasoning skills.</p>`,
       },
     ],
     takeaway:
-      "Before asking for “more training,” say whether you mean more distinct data, more repeated exposure, more updates, or a different step size.",
+      "Distinct examples, repeated exposure, update count and learning rate are separate experimental choices.",
     quiz: {
       question: "What does 32 updates with a batch of eight establish?",
       options: [
@@ -304,28 +304,28 @@ export const lessons = [
   },
   {
     id: "fine-tuning",
-    title: "Adapt a large model with small trainable pieces",
+    title: "Fine-tuning and LoRA",
     eyebrow: "07 · LoRA and capacity",
     minutes: 8,
     lab: "lora",
     summary:
-      "Understand what LoRA changes, what rank means, and why failure does not automatically imply too few parameters.",
+      "Low-rank weight updates, trainable parameter counts and the distinction between capacity and optimization.",
     sections: [
       {
-        title: "Fine-tuning starts from existing abilities",
+        title: "Full and parameter-efficient fine-tuning",
         body: `<p><strong>Fine-tuning</strong> trains a pretrained model further for a task. Full fine-tuning changes many or all base weights. Parameter-efficient methods change a smaller set while retaining the base. This can reduce optimizer memory and storage; it does not eliminate the cost of running the large model.</p><p>In this project, LoRA is one way to teach Qwen to respond to an added signal. That is different from training a small probe to read frozen Qwen activations. In the first case the language model’s behavior is adapted; in the second the large model remains fixed while a separate reader learns.</p>`,
       },
       {
-        title: "LoRA represents a constrained weight change",
+        title: "Low-rank weight changes",
         body: `<p>For a weight matrix W, <strong>LoRA</strong> adds a learned change expressed as the product of two smaller matrices: <code>W′ = W + BA</code>, with a scaling factor omitted here for clarity. The base W can stay frozen while A and B learn.</p><p>The <strong>rank</strong> controls the size of this factorization. Larger rank permits a broader family of updates and uses more trainable parameters. The actual count also depends on which projection matrices receive adapters. Rank eight does not mean eight total parameters, nor eight emotion concepts. In the project’s broad projection configuration it corresponds to millions of trainable numbers.</p>`,
       },
       {
-        title: "Capacity and learnability are different questions",
-        body: `<p><strong>Capacity</strong> concerns what a model family can represent. Optimization concerns whether the training procedure finds a useful solution. A model stuck choosing A could have inadequate capacity, poor exploration, a disruptive signal, unsuitable learning settings, or a bug. The failure alone does not identify which explanation is correct.</p><p>If the same configuration learns the mapping in some runs, it has demonstrated capacity for that particular task. Reproducibility remains another problem. Increasing rank changes capacity and training behavior together, so a matched comparison is needed. More adjustable weights can also make unwanted changes easier; bigger is not automatically better.</p>`,
+        title: "Capacity and optimization",
+        body: `<p><strong>Capacity</strong> concerns what a model family can represent. Optimization concerns whether the training procedure finds a useful solution. A model stuck choosing A could have inadequate capacity, poor exploration, a disruptive signal, unsuitable learning settings, or a bug. The failure alone does not identify which explanation is correct.</p><p>If the same configuration learns the mapping in some runs, it has demonstrated capacity for that particular task. Reproducibility remains another problem. Increasing rank changes capacity and training behavior together, so a matched comparison is needed. More adjustable weights can also permit larger unwanted changes.</p>`,
       },
       {
-        title: "Preservation needs its own evidence",
-        body: `<p>Freezing base weights does not freeze behavior. LoRA updates change the model’s effective computation and can degrade earlier skills. <strong>Catastrophic forgetting</strong> describes loss of previously useful abilities during new training, though a small arithmetic screen cannot measure the full phenomenon.</p><p>Evaluate initial and final models on the new task and relevant unrelated tasks. Compare adapters from identical starting points, document any format warmup, and disclose whether adapters are replaced, stacked or merged. The LoRA illustration shows a low-rank update in a small matrix. Its visual neatness does not guarantee that a particular rank will work for PAFS-LM.</p><p>A matched rank comparison should keep data, starting behavior and training budget aligned. Otherwise a different result may come from a changed recipe rather than rank.</p>`,
+        title: "Skill preservation and matched comparisons",
+        body: `<p>Freezing base weights does not freeze behavior. LoRA updates change the model’s effective computation and can degrade earlier skills. <strong>Catastrophic forgetting</strong> describes loss of previously useful abilities during new training, though a small arithmetic screen cannot measure the full phenomenon.</p><p>Evaluate initial and final models on the new task and relevant unrelated tasks. Compare adapters from identical starting points, document any format warmup, and disclose whether adapters are replaced, stacked or merged. The LoRA lab displays a low-rank update in a small matrix. It illustrates the factorization rather than predicting which rank will work for PAFS-LM.</p><p>A matched rank comparison should keep data, starting behavior and training budget aligned. Otherwise a different result may come from a changed recipe rather than rank.</p>`,
       },
     ],
     takeaway:
@@ -355,28 +355,28 @@ export const lessons = [
   },
   {
     id: "reinforcement-learning",
-    title: "Learn from actions and rewards",
-    eyebrow: "08 · The RL experiments",
+    title: "Reinforcement learning",
+    eyebrow: "08 · Policies and rewards",
     minutes: 10,
     lab: "rl",
     summary:
-      "Distinguish reward learning from direct teaching, and understand what the one-bit experiments do and do not test.",
+      "Policy gradients, exploration and comparisons with supervised learning in the one-bit experiments.",
     sections: [
       {
-        title: "A reward evaluates an action",
+        title: "Policies, actions and rewards",
         body: `<p>In <strong>reinforcement learning</strong>, a policy chooses an action and receives feedback from an environment. The aim is higher expected reward. A language model can be a policy when its output selects an action. A <strong>bandit</strong> task has one consequential choice per trial; a longer episode contains linked decisions and potentially delayed consequences.</p><p>The project’s early bit task maps hidden bit 0 to A and bit 1 to B. The learner samples an action and gets reward one if correct, zero otherwise. This tests learning an input channel. Fresh independent trials without accumulated state do not test persistence merely because the input enters through activations.</p>`,
       },
       {
-        title: "REINFORCE changes the sampled policy",
+        title: "REINFORCE and exploration",
         body: `<p><strong>REINFORCE</strong> increases the probability of sampled actions that receive better-than-baseline rewards, and reduces it for worse ones. A simplified loss is <code>−(reward − baseline) × log P(sampled action)</code>. An action-independent baseline can reduce gradient variance without telling the model which action is correct.</p><p>An entropy bonus encourages a less concentrated action distribution, helping exploration. It does not guarantee exploration will remain sufficient. If the policy almost always selects A, it may obtain too little useful experience to learn B reliably. Reward learning is sensitive to sampling, initialization and update settings.</p>`,
       },
       {
-        title: "Direct teaching answers a different diagnostic question",
+        title: "Supervised learning as a diagnostic",
         body: `<p>Supervised cross-entropy directly increases the probability of a supplied correct target. REINFORCE works through a sampled action and its reward. In the special binary task, the action plus binary reward reveals the correct label, so researchers can reconstruct targets and compare the two objectives.</p><p>If direct teaching works more reliably, that suggests the signal is learnable while the tested reward-learning procedure is a bottleneck. It is not proof that RL always fails. Nor does this special task demonstrate label efficiency: here rewards contain enough information to recover the answer. Keep actual RL successes separate from supervised successes.</p>`,
       },
       {
-        title: "Choose controls that answer the intended question",
-        body: `<p>A no-information group should average chance on balanced hidden bits. Beating it shows that some information was used. A text-information group receives the same bit in words; comparing with it asks whether internal delivery offers a useful alternative. Both groups need competent training and valid native answers.</p><p>Measure ordinary skills before and after training. Report mean probability of the rewarding action, greedy accuracy, sampled rewards and unrestricted validity as distinct quantities. The reward illustration is deliberately synthetic. It shows how a policy can collapse or explore; it is not a replay or simulation of the repository’s measured learning curves.</p><p>Reward design also matters: optimizing an easy proxy can improve that proxy without improving the intended behavior. Evaluate the actual goal on held-out episodes.</p>`,
+        title: "Information controls and evaluation",
+        body: `<p>A no-information group should average chance on balanced hidden bits. Beating it shows that some information was used. A text-information group receives the same bit in words; comparing with it asks whether internal delivery offers a useful alternative. Both groups need competent training and valid native answers.</p><p>Measure ordinary skills before and after training. Report mean probability of the rewarding action, greedy accuracy, sampled rewards and unrestricted validity as distinct quantities. The reward lab uses synthetic outcomes to illustrate exploration and policy collapse. It does not replay or simulate the repository’s measured learning curves.</p><p>Reward design also matters: optimizing an easy proxy can improve that proxy without improving the intended behavior. Evaluate the actual goal on held-out episodes.</p>`,
       },
     ],
     takeaway:
@@ -406,28 +406,28 @@ export const lessons = [
   },
   {
     id: "memory",
-    title: "Separate history, a notebook and learned skill",
-    eyebrow: "09 · What persistence means",
+    title: "History, external memory and retention",
+    eyebrow: "09 · Persistence",
     minutes: 10,
     lab: "memory",
     summary:
-      "See exactly why a current-state table helps, where persistence lives, and what a fair emotional-memory comparison needs.",
+      "Current-state tables, state lifetimes and comparisons between persistent state and ordinary memory.",
     sections: [
       {
-        title: "History says what happened; a table says what is true now",
+        title: "Event history and current-state tables",
         body: `<p>Suppose the history says “A points to B,” then “B points to D,” then “A now points to C.” A current-state table records A→C and B→D. Both contain the underlying facts, but the table has already resolved which instruction overwrote which.</p><p>In the pointer experiments, a separate deterministic program applies the writes and reconstructs the exact table. It is not a model-generated summary. The table is independent of the question; the model must still answer queries such as following two links. The text-memory group receives the full history plus this table. The history group receives the history alone.</p>`,
       },
       {
-        title: "Locate the memory precisely",
+        title: "Where state is stored",
         body: `<p>The notebook is <strong>external memory</strong>: software maintains it, and a text rendering enters the prompt. Its entries last until changed or reset. The model’s context contains the supplied version during a request. Neither mechanism automatically stores the table in the model’s parameters.</p><p>An affective controller is another external state, but it may compress events into quantities such as setback intensity that decay across decisions. That compression discards details. Define when the clock advances, when state resets, how new events combine, and what information reaches the model. “Persistent” needs a declared boundary: across tokens, requests, decisions, or complete episodes.</p>`,
       },
       {
-        title: "Available help and retained learning are separate outcomes",
-        body: `<p>A student can answer better with a reference sheet even if studying with it leaves no extra unaided skill. That can still be a useful reference sheet. Similarly, table-present performance and performance after table withdrawal answer different questions.</p><p>The matched-time project comparison averaged 92.32% with text tables and 73.44% with history alone. But one table run reached only 79.69%, failing the required every-run 90% floor, and preservation remained uncertain. A separate withdrawal study did not establish extra unaided retention. These findings support a useful, variable active aid in a narrow task; they do not establish emotional or general learning-speed advantages.</p>`,
+        title: "Active assistance and retained skill",
+        body: `<p>A student may answer better with a reference sheet without gaining extra unaided skill from studying with it. Similarly, performance with a table and performance after its withdrawal measure different benefits.</p><p>The matched-time project comparison averaged 92.32% with text tables and 73.44% with history alone. But one table run reached only 79.69%, failing the required every-run 90% floor, and preservation remained uncertain. A separate withdrawal study did not establish extra unaided retention. These findings support a useful, variable active aid in a narrow task; they do not establish emotional or general learning-speed advantages.</p>`,
       },
       {
-        title: "Test what an emotional state adds",
-        body: `<p>To test persistence, compare carrying state forward with resetting it while keeping other conditions matched. To test emotional structure, compare the proposed state against strong ordinary summaries containing equivalent relevant information. To test delivery, supply the same state as text and through activations.</p><p>Also specify whether triggering events remain in the context. A model with complete history may reconstruct state without the controller; removing history changes the problem. The memory illustration lets you apply writes and inspect the resulting table. It teaches current-state bookkeeping using invented examples. Table entries persist until overwritten; an affective controller’s gradual decay would require a separate mechanism and test.</p><p>A future test can remove the triggering event from later prompts while preserving external state. That isolates a different question from helping a model interpret complete history.</p>`,
+        title: "Persistence, structure and delivery controls",
+        body: `<p>To test persistence, compare carrying state forward with resetting it while keeping other conditions matched. To test emotional structure, compare the proposed state against strong ordinary summaries containing equivalent relevant information. To test delivery, supply the same state as text and through activations.</p><p>Also specify whether triggering events remain in the context. A model with complete history may reconstruct state without the controller; removing history changes the problem. The memory lab applies writes to a current-state table using invented examples. Table entries persist until overwritten; an affective controller’s gradual decay would require a separate mechanism and test.</p><p>A future test can remove the triggering event from later prompts while preserving external state. That isolates a different question from helping a model interpret complete history.</p>`,
       },
     ],
     takeaway:
@@ -455,32 +455,32 @@ export const lessons = [
   },
   {
     id: "experiments",
-    title: "Design an experiment that changes the next decision",
-    eyebrow: "10 · Causal research",
+    title: "Experimental design",
+    eyebrow: "10 · Controls and evaluation",
     minutes: 10,
     lab: "experiment",
     summary:
-      "Turn a broad idea into a bounded question with fair comparisons, clean splits and a stopping rule.",
+      "Research questions, comparison groups, data splits, resource budgets and stopping rules.",
     sections: [
       {
-        title: "Turn the idea into a contrast",
+        title: "Research questions and controls",
         body: `<p>“Does the apparatus work?” bundles many questions. A stronger question is “Does multilayer nonlinear reading reduce held-out intensity error compared with a single-layer linear reader?” Another is “Does keeping the same external state across decisions improve reward relative to resetting it?”</p><p>A <strong>control</strong> makes a specific alternative explanation testable. A random vector controls some effects of injecting arbitrary activity. A text-state group controls access to information. A reset-state group controls persistence. No single control substitutes for all the others. Start with the main contrast and change as few things as possible between its groups.</p>`,
       },
       {
-        title: "Make the ordinary task competent first",
-        body: `<p>A task that the model cannot perform even with clear correct information is a poor instrument for testing subtle memory benefits. Check instructions, output parsing, answer-order sensitivity and a strong information-present condition. Include a positive control expected to work.</p><p>This qualification is not an endless prerequisite campaign. Define a small check and stopping rule beforehand. If it fails, close that instrument and explain what remains unanswered. Likewise, a successful detector study need not wait for a solved activation-control problem. Independent workstreams should answer independent questions, rather than forming an ever-growing chain of prerequisites.</p>`,
+        title: "Task qualification and positive controls",
+        body: `<p>A task that the model cannot perform even with clear correct information is a poor instrument for testing subtle memory benefits. Check instructions, output parsing, answer-order sensitivity and a strong information-present condition. Include a positive control expected to work.</p><p>Define a small qualification check and stopping rule beforehand. If it fails, close that instrument and explain what remains unanswered. Likewise, a successful detector study need not wait for a solved activation-control problem. Independent workstreams should answer independent questions, rather than forming an ever-growing chain of prerequisites.</p>`,
       },
       {
-        title: "Keep genuinely related examples together",
+        title: "Grouped splits and data leakage",
         body: `<p><strong>Data leakage</strong> occurs when information reserved for evaluation influences fitting or selection. Randomly splitting paraphrases from the same story can create an overly easy test. Group original stories, related passages and repeated person annotations before splitting.</p><p>Training data fits weights. Development data guides architecture, prompts and stopping. Test data assesses frozen choices. After examining test failures and changing the system, that test is no longer untouched confirmation. A new held-out sample is needed for a fresh confirmatory claim. Even a clean local split cannot prove a public dataset was absent from the language model’s pretraining.</p>`,
       },
       {
-        title: "Bound the work and preserve the decision",
-        body: `<p>Before outcomes, declare the primary metric, meaningful effect size, quality constraints, resource budget and stopping rule. Save raw predictions and configurations, including failed runs. Small exploratory pilots can guide a later confirmation, provided their status is explicit.</p><p>Match the relevant resource: examples, tokens, updates or time. Explain what the budget excludes, such as summary construction. Record multiple training seeds when practical. Then ask what the result changes: proceed, diagnose one named uncertainty, or stop this configuration. The experiment illustration helps choose controls; it is a planning aid, not an automated verdict on whether the research is scientifically valid.</p><p>Keep exploratory analyses useful by labeling them clearly. A surprising pattern can motivate the next study without being treated as a prediction confirmed by the same data.</p>`,
+        title: "Predeclared outcomes and resource budgets",
+        body: `<p>Before outcomes, declare the primary metric, meaningful effect size, quality constraints, resource budget and stopping rule. Save raw predictions and configurations, including failed runs. Small exploratory pilots can guide a later confirmation, provided their status is explicit.</p><p>Match the relevant resource: examples, tokens, updates or time. Explain what the budget excludes, such as summary construction. Record multiple training seeds when practical. Then ask what the result changes: proceed, diagnose one named uncertainty, or stop this configuration. The experiment lab compares the purposes of different controls. It does not assess the scientific validity of a proposed study.</p><p>Keep exploratory analyses useful by labeling them clearly. A surprising pattern can motivate the next study without being treated as a prediction confirmed by the same data.</p>`,
       },
     ],
     takeaway:
-      "A useful experiment resolves one uncertainty and changes what you do next. More conditions and more audit files are not substitutes for a clear contrast.",
+      "Specify the uncertainty each experiment should resolve and the result that would justify continuing, diagnosing a problem or stopping.",
     quiz: {
       question:
         "You inspect final test failures and rewrite the prompt. What should happen before a fresh confirmatory claim?",
@@ -491,7 +491,7 @@ export const lessons = [
       ],
       correct: 1,
       explanation:
-        "The old test has influenced development. Keep its history, but use genuinely fresh evaluation for a new confirmatory claim.",
+        "The old test has influenced development. Preserve its results and evaluate a new held-out sample for a fresh confirmatory claim.",
     },
     sources: [
       perception(),
@@ -504,32 +504,32 @@ export const lessons = [
   },
   {
     id: "reading-results",
-    title: "Read a result without being fooled by the headline",
-    eyebrow: "11 · Evidence and judgment",
+    title: "Metrics and uncertainty",
+    eyebrow: "11 · Interpreting results",
     minutes: 10,
     lab: "evidence",
     summary:
-      "Interpret averages, ordinal errors, calibration, uncertainty, failed gates and the difference between a component finding and the central claim.",
+      "Accuracy, ordinal errors, calibration, confidence intervals and the limits of component findings.",
     sections: [
       {
-        title: "Ask what was counted",
+        title: "Metrics and independent observations",
         body: `<p>Accuracy is the fraction of correct predictions. A change from 60% to 70% is ten <strong>percentage points</strong>, or about a 16.7% relative increase. Those are different descriptions. A large number of rows can still represent few independent stories or training runs.</p><p><strong>Macro averaging</strong> gives each emotion equal weight instead of letting common labels dominate. Ordinal absolute error counts distance between levels: predicting low instead of high gives an error of two on the 0–3 code. These numeric distances are a working evaluation convention. Inspect per-emotion and present-only results so successful absence prediction does not conceal poor intensity recognition.</p>`,
       },
       {
-        title: "Correctness, calibration and uncertainty differ",
+        title: "Accuracy, calibration and confidence intervals",
         body: `<p>A calibrated model’s 80%-confidence predictions should be correct about 80% of the time across comparable cases. Accuracy alone cannot establish calibration. A confusion matrix shows which labels are mixed up, while a calibration plot compares confidence with observed frequency.</p><p>A <strong>confidence interval</strong> expresses uncertainty under a specified sampling procedure. It is not a guarantee and is not literally a 95% probability assigned to this fixed interval containing the true value. Resample related examples together when they share a story. Training-seed variation deserves separate attention: many test rows cannot replace independent training runs.</p>`,
       },
       {
-        title: "A failed overall criterion can contain a useful finding",
+        title: "Composite criteria and noninferiority",
         body: `<p>The matched-time memory study found a positive average table advantage, but failed its combined reliability and preservation criterion. Both statements can be true. Do not erase the positive component; do not promote it into a reliable quality-preserving system claim.</p><p><strong>Noninferiority</strong> asks whether a loss larger than a declared margin can be ruled out. Failure to establish preservation does not necessarily demonstrate damage. Likewise, an interval crossing zero does not prove no effect. Look at plausible effect sizes, uncertainty, the prespecified threshold and practical consequences rather than reducing everything to pass or fail.</p>`,
       },
       {
-        title: "Keep the conclusion at the level of the evidence",
-        body: `<p>A detector score supports prediction of its annotations. A successful bit channel supports that mapping in the tested setup. A useful table supports external preprocessing in that task. The original PAFS-LM claim additionally needs persistent emotional feedback to improve learning against strong ordinary-memory alternatives.</p><p>When reading a report, ask: What was trained? What information did each group receive? Was evaluation native or restricted? What varied across runs? What failed? What remains untested? The evidence illustration uses invented results so you can explore how sample size and variability affect confidence. It cannot settle the project’s hypotheses; the linked reports contain the real measurements.</p><p>A good research update states the strongest supported finding first, then its boundary. That makes useful progress visible without letting preliminary successes stand in for the original hypothesis.</p>`,
+        title: "Claims supported by each experiment",
+        body: `<p>A detector score supports prediction of its annotations. A successful bit channel supports that mapping in the tested setup. A useful table supports external preprocessing in that task. The original PAFS-LM claim additionally needs persistent emotional feedback to improve learning against strong ordinary-memory alternatives.</p><p>When reading a report, ask: What was trained? What information did each group receive? Was evaluation native or restricted? What varied across runs? What failed? What remains untested? The evidence lab uses invented results to show how sample size and variability affect uncertainty. The linked reports contain the project’s measurements.</p><p>A research update should state the strongest supported finding and its limits. Component successes require separate interpretation from evidence for the original hypothesis.</p>`,
       },
     ],
     takeaway:
-      "Preserve useful component evidence while keeping the central claim separate. An honest result explains both what changed and what the experiment cannot establish.",
+      "Interpret component findings separately from the central claim. Report the observed change, its uncertainty and the experiment’s limits.",
     quiz: {
       question:
         "A preservation interval includes both a negligible change and a loss beyond the allowed margin. What is justified?",

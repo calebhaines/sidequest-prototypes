@@ -4,9 +4,9 @@
 
 [Play the gallery](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0) · [Velvet Static 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-lynch-3d) · [Hidden Ember 3D](https://calebhaines.github.io/sidequest-prototypes/?v=0.6.0#play-shinobi-3d)
 
-## The ML Field Guide — learn with PAFS-LM
+## ML reference for PAFS-LM
 
-[**Open the interactive ML Field Guide**](https://calebhaines.github.io/sidequest-prototypes/ml-field-guide/) for eleven project-specific lessons and eleven hands-on labs covering language models, activations, probes, emotion intensity, training, LoRA, reinforcement learning, external memory and experimental evidence. A searchable 58-term glossary, saved progress, field notes and an exportable experiment planner support the learning path. All lab values are labeled teaching simulations, not Qwen benchmarks.
+[**Open the ML reference**](https://calebhaines.github.io/sidequest-prototypes/ml-field-guide/) for eleven modules and interactive simulations covering language models, activations, probes, emotion intensity, training, LoRA, reinforcement learning, external memory and experimental evidence. Includes a searchable 58-term glossary, saved progress, notes and an exportable experiment planner. The interface uses a dark terminal theme and system monospace fonts. Simulated values are teaching examples, not Qwen benchmarks.
 
 The six editable files live in [`public/ml-field-guide/`](public/ml-field-guide/), with identical published copies in [`docs/ml-field-guide/`](docs/ml-field-guide/). Keep both copies synchronized; the public copy preserves the subpage through future site builds. Progress, notes and plans stay in browser storage. Research links may require access to the private PAFS-LM repository.
 

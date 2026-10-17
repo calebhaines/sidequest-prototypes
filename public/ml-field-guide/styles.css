@@ -1,20 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Instrument+Serif:ital@0;1&display=swap");
 :root {
-  --paper: #f4f1e9;
-  --paper-light: #fbfaf6;
-  --ink: #1c3438;
-  --muted: #5e6c6a;
-  --line: #d8ded5;
-  --green: #365d4d;
-  --orange: #b7472d;
-  --peach: #f2d8bf;
-  --sage: #dce6d7;
-  --navy: #173b3f;
-  --white: #fff;
-  --serif: "Instrument Serif", Georgia, serif;
-  --sans: "DM Sans", system-ui, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-  --shadow: 0 14px 45px #173b3f0b;
+  color-scheme: dark;
+  --paper: #080d0a;
+  --paper-light: #0c1510;
+  --ink: #d8e6dd;
+  --muted: #94a79c;
+  --line: #2b3c30;
+  --green: #8fcf9d;
+  --orange: #d9b36c;
+  --peach: #19271b;
+  --sage: #152219;
+  --navy: #0b1510;
+  --white: #d8e6dd;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --serif: var(--mono);
+  --sans: var(--mono);
+  --shadow: none;
 }
 * {
   box-sizing: border-box;
@@ -29,7 +29,7 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.75;
   -webkit-font-smoothing: antialiased;
 }
 button,
@@ -61,11 +61,11 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #bd4d31;
+  outline: 2px solid #d9b36c;
   outline-offset: 5px;
 }
 ::selection {
-  background: #edc6a5;
+  background: #35523d;
 }
 svg {
   display: block;
@@ -116,8 +116,8 @@ button svg {
   position: fixed;
   top: -70px;
   left: 20px;
-  background: var(--ink);
-  color: white;
+  background: var(--green);
+  color: #07110b;
   padding: 12px;
   z-index: 100;
 }
@@ -132,7 +132,7 @@ button svg {
   gap: 30px;
   padding: 0 5%;
   border-bottom: 1px solid var(--line);
-  background: #f4f1e9f5;
+  background: #080d0af5;
   position: relative;
   z-index: 20;
 }
@@ -152,28 +152,16 @@ button svg {
   display: grid;
   place-items: center;
   background: var(--navy);
-  color: var(--paper);
-  border-radius: 50%;
+  color: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 2px;
   font-family: var(--serif);
-  font-style: italic;
-  font-size: 40px;
+  font-style: normal;
+  font-size: 20px;
   position: relative;
-  padding-bottom: 6px;
+  padding-bottom: 0;
 }
-.brand-mark span {
-  font-family: var(--sans);
-  position: absolute;
-  font-size: 15px;
-  right: -3px;
-  top: -3px;
-  background: var(--peach);
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-}
+
 .brand-sub {
   display: block;
   font-size: 9px;
@@ -217,8 +205,8 @@ button svg {
 .search-trigger kbd {
   font: 11px var(--mono);
   padding: 0 5px;
-  border: 1px solid #cbd2c9;
-  border-radius: 4px;
+  border: 1px solid #405548;
+  border-radius: 2px;
   margin-left: 5px;
 }
 .notes-link span {
@@ -246,30 +234,29 @@ button svg {
   margin-bottom: 22px;
 }
 .eyebrow:before {
-  content: "";
+  content: ">";
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
-  background: var(--orange);
-  border-radius: 50%;
+  color: var(--orange);
 }
 .hero h1 {
   font-family: var(--serif);
-  font-size: clamp(62px, 6.2vw, 91px);
-  font-weight: 400;
-  line-height: 1.02;
+  font-size: clamp(36px, 4.1vw, 60px);
+  font-weight: 500;
+  line-height: 1.2;
   letter-spacing: -0.025em;
   margin: 0 0 25px;
 }
 .hero h1 em {
   color: var(--orange);
-  font-weight: 400;
+  font-weight: 500;
 }
 .hero-description {
   font-size: 17px;
   max-width: 410px;
   line-height: 1.8;
-  color: #536260;
+  color: #94a79c;
 }
 .hero-actions {
   display: flex;
@@ -279,14 +266,14 @@ button svg {
   flex-wrap: wrap;
 }
 .button-primary {
-  background: var(--orange);
-  color: white;
+  background: var(--green);
+  color: #07110b;
   display: inline-flex;
   justify-content: center;
   align-items: center;
   gap: 25px;
   min-height: 48px;
-  border-radius: 5px;
+  border-radius: 2px;
   padding: 12px 22px;
   text-decoration: none;
   font-size: 13px;
@@ -296,8 +283,8 @@ button svg {
     transform 0.15s;
 }
 .button-primary:hover {
-  background: #953920;
-  transform: translateY(-2px);
+  background: #aaddb5;
+  transform: none;
 }
 .button-primary span {
   font-size: 20px;
@@ -308,7 +295,7 @@ button svg {
   background: transparent;
   padding: 10px 18px;
   min-height: 45px;
-  border-radius: 5px;
+  border-radius: 2px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -324,21 +311,21 @@ button svg {
   margin: 17px 0 0;
 }
 .hero-visual {
-  background: #e4e9de;
-  border-radius: 12px;
+  background: #0c1510;
+  border-radius: 2px;
   position: relative;
   overflow: hidden;
   padding: 25px 26px 20px;
   min-height: 415px;
-  border: 1px solid #d6dfd0;
-  box-shadow: 0 16px 38px #173b3f06;
+  border: 1px solid #2b3c30;
+  box-shadow: none;
 }
 .hero-visual:before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(#70877435 0.8px, transparent 0.8px);
-  background-size: 14px 14px;
+  background-image: radial-gradient(#8fcf9d12 0.8px, transparent 0.8px);
+  background-size: 20px 20px;
   pointer-events: none;
 }
 .visual-label {
@@ -350,10 +337,10 @@ button svg {
   align-items: center;
 }
 .live-dot {
-  background: #7b9473;
+  background: #8fcf9d;
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: 2px;
   display: inline-block;
   margin-right: 5px;
 }
@@ -374,29 +361,29 @@ button svg {
   position: relative;
 }
 .arch-tabs button {
-  background: #f4f1e99c;
-  border: 1px solid #c7d2bf;
-  border-radius: 4px;
+  background: #0c1510;
+  border: 1px solid #405548;
+  border-radius: 2px;
   padding: 5px 10px;
   font-size: 10px;
 }
 .arch-tabs button[aria-pressed="true"] {
-  background: var(--navy);
-  color: white;
-  border-color: var(--navy);
+  background: var(--green);
+  color: #07110b;
+  border-color: var(--green);
 }
 .arch-caption {
   font-size: 12px;
   line-height: 1.65;
   min-height: 59px;
-  color: #526354;
+  color: #94a79c;
   position: relative;
   margin: 0;
 }
 .flow-dot {
   offset-path: path("M 66 88 L 245 88 L 245 158 L 357 158");
   animation: travel 7s linear infinite;
-  fill: #c06440;
+  fill: #d9b36c;
 }
 @keyframes travel {
   to {
@@ -415,8 +402,8 @@ button svg {
 }
 .intro-strip p {
   font-family: var(--serif);
-  font-size: 27px;
-  line-height: 1.3;
+  font-size: 15px;
+  line-height: 1.8;
   max-width: 400px;
   margin: 0;
 }
@@ -432,7 +419,7 @@ button svg {
 .intro-stats strong {
   font-family: var(--serif);
   font-size: 38px;
-  font-weight: 400;
+  font-weight: 500;
 }
 .intro-stats span {
   font-size: 10px;
@@ -456,8 +443,8 @@ button svg {
 }
 .section-heading h2 {
   font-family: var(--serif);
-  font-size: 47px;
-  line-height: 1.1;
+  font-size: 36px;
+  line-height: 1.35;
   letter-spacing: -0.02em;
   margin-bottom: 0;
 }
@@ -484,8 +471,8 @@ button svg {
 }
 .path-group-label h3 {
   font-family: var(--serif);
-  font-size: 30px;
-  line-height: 1.1;
+  font-size: 19px;
+  line-height: 1.5;
   margin: 9px 0;
 }
 .path-group-label p {
@@ -508,7 +495,7 @@ button svg {
   border-bottom: 1px solid var(--line);
 }
 .lesson-row:hover {
-  background: #e5e9df8c;
+  background: #152219;
 }
 .row-number {
   font: 11px var(--mono);
@@ -536,22 +523,22 @@ button svg {
   transition: transform 0.2s;
 }
 .lesson-row:hover .row-arrow {
-  transform: translate(4px, -2px);
+  transform: translateX(3px);
 }
 .lesson-row.is-complete .row-number {
   display: grid;
   place-items: center;
   background: var(--green);
-  color: white;
-  border-radius: 50%;
+  color: #07110b;
+  border-radius: 2px;
   height: 25px;
   width: 25px;
 }
 .home-bottom {
   background: var(--navy);
-  color: var(--paper-light);
+  color: var(--ink);
   margin: 0 5.6% 70px;
-  border-radius: 8px;
+  border-radius: 2px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 38px 42px;
@@ -559,23 +546,23 @@ button svg {
 }
 .home-bottom h2 {
   font-family: var(--serif);
-  font-size: 39px;
-  line-height: 1.1;
+  font-size: 26px;
+  line-height: 1.35;
   margin: 0 0 15px;
 }
 .home-bottom p {
   font-size: 13px;
-  color: #c4d1c8;
+  color: #94a79c;
   margin-bottom: 20px;
   max-width: 390px;
 }
 .home-bottom a {
-  color: #f1bd91;
+  color: #d9b36c;
   font-size: 12px;
   text-decoration: none;
 }
 .home-bottom > div + div {
-  border-left: 1px solid #ffffff24;
+  border-left: 1px solid #2b3c30;
   padding-left: 45px;
 }
 .research-note {
@@ -614,8 +601,8 @@ button svg {
 }
 .progress-track {
   height: 3px;
-  background: #dce2d7;
-  border-radius: 3px;
+  background: #26392d;
+  border-radius: 2px;
   overflow: hidden;
 }
 .progress-fill {
@@ -641,13 +628,13 @@ button svg {
   flex-shrink: 0;
 }
 .chapter-link.active {
-  background: #e6eade;
+  background: #19271b;
   border-color: var(--orange);
   color: var(--ink);
   font-weight: 600;
 }
 .chapter-link:hover {
-  background: #e8ecdf;
+  background: #152219;
 }
 .chapter-link.done > span:first-child {
   color: var(--green);
@@ -691,9 +678,9 @@ button svg {
 }
 .reader-main h1 {
   font-family: var(--serif);
-  font-size: 60px;
-  line-height: 1.06;
-  font-weight: 400;
+  font-size: 42px;
+  line-height: 1.2;
+  font-weight: 500;
   letter-spacing: -0.02em;
   margin: 0 0 20px;
 }
@@ -718,7 +705,7 @@ button svg {
 .lesson-section li {
   font-size: 16px;
   line-height: 1.85;
-  color: #374c4d;
+  color: #c0d0c5;
 }
 .lesson-section ul,
 .lesson-section ol {
@@ -734,9 +721,9 @@ button svg {
 .lesson-section code,
 .note-content code {
   font-size: 0.85em;
-  background: #e5eadd;
+  background: #152219;
   padding: 3px 5px;
-  border-radius: 3px;
+  border-radius: 2px;
   overflow-wrap: anywhere;
 }
 .lesson-section table {
@@ -754,13 +741,13 @@ button svg {
   border-bottom: 1px solid var(--line);
 }
 .lesson-section th {
-  background: #e6eadd;
+  background: #19271b;
 }
 .lesson-section blockquote {
   border-left: 3px solid var(--orange);
   margin: 20px 0;
   padding: 10px 20px;
-  background: #eee8da;
+  background: #1c2118;
 }
 .lesson-aside {
   position: sticky;
@@ -780,8 +767,8 @@ button svg {
 }
 .aside-card p {
   font-family: var(--serif);
-  font-size: 24px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.8;
 }
 .source-list {
   padding: 0;
@@ -803,8 +790,8 @@ button svg {
   width: 100%;
   min-height: 170px;
   border: 1px solid var(--line);
-  background: #fcfaf4;
-  border-radius: 5px;
+  background: #080d0a;
+  border-radius: 2px;
   padding: 12px;
   font-size: 12px;
   resize: vertical;
@@ -830,19 +817,19 @@ button svg {
 .complete-button {
   background: var(--sage);
   padding: 10px 18px;
-  border: 1px solid #c4d2bb;
-  border-radius: 4px;
+  border: 1px solid #405548;
+  border-radius: 2px;
   font-size: 12px;
 }
 .complete-button[aria-pressed="true"] {
   background: var(--green);
-  color: white;
+  color: #07110b;
 }
 .quiz-card {
-  background: #e5eadd;
-  border: 1px solid #d2dec9;
+  background: #152219;
+  border: 1px solid #2b3c30;
   padding: 25px;
-  border-radius: 7px;
+  border-radius: 2px;
   margin: 30px 0;
 }
 .quiz-kicker {
@@ -861,11 +848,11 @@ button svg {
   gap: 9px;
 }
 .quiz-option {
-  background: #fbfaf5;
-  border: 1px solid #d1d9c9;
+  background: #0c1510;
+  border: 1px solid #405548;
   padding: 12px 15px;
   text-align: left;
-  border-radius: 4px;
+  border-radius: 2px;
   line-height: 1.55;
   font-size: 13px;
   display: flex;
@@ -881,12 +868,12 @@ button svg {
   border-color: var(--green);
 }
 .quiz-option.correct {
-  background: #d3e2c9;
-  border-color: #668252;
+  background: #183022;
+  border-color: #8fcf9d;
 }
 .quiz-option.incorrect {
-  background: #f3ded0;
-  border-color: #be7c5e;
+  background: #302719;
+  border-color: #d9b36c;
 }
 .quiz-feedback {
   font-size: 13px;
@@ -896,9 +883,9 @@ button svg {
   min-height: 20px;
 }
 .lab-shell {
-  border: 1px solid #cbd5c7;
+  border: 1px solid #405548;
   background: var(--paper-light);
-  border-radius: 8px;
+  border-radius: 2px;
   margin: 30px 0 39px;
   overflow: hidden;
   box-shadow: var(--shadow);
@@ -920,9 +907,9 @@ button svg {
   font: 9px var(--mono);
   letter-spacing: 0.05em;
   color: var(--green);
-  background: #e4ecdf;
+  background: #19271b;
   padding: 5px 8px;
-  border-radius: 3px;
+  border-radius: 2px;
   white-space: nowrap;
 }
 .lab-container {
@@ -935,7 +922,7 @@ button svg {
   border-top: 1px solid var(--line);
   padding: 12px 23px;
   margin: 0;
-  background: #f0f2e9;
+  background: #101b14;
 }
 .lab-controls {
   display: flex;
@@ -960,9 +947,9 @@ button svg {
 .control input[type="number"],
 .control input[type="text"],
 .lab-select {
-  border: 1px solid #c8d3c3;
-  border-radius: 4px;
-  background: white;
+  border: 1px solid #405548;
+  border-radius: 2px;
+  background: var(--paper);
   padding: 8px;
   min-height: 38px;
   width: 100%;
@@ -981,10 +968,10 @@ input[type="range"] {
   min-width: 0;
 }
 .lab-chart {
-  background: #f1f4eb;
-  border: 1px solid #e1e6da;
+  background: #080d0a;
+  border: 1px solid #2b3c30;
   padding: 12px;
-  border-radius: 5px;
+  border-radius: 2px;
   min-width: 0;
   overflow: auto;
 }
@@ -997,8 +984,8 @@ input[type="range"] {
   font-family: var(--sans);
 }
 .lab-result {
-  background: #e7eddf;
-  border-radius: 5px;
+  background: #152219;
+  border-radius: 2px;
   padding: 16px;
   margin-top: 16px;
   font-size: 13px;
@@ -1021,15 +1008,15 @@ input[type="range"] {
 }
 .metric {
   padding: 12px;
-  background: #edf1e6;
-  border-radius: 4px;
+  background: #101b14;
+  border-radius: 2px;
   min-width: 0;
 }
 .metric-value {
   font-family: var(--serif);
   font-size: 31px;
   line-height: 1.25;
-  font-weight: 400;
+  font-weight: 500;
 }
 .metric-label {
   font-size: 10px;
@@ -1039,21 +1026,21 @@ input[type="range"] {
 .lab-button {
   min-height: 38px;
   background: var(--green);
-  color: white;
+  color: #07110b;
   border: 1px solid var(--green);
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 8px 14px;
   font-size: 12px;
   line-height: 1.5;
 }
 .lab-button:hover {
-  background: #254a3b;
+  background: #aaddb5;
 }
 .lab-button.secondary,
 .lab-button.secondary:hover {
   background: transparent;
   color: var(--ink);
-  border-color: #b9c8b0;
+  border-color: #54765c;
 }
 .lab-tabs {
   display: flex;
@@ -1063,14 +1050,14 @@ input[type="range"] {
 }
 .lab-tabs button {
   padding: 7px 10px;
-  border: 1px solid #bdcbb4;
-  border-radius: 4px;
-  background: #f3f6ee;
+  border: 1px solid #405548;
+  border-radius: 2px;
+  background: #101b14;
   font-size: 11px;
 }
 .lab-tabs button[aria-pressed="true"] {
-  background: var(--navy);
-  color: white;
+  background: var(--green);
+  color: #07110b;
 }
 .lab-container table {
   width: 100%;
@@ -1096,7 +1083,7 @@ input[type="range"] {
 }
 .lab-container fieldset {
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 12px;
   margin: 10px 0;
 }
@@ -1115,7 +1102,7 @@ input[type="range"] {
   padding: 65px 5% 90px;
 }
 .tool-page > h1 {
-  font: 64px/1.05 var(--serif);
+  font: 40px/1.25 var(--mono);
   letter-spacing: -0.02em;
   margin: 0 0 20px;
 }
@@ -1130,8 +1117,8 @@ input[type="range"] {
   display: block;
   width: 100%;
   background: var(--paper-light);
-  border: 1px solid #c9d4c2;
-  border-radius: 5px;
+  border: 1px solid #405548;
+  border-radius: 2px;
   padding: 15px 18px;
   font-size: 15px;
   margin: 20px 0;
@@ -1190,8 +1177,8 @@ input[type="range"] {
 .planner-field textarea,
 .planner-field input {
   background: var(--paper-light);
-  border: 1px solid #c8d2c1;
-  border-radius: 5px;
+  border: 1px solid #405548;
+  border-radius: 2px;
   padding: 13px;
   font-size: 13px;
   line-height: 1.75;
@@ -1216,7 +1203,7 @@ input[type="range"] {
 .planner-callout {
   padding: 20px;
   background: var(--sage);
-  border-radius: 5px;
+  border-radius: 2px;
   font-size: 13px;
   line-height: 1.8;
   margin: 25px 0;
@@ -1242,9 +1229,9 @@ input[type="range"] {
   line-height: 1.9;
 }
 .empty-state {
-  background: #e8edde;
-  border: 1px solid #d5dfcc;
-  border-radius: 6px;
+  background: #152219;
+  border: 1px solid #2b3c30;
+  border-radius: 2px;
   padding: 30px;
   margin: 25px 0;
 }
@@ -1266,9 +1253,9 @@ input[type="range"] {
 }
 .footer-brand {
   font-family: var(--serif);
-  font-size: 25px;
+  font-size: 16px;
   color: var(--ink);
-  text-decoration: none;
+  text-decoration: underline;
 }
 .site-footer p {
   font-size: 11px;
@@ -1299,12 +1286,12 @@ dialog {
   border: 1px solid var(--line);
   padding: 25px;
   background: var(--paper-light);
-  border-radius: 10px;
+  border-radius: 2px;
   color: var(--ink);
-  box-shadow: 0 30px 100px #173b3f33;
+  box-shadow: 0 30px 100px #00000066;
 }
 dialog::backdrop {
-  background: #102a31a1;
+  background: #020704ce;
   backdrop-filter: blur(4px);
 }
 .search-dialog-head {
@@ -1326,9 +1313,9 @@ dialog::backdrop {
 }
 #guide-search {
   width: 100%;
-  border: 1px solid #bfcfb7;
-  background: white;
-  border-radius: 5px;
+  border: 1px solid #54765c;
+  background: var(--paper);
+  border-radius: 2px;
   padding: 13px;
   font-size: 15px;
 }
@@ -1363,10 +1350,10 @@ dialog::backdrop {
   bottom: 25px;
   left: 50%;
   transform: translate(-50%, 15px);
-  background: var(--ink);
-  color: var(--paper-light);
+  background: var(--green);
+  color: #07110b;
   padding: 12px 20px;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 12px;
   opacity: 0;
   pointer-events: none;
@@ -1435,7 +1422,7 @@ dialog::backdrop {
     padding-top: 60px;
   }
   .hero h1 {
-    font-size: 70px;
+    font-size: 44px;
   }
   .hero-visual {
     padding: 22px 18px;
@@ -1458,7 +1445,7 @@ dialog::backdrop {
     gap: 24px;
   }
   .hero h1 {
-    font-size: 61px;
+    font-size: 36px;
   }
   .hero-description {
     font-size: 14px;
@@ -1485,7 +1472,7 @@ dialog::backdrop {
     padding: 20px 0;
   }
   .intro-strip p {
-    font-size: 23px;
+    font-size: 14px;
     max-width: 280px;
   }
   .intro-stats {
@@ -1501,10 +1488,10 @@ dialog::backdrop {
     gap: 6px;
   }
   .section-heading h2 {
-    font-size: 40px;
+    font-size: 30px;
   }
   .reader-main h1 {
-    font-size: 49px;
+    font-size: 34px;
   }
   .reader-layout {
     gap: 25px;
@@ -1560,7 +1547,7 @@ dialog::backdrop {
     gap: 33px;
   }
   .hero h1 {
-    font-size: 66px;
+    font-size: 36px;
     max-width: 400px;
   }
   .eyebrow {
@@ -1607,7 +1594,7 @@ dialog::backdrop {
     padding: 23px 0;
   }
   .intro-strip p {
-    font-size: 26px;
+    font-size: 15px;
     max-width: 330px;
     margin-bottom: 20px;
   }
@@ -1630,7 +1617,7 @@ dialog::backdrop {
     margin-bottom: 28px;
   }
   .section-heading h2 {
-    font-size: 43px;
+    font-size: 32px;
     margin-bottom: 15px;
   }
   .section-heading > p {
@@ -1644,7 +1631,7 @@ dialog::backdrop {
     padding: 18px 0 10px;
   }
   .path-group-label h3 {
-    font-size: 27px;
+    font-size: 18px;
     display: inline;
     margin-left: 10px;
   }
@@ -1679,11 +1666,11 @@ dialog::backdrop {
     gap: 25px;
   }
   .home-bottom h2 {
-    font-size: 34px;
+    font-size: 24px;
   }
   .home-bottom > div + div {
     border-left: 0;
-    border-top: 1px solid #ffffff24;
+    border-top: 1px solid #2b3c30;
     padding: 24px 0 0;
   }
   .research-note {
@@ -1699,10 +1686,10 @@ dialog::backdrop {
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    border: 1px solid #ccd7c4;
-    background: #e7ecdf;
+    border: 1px solid #405548;
+    background: #152219;
     padding: 12px 14px;
-    border-radius: 5px;
+    border-radius: 2px;
     font-size: 12px;
     margin: 0 0 22px;
   }
@@ -1710,8 +1697,8 @@ dialog::backdrop {
     display: none;
     position: static;
     padding: 15px;
-    background: #e8edde;
-    border-radius: 5px;
+    background: #152219;
+    border-radius: 2px;
     margin-bottom: 25px;
   }
   .lesson-nav.open {
@@ -1722,8 +1709,8 @@ dialog::backdrop {
     padding: 11px;
   }
   .reader-main h1 {
-    font-size: 49px;
-    line-height: 1.08;
+    font-size: 34px;
+    line-height: 1.25;
   }
   .lesson-breadcrumb {
     margin: 5px 0 25px;
@@ -1751,7 +1738,7 @@ dialog::backdrop {
     padding-top: 40px;
   }
   .aside-card p {
-    font-size: 25px;
+    font-size: 15px;
   }
   .aside-card textarea {
     min-height: 150px;
@@ -1829,7 +1816,7 @@ dialog::backdrop {
     padding: 40px 6% 60px;
   }
   .tool-page > h1 {
-    font-size: 53px;
+    font-size: 34px;
   }
   .tool-deck {
     font-size: 15px;
@@ -1855,7 +1842,7 @@ dialog::backdrop {
     padding: 28px 6%;
   }
   .footer-brand {
-    font-size: 25px;
+    font-size: 15px;
   }
   .site-footer > div {
     gap: 18px;
@@ -1926,5 +1913,175 @@ dialog::backdrop {
     font-size: 11px;
     color: var(--muted);
     margin: 7px 0 0;
+  }
+}
+
+/* Terminal interface: fixed-width type, explicit panel boundaries, no ornament. */
+body {
+  font-variant-ligatures: none;
+}
+.hero > div,
+.path-group > div {
+  min-width: 0;
+}
+.hero h1 {
+  overflow-wrap: anywhere;
+}
+.hero-description {
+  max-width: 480px;
+  font-size: 15px;
+}
+.terminal-cursor {
+  color: var(--green);
+}
+.hero-visual {
+  border-top: 2px solid var(--green);
+}
+.visual-label {
+  color: var(--muted);
+  gap: 12px;
+}
+.visual-label > span:last-child {
+  text-align: right;
+}
+.button-primary {
+  border: 1px solid var(--green);
+}
+.button-outline {
+  color: var(--green);
+  border-color: #54765c;
+}
+.home-bottom {
+  border: 1px solid var(--line);
+}
+.path-group-label h3 {
+  font-size: 19px;
+}
+.path-group-label p {
+  max-width: 210px;
+}
+.row-title {
+  font-size: 15px;
+}
+.lesson-section h2 {
+  font-size: 22px;
+  line-height: 1.5;
+}
+.reader-main h1 {
+  overflow-wrap: anywhere;
+}
+.aside-card p {
+  font-size: 14px;
+  line-height: 1.85;
+}
+.metric-value {
+  color: var(--green);
+  font-size: 28px;
+}
+input,
+select,
+textarea {
+  caret-color: var(--green);
+}
+input::placeholder,
+textarea::placeholder {
+  color: #84998b;
+  opacity: 1;
+}
+.quiz-card,
+.lab-shell {
+  border-top: 2px solid #54765c;
+}
+.lab-heading {
+  background: #101b14;
+}
+.lab-chart {
+  scrollbar-color: #54765c #080d0a;
+}
+.lab-badge {
+  border: 1px solid var(--line);
+}
+.note-entry h2,
+.empty-state h2 {
+  font-size: 22px;
+  line-height: 1.5;
+}
+.toast {
+  border: 1px solid var(--green);
+}
+.tool-search,
+#guide-search {
+  color: var(--ink);
+}
+@media (max-width: 900px) and (min-width: 681px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .hero h1 {
+    font-size: 48px;
+  }
+  .hero-visual {
+    min-height: 0;
+    max-width: 650px;
+  }
+}
+@media (max-width: 680px) {
+  .brand-mark {
+    font-size: 17px;
+  }
+  .hero h1 {
+    font-size: clamp(29px, 8.5vw, 42px);
+  }
+  .hero-actions {
+    align-items: stretch;
+  }
+  .hero-actions > a {
+    font-size: 11px;
+    padding: 10px 12px;
+    gap: 12px;
+  }
+  .small-note {
+    font-size: 10px;
+    line-height: 1.8;
+  }
+  .intro-stats strong {
+    font-size: 28px;
+  }
+  .intro-stats > div {
+    display: block;
+  }
+  .intro-stats span {
+    display: block;
+    font-size: 10px;
+  }
+  .intro-stats strong > span {
+    display: inline;
+  }
+  .path-group-label h3 {
+    font-size: 17px;
+  }
+  .lesson-kicker {
+    align-items: start;
+    gap: 15px;
+  }
+  .lesson-kicker > span:last-child {
+    text-align: right;
+  }
+  .reader-main h1 {
+    font-size: 30px;
+  }
+  .lesson-section h2 {
+    font-size: 20px;
+  }
+  .tool-page > h1 {
+    font-size: 30px;
+    overflow-wrap: anywhere;
+  }
+  .lab-heading {
+    align-items: start;
+  }
+  .visual-label {
+    font-size: 7px;
+    letter-spacing: 0.04em;
   }
 }
