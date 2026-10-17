@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f1e9" />
+    <meta
+      name="description"
+      content="An interactive field guide to the machine learning behind PAFS-LM. Understand activations, emotion probes, training, persistent memory and good experiments."
+    />
+    <title>The ML Field Guide · PAFS-LM</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="PAFS-LM field guide home"
+        ><span class="brand-mark" aria-hidden="true">p<span>→</span></span
+        ><span
+          >PAFS-LM<span class="brand-sub">THE ML FIELD GUIDE</span></span
+        ></a
+      >
+      <nav class="top-nav" aria-label="Main navigation">
+        <a href="#path">Learning path</a><a href="#glossary">Glossary</a
+        ><a href="#planner">Experiment planner</a>
+      </nav>
+      <div class="header-actions">
+        <button
+          class="search-trigger"
+          id="open-search"
+          aria-label="Search the guide"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m16 16 5 5" /></svg
+          ><span>Search</span><kbd>/</kbd></button
+        ><a href="#notes" class="notes-link" aria-label="Your saved notes"
+          >Notes <span aria-hidden="true">→</span></a
+        >
+      </div>
+    </header>
+    <main id="main" tabindex="-1"></main>
+    <footer class="site-footer">
+      <a href="#home" class="footer-brand"
+        >A clearer model. A better experiment.</a
+      >
+      <p>
+        Built for learning with PAFS-LM. Labs are simplified simulations, not
+        model benchmarks.
+      </p>
+      <div>
+        <a
+          href="https://github.com/calebhaines/PAFS-LM"
+          target="_blank"
+          rel="noreferrer"
+          >Research repository →</a
+        ><a href="#glossary">Look up a term</a
+        ><button id="reset-progress" class="text-button">Reset progress</button>
+      </div>
+      <p class="storage-status" id="storage-status">
+        Progress and notes are saved only in this browser.
+      </p>
+    </footer>
+    <dialog id="search-dialog" aria-labelledby="search-title">
+      <form method="dialog" class="search-dialog-head">
+        <h2 id="search-title">Find your next idea</h2>
+        <button class="icon-button" aria-label="Close search">×</button>
+      </form>
+      <label class="sr-only" for="guide-search">Search lessons and terms</label
+      ><input
+        type="search"
+        id="guide-search"
+        placeholder="Try “LoRA”, “intensity” or “overfitting”…"
+        autocomplete="off"
+      />
+      <div id="search-results" class="search-results" aria-live="polite"></div>
+      <p class="dialog-hint">Search lessons and the plain-language glossary.</p>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <noscript
+      ><div class="noscript">
+        <h1>The ML Field Guide</h1>
+        <p>
+          This guide uses JavaScript for its lessons and interactive
+          experiments. Enable JavaScript to explore it. You can also read the
+          <a
+            href="https://github.com/calebhaines/PAFS-LM/blob/research/causal-pilot/PAFS_LM_Research_Proposal.md"
+            >research proposal</a
+          >.
+        </p>
+      </div></noscript
+    >
+  </body>
+</html>
