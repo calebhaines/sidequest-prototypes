@@ -161,6 +161,65 @@ a{color:inherit}
 .level-label{font:8.5px/1 var(--mono);letter-spacing:1.6px;color:var(--muted);text-transform:uppercase}
 .meter i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--yellow),var(--accent));transition:width .08s linear}
 
+/* ---------- sequencer ---------- */
+.sequence-panel{margin-top:22px;border:1px solid var(--line);border-radius:4px;background:#141d1f;padding:16px}
+.panel-heading{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:13px;flex-wrap:wrap}
+.panel-heading h2{margin:0;font:600 22px/1 var(--heading);letter-spacing:1.2px;text-transform:uppercase}
+.panel-heading h2 span{color:var(--yellow);font:8.5px/1 var(--mono);letter-spacing:2px;margin-right:9px;vertical-align:middle}
+.panel-caption{font:8.5px/1 var(--mono);letter-spacing:2px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.pattern-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px;font:8.5px/1 var(--mono);letter-spacing:1.6px;color:var(--muted);text-transform:uppercase}
+.pattern-toolbar label{display:flex;align-items:center;gap:6px}
+.pattern-toolbar select,.pattern-toolbar input{background:#0f1719;border:1px solid var(--line);color:var(--ink);font:10px/1 var(--mono);padding:6px;border-radius:2px}
+.pattern-toolbar input{width:52px;text-align:center}
+.pattern-toolbar button{background:#1b2629;border:1px solid var(--line);color:var(--muted);font:9px/1 var(--mono);letter-spacing:1.4px;padding:7px 11px;border-radius:2px;cursor:pointer;text-transform:uppercase}
+.pattern-toolbar button:hover{color:var(--ink);border-color:#5b7a80}
+.pattern-toolbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seq-play{border-color:var(--accent);color:var(--accent)}
+.seq-play.on{background:#3a2112;color:var(--ink);border-color:var(--accent);box-shadow:0 0 18px -8px var(--accent)}
+.step-pages{display:inline-flex;gap:4px}
+.step-pages[hidden]{display:none}
+.step-pages button{font-size:9px;padding:7px 9px}
+.step-pages button[aria-pressed="true"]{border-color:var(--yellow);color:var(--yellow)}
+.step-pages button.playing{box-shadow:inset 0 -2px var(--accent)}
+.sequence-body{display:grid;grid-template-columns:1fr 236px;gap:16px}
+.step-area{min-width:0}
+.steps{display:grid;grid-template-columns:repeat(16,minmax(32px,1fr));gap:5px;overflow-x:auto;scrollbar-width:thin;padding-bottom:5px}
+.step-cell{padding:6px 2px;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;background:linear-gradient(#1d2a2d,#162022);border:1px solid #3f5459;min-width:32px;border-radius:4px;position:relative;gap:5px;cursor:ns-resize;user-select:none;-webkit-user-select:none;touch-action:none}
+.step-cell:nth-child(4n+1){border-top-color:#7f9aa0}
+.step-cell.selected{outline:1px solid var(--yellow);outline-offset:-3px;border-color:var(--yellow);background:#243236}
+.step-cell.off{background:#111b1d;border-color:#2c3d42;color:#5f7378}
+.step-cell.outside{opacity:.32}
+.step-cell.playing{background:#3a2a17;color:#ffd9b8;border-color:var(--accent)}
+.step-number{font:9px var(--mono);opacity:.7}
+.step-note{font:10px var(--mono);font-weight:700;white-space:nowrap}
+.step-velocity{height:34px;width:8px;background:#0b1416;position:relative;border-radius:1px;overflow:hidden}
+.step-velocity i{position:absolute;bottom:0;left:0;right:0;background:var(--accent);height:0}
+.step-cell.off .step-velocity i{opacity:.3}
+.step-flags{font:8px var(--mono);height:9px;color:var(--yellow);letter-spacing:1px}
+.pattern-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px;font:8.5px/1 var(--mono);letter-spacing:1.6px;color:var(--muted);text-transform:uppercase}
+.lane-tabs{display:flex;flex-wrap:wrap;gap:5px}
+.lane-tabs button{background:#141d1f;border:1px solid var(--line);color:var(--muted);font:9px/1 var(--mono);letter-spacing:1.2px;padding:6px 9px;border-radius:2px;cursor:pointer;text-transform:uppercase}
+.lane-tabs button:hover{color:var(--ink);border-color:#5b7a80}
+.lane-tabs button[aria-pressed="true"]{border-color:var(--yellow);color:var(--yellow);background:#1d2621}
+.step-inspector{padding:13px;background:#101a1c;border:1px solid #46605f;border-radius:4px;align-self:start}
+.step-inspector-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.step-inspector h3{margin:0;font:11px var(--mono);color:var(--yellow);letter-spacing:.07em;text-transform:uppercase}
+.step-inspector-heading button{padding:5px 12px;background:#1d2a2d;border:1px solid var(--line);color:var(--muted);font:9px var(--mono);letter-spacing:1px;border-radius:2px;cursor:pointer;text-transform:uppercase}
+.step-inspector-heading button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.ins-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font:8.5px/1 var(--mono);letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.ins-row select{flex:1;background:#0f1719;border:1px solid var(--line);color:var(--ink);font:10px var(--mono);padding:6px;border-radius:2px}
+.locks{display:grid;gap:7px}
+.lock-row{display:grid;grid-template-columns:54px 1fr 30px 16px;align-items:center;gap:6px;font:8px/1 var(--mono);letter-spacing:1.1px;color:var(--muted);text-transform:uppercase}
+.lock-row input[type="range"]{width:100%;height:14px;accent-color:var(--accent);background:transparent;cursor:pointer}
+.lock-row .lock-val{color:#5f7378;text-align:right;font-size:8px}
+.lock-row.locked .lock-val{color:var(--accent)}
+.lock-row .lock-clear{background:none;border:0;color:#5f7378;cursor:pointer;font:11px var(--mono);line-height:1;padding:0}
+.lock-row .lock-clear:hover{color:var(--accent)}
+.ins-hint{margin:11px 0 0;font:8px/1.6 var(--mono);letter-spacing:.8px;color:#5d7076;text-transform:uppercase}
+@media(max-width:900px){
+  .sequence-body{grid-template-columns:1fr}
+  .step-inspector{align-self:stretch}
+}
 /* ---------- footer ---------- */
 .foot{
   margin-top:26px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
@@ -260,9 +319,52 @@ a{color:inherit}
     </div>
   </div>
 
+  <section class="panel sequence-panel" aria-labelledby="seqTitle">
+    <div class="panel-heading">
+      <h2 id="seqTitle"><span>02</span> Pressure recipe</h2>
+      <span class="panel-caption">32 steps / dial locks</span>
+    </div>
+    <div class="pattern-toolbar">
+      <button id="seqPlay" type="button" class="seq-play">&#9654; Play</button>
+      <label>Steps
+        <select id="seqLength"><option value="16">16</option><option value="32">32</option></select>
+      </label>
+      <span id="stepPages" class="step-pages" aria-label="Step pages" hidden>
+        <button type="button" data-step-page="0" aria-pressed="true">1–16</button>
+        <button type="button" data-step-page="1" aria-pressed="false">17–32</button>
+      </span>
+      <label>Rate
+        <select id="seqRate">
+          <option value="0.5">1/8</option>
+          <option value="0.25" selected>1/16</option>
+          <option value="0.125">1/32</option>
+        </select>
+      </label>
+      <label>Tempo <input id="seqBpm" type="number" min="40" max="200" value="96"> bpm</label>
+      <button id="seqClear" type="button">Clear</button>
+    </div>
+    <div class="sequence-body">
+      <div class="step-area">
+        <div id="steps" class="steps" aria-label="Sixteen sequencer steps"></div>
+        <div class="pattern-tools">
+          <span class="lane-label">Dial</span>
+          <div class="lane-tabs" id="seqLanes" role="group" aria-label="Dial lane"></div>
+        </div>
+      </div>
+      <div class="step-inspector">
+        <div class="step-inspector-heading">
+          <h3>Step <span id="stepIndex">01</span></h3>
+          <button id="stepToggle" type="button" aria-pressed="true">On</button>
+        </div>
+        <label class="ins-row"><span>Note</span><select id="stepNote"></select></label>
+        <div id="stepLocks" class="locks"></div>
+        <p class="ins-hint">Drag a step to write the active dial. Right-click a step clears it.</p>
+      </div>
+    </div>
+  </section>
   <div class="foot">
     <span>Signal: source → <b>burner</b> → vent → spout delay → <b>pressure</b> back into burner</span>
-    <span>Keyboard: <b>A S D F G H J K</b> · <b>Space</b> shrieks</span>
+    <span>Keyboard: <b>A S D F G H J K</b> · <b>Space</b> shrieks · <b>P</b> plays</span>
   </div>
 </div>
 
@@ -413,21 +515,24 @@ a{color:inherit}
     noiseGain.gain.exponentialRampToValueAtTime(0.016, t + 0.42);
   }
 
-  function applyState(){
+  function applyValues(v, hz){
     if (!ctx) return;
     const t = ctx.currentTime;
-    shaper.curve = makeDriveCurve(state.burner);
-    feedback.gain.setTargetAtTime(state.pressure * 0.92, t, 0.03);
-    loopLP.frequency.setTargetAtTime(280 + state.vent * 7720, t, 0.03);
-    band.Q.setTargetAtTime(0.7 + state.glass * 22, t, 0.03);
-    master.gain.setTargetAtTime(state.kettle * 0.9, t, 0.03);
-    // Retune the live loop so SPOUT stays audible while a pitch is held.
-    if (activePitch){
-      const period = clamp(1 / activePitch, 0.002, 1.2) * (0.55 + state.spout * 0.9);
+    shaper.curve = makeDriveCurve(v.burner);
+    feedback.gain.setTargetAtTime(v.pressure * 0.92, t, 0.03);
+    loopLP.frequency.setTargetAtTime(280 + v.vent * 7720, t, 0.03);
+    band.Q.setTargetAtTime(0.7 + v.glass * 22, t, 0.03);
+    master.gain.setTargetAtTime(v.kettle * 0.9, t, 0.03);
+    if (hz) activePitch = hz;
+    const target = hz || activePitch;
+    if (target){
+      const period = clamp(1 / target, 0.002, 1.2) * (0.55 + v.spout * 0.9);
       delay.delayTime.setTargetAtTime(period, t, 0.03);
-      band.frequency.setTargetAtTime(activePitch * (1.6 + state.spout * 3.4), t, 0.05);
+      band.frequency.setTargetAtTime(target * (1.6 + v.spout * 3.4), t, 0.05);
     }
   }
+
+  function applyState(){ applyValues(state, null); }
 
   function vent(){
     if (!ctx) return;
@@ -560,6 +665,7 @@ a{color:inherit}
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.code === 'Space'){ e.preventDefault(); shriek(); return; }
+    if (e.key === 'p' || e.key === 'P'){ e.preventDefault(); if (seq.playing) seqStop(); else seqStart(); return; }
     const i = KEYMAP.get(e.key.toLowerCase());
     if (i === undefined) return;
     e.preventDefault();
@@ -676,10 +782,340 @@ a{color:inherit}
     return Math.sqrt(s / arr.length);
   }
 
+  /* ---------------- sequencer ---------------- */
+  const SEQ_PARAMS = ['burner','pressure','spout','vent','glass','kettle'];
+  const SEQ_LABEL = { burner:'Burner', pressure:'Pressure', spout:'Spout', vent:'Vent', glass:'Glass', kettle:'Kettle' };
+  const seq = {
+    length: 16, page: 0, lane: 'note', selected: 0, playing: false,
+    bpm: 96, rate: 0.25, stepIndex: 0,
+    steps: Array.from({ length: 32 }, (_, i) => ({
+      on: i % 4 === 0,
+      note: i % 8,
+      locks: (i % 4 === 0) ? { pressure: 0.5 } : {}
+    }))
+  };
+  let seqTimer = null, seqNext = 0, seqDrag = null;
+  const seqEls = { locks: {} };
+
+  function effectiveValues(st){
+    const v = {};
+    SEQ_PARAMS.forEach(p => {
+      v[p] = (st.locks && st.locks[p] !== undefined) ? st.locks[p] : state[p];
+    });
+    return v;
+  }
+
+  function laneValue(st){
+    if (seq.lane === 'note') return st.note / (PITCHES.length - 1);
+    const k = seq.lane;
+    return (st.locks && st.locks[k] !== undefined) ? st.locks[k] : state[k];
+  }
+
+  function laneText(st){
+    if (seq.lane === 'note') return PITCHES[st.note].note;
+    const k = seq.lane;
+    const locked = st.locks && st.locks[k] !== undefined;
+    return locked ? String(Math.round(st.locks[k] * 100)) : '—';
+  }
+
+  function flagText(st){
+    const n = Object.keys(st.locks || {}).length;
+    return n ? '•'.repeat(Math.min(n, 4)) : '';
+  }
+
+  function renderSteps(){
+    if (!seqEls.steps) return;
+    const start = seq.page * 16;
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < 16; i++){
+      const idx = start + i;
+      const st = seq.steps[idx];
+      const cell = document.createElement('div');
+      cell.className = 'step-cell'
+        + (st.on ? '' : ' off')
+        + (idx === seq.selected ? ' selected' : '')
+        + (idx >= seq.length ? ' outside' : '')
+        + (seq.playing && idx === seq.stepIndex ? ' playing' : '');
+      cell.dataset.index = String(idx);
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('tabindex', '0');
+      cell.setAttribute('aria-label', 'Step ' + (idx + 1) + ', ' + PITCHES[st.note].note + ', ' + (st.on ? 'on' : 'off'));
+      const h = Math.round(clamp(laneValue(st), 0, 1) * 100);
+      cell.innerHTML = '<span class="step-number">' + String(idx + 1).padStart(2, '0') + '</span>'
+        + '<span class="step-note">' + laneText(st) + '</span>'
+        + '<span class="step-velocity"><i style="height:' + h + '%"></i></span>'
+        + '<span class="step-flags">' + flagText(st) + '</span>';
+      frag.appendChild(cell);
+    }
+    seqEls.steps.replaceChildren(frag);
+  }
+
+  function renderPages(){
+    if (!seqEls.pages) return;
+    const multi = seq.length > 16;
+    seqEls.pages.hidden = !multi;
+    seqEls.pages.querySelectorAll('button').forEach(b => {
+      const p = Number(b.dataset.stepPage);
+      b.setAttribute('aria-pressed', String(p === seq.page));
+      b.classList.toggle('playing', seq.playing && multi && Math.floor(seq.stepIndex / 16) === p && p !== seq.page);
+    });
+  }
+
+  function renderInspector(){
+    if (!seqEls.stepIndex) return;
+    const st = seq.steps[seq.selected];
+    seqEls.stepIndex.textContent = String(seq.selected + 1).padStart(2, '0');
+    seqEls.stepToggle.setAttribute('aria-pressed', String(st.on));
+    seqEls.stepToggle.textContent = st.on ? 'On' : 'Off';
+    seqEls.stepNote.value = String(st.note);
+    SEQ_PARAMS.forEach(p => {
+      const row = seqEls.locks[p];
+      if (!row) return;
+      const locked = st.locks && st.locks[p] !== undefined;
+      const v = locked ? st.locks[p] : state[p];
+      row.input.value = String(Math.round(v * 100));
+      row.val.textContent = locked ? Math.round(v * 100) + '%' : 'dial';
+      row.el.classList.toggle('locked', !!locked);
+    });
+  }
+
+  function renderLanes(){
+    if (!seqEls.lanes) return;
+    const lanes = ['note'].concat(SEQ_PARAMS);
+    seqEls.lanes.replaceChildren(...lanes.map(k => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.lane = k;
+      b.textContent = k === 'note' ? 'Note' : SEQ_LABEL[k];
+      b.setAttribute('aria-pressed', String(seq.lane === k));
+      b.addEventListener('click', () => { seq.lane = k; renderLanes(); renderSteps(); });
+      return b;
+    }));
+  }
+
+  function paintCell(idx){
+    if (!seqEls.steps) return;
+    const el = seqEls.steps.querySelector('.step-cell[data-index="' + idx + '"]');
+    if (!el) return;
+    const st = seq.steps[idx];
+    el.classList.toggle('off', !st.on);
+    el.classList.toggle('selected', idx === seq.selected);
+    el.querySelector('.step-note').textContent = laneText(st);
+    el.querySelector('.step-velocity i').style.height = Math.round(clamp(laneValue(st), 0, 1) * 100) + '%';
+    el.querySelector('.step-flags').textContent = flagText(st);
+  }
+
+  function stepIndexOf(e){
+    const cell = e.target && e.target.closest ? e.target.closest('.step-cell') : null;
+    return cell ? Number(cell.dataset.index) : null;
+  }
+
+  function onStepDown(e){
+    if (e.button === 2) return;
+    const idx = stepIndexOf(e);
+    if (idx === null) return;
+    e.preventDefault();
+    seq.selected = idx;
+    const st = seq.steps[idx];
+    if (seq.lane === 'note'){
+      seqDrag = { idx, mode: 'note', y: e.clientY, start: st.note };
+    } else {
+      const cur = (st.locks && st.locks[seq.lane] !== undefined) ? st.locks[seq.lane] : state[seq.lane];
+      seqDrag = { idx, mode: 'lock', y: e.clientY, start: cur, param: seq.lane };
+    }
+    renderInspector();
+    paintCell(idx);
+  }
+
+  function onStepMove(e){
+    if (!seqDrag) return;
+    const dy = seqDrag.y - e.clientY;
+    const st = seq.steps[seqDrag.idx];
+    if (seqDrag.mode === 'note'){
+      const next = clamp(Math.round(seqDrag.start + dy / 22), 0, PITCHES.length - 1);
+      if (next !== st.note){ st.note = next; st.on = true; paintCell(seqDrag.idx); renderInspector(); }
+    } else {
+      st.locks = st.locks || {};
+      st.locks[seqDrag.param] = clamp(seqDrag.start + dy / 120, 0, 1);
+      st.on = true;
+      paintCell(seqDrag.idx); renderInspector();
+    }
+  }
+
+  function onStepUp(){ seqDrag = null; }
+
+  function onStepContext(e){
+    const idx = stepIndexOf(e);
+    if (idx === null) return;
+    e.preventDefault();
+    const st = seq.steps[idx];
+    if (seq.lane === 'note') st.on = false;
+    else if (st.locks) delete st.locks[seq.lane];
+    paintCell(idx); renderInspector();
+  }
+
+  function onStepKey(e){
+    const idx = stepIndexOf(e);
+    if (idx === null) return;
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      seq.selected = idx;
+      seq.steps[idx].on = !seq.steps[idx].on;
+      paintCell(idx); renderInspector();
+    }
+  }
+
+  function stepMs(){ return (60000 / seq.bpm) * seq.rate; }
+
+  function playSeqStep(idx){
+    const st = seq.steps[idx];
+    const v = effectiveValues(st);
+    if (!ensureAudio()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    if (st.on){
+      applyValues(v, PITCHES[st.note].hz);
+      excite(1);
+      setLamp('hot');
+    } else {
+      applyValues(v, null);
+      noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02);
+    }
+    renderSteps(); renderPages();
+  }
+
+  function seqTick(){
+    if (!seq.playing) return;
+    const now = performance.now();
+    if (now < seqNext - 1){
+      seqTimer = setTimeout(seqTick, Math.max(1, seqNext - now));
+      return;
+    }
+    playSeqStep(seq.stepIndex);
+    seq.stepIndex = (seq.stepIndex + 1) % seq.length;
+    seqNext += stepMs();
+    seqTimer = setTimeout(seqTick, Math.max(1, seqNext - performance.now()));
+  }
+
+  function seqStart(){
+    if (!ensureAudio()) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    seq.playing = true;
+    seq.stepIndex = 0;
+    seqNext = performance.now();
+    seqEls.play.classList.add('on');
+    seqEls.play.innerHTML = '&#9632; Stop';
+    seqTick();
+  }
+
+  function seqStop(){
+    seq.playing = false;
+    clearTimeout(seqTimer);
+    seqEls.play.classList.remove('on');
+    seqEls.play.innerHTML = '&#9654; Play';
+    applyValues(state, activePitch);
+    setLamp('off');
+    renderSteps(); renderPages();
+  }
+
+  function initSequencer(){
+    seqEls.steps = document.getElementById('steps');
+    seqEls.pages = document.getElementById('stepPages');
+    seqEls.lanes = document.getElementById('seqLanes');
+    seqEls.play = document.getElementById('seqPlay');
+    seqEls.length = document.getElementById('seqLength');
+    seqEls.rate = document.getElementById('seqRate');
+    seqEls.bpm = document.getElementById('seqBpm');
+    seqEls.clear = document.getElementById('seqClear');
+    seqEls.stepIndex = document.getElementById('stepIndex');
+    seqEls.stepToggle = document.getElementById('stepToggle');
+    seqEls.stepNote = document.getElementById('stepNote');
+    if (!seqEls.steps) return;
+
+    const lockHost = document.getElementById('stepLocks');
+    SEQ_PARAMS.forEach(p => {
+      const row = document.createElement('label');
+      row.className = 'lock-row';
+      row.innerHTML = '<span>' + SEQ_LABEL[p] + '</span>'
+        + '<input type="range" min="0" max="100" step="1" aria-label="' + SEQ_LABEL[p] + ' lock">'
+        + '<span class="lock-val">dial</span>'
+        + '<button class="lock-clear" type="button" aria-label="Clear ' + SEQ_LABEL[p] + ' lock">×</button>';
+      lockHost.appendChild(row);
+      const input = row.querySelector('input');
+      const val = row.querySelector('.lock-val');
+      input.addEventListener('input', () => {
+        const st = seq.steps[seq.selected];
+        st.locks = st.locks || {};
+        st.locks[p] = Number(input.value) / 100;
+        st.on = true;
+        row.classList.add('locked');
+        val.textContent = Math.round(Number(input.value)) + '%';
+        renderSteps();
+      });
+      row.querySelector('.lock-clear').addEventListener('click', ev => {
+        ev.preventDefault();
+        const st = seq.steps[seq.selected];
+        if (st.locks) delete st.locks[p];
+        renderInspector(); renderSteps();
+      });
+      seqEls.locks[p] = { el: row, input, val };
+    });
+
+    PITCHES.forEach((p, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = p.note + ' · ' + p.hz.toFixed(2) + ' Hz';
+      seqEls.stepNote.appendChild(o);
+    });
+    seqEls.stepNote.addEventListener('change', () => {
+      const st = seq.steps[seq.selected];
+      st.note = Number(seqEls.stepNote.value);
+      st.on = true;
+      renderSteps();
+    });
+
+    seqEls.stepToggle.addEventListener('click', () => {
+      const st = seq.steps[seq.selected];
+      st.on = !st.on;
+      renderInspector(); renderSteps();
+    });
+
+    seqEls.play.addEventListener('click', () => { if (seq.playing) seqStop(); else seqStart(); });
+
+    seqEls.length.addEventListener('change', () => {
+      seq.length = Number(seqEls.length.value);
+      if (seq.length <= 16) seq.page = 0;
+      renderPages(); renderSteps();
+    });
+    seqEls.rate.addEventListener('change', () => { seq.rate = Number(seqEls.rate.value); });
+    seqEls.bpm.addEventListener('change', () => {
+      seq.bpm = clamp(Number(seqEls.bpm.value) || 96, 40, 200);
+      seqEls.bpm.value = String(seq.bpm);
+    });
+    seqEls.clear.addEventListener('click', () => {
+      seq.steps.forEach((s, i) => { s.on = false; s.locks = {}; s.note = i % PITCHES.length; });
+      renderSteps(); renderInspector();
+    });
+    seqEls.pages.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        seq.page = Number(b.dataset.stepPage);
+        renderPages(); renderSteps();
+      });
+    });
+
+    seqEls.steps.addEventListener('pointerdown', onStepDown);
+    seqEls.steps.addEventListener('pointermove', onStepMove);
+    window.addEventListener('pointerup', onStepUp);
+    seqEls.steps.addEventListener('contextmenu', onStepContext);
+    seqEls.steps.addEventListener('keydown', onStepKey);
+
+    renderLanes(); renderPages(); renderSteps(); renderInspector();
+  }
+
   /* ---------------- wiring ---------------- */
   function init(){
     buildKnobs();
     buildPads();
+    initSequencer();
     sizeCanvas();
     requestAnimationFrame(draw);
     setLamp('off');
