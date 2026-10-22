@@ -25,6 +25,8 @@
   let voiceLab;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
   let bank = 0, selected = 0, sequencePage = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
+  const compactGrid = window.matchMedia('(max-width: 650px)');
+  let pageSize = compactGrid.matches ? 4 : 16;
   let history = [], toastTimer, saveTimer, exporting = false;
   // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
   let playheadColumns = Array.from({ length: 32 }, () => []);
@@ -70,7 +72,29 @@
   }
   function persist() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 250);
+    saveStatus('Saving…');
+    saveTimer = setTimeout(saveNow, 250);
+  }
+  function saveStatus(message, failed = false) {
+    if (!$('save-status')) return;
+    $('save-status').textContent = message;
+    $('save-status').classList.toggle('save-failed', failed);
+  }
+  function saveNow() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(project()));
+      saveStatus('Saved on this device');
+    } catch (_) {
+      saveStatus('Browser saving unavailable · Save project to keep your work', true);
+    }
+  }
+  function useNativeSequence() {
+    if (!state.musicLabPattern) return;
+    const resume = playing || busy;
+    if (resume) stop();
+    delete state.musicLabPattern;
+    // Finish the grid edit before the engine snapshots its scheduling state.
+    if (resume) queueMicrotask(play);
   }
   function remember() {
     history.push(project());
@@ -119,8 +143,8 @@
       playing = true;
       startHeroAnimation();
       syncEffects(); audioReady();
-      $('play-button').innerHTML = icon('pause') + '<span>Pause</span>';
-      $('play-button').setAttribute('aria-label', 'Pause sequencer');
+      $('play-button').innerHTML = icon('stop') + '<span>Stop</span>';
+      $('play-button').setAttribute('aria-label', 'Stop sequencer');
       $('play-button').classList.add('playing');
       $('master-led').classList.add('playing');
       document.body.classList.add('is-playing');
@@ -139,9 +163,22 @@
     $('beat-position').textContent = '1 . 1 . 1';
   }
   function setPlayhead(step) {
+    if (step >= 0 && $('follow-playhead').checked && sequencePage !== Math.floor(step / pageSize)) {
+      sequencePage = Math.floor(step / pageSize);
+      renderRows();
+    }
     if (currentStep >= 0) playheadColumns[currentStep].forEach((el) => el.classList.remove('current'));
     if (step >= 0) playheadColumns[step].forEach((el) => el.classList.add('current'));
     currentStep = step;
+  }
+  async function panic() {
+    stop();
+    await engine.dispose();
+    if (!playing && !busy && !engine.context) {
+      $('audio-status').textContent = 'SILENCED · READY TO PLAY';
+      $('status-dot').classList.remove('ready');
+    }
+    toast('All sound silenced.');
   }
 
   const wavePaths = {
@@ -155,12 +192,24 @@
     bass: 'M1 14q3-12 6 0t6 0t6 0t6 0h6'
   };
   function renderSequenceControls() {
+    sequencePage = Math.min(sequencePage, Math.ceil(state.stepCount / pageSize) - 1);
+    document.querySelector('.sequencer').style.setProperty('--visible-steps', pageSize);
     $('sequence-length').value = state.stepCount;
-    $('sequence-page').hidden = state.stepCount === 16;
+    $('sequence-page').replaceChildren();
+    for (let page = 0; page < state.stepCount / pageSize; page++) {
+      const option = document.createElement('option'); option.value = page;
+      option.textContent = (page * pageSize + 1) + '–' + Math.min(state.stepCount, (page + 1) * pageSize);
+      $('sequence-page').append(option);
+    }
+    $('sequence-page').hidden = state.stepCount === pageSize;
     $('sequence-page').value = sequencePage;
+    const start = sequencePage * pageSize;
+    $('step-window').textContent = 'Steps ' + String(start + 1).padStart(2, '0') + '–' + String(start + pageSize).padStart(2, '0') + ' / ' + state.stepCount;
+    $('step-prev').disabled = sequencePage === 0;
+    $('step-next').disabled = start + pageSize >= state.stepCount;
     $('step-numbers').replaceChildren();
-    for (let index = 0; index < 16; index++) {
-      const step = sequencePage * 16 + index;
+    for (let index = 0; index < pageSize; index++) {
+      const step = sequencePage * pageSize + index;
       const label = document.createElement('span');
       label.className = 'step-number' + (step % 4 === 0 ? ' beat' : '') + (currentStep === step ? ' current' : '');
       label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label);
@@ -168,6 +217,17 @@
   }
   function renderRows() {
     renderSequenceControls();
+    renderPads();
+    let received = $('received-pattern-status');
+    if (!received) {
+      received = document.createElement('div'); received.id = 'received-pattern-status'; received.className = 'received-pattern-status';
+      const label = document.createElement('span'); const button = document.createElement('button');
+      button.className = 'text-button'; button.textContent = 'Use grid';
+      button.addEventListener('click', () => { remember(); useNativeSequence(); renderRows(); persist(); });
+      received.append(label, button); document.querySelector('.sequencer-scroll').before(received);
+    }
+    received.hidden = !state.musicLabPattern;
+    received.firstElementChild.textContent = state.musicLabPattern ? 'Playing shared pattern: ' + state.musicLabPattern.pattern.name + '. Edit a step to use this grid.' : '';
     const container = $('track-rows');
     const focused = container.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null;
     container.replaceChildren();
@@ -186,17 +246,21 @@
       row.append(nameButton);
       const steps = document.createElement('div'); steps.className = 'step-buttons'; steps.setAttribute('role', 'group'); steps.setAttribute('aria-label', pretty(track.name) + ' steps');
       track.steps.forEach((value, stepIndex) => {
-        if (Math.floor(stepIndex / 16) !== sequencePage) return;
+        if (stepIndex >= state.stepCount || Math.floor(stepIndex / pageSize) !== sequencePage) return;
         const button = document.createElement('button'); button.dataset.step = stepIndex; button.dataset.track = index;
         button.dataset.focusKey = 'step-' + index + '-' + stepIndex;
         updateStep(button, index, stepIndex);
         let holdTimer, touchStartX, touchStartY, held = false;
         const edit = (accent) => {
           remember();
+          const wasPlaying = playing || busy;
+          useNativeSequence();
           const previous = track.steps[stepIndex];
-          track.steps[stepIndex] = accent ? (previous === 2 ? 1 : 2) : (previous ? 0 : 1);
+          const mode = $('step-edit-mode').value;
+          track.steps[stepIndex] = accent ? (previous === 2 ? 1 : 2) : mode === 'erase' ? 0 : mode === 'accent' ? (previous === 2 ? 0 : 2) : (previous ? 0 : 1);
           updateStep(button, index, stepIndex); persist();
-          if (track.steps[stepIndex] && !playing) audition(track);
+          received.hidden = !state.musicLabPattern;
+          if (track.steps[stepIndex] && !wasPlaying) audition(track);
         };
         button.addEventListener('click', (event) => {
           if (held) { held = false; return; }
@@ -215,7 +279,7 @@
           if (!delta) return;
           event.preventDefault();
           const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + state.stepCount) % state.stepCount;
-          if (Math.floor(nextStep / 16) !== sequencePage) { sequencePage = Math.floor(nextStep / 16); renderRows(); }
+          if (Math.floor(nextStep / pageSize) !== sequencePage) { sequencePage = Math.floor(nextStep / pageSize); $('follow-playhead').checked = false; renderRows(); }
           container.querySelector('[data-track="' + nextRow + '"][data-step="' + nextStep + '"]').focus();
         });
         steps.append(button);
@@ -235,6 +299,23 @@
     playheadColumns = Array.from({ length: 32 }, () => []);
     document.querySelectorAll('[data-step]').forEach((el) => playheadColumns[Number(el.dataset.step)].push(el));
     if (focused) { const replacement = container.querySelector('[data-focus-key="' + focused + '"]'); if (replacement) replacement.focus({ preventScroll: true }); }
+  }
+  function renderPads() {
+    if (!$('voice-pads').children.length) state.tracks.forEach((_, index) => {
+      const button = document.createElement('button'); button.className = 'voice-pad'; button.dataset.pad = index;
+      button.style.setProperty('--track-color', colors[index]);
+      button.innerHTML = '<span class="pad-index">0' + (index + 1) + '</span><span class="pad-name"></span><span class="pad-source"></span>';
+      button.addEventListener('click', () => {
+        selected = index; renderRows(); renderVoice(); audition(state.tracks[index]); persist();
+      });
+      $('voice-pads').append(button);
+    });
+    Array.from($('voice-pads').children).forEach((button, index) => {
+      const track = state.tracks[index]; button.classList.toggle('selected', index === selected);
+      button.setAttribute('aria-pressed', index === selected); button.setAttribute('aria-label', 'Play ' + pretty(track.name) + ' (key ' + (index + 1) + ')');
+      button.querySelector('.pad-name').textContent = pretty(track.name);
+      button.querySelector('.pad-source').textContent = track.noise + ' noise';
+    });
   }
   function updateStep(button, row, step) {
     const value = state.tracks[row].steps[step];
@@ -283,9 +364,34 @@
     const values = { 'body-level': synth.body.level, 'noise-level': synth.noise.level, level: track.level, pan: (track.pan + 1) / 2 };
     Array.from($('voice-knobs').children).forEach((control) => { const knob = control.querySelector('.knob'); if (knob && control.updateValue) control.updateValue(values[knob.dataset.param]); });
   }
+  const quickParameters = [['noise', 'cutoff'], ['noise', 'decay'], ['body', 'frequency'], ['noise', 'drive']];
+  function refreshQuickKnobs() {
+    const synth = window.GrainSynth.ensureTrack(state.tracks[selected]);
+    Array.from($('quick-knobs').children).forEach((control, index) => {
+      const [group, key] = quickParameters[index];
+      const descriptor = window.GrainSynth.descriptors[group].find(item => item.key === key);
+      control.updateValue(window.GrainSynth.toNormalized(synth[group][key], descriptor));
+    });
+  }
+  function renderQuickKnobs() {
+    const synth = window.GrainSynth.ensureTrack(state.tracks[selected]);
+    $('quick-knobs').replaceChildren();
+    quickParameters.forEach(([group, key]) => {
+      const descriptor = window.GrainSynth.descriptors[group].find(item => item.key === key);
+      const labels = { cutoff: 'NOISE CUTOFF', decay: 'NOISE TAIL', frequency: 'BODY PITCH', drive: 'NOISE HEAT' };
+      const control = knobControl('quick-' + key, labels[key], window.GrainSynth.toNormalized(synth[group][key], descriptor),
+        value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor), value => {
+          synth[group][key] = window.GrainSynth.fromNormalized(value, descriptor);
+          drawVoice(); renderNoiseBench(); if (voiceLab) voiceLab.render();
+        });
+      control.querySelector('.knob').title = descriptor.title;
+      control.querySelector('.knob').setAttribute('aria-label', (group === 'body' ? 'Body ' : 'Noise ') + key);
+      $('quick-knobs').append(control);
+    });
+  }
   function renderVoice() {
     const active = document.activeElement;
-    const focusedParam = ($('voice-knobs').contains(active) || $('synthesis-knobs').contains(active)) ? active.dataset.param : null;
+    const focusedParam = ['voice-knobs', 'quick-knobs', 'synthesis-knobs', 'noise-bench-knobs'].some(id => $(id).contains(active)) ? active.dataset.param : null;
     const focusedSelector = $('synthesis-selectors').contains(active) ? active.id : null;
     const track = state.tracks[selected];
     const synth = window.GrainSynth.ensureTrack(track);
@@ -302,6 +408,7 @@
     $('voice-knobs').append(knobControl('noise-level', 'NOISE', synth.noise.level, percent, (value) => { synth.noise.level = value; refresh(); }));
     $('voice-knobs').append(knobControl('level', 'LEVEL', track.level, percent, (value) => { track.level = value; refresh(); }));
     $('voice-knobs').append(knobControl('pan', 'PAN', (track.pan + 1) / 2, (value) => Math.abs(value - .5) < .005 ? 'Center' : (value < .5 ? 'L ' : 'R ') + Math.round(Math.abs(value - .5) * 200), (value) => { track.pan = value * 2 - 1; refresh(); }));
+    renderQuickKnobs();
     document.querySelectorAll('.noise-source').forEach((button) => { const active = button.dataset.noise === track.noise; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', active); });
     const source = sources.find((n) => n.id === track.noise);
     $('noise-caption').textContent = source.name + ' noise. ' + source.description;
@@ -322,7 +429,7 @@
       const formatter = value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor);
       const control = knobControl('bench-' + key, descriptor.label, window.GrainSynth.toNormalized(noise[key], descriptor), formatter, value => {
         noise[key] = window.GrainSynth.fromNormalized(value, descriptor);
-        drawVoice(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
+        drawVoice(); refreshQuickKnobs(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
       });
       control.querySelector('.knob').title = descriptor.title; container.append(control);
     });
@@ -338,6 +445,7 @@
     syncEffects();
   }
   function renderAll() {
+    $('project-name').value = state.name;
     $('tempo').value = state.bpm; $('swing').value = Math.round(state.swing * 100);
     $('swing-value').innerHTML = Math.round(state.swing * 100) + '<span>%</span>';
     const presetIndex = window.NOISE_PRESETS.findIndex((p) => p.name === state.name);
@@ -346,6 +454,7 @@
   }
   function random() {
     remember();
+    useNativeSequence();
     state.tracks.forEach((track, row) => {
       const hidden = track.steps.slice(state.stepCount);
       track.steps = Array.from({ length: state.stepCount }, (_, index) => {
@@ -493,26 +602,64 @@
   $('preset-select').addEventListener('change', () => {
     const preset = window.NOISE_PRESETS[Number($('preset-select').value)]; if (!preset) return;
     remember(); const wasPlaying = playing || busy; if (wasPlaying) stop();
-    state = { ...clone(preset), master: state.master, stepCount: 16 }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
+    const mode = $('preset-load-mode').value;
+    if (mode === 'sounds') {
+      state.tracks = clone(preset.tracks).map((track, index) => ({ ...track, steps: [...state.tracks[index].steps], mute: state.tracks[index].mute, solo: state.tracks[index].solo }));
+      state.drive = preset.drive; state.space = preset.space;
+    } else if (mode === 'groove') {
+      delete state.musicLabPattern;
+      banks[bank] = state.tracks.map(track => [...track.steps]);
+      state.bpm = preset.bpm; state.swing = preset.swing; state.stepCount = 16; bank = 0; sequencePage = 0;
+      state.tracks.forEach((track, index) => { track.steps = [...preset.tracks[index].steps, ...banks[0][index].slice(16)]; });
+      banks[0] = state.tracks.map(track => [...track.steps]);
+    } else {
+      state = { ...clone(preset), master: state.master, stepCount: 16 };
+      banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
+    }
     state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
-    renderAll(); persist(); toast(preset.tagline); if (wasPlaying) play();
+    renderAll(); $('preset-select').value = String(window.NOISE_PRESETS.indexOf(preset)); persist();
+    toast(mode === 'sounds' ? 'Sounds loaded. Your rhythm, banks and tempo kept.' : mode === 'groove' ? 'Groove loaded into A. Your sounds and mix kept.' : preset.tagline);
+    if (wasPlaying) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
     const next = Number(button.dataset.bank); if (next === bank) return;
+    remember(); useNativeSequence();
     banks[bank] = state.tracks.map((t) => [...t.steps]); bank = next; state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; }); renderRows(); renderBanks(); persist();
   }));
   $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((t) => [...t.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
   $('sequence-length').addEventListener('change', () => {
     const length = Number($('sequence-length').value); if (length === state.stepCount) return;
-    remember(); const resume = playing || busy; if (resume) stop(); state.stepCount = length;
+    remember(); const resume = playing || busy; if (resume) stop(); delete state.musicLabPattern; state.stepCount = length;
     if (length === 32) {
       const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
       state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
     } else sequencePage = 0;
     renderRows(); persist(); if (resume) play();
   });
-  $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared.'); });
+  function browsePage(page) {
+    sequencePage = Math.max(0, Math.min(Math.ceil(state.stepCount / pageSize) - 1, page));
+    $('follow-playhead').checked = false; renderRows();
+  }
+  $('sequence-page').addEventListener('change', () => browsePage(Number($('sequence-page').value)));
+  $('step-prev').addEventListener('click', () => browsePage(sequencePage - 1));
+  $('step-next').addEventListener('click', () => browsePage(sequencePage + 1));
+  $('follow-playhead').addEventListener('change', () => {
+    if ($('follow-playhead').checked && currentStep >= 0) { sequencePage = Math.floor(currentStep / pageSize); renderRows(); }
+  });
+  $('track-rows').addEventListener('focusin', (event) => {
+    // Editing a cell owns the page until the player explicitly follows again.
+    if (event.target.matches('.step')) $('follow-playhead').checked = false;
+  });
+  compactGrid.addEventListener('change', () => {
+    const start = sequencePage * pageSize; pageSize = compactGrid.matches ? 4 : 16;
+    sequencePage = Math.floor(start / pageSize); renderRows();
+  });
+  $('project-name').addEventListener('change', () => {
+    const name = $('project-name').value.trim().slice(0, 80);
+    if (name && name !== state.name) { remember(); state.name = name; $('preset-select').value = 'custom'; persist(); }
+    $('project-name').value = state.name;
+  });
+  $('clear-button').addEventListener('click', () => { remember(); useNativeSequence(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared. Undo brings it back.'); });
   $('random-button').addEventListener('click', random);
   $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'sizzle-' + safeName() + '.json'); toast('Project saved.'); });
@@ -533,16 +680,17 @@
   $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) { const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); } });
   document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' }); });
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { event.preventDefault(); panic(); return; }
     if ($('help-dialog').open || event.target.matches('input,select,textarea') || event.target.isContentEditable) return;
     if (event.code === 'Space' && !event.target.matches('button,[role=slider]')) { event.preventDefault(); playing || busy ? stop() : play(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
     if (!event.ctrlKey && !event.metaKey && /^[1-8]$/.test(event.key)) { selected = Number(event.key) - 1; renderRows(); renderVoice(); audition(state.tracks[selected]); persist(); }
   });
-  window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
+  window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveNow(); stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
-  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
-  renderAll(); drawHero(0);
+  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); refreshQuickKnobs(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  renderAll(); drawHero(0); saveNow();
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
