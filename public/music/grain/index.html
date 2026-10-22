@@ -99,7 +99,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141719">
-  <meta name="grain-version" content="1.2.0">
+  <meta name="grain-version" content="1.3.0">
   <meta name="description" content="SIZZLE — a noise-powered drum machine from Kitchen. Eight voices, sixteen or thirty-two steps. The grill has developed a rhythm.">
   <title>SIZZLE — Kitchen</title>
   <style>
@@ -203,101 +203,407 @@ body[data-kitchen-app="sizzle"] dialog{border-radius:3px;background:#20272a;bord
 @media(max-width:650px){body[data-kitchen-app="sizzle"] h1{font-size:45px}body[data-kitchen-app="sizzle"] .brand{font-size:30px}body[data-kitchen-app="sizzle"] .topbar-right{gap:13px}body[data-kitchen-app="sizzle"] .music-link span{display:none}body[data-kitchen-app="sizzle"] .music-link svg{width:16px;height:16px}body[data-kitchen-app="sizzle"] .intro-art{display:none}body[data-kitchen-app="sizzle"] .intro{padding:28px 0}body[data-kitchen-app="sizzle"] .intro p{font-size:10px;max-width:290px}body[data-kitchen-app="sizzle"] .envelope-panel>h3{font-size:20px}}
 @media(max-width:380px){body[data-kitchen-app="sizzle"] h1{font-size:40px}body[data-kitchen-app="sizzle"] .brand{font-size:27px}body[data-kitchen-app="sizzle"] .envelope-panel>h3{font-size:18px}}
 
-/* SIZZLE 1.2 — the familiar noise station, dressed for service. */
-body[data-kitchen-app="sizzle"]{--panel:#20272a;--line:#414b4c;--muted:#a3ada9;background:radial-gradient(ellipse at 50% -20%,#ff8d4510,transparent 48%),#121719}
-body[data-kitchen-app="sizzle"] .app-shell{max-width:1472px;padding:0 32px}
-body[data-kitchen-app="sizzle"] .topbar{height:auto;min-height:76px;gap:20px;padding:15px 0;flex-wrap:wrap}
-body[data-kitchen-app="sizzle"] .brand{font-size:33px;gap:11px;flex-shrink:0}
-body[data-kitchen-app="sizzle"] .brand-description{font-size:7px;line-height:1.6;padding-left:13px;margin-left:2px}
-body[data-kitchen-app="sizzle"] .topbar-right{gap:12px;flex-wrap:wrap;justify-content:flex-end;min-width:0;max-width:100%}
-body[data-kitchen-app="sizzle"] .local-badge{font-size:8px;letter-spacing:.8px}
-body[data-kitchen-app="sizzle"] .topbar-divider{display:none}
-body[data-kitchen-app="sizzle"] .intro{padding:22px 0;gap:24px}
-body[data-kitchen-app="sizzle"] h1{font-size:clamp(28px,3vw,39px);letter-spacing:-.8px;line-height:1.1;text-transform:none}
-body[data-kitchen-app="sizzle"] .intro .eyebrow{font-size:8px;margin-bottom:8px}
-body[data-kitchen-app="sizzle"] .intro p{font-size:11px;margin-top:7px;max-width:520px}
-body[data-kitchen-app="sizzle"] .intro-art{width:270px;padding:10px 14px;transform:none;box-shadow:0 3px 0 #0a0f10;border-radius:4px;background:repeating-linear-gradient(0deg,#20282b 0,#20282b 3px,#242d30 4px)}
-body[data-kitchen-app="sizzle"] .intro-art::before{content:'NOISE / ON THE HEAT';font-size:6px;top:-5px;transform:none}
-body[data-kitchen-app="sizzle"] .griddle-drawing{display:none}
-body[data-kitchen-app="sizzle"] .art-label{font-size:6px;margin-bottom:5px}
-body[data-kitchen-app="sizzle"] .intro-art canvas{height:32px;border:0}
-body[data-kitchen-app="sizzle"] .art-coordinates{font-size:6px;margin-top:5px;letter-spacing:.5px}
-body[data-kitchen-app="sizzle"] .art-coordinates span{font-size:5px}
-body[data-kitchen-app="sizzle"] .panel{border-radius:6px;background:linear-gradient(135deg,#293134,#20272a 55%);box-shadow:0 3px 0 #0a0f10,inset 0 1px 0 #f1ecdc0a}
-body[data-kitchen-app="sizzle"] .transport{padding:14px 18px;gap:18px;min-height:78px;margin-bottom:18px;flex-wrap:wrap}
-body[data-kitchen-app="sizzle"] .preset-control{min-width:180px}
-body[data-kitchen-app="sizzle"] .select-wrap select{min-height:36px;font-size:13px;padding:5px 23px 5px 0}
-body[data-kitchen-app="sizzle"] .select-wrap svg{top:10px}
-body[data-kitchen-app="sizzle"] .play-button{min-height:44px;border-radius:4px}
-body[data-kitchen-app="sizzle"] .button,body[data-kitchen-app="sizzle"] .icon-button{min-height:40px}
-body[data-kitchen-app="sizzle"] .icon-button{width:40px;flex-shrink:0;border:1px solid #495355;background:#182023;border-radius:4px}
-body[data-kitchen-app="sizzle"] .text-button{min-height:36px;padding:0 7px;color:#bdc7c2;font-size:10px;border-radius:3px}
-body[data-kitchen-app="sizzle"] .text-button:hover{background:#ffffff08;color:#f1ecdc}
-body[data-kitchen-app="sizzle"] .sequencer>.section-heading{height:auto;min-height:55px;gap:14px;padding:9px 18px}
-body[data-kitchen-app="sizzle"] .sequencer-actions{gap:5px}
-body[data-kitchen-app="sizzle"] .action-divider{margin:0 4px}
-body[data-kitchen-app="sizzle"] h2{font-size:10px;letter-spacing:1px}
-body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:180px minmax(0,1fr) 82px;gap:14px}
-body[data-kitchen-app="sizzle"] .track-row{height:44px}
-body[data-kitchen-app="sizzle"] .step{height:34px;border-radius:4px;box-shadow:0 2px 0 #101719}
-body[data-kitchen-app="sizzle"] .step.active{background:color-mix(in srgb,var(--track-color) 50%,#162023);border-color:var(--track-color)}
-body[data-kitchen-app="sizzle"] .step.accent{background:var(--track-color);box-shadow:inset 0 1px 0 #ffffff44,0 0 8px color-mix(in srgb,var(--track-color) 14%,transparent)}
-body[data-kitchen-app="sizzle"] .track-name{font-size:10px;letter-spacing:.6px;color:#ececdf}
-body[data-kitchen-app="sizzle"] .track-noise{font-size:9px;color:#a0ada6}
-body[data-kitchen-app="sizzle"] .track-name-button{min-height:40px}
-body[data-kitchen-app="sizzle"] .mix-button{width:36px;height:36px;border-radius:4px;font-size:11px;color:#a9b4ae;background:#182023;border-color:#485456}
-body[data-kitchen-app="sizzle"] .mix-button.mute-on{background:#4a3829;border-color:#ff8d45;color:#ffc492}
-body[data-kitchen-app="sizzle"] .mix-button.solo-on{background:#dcc85e;color:#202725;border-color:#eadb96}
-body[data-kitchen-app="sizzle"] .sequencer-footer{padding:10px 18px;gap:14px;flex-wrap:wrap}
-body[data-kitchen-app="sizzle"] .bank-button{width:36px;height:36px;border-radius:4px;font-size:11px}
-body[data-kitchen-app="sizzle"] .bank-button.active{color:#ffd2ac;background:#ff8d451b;border-color:#ff8d4588}
-body[data-kitchen-app="sizzle"] .sequencer-hint{color:#a0ada6;font-size:10px}
-body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.7fr) minmax(0,1.1fr) minmax(0,.7fr);gap:14px;margin-top:18px}
-body[data-kitchen-app="sizzle"] .voice-panel .section-heading{height:auto;min-height:50px;flex-wrap:wrap;gap:4px;padding:7px 15px}
-body[data-kitchen-app="sizzle"] .voice-heading-actions{gap:3px;flex-wrap:wrap}
-body[data-kitchen-app="sizzle"] .voice-heading-actions .text-button{font-size:9px;padding:0 5px}
-body[data-kitchen-app="sizzle"] .voice-editor{min-height:153px;padding:17px 16px;gap:18px}
-body[data-kitchen-app="sizzle"] .voice-identity{width:135px;min-width:110px}
-body[data-kitchen-app="sizzle"] .voice-identity h3{font-family:var(--kk-heading,'Arial Narrow',sans-serif);font-size:23px;color:#f1ecdc}
-body[data-kitchen-app="sizzle"] .voice-identity p{font-size:10px;color:#a4afa9}
-body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-body[data-kitchen-app="sizzle"] .voice-knobs .knob,body[data-kitchen-app="sizzle"] .synthesis-knobs .knob{width:42px;height:42px}
-body[data-kitchen-app="sizzle"] .voice-knobs .knob svg,body[data-kitchen-app="sizzle"] .synthesis-knobs .knob svg{width:52px;height:52px}
-body[data-kitchen-app="sizzle"] .knob-label{font-size:8px;letter-spacing:.5px}
-body[data-kitchen-app="sizzle"] .knob-value{font-size:9px}
-body[data-kitchen-app="sizzle"] .noise-sources{padding:13px 13px 0;gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}
-body[data-kitchen-app="sizzle"] .noise-source{height:36px;font-size:10px;border-radius:4px;padding:0 7px;justify-content:center}
-body[data-kitchen-app="sizzle"] .noise-caption{margin:10px 14px 14px;color:#a0ada6;font-size:9px}
-body[data-kitchen-app="sizzle"] .synthesis-panel{margin-top:18px}
-body[data-kitchen-app="sizzle"] .synthesis-header{padding:10px 18px;flex-wrap:wrap}
-body[data-kitchen-app="sizzle"] .synthesis-selector select{min-height:38px}
-body[data-kitchen-app="sizzle"] .synth-tab{min-height:40px}
-body[data-kitchen-app="sizzle"] .synthesis-note,body[data-kitchen-app="sizzle"] .envelope-description{font-size:10px;color:#a6b1ab}
-body[data-kitchen-app="sizzle"] .noise-bench{margin-top:18px;scroll-margin-top:16px}
-.noise-bench>summary{display:flex;align-items:center;justify-content:space-between;min-height:53px;padding:10px 18px;gap:12px;cursor:pointer;list-style:none}
-.noise-bench>summary::-webkit-details-marker{display:none}
-.noise-bench>summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-.bench-summary-title{font:600 10px var(--mono);letter-spacing:1px;color:#eadcc5}
-.bench-summary-note{font-size:10px;color:#a7b5ac;margin-left:5px}
-.bench-disclosure{font:9px var(--mono);letter-spacing:.6px;color:#e8b183;white-space:nowrap}
-.noise-bench[open] .bench-disclosure{font-size:0}.noise-bench[open] .bench-disclosure::after{content:'CLOSE −';font:9px var(--mono)}
-.noise-bench[open]>summary{border-bottom:1px solid var(--line)}
-.noise-bench-content{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(0,1.5fr);padding:20px;gap:30px}
-.bench-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font:8px var(--mono);letter-spacing:.7px;color:#d6d7bb}
-#bench-voice-label{color:#a4b4ad;letter-spacing:.2px;font-size:9px}
-.bench-recipe-actions{display:flex;gap:10px;margin-top:10px}
-.bench-recipe-actions select,.bench-selectors select{min-width:0;min-height:40px;border:1px solid #546462;background:#172022;color:#f1ecdc;border-radius:4px;padding:8px 9px;font-size:12px}
-.bench-recipe-actions select{flex:1;width:0}
-#noise-recipe-description{font-size:11px;line-height:1.6;color:#c2cbc1;min-height:35px;margin:12px 0 8px}
-.bench-preservation,.bench-control-note{font-size:10px;line-height:1.6;color:#a0ada6;margin:8px 0}
-.bench-selectors{display:flex;gap:12px;margin-top:15px}.bench-selectors label{display:flex;flex-direction:column;gap:7px;flex:1;font:9px var(--mono);color:#b6c1b9}
-.noise-bench-knobs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-top:14px}
-.noise-bench-knobs .knob{width:48px;height:48px}.noise-bench-knobs .knob svg{width:58px;height:58px}
-.bench-control-note{margin:22px 0 0;max-width:570px}
-@media(max-width:1190px){body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,.65fr)}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}body[data-kitchen-app="sizzle"] .voice-editor{min-height:220px}.noise-bench-content{gap:20px}.noise-bench-knobs{grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 18px}}
-@media(max-width:900px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 20px}body[data-kitchen-app="sizzle"] .topbar{min-height:72px}body[data-kitchen-app="sizzle"] .local-badge{display:none}body[data-kitchen-app="sizzle"] .intro{padding:18px 0}body[data-kitchen-app="sizzle"] .intro-art{width:220px}body[data-kitchen-app="sizzle"] .transport{gap:14px}.transport-divider{display:none}body[data-kitchen-app="sizzle"] .sequencer-inner{min-width:920px}body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:152px minmax(0,1fr) 80px;gap:12px}body[data-kitchen-app="sizzle"] .track-row{height:46px}body[data-kitchen-app="sizzle"] .step{height:36px}body[data-kitchen-app="sizzle"] .step-numbers,body[data-kitchen-app="sizzle"] .step-buttons{gap:4px}body[data-kitchen-app="sizzle"] .track-name-button,body[data-kitchen-app="sizzle"] .ruler-voice{position:sticky;left:0;z-index:2;background:#252e31;box-shadow:8px 0 8px #14202366;padding-right:8px}body[data-kitchen-app="sizzle"] .track-row.selected .track-name-button{background:#303833}body[data-kitchen-app="sizzle"] .track-row.selected::before{z-index:3}body[data-kitchen-app="sizzle"] .ruler-voice::after{font-size:7px}body[data-kitchen-app="sizzle"] .track-mini-wave{width:22px}body[data-kitchen-app="sizzle"] .track-name{font-size:9px}body[data-kitchen-app="sizzle"] .track-index{font-size:8px}body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}body[data-kitchen-app="sizzle"] .master-panel{grid-column:1/-1}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr))}body[data-kitchen-app="sizzle"] .voice-editor{min-height:210px}.bench-summary-note{font-size:9px}.noise-bench-content{grid-template-columns:minmax(230px,1fr) minmax(0,1fr);padding:18px}.bench-title{flex-wrap:wrap;gap:6px}.noise-bench-knobs .knob{width:44px;height:44px}.noise-bench-knobs .knob svg{width:54px;height:54px}}
-@media(max-width:650px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 12px}body[data-kitchen-app="sizzle"] .topbar{gap:8px;min-height:65px;padding:12px 0}body[data-kitchen-app="sizzle"] .brand{font-size:29px;gap:8px}body[data-kitchen-app="sizzle"] .brand-description{display:none}body[data-kitchen-app="sizzle"] .brand-mark{width:23px;height:28px;gap:2px}body[data-kitchen-app="sizzle"] .topbar-right{gap:7px;flex:1}body[data-kitchen-app="sizzle"] .music-link{min-width:36px;min-height:40px;justify-content:center}body[data-kitchen-app="sizzle"] .music-link span{display:none}body[data-kitchen-app="sizzle"] .intro{padding:16px 0}body[data-kitchen-app="sizzle"] h1{font-size:27px}body[data-kitchen-app="sizzle"] .intro p{font-size:10px;max-width:340px}body[data-kitchen-app="sizzle"] .intro-art{display:none}body[data-kitchen-app="sizzle"] .transport{display:grid;grid-template-columns:104px minmax(62px,.7fr) minmax(64px,1fr);gap:14px 12px;padding:14px 12px}body[data-kitchen-app="sizzle"] .playback{gap:5px}body[data-kitchen-app="sizzle"] .play-button{width:66px;font-size:10px;gap:4px}body[data-kitchen-app="sizzle"] .play-button svg{width:15px}body[data-kitchen-app="sizzle"] .restart{width:34px;min-height:40px}body[data-kitchen-app="sizzle"] .tempo-control{min-width:0}body[data-kitchen-app="sizzle"] .tempo-control input{font-size:24px;width:45px}body[data-kitchen-app="sizzle"] .tempo-control>div{gap:4px}body[data-kitchen-app="sizzle"] .swing-control{min-width:0;max-width:none;width:auto}body[data-kitchen-app="sizzle"] .preset-control{min-width:0;grid-column:1/-1}body[data-kitchen-app="sizzle"] .file-actions{grid-column:1/-1;width:100%;justify-content:flex-end;gap:8px;margin:0}body[data-kitchen-app="sizzle"] .button.subtle span{display:inline}body[data-kitchen-app="sizzle"] .open-project{display:inline-flex;width:40px}body[data-kitchen-app="sizzle"] .file-actions .button{flex:1;padding:0 8px;font-size:10px}body[data-kitchen-app="sizzle"] .control-label{font-size:8px;letter-spacing:.7px}body[data-kitchen-app="sizzle"] .sequencer>.section-heading{flex-wrap:wrap;gap:2px;padding:10px 12px}body[data-kitchen-app="sizzle"] .sequencer>.section-heading .heading-label{gap:7px}body[data-kitchen-app="sizzle"] .sequencer-actions{margin-left:auto;gap:1px}body[data-kitchen-app="sizzle"] .sequencer-actions .text-button{font-size:10px;padding:0 6px}body[data-kitchen-app="sizzle"] .sequencer-scroll{padding:0 12px}body[data-kitchen-app="sizzle"] .sequencer-inner{min-width:900px}body[data-kitchen-app="sizzle"] .step-ruler,body[data-kitchen-app="sizzle"] .track-row{grid-template-columns:132px minmax(0,1fr) 80px;gap:12px}body[data-kitchen-app="sizzle"] .track-mini-wave{display:none}body[data-kitchen-app="sizzle"] .track-name-button{gap:6px}body[data-kitchen-app="sizzle"] .ruler-voice{font-size:7px;letter-spacing:.7px}body[data-kitchen-app="sizzle"] .ruler-voice::after{font-size:6px;max-width:64px;line-height:1.4}body[data-kitchen-app="sizzle"] .sequencer-footer{padding:10px 12px;gap:10px}body[data-kitchen-app="sizzle"] .pattern-banks{gap:7px}body[data-kitchen-app="sizzle"] .bank-buttons{gap:4px}body[data-kitchen-app="sizzle"] .sequencer-hint{width:100%;order:3;font-size:9px;gap:5px}body[data-kitchen-app="sizzle"] .beat-indicator{font-size:8px;gap:8px;letter-spacing:.3px}body[data-kitchen-app="sizzle"] .time-signature{display:none}body[data-kitchen-app="sizzle"] .sound-panels{grid-template-columns:1fr;gap:14px}body[data-kitchen-app="sizzle"] .voice-editor{min-height:175px;padding:18px 14px;gap:14px}body[data-kitchen-app="sizzle"] .voice-identity{width:120px;min-width:110px}body[data-kitchen-app="sizzle"] .voice-knobs{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}body[data-kitchen-app="sizzle"] .noise-sources{grid-template-columns:repeat(4,minmax(0,1fr));padding:14px 12px 0;gap:6px}body[data-kitchen-app="sizzle"] .noise-source{height:38px;font-size:10px}body[data-kitchen-app="sizzle"] .master-panel{display:flex;gap:0}body[data-kitchen-app="sizzle"] .master-panel>.section-heading{width:100%}body[data-kitchen-app="sizzle"] .master-volume{flex:1;margin-left:14px;min-width:90px}body[data-kitchen-app="sizzle"] .master-effects{gap:24px}body[data-kitchen-app="sizzle"] .synthesis-header{padding:12px;gap:8px}body[data-kitchen-app="sizzle"] .synthesis-header h2{font-size:9px}body[data-kitchen-app="sizzle"] .synthesis-voice{margin-left:0;font-size:9px}body[data-kitchen-app="sizzle"] .synthesis-header-actions{gap:8px;margin-left:auto}body[data-kitchen-app="sizzle"] .synthesis-header-actions .text-button{font-size:10px}body[data-kitchen-app="sizzle"] .synthesis-header-actions .text-button svg{width:13px}body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-label{font-size:8px}body[data-kitchen-app="sizzle"] .synth-tab{font-size:10px;padding:9px 5px}body[data-kitchen-app="sizzle"] .footer{gap:10px;flex-wrap:wrap;font-size:7px}body[data-kitchen-app="sizzle"] .footer-motto{display:none}.noise-bench>summary{padding:12px;gap:7px}.noise-bench>summary .heading-label{gap:7px;flex-wrap:wrap}.bench-summary-note{margin-left:0;font-size:9px}.noise-bench-content{grid-template-columns:1fr;padding:16px;gap:10px}.noise-bench-knobs{margin-top:18px;gap:26px 14px}.bench-title{font-size:8px}#bench-voice-label{font-size:8px}.bench-recipe-actions .button{font-size:10px;padding:0 11px}.bench-control-note{margin-top:19px}}
-@media(max-width:380px){body[data-kitchen-app="sizzle"] .app-shell{padding:0 10px}body[data-kitchen-app="sizzle"] h1{font-size:25px}body[data-kitchen-app="sizzle"] .topbar-right{gap:4px}body[data-kitchen-app="sizzle"] .brand{font-size:27px}body[data-kitchen-app="sizzle"] .transport{column-gap:9px;grid-template-columns:100px minmax(57px,.7fr) minmax(58px,1fr)}body[data-kitchen-app="sizzle"] .tempo-control>div>span{font-size:8px}body[data-kitchen-app="sizzle"] .voice-editor{gap:10px}body[data-kitchen-app="sizzle"] .voice-identity{width:111px;min-width:100px}body[data-kitchen-app="sizzle"] .voice-knobs{gap:19px 11px}body[data-kitchen-app="sizzle"] .noise-source{font-size:9px;padding:0 4px;gap:4px}body[data-kitchen-app="sizzle"] .pattern-banks>.control-label{font-size:7px}body[data-kitchen-app="sizzle"] .beat-indicator{margin-left:auto}.bench-summary-note{width:100%;margin-left:28px}.bench-summary-title{font-size:9px}.noise-bench-knobs .knob{width:42px;height:42px}.noise-bench-knobs .knob svg{width:52px;height:52px}}
+/* SIZZLE 1.3 — a working griddle, from first hit to finished recipe. */
+body[data-kitchen-app="sizzle"] {
+  --panel: #222a2d;
+  --line: #465052;
+  --muted: #a8b2ac;
+  background: radial-gradient(ellipse at 18% -15%, #9b58291b, transparent 45%), #111719;
+}
+body[data-kitchen-app="sizzle"] .app-shell { max-width: 1480px; padding: 0 32px; }
+body[data-kitchen-app="sizzle"] .topbar { height: auto; min-height: 76px; gap: 20px; padding: 14px 0; flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .brand { font-size: 35px; gap: 12px; }
+body[data-kitchen-app="sizzle"] .brand-description { font-size: 8px; line-height: 1.6; padding-left: 14px; }
+body[data-kitchen-app="sizzle"] .topbar-right { gap: 10px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 100%; }
+body[data-kitchen-app="sizzle"] .local-badge { font-size: 8px; letter-spacing: .6px; }
+body[data-kitchen-app="sizzle"] .topbar-divider { display: none; }
+body[data-kitchen-app="sizzle"] .intro { display: grid; grid-template-columns: minmax(0, 1fr) 260px 236px; gap: 28px; padding: 24px 0; align-items: center; }
+body[data-kitchen-app="sizzle"] .intro-copy { min-width: 0; }
+body[data-kitchen-app="sizzle"] h1 { font-size: clamp(34px, 3.4vw, 49px); line-height: 1; text-transform: none; letter-spacing: -.8px; }
+body[data-kitchen-app="sizzle"] .intro .eyebrow { font-size: 9px; margin-bottom: 10px; }
+body[data-kitchen-app="sizzle"] .intro p { font-size: 12px; margin-top: 10px; max-width: 460px; }
+.station-specs { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 15px; color: #a9b4ab; font: 9px var(--mono); letter-spacing: .5px; }
+.station-specs span + span::before { content: '/'; color: #65726d; margin-right: 15px; }
+body[data-kitchen-app="sizzle"] .intro-art { width: 100%; padding: 15px 14px 10px; background: linear-gradient(120deg, #2b3436, #192124); transform: none; border-radius: 3px; box-shadow: 0 3px 0 #080d0f; }
+body[data-kitchen-app="sizzle"] .intro-art::before { content: 'FLAT-TOP / K—01'; top: -6px; font-size: 8px; transform: rotate(-1deg); }
+body[data-kitchen-app="sizzle"] .art-label { font-size: 7px; margin-bottom: 2px; }
+body[data-kitchen-app="sizzle"] .griddle-drawing { display: block; height: 66px; margin: 4px 0; }
+body[data-kitchen-app="sizzle"] .intro-art canvas { height: 20px; border: 0; }
+body[data-kitchen-app="sizzle"] .art-coordinates { font-size: 7px; margin-top: 5px; letter-spacing: .5px; }
+body[data-kitchen-app="sizzle"] .art-coordinates span { font-size: 6px; }
+.service-ticket { position: relative; display: flex; flex-direction: column; gap: 8px; background: #eee7d1; color: #28302b; padding: 15px 17px 13px; border: 1px solid #fff5d8; box-shadow: 3px 4px 0 #05090b66; transform: rotate(.5deg); }
+.service-ticket::after { content: ''; position: absolute; width: 36px; height: 9px; left: calc(50% - 18px); top: -5px; background: #53625f; border: 1px solid #6d7c77; box-shadow: 0 2px 2px #0002; }
+.ticket-kicker { color: #795b3b; font: bold 9px var(--mono); letter-spacing: 1.4px; }
+.service-ticket label { font-size: 10px; color: #646b5b; margin-top: 2px; }
+#project-name { background: transparent; border: 0; border-bottom: 1px solid #aaa58b; border-radius: 0; color: #26322d; padding: 0 0 7px; width: 100%; font: 700 23px var(--kk-heading, Arial, sans-serif); min-width: 0; }
+#project-name:focus-visible { outline-color: #7e4a24; }
+.save-status { color: #4d6554; font: 9px/1.4 var(--mono); }
+.ticket-foot { border-top: 1px dashed #b8af91; padding-top: 8px; color: #7b785e; font: 8px var(--mono); letter-spacing: 1.5px; }
+body[data-kitchen-app="sizzle"] .panel { border-radius: 4px; background: linear-gradient(125deg, #293134, #20282a 65%); border-color: #434e50; box-shadow: 0 3px 0 #090e10, inset 0 1px 0 #f1ecdc09; }
+body[data-kitchen-app="sizzle"] .transport { padding: 16px 18px; gap: 22px; min-height: 87px; margin-bottom: 18px; flex-wrap: wrap; border-top: 2px solid #ba7546; }
+body[data-kitchen-app="sizzle"] .play-button { min-height: 46px; border-radius: 3px; width: 100px; }
+body[data-kitchen-app="sizzle"] .button, body[data-kitchen-app="sizzle"] .icon-button { min-height: 40px; }
+body[data-kitchen-app="sizzle"] .icon-button { width: 40px; flex-shrink: 0; border: 1px solid #4a585b; background: #192124; border-radius: 3px; }
+body[data-kitchen-app="sizzle"] .icon-button:hover { background: #344144; color: #f1ecdc; }
+body[data-kitchen-app="sizzle"] .button { font-size: 12px; }
+body[data-kitchen-app="sizzle"] .button.subtle { border: 1px solid #435052; color: #d9ded1; }
+body[data-kitchen-app="sizzle"] .button.subtle span { display: inline; }
+body[data-kitchen-app="sizzle"] .preset-control { min-width: 240px; }
+.recipe-labels { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.recipe-load { display: flex; align-items: center; gap: 7px; color: #a4aea7; font: 8px var(--mono); }
+.recipe-load select { border: 1px solid #4b585a; background: #172023; border-radius: 3px; color: #e4e6d8; min-height: 30px; padding: 4px 7px; font-size: 10px; }
+body[data-kitchen-app="sizzle"] .select-wrap { margin-top: 4px; }
+body[data-kitchen-app="sizzle"] .select-wrap select { min-height: 32px; font-size: 14px; padding: 5px 24px 5px 0; }
+body[data-kitchen-app="sizzle"] .select-wrap svg { top: 8px; }
+body[data-kitchen-app="sizzle"] .file-actions { margin-left: auto; gap: 8px; }
+body[data-kitchen-app="sizzle"] .open-project { display: inline-flex; }
+body[data-kitchen-app="sizzle"] .control-label { font-size: 9px; letter-spacing: 1px; color: #a8b3ad; }
+body[data-kitchen-app="sizzle"] .text-button { min-height: 38px; padding: 0 8px; color: #bdc8c0; font-size: 11px; border-radius: 3px; }
+body[data-kitchen-app="sizzle"] .text-button:hover { background: #ffffff08; color: #f8f0df; }
+body[data-kitchen-app="sizzle"] .section-heading { min-height: 54px; height: auto; padding: 8px 18px; gap: 12px; }
+body[data-kitchen-app="sizzle"] h2 { font-size: 11px; letter-spacing: 1px; }
+body[data-kitchen-app="sizzle"] .section-number { font-size: 9px; }
+.station-caption { color: #9ba9a0; font: 8px var(--mono); letter-spacing: 1px; padding-left: 12px; border-left: 1px solid #52605d; }
+body[data-kitchen-app="sizzle"] .sequencer-actions { gap: 4px; }
+body[data-kitchen-app="sizzle"] .action-divider { margin: 0 5px; }
+.griddle-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 18px; border-bottom: 1px solid #3c4849; background: #131c1f60; }
+.sequence-options { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.toolbar-control { display: flex; gap: 8px; align-items: center; }
+.toolbar-control > span { color: #a1aea5; font: 9px var(--mono); letter-spacing: .6px; }
+body[data-kitchen-app="sizzle"] .sequence-select { min-height: 36px; max-width: 130px; font: 11px var(--mono); padding: 7px 9px; background: #182225; border-color: #52605e; color: #e8e9d9; }
+body[data-kitchen-app="sizzle"] .sequence-select[hidden] { display: none; }
+.follow-control { display: flex; align-items: center; gap: 7px; min-height: 36px; font-size: 11px; color: #b5c1b6; cursor: pointer; }
+.follow-control input { accent-color: #dcc85e; width: 15px; height: 15px; margin: 0; }
+.step-navigation { display: flex; gap: 8px; align-items: center; }
+.step-window { min-width: 93px; font: 10px var(--mono); color: #ece7d1; text-align: center; }
+body[data-kitchen-app="sizzle"] .page-button { width: 34px; min-height: 34px; height: 34px; font: 16px var(--mono); }
+.voice-pad-strip { padding: 12px 18px 14px; border-bottom: 1px solid #465052; }
+.pad-strip-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; font: 8px var(--mono); letter-spacing: .7px; color: #afbaa9; }
+.pad-strip-label span:last-child { color: #a0aca5; letter-spacing: 0; }
+.voice-pads { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+.voice-pad { display: grid; grid-template-columns: 20px minmax(0, 1fr); grid-template-rows: 1fr auto; align-items: center; gap: 4px; text-align: left; min-height: 60px; padding: 9px 10px; border: 1px solid #475554; border-top: 2px solid var(--track-color, #ff8d45); border-radius: 3px; background: linear-gradient(135deg, #323c3d, #192325); box-shadow: 0 2px 0 #0b1112; transition: background .12s, border-color .12s; min-width: 0; }
+.voice-pad:hover { background: #3c4847; color: #fff5df; }
+.voice-pad.selected, .voice-pad[aria-pressed="true"] { background: color-mix(in srgb, var(--track-color, #ff8d45) 15%, #1d292a); border-color: var(--track-color, #ff8d45); }
+.voice-pad.sounding, .voice-pad.triggered { background: color-mix(in srgb, var(--track-color, #ff8d45) 45%, #26302d); }
+.pad-index { grid-row: 1 / 3; color: var(--track-color, #ff8d45); font: 10px var(--mono); }
+.pad-name { overflow: hidden; text-overflow: ellipsis; font: 600 11px var(--kk-heading, Arial, sans-serif); letter-spacing: .4px; text-transform: uppercase; }
+.pad-source { grid-column: 2; color: #b2beb4; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body[data-kitchen-app="sizzle"] .sequencer-scroll { padding: 0 18px; }
+body[data-kitchen-app="sizzle"] .sequencer-inner { min-width: 760px; }
+body[data-kitchen-app="sizzle"] .step-ruler, body[data-kitchen-app="sizzle"] .track-row { grid-template-columns: 170px minmax(0, 1fr) 78px; gap: 12px; }
+body[data-kitchen-app="sizzle"] .step-numbers, body[data-kitchen-app="sizzle"] .step-buttons { grid-template-columns: repeat(var(--visible-steps, 16), minmax(0, 1fr)); gap: 5px; }
+body[data-kitchen-app="sizzle"] .ruler-voice, body[data-kitchen-app="sizzle"] .ruler-mix { font-size: 8px; color: #acb8af; }
+body[data-kitchen-app="sizzle"] .ruler-voice span { color: #92a197; font-size: 7px; }
+body[data-kitchen-app="sizzle"] .ruler-voice::after { content: none; }
+body[data-kitchen-app="sizzle"] .step-number { font-size: 10px; color: #9daaa1; }
+body[data-kitchen-app="sizzle"] .step-number.beat { color: #e3dfcb; }
+body[data-kitchen-app="sizzle"] .track-row { height: 46px; }
+body[data-kitchen-app="sizzle"] .track-name-button { min-height: 42px; gap: 9px; }
+body[data-kitchen-app="sizzle"] .track-name { font-size: 11px; letter-spacing: .4px; color: #efecdb; }
+body[data-kitchen-app="sizzle"] .track-noise { font-size: 10px; color: #b1bcb2; }
+body[data-kitchen-app="sizzle"] .track-index { color: #95a096; }
+body[data-kitchen-app="sizzle"] .step { height: 36px; border-radius: 3px; box-shadow: 0 2px 0 #0c1416; }
+body[data-kitchen-app="sizzle"] .step.active { background: color-mix(in srgb, var(--track-color) 45%, #152124); border-color: var(--track-color); }
+body[data-kitchen-app="sizzle"] .step.accent, body[data-kitchen-app="sizzle"] .step.active.current { background: var(--track-color); }
+body[data-kitchen-app="sizzle"] .step.accent::after { content: '+'; width: auto; height: auto; left: 0; right: 0; bottom: 2px; color: #17201c; background: none; font: bold 14px var(--mono); text-align: center; }
+body[data-kitchen-app="sizzle"] .track-row.selected { background: #e4d5930a; }
+body[data-kitchen-app="sizzle"] .track-row.muted .track-name { color: #a3ada3; }
+body[data-kitchen-app="sizzle"] .mix-button { width: 35px; height: 36px; border-radius: 3px; font-size: 11px; color: #bcc7bd; border-color: #4b5b5b; background: #182225; }
+body[data-kitchen-app="sizzle"] .mix-button.mute-on { background: #69422b; border-color: #ff8d45; color: #ffe5bc; }
+body[data-kitchen-app="sizzle"] .mix-button.solo-on { background: #dcc85e; border-color: #edda8a; color: #222c23; }
+body[data-kitchen-app="sizzle"] .sequencer-footer { padding: 11px 18px; gap: 14px; flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .bank-button { width: 36px; height: 36px; border-radius: 3px; font-size: 11px; color: #c0c8b9; }
+body[data-kitchen-app="sizzle"] .bank-button.active { color: #fff0c8; background: #85502e; border-color: #ffae6f; }
+body[data-kitchen-app="sizzle"] .sequencer-hint { color: #acb8ab; font-size: 10px; }
+body[data-kitchen-app="sizzle"] .sound-panels { grid-template-columns: minmax(0, 1.9fr) minmax(280px, 1fr); gap: 16px; margin-top: 18px; align-items: stretch; }
+body[data-kitchen-app="sizzle"] .voice-panel { grid-row: span 2; }
+body[data-kitchen-app="sizzle"] .voice-panel .section-heading { flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .voice-heading-actions { gap: 2px; flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .voice-heading-actions .text-button { font-size: 10px; }
+body[data-kitchen-app="sizzle"] .voice-editor { display: grid; grid-template-columns: minmax(130px, .75fr) minmax(0, 2fr); min-height: 270px; padding: 24px 22px 18px; gap: 30px; align-items: center; }
+body[data-kitchen-app="sizzle"] .voice-identity { width: auto; min-width: 0; }
+body[data-kitchen-app="sizzle"] .voice-identity h3 { font: 700 31px/1.05 var(--kk-heading, Arial, sans-serif); color: #f1ecdc; margin: 10px 0; }
+body[data-kitchen-app="sizzle"] .voice-identity p { font-size: 12px; color: #b2bdb1; line-height: 1.65; }
+body[data-kitchen-app="sizzle"] .selected-voice-label { font-size: 9px; color: #bdc4af; }
+body[data-kitchen-app="sizzle"] .voice-wave { height: 59px; margin-top: 19px; }
+body[data-kitchen-app="sizzle"] .voice-wave > span { font-size: 8px; color: #b5c0b2; }
+.voice-controls { min-width: 0; display: grid; gap: 24px; }
+.voice-control-group { display: grid; gap: 16px; min-width: 0; }
+.control-group-label { color: #b7c1af; font: 9px var(--mono); letter-spacing: 1.2px; padding-bottom: 8px; border-bottom: 1px solid #48534d; }
+body[data-kitchen-app="sizzle"] .voice-knobs, .quick-knobs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+body[data-kitchen-app="sizzle"] .voice-knobs .knob, body[data-kitchen-app="sizzle"] .quick-knobs .knob { width: 48px; height: 48px; }
+body[data-kitchen-app="sizzle"] .voice-knobs .knob svg, body[data-kitchen-app="sizzle"] .quick-knobs .knob svg { width: 58px; height: 58px; }
+body[data-kitchen-app="sizzle"] .knob-label { color: #c2cbb8; font-size: 9px; letter-spacing: .5px; }
+body[data-kitchen-app="sizzle"] .knob-value { font-size: 10px; }
+.voice-station-note { margin: 0 22px 18px; padding-top: 12px; border-top: 1px solid #46514b; font-size: 11px; color: #aeb9a9; line-height: 1.6; }
+body[data-kitchen-app="sizzle"] .noise-sources { padding: 15px 16px 0; gap: 6px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body[data-kitchen-app="sizzle"] .noise-source { height: 36px; font-size: 11px; padding: 0 6px; justify-content: center; }
+body[data-kitchen-app="sizzle"] .noise-caption { margin: 10px 16px 14px; color: #b0bcae; font-size: 10px; }
+body[data-kitchen-app="sizzle"] .small-counter { display: inline; color: #a9b8aa; font-size: 8px; }
+body[data-kitchen-app="sizzle"] .master-panel { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; gap: 0; }
+body[data-kitchen-app="sizzle"] .master-panel > .section-heading { grid-column: 1 / -1; width: auto; min-height: 44px; border-bottom: 1px solid var(--line); }
+body[data-kitchen-app="sizzle"] .master-panel .heading-label { gap: 8px; }
+body[data-kitchen-app="sizzle"] .master-effects { padding: 15px 17px 0; gap: 25px; grid-column: 1 / -1; }
+body[data-kitchen-app="sizzle"] .master-volume { grid-column: 1 / -1; margin: 17px 20px 18px; }
+body[data-kitchen-app="sizzle"] .master-effects .knob-label, body[data-kitchen-app="sizzle"] .master-effects .knob-value, body[data-kitchen-app="sizzle"] .master-volume > span { font-size: 9px; }
+body[data-kitchen-app="sizzle"] .noise-bench { margin-top: 18px; scroll-margin-top: 18px; }
+.noise-bench > summary { display: flex; justify-content: space-between; align-items: center; min-height: 55px; gap: 12px; padding: 12px 18px; cursor: pointer; list-style: none; }
+.noise-bench > summary::-webkit-details-marker { display: none; }
+.noise-bench > summary:focus-visible { outline: 2px solid #dcc85e; outline-offset: 3px; }
+.bench-summary-title { font: 600 11px var(--mono); letter-spacing: 1px; }
+.bench-summary-note { font-size: 11px; color: #acbba9; margin-left: 5px; }
+.bench-disclosure { font: 10px var(--mono); color: #eeb688; white-space: nowrap; }
+.noise-bench[open] .bench-disclosure { font-size: 0; }
+.noise-bench[open] .bench-disclosure::after { content: 'CLOSE −'; font: 10px var(--mono); }
+.noise-bench[open] > summary { border-bottom: 1px solid var(--line); }
+.noise-bench-content { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(0, 1.4fr); padding: 22px; gap: 32px; }
+.bench-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font: 9px var(--mono); color: #d6ddc5; }
+#bench-voice-label { color: #b4c0ac; font-size: 10px; }
+.bench-recipe-actions { display: flex; gap: 10px; margin-top: 12px; }
+.bench-recipe-actions select, .bench-selectors select { min-width: 0; min-height: 40px; border: 1px solid #53665e; background: #172124; color: #f1ecdc; border-radius: 3px; padding: 8px; font-size: 12px; }
+.bench-recipe-actions select { flex: 1; width: 0; }
+#noise-recipe-description { font-size: 12px; line-height: 1.6; color: #d2dac6; min-height: 35px; margin: 12px 0 8px; }
+.bench-preservation, .bench-control-note { font-size: 11px; line-height: 1.6; color: #adbaa7; margin: 8px 0; }
+.bench-selectors { display: flex; gap: 12px; margin-top: 16px; }
+.bench-selectors label { display: flex; flex-direction: column; gap: 7px; flex: 1; font: 10px var(--mono); color: #c3cdb8; }
+.noise-bench-knobs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.noise-bench-knobs .knob { width: 48px; height: 48px; }
+.noise-bench-knobs .knob svg { width: 58px; height: 58px; }
+.bench-control-note { margin-top: 24px; }
+body[data-kitchen-app="sizzle"] .synthesis-panel { margin-top: 18px; }
+body[data-kitchen-app="sizzle"] .synthesis-header { min-height: 58px; padding: 11px 18px; flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .synthesis-voice { color: #c8cfbb; font-size: 10px; }
+body[data-kitchen-app="sizzle"] .synthesis-tabbar { padding: 10px 18px; }
+body[data-kitchen-app="sizzle"] .synth-tab { min-height: 40px; font-size: 12px; padding: 10px 17px; }
+body[data-kitchen-app="sizzle"] .synthesis-tab-hint { color: #aab6a4; font-size: 8px; }
+body[data-kitchen-app="sizzle"] .synthesis-layout { grid-template-columns: 250px minmax(0, 1fr); }
+body[data-kitchen-app="sizzle"] .envelope-panel { padding: 24px 22px; }
+body[data-kitchen-app="sizzle"] .envelope-panel h3 { font-size: 26px; line-height: 1.1; }
+body[data-kitchen-app="sizzle"] .envelope-time-label { font-size: 8px; color: #a7b49f; }
+body[data-kitchen-app="sizzle"] .envelope-time-value { font-size: 10px; }
+body[data-kitchen-app="sizzle"] .envelope-description { font-size: 11px; color: #b2bda9; }
+body[data-kitchen-app="sizzle"] .synthesis-controls { padding: 22px 24px; }
+body[data-kitchen-app="sizzle"] .synthesis-selector > span { font-size: 9px; color: #bdc6b1; }
+body[data-kitchen-app="sizzle"] .synthesis-selector select { min-height: 38px; font-size: 12px; }
+body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-label { font-size: 9px; letter-spacing: .3px; }
+body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-value { font-size: 10px; }
+body[data-kitchen-app="sizzle"] .synthesis-note { font-size: 11px; color: #b2bda9; }
+body[data-kitchen-app="sizzle"] .footer { font-size: 8px; color: #a1afa1; gap: 14px; flex-wrap: wrap; }
+body[data-kitchen-app="sizzle"] .footer-motto, body[data-kitchen-app="sizzle"] .footer-version > span { font-size: 8px; color: #96a48f; }
+body[data-kitchen-app="sizzle"] .help-grid p, body[data-kitchen-app="sizzle"] dialog > p { font-size: 12px; color: #bfcab8; }
+body[data-kitchen-app="sizzle"] .toast { line-height: 1.5; }
+@media (max-width: 1150px) {
+  body[data-kitchen-app="sizzle"] .intro { grid-template-columns: minmax(0, 1fr) 220px; gap: 24px; }
+  body[data-kitchen-app="sizzle"] .intro-art { display: none; }
+  body[data-kitchen-app="sizzle"] .transport { gap: 16px; }
+  body[data-kitchen-app="sizzle"] .transport-divider { display: none; }
+  body[data-kitchen-app="sizzle"] .file-actions { flex-basis: 100%; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #45514d; }
+  body[data-kitchen-app="sizzle"] .voice-pad { padding: 8px 6px; gap: 2px; grid-template-columns: 16px minmax(0, 1fr); }
+  body[data-kitchen-app="sizzle"] .sound-panels { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  body[data-kitchen-app="sizzle"] .voice-panel { grid-column: 1 / -1; grid-row: auto; }
+  body[data-kitchen-app="sizzle"] .master-panel { grid-column: auto; }
+  body[data-kitchen-app="sizzle"] .voice-editor { min-height: 230px; grid-template-columns: minmax(140px, .7fr) minmax(0, 2fr); }
+  body[data-kitchen-app="sizzle"] .voice-controls { grid-template-columns: 1fr 1fr; gap: 24px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs, body[data-kitchen-app="sizzle"] .quick-knobs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 16px; }
+  body[data-kitchen-app="sizzle"] .noise-bench-knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 18px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=noise] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=mod] { grid-template-columns: repeat(2, 100px); }
+}
+@media (max-width: 900px) {
+  body[data-kitchen-app="sizzle"] .app-shell { padding: 0 20px; }
+  body[data-kitchen-app="sizzle"] .local-badge { display: none; }
+  body[data-kitchen-app="sizzle"] .topbar { min-height: 70px; gap: 12px; }
+  body[data-kitchen-app="sizzle"] .brand-description { display: none; }
+  body[data-kitchen-app="sizzle"] .voice-pads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body[data-kitchen-app="sizzle"] .voice-pad { min-height: 54px; padding: 8px 10px; grid-template-columns: 20px minmax(0, 1fr); }
+  body[data-kitchen-app="sizzle"] .track-name-button, body[data-kitchen-app="sizzle"] .ruler-voice { position: sticky; left: 0; z-index: 2; background: #252f31; }
+  body[data-kitchen-app="sizzle"] .track-row.selected .track-name-button { background: #323a32; }
+  body[data-kitchen-app="sizzle"] .track-row.selected::before { z-index: 3; }
+  body[data-kitchen-app="sizzle"] .synthesis-layout { grid-template-columns: 210px minmax(0, 1fr); }
+  body[data-kitchen-app="sizzle"] .synthesis-controls { padding: 22px 18px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=noise] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body[data-kitchen-app="sizzle"] .synthesis-tab-hint { display: none; }
+  body[data-kitchen-app="sizzle"] .noise-bench-content { grid-template-columns: minmax(210px, 1fr) minmax(0, 1fr); gap: 22px; padding: 18px; }
+}
+@media (max-width: 650px) {
+  body[data-kitchen-app="sizzle"] .app-shell { padding: 0 12px; }
+  body[data-kitchen-app="sizzle"] .topbar { gap: 10px; padding: 11px 0; }
+  body[data-kitchen-app="sizzle"] .brand { font-size: 30px; gap: 8px; }
+  body[data-kitchen-app="sizzle"] .brand-mark { width: 24px; }
+  body[data-kitchen-app="sizzle"] .topbar-right { gap: 7px; flex: 1; }
+  body[data-kitchen-app="sizzle"] .music-link { min-height: 40px; padding: 0 2px; }
+  body[data-kitchen-app="sizzle"] .music-link span { display: inline; }
+  body[data-kitchen-app="sizzle"] .intro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 20px 0; }
+  body[data-kitchen-app="sizzle"] h1 { font-size: clamp(32px, 9vw, 43px); }
+  body[data-kitchen-app="sizzle"] .intro .eyebrow { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .intro p { font-size: 12px; margin-top: 9px; max-width: 360px; }
+  .station-specs { font-size: 8px; gap: 7px 10px; margin-top: 12px; }
+  .station-specs span + span::before { margin-right: 10px; }
+  .service-ticket { padding: 11px 13px; gap: 5px; transform: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .ticket-kicker { grid-column: 1; font-size: 8px; }
+  .service-ticket label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #project-name { grid-column: 1; grid-row: 2; padding-bottom: 4px; font-size: 22px; }
+  .save-status { grid-column: 2; grid-row: 1 / 3; max-width: 100px; text-align: right; font-size: 9px; }
+  .ticket-foot { display: none; }
+  body[data-kitchen-app="sizzle"] .transport { display: grid; grid-template-columns: 108px minmax(56px, .8fr) minmax(65px, 1fr); gap: 15px 10px; padding: 14px 12px; }
+  body[data-kitchen-app="sizzle"] .playback { gap: 5px; }
+  body[data-kitchen-app="sizzle"] .play-button { width: 68px; min-height: 44px; font-size: 10px; gap: 4px; }
+  body[data-kitchen-app="sizzle"] .play-button svg { width: 15px; }
+  body[data-kitchen-app="sizzle"] .restart { width: 35px; min-height: 42px; }
+  body[data-kitchen-app="sizzle"] .tempo-control { min-width: 0; }
+  body[data-kitchen-app="sizzle"] .tempo-control input { width: 45px; font-size: 25px; }
+  body[data-kitchen-app="sizzle"] .tempo-control > div { gap: 4px; }
+  body[data-kitchen-app="sizzle"] .tempo-control > div > span { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .swing-control { min-width: 0; width: auto; max-width: none; }
+  body[data-kitchen-app="sizzle"] .control-label { font-size: 8px; letter-spacing: .6px; }
+  body[data-kitchen-app="sizzle"] .preset-control { grid-column: 1 / -1; min-width: 0; padding-top: 11px; border-top: 1px solid #43524c; }
+  body[data-kitchen-app="sizzle"] .file-actions { grid-column: 1 / -1; width: 100%; padding-top: 12px; margin: 0; gap: 7px; }
+  body[data-kitchen-app="sizzle"] .file-actions .button { flex: 1; padding: 0 8px; font-size: 11px; }
+  body[data-kitchen-app="sizzle"] .section-heading { min-height: 52px; padding: 9px 12px; gap: 4px 10px; }
+  body[data-kitchen-app="sizzle"] .sequencer > .section-heading { flex-wrap: wrap; }
+  body[data-kitchen-app="sizzle"] .heading-label { gap: 8px; }
+  body[data-kitchen-app="sizzle"] h2 { font-size: 10px; letter-spacing: .8px; }
+  .station-caption { display: none; }
+  body[data-kitchen-app="sizzle"] .sequencer-actions { margin-left: auto; gap: 0; }
+  body[data-kitchen-app="sizzle"] .sequencer-actions .text-button { font-size: 10px; padding: 0 5px; }
+  body[data-kitchen-app="sizzle"] .action-divider { display: none; }
+  .griddle-toolbar { padding: 10px 12px; gap: 9px; }
+  .sequence-options { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 6px 14px; }
+  .toolbar-control { justify-content: space-between; gap: 7px; }
+  .toolbar-control > span { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .sequence-select { min-height: 38px; font-size: 11px; padding: 6px; }
+  .follow-control { grid-column: 1 / -1; min-height: 30px; font-size: 11px; }
+  .step-navigation { justify-content: space-between; width: 100%; gap: 7px; }
+  body[data-kitchen-app="sizzle"] .page-button { width: 42px; min-height: 40px; height: 40px; }
+  .step-window { flex: 1; font-size: 11px; }
+  .voice-pad-strip { padding: 12px; }
+  .pad-strip-label { font-size: 7px; gap: 8px; letter-spacing: .4px; }
+  .voice-pads { gap: 7px; }
+  body[data-kitchen-app="sizzle"] .voice-pad { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 5px; min-height: 62px; padding: 8px 7px; }
+  .pad-index { font-size: 9px; }
+  .pad-name { font-size: 11px; letter-spacing: .1px; max-width: 100%; white-space: nowrap; }
+  .pad-source { display: none; }
+  body[data-kitchen-app="sizzle"] .sequencer-scroll { padding: 0 10px; overflow: visible; }
+  body[data-kitchen-app="sizzle"] .sequencer-inner { min-width: 0; width: 100%; }
+  body[data-kitchen-app="sizzle"] .step-ruler, body[data-kitchen-app="sizzle"] .track-row { grid-template-columns: 93px minmax(0, 1fr) 66px; gap: 6px; }
+  body[data-kitchen-app="sizzle"] .step-ruler { height: 35px; }
+  body[data-kitchen-app="sizzle"] .step-buttons, body[data-kitchen-app="sizzle"] .step-numbers { gap: 4px; }
+  body[data-kitchen-app="sizzle"] .track-row { height: 48px; }
+  body[data-kitchen-app="sizzle"] .track-name-button, body[data-kitchen-app="sizzle"] .ruler-voice { position: static; background: none; box-shadow: none; padding-right: 1px; }
+  body[data-kitchen-app="sizzle"] .track-name-button { gap: 0; min-height: 44px; }
+  body[data-kitchen-app="sizzle"] .track-row.selected .track-name-button { background: none; }
+  body[data-kitchen-app="sizzle"] .track-row.selected::before { left: -6px; top: 8px; height: 32px; }
+  body[data-kitchen-app="sizzle"] .track-mini-wave, body[data-kitchen-app="sizzle"] .track-index, body[data-kitchen-app="sizzle"] .ruler-voice span { display: none; }
+  body[data-kitchen-app="sizzle"] .track-info { gap: 5px; }
+  body[data-kitchen-app="sizzle"] .track-name { font-size: 9px; letter-spacing: .1px; line-height: 1.25; }
+  body[data-kitchen-app="sizzle"] .track-noise { font-size: 9px; }
+  body[data-kitchen-app="sizzle"] .step { height: 40px; }
+  body[data-kitchen-app="sizzle"] .step-number { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .track-mix { gap: 4px; }
+  body[data-kitchen-app="sizzle"] .mix-button { width: 31px; height: 40px; font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .sequencer-footer { padding: 11px 12px; gap: 10px; }
+  body[data-kitchen-app="sizzle"] .pattern-banks { gap: 8px; }
+  body[data-kitchen-app="sizzle"] .bank-buttons { gap: 4px; }
+  body[data-kitchen-app="sizzle"] .bank-button { width: 34px; height: 36px; }
+  body[data-kitchen-app="sizzle"] .pattern-banks > .control-label { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .beat-indicator { font-size: 9px; gap: 7px; }
+  body[data-kitchen-app="sizzle"] .time-signature { display: none; }
+  body[data-kitchen-app="sizzle"] .sequencer-hint { width: 100%; order: 3; font-size: 9px; line-height: 1.5; display: block; }
+  body[data-kitchen-app="sizzle"] .sequencer-hint .hint-dot { display: none; }
+  body[data-kitchen-app="sizzle"] .sound-panels { grid-template-columns: 1fr; gap: 16px; }
+  body[data-kitchen-app="sizzle"] .voice-panel { grid-column: auto; }
+  body[data-kitchen-app="sizzle"] .voice-heading-actions { gap: 1px; margin-left: auto; }
+  body[data-kitchen-app="sizzle"] .voice-heading-actions .text-button { padding: 0 5px; font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .voice-editor { grid-template-columns: 1fr; padding: 18px 16px; gap: 19px; min-height: 0; }
+  body[data-kitchen-app="sizzle"] .voice-identity { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 0 16px; }
+  body[data-kitchen-app="sizzle"] .voice-identity > .selected-voice-label { grid-column: 1; font-size: 9px; }
+  body[data-kitchen-app="sizzle"] .voice-identity h3 { grid-column: 1; font-size: 30px; margin: 8px 0; }
+  body[data-kitchen-app="sizzle"] .voice-identity p { grid-column: 1; font-size: 11px; }
+  body[data-kitchen-app="sizzle"] .voice-wave { grid-column: 2; grid-row: 1 / 4; align-self: center; margin: 0; }
+  body[data-kitchen-app="sizzle"] .voice-controls { grid-template-columns: 1fr; gap: 24px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs, body[data-kitchen-app="sizzle"] .quick-knobs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs .knob, body[data-kitchen-app="sizzle"] .quick-knobs .knob { width: 44px; height: 44px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs .knob svg, body[data-kitchen-app="sizzle"] .quick-knobs .knob svg { width: 54px; height: 54px; }
+  body[data-kitchen-app="sizzle"] .knob-label { font-size: 8px; letter-spacing: .2px; }
+  body[data-kitchen-app="sizzle"] .knob-value { font-size: 9px; }
+  .voice-station-note { margin: 0 16px 16px; font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .noise-sources { padding: 15px 12px 0; }
+  body[data-kitchen-app="sizzle"] .noise-source { height: 40px; font-size: 11px; }
+  body[data-kitchen-app="sizzle"] .master-panel { display: grid; }
+  body[data-kitchen-app="sizzle"] .master-effects { padding: 18px 20px 0; gap: 50px; }
+  body[data-kitchen-app="sizzle"] .master-volume { margin: 18px 20px 20px; }
+  .noise-bench > summary { padding: 12px; gap: 8px; }
+  .noise-bench > summary .heading-label { flex-wrap: wrap; }
+  .bench-summary-title { font-size: 10px; }
+  .bench-summary-note { margin-left: 0; font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .noise-bench-content { grid-template-columns: 1fr; padding: 17px; gap: 12px; }
+  .bench-title { flex-wrap: wrap; gap: 6px; }
+  .bench-recipe-actions .button { font-size: 11px; padding: 0 10px; }
+  .noise-bench-knobs { gap: 28px 18px; }
+  body[data-kitchen-app="sizzle"] .synthesis-header { padding: 12px; gap: 10px; }
+  body[data-kitchen-app="sizzle"] .synthesis-header .heading-label { gap: 9px; }
+  body[data-kitchen-app="sizzle"] .synthesis-voice { font-size: 10px; width: 100%; margin: 0; border: 0; padding: 0; }
+  body[data-kitchen-app="sizzle"] .synthesis-header-actions { gap: 6px; margin-left: auto; }
+  body[data-kitchen-app="sizzle"] .synthesis-header-actions .text-button { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .synthesis-tabbar { padding: 9px; }
+  body[data-kitchen-app="sizzle"] .synth-tab { padding: 9px 6px; font-size: 11px; gap: 6px; }
+  body[data-kitchen-app="sizzle"] .synthesis-layout { grid-template-columns: 1fr; }
+  body[data-kitchen-app="sizzle"] .envelope-panel { padding: 19px 16px; gap: 0 18px; }
+  body[data-kitchen-app="sizzle"] .envelope-panel h3 { font-size: 23px; }
+  body[data-kitchen-app="sizzle"] .envelope-time-label { font-size: 7px; letter-spacing: .3px; }
+  body[data-kitchen-app="sizzle"] .envelope-time-value { font-size: 9px; }
+  body[data-kitchen-app="sizzle"] .envelope-description { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .synthesis-controls { padding: 20px 16px; }
+  body[data-kitchen-app="sizzle"] .synthesis-selector { min-width: 100px; }
+  body[data-kitchen-app="sizzle"] .synthesis-selector > span { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .synthesis-selector select { font-size: 11px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs, body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=noise] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 27px 10px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=mod] { grid-template-columns: repeat(2, minmax(0, 100px)); }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-label { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs .knob-value { font-size: 9px; }
+  body[data-kitchen-app="sizzle"] .synthesis-note { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .footer { font-size: 8px; gap: 10px; }
+  body[data-kitchen-app="sizzle"] .footer-motto { display: none; }
+}
+@media (max-width: 380px) {
+  body[data-kitchen-app="sizzle"] .app-shell { padding: 0 9px; }
+  body[data-kitchen-app="sizzle"] .topbar-right { gap: 5px; }
+  body[data-kitchen-app="sizzle"] .music-link span { display: none; }
+  body[data-kitchen-app="sizzle"] .brand { font-size: 28px; }
+  body[data-kitchen-app="sizzle"] .transport { grid-template-columns: 102px minmax(52px, .8fr) minmax(55px, 1fr); column-gap: 8px; }
+  body[data-kitchen-app="sizzle"] .play-button { width: 64px; }
+  body[data-kitchen-app="sizzle"] .restart { width: 33px; }
+  body[data-kitchen-app="sizzle"] .tempo-control input { width: 40px; font-size: 23px; }
+  body[data-kitchen-app="sizzle"] .step-ruler, body[data-kitchen-app="sizzle"] .track-row { grid-template-columns: 78px minmax(0, 1fr) 58px; gap: 5px; }
+  body[data-kitchen-app="sizzle"] .mix-button { width: 27px; }
+  body[data-kitchen-app="sizzle"] .track-name { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .track-noise { font-size: 8px; }
+  body[data-kitchen-app="sizzle"] .step-buttons, body[data-kitchen-app="sizzle"] .step-numbers { gap: 3px; }
+  body[data-kitchen-app="sizzle"] .voice-identity { grid-template-columns: minmax(0, 1fr) 90px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs, body[data-kitchen-app="sizzle"] .quick-knobs { gap: 10px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs .knob, body[data-kitchen-app="sizzle"] .quick-knobs .knob { width: 40px; height: 40px; }
+  body[data-kitchen-app="sizzle"] .voice-knobs .knob svg, body[data-kitchen-app="sizzle"] .quick-knobs .knob svg { width: 50px; height: 50px; }
+  body[data-kitchen-app="sizzle"] .noise-source { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs, body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=noise] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  body[data-kitchen-app="sizzle"] .synthesis-knobs[data-group=mod] { grid-template-columns: repeat(2, minmax(0, 100px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-kitchen-app="sizzle"] *, body[data-kitchen-app="sizzle"] *::before, body[data-kitchen-app="sizzle"] *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation: none !important; }
+}
+.received-pattern-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: #dcc85e14; border-bottom: 1px solid #dcc85e50; color: #e7dfb2; font-size: 12px; line-height: 1.5; }
+.received-pattern-status[hidden] { display: none; }
+.received-pattern-status button { flex-shrink: 0; min-height: 38px; padding: 8px 12px; background: #36423b; border: 1px solid #87906a; border-radius: 3px; color: #f1ecdc; font-size: 11px; }
+@media (max-width: 650px) { .received-pattern-status { flex-wrap: wrap; padding: 12px; font-size: 11px; } }
+@media (min-width: 651px) and (max-width: 900px) {
+  body[data-kitchen-app="sizzle"] .sequencer-inner { min-width: 0; }
+  body[data-kitchen-app="sizzle"] .step-ruler, body[data-kitchen-app="sizzle"] .track-row { grid-template-columns: 134px minmax(0, 1fr) 66px; gap: 8px; }
+  body[data-kitchen-app="sizzle"] .step-buttons, body[data-kitchen-app="sizzle"] .step-numbers { gap: 3px; }
+  body[data-kitchen-app="sizzle"] .mix-button { width: 31px; }
+  body[data-kitchen-app="sizzle"] .track-mix { gap: 4px; }
+  body[data-kitchen-app="sizzle"] .track-name { font-size: 10px; }
+  body[data-kitchen-app="sizzle"] .track-noise { font-size: 9px; }
+}
 
 </style>
 
@@ -492,6 +798,7 @@ body {
 <body data-kitchen-app="sizzle">
   <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="4"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 9a8 8 0 1 1 0 6M4 4v5h5"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
@@ -514,30 +821,33 @@ body {
 
     <main>
       <section class="intro" aria-label="Welcome">
-        <div><div class="eyebrow">KITCHEN / NOISE STATION</div><h1>Service with a sizzle<span>.</span></h1><p>Eight voices. Sixteen or thirty-two steps. Body, noise, and whatever fell off the griddle.</p></div>
-        <div class="intro-art" aria-hidden="true"><span class="art-label">GRIDDLE / HEAT TRACE</span><svg class="griddle-drawing" viewBox="0 0 360 96" aria-hidden="true"><path d="M18 18h324v56H18zM12 74h336v8H12zM52 82v8m256-8v8M30 12h300M42 28h276M42 38h276M42 48h276M42 58h276"/><circle cx="63" cy="70" r="3"/><circle cx="296" cy="70" r="3"/><path class="heat-path" d="M88 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17"/></svg><canvas id="hero-wave" width="600" height="100"></canvas><div class="art-coordinates">HOT <span>DO NOT SEASON THE CIRCUITS</span> 001—016</div></div>
+        <div class="intro-copy"><div class="eyebrow">KITCHEN / K—01 / NOISE STATION</div><h1>Noise on the griddle<span>.</span></h1><p>Tap a voice. Write a rhythm. Shape the body and noise to taste.</p><div class="station-specs"><span>8 VOICES</span><span>12 NOISE SOURCES</span><span>16 / 32 STEPS</span></div></div>
+        <div class="intro-art" aria-hidden="true"><span class="art-label">GRIDDLE / HEAT TRACE</span><svg class="griddle-drawing" viewBox="0 0 360 96" aria-hidden="true"><path d="M18 18h324v56H18zM12 74h336v8H12zM52 82v8m256-8v8M30 12h300M42 28h276M42 38h276M42 48h276M42 58h276"/><circle cx="63" cy="70" r="3"/><circle cx="296" cy="70" r="3"/><path class="heat-path" d="M88 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17m45 17c-10-8 10-9 0-17"/></svg><canvas id="hero-wave" width="600" height="100"></canvas><div class="art-coordinates">HOT <span>KEEP THE RHYTHM MOVING</span> K—01</div></div>
+        <div class="service-ticket"><span class="ticket-kicker">TODAY’S RECIPE</span><label for="project-name">Project name</label><input id="project-name" type="text" maxlength="80" value="Flat-top special" autocomplete="off" spellcheck="false"><span id="save-status" class="save-status" role="status" aria-live="polite">Saved on this device</span><span class="ticket-foot">KEEP THE GOOD BITS.</span></div>
       </section>
 
       <section class="transport panel" aria-label="Playback and pattern controls">
-        <div class="playback"><button id="play-button" class="play-button" aria-label="Play sequencer" title="Play / pause (Space)"><svg><use href="#i-play"/></svg><span>Play</span></button><button id="restart-button" class="icon-button restart" aria-label="Restart from step one" title="Restart from step one"><svg><use href="#i-reset"/></svg></button></div>
+        <div class="playback"><button id="play-button" class="play-button" aria-label="Play sequencer" title="Play / stop (Space)"><svg><use href="#i-play"/></svg><span>Play</span></button><button id="restart-button" class="icon-button restart" aria-label="Restart from step one" title="Restart from step one"><svg><use href="#i-reset"/></svg></button></div>
         <div class="transport-divider"></div>
         <div class="tempo-control"><label class="control-label" for="tempo">TEMPO</label><div><input id="tempo" type="number" min="40" max="240" step="1" value="118" aria-label="Tempo in beats per minute"><span>BPM</span></div></div>
         <div class="swing-control"><div class="control-label"><label for="swing">SWING</label><span id="swing-value">12<span>%</span></span></div><input id="swing" type="range" min="0" max="60" value="12" aria-label="Swing amount"></div>
         <div class="transport-divider preset-divider"></div>
-        <div class="preset-control"><label class="control-label" for="preset-select">KIT + GROOVE</label><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
+        <div class="preset-control"><div class="recipe-labels"><label class="control-label" for="preset-select">HOUSE RECIPES</label><label class="recipe-load"><span>LOAD</span><select id="preset-load-mode" aria-label="What to load from a recipe"><option value="full">Kit + groove</option><option value="sounds">Sounds only</option><option value="groove">Groove only</option></select></label></div><div class="select-wrap"><select id="preset-select" aria-label="Load a groove preset"></select><svg><use href="#i-chevron"/></svg></div></div>
         <div class="file-actions"><button id="save-button" class="button subtle" aria-label="Save project" title="Download your project"><svg><use href="#i-save"/></svg><span>Save project</span></button><button id="export-button" class="button export"><svg><use href="#i-download"/></svg><span>Export WAV</span></button><button id="open-button" class="icon-button open-project" aria-label="Open saved project" title="Open saved project"><svg><use href="#i-folder"/></svg></button><input type="file" id="project-file" accept=".json,application/json" hidden></div>
       </section>
 
       <section class="sequencer panel" aria-labelledby="sequencer-title">
-        <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">STEP SEQUENCER</h2><select id="sequence-length" class="sequence-select" aria-label="Sequence length"><option value="16">16 STEPS</option><option value="32">32 STEPS</option></select><select id="sequence-page" class="sequence-select" aria-label="Visible sequence steps" hidden><option value="0">1–16</option><option value="1">17–32</option></select></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>Randomize</span></button></div></div>
-        <div class="sequencer-scroll"><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>CLICK TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">MIX</div></div><div id="track-rows" class="track-rows"></div></div></div>
-        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Click to add a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
+        <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">THE GRIDDLE</h2><span class="station-caption">WRITE THE RHYTHM</span></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>Randomize</span></button></div></div>
+        <div class="griddle-toolbar"><div class="sequence-options"><label class="toolbar-control"><span>LENGTH</span><select id="sequence-length" class="sequence-select" aria-label="Sequence length"><option value="16">16 steps</option><option value="32">32 steps</option></select></label><label class="toolbar-control edit-mode"><span>STEP TOOL</span><select id="step-edit-mode" class="sequence-select" aria-label="Step editing tool"><option value="hit">Hit</option><option value="accent">Accent</option><option value="erase">Erase</option></select></label><label class="follow-control"><input id="follow-playhead" type="checkbox" checked><span>Follow playhead</span></label></div><div class="step-navigation"><button id="step-prev" class="icon-button page-button" aria-label="Previous steps" title="Previous steps">←</button><span id="step-window" class="step-window">Steps 01–16</span><select id="sequence-page" class="sequence-select" aria-label="Visible sequence steps" hidden><option value="0">1–16</option><option value="1">17–32</option></select><button id="step-next" class="icon-button page-button" aria-label="Next steps" title="Next steps">→</button></div></div>
+        <div class="voice-pad-strip"><div class="pad-strip-label"><span>A TASTE OF EACH VOICE</span><span>Tap to hear · keys 1–8</span></div><div id="voice-pads" class="voice-pads" role="group" aria-label="Audition voices"></div></div>
+        <div class="sequencer-scroll"><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>SELECT TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">MIX</div></div><div id="track-rows" class="track-rows"></div></div></div>
+        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Choose Hit, Accent, or Erase <span class="hint-separator">/</span> Shift + click for accents</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
       </section>
 
       <section class="sound-panels" aria-label="Sound design">
-        <section class="voice-panel panel" aria-labelledby="voice-panel-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">02</span><h2 id="voice-panel-title">VOICE STATION</h2></div><div class="voice-heading-actions"><button id="open-noise-bench" class="text-button" aria-controls="noise-bench" aria-expanded="false" title="Noise-only recipes and quick shaping">Noise bench</button><button id="edit-synthesis" class="text-button" aria-label="Open detailed synthesis controls">Synthesis <svg class="down-arrow"><use href="#i-arrow"/></svg></button><button id="audition-button" class="text-button"><svg><use href="#i-speaker"/></svg>Audition</button></div></div><div class="voice-editor"><div class="voice-identity"><span class="selected-voice-label" id="selected-voice-index">VOICE 01</span><h3 id="selected-voice-name">Sub kick</h3><p id="voice-description">A low thump from the walk-in. Nobody ordered that.</p><div class="voice-wave"><canvas id="voice-wave" width="420" height="80"></canvas><span id="selected-noise-label">BROWN NOISE</span></div></div><div class="voice-knobs" id="voice-knobs"></div></div></section>
-        <section class="noise-panel panel" aria-labelledby="noise-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">03</span><h2 id="noise-title">NOISE PALETTE</h2></div><span class="small-counter">12 SOURCES</span></div><div class="noise-sources" id="noise-sources"></div><p class="noise-caption" id="noise-caption">Brown noise. Low, warm rumble. The extractor has opinions.</p></section>
-        <section class="master-panel panel" aria-labelledby="master-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">04</span><h2 id="master-title">MASTER</h2></div><div class="master-led" id="master-led"></div></div><div class="master-effects" id="master-knobs"></div><div class="master-volume"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"><span id="volume-value">78%</span></div></section>
+        <section class="voice-panel panel" aria-labelledby="voice-panel-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">02</span><h2 id="voice-panel-title">SEASON THE VOICE</h2></div><div class="voice-heading-actions"><button id="open-noise-bench" class="text-button" aria-controls="noise-bench" aria-expanded="false" title="Noise-only recipes and quick shaping">Noise bench</button><button id="edit-synthesis" class="text-button" aria-label="Open detailed synthesis controls">Synthesis <svg class="down-arrow"><use href="#i-arrow"/></svg></button><button id="audition-button" class="text-button"><svg><use href="#i-speaker"/></svg>Audition</button></div></div><div class="voice-editor"><div class="voice-identity"><span class="selected-voice-label" id="selected-voice-index">VOICE 01</span><h3 id="selected-voice-name">Sub kick</h3><p id="voice-description">A low thump from the walk-in. Nobody ordered that.</p><div class="voice-wave"><canvas id="voice-wave" width="420" height="80"></canvas><span id="selected-noise-label">BROWN NOISE</span></div></div><div class="voice-controls"><div class="voice-control-group"><span class="control-group-label">LAYER &amp; MIX</span><div class="voice-knobs" id="voice-knobs"></div></div><div class="voice-control-group"><span class="control-group-label">QUICK SEASONING</span><div class="quick-knobs" id="quick-knobs"></div></div></div></div><p class="voice-station-note">Quick controls and Synthesis shape the same voice. Audition to hear each change.</p></section>
+        <section class="noise-panel panel" aria-labelledby="noise-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">03</span><h2 id="noise-title">NOISE CUPBOARD</h2></div><span class="small-counter">12 SOURCES</span></div><div class="noise-sources" id="noise-sources"></div><p class="noise-caption" id="noise-caption">Brown noise. Low, warm rumble. The extractor has opinions.</p></section>
+        <section class="master-panel panel" aria-labelledby="master-title"><div class="section-heading small"><div class="heading-label"><span class="section-number">04</span><h2 id="master-title">THE PASS</h2></div><div class="master-led" id="master-led"></div></div><div class="master-effects" id="master-knobs"></div><div class="master-volume"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"><span id="volume-value">78%</span></div></section>
       </section>
       <details id="noise-bench" class="noise-bench panel">
         <summary><span class="heading-label"><span class="section-number">+</span><span class="bench-summary-title">NOISE BENCH</span><span class="bench-summary-note">Recipes &amp; quick shaping</span></span><span class="bench-disclosure" aria-hidden="true">OPEN +</span></summary>
@@ -547,15 +857,15 @@ body {
         </div>
       </details>
       <section id="synthesis-panel" class="synthesis-panel panel" aria-labelledby="synthesis-title">
-        <div class="synthesis-header"><div class="heading-label"><span class="section-number">05</span><h2 id="synthesis-title">SYNTHESIS STATION</h2><span id="synthesis-voice" class="synthesis-voice">01 / SUB KICK</span></div><div class="synthesis-header-actions"><button id="synthesis-reset" class="text-button" title="Restore this section to the selected voice’s original settings"><svg><use href="#i-reset"/></svg>Reset section</button><button id="lab-audition" class="button lab-audition"><svg><use href="#i-speaker"/></svg>Hear voice</button></div></div>
+        <div class="synthesis-header"><div class="heading-label"><span class="section-number">05</span><h2 id="synthesis-title">INSIDE THE RECIPE</h2><span id="synthesis-voice" class="synthesis-voice">01 / SUB KICK</span></div><div class="synthesis-header-actions"><button id="synthesis-reset" class="text-button" title="Restore this section to the selected voice’s original settings"><svg><use href="#i-reset"/></svg>Reset section</button><button id="lab-audition" class="button lab-audition"><svg><use href="#i-speaker"/></svg>Hear voice</button></div></div>
         <div class="synthesis-tabbar"><div id="synthesis-tabs" class="synthesis-tabs" role="tablist" aria-label="Synthesis section"><button data-synth-tab="body" role="tab" aria-selected="true" aria-controls="synthesis-layout" class="synth-tab active"><span class="tab-dot body-dot"></span>Drum body</button><button data-synth-tab="noise" role="tab" aria-selected="false" aria-controls="synthesis-layout" class="synth-tab"><span class="tab-dot noise-dot"></span>Noise shaper</button><button data-synth-tab="mod" role="tab" aria-selected="false" aria-controls="synthesis-layout" class="synth-tab"><span class="tab-dot mod-dot"></span>Modulation</button></div><span class="synthesis-tab-hint">ADJUST TO TASTE. TASTE WITH YOUR EARS.</span></div>
         <div id="synthesis-layout" class="synthesis-layout" role="tabpanel"><aside class="envelope-panel"><span id="envelope-kicker" class="selected-voice-label">AMPLITUDE ENVELOPE</span><h3 id="envelope-title">Attack. Hold. Take off the heat.</h3><canvas id="envelope-canvas" width="620" height="250" aria-label="Envelope or modulation waveform preview"></canvas><div id="envelope-times" class="envelope-times"></div><p id="envelope-description" class="envelope-description"></p></aside><div class="synthesis-controls"><div id="synthesis-selectors" class="synthesis-selectors"></div><div id="synthesis-knobs" class="synthesis-knobs"></div><div id="synthesis-note" class="synthesis-note"></div></div></div>
       </section>
     </main>
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CAUTION: THE DAILY SPECIAL IS LOUD.</span><span class="footer-version">SIZZLE <span>v1.2.0</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CAUTION: THE DAILY SPECIAL IS LOUD.</span><span class="footer-version">SIZZLE <span>v1.3.0</span></span></footer>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / KEEP THIS TICKET</div><h2 id="help-title">Start the grill.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>Blend drum bodies and noise, shape their envelopes, and set the sound in motion. The grill is now taking musical orders.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for a louder accent, or press and hold on a touchscreen. Select a voice to blend its BODY and NOISE layers, level, and pan. Open Synthesis to edit the drum oscillators, separate envelopes, noise filter, distortion, and modulation. Modulation restarts on each hit; tempo sync sets its rate from the beat. Drag knobs up or down; hold Shift for fine adjustments. Use M to mute a track or S to hear it solo.</p></div><div><h3>Make it yours</h3><p>Try any of the original six grooves, or the four new noise kits. The optional Noise bench adds sixteen noise-only recipes and quick shaping without changing your drum body, rhythm, mix, or modulation. Every change supports Undo. Randomize for a new direction. Choose 16 or 32 steps above the grid; at 32, use 1–16 / 17–32 to edit either half. Returning to 16 keeps the second half for later. Pattern banks A–D hold four variations. Copy sends your current pattern to the next bank. Changes are saved in this browser automatically. Older projects upgrade to the new synthesis controls when opened.</p></div><div><h3>Take it with you</h3><p>Save project downloads an editable JSON file. The folder button opens it again. Export WAV renders four bars plus an effect tail as a stereo audio file, ready for your DAW.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span> Works offline. No samples, accounts, or external connections.</div></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / KEEP THIS TICKET</div><h2 id="help-title">Start the grill.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>Blend drum bodies and noise, shape their envelopes, and set the sound in motion. The grill is now taking musical orders.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Tap a pad to hear and select a voice. Choose Hit, Accent, or Erase above the sequencer, then tap steps to write your rhythm. Shift + click or a long press also adds an accent. On phones, the arrow buttons move through four steps at a time; Follow playhead keeps the sounding steps in view. Select a voice to blend its BODY and NOISE layers, level, and pan; Quick seasoning gives direct access to cutoff, decay, body pitch, and noise saturation. Open Synthesis to edit the drum oscillators, separate envelopes, noise filter, distortion, and modulation. Modulation restarts on each hit; tempo sync sets its rate from the beat. Drag knobs up or down; hold Shift for fine adjustments. Use each row’s M and S buttons to mute or solo that voice.</p></div><div><h3>Make it yours</h3><p>Choose a house recipe and load its Kit + groove, Sounds only, or Groove only. Sounds only keeps your rhythm and timing; Groove only keeps your voices and effects. The optional Noise bench adds sixteen noise-only recipes and quick shaping without changing your drum body, rhythm, mix, or modulation. Every change supports Undo. Randomize for a new direction. Choose 16 or 32 steps above the grid; use the step arrows or page chooser to move through the loop. Returning to 16 keeps the second half for later. Pattern banks A–D hold four variations. Copy sends your current pattern to the next bank. Name your recipe above. Changes are saved in this browser automatically; the recipe ticket shows save status. Older projects upgrade to the new synthesis controls when opened.</p></div><div><h3>Take it with you</h3><p>Save project downloads an editable JSON file. The folder button opens it again. Export WAV renders four bars plus an effect tail as a stereo audio file, ready for your DAW.</p></div><div><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / stop<br><kbd>1</kbd>–<kbd>8</kbd> Audition a voice<br><kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob<br><kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span> Works offline. No samples, accounts, or external connections.</div></dialog>
   <script>
 /* Shared synthesis settings. Physical units keep the editor and audio engine in agreement. */
 (function () {
@@ -2216,6 +2526,8 @@ body {
   let voiceLab;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
   let bank = 0, selected = 0, sequencePage = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
+  const compactGrid = window.matchMedia('(max-width: 650px)');
+  let pageSize = compactGrid.matches ? 4 : 16;
   let history = [], toastTimer, saveTimer, exporting = false;
   // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
   let playheadColumns = Array.from({ length: 32 }, () => []);
@@ -2261,7 +2573,29 @@ body {
   }
   function persist() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 250);
+    saveStatus('Saving…');
+    saveTimer = setTimeout(saveNow, 250);
+  }
+  function saveStatus(message, failed = false) {
+    if (!$('save-status')) return;
+    $('save-status').textContent = message;
+    $('save-status').classList.toggle('save-failed', failed);
+  }
+  function saveNow() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(project()));
+      saveStatus('Saved on this device');
+    } catch (_) {
+      saveStatus('Browser saving unavailable · Save project to keep your work', true);
+    }
+  }
+  function useNativeSequence() {
+    if (!state.musicLabPattern) return;
+    const resume = playing || busy;
+    if (resume) stop();
+    delete state.musicLabPattern;
+    // Finish the grid edit before the engine snapshots its scheduling state.
+    if (resume) queueMicrotask(play);
   }
   function remember() {
     history.push(project());
@@ -2310,8 +2644,8 @@ body {
       playing = true;
       startHeroAnimation();
       syncEffects(); audioReady();
-      $('play-button').innerHTML = icon('pause') + '<span>Pause</span>';
-      $('play-button').setAttribute('aria-label', 'Pause sequencer');
+      $('play-button').innerHTML = icon('stop') + '<span>Stop</span>';
+      $('play-button').setAttribute('aria-label', 'Stop sequencer');
       $('play-button').classList.add('playing');
       $('master-led').classList.add('playing');
       document.body.classList.add('is-playing');
@@ -2330,9 +2664,22 @@ body {
     $('beat-position').textContent = '1 . 1 . 1';
   }
   function setPlayhead(step) {
+    if (step >= 0 && $('follow-playhead').checked && sequencePage !== Math.floor(step / pageSize)) {
+      sequencePage = Math.floor(step / pageSize);
+      renderRows();
+    }
     if (currentStep >= 0) playheadColumns[currentStep].forEach((el) => el.classList.remove('current'));
     if (step >= 0) playheadColumns[step].forEach((el) => el.classList.add('current'));
     currentStep = step;
+  }
+  async function panic() {
+    stop();
+    await engine.dispose();
+    if (!playing && !busy && !engine.context) {
+      $('audio-status').textContent = 'SILENCED · READY TO PLAY';
+      $('status-dot').classList.remove('ready');
+    }
+    toast('All sound silenced.');
   }
 
   const wavePaths = {
@@ -2346,12 +2693,24 @@ body {
     bass: 'M1 14q3-12 6 0t6 0t6 0t6 0h6'
   };
   function renderSequenceControls() {
+    sequencePage = Math.min(sequencePage, Math.ceil(state.stepCount / pageSize) - 1);
+    document.querySelector('.sequencer').style.setProperty('--visible-steps', pageSize);
     $('sequence-length').value = state.stepCount;
-    $('sequence-page').hidden = state.stepCount === 16;
+    $('sequence-page').replaceChildren();
+    for (let page = 0; page < state.stepCount / pageSize; page++) {
+      const option = document.createElement('option'); option.value = page;
+      option.textContent = (page * pageSize + 1) + '–' + Math.min(state.stepCount, (page + 1) * pageSize);
+      $('sequence-page').append(option);
+    }
+    $('sequence-page').hidden = state.stepCount === pageSize;
     $('sequence-page').value = sequencePage;
+    const start = sequencePage * pageSize;
+    $('step-window').textContent = 'Steps ' + String(start + 1).padStart(2, '0') + '–' + String(start + pageSize).padStart(2, '0') + ' / ' + state.stepCount;
+    $('step-prev').disabled = sequencePage === 0;
+    $('step-next').disabled = start + pageSize >= state.stepCount;
     $('step-numbers').replaceChildren();
-    for (let index = 0; index < 16; index++) {
-      const step = sequencePage * 16 + index;
+    for (let index = 0; index < pageSize; index++) {
+      const step = sequencePage * pageSize + index;
       const label = document.createElement('span');
       label.className = 'step-number' + (step % 4 === 0 ? ' beat' : '') + (currentStep === step ? ' current' : '');
       label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label);
@@ -2359,6 +2718,17 @@ body {
   }
   function renderRows() {
     renderSequenceControls();
+    renderPads();
+    let received = $('received-pattern-status');
+    if (!received) {
+      received = document.createElement('div'); received.id = 'received-pattern-status'; received.className = 'received-pattern-status';
+      const label = document.createElement('span'); const button = document.createElement('button');
+      button.className = 'text-button'; button.textContent = 'Use grid';
+      button.addEventListener('click', () => { remember(); useNativeSequence(); renderRows(); persist(); });
+      received.append(label, button); document.querySelector('.sequencer-scroll').before(received);
+    }
+    received.hidden = !state.musicLabPattern;
+    received.firstElementChild.textContent = state.musicLabPattern ? 'Playing shared pattern: ' + state.musicLabPattern.pattern.name + '. Edit a step to use this grid.' : '';
     const container = $('track-rows');
     const focused = container.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null;
     container.replaceChildren();
@@ -2377,17 +2747,21 @@ body {
       row.append(nameButton);
       const steps = document.createElement('div'); steps.className = 'step-buttons'; steps.setAttribute('role', 'group'); steps.setAttribute('aria-label', pretty(track.name) + ' steps');
       track.steps.forEach((value, stepIndex) => {
-        if (Math.floor(stepIndex / 16) !== sequencePage) return;
+        if (stepIndex >= state.stepCount || Math.floor(stepIndex / pageSize) !== sequencePage) return;
         const button = document.createElement('button'); button.dataset.step = stepIndex; button.dataset.track = index;
         button.dataset.focusKey = 'step-' + index + '-' + stepIndex;
         updateStep(button, index, stepIndex);
         let holdTimer, touchStartX, touchStartY, held = false;
         const edit = (accent) => {
           remember();
+          const wasPlaying = playing || busy;
+          useNativeSequence();
           const previous = track.steps[stepIndex];
-          track.steps[stepIndex] = accent ? (previous === 2 ? 1 : 2) : (previous ? 0 : 1);
+          const mode = $('step-edit-mode').value;
+          track.steps[stepIndex] = accent ? (previous === 2 ? 1 : 2) : mode === 'erase' ? 0 : mode === 'accent' ? (previous === 2 ? 0 : 2) : (previous ? 0 : 1);
           updateStep(button, index, stepIndex); persist();
-          if (track.steps[stepIndex] && !playing) audition(track);
+          received.hidden = !state.musicLabPattern;
+          if (track.steps[stepIndex] && !wasPlaying) audition(track);
         };
         button.addEventListener('click', (event) => {
           if (held) { held = false; return; }
@@ -2406,7 +2780,7 @@ body {
           if (!delta) return;
           event.preventDefault();
           const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + state.stepCount) % state.stepCount;
-          if (Math.floor(nextStep / 16) !== sequencePage) { sequencePage = Math.floor(nextStep / 16); renderRows(); }
+          if (Math.floor(nextStep / pageSize) !== sequencePage) { sequencePage = Math.floor(nextStep / pageSize); $('follow-playhead').checked = false; renderRows(); }
           container.querySelector('[data-track="' + nextRow + '"][data-step="' + nextStep + '"]').focus();
         });
         steps.append(button);
@@ -2426,6 +2800,23 @@ body {
     playheadColumns = Array.from({ length: 32 }, () => []);
     document.querySelectorAll('[data-step]').forEach((el) => playheadColumns[Number(el.dataset.step)].push(el));
     if (focused) { const replacement = container.querySelector('[data-focus-key="' + focused + '"]'); if (replacement) replacement.focus({ preventScroll: true }); }
+  }
+  function renderPads() {
+    if (!$('voice-pads').children.length) state.tracks.forEach((_, index) => {
+      const button = document.createElement('button'); button.className = 'voice-pad'; button.dataset.pad = index;
+      button.style.setProperty('--track-color', colors[index]);
+      button.innerHTML = '<span class="pad-index">0' + (index + 1) + '</span><span class="pad-name"></span><span class="pad-source"></span>';
+      button.addEventListener('click', () => {
+        selected = index; renderRows(); renderVoice(); audition(state.tracks[index]); persist();
+      });
+      $('voice-pads').append(button);
+    });
+    Array.from($('voice-pads').children).forEach((button, index) => {
+      const track = state.tracks[index]; button.classList.toggle('selected', index === selected);
+      button.setAttribute('aria-pressed', index === selected); button.setAttribute('aria-label', 'Play ' + pretty(track.name) + ' (key ' + (index + 1) + ')');
+      button.querySelector('.pad-name').textContent = pretty(track.name);
+      button.querySelector('.pad-source').textContent = track.noise + ' noise';
+    });
   }
   function updateStep(button, row, step) {
     const value = state.tracks[row].steps[step];
@@ -2474,9 +2865,34 @@ body {
     const values = { 'body-level': synth.body.level, 'noise-level': synth.noise.level, level: track.level, pan: (track.pan + 1) / 2 };
     Array.from($('voice-knobs').children).forEach((control) => { const knob = control.querySelector('.knob'); if (knob && control.updateValue) control.updateValue(values[knob.dataset.param]); });
   }
+  const quickParameters = [['noise', 'cutoff'], ['noise', 'decay'], ['body', 'frequency'], ['noise', 'drive']];
+  function refreshQuickKnobs() {
+    const synth = window.GrainSynth.ensureTrack(state.tracks[selected]);
+    Array.from($('quick-knobs').children).forEach((control, index) => {
+      const [group, key] = quickParameters[index];
+      const descriptor = window.GrainSynth.descriptors[group].find(item => item.key === key);
+      control.updateValue(window.GrainSynth.toNormalized(synth[group][key], descriptor));
+    });
+  }
+  function renderQuickKnobs() {
+    const synth = window.GrainSynth.ensureTrack(state.tracks[selected]);
+    $('quick-knobs').replaceChildren();
+    quickParameters.forEach(([group, key]) => {
+      const descriptor = window.GrainSynth.descriptors[group].find(item => item.key === key);
+      const labels = { cutoff: 'NOISE CUTOFF', decay: 'NOISE TAIL', frequency: 'BODY PITCH', drive: 'NOISE HEAT' };
+      const control = knobControl('quick-' + key, labels[key], window.GrainSynth.toNormalized(synth[group][key], descriptor),
+        value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor), value => {
+          synth[group][key] = window.GrainSynth.fromNormalized(value, descriptor);
+          drawVoice(); renderNoiseBench(); if (voiceLab) voiceLab.render();
+        });
+      control.querySelector('.knob').title = descriptor.title;
+      control.querySelector('.knob').setAttribute('aria-label', (group === 'body' ? 'Body ' : 'Noise ') + key);
+      $('quick-knobs').append(control);
+    });
+  }
   function renderVoice() {
     const active = document.activeElement;
-    const focusedParam = ($('voice-knobs').contains(active) || $('synthesis-knobs').contains(active)) ? active.dataset.param : null;
+    const focusedParam = ['voice-knobs', 'quick-knobs', 'synthesis-knobs', 'noise-bench-knobs'].some(id => $(id).contains(active)) ? active.dataset.param : null;
     const focusedSelector = $('synthesis-selectors').contains(active) ? active.id : null;
     const track = state.tracks[selected];
     const synth = window.GrainSynth.ensureTrack(track);
@@ -2493,6 +2909,7 @@ body {
     $('voice-knobs').append(knobControl('noise-level', 'NOISE', synth.noise.level, percent, (value) => { synth.noise.level = value; refresh(); }));
     $('voice-knobs').append(knobControl('level', 'LEVEL', track.level, percent, (value) => { track.level = value; refresh(); }));
     $('voice-knobs').append(knobControl('pan', 'PAN', (track.pan + 1) / 2, (value) => Math.abs(value - .5) < .005 ? 'Center' : (value < .5 ? 'L ' : 'R ') + Math.round(Math.abs(value - .5) * 200), (value) => { track.pan = value * 2 - 1; refresh(); }));
+    renderQuickKnobs();
     document.querySelectorAll('.noise-source').forEach((button) => { const active = button.dataset.noise === track.noise; button.classList.toggle('selected', active); button.setAttribute('aria-pressed', active); });
     const source = sources.find((n) => n.id === track.noise);
     $('noise-caption').textContent = source.name + ' noise. ' + source.description;
@@ -2513,7 +2930,7 @@ body {
       const formatter = value => window.GrainSynth.format(window.GrainSynth.fromNormalized(value, descriptor), descriptor);
       const control = knobControl('bench-' + key, descriptor.label, window.GrainSynth.toNormalized(noise[key], descriptor), formatter, value => {
         noise[key] = window.GrainSynth.fromNormalized(value, descriptor);
-        drawVoice(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
+        drawVoice(); refreshQuickKnobs(); if (voiceLab) { voiceLab.render(); voiceLab.draw(); }
       });
       control.querySelector('.knob').title = descriptor.title; container.append(control);
     });
@@ -2529,6 +2946,7 @@ body {
     syncEffects();
   }
   function renderAll() {
+    $('project-name').value = state.name;
     $('tempo').value = state.bpm; $('swing').value = Math.round(state.swing * 100);
     $('swing-value').innerHTML = Math.round(state.swing * 100) + '<span>%</span>';
     const presetIndex = window.NOISE_PRESETS.findIndex((p) => p.name === state.name);
@@ -2537,6 +2955,7 @@ body {
   }
   function random() {
     remember();
+    useNativeSequence();
     state.tracks.forEach((track, row) => {
       const hidden = track.steps.slice(state.stepCount);
       track.steps = Array.from({ length: state.stepCount }, (_, index) => {
@@ -2684,26 +3103,64 @@ body {
   $('preset-select').addEventListener('change', () => {
     const preset = window.NOISE_PRESETS[Number($('preset-select').value)]; if (!preset) return;
     remember(); const wasPlaying = playing || busy; if (wasPlaying) stop();
-    state = { ...clone(preset), master: state.master, stepCount: 16 }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
+    const mode = $('preset-load-mode').value;
+    if (mode === 'sounds') {
+      state.tracks = clone(preset.tracks).map((track, index) => ({ ...track, steps: [...state.tracks[index].steps], mute: state.tracks[index].mute, solo: state.tracks[index].solo }));
+      state.drive = preset.drive; state.space = preset.space;
+    } else if (mode === 'groove') {
+      delete state.musicLabPattern;
+      banks[bank] = state.tracks.map(track => [...track.steps]);
+      state.bpm = preset.bpm; state.swing = preset.swing; state.stepCount = 16; bank = 0; sequencePage = 0;
+      state.tracks.forEach((track, index) => { track.steps = [...preset.tracks[index].steps, ...banks[0][index].slice(16)]; });
+      banks[0] = state.tracks.map(track => [...track.steps]);
+    } else {
+      state = { ...clone(preset), master: state.master, stepCount: 16 };
+      banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
+    }
     state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
-    renderAll(); persist(); toast(preset.tagline); if (wasPlaying) play();
+    renderAll(); $('preset-select').value = String(window.NOISE_PRESETS.indexOf(preset)); persist();
+    toast(mode === 'sounds' ? 'Sounds loaded. Your rhythm, banks and tempo kept.' : mode === 'groove' ? 'Groove loaded into A. Your sounds and mix kept.' : preset.tagline);
+    if (wasPlaying) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
     const next = Number(button.dataset.bank); if (next === bank) return;
+    remember(); useNativeSequence();
     banks[bank] = state.tracks.map((t) => [...t.steps]); bank = next; state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; }); renderRows(); renderBanks(); persist();
   }));
   $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((t) => [...t.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
   $('sequence-length').addEventListener('change', () => {
     const length = Number($('sequence-length').value); if (length === state.stepCount) return;
-    remember(); const resume = playing || busy; if (resume) stop(); state.stepCount = length;
+    remember(); const resume = playing || busy; if (resume) stop(); delete state.musicLabPattern; state.stepCount = length;
     if (length === 32) {
       const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
       state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
     } else sequencePage = 0;
     renderRows(); persist(); if (resume) play();
   });
-  $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared.'); });
+  function browsePage(page) {
+    sequencePage = Math.max(0, Math.min(Math.ceil(state.stepCount / pageSize) - 1, page));
+    $('follow-playhead').checked = false; renderRows();
+  }
+  $('sequence-page').addEventListener('change', () => browsePage(Number($('sequence-page').value)));
+  $('step-prev').addEventListener('click', () => browsePage(sequencePage - 1));
+  $('step-next').addEventListener('click', () => browsePage(sequencePage + 1));
+  $('follow-playhead').addEventListener('change', () => {
+    if ($('follow-playhead').checked && currentStep >= 0) { sequencePage = Math.floor(currentStep / pageSize); renderRows(); }
+  });
+  $('track-rows').addEventListener('focusin', (event) => {
+    // Editing a cell owns the page until the player explicitly follows again.
+    if (event.target.matches('.step')) $('follow-playhead').checked = false;
+  });
+  compactGrid.addEventListener('change', () => {
+    const start = sequencePage * pageSize; pageSize = compactGrid.matches ? 4 : 16;
+    sequencePage = Math.floor(start / pageSize); renderRows();
+  });
+  $('project-name').addEventListener('change', () => {
+    const name = $('project-name').value.trim().slice(0, 80);
+    if (name && name !== state.name) { remember(); state.name = name; $('preset-select').value = 'custom'; persist(); }
+    $('project-name').value = state.name;
+  });
+  $('clear-button').addEventListener('click', () => { remember(); useNativeSequence(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared. Undo brings it back.'); });
   $('random-button').addEventListener('click', random);
   $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'sizzle-' + safeName() + '.json'); toast('Project saved.'); });
@@ -2724,16 +3181,17 @@ body {
   $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) { const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); } });
   document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' }); });
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { event.preventDefault(); panic(); return; }
     if ($('help-dialog').open || event.target.matches('input,select,textarea') || event.target.isContentEditable) return;
     if (event.code === 'Space' && !event.target.matches('button,[role=slider]')) { event.preventDefault(); playing || busy ? stop() : play(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
     if (!event.ctrlKey && !event.metaKey && /^[1-8]$/.test(event.key)) { selected = Number(event.key) - 1; renderRows(); renderVoice(); audition(state.tracks[selected]); persist(); }
   });
-  window.addEventListener('pagehide', () => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} engine.stop(); });
+  window.addEventListener('pagehide', () => { clearTimeout(saveTimer); saveNow(); stop(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
-  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
-  renderAll(); drawHero(0);
+  voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); refreshQuickKnobs(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  renderAll(); drawHero(0); saveNow();
   window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
