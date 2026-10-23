@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { MODES, LEVELS, generateQuestion, isCorrect, noteName } from '../public/ear-training/music.js';
+import { createHash } from 'node:crypto';
+import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, LEVEL_CONFIGS, generateQuestion, generatePitchQuestion, getLevelDescription, isCorrect, noteName } from '../public/ear-training/music.js';
 
 function seeded(seed) {
   return () => {
@@ -16,6 +17,27 @@ assert.equal(noteName(48, false), 'C');
 assert.equal(noteName(72), 'C5');
 assert.throws(() => generateQuestion('missing'), RangeError);
 assert.throws(() => generateQuestion('intervals', 'missing'), RangeError);
+assert.deepEqual(LEVELS.map(l => l.id), ['level-1', 'level-2', 'level-3', 'level-4', 'level-5', 'level-6', 'level-7', 'level-8']);
+assert.deepEqual(LEVELS.map(l => l.number), [1, 2, 3, 4, 5, 6, 7, 8]);
+assert.deepEqual(LEVEL_MIGRATION, { beginner: 'level-3', intermediate: 'level-5', advanced: 'level-7' });
+assert.deepEqual(MODES.map(m => m.id), ['intervals', 'chords', 'progressions', 'melody', 'scales', 'rhythm', 'pitch']);
+
+// A seeded fingerprint captured before the expanded levels were introduced.
+// Legacy levels must produce the same question content, sounds, and RNG behavior.
+const legacyQuestions = [];
+const legacyRng = seeded(94571);
+for (const mode of MODES.filter(m => m.id !== 'pitch')) {
+  for (const level of LEGACY_LEVELS) {
+    for (let i = 0; i < 40; i++) legacyQuestions.push(generateQuestion(mode.id, level.id, legacyRng));
+  }
+}
+assert.equal(createHash('sha256').update(JSON.stringify(legacyQuestions)).digest('hex'), '3626423321f20be34b88fa0fd4fd95839ba8839af646e1d5cbc3d9e67b68121a');
+
+for (const mode of MODES) {
+  const behaviors = LEVEL_CONFIGS[mode.id].map(({ description, ...config }) => JSON.stringify(config));
+  assert.equal(new Set(behaviors).size, 8, `${mode.id} must have eight actual sound/coverage configurations`);
+  LEVELS.forEach(level => assert.ok(getLevelDescription(mode.id, level.id).length > 20));
+}
 
 // Independently specified auditory signatures, rather than the generator's data tables.
 const intervalDistances = { m2: 1, M2: 2, m3: 3, M3: 4, P4: 5, TT: 6, P5: 7, m6: 8, M6: 9, m7: 10, M7: 11, P8: 12 };
@@ -33,10 +55,19 @@ const scaleSignatures = {
 };
 const degreeOffsets = { I: 0, ii: 2, iii: 4, IV: 5, V: 7, vi: 9 };
 const coverage = Object.fromEntries(MODES.map(m => [m.id, new Set()]));
+const expectedChoices = {
+  intervals: [2, 3, 5, 7, 12, 12, 12, 12], chords: [2, 3, 4, 6, 8, 10, 10, 10],
+  progressions: [2, 3, 4, 5, 6, 7, 8, 8], scales: [2, 3, 4, 5, 6, 7, 8, 9],
+  pitch: [2, 2, 2, 2, 2, 2, 2, 2]
+};
+const pitchDifferences = [200, 100, 50, 25, 15, 10, 5, 2];
+const directionCoverage = new Map();
 let checked = 0;
 for (const { id: mode } of MODES) {
-  for (const { id: level } of LEVELS) {
+  const levels = mode === 'pitch' ? LEVELS : [...LEGACY_LEVELS, ...LEVELS];
+  for (const { id: level } of levels) {
     const rng = seeded(1);
+    const levelIndex = LEVELS.findIndex(l => l.id === level);
     for (let iteration = 0; iteration < 300; iteration++) {
       const q = generateQuestion(mode, level, rng);
       checked++;
@@ -51,28 +82,34 @@ for (const { id: mode } of MODES) {
         assert.ok(Number.isFinite(e.at) && e.at >= 0);
         assert.ok(Number.isFinite(e.duration) && e.duration > 0);
         assert.ok(e.notes.length > 0);
-        assert.ok(e.notes.every(n => Number.isInteger(n) && n >= 36 && n <= 96));
+        assert.ok(e.notes.every(n => Number.isFinite(n) && n >= 36 && n <= 96));
+        if (mode !== 'pitch') assert.ok(e.notes.every(Number.isInteger));
       }
       if (q.choices.length) {
         assert.equal(new Set(q.choices.map(c => c.value)).size, q.choices.length);
         assert.equal(q.choices.filter(c => c.value === q.answer).length, 1);
         assert.ok(!isCorrect(q, q.choices.find(c => c.value !== q.answer).value));
         coverage[mode].add(q.answer);
+        if (levelIndex >= 0) assert.equal(q.choices.length, expectedChoices[mode][levelIndex]);
       }
       if (mode === 'intervals') {
         const notes = q.events.flatMap(e => e.notes);
         assert.equal(Math.abs(notes[0] - notes[1]), intervalDistances[q.answer]);
         if (q.context.includes('descending')) assert.ok(notes[1] < notes[0]);
+        if (q.context.includes('ascending')) assert.ok(notes[1] > notes[0]);
+        const direction = q.events.length === 1 ? 'simultaneous' : notes[1] < notes[0] ? 'descending' : 'ascending';
+        const directions = directionCoverage.get(level) || new Set(); directions.add(direction); directionCoverage.set(level, directions);
       } else if (mode === 'chords') {
         const notes = q.events[0].notes;
         const target = pc(notes);
         const equivalent = Array.from({ length: 12 }, (_, root) => root).some(root =>
           JSON.stringify(pc(chordSignatures[q.answer].map(n => n + root))) === JSON.stringify(target));
         assert.ok(equivalent, `${q.answer} must match its independent pitch-class signature`);
-        if (level !== 'advanced' || q.answer.startsWith('sus')) assert.deepEqual(relative(notes), chordSignatures[q.answer]);
+        if ((q.levelConfig?.maxInversion ?? (level === 'advanced' ? 3 : 0)) === 0 || q.answer.startsWith('sus')) assert.deepEqual(relative(notes), chordSignatures[q.answer]);
       } else if (mode === 'progressions') {
         assert.equal(q.events.length, 4);
-        assert.equal(q.events.at(-1).at, 2.7);
+        assert.ok(Math.abs(q.events.at(-1).at - (q.levelConfig?.gap || .9) * 3) < 1e-9);
+        assert.ok(q.events.every(e => e.duration === q.events[0].duration));
         const tonic = q.reference[0].notes[0];
         const expected = q.answer.split('-').map(numeral => degreeOffsets[numeral]);
         assert.deepEqual(q.events.map(e => ((e.notes[0] - tonic) % 12 + 12) % 12), expected);
@@ -84,11 +121,17 @@ for (const { id: mode } of MODES) {
         assert.ok(q.answer.every(n => q.keyboard.some(k => k.midi === n)));
         assert.ok(!isCorrect(q, q.answer.map(n => n + 12)), 'octave-shifted melody must not count as exact reconstruction');
         assert.ok(!isCorrect(q, q.answer.slice(1)), 'partial reconstruction cannot be correct');
+        assert.ok(q.keyboard.length <= 8);
+        if (levelIndex >= 0) {
+          assert.equal(q.inputLength, levelIndex + 2);
+          assert.equal(q.keyboard.length, [3, 4, 5, 5, 6, 7, 8, 8][levelIndex]);
+        }
       } else if (mode === 'scales') {
         const signature = scaleSignatures[q.answer];
         const pitches = q.events.map(e => e.notes[0]);
         assert.deepEqual(relative(pitches.slice(0, signature.length)), signature);
-        assert.deepEqual(pitches.slice(signature.length), pitches.slice(0, signature.length - 1).reverse());
+        if (q.levelConfig?.ascendingOnly) assert.equal(pitches.length, signature.length);
+        else assert.deepEqual(pitches.slice(signature.length), pitches.slice(0, signature.length - 1).reverse());
       } else if (mode === 'rhythm') {
         assert.equal(q.answer.length, q.rhythmSteps);
         assert.equal(q.reference.length, 4);
@@ -99,6 +142,28 @@ for (const { id: mode } of MODES) {
         assert.deepEqual(hitSteps, q.answer.flatMap((on, i) => on ? [i] : []));
         assert.ok(!isCorrect(q, q.answer.map(on => !on)));
         coverage[mode].add(q.answer.join(''));
+        if (levelIndex >= 0) {
+          assert.equal(q.rhythmSteps, levelIndex < 5 ? 8 : 16);
+          assert.ok(Math.abs(beat - 60 / [72, 80, 88, 96, 108, 84, 96, 116][levelIndex]) < 1e-9);
+          const hits = q.answer.filter(Boolean).length;
+          assert.ok(hits >= q.levelConfig.minHits && hits <= q.levelConfig.maxHits);
+          if (q.levelConfig.anchor) assert.ok(q.answer[0]);
+          if (levelIndex === 0) assert.ok(q.answer.every((on, i) => !on || i % 2 === 0));
+          if (levelIndex === 1 || levelIndex === 2) assert.ok([0, 2, 4, 6].every(i => q.answer[i]));
+          if (levelIndex === 5) assert.equal(q.answer.filter((on, i) => on && i % 2 !== 0).length, 1);
+        }
+      } else if (mode === 'pitch') {
+        assert.equal(q.pitchCents, pitchDifferences[levelIndex]);
+        assert.equal(q.events.length, 2);
+        assert.equal(q.events[0].duration, q.events[1].duration);
+        assert.equal(q.events[0].velocity, q.events[1].velocity);
+        assert.equal(q.events[0].voice, q.events[1].voice);
+        const signedSemitones = q.events[1].notes[0] - q.events[0].notes[0];
+        assert.ok(Math.abs(Math.abs(signedSemitones) * 100 - q.pitchCents) < 1e-9);
+        assert.equal(q.answer, signedSemitones > 0 ? 'higher' : 'lower');
+        const frequencyRatio = 2 ** (q.events[1].notes[0] / 12) / 2 ** (q.events[0].notes[0] / 12);
+        assert.ok(Math.abs(1200 * Math.log2(frequencyRatio) - Math.sign(signedSemitones) * q.pitchCents) < 1e-8);
+        assert.ok(!q.context.includes(String(q.pitchCents)), 'pre-answer context must not expose the exact pitch difference');
       }
     }
   }
@@ -108,4 +173,17 @@ assert.equal(coverage.chords.size, 10);
 assert.equal(coverage.progressions.size, 8);
 assert.equal(coverage.scales.size, 9);
 assert.ok(coverage.rhythm.size > 50);
-console.log(`PASS: ${checked} seeded questions; musical signatures, ranges, answer pools, rhythm timing, exact reconstruction, and full content coverage.`);
+assert.equal(coverage.pitch.size, 2);
+assert.deepEqual([...directionCoverage.get('level-6')].sort(), ['ascending', 'descending']);
+assert.deepEqual([...directionCoverage.get('level-7')].sort(), ['ascending', 'descending', 'simultaneous']);
+assert.deepEqual([...directionCoverage.get('level-8')], ['simultaneous']);
+for (const cents of [-10, 0, 1, 2, 2.5, 5, 25, 200, 999, undefined, Infinity, 'bad']) {
+  for (const sign of [.25, .75]) {
+    const q = generatePitchQuestion(cents, () => sign);
+    assert.equal(q.mode, 'pitch'); assert.equal(q.level, 'adaptive');
+    assert.ok(q.pitchCents >= 2 && q.pitchCents <= 200);
+    assert.ok(isCorrect(q, sign < .5 ? 'lower' : 'higher'));
+    assert.ok(Math.abs(Math.abs(q.events[1].notes[0] - q.events[0].notes[0]) * 100 - q.pitchCents) < 1e-9);
+  }
+}
+console.log(`PASS: ${checked} seeded questions across 56 graduated configurations and 18 legacy configurations; preserved legacy fingerprint, independent musical signatures, fractional-cent pitch accuracy, ranges, answer pools, rhythm timing, and exact reconstruction.`);
