@@ -59,7 +59,9 @@
     "check:loom-service": "node loom/service-schema-checks.cjs && node loom/service-engine-checks.cjs && node loom/service-note-checks.cjs && node loom/service-capture-checks.cjs && node loom/service-midi-checks.cjs && node loom/service-controller-checks.cjs",
     "check:loom-service-browser": "node loom/service-browser-checks.cjs",
     "lady-supine:build": "npm --prefix lady-supine run build && node scripts/sync-lady-supine.mjs",
-    "lady-supine:sync": "node scripts/sync-lady-supine.mjs"
+    "lady-supine:sync": "node scripts/sync-lady-supine.mjs",
+    "ear-training:sync": "node scripts/sync-ear-training.mjs",
+    "check:ear-training": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-audio.mjs && node scripts/check-ear-training.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b100e">
+  <meta name="description" content="Train your musical ear. Six focused listening exercises, a playable keyboard, and progress that stays on your device. A free, terminal-inspired ear training lab.">
+  <title>Overtone — ear training lab</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to practice</a>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Overtone home"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span>OVERTONE<span class="brand-sub">EAR TRAINING LAB</span></span></a>
+      <nav class="top-nav" aria-label="Main navigation"><button data-page="practice" aria-current="page">Practice</button><button data-page="progress">Progress</button><button data-page="guide">Field guide</button></nav>
+      <span class="local-status"><span class="status-dot"></span><span id="storage-status">LOCAL / PRIVATE</span></span>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <section id="page-practice" class="page">
+        <div class="intro"><div><p class="eyebrow"><span class="accent">~/</span> THE LISTENING ROOM <span class="intro-version">VOL. 001</span></p><h1>A better ear.<br><span>One listen at a time.</span></h1><p class="intro-copy">Find the distance. Feel the harmony. Remember the phrase.<br> Small sessions for a more musical mind.</p></div><div class="intro-terminal" aria-hidden="true"><div><span class="accent">&gt;</span> initialize listening</div><div><span class="accent">✓</span> six ways to tune in</div><div><span class="accent">✓</span> no perfect pitch required</div><div class="terminal-ready"><span class="status-dot"></span> ready when you are<span class="cursor">_</span></div></div></div>
+
+        <div class="workspace">
+          <aside class="module-sidebar" aria-label="Exercises"><div class="panel-label"><span>01 / SELECT A MODULE</span><span>06</span></div><nav id="mode-nav" class="mode-nav" aria-label="Training modules"></nav><div class="sidebar-note"><span class="accent">↳</span><p>Listen as often as you need.<br>Curiosity beats a perfect score.</p></div><a class="clear-link" href="../cognitive/">Inspired by Clear <span>↗</span></a></aside>
+
+          <div class="training-column">
+            <section class="training-panel" aria-labelledby="exercise-title"><div class="exercise-header"><div><p class="eyebrow" id="exercise-tag">PITCH / RELATIVE LISTENING</p><h2 id="exercise-title">Interval identification</h2></div><span class="module-number" id="module-number">01</span></div>
+              <div class="settings-row"><label>LEVEL <select id="level" aria-label="Difficulty"><option value="beginner">Foundation</option><option value="intermediate">Developing</option><option value="advanced">Deep listening</option></select></label><label>VOICE <select id="timbre" aria-label="Instrument voice"><option value="warm">Warm keys</option><option value="piano">Soft piano</option><option value="sine">Pure sine</option></select></label><label class="volume-label">VOLUME <input id="volume" type="range" min="0" max="100" value="65" aria-label="Playback volume"></label></div>
+
+              <div id="question-area">
+                <div class="signal-stage"><div class="signal-topline"><span id="question-counter">QUESTION 01 / 10</span><span id="audio-status"><span class="status-dot"></span> AWAITING PLAYBACK</span></div><div class="waveform" id="waveform" aria-hidden="true"></div><div class="signal-caption"><span>LISTEN CLOSELY</span><span>TUNING: A4 = 440 HZ</span></div><h3 id="question-prompt">What is the distance between these notes?</h3><p id="question-context" class="question-context"></p><div class="transport"><button id="play" class="primary play-button"><span aria-hidden="true">▶</span> Play signal <kbd>SPACE</kbd></button><button id="reference" class="secondary" hidden>Play tonic</button><button id="stop" class="quiet" disabled>Stop</button></div><p class="play-hint" id="play-hint">Press play to begin. Replays are always free.</p></div>
+                <div class="response-section"><div class="response-heading"><span class="panel-label" id="response-label">02 / IDENTIFY THE SOUND</span><span class="muted small" id="answer-hint">Listen first, then choose.</span></div><div id="answer-area"></div></div>
+                <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
+                <div class="question-actions"><button id="reveal" class="text-button">Reveal & learn <span aria-hidden="true">↗</span></button><span class="muted small" id="replay-count">UNLIMITED REPLAYS</span><button id="next" class="primary" hidden>Next signal <span aria-hidden="true">→</span></button></div>
+              </div>
+              <div id="set-summary" class="set-summary" hidden></div>
+            </section>
+            <div class="session-strip"><div><span class="eyebrow">THIS SET</span><strong id="session-score">0<span> / 0</span></strong><small>correct / answered</small></div><div><span class="eyebrow">ACCURACY</span><strong id="session-accuracy">—</strong><small>first attempts only</small></div><div><span class="eyebrow">STREAK</span><strong id="session-streak">0<span> notes</span></strong><small>consecutive correct</small></div><div class="goal-stat"><span class="eyebrow">A LITTLE, OFTEN</span><div id="goal-dots" class="goal-dots" aria-label="Set progress"></div><small id="goal-label">10 signals. Your own pace.</small></div></div>
+          </div>
+
+          <aside class="practice-notes" aria-label="Listening tips"><div class="panel-label">LISTENING NOTES <span>↙</span></div><div class="note-symbol" id="note-symbol" aria-hidden="true">↗</div><h3 id="lesson-title">Hear the space.</h3><p id="lesson-text"></p><div class="note-divider"></div><p class="eyebrow">YOUR PRACTICE LOOP</p><ol class="practice-loop"><li><span>01</span> Listen without guessing.</li><li><span>02</span> Sing it back, quietly.</li><li><span>03</span> Commit. Compare. Repeat.</li></ol><div class="keyboard-tip"><kbd>SPACE</kbd><span>play / replay</span><kbd>1–9</kbd><span>choose an answer</span><kbd>ENTER</kbd><span>next / check</span></div><p class="headphone-note"><span aria-hidden="true">◉</span> A quiet room helps.<br>Start at a comfortable volume.</p></aside>
+        </div>
+      </section>
+
+      <section id="page-progress" class="page secondary-page" hidden><div class="page-heading"><p class="eyebrow">~/ YOUR LISTENING LOG</p><h1>Keep showing up.</h1><p class="muted">A record of your first attempts. Saved in this browser.</p></div><div id="progress-summary" class="progress-summary"></div><div class="progress-controls"><label>MODULE <select id="progress-mode"><option value="all">All modules</option></select></label><label>LEVEL <select id="progress-level"><option value="all">All levels</option><option value="beginner">Foundation</option><option value="intermediate">Developing</option><option value="advanced">Deep listening</option></select></label><button id="export-progress" class="secondary">Export backup ↓</button><label class="import-button secondary">Import backup ↑<input id="import-progress" type="file" accept="application/json,.json"></label></div><div id="progress-content"></div><p class="muted small progress-footnote">Accuracy uses correct ÷ answered. Revealed questions are logged separately. Compare the same module and level to track your practice. Up to 2,000 recent questions are kept.</p></section>
+
+      <section id="page-guide" class="page secondary-page" hidden><div class="page-heading"><p class="eyebrow">~/ A FIELD GUIDE TO LISTENING</p><h1>Less theory.<br>More recognition.</h1><p class="muted">A few landmarks to help you find your way by ear.</p></div><div id="guide-grid" class="guide-grid"></div><section class="reference-lab"><div><p class="eyebrow">THE REFERENCE DESK</p><h2>A little room to play.</h2><p class="muted">Explore the octave. Sing a note, play it back, and notice the space between pitches.</p></div><div id="free-keyboard" class="free-keyboard"></div><div class="guide-principles"><p><strong>Relative pitch is a skill.</strong> This lab asks how notes relate to each other. You do not need to name a note from silence.</p><p><strong>Make it repeatable.</strong> Try a ten-question set at the same level. Sing the answer before checking, and revisit sounds you confuse.</p><p><strong>Listen before looking.</strong> Answers stay hidden until you commit or reveal. Replaying never lowers your score; a reveal is logged as a skip.</p><p><strong>Entirely in your browser.</strong> Audio is synthesized on your device. No microphone, account, tracking, or external audio files. Progress is local; export a backup to move it.</p></div></section></section>
+    </main>
+    <footer class="footer"><span><span class="accent">OVERTONE</span> <span class="footer-separator">/</span> AN EXERCISE IN LISTENING.</span><div><a href="../cognitive/">Clear ↗</a><a href="../music/">Kitchen ↗</a><a href="../">Sidequest ↗</a><span>BUILT TO BE HEARD.</span></div></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="noscript">Enable JavaScript to generate exercises and play audio.</p></noscript>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
