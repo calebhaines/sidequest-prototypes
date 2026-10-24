@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, LEVEL_CONFIGS, generateQuestion, generatePitchQuestion, getLevelDescription, isCorrect, noteName } from '../public/ear-training/music.js';
+import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, LEVEL_CONFIGS, generateQuestion, generatePitchQuestion, getLevelDescription, isCorrect, noteName, spellIntervalNotes, thirdComparisonEvents } from '../public/ear-training/music.js';
 
 function seeded(seed) {
   return () => {
@@ -22,8 +22,9 @@ assert.deepEqual(LEVELS.map(l => l.number), [1, 2, 3, 4, 5, 6, 7, 8]);
 assert.deepEqual(LEVEL_MIGRATION, { beginner: 'level-3', intermediate: 'level-5', advanced: 'level-7' });
 assert.deepEqual(MODES.map(m => m.id), ['intervals', 'chords', 'progressions', 'melody', 'scales', 'rhythm', 'pitch']);
 
-// A seeded fingerprint captured before the expanded levels were introduced.
-// Legacy levels must produce the same question content, sounds, and RNG behavior.
+// The full content fingerprint intentionally changes for correct interval note
+// spellings. The independent sound/answer baseline was captured from git HEAD
+// e17e782 before this change and must remain identical, including RNG behavior.
 const legacyQuestions = [];
 const legacyRng = seeded(94571);
 for (const mode of MODES.filter(m => m.id !== 'pitch')) {
@@ -31,7 +32,9 @@ for (const mode of MODES.filter(m => m.id !== 'pitch')) {
     for (let i = 0; i < 40; i++) legacyQuestions.push(generateQuestion(mode.id, level.id, legacyRng));
   }
 }
-assert.equal(createHash('sha256').update(JSON.stringify(legacyQuestions)).digest('hex'), '3626423321f20be34b88fa0fd4fd95839ba8839af646e1d5cbc3d9e67b68121a');
+assert.equal(createHash('sha256').update(JSON.stringify(legacyQuestions)).digest('hex'), '0146a7d92021614bb68cd7bd7e86d53da9edadb46e3dd3ee542c97df5f4e8092');
+const legacySoundsAndAnswers = legacyQuestions.map(q => ({mode:q.mode, level:q.level, answer:q.answer, events:q.events, reference:q.reference}));
+assert.equal(createHash('sha256').update(JSON.stringify(legacySoundsAndAnswers)).digest('hex'), 'a0ce7e31a6fec8d7d47840656939853e8b3133ff9f3c09c17da4991c911e6888');
 
 for (const mode of MODES) {
   const behaviors = LEVEL_CONFIGS[mode.id].map(({ description, ...config }) => JSON.stringify(config));
@@ -41,6 +44,43 @@ for (const mode of MODES) {
 
 // Independently specified auditory signatures, rather than the generator's data tables.
 const intervalDistances = { m2: 1, M2: 2, m3: 3, M3: 4, P4: 5, TT: 6, P5: 7, m6: 8, M6: 9, m7: 10, M7: 11, P8: 12 };
+const intervalLetterSteps = { m2: 1, M2: 1, m3: 2, M3: 2, P4: 3, TT: 3, P5: 4, m6: 5, M6: 5, m7: 6, M7: 6, P8: 7 };
+const naturalNotes = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+function readSpelling(name) {
+  const match = /^([A-G])([♯♭]*)(-?\d+)$/.exec(name);
+  assert.ok(match, `valid note spelling: ${name}`);
+  const accidental = [...match[2]].reduce((total, sign) => total + (sign === '♯' ? 1 : -1), 0);
+  return {
+    midi:(Number(match[3])+1)*12+naturalNotes[match[1]]+accidental,
+    degree:Number(match[3])*7+'CDEFGAB'.indexOf(match[1]), accidental
+  };
+}
+for (const [first, second, quality, names] of [
+  [60,63,'m3',['C4','E♭4']], [60,64,'M3',['C4','E4']],
+  [60,57,'m3',['C4','A3']], [60,56,'M3',['C4','A♭3']],
+  [61,64,'m3',['C♯4','E4']], [61,65,'M3',['D♭4','F4']],
+  [63,67,'M3',['E♭4','G4']], [66,69,'m3',['F♯4','A4']],
+  [71,74,'m3',['B4','D5']], [71,75,'M3',['B4','D♯5']],
+  [60,66,'TT',['C4','F♯4']], [60,54,'TT',['C4','G♭3']]
+]) assert.deepEqual(spellIntervalNotes(first,second,quality), names);
+let spellingCases = 0;
+for (const [quality, semitones] of Object.entries(intervalDistances)) {
+  for (let first = 24; first <= 96; first++) {
+    for (const direction of [-1,1]) {
+      const second = first + direction*semitones;
+      const names = spellIntervalNotes(first,second,quality).map(readSpelling);
+      assert.equal(names[0].midi,first);
+      assert.equal(names[1].midi,second);
+      assert.equal(names[1].degree-names[0].degree,direction*intervalLetterSteps[quality]);
+      assert.ok(names.every(n => Math.abs(n.accidental) <= 1), 'choose an enharmonic root rather than require double accidentals');
+      spellingCases++;
+    }
+  }
+}
+assert.throws(() => spellIntervalNotes(60,64,'m3'),RangeError);
+assert.throws(() => spellIntervalNotes(60.1,63.1,'m3'),RangeError);
+assert.throws(() => thirdComparisonEvents({mode:'chords',events:[]}),RangeError);
+assert.throws(() => thirdComparisonEvents(generateQuestion('intervals','level-3'),'P5'),RangeError);
 const chordSignatures = {
   major: [0, 4, 7], minor: [0, 3, 7], diminished: [0, 3, 6], augmented: [0, 4, 8],
   sus2: [0, 2, 7], sus4: [0, 5, 7], dominant7: [0, 4, 7, 10], major7: [0, 4, 7, 11],
@@ -99,6 +139,23 @@ for (const { id: mode } of MODES) {
         if (q.context.includes('ascending')) assert.ok(notes[1] > notes[0]);
         const direction = q.events.length === 1 ? 'simultaneous' : notes[1] < notes[0] ? 'descending' : 'ascending';
         const directions = directionCoverage.get(level) || new Set(); directions.add(direction); directionCoverage.set(level, directions);
+        const spelling = spellIntervalNotes(notes[0],notes[1],q.answer);
+        assert.ok(q.explanation.includes(`notes were ${spelling[0]} and ${spelling[1]}`));
+        const original = JSON.stringify(q);
+        for (const quality of ['m3','M3']) {
+          const comparison = thirdComparisonEvents(q,quality);
+          assert.equal(comparison.length,q.events.length);
+          const comparedNotes = comparison.flatMap(e => e.notes);
+          assert.equal(comparedNotes[0],notes[0], 'comparison must start on the exact question pitch');
+          assert.equal(comparedNotes[1]-comparedNotes[0],Math.sign(notes[1]-notes[0])*(quality==='m3'?3:4));
+          comparison.forEach((e,i) => {
+            assert.notEqual(e,q.events[i]);
+            assert.notEqual(e.notes,q.events[i].notes);
+            assert.deepEqual({...e,notes:undefined},{...q.events[i],notes:undefined},'comparison must preserve timing, duration, voice, and velocity');
+          });
+          assert.equal(JSON.stringify(q),original,'comparison must not mutate question or answer');
+        }
+        assert.deepEqual(thirdComparisonEvents(q),thirdComparisonEvents(q,'m3'));
       } else if (mode === 'chords') {
         const notes = q.events[0].notes;
         const target = pc(notes);
@@ -186,4 +243,4 @@ for (const cents of [-10, 0, 1, 2, 2.5, 5, 25, 200, 999, undefined, Infinity, 'b
     assert.ok(Math.abs(Math.abs(q.events[1].notes[0] - q.events[0].notes[0]) * 100 - q.pitchCents) < 1e-9);
   }
 }
-console.log(`PASS: ${checked} seeded questions across 56 graduated configurations and 18 legacy configurations; preserved legacy fingerprint, independent musical signatures, fractional-cent pitch accuracy, ranges, answer pools, rhythm timing, and exact reconstruction.`);
+console.log(`PASS: ${checked} seeded questions across 56 graduated configurations and 18 legacy configurations; ${spellingCases} exhaustive interval spellings, same-root third comparisons, unchanged legacy sound/answer fingerprint, independent musical signatures, fractional-cent pitch accuracy, ranges, answer pools, rhythm timing, and exact reconstruction.`);

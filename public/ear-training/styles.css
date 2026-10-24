@@ -30,3 +30,6 @@
 @media(max-width:800px){#level-description{font-size:10px}}
 @media(max-width:340px){#level-description{font-size:9px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Same-root reference sounds after an interval answer. */
+.interval-comparison{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.interval-comparison .input-actions{margin-bottom:0}.interval-comparison button{white-space:normal;line-height:1.5}

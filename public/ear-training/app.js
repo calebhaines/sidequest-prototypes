@@ -1,6 +1,6 @@
-import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, isCorrect, noteName } from './music.js?v=2';
-import { AudioEngine } from './audio.js?v=2';
-import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=2';
+import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, thirdComparisonEvents, isCorrect, noteName } from './music.js?v=3';
+import { AudioEngine } from './audio.js?v=3';
+import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=3';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -165,6 +165,7 @@ function updatePlayback() {
   $('#play').disabled = state.busy || Boolean(state.test && state.heard);
   $('#stop').disabled = !state.busy;
   $('#reference').disabled = state.busy;
+  $$('.interval-comparison button').forEach(button => { button.disabled = state.busy; });
   if (!state.busy) {
     $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.heard ? 'READY FOR YOUR ANSWER' : 'AWAITING PLAYBACK'}`;
     if (state.answered) $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.test ? 'RESPONSE RECORDED' : 'SIGNAL DECODED'}`;
@@ -285,6 +286,7 @@ function newQuestion() {
   $('#question-area').hidden = false;
   $('#set-summary').hidden = true;
   $('#feedback').hidden = true;
+  $('#feedback').replaceChildren();
   $('#next').hidden = true;
   $('#reveal').hidden = Boolean(state.test);
   updateTestControls();
@@ -343,8 +345,9 @@ function submit(response, revealed=false) {
     detail = `<p class="feedback-detail">${matching} of ${q.answer.length} ${q.mode === 'melody' ? 'notes in the right position' : 'cells matched'}.</p>`;
   }
   const sequence = q.mode === 'melody' ? `<div class="correct-sequence" aria-label="Correct melody">${q.answer.map(n => `<span>${escape(melodyLabel(n))}</span>`).join('')}</div>` : q.mode === 'rhythm' ? `<div class="correct-sequence rhythm-solution" aria-label="Correct rhythm">${q.answer.map((hit,i) => `<span class="${hit ? 'hit' : ''}"><small>${i+1}</small>${hit ? '●' : '·'}</span>`).join('')}</div>` : '';
+  const comparison = q.mode === 'intervals' ? '<div class="interval-comparison"><p class="small">Compare thirds using this question’s starting note and playback style. One semitone is 100 cents.</p><div class="input-actions"><button id="compare-minor-third" class="secondary">▶ Minor third · 3 semitones</button><button id="compare-major-third" class="secondary">▶ Major third · 4 semitones</button></div></div>' : '';
   $('#feedback').className = `feedback ${outcome}`;
-  $('#feedback').innerHTML = `<h4><span aria-hidden="true">${revealed ? '↗' : correct ? '✓' : '↳'}</span> ${revealed ? 'A sound to remember.' : correct ? 'You heard it.' : 'Keep this one in your ear.'}</h4><p class="feedback-answer">${escape(q.answerLabel)}</p>${sequence}${detail}<p>${escape(q.explanation)}</p><p class="small muted">${revealed ? 'Revealed / saved as a skip. Accuracy unchanged.' : 'First attempt saved. Replay to connect the sound with its name.'}</p>`;
+  $('#feedback').innerHTML = `<h4><span aria-hidden="true">${revealed ? '↗' : correct ? '✓' : '↳'}</span> ${revealed ? 'A sound to remember.' : correct ? 'You heard it.' : 'Keep this one in your ear.'}</h4><p class="feedback-answer">${escape(q.answerLabel)}</p>${sequence}${detail}<p>${escape(q.explanation)}</p>${comparison}<p class="small muted">${revealed ? 'Revealed / saved as a skip. Accuracy unchanged.' : 'First attempt saved. Replay to connect the sound with its name.'}</p>`;
   $('#feedback').hidden = false;
   $('#reveal').hidden = true;
   $('#next').hidden = false;
@@ -451,7 +454,7 @@ function renderPitchHistory(mode) {
 }
 
 const guideExamples = {
-  intervals:['Distance, not pitch names.','A perfect fifth spans seven semitones. The same distance keeps its identity when the starting note changes. The eight levels add interval types, descending notes, simultaneous notes, and shorter presentations.','P5 → 7 semitones'],
+  intervals:['Distance, not pitch names.','A minor third spans 3 semitones (300 cents); a major third spans 4 (400 cents). From C, these are C–E♭ and C–E. Descending examples keep the same distance: C down to A is a minor third. After answering, compare both thirds from the same starting note. Higher levels add descending and simultaneous notes.','m3: C → E♭ · M3: C → E'],
   chords:['One root. Many colors.','Major uses a major third and perfect fifth; minor lowers the third by a semitone. Diminished and augmented change the fifth. Higher levels add suspended and seventh chords, then inversions.','MAJOR [0, 4, 7] · MINOR [0, 3, 7]'],
   progressions:['Give every chord a home.','Roman numerals describe chords relative to a major key: I is home, IV and V lead away, and vi is the relative minor. A tonic reference plays before each four-chord progression.','I → V → vi → IV'],
   melody:['Shape, then detail.','Listen for repetition and direction, then place the exact pitches on the keys. Every slot is one note; octaves matter. Play your phrase to compare. The key and starting reference are given.','LISTEN → SING → REBUILD'],
@@ -486,6 +489,11 @@ document.addEventListener('click', e => {
     if (!events.length) { notify('This grid is all rests. Add a hit to hear your rhythm.'); return; }
     performAudio(combinedEvents(q.reference, fullBar(events, q), q.mode === 'rhythm' ? 0 : 0.45), {message:'PLAYING YOUR ANSWER'});
   } else if (button.id === 'play') playSignal();
+  else if (button.id === 'compare-minor-third' || button.id === 'compare-major-third') {
+    if (!state.answered || state.question.mode !== 'intervals' || state.busy) return;
+    const quality = button.id === 'compare-minor-third' ? 'm3' : 'M3';
+    performAudio(thirdComparisonEvents(state.question, quality), {message:quality === 'm3' ? 'MINOR THIRD / 3 SEMITONES' : 'MAJOR THIRD / 4 SEMITONES'});
+  }
   else if (button.id === 'start-pitch-test' || button.id === 'retake-pitch-test') startPitchTest();
   else if (button.id === 'end-pitch-test' || button.id === 'fixed-pitch-practice') { endPitchTest(); newQuestion(); $('#play').focus(); }
   else if (button.id === 'stop') { stopPlayback(); renderAnswer(); }

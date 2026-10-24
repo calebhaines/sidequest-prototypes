@@ -39,6 +39,56 @@ export const INTERVALS = [
   { value: 'P8', label: 'Octave', semitones: 12 }
 ];
 
+const NATURAL_PITCHES = [0, 2, 4, 5, 7, 9, 11];
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const INTERVAL_LETTER_STEPS = { m2: 1, M2: 1, m3: 2, M3: 2, P4: 3, TT: 3, P5: 4, m6: 5, M6: 5, m7: 6, M7: 6, P8: 7 };
+// Alternative names for each starting pitch. Prefer familiar flats where the
+// interval permits them, then choose the spelling with the simplest ending note.
+const ROOT_SPELLINGS = [
+  [[0, 0]], [[1, -1], [0, 1]], [[1, 0]], [[2, -1], [1, 1]],
+  [[2, 0]], [[3, 0]], [[3, 1], [4, -1]], [[4, 0]],
+  [[5, -1], [4, 1]], [[5, 0]], [[6, -1], [5, 1]], [[6, 0]]
+];
+
+/** Spell a chromatic interval with the letter distance its name requires.
+ * The tritone is spelled as an augmented fourth. MIDI pitches are unchanged.
+ */
+export function spellIntervalNotes(firstMidi, secondMidi, intervalId) {
+  const interval = INTERVALS.find(item => item.value === intervalId);
+  if (!interval || !Number.isInteger(firstMidi) || !Number.isInteger(secondMidi)
+    || Math.abs(secondMidi - firstMidi) !== interval.semitones) {
+    throw new RangeError('Interval spelling requires two matching integer MIDI pitches and an interval id.');
+  }
+  const direction = Math.sign(secondMidi - firstMidi);
+  const octave = Math.floor(firstMidi / 12) - 1;
+  const pitchClass = ((firstMidi % 12) + 12) % 12;
+  let best;
+  for (const [letter, accidental] of ROOT_SPELLINGS[pitchClass]) {
+    const secondDegree = octave * 7 + letter + direction * INTERVAL_LETTER_STEPS[intervalId];
+    const secondOctave = Math.floor(secondDegree / 7);
+    const secondLetter = ((secondDegree % 7) + 7) % 7;
+    const secondAccidental = secondMidi - ((secondOctave + 1) * 12 + NATURAL_PITCHES[secondLetter]);
+    const complexity = Math.abs(accidental) + Math.abs(secondAccidental) + (Math.abs(secondAccidental) > 1 ? 100 : 0);
+    if (!best || complexity < best.complexity) best = { complexity, letter, accidental, secondLetter, secondAccidental, secondOctave };
+  }
+  const format = (letter, accidental, octave) => LETTERS[letter]
+    + (accidental < 0 ? '♭'.repeat(-accidental) : '♯'.repeat(accidental)) + octave;
+  return [format(best.letter, best.accidental, octave), format(best.secondLetter, best.secondAccidental, best.secondOctave)];
+}
+
+/** A third comparison keeps the question's first pitch and presentation intact. */
+export function thirdComparisonEvents(question, quality = 'm3') {
+  if (question?.mode !== 'intervals' || !['m3', 'M3'].includes(quality)
+    || !Array.isArray(question.events) || question.events.flatMap(e => e.notes || []).length !== 2) {
+    throw new RangeError('Third comparisons require an interval question and m3 or M3 quality.');
+  }
+  const pitches = question.events.flatMap(e => e.notes);
+  if (!pitches.every(Number.isFinite) || pitches[0] === pitches[1]) throw new RangeError('Invalid interval comparison pitches.');
+  const second = pitches[0] + Math.sign(pitches[1] - pitches[0]) * (quality === 'm3' ? 3 : 4);
+  let noteIndex = 0;
+  return question.events.map(e => ({ ...e, notes: e.notes.map(midi => noteIndex++ === 1 ? second : midi) }));
+}
+
 export const CHORDS = [
   { value: 'major', label: 'Major', notes: [0, 4, 7], hint: 'a major third and a perfect fifth' },
   { value: 'minor', label: 'Minor', notes: [0, 3, 7], hint: 'a minor third and a perfect fifth' },
@@ -101,11 +151,12 @@ function intervalQuestion(level, rng) {
   const direction = level === 'advanced' ? pick(['ascending', 'descending', 'simultaneous'], rng) : 'ascending';
   const root = integer(55, 67, rng);
   const second = root + (direction === 'descending' ? -interval.semitones : interval.semitones);
+  const [firstName, secondName] = spellIntervalNotes(root, second, interval.value);
   return {
     prompt: 'Which interval do you hear?', context: `Two notes · ${direction} · identify their distance`,
     answer: interval.value, answerLabel: interval.label, choices: choices(pool),
     events: direction === 'simultaneous' ? [event(0, 1.1, [root, second])] : [event(0, .55, [root]), event(.72, .75, [second])],
-    explanation: `${interval.label}: ${interval.semitones} semitone${interval.semitones === 1 ? '' : 's'}. The notes were ${noteName(root)} and ${noteName(second)}${direction === 'simultaneous' ? ', played together' : `, played ${direction}`}.`
+    explanation: `${interval.label}: ${interval.semitones} semitone${interval.semitones === 1 ? '' : 's'}. The notes were ${firstName} and ${secondName}${direction === 'simultaneous' ? ', played together' : `, played ${direction}`}.`
   };
 }
 
@@ -292,11 +343,12 @@ function graduatedInterval(c, rng) {
   const direction = pick(c.directions, rng);
   const root = integer(c.rootMin, c.rootMax, rng);
   const second = root + (direction === 'descending' ? -interval.semitones : interval.semitones);
+  const [firstName, secondName] = spellIntervalNotes(root, second, interval.value);
   return {
     prompt: 'Which interval do you hear?', context: `Two notes · ${direction} · identify their distance`,
     answer: interval.value, answerLabel: interval.label, choices: choices(pool),
     events: direction === 'simultaneous' ? [event(0, c.duration, [root, second])] : [event(0, c.duration, [root]), event(c.gap, c.duration, [second])],
-    explanation: `${interval.label}: ${interval.semitones} semitone${interval.semitones === 1 ? '' : 's'}. The notes were ${noteName(root)} and ${noteName(second)}${direction === 'simultaneous' ? ', played together' : `, played ${direction}`}.`
+    explanation: `${interval.label}: ${interval.semitones} semitone${interval.semitones === 1 ? '' : 's'}. The notes were ${firstName} and ${secondName}${direction === 'simultaneous' ? ', played together' : `, played ${direction}`}.`
   };
 }
 
