@@ -1,4 +1,5 @@
 // Overtone: procedural listening exercises. MIDI 60 is middle C (C4).
+import { ENSEMBLE_MODE, ENSEMBLE_LEVELS, generateEnsembleQuestion, gradeEnsemble } from './ensemble.js?v=4';
 export const LEGACY_LEVELS = [
   { id: 'beginner', title: 'Foundation' },
   { id: 'intermediate', title: 'Developing' },
@@ -15,7 +16,8 @@ export const MODES = [
   { id: 'melody', title: 'Melody memory', short: 'Melody', tag: '04 / RECALL', description: 'Listen, remember, and rebuild a phrase.', prompt: 'Rebuild the melody in order.', lesson: 'Use the tonic reference to orient yourself. Notice the opening pitch, then remember steps, leaps, and repeated notes. Enter the exact pitches in their original octave.' },
   { id: 'scales', title: 'Scale colors', short: 'Scales', tag: '05 / TONALITY', description: 'Recognize the sound of a scale.', prompt: 'Which scale do you hear?', lesson: 'Scales have characteristic step patterns. Major has a bright major third; natural minor lowers the third, sixth, and seventh. Modes change which degrees are raised or lowered relative to major.' },
   { id: 'rhythm', title: 'Rhythm memory', short: 'Rhythm', tag: '06 / TIME', description: 'Reconstruct a bar, one pulse at a time.', prompt: 'Rebuild the rhythm on the grid.', lesson: 'Hear four count-in beats, then one bar in 4/4. Each grid cell is an eighth note at levels 1–5, or a sixteenth note at levels 6–8. Turn on the cells where a sound occurs. This tests the pattern, not tap timing.' },
-  { id: 'pitch', title: 'Pitch discrimination', short: 'Pitch detail', tag: '07 / RESOLUTION', description: 'Hear tiny changes in pitch.', prompt: 'Is the second tone higher or lower?', lesson: 'Listen to two equally long tones and decide whether the second is higher or lower. One semitone is 100 cents. Small differences can be subtle: replay freely and compare the pitch, rather than loudness or timing.' }
+  { id: 'pitch', title: 'Pitch discrimination', short: 'Pitch detail', tag: '07 / RESOLUTION', description: 'Hear tiny changes in pitch.', prompt: 'Is the second tone higher or lower?', lesson: 'Listen to two equally long tones and decide whether the second is higher or lower. One semitone is 100 cents. Small differences can be subtle: replay freely and compare the pitch, rather than loudness or timing.' },
+  ENSEMBLE_MODE
 ];
 
 const PITCHES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -327,7 +329,8 @@ export const LEVEL_CONFIGS = {
     { steps: 16, bpm: 96, style: 'syncopated', minHits: 5, maxHits: 9, anchor: false, description: '16-cell grid · freely placed sixteenth-note hits and rests · 96 BPM.' },
     { steps: 16, bpm: 116, style: 'syncopated', minHits: 6, maxHits: 11, anchor: false, description: '16-cell grid · denser sixteenth-note syncopation · 116 BPM.' }
   ],
-  pitch: [200, 100, 50, 25, 15, 10, 5, 2].map(cents => ({ cents, description: `Two equal-length tones · ${cents}-cent difference · decide whether the second is higher or lower.` }))
+  pitch: [200, 100, 50, 25, 15, 10, 5, 2].map(cents => ({ cents, description: `Two equal-length tones · ${cents}-cent difference · decide whether the second is higher or lower.` })),
+  ensemble: ENSEMBLE_LEVELS
 };
 
 export function getLevelDescription(mode, level) {
@@ -473,6 +476,7 @@ const GRADUATED_GENERATORS = { intervals: graduatedInterval, chords: graduatedCh
 
 export function generateQuestion(mode, level = 'beginner', rng = Math.random) {
   if (!MODES.some(item => item.id === mode)) throw new RangeError(`Unknown exercise: ${mode}`);
+  if (mode === 'ensemble') return generateEnsembleQuestion(level,rng);
   if (LEGACY_LEVELS.some(item => item.id === level) && GENERATORS[mode]) return { mode, level, ...GENERATORS[mode](level, rng) };
   const index = LEVELS.findIndex(item => item.id === level);
   if (index < 0) throw new RangeError(`Unknown difficulty: ${level}`);
@@ -482,6 +486,7 @@ export function generateQuestion(mode, level = 'beginner', rng = Math.random) {
 }
 
 export function isCorrect(question, response) {
+  if (question.mode === 'ensemble') return gradeEnsemble(question,response).correct;
   const expected = question.answer;
   if (!Array.isArray(expected)) return typeof response === 'string' && expected === response;
   return Array.isArray(response) && response.length === expected.length && expected.every((value, i) => value === response[i]);

@@ -1,6 +1,8 @@
-import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, thirdComparisonEvents, isCorrect, noteName } from './music.js?v=3';
-import { AudioEngine } from './audio.js?v=3';
-import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=3';
+import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, thirdComparisonEvents, isCorrect, noteName } from './music.js?v=4';
+import { AudioEngine } from './audio.js?v=4';
+import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=4';
+import { gradeEnsemble, ensembleResponseEvents } from './ensemble.js?v=4';
+import { ENSEMBLE_SHORTCUTS, createEnsembleEditor, ensembleResponse, setEnsembleNote, undoEnsembleNote, renderEnsembleEditor, renderEnsembleFeedback } from './ensemble-ui.js?v=4';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -21,7 +23,13 @@ let saved = {version:1, settings:{...defaults}, attempts:[], pitchTests:[]};
 function validAttempt(a) {
   return a && modeIds.includes(a.mode) && levelIds.includes(a.level)
     && ['correct','incorrect','revealed'].includes(a.outcome)
-    && typeof a.timestamp === 'string' && Number.isFinite(Date.parse(a.timestamp));
+    && typeof a.timestamp === 'string' && Number.isFinite(Date.parse(a.timestamp))
+    && (a.parts === undefined || a.mode === 'ensemble' && a.outcome !== 'revealed' && validParts(a.parts));
+}
+function validParts(parts) {
+  return parts && parts.chordTotal === 4 && [4,8,12,16].includes(parts.melodyTotal)
+    && Number.isInteger(parts.chordsCorrect) && parts.chordsCorrect >= 0 && parts.chordsCorrect <= 4
+    && Number.isInteger(parts.melodyCorrect) && parts.melodyCorrect >= 0 && parts.melodyCorrect <= parts.melodyTotal;
 }
 function testState(record) {
   let result = createPitchTest();
@@ -60,7 +68,9 @@ try {
 } catch { storageAvailable = false; }
 
 function cleanAttempt(a) {
-  return {mode:a.mode, level:a.level, outcome:a.outcome, timestamp:new Date(a.timestamp).toISOString()};
+  const result = {mode:a.mode, level:a.level, outcome:a.outcome, timestamp:new Date(a.timestamp).toISOString()};
+  if (a.mode === 'ensemble' && a.parts) result.parts = {chordsCorrect:a.parts.chordsCorrect,chordTotal:4,melodyCorrect:a.parts.melodyCorrect,melodyTotal:a.parts.melodyTotal};
+  return result;
 }
 function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); storageAvailable = true; }
@@ -75,7 +85,7 @@ function notify(message) {
 }
 const newSession = () => ({round:0, correct:0, answered:0, skipped:0, streak:0, results:[]});
 const state = {mode:saved.settings.mode, level:saved.settings.level, page:'practice', question:null,
-  heard:false, answered:false, busy:false, response:null, input:[], rhythm:[], replays:0, session:newSession(), test:null};
+  heard:false, answered:false, busy:false, response:null, input:[], rhythm:[], replays:0, session:newSession(), test:null, ensemble:null};
 audio.volume = saved.settings.volume;
 audio.timbre = saved.settings.timbre;
 $('#volume').value = Math.round(audio.volume * 100);
@@ -85,8 +95,8 @@ $('#level').value = state.level;
 $('#progress-level').innerHTML += `<optgroup label="Eight-level practice">${LEVELS.map(l => `<option value="${l.id}">${escape(l.title)}</option>`).join('')}</optgroup><optgroup label="Earlier scores — original settings">${historyLevels.filter(l => !currentLevelIds.includes(l.id)).map(l => `<option value="${l.id}">${escape(l.title)}</option>`).join('')}</optgroup>`;
 $('#storage-status').textContent = storageAvailable ? 'LOCAL / PRIVATE' : 'SESSION ONLY';
 
-const lessonTitles = {intervals:'Hear the space.', chords:'Hear the color.', progressions:'Hear the journey.', melody:'Hold the phrase.', scales:'Hear the landscape.', rhythm:'Find the pocket.',pitch:'Hear the smallest shift.'};
-const symbols = {intervals:'↗', chords:'≋', progressions:'→', melody:'⌁', scales:'⋰', rhythm:'▥',pitch:'↕'};
+const lessonTitles = {intervals:'Hear the space.', chords:'Hear the color.', progressions:'Hear the journey.', melody:'Hold the phrase.', scales:'Hear the landscape.', rhythm:'Find the pocket.',pitch:'Hear the smallest shift.',ensemble:'Follow both layers.'};
+const symbols = {intervals:'↗', chords:'≋', progressions:'→', melody:'⌁', scales:'⋰', rhythm:'▥',pitch:'↕',ensemble:'⋈'};
 const lessonCopy = {
   intervals:'An interval is the distance between two notes. Sing the lower note, then reach for the other. Does it feel close, open, or tense?',
   chords:'A chord has a character, even when its root changes. Listen to the whole color before trying to pick out individual notes.',
@@ -94,7 +104,8 @@ const lessonCopy = {
   melody:'Listen to the shape first: rising, falling, or repeating. Then rebuild the exact notes in order. The tonic gives you a place to start.',
   scales:'Every scale has a pattern of steps. Listen for the notes that give it a distinctive shade, especially the third, sixth, and seventh.',
   rhythm:'The count-in sets the beat. Each grid cell is one subdivision. Listen for where the sound lands and where the silence lives.',
-  pitch:'Compare two tones. Is the second a little higher or a little lower? One semitone is 100 cents. At the smallest gaps, listen for a subtle change rather than a new note name.'
+  pitch:'Compare two tones. Is the second a little higher or a little lower? One semitone is 100 cents. At the smallest gaps, listen for a subtle change rather than a new note name.',
+  ensemble:'Hear the bass and chord color, then follow the melody above them. Build each chord with a root and type, and place every melody pitch. The lead spans C5–B5; all twelve notes are always available. Chords use a warm voice, while the voice setting changes the lead.'
 };
 
 $('#mode-nav').innerHTML = MODES.map((m,i) => `<button class="mode-button" data-mode="${m.id}" aria-pressed="false"><span class="mode-index">${String(i+1).padStart(2,'0')}</span><span class="mode-copy"><strong>${escape(m.short || m.title)}</strong><small>${escape(m.tag || m.description)}</small></span><span class="mode-arrow" aria-hidden="true">↗</span></button>`).join('');
@@ -132,7 +143,7 @@ function melodyLabel(midi) {
   return state.question?.keyboard?.find(k => k.midi === midi)?.label || noteName(midi);
 }
 
-async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL'} = {}) {
+async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL',duration=0} = {}) {
   const question = state.question;
   const token = ++playbackId;
   state.busy = true;
@@ -140,7 +151,7 @@ async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL'} 
   updatePlayback();
   renderAnswer();
   try {
-    const result = await audio.play(events);
+    const result = await audio.play(events,{duration});
     if (token !== playbackId || question !== state.question) return;
     state.busy = false;
     if (!result.cancelled && markHeard) { state.heard = true; state.replays++; }
@@ -158,7 +169,8 @@ async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL'} 
 function playSignal() {
   if (!state.question || state.busy || (state.test && state.heard)) return;
   const q = state.question;
-  performAudio(combinedEvents(q.reference, fullBar(q.events, q), q.mode === 'rhythm' ? 0 : 0.45), {markHeard:true});
+  const referenceLength = q.reference?.length ? Math.max(...q.reference.map(e => e.at+e.duration))+.45 : 0;
+  performAudio(combinedEvents(q.reference, fullBar(q.events, q), q.mode === 'rhythm' ? 0 : 0.45), {markHeard:true,duration:q.mode === 'ensemble' ? referenceLength+q.totalDuration : 0});
 }
 
 function updatePlayback() {
@@ -166,6 +178,7 @@ function updatePlayback() {
   $('#stop').disabled = !state.busy;
   $('#reference').disabled = state.busy;
   $$('.interval-comparison button').forEach(button => { button.disabled = state.busy; });
+  $$('#ensemble-feedback button').forEach(button => { button.disabled = state.busy; });
   if (!state.busy) {
     $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.heard ? 'READY FOR YOUR ANSWER' : 'AWAITING PLAYBACK'}`;
     if (state.answered) $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.test ? 'RESPONSE RECORDED' : 'SIGNAL DECODED'}`;
@@ -182,6 +195,7 @@ function updateTestControls() {
   $('#level').disabled = Boolean(state.test);
   $('#timbre').disabled = Boolean(state.test);
   $('#timbre').value = audio.timbre;
+  $('#voice-label').textContent = state.mode === 'ensemble' ? 'LEAD VOICE' : 'VOICE';
   $('#practice-mantra').innerHTML = state.test ? 'One complete listen per trial.<br>Take your time to choose.' : 'Listen as often as you need.<br>Curiosity beats a perfect score.';
   $('#space-shortcut-label').textContent = state.test ? 'play once' : 'play / replay';
   $('#level-description').textContent = state.test ? 'Adaptive / the gap adjusts after your answers. Practice-level scores are kept separate.' : getLevelDescription(state.mode,state.level);
@@ -268,6 +282,7 @@ function newQuestion() {
   state.response = null;
   state.input = [];
   state.rhythm = Array(state.question.rhythmSteps || 0).fill(false);
+  state.ensemble = state.mode === 'ensemble' ? createEnsembleEditor(state.question) : null;
   state.replays = 0;
   const m = MODES.find(m => m.id === state.mode);
   const i = modeIds.indexOf(state.mode);
@@ -299,6 +314,12 @@ function renderAnswer() {
   const q = state.question;
   if (!q) return;
   const disabled = !state.heard || state.busy || state.answered;
+  if (q.mode === 'ensemble') {
+    $('#answer-hint').textContent = state.busy ? 'Listening…' : state.answered ? 'Compare the original parts below.' : state.heard ? 'Enter the chords and melody.' : 'Listen to both parts together first.';
+    $('#response-label').textContent = '02 / RECONSTRUCT BOTH PARTS';
+    $('#answer-area').innerHTML = renderEnsembleEditor(q,state.ensemble,{disabled,busy:state.busy,answered:state.answered,revealed:state.answered && state.response === null});
+    return;
+  }
   $('#answer-hint').textContent = state.answered ? state.test ? 'Response stored. Continue when ready.' : 'Compare what you heard.' : state.busy ? 'Listening…' : !state.heard ? 'Listen first, then choose.' : q.mode === 'melody' ? `${state.input.length} / ${q.inputLength} notes placed` : q.mode === 'rhythm' ? 'Light the cells where a sound lands.' : 'Use the buttons or number keys.';
   $('#response-label').textContent = q.mode === 'melody' ? '02 / REBUILD THE PHRASE' : q.mode === 'rhythm' ? '02 / REBUILD THE RHYTHM' : q.mode === 'pitch' ? '02 / WHICH WAY DID IT MOVE?' : '02 / IDENTIFY THE SOUND';
   if (q.mode === 'melody') {
@@ -319,8 +340,25 @@ function addNote(midi) {
   renderAnswer();
 }
 
+function addEnsembleNote(midi) {
+  if (!state.heard || state.busy || state.answered || state.mode !== 'ensemble' || !state.question.keyboard.some(k => k.midi === midi)) return;
+  setEnsembleNote(state.ensemble,midi);
+  audio.preview(midi).catch(() => notify('Audio could not start. Try pressing Play again.'));
+  renderAnswer();
+}
+
+function previewEnsemble(part='both', original=false) {
+  if (state.mode !== 'ensemble' || state.busy || !state.heard && !state.answered || original && !state.answered) return;
+  const q = state.question;
+  const events = original ? part === 'chords' ? q.chordEvents : q.melodyEvents : ensembleResponseEvents(q,ensembleResponse(q,state.ensemble),{part});
+  if (!events.length) return;
+  performAudio(events,{duration:q.totalDuration,message:original ? `ORIGINAL ${part.toUpperCase()}` : part === 'both' ? 'YOUR ARRANGEMENT' : `YOUR ${part.toUpperCase()}`});
+}
+
 function submit(response, revealed=false) {
   if (state.answered || (revealed && state.test) || (!revealed && (!state.heard || state.busy))) return;
+  if (!revealed && state.mode === 'ensemble' && (!Array.isArray(response?.chords) || response.chords.length !== 4 || !response.chords.every(Boolean)
+    || !Array.isArray(response?.melody) || response.melody.length !== state.question.inputLength || !response.melody.every(Number.isFinite))) return;
   stopPlayback();
   state.answered = true;
   state.response = response;
@@ -336,7 +374,10 @@ function submit(response, revealed=false) {
     else state.session.streak = 0;
   }
   state.session.results.push(outcome);
-  saved.attempts.push({mode:state.mode, level:state.level, outcome, timestamp:new Date().toISOString()});
+  const attempt = {mode:state.mode, level:state.level, outcome, timestamp:new Date().toISOString()};
+  const parts = q.mode === 'ensemble' && !revealed ? gradeEnsemble(q,response) : null;
+  if (parts) attempt.parts = {chordsCorrect:parts.chordsCorrect,chordTotal:4,melodyCorrect:parts.melodyCorrect,melodyTotal:parts.melodyTotal};
+  saved.attempts.push(attempt);
   saved.attempts = saved.attempts.slice(-2000);
   save();
   let detail = '';
@@ -345,7 +386,7 @@ function submit(response, revealed=false) {
     detail = `<p class="feedback-detail">${matching} of ${q.answer.length} ${q.mode === 'melody' ? 'notes in the right position' : 'cells matched'}.</p>`;
   }
   const sequence = q.mode === 'melody' ? `<div class="correct-sequence" aria-label="Correct melody">${q.answer.map(n => `<span>${escape(melodyLabel(n))}</span>`).join('')}</div>` : q.mode === 'rhythm' ? `<div class="correct-sequence rhythm-solution" aria-label="Correct rhythm">${q.answer.map((hit,i) => `<span class="${hit ? 'hit' : ''}"><small>${i+1}</small>${hit ? '●' : '·'}</span>`).join('')}</div>` : '';
-  const comparison = q.mode === 'intervals' ? '<div class="interval-comparison"><p class="small">Compare thirds using this question’s starting note and playback style. One semitone is 100 cents.</p><div class="input-actions"><button id="compare-minor-third" class="secondary">▶ Minor third · 3 semitones</button><button id="compare-major-third" class="secondary">▶ Major third · 4 semitones</button></div></div>' : '';
+  const comparison = q.mode === 'intervals' ? '<div class="interval-comparison"><p class="small">Compare thirds using this question’s starting note and playback style. One semitone is 100 cents.</p><div class="input-actions"><button id="compare-minor-third" class="secondary">▶ Minor third · 3 semitones</button><button id="compare-major-third" class="secondary">▶ Major third · 4 semitones</button></div></div>' : q.mode === 'ensemble' ? renderEnsembleFeedback(q,parts,{revealed}) : '';
   $('#feedback').className = `feedback ${outcome}`;
   $('#feedback').innerHTML = `<h4><span aria-hidden="true">${revealed ? '↗' : correct ? '✓' : '↳'}</span> ${revealed ? 'A sound to remember.' : correct ? 'You heard it.' : 'Keep this one in your ear.'}</h4><p class="feedback-answer">${escape(q.answerLabel)}</p>${sequence}${detail}<p>${escape(q.explanation)}</p>${comparison}<p class="small muted">${revealed ? 'Revealed / saved as a skip. Accuracy unchanged.' : 'First attempt saved. Replay to connect the sound with its name.'}</p>`;
   $('#feedback').hidden = false;
@@ -402,7 +443,7 @@ function showPage(page) {
     if (b.dataset.page === page) b.setAttribute('aria-current','page');
     else b.removeAttribute('aria-current');
   });
-  history.replaceState(null, '', `#${page}`);
+  history.replaceState(null, '', page === 'practice' ? `#practice/${state.mode}` : `#${page}`);
   if (page === 'progress') renderProgress();
 }
 
@@ -410,6 +451,13 @@ function metrics(attempts) {
   const answered = attempts.filter(a => a.outcome !== 'revealed');
   const correct = answered.filter(a => a.outcome === 'correct').length;
   return {answered:answered.length, correct, revealed:attempts.length-answered.length, accuracy:answered.length ? Math.round(100*correct/answered.length)+'%' : '—'};
+}
+
+function ensembleProgress(attempts) {
+  const parts = attempts.filter(a => a.mode === 'ensemble' && a.outcome !== 'revealed' && a.parts).map(a => a.parts);
+  if (!parts.length) return '';
+  const totals = parts.reduce((sum,p) => ({chords:sum.chords+p.chordsCorrect,chordTotal:sum.chordTotal+p.chordTotal,melody:sum.melody+p.melodyCorrect,melodyTotal:sum.melodyTotal+p.melodyTotal}),{chords:0,chordTotal:0,melody:0,melodyTotal:0});
+  return `<section class="progress-panel ensemble-progress"><h2>Harmony + melody, part by part</h2><p class="muted small">First attempts at the selected settings. The combined score requires every chord and melody note to match.</p><div class="ensemble-part-scores"><div class="part-score"><span class="eyebrow">CHORDS</span><strong>${Math.round(totals.chords/totals.chordTotal*100)}%</strong><small>${totals.chords} / ${totals.chordTotal} roots and types matched</small></div><div class="part-score"><span class="eyebrow">MELODY</span><strong>${Math.round(totals.melody/totals.melodyTotal*100)}%</strong><small>${totals.melody} / ${totals.melodyTotal} notes matched</small></div></div></section>`;
 }
 
 function renderProgress() {
@@ -438,6 +486,7 @@ function renderProgress() {
   }).join('');
   const recent = attempts.slice(-20).reverse().map(a => `<tr><td>${escape(new Date(a.timestamp).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}<small>${escape(new Date(a.timestamp).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</small></td><td>${escape(MODES.find(m => m.id === a.mode).short || a.mode)}<small>${escape(levelTitle(a.level))}</small></td><td><span class="outcome ${a.outcome}">${a.outcome === 'correct' ? '✓ Correct' : a.outcome === 'revealed' ? '↗ Revealed' : '↳ Practice again'}</span></td></tr>`).join('');
   $('#progress-content').innerHTML = `<section class="progress-panel"><div class="section-heading"><h2>A rhythm of practice.</h2><span class="eyebrow">LAST 28 DAYS / QUESTIONS EXPLORED</span></div><div class="activity-chart">${days.map(d => `<div class="day-column"><div class="day-bar" style="--height:${Math.max(3, d.count/max*100)}%" title="${d.label}: ${d.count} questions" role="img" aria-label="${d.label}: ${d.count} questions"></div></div>`).join('')}</div><div class="chart-labels"><span>${days[0].label}</span><span>Today</span></div></section><div class="progress-tables"><section class="progress-panel"><h2>By module</h2><div class="table-scroll" tabindex="0" role="region" aria-label="Practice statistics by module"><table class="log-table"><thead><tr><th>Module</th><th>Answered</th><th>Accuracy</th><th>Revealed</th></tr></thead><tbody>${rows}</tbody></table></div></section><section class="progress-panel"><h2>Recent signals</h2><div class="table-scroll" tabindex="0" role="region" aria-label="Recent practice questions"><table class="log-table"><thead><tr><th>When</th><th>Exercise / level</th><th>Result</th></tr></thead><tbody>${recent}</tbody></table></div></section></div>`;
+  $('#progress-content').insertAdjacentHTML('beforeend',ensembleProgress(attempts));
 }
 
 function renderPitchHistory(mode) {
@@ -460,7 +509,8 @@ const guideExamples = {
   melody:['Shape, then detail.','Listen for repetition and direction, then place the exact pitches on the keys. Every slot is one note; octaves matter. Play your phrase to compare. The key and starting reference are given.','LISTEN → SING → REBUILD'],
   scales:['A family of steps.','Major and natural minor are starting landmarks. Pentatonic scales use five notes. Modes such as Dorian and Mixolydian change the color of familiar step patterns. Later levels add more scales and shorter, ascending-only examples.','MAJOR: W W H W W W H'],
   rhythm:['Silence has a place.','After a four-beat count-in, hear one bar. Levels 1–5 use eight eighth-note cells: 1 & 2 & 3 & 4 &. Levels 6–8 use sixteen sixteenth-note cells: 1 e & a. Later patterns include syncopation and opening rests. Light each cell that has a hit.','● = SOUND · = REST'],
-  pitch:['Notice a smaller shift.','Hear two tones and identify whether the second is higher or lower. One semitone is 100 cents. Fixed practice narrows the gap from 200 to 2 cents. The 24-trial adaptive test uses pure sine tones and one listen per trial. Two consecutive correct answers narrow its gap; a miss widens it. Its result is a practice estimate, with bounds when the test range is reached.','100 CENTS = 1 SEMITONE']
+  pitch:['Notice a smaller shift.','Hear two tones and identify whether the second is higher or lower. One semitone is 100 cents. Fixed practice narrows the gap from 200 to 2 cents. The 24-trial adaptive test uses pure sine tones and one listen per trial. Two consecutive correct answers narrow its gap; a miss widens it. Its result is a practice estimate, with bounds when the test range is reached.','100 CENTS = 1 SEMITONE'],
+  ensemble:['Two parts. One picture.','After the tonic reference, hear four chords with a melody playing above them. Choose a root and type for each chord, then rebuild every melody note using the full chromatic octave C5–B5. Timing is given by the slots. Audition your arrangement or either of your parts; after checking, hear the original parts separately. Chords and melody get separate feedback, and the combined answer must match both exactly.','4 CHORDS + MELODY / ALL 12 NOTES']
 };
 $('#guide-grid').innerHTML = MODES.map((m,i) => `<article class="guide-card"><span class="guide-number">${String(i+1).padStart(2,'0')} / ${escape(m.short || m.title)}</span><h3>${guideExamples[m.id][0]}</h3><p>${guideExamples[m.id][1]}</p><div class="guide-example">${guideExamples[m.id][2]}</div><details class="level-ladder"><summary>Explore the eight levels</summary>${LEVELS.map(l => `<div class="level-row"><span class="level-badge">${String(l.number).padStart(2,'0')}</span><span>${escape(getLevelDescription(m.id,l.id))}</span></div>`).join('')}</details><button class="text-button" data-mode="${m.id}">Practice this →</button></article>`).join('');
 $('#free-keyboard').innerHTML = `<div class="piano-keys">${Array.from({length:13},(_,i) => `<button class="piano-key ${[1,3,6,8,10].includes(i%12) ? 'black' : 'white'}" data-preview="${60+i}" aria-label="Play ${escape(noteName(60+i))}"><span class="key-label">${escape(noteName(60+i))}</span></button>`).join('')}</div>`;
@@ -472,6 +522,11 @@ document.addEventListener('click', e => {
   else if (button.dataset.mode) setMode(button.dataset.mode);
   else if (button.hasAttribute('data-answer')) submit(button.dataset.answer);
   else if (button.hasAttribute('data-midi')) addNote(Number(button.dataset.midi));
+  else if (button.hasAttribute('data-ensemble-midi')) addEnsembleNote(Number(button.dataset.ensembleMidi));
+  else if (button.hasAttribute('data-ensemble-slot')) {
+    state.ensemble.activeNote = Number(button.dataset.ensembleSlot); renderAnswer();
+    $(`[data-ensemble-slot="${state.ensemble.activeNote}"]`)?.focus({preventScroll:true});
+  }
   else if (button.hasAttribute('data-preview')) audio.preview(Number(button.dataset.preview)).catch(() => notify('Audio unavailable. Try again in a browser with Web Audio.'));
   else if (button.hasAttribute('data-slot')) { state.input.splice(Number(button.dataset.slot),1); renderAnswer(); }
   else if (button.hasAttribute('data-step')) {
@@ -489,6 +544,16 @@ document.addEventListener('click', e => {
     if (!events.length) { notify('This grid is all rests. Add a hit to hear your rhythm.'); return; }
     performAudio(combinedEvents(q.reference, fullBar(events, q), q.mode === 'rhythm' ? 0 : 0.45), {message:'PLAYING YOUR ANSWER'});
   } else if (button.id === 'play') playSignal();
+  else if (button.id === 'ensemble-check') submit(ensembleResponse(state.question,state.ensemble));
+  else if (button.id === 'ensemble-undo-note') { undoEnsembleNote(state.ensemble); renderAnswer(); }
+  else if (button.id === 'ensemble-clear-notes') { state.ensemble.melody.fill(null); state.ensemble.noteHistory = []; state.ensemble.activeNote = 0; renderAnswer(); }
+  else if (button.id === 'ensemble-clear-chords') { state.ensemble.roots.fill(null); state.ensemble.qualities.fill(null); renderAnswer(); }
+  else if (button.id === 'ensemble-play-mix') previewEnsemble('both');
+  else if (button.id === 'ensemble-play-chords') previewEnsemble('chords');
+  else if (button.id === 'ensemble-play-melody') previewEnsemble('melody');
+  else if (button.id === 'ensemble-stop-preview') { stopPlayback(); renderAnswer(); }
+  else if (button.id === 'ensemble-original-chords') previewEnsemble('chords',true);
+  else if (button.id === 'ensemble-original-melody') previewEnsemble('melody',true);
   else if (button.id === 'compare-minor-third' || button.id === 'compare-major-third') {
     if (!state.answered || state.question.mode !== 'intervals' || state.busy) return;
     const quality = button.id === 'compare-minor-third' ? 'm3' : 'M3';
@@ -508,6 +573,17 @@ document.addEventListener('click', e => {
     const blob = new Blob([JSON.stringify(saved,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `overtone-progress-${new Date().toISOString().slice(0,10)}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
   }
+});
+
+document.addEventListener('change',e => {
+  const root = e.target.closest('[data-ensemble-root]');
+  const quality = e.target.closest('[data-ensemble-quality]');
+  if ((!root && !quality) || state.mode !== 'ensemble' || state.busy || state.answered || !state.heard) return;
+  if (root) state.ensemble.roots[Number(root.dataset.ensembleRoot)] = root.value === '' ? null : Number(root.value);
+  if (quality) state.ensemble.qualities[Number(quality.dataset.ensembleQuality)] = quality.value || null;
+  const id = e.target.id;
+  renderAnswer();
+  document.getElementById(id)?.focus({preventScroll:true});
 });
 
 $('#level').addEventListener('change', () => {
@@ -550,10 +626,20 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Enter') {
     e.preventDefault();
     if (state.answered && !$('#next').hidden) $('#next').click();
+    else if (state.mode === 'ensemble') $('#ensemble-check:not(:disabled)')?.click();
     else $('[data-action="check"]:not(:disabled)')?.click();
   } else if (!state.answered && state.heard && !state.busy) {
     if (/^[1-9]$/.test(e.key) && state.question.choices.length) {
       const choice = state.question.choices[Number(e.key)-1]; if (choice) submit(choice.value);
+    } else if (state.mode === 'ensemble') {
+      const i = ENSEMBLE_SHORTCUTS.indexOf(e.key.toLowerCase());
+      if (i >= 0) { e.preventDefault(); addEnsembleNote(state.question.keyboard[i].midi); }
+      else if (e.key === 'Backspace') { e.preventDefault(); undoEnsembleNote(state.ensemble); renderAnswer(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        state.ensemble.activeNote = Math.max(0,Math.min(state.question.inputLength-1,state.ensemble.activeNote+(e.key === 'ArrowLeft' ? -1 : 1)));
+        renderAnswer(); $(`[data-ensemble-slot="${state.ensemble.activeNote}"]`)?.focus({preventScroll:true});
+      }
     } else if (state.mode === 'melody') {
       const i = 'asdfghjkl'.indexOf(e.key.toLowerCase());
       if (i >= 0 && state.question.keyboard[i]) { e.preventDefault(); addNote(state.question.keyboard[i].midi); }
@@ -565,6 +651,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { stopPlayback(); renderAnswer(); }
 });
 window.addEventListener('pagehide', () => audio.stop());
-window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+function applyRoute() {
+  const [page,mode] = location.hash.slice(1).split('/');
+  if (page === 'practice' && modeIds.includes(mode) && state.mode !== mode) setMode(mode);
+  else showPage(page || 'practice');
+}
+window.addEventListener('hashchange', applyRoute);
+const [initialPage,initialMode] = location.hash.slice(1).split('/');
+if (initialPage === 'practice' && modeIds.includes(initialMode)) { state.mode = initialMode; saved.settings.mode = initialMode; }
 newQuestion();
-showPage(location.hash.slice(1) || 'practice');
+applyRoute();

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b100e">
-  <meta name="description" content="Train your musical ear. Seven focused listening exercises, including fine pitch discrimination, a playable keyboard, and progress that stays on your device. A free, terminal-inspired ear training lab.">
+  <meta name="description" content="Train your musical ear. Eight focused listening exercises, including fine pitch discrimination, a playable keyboard, and progress that stays on your device. A free, terminal-inspired ear training lab.">
   <title>Overtone — ear training lab</title>
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to practice</a>
@@ -19,14 +19,14 @@
 
     <main id="main" tabindex="-1">
       <section id="page-practice" class="page">
-        <div class="intro"><div><p class="eyebrow"><span class="accent">~/</span> THE LISTENING ROOM <span class="intro-version">VOL. 002</span></p><h1>A better ear.<br><span>One listen at a time.</span></h1><p class="intro-copy">Find the distance. Feel the harmony. Remember the phrase.<br> Small sessions for a more musical mind.</p></div><div class="intro-terminal" aria-hidden="true"><div><span class="accent">&gt;</span> initialize listening</div><div><span class="accent">✓</span> seven ways to tune in</div><div><span class="accent">✓</span> no perfect pitch required</div><div class="terminal-ready"><span class="status-dot"></span> ready when you are<span class="cursor">_</span></div></div></div>
+        <div class="intro"><div><p class="eyebrow"><span class="accent">~/</span> THE LISTENING ROOM <span class="intro-version">VOL. 004</span></p><h1>A better ear.<br><span>One listen at a time.</span></h1><p class="intro-copy">Find the distance. Feel the harmony. Remember the phrase.<br> Small sessions for a more musical mind.</p></div><div class="intro-terminal" aria-hidden="true"><div><span class="accent">&gt;</span> initialize listening</div><div><span class="accent">✓</span> eight ways to tune in</div><div><span class="accent">✓</span> no perfect pitch required</div><div class="terminal-ready"><span class="status-dot"></span> ready when you are<span class="cursor">_</span></div></div></div>
 
         <div class="workspace">
-          <aside class="module-sidebar" aria-label="Exercises"><div class="panel-label"><span>01 / SELECT A MODULE</span><span>07</span></div><nav id="mode-nav" class="mode-nav" aria-label="Training modules"></nav><div class="sidebar-note"><span class="accent">↳</span><p id="practice-mantra">Listen as often as you need.<br>Curiosity beats a perfect score.</p></div><a class="clear-link" href="../cognitive/">Inspired by Clear <span>↗</span></a></aside>
+          <aside class="module-sidebar" aria-label="Exercises"><div class="panel-label"><span>01 / SELECT A MODULE</span><span>08</span></div><nav id="mode-nav" class="mode-nav" aria-label="Training modules"></nav><div class="sidebar-note"><span class="accent">↳</span><p id="practice-mantra">Listen as often as you need.<br>Curiosity beats a perfect score.</p></div><a class="clear-link" href="../cognitive/">Inspired by Clear <span>↗</span></a></aside>
 
           <div class="training-column">
             <section class="training-panel" aria-labelledby="exercise-title"><div class="exercise-header"><div><p class="eyebrow" id="exercise-tag">PITCH / RELATIVE LISTENING</p><h2 id="exercise-title">Interval identification</h2></div><span class="module-number" id="module-number">01</span></div>
-              <div class="settings-row"><label>LEVEL <select id="level" aria-label="Difficulty" aria-describedby="level-description"></select></label><label>VOICE <select id="timbre" aria-label="Instrument voice"><option value="warm">Warm keys</option><option value="piano">Soft piano</option><option value="sine">Pure sine</option></select></label><label class="volume-label">VOLUME <input id="volume" type="range" min="0" max="100" value="65" aria-label="Playback volume"></label></div>
+              <div class="settings-row"><label>LEVEL <select id="level" aria-label="Difficulty" aria-describedby="level-description"></select></label><label><span id="voice-label">VOICE</span> <select id="timbre" aria-label="Instrument voice"><option value="warm">Warm keys</option><option value="piano">Soft piano</option><option value="sine">Pure sine</option></select></label><label class="volume-label">VOLUME <input id="volume" type="range" min="0" max="100" value="65" aria-label="Playback volume"></label></div>
 
               <p id="level-description" class="level-description"></p>
               <section id="pitch-test-panel" class="pitch-test-panel" aria-label="Adaptive pitch test" hidden>
@@ -56,6 +56,6 @@
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <noscript><p class="noscript">Enable JavaScript to generate exercises and play audio.</p></noscript>
-  <script type="module" src="./app.js?v=3"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>

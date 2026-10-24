@@ -61,8 +61,9 @@
     "lady-supine:build": "npm --prefix lady-supine run build && node scripts/sync-lady-supine.mjs",
     "lady-supine:sync": "node scripts/sync-lady-supine.mjs",
     "ear-training:sync": "node scripts/sync-ear-training.mjs",
-    "check:ear-training": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-audio.mjs && node scripts/check-ear-training-pitch.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs && node scripts/check-ear-training.cjs",
-    "check:ear-training-thirds": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs"
+    "check:ear-training": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-ensemble-music.mjs && node scripts/check-ear-training-audio.mjs && node scripts/check-ear-training-pitch.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs && node scripts/check-ear-training-ensemble.cjs && node scripts/check-ear-training.cjs",
+    "check:ear-training-thirds": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs",
+    "check:ear-training-ensemble": "node scripts/check-ear-training-ensemble-music.mjs && node scripts/check-ear-training-ensemble.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

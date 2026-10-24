@@ -120,7 +120,7 @@ export class AudioEngine {
 
   _note(midi, at, duration, velocity, polyphony, voice) {
     const frequency = 440 * 2 ** ((midi - 69) / 12);
-    const kind = voice === 'click' ? 'click' : this._timbre;
+    const kind = ['click', 'warm', 'piano', 'sine'].includes(voice) ? voice : this._timbre;
     const amplitude = 0.25 * velocity / Math.sqrt(polyphony);
     if (kind === 'click') {
       this._partial(frequency, at, Math.min(duration, 0.055), amplitude * 0.7, 1, kind);
@@ -134,8 +134,10 @@ export class AudioEngine {
     }
   }
 
-  /** Events: { at, duration, notes: MIDI[], voice?: 'click', velocity?: 0..1 }. */
-  async play(events, { leadIn = 0.06 } = {}) {
+  /** Events: { at, duration, notes: MIDI[], voice?: 'click'|'warm'|'piano'|'sine', velocity?: 0..1 }.
+   * Options.duration holds the clock at least this long after the scheduled start; notes are never truncated.
+   */
+  async play(events, { leadIn = 0.06, duration = 0 } = {}) {
     this.stop();
     const generation = this._generation;
     const context = await this.ensure();
@@ -147,10 +149,11 @@ export class AudioEngine {
       velocity: Number.isFinite(event.velocity) ? Math.max(0, Math.min(1, event.velocity)) : 0.8,
       voice: event.voice,
     })).filter(event => Number.isFinite(event.at) && event.at >= 0 && Number.isFinite(event.duration) && event.duration > 0 && event.notes.length);
-    if (!cleanEvents.length) return { cancelled: false };
+    const minimum = Number.isFinite(duration) ? Math.max(0, duration) : 0;
+    if (!cleanEvents.length && minimum === 0) return { cancelled: false };
     const delay = Number.isFinite(leadIn) ? Math.max(0.025, leadIn) : 0.06;
     const start = context.currentTime + delay;
-    let length = 0;
+    let length = minimum;
     for (const event of cleanEvents) {
       for (const midi of event.notes) {
         this._note(midi, start + event.at, event.duration, event.velocity, event.notes.length, event.voice);

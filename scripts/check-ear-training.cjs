@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const baseURL = process.env.OVERTONE_QA_URL || 'http://127.0.0.1:8765/ear-training/';
 const STORE = 'overtone.practice.v1';
-const MODES = ['intervals','chords','progressions','melody','scales','rhythm','pitch'];
+const MODES = ['intervals','chords','progressions','melody','scales','rhythm','pitch','ensemble'];
 const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
 
 (async () => {
@@ -25,7 +25,7 @@ const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
       };
     });
     await page.goto(baseURL);
-    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 7);
+    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 8);
     const record = () => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '{"attempts":[]}'), STORE);
     const count = async () => (await record()).attempts.length;
     async function mode(id, level='level-3') {
@@ -46,7 +46,7 @@ const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
       await page.locator('#reveal').click();
       assert.match(await page.locator('#feedback').getAttribute('class'), /revealed/);
     }
-    assert.equal(await page.locator('.mode-button').count(),7);
+    assert.equal(await page.locator('.mode-button').count(),8);
     assert.equal(await page.locator('#level option').count(),8);
     assert.ok(await page.locator('.answer-choice').first().isDisabled());
 
@@ -55,7 +55,14 @@ const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
       for (const level of LEVELS) {
         await mode(id,level);
         const q = await question(id,level);
-        if (id === 'melody') assert.equal(await page.locator('.note-slot').count(),q.inputLength);
+        if (id === 'ensemble') {
+          assert.equal(await page.locator('#answer-area [data-ensemble-midi]').count(),12);
+          assert.equal(await page.locator('#answer-area select').count(),8);
+          assert.equal(await page.locator('[data-ensemble-slot]').count(),q.inputLength);
+          assert.equal(q.answer.chords.length,4);
+          assert.equal(q.answer.melody.length,q.inputLength);
+        }
+        else if (id === 'melody') assert.equal(await page.locator('.note-slot').count(),q.inputLength);
         else if (id === 'rhythm') assert.equal(await page.locator('[data-step]').count(),q.rhythmSteps);
         else assert.equal(await page.locator('.answer-choice').count(),q.choices.length);
         await revealed();
@@ -63,9 +70,9 @@ const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
         assert.equal(await page.locator('#session-accuracy').textContent(),'—');
       }
     }
-    assert.equal(await count(),56);
+    assert.equal(await count(),64);
     assert.ok((await record()).attempts.every(a => a.outcome === 'revealed'));
-    console.log('PASS: seven exercises × eight levels render; reveal is an unscored skip.');
+    console.log('PASS: eight exercises × eight levels render; reveal is an unscored skip.');
 
     await mode('pitch','level-8');
     await page.evaluate(()=>{window.__startedNotes=[];});
@@ -276,7 +283,7 @@ const LEVELS = Array.from({length:8},(_,i)=>`level-${i+1}`);
       }
     },{key:STORE,data:legacyData});
     await legacyPage.goto(baseURL);
-    await legacyPage.waitForFunction(()=>document.querySelectorAll('.mode-button').length===7);
+    await legacyPage.waitForFunction(()=>document.querySelectorAll('.mode-button').length===8);
     assert.equal(await legacyPage.locator('#level').inputValue(),'level-7');
     assert.equal(await legacyPage.locator('#volume').inputValue(),'42');
     assert.deepEqual(await legacyPage.evaluate(key=>JSON.parse(localStorage.getItem(key)).attempts,STORE),legacyData.attempts);
