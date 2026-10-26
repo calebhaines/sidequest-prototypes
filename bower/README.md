@@ -42,6 +42,10 @@ shortcuts and includes HTML and editable source downloads.
 
 The Samples panel shares all string patterns or the selected string pattern with other Kitchen apps. Render one to sixteen bars with a configurable effect tail. The selected string can be shared even if it is muted in the mix. The offline render preserves the current score, random seed, and sound settings; live playback continues unchanged. Finish a live capture before sharing a render.
 
+In generative Strings mode, the Patterns panel captures the native scheduler's exact four-bar phrase, including humanized timing, seeded probability decisions, random direction, and evolution. Exporting a selected string preserves its timing within the full ensemble. Humanization is read at the instrument's current tempo; GALLEY supplies its tempo before capturing a live phrase. This preserves the native feel instead of pulling humanized notes onto earlier grid positions. In authored Pattern mode, exports keep each enabled step and its editable probability, rather than freezing probability decisions into a single performance.
+
+Run `node bower/native-pattern-timing-checks.cjs` from the repository root to compare native and portable note timing against the actual string DSP.
+
 `BowerApp.exportAudio({scope, bars, tailSeconds, signal})` returns an audio payload without starting a download. `BowerApp.audioExport` describes the available scopes. SKEWER's strings remain physically modeled rather than sample-based.
 
 ## Source and build

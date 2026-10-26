@@ -751,9 +751,11 @@
             const source = `
               const createVocal=${window.createLoomVocalDSP ? window.createLoomVocalDSP.toString() : 'null'};
               const createUtility=${window.createLoomUtilityDSP ? window.createLoomUtilityDSP.toString() : 'null'};
+              const createFilter=${window.createLoomFilterDSP ? window.createLoomFilterDSP.toString() : 'null'};
+              const createCreative=${window.createLoomCreativeDSP ? window.createLoomCreativeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -842,6 +844,8 @@
     getTrackInput(id) { if (this._audioApplying) throw Error('Finish setting up the audio interface before opening an instrument.'); if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
     _send(m) {
       if (['play', 'stop', 'seek', 'panic', 'recordStart', 'serviceStart', 'serviceStop'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
+      if (m.type === 'recordStart') this._countInOrigin = m.schedule?.countInBeats > 0 ? { revision: this._transportEpoch, beat: this._recordTimelineStartBeat ?? this._meters.beat ?? 0 } : null;
+      else if (['play', 'stop', 'seek', 'panic', 'recordStop', 'recordCancel', 'serviceStart', 'serviceStop'].includes(m.type)) this._countInOrigin = null;
       if (Number.isInteger(m.epoch)) {
         const now = this.context?.currentTime || 0;
         this._clockAnchor = { beat: this._meters.beat || 0, cycle: ['seek', 'play', 'serviceStart', 'serviceStop'].includes(m.type) ? 0 : this._clockAnchor.cycle || 0, time: now, countIn: this._meters.countInBeatsRemaining || 0 };
@@ -911,11 +915,23 @@
       const loopStart = Math.max(0, Number(configuration.loopStart) || 0), loopEnd = Math.min(sessionEnd, Number(configuration.loopEnd) || sessionEnd);
       const loopEnabled = !service && configuration.loopEnabled === true && !(this.isRecording && this._recordSchedule?.punchEnabled), span = Math.max(.25, loopEnd - loopStart);
       const playing = this._meters.playing === true && !this._panicLatched;
-      const elapsed = playing ? (atTime - anchor.time) * tempo / 60 : 0, countIn = Math.max(0, anchor.countIn - Math.max(0, elapsed));
+      const elapsed = playing ? (atTime - anchor.time) * tempo / 60 : 0;
+      let countIn = anchor.countIn > 0 ? Math.max(0, anchor.countIn - elapsed) : 0;
       let beat = anchor.beat + (playing ? Math.max(0, elapsed - anchor.countIn) : 0), cycle = anchor.cycle;
       // Worklet anchors refer to the end of a processed block. Interpolation
       // back to currentTime avoids a quantum-sized jump in UI and note timing.
       if (playing && elapsed < 0 && !anchor.countIn) beat = anchor.beat + elapsed;
+      // A fallback callback can describe an output block slightly ahead of
+      // currentTime. Preserve the same boundary on both sides of count-in,
+      // including a first post-boundary anchor whose countdown is already zero.
+      // The recording epoch and origin distinguish this hold from an ordinary
+      // seek or from returning through a later arrangement loop.
+      const origin = this._countInOrigin;
+      if (playing && origin?.revision === this._transportEpoch && !anchor.cycle) {
+        const projected = anchor.beat + elapsed - anchor.countIn;
+        countIn = Math.max(0, origin.beat - projected);
+        beat = Math.max(origin.beat, projected);
+      }
       if (loopEnabled && cycle > 0 && beat < loopStart) { beat += span; cycle--; }
       if (playing && loopEnabled && beat >= loopEnd) { const wraps = 1 + Math.floor((beat - loopEnd) / span); beat = loopStart + (beat - loopEnd) % span; cycle += wraps; }
       if (!loopEnabled && !this.recordingBusy && !service) beat = Math.min(endBeat, beat);

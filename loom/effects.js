@@ -1,13 +1,17 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
     const vocal = makeVocal ? makeVocal() : null;
     const makeUtility = typeof utilityFactory === 'function' ? utilityFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomUtilityDSP === 'function' ? globalThis.createLoomUtilityDSP : null;
     const utility = makeUtility ? makeUtility() : null;
+    const makeFilter = typeof filterFactory === 'function' ? filterFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomFilterDSP === 'function' ? globalThis.createLoomFilterDSP : null;
+    const filters = makeFilter ? makeFilter() : null;
+    const makeCreative = typeof creativeFactory === 'function' ? creativeFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomCreativeDSP === 'function' ? globalThis.createLoomCreativeDSP : null;
+    const creative = makeCreative ? makeCreative() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -23,6 +27,8 @@
     };
     if (vocal) specifications.glaze = vocal.specifications;
     if (utility) specifications.scales = utility.specifications;
+    if (filters) Object.assign(specifications, filters.specifications);
+    if (creative) Object.assign(specifications, creative.specifications);
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -36,6 +42,8 @@
     function normalize(type, params) {
       if (type === 'glaze' && vocal) return vocal.normalize(params);
       if (type === 'scales' && utility) return utility.normalize(params);
+      if (filters && Object.prototype.hasOwnProperty.call(filters.specifications, type)) return filters.normalize(type, params);
+      if (creative && Object.prototype.hasOwnProperty.call(creative.specifications, type)) return creative.normalize(type, params);
       const spec = specifications[type];
       if (!spec) throw new Error('Unknown LOOM effect: ' + type);
       const source = params && typeof params === 'object' ? params : {};
@@ -92,6 +100,8 @@
     function create(type, sampleRate, params) {
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
       if (type === 'scales' && utility) return utility.create(sampleRate, params);
+      if (filters && Object.prototype.hasOwnProperty.call(filters.specifications, type)) return filters.create(type, sampleRate, params);
+      if (creative && Object.prototype.hasOwnProperty.call(creative.specifications, type)) return creative.create(type, sampleRate, params);
       let p = normalize(type, params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
       let update, run, reset, fastSet, tail = () => 0;

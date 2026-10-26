@@ -44,7 +44,7 @@
         if (generation !== this.generation || this.disposed) throw abortError();
         for (const clip of noteClips) this._validateClip(adapter, clip);
         const entry = { id: track.id, adapter, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
-        if ((track.instrumentLive || this.recordingTracks.has(track.id)) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) {
+        if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) {
           entry.live = await this.host.exportPattern(track.id);
           entry.signature = global.MusicLabPatternSchema?.fingerprint(entry.live) || JSON.stringify(entry.live);
           this._validateClip(adapter, { pattern: entry.live, voiceMap: {} });
@@ -53,6 +53,15 @@
       }));
       if (generation !== this.generation || this.disposed) throw abortError();
       this.tracks = new Map(entries); this.stateSignature = this._signature(); return true;
+    }
+    _nativeLive(track) {
+      // Arming a note arrangement captures that arrangement. An instrument's
+      // own sequencer joins it only through the explicit Live switch. Empty
+      // armed tracks still record the instrument's native performance.
+      return track?.instrumentLive === true || this.recordingTracks.has(track?.id) && !track?.clips.some(clip => clip.type === 'notes');
+    }
+    _clockDriven(track, entry) {
+      return !!entry.live || track?.clips.some(clip => clip.type === 'notes') && (!entry.continuous || !this._nativeLive(track));
     }
     _validateClip(adapter, clip) {
       const spec = adapter?.notes, mappingAdapter = { notes: spec };
@@ -75,7 +84,7 @@
       if (this.disposed || !this.audio.getTransport().playing) return false;
       this.active = true;
       for (const [id, entry] of this.tracks) {
-        if (entry.live) {
+        if (this._clockDriven(this.getState().tracks.find(track => track.id === id), entry)) {
           // Stop autonomous app clocks before handing the same native engine
           // timestamped notes. Subsequent host Start commands stay clock driven.
           this.host.command(id, 'stop').catch(error => this.onStatus(error.message));
@@ -119,7 +128,7 @@
         entry.sources = new Set(); entry.retired = new Map(); if (entry.live) entry.liveSource = this._newSource(entry);
         if (entry.pending) { const boundary = this._nextBoundary(clock); entry.pending = { ...entry.pending, ...boundary, phaseBeat: entry.pending.signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, source: this._newSource(entry) }; if (entry.pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource, when: boundary.when }); }
       }
-      for (const [id, entry] of this.tracks) if (entry.continuous && (this.getState().tracks.find(track => track.id === id)?.instrumentLive || this.recordingTracks.has(id))) {
+      for (const [id, entry] of this.tracks) if (entry.continuous && this._nativeLive(this.getState().tracks.find(track => track.id === id))) {
         try { this.host.transportInstrument(id, { ...clock, when: clock.contextTime + .005, playing: true }); } catch (error) { this.onStatus(error.message); }
       }
     }
@@ -148,8 +157,10 @@
         const entry = this.tracks.get(track.id);
         if (entry && entry.adapter !== this.host.getPatternAdapter(track.id)) this.tracks.delete(track.id);
         if (!this.tracks.has(track.id)) this._addTrack(track);
-        else if (entry?.live && !track.instrumentLive && !this.recordingTracks.has(track.id)) { entry.live = null; entry.pending = null; entry.sources.clear(); this.host.setClockDriven(track.id, false); }
-        else if (entry && (track.instrumentLive || this.recordingTracks.has(track.id)) && !entry.continuous) this.host.setClockDriven(track.id, true);
+        else if (entry) {
+          if (entry.live && !this._nativeLive(track)) { entry.live = null; entry.pending = null; entry.sources.clear(); }
+          this.host.setClockDriven(track.id, this._clockDriven(track, entry));
+        }
       }
       this._tick(); if (!this.refreshing) this._refreshLive();
     }
@@ -162,11 +173,12 @@
         if (!this.active || generation !== this.generation) return;
         const entry = { id: track.id, adapter, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) this._validateClip(adapter, clip);
-        if ((track.instrumentLive || this.recordingTracks.has(track.id)) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.signature = global.MusicLabPatternSchema?.fingerprint(entry.live) || JSON.stringify(entry.live); this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
+        if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.signature = global.MusicLabPatternSchema?.fingerprint(entry.live) || JSON.stringify(entry.live); }
         if (!this.active || generation !== this.generation) return;
+        if (this._clockDriven(track, entry)) { this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
         this.tracks.set(track.id, entry);
         if (entry.live) entry.liveSource = this._newSource(entry);
-        if (entry.continuous && (track.instrumentLive || this.recordingTracks.has(track.id))) this.host.transportInstrument(track.id, { ...this.audio.getTransport(), playing: true });
+        if (entry.continuous && this._nativeLive(track)) this.host.transportInstrument(track.id, { ...this.audio.getTransport(), playing: true });
         this.catchHeld = true; this._tick();
       } catch (error) { if (this.active) this.onStatus(error.message); }
     }
@@ -194,12 +206,12 @@
       try {
         for (const track of state.tracks) {
           const entry = this.tracks.get(track.id); if (!entry) continue;
-          if (entry.continuous && (track.instrumentLive || this.recordingTracks.has(track.id))) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
+          if (entry.continuous && this._nativeLive(track)) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
             const key = [clock.revision, segment.cycle, track.id, 'transport'].join(':');
             if (!this.scheduled.has(key)) { this.host.transportInstrument(track.id, { ...clock, beat: segment.start, when: segment.when, playing: true }); this.scheduled.set(key, segment.when); }
           }
           for (const clip of track.clips) if (clip.type === 'notes') for (const segment of segments) this._clip(track, entry, clip, segment, clock, 'loom');
-          if ((track.instrumentLive || this.recordingTracks.has(track.id)) && entry.live) {
+          if (this._nativeLive(track) && entry.live) {
             if (entry.pending && clock.absoluteBeat >= entry.pending.absoluteBeat - EPSILON) this._commit(entry);
             for (const segment of segments) {
               const pending = entry.pending, span = segment.end - segment.start, switchBeat = pending ? segment.start + pending.absoluteBeat - segment.absolute : Infinity;
@@ -258,7 +270,7 @@
         for (const [id, entry] of this.tracks) {
           if (!this.active || generation !== this.generation) break;
           const track = this.getState().tracks.find(item => item.id === id);
-          if (!track?.instrumentLive && !this.recordingTracks.has(id)) continue;
+          if (!this._nativeLive(track)) continue;
           const continuous = !!entry.adapter?.transport && ['bands', 'decks'].includes(entry.adapter?.patternImport?.mode) && !entry.adapter?.importedPattern;
           if (continuous !== entry.continuous) {
             entry.continuous = continuous; for (const source of entry.sources) this.host.cancelNotes(id, { source }); entry.sources.clear(); entry.live = null; entry.pending = null; entry.signature = '';
