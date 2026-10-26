@@ -301,7 +301,9 @@
           catch(error){if(this._disposed)throw error;this.node=null;this.onStatus?.('Using the compatible audio engine.');}
           finally{if(url)URL.revokeObjectURL(url);}
         }
-        if(!this.node){if(!ctx.createScriptProcessor)throw new Error('This browser cannot run LEAVEN’s audio engine.');this.core=new DSP.Core(ctx.sampleRate,this.state);this.core.frame=Math.round(ctx.currentTime*ctx.sampleRate);this.node=ctx.createScriptProcessor(1024,0,2);this.mode='fallback';this.node.onaudioprocess=e=>{if(this._disposed)return;const at=Math.round((Number.isFinite(e.playbackTime)?e.playbackTime:ctx.currentTime)*ctx.sampleRate);if(at>this.core.frame)this.core.frame=at;this.core.processBlock(e.outputBuffer.getChannelData(0),e.outputBuffer.getChannelData(1));this.meters=this.core.getMeters();};}
+        // playbackTime is this output buffer's absolute origin. Keeping an
+        // inherited clock ahead of it would advance every scheduled note.
+        if(!this.node){if(!ctx.createScriptProcessor)throw new Error('This browser cannot run LEAVEN’s audio engine.');this.core=new DSP.Core(ctx.sampleRate,this.state);this.core.frame=Math.round(ctx.currentTime*ctx.sampleRate);this.node=ctx.createScriptProcessor(1024,0,2);this.mode='fallback';this.node.onaudioprocess=e=>{if(this._disposed)return;const at=Math.round((Number.isFinite(e.playbackTime)?e.playbackTime:ctx.currentTime)*ctx.sampleRate);this.core.frame=at;this.core.processBlock(e.outputBuffer.getChannelData(0),e.outputBuffer.getChannelData(1));this.meters=this.core.getMeters();};}
         if(this._disposed)throw new Error('This LEAVEN engine has been closed.');this.node.connect(ctx.destination);return this;
       })().catch(error=>{this._initPromise=null;this.node?.disconnect();this.node=null;if(this._ownsContext)this.context?.close().catch(()=>{});this.context=null;this.core=null;throw error;});return this._initPromise;
     }

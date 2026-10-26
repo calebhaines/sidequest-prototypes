@@ -1214,7 +1214,9 @@ function createMarinadeSequence() {
           catch(error){if(this._disposed)throw error;this.node=null;this.onStatus?.('Using the compatible audio engine.');}
           finally{if(url)URL.revokeObjectURL(url);}
         }
-        if(!this.node){if(!ctx.createScriptProcessor)throw new Error('This browser cannot run MARINADE’s audio engine.');this.core=new DSP.Core(ctx.sampleRate,this.state,this.models);this.core.frame=Math.round(ctx.currentTime*ctx.sampleRate);this.node=ctx.createScriptProcessor(1024,0,2);this.mode='fallback';this.node.onaudioprocess=e=>{if(this._disposed)return;const at=Math.round((Number.isFinite(e.playbackTime)?e.playbackTime:ctx.currentTime)*ctx.sampleRate);if(at>this.core.frame)this.core.frame=at;this.core.processBlock(e.outputBuffer.getChannelData(0),e.outputBuffer.getChannelData(1));this.meters=this.core.getMeters();};}
+        // playbackTime is this output buffer's absolute origin. Keeping an
+        // inherited clock ahead of it would advance every scheduled note.
+        if(!this.node){if(!ctx.createScriptProcessor)throw new Error('This browser cannot run MARINADE’s audio engine.');this.core=new DSP.Core(ctx.sampleRate,this.state,this.models);this.core.frame=Math.round(ctx.currentTime*ctx.sampleRate);this.node=ctx.createScriptProcessor(1024,0,2);this.mode='fallback';this.node.onaudioprocess=e=>{if(this._disposed)return;const at=Math.round((Number.isFinite(e.playbackTime)?e.playbackTime:ctx.currentTime)*ctx.sampleRate);this.core.frame=at;this.core.processBlock(e.outputBuffer.getChannelData(0),e.outputBuffer.getChannelData(1));this.meters=this.core.getMeters();};}
         if(this._disposed)throw new Error('This MARINADE engine has been closed.');await this._ensureModels();this._send('models',{models:this.models});this._send('state',{state:this.state});this.node.connect(ctx.destination);return this;
       })().catch(error=>{this._initPromise=null;this.node?.disconnect();this.node=null;if(this._ownsContext)this.context?.close().catch(()=>{});this.context=null;this.core=null;throw error;});return this._initPromise;
     }
@@ -2139,6 +2141,13 @@ MusicLabExchange.register({...{"id":"marinade","name":"MARINADE","sourceApp":"MA
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode!=='pattern'&&window.BowerDSP?.captureEvents){
+        const length=s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length/4:16;
+        const out=packetBase(s,s.name+(s.sequenceMode==='pattern'?' · Pattern '+String.fromCharCode(65+s.pattern.selected):' · four-bar phrase'),length,voices);
+        const sampleRate=engine.context?.sampleRate||48000;
+        for(const hit of window.BowerDSP.captureEvents(sampleRate,s,length))if(selected===null||hit.lane===selected)addNote(out,hit.note,hit.beat,hit.durationBeats,hit.velocity,String(hit.lane));
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       if(s.sequenceMode==='pattern') {
         const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
         for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}

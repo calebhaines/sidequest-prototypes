@@ -2284,6 +2284,13 @@ MusicLabExchange.register({...{"id":"mire","name":"REDUCE","sourceApp":"MIRE","a
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode!=='pattern'&&window.BowerDSP?.captureEvents){
+        const length=s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length/4:16;
+        const out=packetBase(s,s.name+(s.sequenceMode==='pattern'?' · Pattern '+String.fromCharCode(65+s.pattern.selected):' · four-bar phrase'),length,voices);
+        const sampleRate=engine.context?.sampleRate||48000;
+        for(const hit of window.BowerDSP.captureEvents(sampleRate,s,length))if(selected===null||hit.lane===selected)addNote(out,hit.note,hit.beat,hit.durationBeats,hit.velocity,String(hit.lane));
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       if(s.sequenceMode==='pattern') {
         const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
         for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}

@@ -62,7 +62,32 @@ function createBowerDSP(){
   }
   getMeters(){return{rms:this.rms,peak:this.peak,lanes:this.laneRms.slice(),positions:this.positions.slice(),voices:this.voices.length,beat:this.transport/this.stepsPerBeat,waveform:Array.from(this.waveform)};}
  }
- return{Core,StringVoice};
+ // Read the real native scheduler without running the audio sample loop. The
+ // string exciter shares its PRNG with probability, evolution and humanization,
+ // so each real pluck must still consume its usual excitation noise draws.
+ function captureEvents(sampleRate,state,lengthBeats=16){
+  if(!Number.isFinite(lengthBeats)||lengthBeats<=0||lengthBeats>256)throw new Error('Capture a string phrase between zero and 256 beats.');
+  const core=new Core(sampleRate,state),end=Math.max(1,Math.round(lengthBeats*core.stepsPerBeat)),events=[];
+  core.start();
+  while(core.frame<end){
+   core.sequence();
+   for(let k=core.events.length-1;k>=0;k--)if(core.events[k].at<=core.frame){
+    const e=core.events[k],lane=core.lanes[e.lane],solo=core.lanes.some(l=>l.solo);
+    if(!lane.mute&&(!solo||lane.solo)){
+     const note=e.note??core.degreeMidi(e.lane,e.degree),duration=e.duration??lane.decay;
+     events.push({lane:e.lane,note,velocity:e.velocity,beat:core.frame/core.stepsPerBeat,durationBeats:duration*core.tempo/60});
+    }
+    core.pluck(e.lane,e.degree,e.velocity,e.note??null,e.duration??null,e.source??'native');core.events.splice(k,1);
+   }
+   const clocks=state.sequenceMode==='pattern'?[core.clocks[0]]:core.clocks;
+   let next=end;
+   for(const clock of clocks)next=Math.min(next,Math.ceil(clock.next-.001));
+   for(const event of core.events)next=Math.min(next,event.at);
+   core.frame=core.transport=Math.max(core.frame+1,next);
+  }
+  return events;
+ }
+ return{Core,StringVoice,captureEvents};
 }
 const DSP=createBowerDSP();window.BowerDSP=DSP;
 function wav(chunks,sampleRate){let frames=0;for(const c of chunks)frames+=c.length/2;const bytes=new ArrayBuffer(44+frames*4),v=new DataView(bytes),text=(p,s)=>{for(let i=0;i<s.length;i++)v.setUint8(p+i,s.charCodeAt(i));};text(0,'RIFF');v.setUint32(4,36+frames*4,true);text(8,'WAVE');text(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sampleRate,true);v.setUint32(28,sampleRate*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);text(36,'data');v.setUint32(40,frames*4,true);let at=44;for(const c of chunks)for(const x of c){const a=Math.max(-1,Math.min(1,Number.isFinite(x)?x:0));v.setInt16(at,Math.round(a<0?a*32768:a*32767),true);at+=2;}return new Blob([bytes],{type:'audio/wav'});}

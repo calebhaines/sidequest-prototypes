@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; the existing GALLEY engine and arrangement remain 1.11.1.
+SERVICE is version 1.0.0; the existing GALLEY engine and arrangement remain 1.12.0.
 
 ## Making a piece
 
@@ -98,6 +98,16 @@ interface plays through that track’s mixer and four effects slots. Editor
 audition lets you try sounds; Live makes the app follow the studio transport.
 Arm tracks and record their actual output into audio clips. Preparation loads
 the instrument’s engine before recording starts.
+
+An armed track with note clips records those written parts. Its native groove
+joins them only when **Live** is enabled. An armed track without note clips
+records its native instrument performance. Leading rests stay in the take.
+SKEWER’s generative pattern exports retain the actual humanized timing of the
+captured phrase; its authored pattern banks keep editable probabilities.
+The shared clock preserves count-in boundaries, and LEAVEN/MARINADE fallback
+rendering uses each browser audio block’s timestamp rather than carrying a
+clock lead into new notes. Internal instrument takes use their musical clock;
+microphone delay correction applies only to microphone input.
 
 Choose **+ Note clip** to write a part directly in the piano roll. Click to add
 notes, drag to move, and drag their ends to resize. Select several notes to move
@@ -304,7 +314,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Eleven effects
+## Fourteen effects
 
 | Effect | Processing |
 | --- | --- |
@@ -319,6 +329,44 @@ is unavailable, keep a WAV or packet for the next session.
 | BROILER | Bass and guitar amp heads, power-stage dynamics, speaker cabinets, microphone position, and protected clean lows |
 | GLAZE | Vocal cleanup, de-essing, compression, tone, saturation, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, echo, reverb, and rhythmic chopping |
 | SCALES | Chromatic tuner, calibration, stereo meters, gain trim, channel routing, width, mono bass, polarity, DC removal, filters, clip guard, and mute |
+| STRAINER | Multimode filtering with clean, ladder, diode, and comb resonance; input envelope following, synced modulation, and stereo motion |
+| SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
+| CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
+
+### STRAINER: shape a sound with its own envelope
+
+Choose a resonance circuit and a low-pass, high-pass, band-pass, or notch
+response. Clean uses a state-variable filter; Ladder has rounded four-pole
+feedback; Diode adds asymmetric bite; Comb places tuned reflections before the
+filter. Use 12 or 24 dB/octave response, then set cutoff, resonance, and Input heat.
+
+Raise **Envelope sweep** for an opening wah, or use a negative value for an
+inverted sweep. **Full-sweep level** sets the input level that reaches the whole
+sweep; lower levels react to quieter playing. Attack and Release control the
+follower’s response. Peak follows transients; RMS follows body and sustain.
+The detector is stereo-linked and its low cut affects detection only.
+
+The LFO can run freely or follow session tempo, with sine, triangle, rising ramp,
+or seeded sample-and-hold movement. Stereo offset moves the right-hand sweep.
+Live readings report each cutoff, detector level, and input/output peaks.
+Start with a house recipe, then adjust the cutoff and envelope to suit the part.
+
+### SWIRL and CRUMBLE
+
+**SWIRL** makes phase cancellations with four, eight, or twelve all-pass stages.
+Stage spread, signed feedback, and cancellation polarity change the character.
+A synced/free LFO and a stereo-linked envelope move the sweep independently.
+Set LFO sweep to zero for an envelope-only or manually placed phaser.
+
+**CRUMBLE** reduces amplitude precision and sample-clock rate. Clock jitter,
+independent stereo clocks, and signal-gated triangular dither add digital texture.
+Raw mode deliberately aliases; Soft filters the input before reduction. Recover
+attacks brings original transients back in parallel, and the output low-pass
+softens the edges. Fractional bit depth supports smooth automated transitions.
+
+All three effects have grouped controls, described recipes, actual DSP meters,
+Dry / wet, bypass, and numeric automation targets. They use the same processing
+in live monitoring and WAV export; their settings travel in normal projects.
 
 BROILER contains nine bass models: the original clean solid-state, flip-top,
 valve stack, modern grind, and doom fuzz, plus four characters inspired by the
@@ -454,6 +502,17 @@ preserved edits, snapshots, routed audio, and reopening on desktop and phone
 layouts. The extracted command is `node host-navigation-checks.cjs` and requires
 Playwright and Chromium.
 
+Run `npm run check:loom-filter`, `npm run check:loom-creative`, and
+`npm run check:loom-creative-browser` for the new circuits, envelope response,
+phase notches, digital reduction, automation, Worklet/fallback processing,
+WAV parity, recipes, saved projects, and phone layouts.
+`npm run check:loom-tonal-print` checks ten tonal and sample instruments through
+source printing, including rests, swing, rate, source trim, and placement.
+`npm run check:loom-tonal-clocks` checks actual fallback engine callbacks at
+44.1, 48, and 96 kHz and count-in interpolation across render boundaries.
+`npm run check:loom-tonal-live` records them through the shared clock in both
+audio paths and checks native/arranged switching, count-in, and seeks.
+
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all fourteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
@@ -461,7 +520,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.11.1.
+font license notices. Version 1.12.0.
 
 ## Compatibility
 
