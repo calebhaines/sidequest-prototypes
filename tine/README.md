@@ -39,6 +39,12 @@ stereo WAV audio, the four-bar duration and natural tail, unchanged project stat
 and cancellation. `PLAYWRIGHT_MODULE` and `CHROMIUM_PATH` can select an existing
 Playwright/Chromium installation; `TINE_QA_URL` can check the published page.
 
+Run `node tine/cancellation-checks.cjs` for native audio checks of repeated stops,
+natural release fades, and cancellation before a scheduled strike. Hosted notes
+retain a stable lane identity so GALLEY applies CLATTER's six-voice limit even
+when each strike reads a fresh sound-settings snapshot. The integration check is
+`node loom/clatter-polyphony-checks.cjs`.
+
 `node grain/pattern-length-checks.cjs` also verifies CLATTER's maintained sources directly: all eight factory groove states and native WAVs match the rollback checkpoint within the browser's native filter precision, versions 1/2 migrate without changing their sound, and 32-step playback/export, accents, paging, banks, undo, persistence, strict project validation, and 320/390 px controls work together.
 
 ## Display identity

@@ -188,6 +188,9 @@
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
         const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        // Public app snapshots are copies. Preserve lane identity separately
+        // so a hosted modal voice keeps the same polyphony budget on each hit.
+        if(id==='tine')options.voiceKey='voice-'+index;
         if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
         if(id==='form')return native().scheduleNativeNote(index,note.when,options);
         return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);

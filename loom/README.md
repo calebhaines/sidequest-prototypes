@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; the existing GALLEY engine and arrangement remain 1.12.0.
+SERVICE is version 1.0.0; GALLEY is version 1.12.1.
 
 ## Making a piece
 
@@ -108,6 +108,16 @@ The shared clock preserves count-in boundaries, and LEAVEN/MARINADE fallback
 rendering uses each browser audio block’s timestamp rather than carrying a
 clock lead into new notes. Internal instrument takes use their musical clock;
 microphone delay correction applies only to microphone input.
+
+Recorded audio can end while a resonator is still ringing. Repeating a source
+or an arrangement loop now joins discontinuous clip audio with a brief correction
+before the track inserts. Loop lengths, note timing, source trims, instrument
+input, and effect tails retain their original timing; already seamless repeats
+keep their waveform. This also applies to existing recorded takes.
+
+CLATTER keeps its six-voice limit per lane when GALLEY schedules notes from saved
+settings. Repeated stops preserve an ongoing release instead of restoring its
+full volume, and finished instrument nodes are released during long sessions.
 
 Choose **+ Note clip** to write a part directly in the piano roll. Click to add
 notes, drag to move, and drag their ends to resize. Select several notes to move
@@ -512,6 +522,9 @@ source printing, including rests, swing, rate, source trim, and placement.
 44.1, 48, and 96 kHz and count-in interpolation across render boundaries.
 `npm run check:loom-tonal-live` records them through the shared clock in both
 audio paths and checks native/arranged switching, count-in, and seeks.
+`npm run check:loom-playback` checks audio loop continuity and transfer parity.
+`npm run check:loom-playback-browser` checks actual hosted node cleanup, CLATTER
+lane limits, and native cancellation envelopes in Chromium.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all fourteen standalone instrument pages in
@@ -520,7 +533,7 @@ source projects are available from Kitchen.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.12.0.
+font license notices. Version 1.12.1.
 
 ## Compatibility
 

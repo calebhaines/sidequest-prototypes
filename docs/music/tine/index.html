@@ -99,7 +99,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141719">
-  <meta name="tine-version" content="1.1.2">
+  <meta name="tine-version" content="1.1.3">
   <meta name="description" content="CLATTER — a physical modeling drum machine from Kitchen. Eight voices, sixteen or thirty-two steps, and cookware with unexpected sustain.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23111517'/%3E%3Cg fill='none' stroke='%23dcc85e' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
   <title>CLATTER — Kitchen</title>
@@ -760,7 +760,7 @@ body {
       <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>The dish pit has remarkable acoustics.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">CHECK THE<br>RING TIME.</span></section>
     </main>
 
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.2</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.3</span></span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -1105,7 +1105,7 @@ body {
 /* TINE: force-driven modal physical percussion. No samples, oscillators, or dependencies. */
 (function () {
   'use strict';
-  const TAU = Math.PI * 2, LOG1000 = Math.log(1000), EPSILON = 0.000001;
+  const TAU = Math.PI * 2, LOG1000 = Math.log(1000);
   const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate', 'bell', 'bowl', 'tube'];
   const COLORS = ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'];
   // Contact compliance changes the force itself, before it reaches the body.
@@ -1305,14 +1305,44 @@ body {
   function fadeVoice(voice, at, duration = .01) {
     if (!voice || voice.disposed) return;
     voice.stolen = true;
-    voice.bus.gain.cancelScheduledValues(at); voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at); voice.bus.gain.linearRampToValueAtTime(0, at + duration);
-    voice.stopTime = Math.min(voice.stopTime, at + duration + .002);
-    voice.sources.forEach(source => { try { source.stop(at + duration + .002); } catch (_) {} });
+    // A second stop must not restore the full level halfway through an already
+    // audible fade, or extend an earlier cancellation into a new tail.
+    if (voice.fadeAt !== undefined && at >= voice.fadeAt) return;
+    const naturalEnd = voice.naturalStopTime ?? voice.stopTime;
+    voice.naturalStopTime = naturalEnd;
+    if (at >= naturalEnd) return;
+    const gain = voice.bus.gain, end = Math.min(naturalEnd, at + duration);
+    if (voice.startTime > at) {
+      // A prepared future note has no audible envelope to release. Do not let
+      // it start at partial volume inside the cancellation fade window.
+      gain.cancelScheduledValues(at); gain.setValueAtTime(0, at);
+      voice.fadeAt = at; voice.stopTime = at;
+      voice.sources.forEach(source => { try { source.stop(at); } catch (_) {} });
+      return;
+    }
+    const level = voice.volume * clamp((naturalEnd - at) / .02, 0, 1);
+    if (typeof gain.cancelAndHoldAtTime === 'function') {
+      gain.cancelAndHoldAtTime(at);
+      // Explicitly anchor the following ramp even when the original envelope
+      // had no automation event before `at` (only its initial .value).
+      gain.setValueAtTime(level, at);
+    } else {
+      // The only uncancelled bus envelope is its final twenty-millisecond
+      // linear fade. Preserve that level on browsers without cancel-and-hold.
+      gain.cancelScheduledValues(at);
+      if (at > naturalEnd - .02) gain.linearRampToValueAtTime(level, at);
+      else gain.setValueAtTime(level, at);
+    }
+    gain.linearRampToValueAtTime(0, end);
+    voice.fadeAt = at;
+    voice.stopTime = Math.min(naturalEnd, end + .002);
+    voice.sources.forEach(source => { try { source.stop(voice.stopTime); } catch (_) {} });
   }
   function synthesize(environment, data, time, accent, expression = {}) {
     const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
     const { context, graph, random } = environment, now = Math.max(time, context.currentTime);
-    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.track === data);
+    const voiceKey = typeof expression.voiceKey === 'string' ? expression.voiceKey : data;
+    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.voiceKey === voiceKey);
     if (sameTrack.length >= 6) { fadeVoice(sameTrack[0], now); environment.stolen++; }
     if (active.filter(voice => !voice.stolen).length >= 48) { fadeVoice(active.find(voice => !voice.stolen), now); environment.stolen++; }
     if (t.variation) { t.pitchHz *= Math.pow(2, (random() * 2 - 1) * t.variation * .4 / 12); t.position = clamp(t.position + (random() * 2 - 1) * t.variation * .045, .02, .98); t.decay = clamp(t.decay * (1 + (random() * 2 - 1) * t.variation * .08), .04, 4); }
@@ -1323,7 +1353,7 @@ body {
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
     const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', track: data, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
+    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
@@ -2568,6 +2598,13 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode!=='pattern'&&window.BowerDSP?.captureEvents){
+        const length=s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length/4:16;
+        const out=packetBase(s,s.name+(s.sequenceMode==='pattern'?' · Pattern '+String.fromCharCode(65+s.pattern.selected):' · four-bar phrase'),length,voices);
+        const sampleRate=engine.context?.sampleRate||48000;
+        for(const hit of window.BowerDSP.captureEvents(sampleRate,s,length))if(selected===null||hit.lane===selected)addNote(out,hit.note,hit.beat,hit.durationBeats,hit.velocity,String(hit.lane));
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       if(s.sequenceMode==='pattern') {
         const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
         for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}
@@ -2883,6 +2920,9 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
         const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        // Public app snapshots are copies. Preserve lane identity separately
+        // so a hosted modal voice keeps the same polyphony budget on each hit.
+        if(id==='tine')options.voiceKey='voice-'+index;
         if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
         if(id==='form')return native().scheduleNativeNote(index,note.when,options);
         return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);

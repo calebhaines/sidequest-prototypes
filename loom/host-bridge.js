@@ -6,7 +6,7 @@
     'use strict';
     const record = parent.__LoomHostRegistry[key];
     if (!record || !record.active) throw new Error('This instrument has been unloaded.');
-    const contexts = new Set(), rawNodes = new WeakMap(), wrappedNodes = new WeakMap();
+    const contexts = new Set(), rawNodes = new WeakMap(), wrappedNodes = new WeakMap(), trackedSources = new WeakSet();
     const nativeNodeConstructors = new Map();
     const nativeGetUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
     const streams = new Set();
@@ -52,10 +52,20 @@
       Object.defineProperty(window, 'indexedDB', { configurable: true, get: () => isolatedIndexedDB });
     }
 
+    function retainNode(node, facade) {
+      facade._nodes.add(node);
+      if (typeof node.start === 'function' && !trackedSources.has(node)) {
+        trackedSources.add(node);
+        // A short-lived native voice can create dozens of nodes. Keep running
+        // sources available for Stop, then let their ended event release them.
+        node.addEventListener('ended', () => facade._nodes.delete(node), { once: true });
+      }
+    }
+
     function wrapNode(node, facade) {
       if (!node || typeof node.connect !== 'function') return node;
       if (wrappedNodes.has(node)) return wrappedNodes.get(node);
-      facade._nodes.add(node);
+      retainNode(node, facade);
       const proxy = new Proxy(node, {
         get(target, property) {
           if (property === 'context') return facade;
@@ -65,6 +75,10 @@
           return (...args) => {
             if (property === 'connect' || property === 'start') requireActive();
             const result = value.apply(target, args.map(unwrap));
+            if (property === 'connect' || property === 'start') retainNode(target, facade);
+            // Partial disconnects can leave other outputs connected. A full
+            // disconnect releases processors; running sources stay until ended.
+            if (property === 'disconnect' && !args.length && typeof target.start !== 'function') facade._nodes.delete(target);
             return result && typeof result.connect === 'function' ? wrapNode(result, facade) : result;
           };
         },
@@ -108,7 +122,7 @@
         },
         async resume() { requireActive(); if (closed) throw new DOMException('This context is closed.', 'InvalidStateError'); suspended = false; output.gain.setValueAtTime(record.soundEnabled ? 1 : 0, raw.currentTime); if (raw.state === 'suspended' && record.soundEnabled) await raw.resume(); requireActive(); dispatch(); },
         async suspend() { if (closed) return; suspended = true; output.gain.setValueAtTime(0, raw.currentTime); dispatch(); },
-        async close() { if (closed) return; closed = true; output.gain.setValueAtTime(0, raw.currentTime); nodes.forEach(node => { try { node.stop?.(); } catch (_) {} try { node.disconnect(); } catch (_) {} }); try { output.disconnect(); } catch (_) {} contexts.delete(proxy); dispatch(); },
+        async close() { if (closed) return; closed = true; output.gain.setValueAtTime(0, raw.currentTime); nodes.forEach(node => { try { node.stop?.(); } catch (_) {} try { node.disconnect(); } catch (_) {} }); nodes.clear(); try { output.disconnect(); } catch (_) {} contexts.delete(proxy); dispatch(); },
         addEventListener(type, listener) { if (type === 'statechange') listeners.add(listener); },
         removeEventListener(type, listener) { if (type === 'statechange') listeners.delete(listener); },
         dispatchEvent(event) { if (event.type === 'statechange') dispatch(); return true; },

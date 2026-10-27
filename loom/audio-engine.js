@@ -24,6 +24,78 @@
     };
     const emptyMeter = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
+    const sampleData = (data, position) => {
+      if (!data || position < 0 || position >= data.length) return 0;
+      const index = Math.floor(position), fraction = position - index;
+      return (data[index] || 0) * (1 - fraction) + (data[Math.min(index + 1, data.length - 1)] || 0) * fraction;
+    };
+    function loopDelta(data, start, end, reverse) {
+      if (end - start < 4) return 0;
+      const direction = reverse ? -1 : 1, firstPosition = reverse ? end - 1 : start, lastPosition = reverse ? start : end - 1;
+      const first = sampleData(data, firstPosition), last = sampleData(data, lastPosition);
+      let adjacent = 0;
+      for (let index = 1; index <= 3; index++) {
+        adjacent = Math.max(adjacent,
+          Math.abs(sampleData(data, firstPosition + direction * index) - sampleData(data, firstPosition + direction * (index - 1))),
+          Math.abs(sampleData(data, lastPosition - direction * index) - sampleData(data, lastPosition - direction * (index - 1))));
+      }
+      // A normal waveform step at a periodic boundary is not an edit. Only
+      // repair a jump larger than the neighbouring source sample changes.
+      if (Math.abs(first - last) <= adjacent * 1.25 + 1e-5) return 0;
+      const previous = sampleData(data, lastPosition - direction);
+      return 2 * last - previous - first;
+    }
+    function compileClip(clip, asset) {
+      const sr = clamp(asset?.sampleRate, 8000, 192000, 48000), duration = asset?.left?.length / sr || 0;
+      const sourceStart = clamp(clip.sourceStart, 0, duration, 0), sourceEnd = clamp(clip.sourceEnd, sourceStart, duration, duration);
+      const item = { start: Number(clip.start) || 0, length: clamp(clip.length, .0001, 256, 1), left: asset?.left, right: asset?.right || asset?.left, sampleRate: sr,
+        sourceStart, sourceEnd, span: sourceEnd - sourceStart, sourceOffset: clamp(clip.sourceOffset, 0, 120, 0), rate: clamp(clip.rate, .125, 8, 1), reverse: clip.reverse === true,
+        loop: clip.loop === true, gain: clamp(clip.gain, 0, 4, 1), fadeIn: clamp(clip.fadeIn, 0, 32, 0), fadeOut: clamp(clip.fadeOut, 0, 32, 0) };
+      item.loopDeltaLeft = item.loop && item.left ? loopDelta(item.left, sourceStart * sr, sourceEnd * sr, item.reverse) : 0;
+      item.loopDeltaRight = item.loop && item.right ? loopDelta(item.right, sourceStart * sr, sourceEnd * sr, item.reverse) : 0;
+      item.loopCorrectionSpan = Math.min(.003 * item.rate, item.span * .5);
+      item.initialSourceCycle = item.span > 0 ? Math.floor((item.sourceOffset + Math.min(1e-9, item.span * .0001)) / item.span) : 0;
+      return item;
+    }
+    function clipSourceSample(item, position, channel) {
+      const data = channel ? item.right : item.left, start = item.sourceStart * item.sampleRate;
+      if (item.loop && item.reverse && position < start) {
+        // Reverse playback starts on the last selected sample. At fractional
+        // rates its final interpolation can run less than one sample before
+        // the region; extend its local slope instead of reading outside it or
+        // inserting zero before the wrap.
+        const first = sampleData(data, start);
+        if ((channel ? item.loopDeltaRight : item.loopDeltaLeft) === 0) {
+          const previous = sampleData(data, Math.max(start, item.sourceEnd * item.sampleRate - 1));
+          return first + (start - position) * (previous - first);
+        }
+        const next = sampleData(data, Math.min(start + 1, Math.max(start, item.sourceEnd * item.sampleRate - 1)));
+        return first + (position - start) * (next - first);
+      }
+      return sampleData(data, position);
+    }
+    function readClip(item, beat, secondsPerBeat, pair) {
+      pair[0] = pair[1] = 0;
+      const localBeat = beat - item.start;
+      if (localBeat < 0 || localBeat >= item.length || !item.left?.length || item.span <= 0) return;
+      let offset = localBeat * secondsPerBeat * item.rate + item.sourceOffset, correction = 0;
+      if (item.loop) {
+        const cycle = Math.floor((offset + Math.min(1e-9, item.span * .0001)) / item.span);
+        offset = Math.max(0, offset - cycle * item.span);
+        if (cycle > item.initialSourceCycle && offset < item.loopCorrectionSpan) {
+          const progress = offset / item.loopCorrectionSpan;
+          correction = 1 - progress * progress * (3 - 2 * progress);
+        }
+      } else if (offset >= item.span) return;
+      const position = (item.reverse ? item.sourceEnd - 1 / item.sampleRate - offset : item.sourceStart + offset) * item.sampleRate;
+      const minimumFade = .003 / secondsPerBeat;
+      const fadeIn = item.blockFadeIn ?? Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn));
+      const fadeOut = item.blockFadeOut ?? Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut));
+      let gain = item.gain * Math.min(1, localBeat / fadeIn, (item.length - localBeat) / fadeOut);
+      if (!item.loop) gain *= Math.min(1, offset / .003, (item.span - offset) / .003);
+      pair[0] = (clipSourceSample(item, position, 0) + item.loopDeltaLeft * correction) * gain;
+      pair[1] = (clipSourceSample(item, position, 1) + item.loopDeltaRight * correction) * gain;
+    }
     class Core {
       constructor(state, assets, sampleRate = 48000, options = {}) {
         this.sampleRate = clamp(sampleRate, 8000, 192000, 48000);
@@ -42,6 +114,11 @@
         this.seekOrigin = [0, 0];
         this.seekFadeFrames = Math.max(1, Math.round(this.sampleRate * .006));
         this.seekFadeRemaining = 0;
+        this.clipSample = [0, 0];
+        this.clipWrapOffsets = Array.from({ length: 8 }, () => [0, 0]);
+        this.clipWrapFrames = Math.max(1, Math.round(this.sampleRate * .003));
+        this.clipWrapRemaining = 0;
+        this.clipWrapContinuation = null;
         this.recordOnly = new Set();
         this.auditionTracks = new Set();
         this.microphoneMonitor = { track: -1, enabled: false };
@@ -70,13 +147,7 @@
         if (this.tracks) this._compileClips();
       }
       _compileClips() {
-        this.clipLists = this.tracks.map(track => (track.clips || []).map(clip => {
-          const asset = this.assets.get(clip.assetId), sr = clamp(asset?.sampleRate, 8000, 192000, 48000), duration = asset?.left?.length / sr || 0;
-          const sourceStart = clamp(clip.sourceStart, 0, duration, 0), sourceEnd = clamp(clip.sourceEnd, sourceStart, duration, duration);
-          return { start: Number(clip.start) || 0, length: clamp(clip.length, .0001, 256, 1), left: asset?.left, right: asset?.right || asset?.left, sampleRate: sr,
-            sourceStart, sourceEnd, span: sourceEnd - sourceStart, sourceOffset: clamp(clip.sourceOffset, 0, 120, 0), rate: clamp(clip.rate, .125, 8, 1), reverse: clip.reverse === true,
-            loop: clip.loop === true, gain: clamp(clip.gain, 0, 4, 1), fadeIn: clamp(clip.fadeIn, 0, 32, 0), fadeOut: clamp(clip.fadeOut, 0, 32, 0) };
-        }).filter(item => item.left?.length && item.span > 0));
+        this.clipLists = this.tracks.map(track => (track.clips || []).map(clip => compileClip(clip, this.assets.get(clip.assetId))).filter(item => item.left?.length && item.span > 0));
       }
       setState(state) {
         if (this.service) { this.service.baseState = state || {}; this._setState(this._serviceState()); }
@@ -120,6 +191,8 @@
         this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
         this.transportCycle = 0;
         this.sampleClock = 0;
+        this.clipWrapRemaining = 0; this.clipWrapContinuation = null;
+        for (const pair of this.clipWrapOffsets) pair.fill(0);
         if (!this.options.linear) {
           // Discard audio from the previous timeline position, then crossfade the
           // last audible sample into the new position over six milliseconds.
@@ -148,6 +221,8 @@
         this.playing = false; this.ended = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
         this.countInRemaining = 0; this.recordingPunch = false;
         this.lastOutput.fill(0); this.seekOrigin.fill(0); this.seekFadeRemaining = 0;
+        this.clipWrapRemaining = 0; this.clipWrapContinuation = null;
+        for (const pair of this.clipWrapOffsets) pair.fill(0);
         this.masterGain = 0;
         for (const pair of this.gains) pair.fill(0);
         for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
@@ -166,10 +241,7 @@
         return true;
       }
       _sample(asset, position, channel) {
-        const data = channel ? (asset.right || asset.left) : asset.left;
-        if (!data || position < 0 || position >= data.length) return 0;
-        const a = Math.floor(position), f = position - a;
-        return (data[a] || 0) * (1 - f) + (data[Math.min(a + 1, data.length - 1)] || 0) * f;
+        return sampleData(channel ? (asset.right || asset.left) : asset.left, position);
       }
       // SERVICE is an opt-in runtime overlay. The arrangement renderer below
       // receives the same state, clips and block sizes whenever it is inactive.
@@ -269,7 +341,7 @@
           const geometryOptions = { clip: { ...clip, sourceStart, sourceEnd }, tempo: this.tempo, sceneBeat: service.sceneStarts[track], padBeat: service.padBeats[track], phaseOrigin: service.phaseOrigins[track], stutterBeats: p.stutterBeats, fill: p.fill }, first = serviceGeometry(geometryOptions, this.beat), result = [];
           for (let start = first.start; start <= endBeat + 1e-10; start += first.length) {
             if (start < service.sceneStarts[track] - 1e-10 && !p.fill) continue;
-            result.push({ ...first, start, left: asset.left, right: asset.right || asset.left, sampleRate: sr, sourceStart, sourceEnd, span: sourceEnd - sourceStart, reverse: clip.reverse === true, gain: clamp(clip.gain, 0, 4, 1) });
+            result.push(compileClip({ ...clip, ...first, start, sourceStart, sourceEnd }, asset));
           }
           return result;
         });
@@ -340,23 +412,39 @@
           const beat = this.beat;
           if (this.ended) for (let t = 0; t < 8; t++) if (!this.auditionTracks.has(t)) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
           if (this.playing) {
+            const wrapContinuation = this.clipWrapContinuation;
+            if (wrapContinuation !== null) this.clipWrapRemaining = this.clipWrapFrames;
+            const wrapProgress = 1 - this.clipWrapRemaining / this.clipWrapFrames;
+            const wrapWeight = this.clipWrapRemaining > 0 ? 1 - wrapProgress * wrapProgress * (3 - 2 * wrapProgress) : 0;
             for (let t = 0; t < 8; t++) {
               const [l, r] = this.buffers[t];
+              let clipLeft = 0, clipRight = 0;
               for (const item of candidates[t]) {
-                const length = item.length, localBeat = beat - item.start;
-                if (localBeat < 0 || localBeat >= length) continue;
-                let offset = localBeat * secondsPerBeat * item.rate + item.sourceOffset;
-                if (item.loop) offset %= item.span;
-                else if (offset >= item.span) continue;
-                const position = (item.reverse ? item.sourceEnd - 1 / item.sampleRate - offset : item.sourceStart + offset) * item.sampleRate;
-                let gain = item.gain * Math.min(1, localBeat / item.blockFadeIn, (length - localBeat) / item.blockFadeOut);
-                if (!item.loop) gain *= Math.min(1, offset / .003, (item.span - offset) / .003);
-                l[frame] += this._sample(item, position, 0) * gain;
-                r[frame] += this._sample(item, position, 1) * gain;
+                readClip(item, beat, secondsPerBeat, this.clipSample);
+                clipLeft += this.clipSample[0]; clipRight += this.clipSample[1];
               }
+              const correction = this.clipWrapOffsets[t];
+              if (wrapContinuation !== null) {
+                let outgoingLeft = 0, outgoingRight = 0;
+                // Read the known clip continuation at the next sample time.
+                // This never delays playback or includes the live input/rack.
+                for (const item of this.clipLists[t]) {
+                  readClip(item, wrapContinuation, secondsPerBeat, this.clipSample);
+                  outgoingLeft += this.clipSample[0]; outgoingRight += this.clipSample[1];
+                }
+                correction[0] = Math.abs(outgoingLeft - clipLeft) > 1e-5 ? outgoingLeft - clipLeft : 0;
+                correction[1] = Math.abs(outgoingRight - clipRight) > 1e-5 ? outgoingRight - clipRight : 0;
+              }
+              l[frame] += clipLeft + correction[0] * wrapWeight;
+              r[frame] += clipRight + correction[1] * wrapWeight;
             }
+            this.clipWrapContinuation = null;
+            if (this.clipWrapRemaining > 0) this.clipWrapRemaining--;
             this.beat += advance;
-            if (loop && this.beat >= loopEnd - 1e-10) { this.beat = loopStart + Math.max(0, this.beat - loopEnd) % (loopEnd - loopStart); this.transportCycle++; }
+            if (loop && this.beat >= loopEnd - 1e-10) {
+              this.clipWrapContinuation = this.beat;
+              this.beat = loopStart + Math.max(0, this.beat - loopEnd) % (loopEnd - loopStart); this.transportCycle++;
+            }
             else if (stopAtEnd && this.beat >= sessionEnd - 1e-10) { this.beat = sessionEnd; this.playing = false; this.ended = true; this.clickRemaining = 0; playingFrames = frame + 1; }
           }
         }
@@ -554,7 +642,7 @@
       }
       cancel() { this.active = false; this.stage = 'idle'; this.frames = 0; this.used = 0; this.buffers = []; }
     }
-    return { Core, Recorder, ServiceTiming: { geometry: serviceGeometry } };
+    return { Core, Recorder, ServiceTiming: { geometry: serviceGeometry }, ClipPlayback: { compile: compileClip, read: readClip } };
   }
 
   const silenceMeters = beat => ({ beat: beat || 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), master: { peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 } });
@@ -1250,6 +1338,8 @@
     async dispose() { this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
-  window.LoomServiceTiming = createLoomEngineDSP(window.createLoomEffectsDSP).ServiceTiming;
+  const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP);
+  window.LoomServiceTiming = sharedPlayback.ServiceTiming;
+  window.LoomClipPlayback = sharedPlayback.ClipPlayback;
   window.LoomAudio = LoomAudio;
 })();

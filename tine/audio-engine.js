@@ -1,7 +1,7 @@
 /* TINE: force-driven modal physical percussion. No samples, oscillators, or dependencies. */
 (function () {
   'use strict';
-  const TAU = Math.PI * 2, LOG1000 = Math.log(1000), EPSILON = 0.000001;
+  const TAU = Math.PI * 2, LOG1000 = Math.log(1000);
   const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate', 'bell', 'bowl', 'tube'];
   const COLORS = ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'];
   // Contact compliance changes the force itself, before it reaches the body.
@@ -201,14 +201,44 @@
   function fadeVoice(voice, at, duration = .01) {
     if (!voice || voice.disposed) return;
     voice.stolen = true;
-    voice.bus.gain.cancelScheduledValues(at); voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at); voice.bus.gain.linearRampToValueAtTime(0, at + duration);
-    voice.stopTime = Math.min(voice.stopTime, at + duration + .002);
-    voice.sources.forEach(source => { try { source.stop(at + duration + .002); } catch (_) {} });
+    // A second stop must not restore the full level halfway through an already
+    // audible fade, or extend an earlier cancellation into a new tail.
+    if (voice.fadeAt !== undefined && at >= voice.fadeAt) return;
+    const naturalEnd = voice.naturalStopTime ?? voice.stopTime;
+    voice.naturalStopTime = naturalEnd;
+    if (at >= naturalEnd) return;
+    const gain = voice.bus.gain, end = Math.min(naturalEnd, at + duration);
+    if (voice.startTime > at) {
+      // A prepared future note has no audible envelope to release. Do not let
+      // it start at partial volume inside the cancellation fade window.
+      gain.cancelScheduledValues(at); gain.setValueAtTime(0, at);
+      voice.fadeAt = at; voice.stopTime = at;
+      voice.sources.forEach(source => { try { source.stop(at); } catch (_) {} });
+      return;
+    }
+    const level = voice.volume * clamp((naturalEnd - at) / .02, 0, 1);
+    if (typeof gain.cancelAndHoldAtTime === 'function') {
+      gain.cancelAndHoldAtTime(at);
+      // Explicitly anchor the following ramp even when the original envelope
+      // had no automation event before `at` (only its initial .value).
+      gain.setValueAtTime(level, at);
+    } else {
+      // The only uncancelled bus envelope is its final twenty-millisecond
+      // linear fade. Preserve that level on browsers without cancel-and-hold.
+      gain.cancelScheduledValues(at);
+      if (at > naturalEnd - .02) gain.linearRampToValueAtTime(level, at);
+      else gain.setValueAtTime(level, at);
+    }
+    gain.linearRampToValueAtTime(0, end);
+    voice.fadeAt = at;
+    voice.stopTime = Math.min(naturalEnd, end + .002);
+    voice.sources.forEach(source => { try { source.stop(voice.stopTime); } catch (_) {} });
   }
   function synthesize(environment, data, time, accent, expression = {}) {
     const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
     const { context, graph, random } = environment, now = Math.max(time, context.currentTime);
-    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.track === data);
+    const voiceKey = typeof expression.voiceKey === 'string' ? expression.voiceKey : data;
+    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.voiceKey === voiceKey);
     if (sameTrack.length >= 6) { fadeVoice(sameTrack[0], now); environment.stolen++; }
     if (active.filter(voice => !voice.stolen).length >= 48) { fadeVoice(active.find(voice => !voice.stolen), now); environment.stolen++; }
     if (t.variation) { t.pitchHz *= Math.pow(2, (random() * 2 - 1) * t.variation * .4 / 12); t.position = clamp(t.position + (random() * 2 - 1) * t.variation * .045, .02, .98); t.decay = clamp(t.decay * (1 + (random() * 2 - 1) * t.variation * .08), .04, 4); }
@@ -219,7 +249,7 @@
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
     const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', track: data, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
+    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
