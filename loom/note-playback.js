@@ -31,6 +31,9 @@
         if (clock.revision !== this.revision) this._reset(clock);
       });
     }
+    _patternSignature(pattern, loop = true) {
+      return (global.MusicLabPatternSchema?.fingerprint(pattern) || JSON.stringify(pattern)) + (loop === false ? ':once' : ':loop');
+    }
     async prepare() {
       if (this.disposed) throw Error('Note playback has been disposed.');
       const generation = ++this.generation, state = this.getState(), relevant = state.tracks.filter(track => track.instrument && (track.instrumentLive || this.recordingTracks.has(track.id) || track.clips.some(clip => clip.type === 'notes')));
@@ -46,7 +49,8 @@
         const entry = { id: track.id, adapter, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
         if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) {
           entry.live = await this.host.exportPattern(track.id);
-          entry.signature = global.MusicLabPatternSchema?.fingerprint(entry.live) || JSON.stringify(entry.live);
+          entry.liveLoop = adapter.nativeSequenceLoop !== false;
+          entry.signature = this._patternSignature(entry.live, entry.liveLoop);
           this._validateClip(adapter, { pattern: entry.live, voiceMap: {} });
         }
         return [track.id, entry];
@@ -104,19 +108,19 @@
     _nextBoundary(clock) {
       const nextBar = (Math.floor((clock.beat + EPSILON) / 4) + 1) * 4, boundary = clock.loopEnabled ? Math.min(nextBar, clock.loopEnd) : Math.min(nextBar, clock.endBeat);
       const distance = Math.max(0, boundary - clock.beat), wrapped = clock.loopEnabled && boundary >= clock.loopEnd - EPSILON;
-      return { absoluteBeat: clock.absoluteBeat + distance, phaseBeat: wrapped ? clock.loopStart : boundary, when: clock.contextTime + (distance + clock.countInBeatsRemaining) * 60 / clock.tempo };
+      return { absoluteBeat: clock.absoluteBeat + distance, phaseBeat: wrapped ? clock.loopStart : boundary, phaseCycle: (clock.cycle || 0) + (wrapped ? 1 : 0), when: clock.contextTime + (distance + clock.countInBeatsRemaining) * 60 / clock.tempo };
     }
     _commit(entry) {
       const pending = entry.pending; if (!pending) return;
       if (!pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource });
       if (entry.liveSource) { entry.retired ||= new Map(); entry.retired.set(entry.liveSource, pending.when); }
-      entry.live = pending.pattern; entry.signature = pending.signature; entry.phaseBeat = pending.phaseBeat; entry.liveSource = pending.source; entry.pending = null; this.catchHeld = true;
+      entry.live = pending.pattern; entry.liveLoop = pending.loop !== false; entry.signature = pending.signature; entry.phaseBeat = pending.phaseBeat; entry.phaseCycle = pending.phaseCycle || 0; entry.liveSource = pending.source; entry.pending = null; this.catchHeld = true;
     }
-    _queuePattern(entry, pattern, signature, clock) {
+    _queuePattern(entry, pattern, signature, clock, loop = true) {
       const previous = entry.pending;
       if (previous) { this.host.cancelNotes(entry.id, { source: previous.source }); for (const key of [...this.scheduled.keys()]) if (key.includes(':live-' + entry.id + ':' + previous.source + ':')) this.scheduled.delete(key); entry.sources.delete(previous.source); }
       const boundary = previous || this._nextBoundary(clock), source = this._newSource(entry);
-      entry.pending = { pattern, signature, absoluteBeat: boundary.absoluteBeat, phaseBeat: signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, when: boundary.when, source, precise: entry.adapter?.notes?.scheduledCancel === true };
+      entry.pending = { pattern, loop, signature, absoluteBeat: boundary.absoluteBeat, phaseBeat: signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, phaseCycle: signature === entry.signature ? entry.phaseCycle || 0 : boundary.phaseCycle || 0, when: boundary.when, source, precise: entry.adapter?.notes?.scheduledCancel === true };
       // Source generations keep already queued new notes independent of the
       // old pattern's sample-accurate release at the shared bar boundary.
       if (!previous && entry.pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource, when: boundary.when });
@@ -126,7 +130,7 @@
       this._cancel(); this.revision = clock.revision; this.catchHeld = true;
       for (const entry of this.tracks.values()) {
         entry.sources = new Set(); entry.retired = new Map(); if (entry.live) entry.liveSource = this._newSource(entry);
-        if (entry.pending) { const boundary = this._nextBoundary(clock); entry.pending = { ...entry.pending, ...boundary, phaseBeat: entry.pending.signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, source: this._newSource(entry) }; if (entry.pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource, when: boundary.when }); }
+        if (entry.pending) { const boundary = this._nextBoundary(clock); entry.pending = { ...entry.pending, ...boundary, phaseBeat: entry.pending.signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, phaseCycle: entry.pending.signature === entry.signature ? entry.phaseCycle || 0 : boundary.phaseCycle, source: this._newSource(entry) }; if (entry.pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource, when: boundary.when }); }
       }
       for (const [id, entry] of this.tracks) if (entry.continuous && this._nativeLive(this.getState().tracks.find(track => track.id === id))) {
         try { this.host.transportInstrument(id, { ...clock, when: clock.contextTime + .005, playing: true }); } catch (error) { this.onStatus(error.message); }
@@ -173,7 +177,7 @@
         if (!this.active || generation !== this.generation) return;
         const entry = { id: track.id, adapter, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) this._validateClip(adapter, clip);
-        if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.signature = global.MusicLabPatternSchema?.fingerprint(entry.live) || JSON.stringify(entry.live); }
+        if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.liveLoop = adapter.nativeSequenceLoop !== false; entry.signature = this._patternSignature(entry.live, entry.liveLoop); }
         if (!this.active || generation !== this.generation) return;
         if (this._clockDriven(track, entry)) { this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
         this.tracks.set(track.id, entry);
@@ -216,10 +220,10 @@
             for (const segment of segments) {
               const pending = entry.pending, span = segment.end - segment.start, switchBeat = pending ? segment.start + pending.absoluteBeat - segment.absolute : Infinity;
               const oldEnd = Math.min(segment.end, switchBeat);
-              if (oldEnd > segment.start + EPSILON) this._liveClip(track, entry, entry.live, entry.liveSource, entry.phaseBeat, { ...segment, end: oldEnd, boundary: Math.min(segment.boundary, switchBeat) }, clock);
+              if (oldEnd > segment.start + EPSILON) this._liveClip(track, entry, entry.live, entry.liveSource, entry.phaseBeat, { ...segment, end: oldEnd, boundary: Math.min(segment.boundary, switchBeat) }, clock, entry.liveLoop, entry.phaseCycle || 0);
               if (pending?.precise && switchBeat < segment.end - EPSILON && pending.absoluteBeat < segment.absolute + span) {
                 const start = Math.max(segment.start, switchBeat), offset = start - segment.start;
-                this._liveClip(track, entry, pending.pattern, pending.source, pending.phaseBeat, { ...segment, start, when: segment.when + offset * 60 / clock.tempo, absolute: segment.absolute + offset, catchHeld: true }, clock);
+                this._liveClip(track, entry, pending.pattern, pending.source, pending.phaseBeat, { ...segment, start, when: segment.when + offset * 60 / clock.tempo, absolute: segment.absolute + offset, catchHeld: true }, clock, pending.loop, pending.phaseCycle || 0);
               }
             }
           }
@@ -228,9 +232,12 @@
       if (segments.length) this.catchHeld = false;
       if (clock.contextTime - this.lastRefresh > .25 && !this.refreshing) { this.lastRefresh = clock.contextTime; this._refreshLive(); }
     }
-    _liveClip(track, entry, pattern, source, phaseBeat, segment, clock) {
+    _liveClip(track, entry, pattern, source, phaseBeat, segment, clock, loop = true, phaseCycle = 0) {
       const offset = ((-phaseBeat % pattern.lengthBeats) + pattern.lengthBeats) % pattern.lengthBeats;
-      const clip = { id: 'live-' + track.id, name: pattern.name, pattern, start: 0, length: clock.endBeat, sourceOffset: offset, rate: 1, loop: true, gain: 1, transpose: 0, voiceMap: {} };
+      // Native once-mode is finite. A GALLEY arrangement loop is still the
+      // outer clock, so entering its next cycle restarts that finite source.
+      const start = loop === false ? segment.cycle > phaseCycle && clock.loopEnabled ? clock.loopStart : phaseBeat : 0;
+      const clip = { id: 'live-' + track.id, name: pattern.name, pattern, start, length: loop === false ? pattern.lengthBeats : clock.endBeat, sourceOffset: loop === false ? 0 : offset, rate: 1, loop: loop !== false, gain: 1, transpose: 0, voiceMap: {} };
       this._clip(track, entry, clip, segment, clock, source);
     }
     _clip(track, entry, clip, segment, clock, source) {
@@ -259,7 +266,7 @@
         const audibleBeat = Math.max(beat, segment.start, clip.start), when = Math.max(clock.contextTime + .004, segment.when + (audibleBeat - segment.start) * 60 / clock.tempo);
         const remaining = (end - audibleBeat) * 60 / clock.tempo - Math.max(0, when - (segment.when + (audibleBeat - segment.start) * 60 / clock.tempo));
         if (remaining <= .0001) continue;
-        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, durationSeconds: remaining, source });
+        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, durationSeconds: remaining, source, ...(note.locks ? { locks: { ...note.locks } } : {}) });
         if (token !== false) this.scheduled.set(key, when);
         }
       }
@@ -280,12 +287,12 @@
             else { await this.host.command(id, 'stop'); this.host.setClockDriven(id, true); for (const key of [...this.scheduled.keys()]) if (key.includes(':' + id + ':')) this.scheduled.delete(key); this.catchHeld = true; }
           }
           if (!entry.adapter?.scheduleNote || !entry.adapter?.exportPattern || entry.continuous) continue;
-          const pattern = await this.host.exportPattern(id), signature = global.MusicLabPatternSchema?.fingerprint(pattern) || JSON.stringify(pattern);
+          const pattern = await this.host.exportPattern(id), loop = entry.adapter.nativeSequenceLoop !== false, signature = this._patternSignature(pattern, loop);
           if (!this.active || generation !== this.generation) break;
           if (signature !== (entry.pending?.signature || entry.signature)) {
             this._validateClip(entry.adapter, { pattern, voiceMap: {} });
-            if (!entry.live) { entry.live = pattern; entry.signature = signature; entry.liveSource = this._newSource(entry); this.catchHeld = true; }
-            else this._queuePattern(entry, pattern, signature, this.audio.getTransport());
+            if (!entry.live) { entry.live = pattern; entry.liveLoop = loop; entry.signature = signature; entry.liveSource = this._newSource(entry); this.catchHeld = true; }
+            else this._queuePattern(entry, pattern, signature, this.audio.getTransport(), loop);
             this.host.setClockDriven(id, true);
           }
         }

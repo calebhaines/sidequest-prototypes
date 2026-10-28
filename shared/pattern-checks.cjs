@@ -71,6 +71,14 @@ function reject(edit, expression) { const pattern = fresh(); edit(pattern); asse
     const entries = await P.list(); assert.equal(entries.length, 1); assert(!Array.isArray(entries[0].notes)); assert.equal(entries[0].voices, 2);
     await P.remove(item.id); assert.equal((await P.list()).length, 0);
   });
+  await check('Shared-library persistence retains per-strike locks without aliasing their source', async () => {
+    const raw = fresh(); raw.notes[0].locks = { cutoff: 740, resonance: 2.1, decay: .13, pan: -.3, drive: .2 };
+    const item = await P.save(raw), saved = await P.get(item.id), expected = S.serialize(raw);
+    raw.notes[0].locks.cutoff = 19000; saved.notes[0].locks.cutoff = 20;
+    assert.equal(S.serialize(await P.get(item.id)), expected);
+    const portable = S.parse(S.serialize(await P.get(item.id))); assert.equal(portable.notes[0].locks.cutoff, 740); assert.equal(portable.notes[1].locks, undefined);
+    await P.remove(item.id); assert.equal((await P.list()).length, 0);
+  });
   await check('Fallback count quota is atomic and deletion frees capacity without evicting parts', async () => {
     const ids = []; for (let i = 0; i < 128; i++) ids.push((await P.save({ ...fresh(), name: 'Part ' + i })).id);
     await assert.rejects(P.save(fresh()), /full/); assert.equal((await P.list()).length, 128);

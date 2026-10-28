@@ -1,6 +1,6 @@
 # HOTPLATE — Kitchen
 
-HOTPLATE 3.0 is Kitchen’s eight-burner electronic drum groovebox: pick a kit, put a rhythm on the hob, then shape each drum with six direct controls. Its dark enamel control panel puts the sixteen-step grid, transport, and playable burner pads first. The three-layer sound workshop is still there when you open a recipe.
+HOTPLATE 3.1 is Kitchen’s eight-burner electronic drum groovebox: pick a kit, put a rhythm on the hob, then shape each drum with six direct controls. Its dark enamel control panel puts the sixteen-step grid, transport, and playable burner pads first. The three-layer sound workshop is still there when you open a recipe.
 
 HOTPLATE makes synthesized electronic drums. Use BATTER for recorded acoustic kits, CLATTER for physical-model percussion, or bring their recordings into HOTPLATE’s granular layers through the shared Kitchen sample library. Sound design, playback, and exports run locally in your browser. No account or audio service is required.
 
@@ -8,10 +8,20 @@ HOTPLATE makes synthesized electronic drums. Use BATTER for recorded acoustic ki
 
 1. Choose **Enamel**, **Cast iron**, **Cold store**, or **After hours** from **Sound kit**. Each loads eight coherent electronic drums and leaves your rhythm intact.
 2. Choose a **Rhythm recipe** and press **Play**. Twelve newly authored two-bar grooves include clean dance pulses, shuffled and broken rhythms, sparse space, industrial pressure, and irregular fills. **Use recipe tempo and swing** controls whether loading one also changes those settings.
-3. Tap a grid step to toggle it. **Bar A** and **Bar B** each show sixteen steps; switch to **16 steps** for a one-bar loop. **Stop** ends playback and **Restart** begins at step one.
+3. Tap a grid step to toggle it. **Steps 1–16** and **Steps 17–32** page the same pattern; switch to **16 steps** for a one-bar loop. Pattern banks **A–D** hold four independent variations, including hidden second halves. **Stop** ends playback and **Restart** begins at step one.
 4. Tap a burner to hear and select it. **Pitch**, **Length**, **Body**, **Snap**, **Air**, and **Heat** change real saved synthesis parameters; their explanations sit beneath the controls. Level and pan are nearby.
-5. Select **Edit step details** on a touchscreen, or Shift-click/right-click a step, to edit velocity, probability, repeats, timing, and pitch without toggling the hit. **Enable step** makes an empty inspected step audible.
+5. Select **Edit step details** on a touchscreen, or Shift-click/right-click a step, to edit velocity, probability, repeats, timing, pitch, and sound overrides without toggling the hit. A sound override changes only that strike; uncheck its Override box to inherit the saved burner again. **Enable step** makes an empty inspected step audible.
 6. **Undo** restores cleared steps, recipe changes, and sound edits. Export a sound, complete kit, or groove; download a project to keep the editable session and imported recordings.
+
+## Pattern chains and sound locks
+
+The compact **A–D** buttons select the pattern you are editing. Each bank keeps its own 16/32-step length, notes, and step details; returning to 16 steps hides the second half without deleting it. The copy button sends the entire current bank, including hidden steps and sound overrides, to the next bank. Undo restores the destination.
+
+Open **Chain** beside the bank buttons to append complete patterns with **1–16 repeats** each. Reorder, duplicate, or remove entries, then enable **Play chain**. **Loop chain** repeats the complete order; **Play once** ends at its final pattern boundary and lets the last voices ring out. The active entry/repeat appears in the summary and editor. Pattern, repeat, chain, and length changes enter at the next whole-pattern boundary without restarting the audio clock. Selecting an editing bank does not replace an enabled chain. Chains support up to 32 entries and 256 beats; the editor reports a limit instead of silently dropping entries.
+
+In **Step details**, enable **Override cutoff** for a logarithmic 20 Hz–20 kHz low-pass that affects every synthesis engine. Click its readout for an exact frequency. Optional resonance, decay, heat, and pan overrides shape that strike without changing the saved burner or following unlocked hits. Each control can inherit independently, and **Inherit all sound controls** clears the selected step’s overrides. A small amber dot identifies a step with sound overrides. Touch users can enter Details mode or hold a step; normal taps still toggle hits.
+
+The main **Export groove** WAV follows the enabled chain, or the current pattern when chaining is off. The shared Samples panel offers explicit **Current pattern** and **Complete chain** exports; Complete chain renders the stored order once, even while Play chain is off. Audio including the requested tail is limited to 120 seconds. Portable patterns are limited to 4,096 expanded notes, so dense repeated ratchets may need fewer repeats. Voice one-shot exports remain one shots.
 
 ## What you can make
 
@@ -25,7 +35,7 @@ HOTPLATE makes synthesized electronic drums. Use BATTER for recorded acoustic ki
 - Inspect the rendered waveform and frequency spectrum, zoom into transients, and click knob values to enter precise settings.
 - Use **Audition layer A/B/C** to hear an engine on its own while editing. This preview uses full layer level without changing your saved mix. The waveform play button plays the complete sound. Muted layers, unconnected LFOs, and inactive modulation destinations are clearly indicated.
 - Build 16- or 32-step grooves with mute, solo, and individual velocity, probability, one-to-four repeats, signed microtiming, and ±24-semitone pitch. Native live playback and WAV rendering use the same deterministic timing and probability helper; repeated hits share one parent step’s probability decision.
-- Shift a selected burner’s rhythm, vary it, clear it, duplicate bar A to B, or generate evenly spaced hits with density and rotation. **Clear pattern** has Undo nearby. Hold **Hold fill** for temporary repeats in the last four active steps; releasing it restores the saved rhythm without changing the project.
+- Shift a selected burner’s rhythm, vary it, clear it, copy steps 1–16 to 17–32, or generate evenly spaced hits with density and rotation. **Clear pattern** has Undo nearby. Hold **Hold fill** for temporary repeats in the last four active steps; releasing it restores the saved rhythm without changing the project.
 - Search and audition presets by drum type or engine, mark favorites, save your own sounds, generate variations, and undo or redo changes. Sessions autosave locally; download and import projects to move them between browsers. Embedded recordings can exceed browser storage limits, so download a project to keep a portable backup. Original FORM projects migrate to a percussion layer when opened.
 - Export mono samples, complete kits as ZIP archives, or stereo patterns with panning, step details, swing, and decay tails. Choose 44.1/48/96 kHz and 16/24/32-bit PCM WAV, with optional normalization and sample silence trimming. Kit archives include sound parameters and sequence settings. Received Kitchen patterns render their exact notes rather than the dormant native grid.
 
@@ -76,6 +86,7 @@ Production checks exercise the original synthesis engines and exports, new facto
 
 ```sh
 npm run test:sequencing
+npm run test:chain-locks
 npm run test:compat
 ```
 
@@ -96,13 +107,15 @@ Set `CHROMIUM_PATH` to use an existing Chromium executable, `PLAYWRIGHT_MODULE` 
 
 The native `window.FormApp` facade provides `getState`, `getProject`, `loadState`, `prepare`, `play`, `stop`, `panic`, and `setTempo`. GALLEY and the Kitchen libraries use this public API rather than editing compiled React internals. Stable native voices remain `voice-0` through `voice-7`, with the original eight-lane order.
 
-Projects may contain `stepDetails`, an eight-row array matching the boolean grid. Each object stores `velocity` and `probability` from zero to one, integer `ratchet` from one to four, `timing` from −0.45 to +0.45 of a sixteenth note, and `pitch` from −24 to +24 semitones. Older projects without this field retain their original downbeat/offbeat accents. Project downloads, restoration, and kit manifests preserve these details and embedded granular PCM.
+Projects may contain `stepDetails`, an eight-row array matching the boolean grid. Each object stores `velocity` and `probability` from zero to one, integer `ratchet` from one to four, `timing` from −0.45 to +0.45 of a sixteenth note, and `pitch` from −24 to +24 semitones. Optional `locks` contain canonical numeric `cutoff` (Hz), `resonance` (linear Q), `decay` (seconds), `pan`, `level`, `tone`, and `drive`; absent keys inherit. Imported malformed keys, nonfinite values, and out-of-range overrides are rejected. Native playback, source snapshots, and offline renders apply fresh strike patches, with cutoff/Q filtering after pitch playback. Older projects without this field retain their original downbeat/offbeat accents. Project downloads, restoration, and kit manifests preserve these details and embedded granular PCM.
+
+Projects also store `selectedBank` (0–3), four `patternBanks` with 32-step backing grids/details and an active `length` of 16 or 32, and `chain: { enabled, loop, entries: [{ bank, repeats }] }`. Older projects migrate to disabled empty chains. `FormApp.getSequencerPattern(options)` returns a fresh canonical native packet: no scope follows the enabled chain/current pattern; explicit `pattern`, `chain`, and `voice` select those sources. `sequenceLoop` exposes native loop/once behavior, and `sequencePosition` reports the playing bank/entry/repeat without changing the editing bank.
 
 Portable Kitchen note patterns retain explicit velocities, probability, pitch, and exact hit positions. Native repeats expand into separate notes because the shared version-one format has no parent-step field; receiving instruments can make an independent probability choice for each expanded hit. Save a HOTPLATE project to preserve grouped native-step probability. Received patterns remain as an exact `musicLabPattern` overlay: changing sounds or mute/solo keeps the received notes; **Use native grid** or a native rhythm edit restores the stored grid, and Undo restores the received part. Received audio playback and exports use matching note-probability choices across repeated loops.
 
 `audioImport.targets` lists stable IDs such as `0:a` and `7:c`, display names, and replacement metadata. `importAudio({ pcm, sampleRate, name, options: { target: "0:c", replace: true } })` accepts finite interleaved stereo Float32 PCM between 8 and 192 kHz, up to two seconds. Audio is downmixed and resampled locally to 22.05 kHz mono. `replace` must be explicit for an existing sample or enabled synthesis layer. Each transfer is one undoable project change.
 
-`exportAudio({ scope: "voice" | "pattern", voice, bars, sampleRate, tailSeconds, signal })` returns interleaved stereo PCM with tempo, duration, and source metadata. Voice exports default to the selected pad; pattern exports respect mute, solo, panning, swing, and step details, or the exact received notes. `bars` requests one to four repetitions of the current native or received pattern; returned `bars` describes the actual four-beat bar count. Effect tails default to zero for seamless loop transfer. Cancelled transfers leave project state intact.
+`exportAudio({ scope: "voice" | "pattern" | "chain", voice, bars, sampleRate, tailSeconds, signal })` returns interleaved stereo PCM with tempo, duration, and source metadata. Voice exports default to the selected pad; pattern/chain exports respect mute, solo, panning, swing, and step details, or the exact received notes. `bars` requests one to four repetitions for Current pattern; explicit Complete chain ignores this control and renders the full chain once; returned `bars` describes the actual four-beat bar count. Effect tails default to zero for seamless loop transfer. Cancelled transfers leave project state intact.
 
 The facade announces readiness with `musiclab:app-ready` and completed sample imports with `musiclab:state-change` events.
 

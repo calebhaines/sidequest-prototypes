@@ -1,12 +1,14 @@
 # HOTPLATE — Electronic drum groovebox
 
-HOTPLATE 3.0 is Kitchen’s eight-burner electronic drum groovebox. The enamel-and-copper interface puts sixteen visible steps, playable burners, and direct Pitch/Length/Body/Snap/Air/Heat controls up front. Four complete kits contain 32 new synthesized drum recipes; twelve newly authored two-bar rhythms offer independent starting patterns. The 46 original sounds remain available in Archive.
+HOTPLATE 3.1 is Kitchen’s eight-burner electronic drum groovebox. The enamel-and-copper interface puts sixteen visible steps, playable burners, and direct Pitch/Length/Body/Snap/Air/Heat controls up front. Four complete kits contain 32 new synthesized drum recipes; twelve newly authored two-bar rhythms offer independent starting patterns. The 46 original sounds remain available in Archive.
 
-Use Bar A/B for 32-step rhythms, open step details for velocity/probability/repeats/timing/pitch, and shape the selected burner without opening the deeper editor. Density, rotation, lane shifts, variation, bar duplication, temporary fills, clear, and Undo make the sequencer useful for building a groove rather than just playing a demo. **Open recipe** still exposes three layers, five synthesis engines, modulation, effects, and granular recording import.
+Use Steps 1–16 / 17–32 for 32-step rhythms, open step details for velocity/probability/repeats/timing/pitch and per-hit sound locks, and shape the selected burner without opening the deeper editor. Density, rotation, lane shifts, variation, bar duplication, temporary fills, clear, and Undo make the sequencer useful for building a groove rather than just playing a demo. **Open recipe** still exposes three layers, five synthesis engines, modulation, effects, and granular recording import.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/form/
 
 `index.html` is the self-contained, tested application. Open it directly for offline play. `FORM-source.zip` contains the complete editable React/TypeScript/Vite project and its audio/playback tests; it is also available at the live app URL with `FORM-source.zip` appended.
+
+Pattern banks A–D and the compact Chain editor keep repeat counts, ordering, and Loop/Once playback alongside the existing sequencer. Cutoff and other sound overrides belong to individual steps, with explicit inheritance from the saved burner sound. Shared patterns and GALLEY retain those overrides.
 
 ## Updating the application
 

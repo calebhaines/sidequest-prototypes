@@ -62,14 +62,17 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     target.parent.mkdir(parents=True, exist_ok=True)
     sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'vocal-checks.cjs', 'vocal-browser-checks.cjs', 'utility-checks.cjs', 'utility-integration-checks.cjs', 'utility-browser-checks.cjs', 'batter-integration-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     sources += ['service.css', 'service-schema-checks.cjs', 'service-engine-checks.cjs', 'service-note-checks.cjs', 'service-capture-checks.cjs', 'service-midi-checks.cjs', 'service-controller-checks.cjs', 'service-browser-checks.cjs', 'host-navigation-checks.cjs', 'creative-effects.css', 'filter-checks.cjs', 'creative-checks.cjs', 'creative-effects-integration-checks.cjs', 'creative-effects-browser-checks.cjs', 'tonal-print-timing-checks.cjs', 'tonal-live-timing-checks.cjs', 'tonal-fallback-clock-checks.cjs', 'transport-count-in-checks.cjs']
-    sources += ['clip-loop-continuity-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs']
+    sources += ['clip-loop-continuity-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs', 'percussion-integration-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.
     timing_fixtures = ['shared/pattern-schema.js', 'proof/schema.js', 'proof/arp.js', 'proof/audio-engine.js', 'marinade/analysis.js', 'marinade/sources.js', 'marinade/schema.js', 'marinade/sequence.js', 'marinade/audio-engine.js']
-    timing_fixtures += ['tine/' + name for name in ['app.html', 'styles.css', 'synth-schema.js', 'presets.js', 'audio-engine.js', 'app.js', 'cancellation-checks.cjs']]
+    timing_fixtures += ['tine/' + name for name in ['app.html', 'styles.css', 'cancellation-checks.cjs']]
+    timing_fixtures += ['tine/' + source.name for source in sorted((ROOT.parent / 'tine').glob('*.js'))]
     files += [('timing-fixtures/' + name, (ROOT.parent / name).read_bytes()) for name in timing_fixtures]
     files += exchange_helpers['exchange_sources'](ROOT)
+    files += [('shared/pattern-lock-checks.cjs', (exchange_dir / 'pattern-lock-checks.cjs').read_bytes())]
+    files += [('shared/percussion-browser-checks.cjs', (exchange_dir / 'percussion-browser-checks.cjs').read_bytes())]
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]
     files += [('instruments/' + name + '.html', data) for name, data in instrument_files.items()]
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:

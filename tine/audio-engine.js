@@ -235,7 +235,9 @@
     voice.sources.forEach(source => { try { source.stop(voice.stopTime); } catch (_) {} });
   }
   function synthesize(environment, data, time, accent, expression = {}) {
-    const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
+    const t = readTrack(data), locks = window.TineModel?.normalizeLocks(expression.locks) || expression.locks || {};
+    for (const key of ['decay', 'pan', 'level', 'tone']) if (locks[key] !== undefined) t[key] = clamp(locks[key], key === 'decay' ? .04 : key === 'pan' ? -1 : 0, key === 'decay' ? 4 : 1);
+    t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
     const { context, graph, random } = environment, now = Math.max(time, context.currentTime);
     const voiceKey = typeof expression.voiceKey === 'string' ? expression.voiceKey : data;
     const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.voiceKey === voiceKey);
@@ -248,15 +250,32 @@
     const longest = Math.max(t.decay, ...modes.map(mode => mode.t60));
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
-    const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
+    const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1;
+    // Keep the existing envelope after any per-hit filter/drive so resonant
+    // filter state also fades before cleanup or voice stealing. Unlocked hits
+    // retain their original graph, node count and sound exactly.
+    const lockedNodes = [], processing = locks.cutoff !== undefined || locks.resonance !== undefined || locks.drive > 0;
+    const resonatorInput = processing ? context.createGain() : bus;
+    if (processing) lockedNodes.push(resonatorInput);
+    let output = resonatorInput;
+    if (locks.cutoff !== undefined || locks.resonance !== undefined) {
+      const filter = context.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = Math.min(locks.cutoff ?? 20000, context.sampleRate * .43); filter.Q.value = 20 * Math.log10(locks.resonance ?? Math.SQRT1_2);
+      output.connect(filter); output = filter; lockedNodes.push(filter);
+    }
+    if (locks.drive > 0) {
+      const shaper = context.createWaveShaper(), trim = context.createGain(); shaper.curve = saturation(locks.drive); shaper.oversample = '2x'; trim.gain.value = 1 / (1 + locks.drive * 2);
+      output.connect(shaper); shaper.connect(trim); output = trim; lockedNodes.push(shaper, trim);
+    }
+    if (processing) output.connect(bus);
+    bus.connect(panner); panner.connect(graph.input);
+    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force, ...lockedNodes], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
     let pending = 0;
     const source = (buffer, amount, directScale, offset = 0) => {
       const node = add(context.createBufferSource()), level = add(context.createGain()); node.buffer = buffer; level.gain.value = amount; node.connect(level); level.connect(force);
-      if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(bus); }
+      if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(resonatorInput); }
       // Excitation ends naturally while the resonator lifetime clock keeps
       // the filter state alive. Offline nodes stay connected before rendering.
       node.loop = false; node.onended = () => { pending--; if (!pending && context.currentTime >= voice.stopTime - .005) clean(); };
@@ -273,7 +292,7 @@
       gain.gain.value = mode.weight * .74 / radiusTerm * bodyGain;
       // Compensation precedes the filter: browsers otherwise prune the tiny
       // unamplified filter tail while it is still audible after compensation.
-      force.connect(gain); gain.connect(filter); filter.connect(bus);
+      force.connect(gain); gain.connect(filter); filter.connect(resonatorInput);
     });
     if (t.mallet > 0) { exciter.contacts.forEach(contact => { const mallet = makeMallet(context, t, exciter, contact, random); source(mallet.buffer, t.mallet * contact.gain, mallet.directScale, contact.time); }); }
     if (t.noise > 0) { const noise = makeNoise(context, t, random); source(noise.buffer, t.noise, noise.directScale); }
@@ -289,7 +308,13 @@
   function stopVoices(environment, at) { if (environment) environment.voices.forEach(voice => fadeVoice(voice, at)); }
   function stepLength(state, step) { const seconds = 60 / clamp(state.bpm || 120, 40, 240) / 4, swing = clamp(state.swing || 0, 0, .6); return seconds * (step % 2 === 0 ? 1 + swing : 1 - swing); }
   function sequenceLength(state) { return state.stepCount === 32 ? 32 : 16; }
-  function playStep(environment, state, step, time) { const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); tracks.forEach(track => { const hit = track.steps && track.steps[step]; if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2); }); }
+  function playStep(environment, state, step, time, sequence, frame) {
+    const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo);
+    tracks.forEach((track, index) => {
+      const hit = sequence && frame ? sequence.banks[frame.bank][index][step] : track.steps?.[step];
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, sequence && frame ? { locks: sequence.bankLocks[frame.bank][index][step], voiceKey: 'voice-' + index } : {});
+    });
+  }
   function encodeWav(audio) {
     const frames = audio.length, left = audio.getChannelData(0), right = audio.getChannelData(1), buffer = new ArrayBuffer(44 + frames * 4), view = new DataView(buffer);
     const string = (at, value) => { for (let i = 0; i < value.length; i++) view.setUint8(at + i, value.charCodeAt(i)); };
@@ -308,9 +333,9 @@
       if (!this.context) { this._initPromise = (async () => { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) throw new Error('This browser does not support Web Audio. Please use a current browser.'); try { this.context = new AudioContext({ latencyHint: 'interactive' }); } catch (_) { this.context = new AudioContext(); } this.graph = buildGraph(this.context, this.values); this.environment = createEnvironment(this.context, this.graph, Date.now()); })(); try { await this._initPromise; } catch (error) { this._initPromise = null; throw error; } }
       if (this.context && this.context.state === 'suspended') await this.context.resume(); return this;
     }
-    async start(state, onStep) {
+    async start(state, onStep, sequenceProvider) {
       const generation = ++this.generation; await this.init(); if (generation !== this.generation) return;
-      this._stopTransport(); this.state = state || { bpm: 120, tracks: [] }; this.onStep = typeof onStep === 'function' ? onStep : null; this.running = true; this.currentStep = 0; this.nextNoteTime = this.context.currentTime + .045;
+      this._stopTransport(); this.state = state || { bpm: 120, tracks: [] }; this.onStep = typeof onStep === 'function' ? onStep : null; this.sequenceProvider = typeof sequenceProvider === 'function' ? sequenceProvider : null; this.sequenceFrame = null; this.sequenceNeedsFrame = true; this.sequenceEnding = false; this.running = true; this.currentStep = 0; this.nextNoteTime = this.context.currentTime + .045;
       this.values = { master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1), drive: clamp(this.state.drive || 0, 0, 1), space: clamp(this.state.space || 0, 0, 1) }; updateGraph(this.context, this.graph, this.values, false); this._schedule(); this._startTimer();
     }
     _startTimer() {
@@ -318,11 +343,26 @@
       this.timer = setInterval(() => this._schedule(), 25);
     }
     _schedule() {
-      if (!this.running || !this.context || this.context.state !== 'running') return;
+      if (!this.running || this.sequenceEnding || !this.context || this.context.state !== 'running') return;
       const currentTime = this.context.currentTime; let skipped = 0;
-      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { this.nextNoteTime += stepLength(this.state, this.currentStep); this.currentStep = (this.currentStep + 1) % sequenceLength(this.state); skipped++; }
+      const prepare = () => {
+        if (!this.sequenceProvider || !this.sequenceNeedsFrame) return true;
+        const next = window.TineModel.nextSequenceFrame(this.sequenceProvider(), this.sequenceFrame);
+        if (next) { this.sequenceFrame = next; this.sequenceNeedsFrame = false; return true; }
+        this.sequenceEnding = true; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null;
+        const generation = this.generation, timer = setTimeout(() => { this.displayTimers.delete(timer); if (generation !== this.generation) return; this.running = false; this.onStep?.(-1, { ended: true }); }, Math.max(0, (this.nextNoteTime - this.context.currentTime + Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0)) * 1000));
+        this.displayTimers.add(timer); return false;
+      };
+      const advance = () => { this.currentStep++; if (this.currentStep >= (this.sequenceFrame?.length || sequenceLength(this.state))) { this.currentStep = 0; this.sequenceNeedsFrame = true; } };
+      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { if (!prepare()) return; this.nextNoteTime += stepLength(this.state, this.currentStep); advance(); skipped++; }
       if (skipped >= 4096) this.nextNoteTime = currentTime + .025;
-      while (this.nextNoteTime < currentTime + .13) { const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime); playStep(this.environment, this.state, step, when); if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); } this.nextNoteTime += stepLength(this.state, step); this.currentStep = (step + 1) % sequenceLength(this.state); }
+      while (this.nextNoteTime < currentTime + .13) {
+        if (!prepare()) return;
+        const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime), frame = this.sequenceFrame && { ...this.sequenceFrame };
+        playStep(this.environment, this.state, step, when, this.sequenceProvider?.(), frame);
+        if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step, frame); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); }
+        this.nextNoteTime += stepLength(this.state, step); advance();
+      }
     }
     _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
     stop() { this.generation++; this._stopTransport(); this.currentStep = 0; }
@@ -365,7 +405,7 @@
       for (let i = 0; i < events.length; i++) {
         const event = events[i], track = snapshot.tracks[event.voice];
         if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
-        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, event);
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, options.nativeHits ? { ...event, velocity: undefined } : event);
         if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       const end = duration + tail, fade = Math.min(.03, end / 2);

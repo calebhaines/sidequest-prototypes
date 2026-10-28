@@ -1,7 +1,7 @@
 {
   "name": "form-percussion-lab",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,6 +12,7 @@
     "test:playback": "node scripts/test-playback.mjs",
     "test:exchange": "node scripts/test-exchange.mjs",
     "test:sequencing": "node scripts/test-sequencing.mjs",
+    "test:chain-locks": "node scripts/test-chain-locks.mjs",
     "test:compat": "node scripts/test-overhaul-compat.mjs",
     "test:overhaul": "node scripts/test-overhaul-browser.mjs"
   },

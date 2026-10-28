@@ -6,8 +6,8 @@ import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dist = resolve(root, "dist");
-const release = resolve(root, "releases");
+const dist = resolve(process.env.FORM_DIST_DIR || resolve(root, "dist"));
+const release = resolve(process.env.FORM_RELEASE_DIR || resolve(root, "releases"));
 const exchangeDirectory = [resolve(root,"shared"),resolve(root,"../shared")].find(path=>existsSync(resolve(path,"bundle_audio_exchange.mjs")));
 if(!exchangeDirectory)throw Error("Missing Music Lab audio exchange sources.");
 const {embedExchange,exchangeFiles}=await import(pathToFileURL(resolve(exchangeDirectory,"bundle_audio_exchange.mjs")).href);
@@ -154,7 +154,7 @@ for (const name of [
 ])
   sourceFiles.push({ name, data: await readFile(resolve(root, name)) });
 await writeFile(resolve(release, "FORM-source.zip"), makeZip(sourceFiles));
-const startHere = `HOTPLATE 3.0 — Kitchen
+const startHere = `HOTPLATE 3.1 — Kitchen
 
 1. Extract this ZIP to a folder.
 2. Open FORM.html in a current Chrome, Edge, Firefox, or Safari browser.
@@ -169,8 +169,12 @@ burner controls shape Pitch, Length, Body, Snap, Air, and Heat. Open recipe
 reveals the three synthesis layers, modulation, and deeper sound design.
 
 Select Details to edit a hit's velocity, probability, repeats, timing, and
-pitch. Use bank A/B for a two-bar pattern. Stop resets playback, and Restart
-returns to the first step. Export downloads samples, complete kits, or WAVs.
+pitch. Use Steps 1–16 / 17–32 for a two-bar pattern. Stop resets playback, and Restart
+returns to the first step. Pattern banks A–D keep four variations. Open Chain
+for ordered complete patterns, repeats, loop/once, and entry controls. Step
+details add cutoff, resonance, decay, heat, and pan overrides for one strike;
+uncheck Override to inherit the saved burner. Export downloads samples,
+complete kits, or WAVs; the main groove WAV follows an enabled chain.
 
 Audition layer A/B/C hears one engine without changing your saved mix.
 Use Undo to restore cleared patterns, recipe changes, and edited steps.

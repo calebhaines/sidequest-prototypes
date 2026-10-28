@@ -11,6 +11,8 @@ export interface KnobProps {
   format?: (value: number) => string;
   log?: boolean;
   accent?: boolean;
+  disabled?: boolean;
+  lockKey?: string;
 }
 
 const clamp = (value: number, min: number, max: number) =>
@@ -39,6 +41,8 @@ export function Knob({
   format,
   log = false,
   accent = false,
+  disabled = false,
+  lockKey,
 }: KnobProps) {
   const id = useId();
   const useLog = log && min > 0 && max > min;
@@ -57,6 +61,7 @@ export function Knob({
   const displayValue = `${format ? format(safeValue) : safeValue.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 
   function update(next: number) {
+    if (disabled) return;
     const stepped =
       step > 0 ? min + Math.round((next - min) / step) * step : next;
     onChange(clamp(Number(stepped.toFixed(8)), min, max));
@@ -127,6 +132,8 @@ export function Knob({
         <input
           id={id}
           className="knob-range"
+          disabled={disabled}
+          data-step-lock={lockKey}
           type="range"
           min={useLog ? 0 : min}
           max={useLog ? 1000 : max}
@@ -145,6 +152,7 @@ export function Knob({
         <input
           autoFocus
           className="knob-value knob-value-input"
+          disabled={disabled}
           type="number"
           min={min}
           max={max}
@@ -166,6 +174,7 @@ export function Knob({
         <button
           type="button"
           className="knob-value"
+          disabled={disabled}
           aria-label={`Edit ${label} value: ${displayValue}`}
           title="Click to enter an exact value"
           onClick={() => {

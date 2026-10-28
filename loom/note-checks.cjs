@@ -104,6 +104,20 @@ async function check(name, run) { await run(); assert.equal(frames.size, 0, name
     const state = session(); state.tracks[0].effects[0] = { type: 'cinder', params: { arbitrary: 1 } }; const before = JSON.stringify(state), r = renderer(), result = await r.print(state, 'track-1', 'notes');
     assert.equal(result.origin.format, 'loom-render-source'); assert.equal(result.origin.version, 1); assert.equal(result.origin.sourceClip.type, 'notes'); assert.equal(result.origin.sourceClip.origin, undefined); assert.equal(JSON.stringify(state), before); assert.equal(calls.at(-1).request.effects, undefined); assert.equal(result.audio.left.length, result.asset.frames); await r.dispose();
   });
+  await check('Per-strike locks survive native rendering, printed origins, project recovery and source revisions', async () => {
+    const state = session(), clip = state.tracks[0].clips[0], r = renderer();
+    clip.pattern.notes[0].locks = { cutoff: 640, resonance: 2.3, decay: .17, pan: -.25, level: .8 };
+    const original = JSON.stringify(state), first = await r.print(state, 'track-1', clip.id), previousCalls = calls.length;
+    assert.deepEqual(JSON.parse(JSON.stringify(calls.at(-1).request.pattern.notes[0].locks)), clip.pattern.notes[0].locks);
+    assert.deepEqual(JSON.parse(JSON.stringify(first.origin.pattern.notes[0].locks)), clip.pattern.notes[0].locks);
+    assert.deepEqual(JSON.parse(JSON.stringify(first.origin.sourceClip.pattern.notes[0].locks)), clip.pattern.notes[0].locks);
+    assert.equal(JSON.stringify(state), original);
+    const recovered = S.copy(state); recovered.assets = [first.asset]; recovered.tracks[0].clips = [first.clip];
+    const reopened = S.parseProject(S.serializeProject(recovered)); assert.equal(reopened.tracks[0].clips[0].origin.pattern.notes[0].locks.cutoff, 640);
+    clip.pattern.notes[0].locks.cutoff = 4300; const second = await r.print(state, 'track-1', clip.id);
+    assert.equal(calls.length, previousCalls + 1, 'A lock edit invalidates the rendered-source cache');
+    assert.equal(second.origin.pattern.notes[0].locks.cutoff, 4300); assert.equal(first.origin.pattern.notes[0].locks.cutoff, 640); await r.dispose();
+  });
   await check('Updating a shorter pattern keeps all existing audio geometry and mix controls', async () => {
     const state = session(), r = renderer(), initial = await r.print(state, 'track-1', 'notes'); state.assets.push(initial.asset); const old = { ...initial.clip, start: 5, length: 7, sourceStart: .2, sourceEnd: 1.9, sourceOffset: .3, rate: .8, reverse: true, gain: .4, fadeIn: .2, fadeOut: .8 }; state.tracks[0].clips = [old];
     const smaller = packet(); smaller.lengthBeats = 2; const original = JSON.stringify(state), result = await r.update(state, 'track-1', old.id, { pattern: smaller });

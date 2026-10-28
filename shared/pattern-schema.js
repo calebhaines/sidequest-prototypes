@@ -3,6 +3,7 @@
   'use strict';
   if (global.MusicLabPatternSchema) return;
   const VERSION = 1, MAX_NOTES = 4096, MAX_VOICES = 64, MAX_BEATS = 256, MAX_BYTES = 1024 * 1024;
+  const LOCK_RANGES = Object.freeze({ cutoff: Object.freeze([20, 20000]), resonance: Object.freeze([.1, 20]), decay: Object.freeze([.005, 10]), pan: Object.freeze([-1, 1]), level: Object.freeze([0, 1]), tone: Object.freeze([0, 1]), drive: Object.freeze([0, 1]) });
   const object = value => value && Object.prototype.toString.call(value) === '[object Object]';
   function text(value, name, max, fallback) {
     if (value === undefined && fallback !== undefined) return fallback;
@@ -18,6 +19,19 @@
     const id = text(value, name, 80);
     if (!id || ['__proto__', 'prototype', 'constructor'].includes(id)) throw new Error(name + ' is invalid.');
     return id;
+  }
+  function normalizeLocks(value) {
+    if (value === undefined) return {};
+    if (!object(value)) throw new Error('Note locks must be a sound-control object.');
+    for (const key of Object.keys(value)) if (!Object.prototype.hasOwnProperty.call(LOCK_RANGES, key)) throw new Error('Unsupported note lock: ' + key + '.');
+    const result = {};
+    // Fixed order makes identical overrides share an identity even when their
+    // source object was assembled in a different order. Empty locks are omitted
+    // from notes so existing version-1 identities remain byte-for-byte stable.
+    for (const key of Object.keys(LOCK_RANGES)) if (Object.prototype.hasOwnProperty.call(value, key)) {
+      const range = LOCK_RANGES[key]; result[key] = number(value[key], 'Note ' + key + ' lock', range[0], range[1]);
+    }
+    return result;
   }
   function normalize(input) {
     if (!object(input)) throw new Error('Choose a Kitchen note-pattern object.');
@@ -50,7 +64,9 @@
       if (beat >= lengthBeats || beat + duration > lengthBeats + 1e-8) throw new Error('Notes must fit within the pattern length.');
       const voice = note.voice === undefined && voices.length === 1 ? voices[0].id : identity(note.voice, 'Note voice');
       if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
-      return { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      const result = { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      if (note.locks !== undefined) { const locks = normalizeLocks(note.locks); if (Object.keys(locks).length) result.locks = locks; }
+      return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;
     if (!Array.isArray(tags) || tags.length > 24) throw new Error('Use at most 24 pattern tags.');
@@ -87,5 +103,5 @@
     return 'pattern-v1-' + (hash >>> 0).toString(16).padStart(8, '0');
   }
   function durationSeconds(value, tempo) { const pattern = normalize(value); return pattern.lengthBeats * 60 / number(tempo === undefined ? pattern.tempo : tempo, 'Playback tempo', 20, 400); }
-  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, normalize, parse, serialize, clone, fingerprint, durationSeconds });
+  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);

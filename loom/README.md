@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.12.1.
+SERVICE is version 1.0.0; GALLEY is version 1.13.0.
 
 ## Making a piece
 
@@ -136,6 +136,18 @@ as a GALLEY note clip. Map voices explicitly when instruments differ. Portable
 pattern JSON carries notes between devices and standalone HTML files. Imported
 parts retain their exact timing, durations, velocity, and probability. Choose
 **Use native sequence** in an instrument to return to its own sequencer.
+
+SIZZLE, CLATTER, HOTPLATE, and BATTER also have compact native pattern chains.
+Open **Chain** beside the pattern banks to arrange entries and repeats, then
+choose Loop or Once. Per-step sound overrides live in the selected-step editor;
+cutoff and the supported sound settings apply to that strike, with an explicit
+way to inherit the instrument's normal sound again.
+
+**Patterns → Current sequence** sends the enabled chain or current native
+pattern. Explicit pattern and chain choices remain available. Supported sound
+overrides travel with each note through the shared library, projects, native
+playback, and revisable prints. GALLEY Live follows native Once mode within each
+host transport cycle; GALLEY's own arrangement loop remains the outer clock.
 
 GALLEY supplies a shared musical clock. Live instrument patterns follow its tempo,
 position, and loops; pattern changes enter at the next bar or loop boundary. Seeks cancel pending
@@ -525,15 +537,21 @@ audio paths and checks native/arranged switching, count-in, and seeks.
 `npm run check:loom-playback` checks audio loop continuity and transfer parity.
 `npm run check:loom-playback-browser` checks actual hosted node cleanup, CLATTER
 lane limits, and native cancellation envelopes in Chromium.
+`npm run check:percussion-integration` checks all four native percussion apps
+through GALLEY's actual host, once-mode scheduling, private printing, saved
+origins, and arrangement WAV export with per-step sound overrides.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all fourteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
+The extracted percussion checks are `node percussion-integration-checks.cjs`
+and `PERCUSSION_BUILT=1 node shared/percussion-browser-checks.cjs` with Playwright
+and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.12.1.
+font license notices. Version 1.13.0.
 
 ## Compatibility
 

@@ -11,6 +11,7 @@ import {
 import { encodeWav, renderPattern, renderSound } from "./audio";
 import type { SoundParams } from "./types";
 import type { StepDetail } from "./sequencing";
+import type { PatternState } from "./pattern-chain";
 import {
   createZip,
   downloadBlob,
@@ -30,6 +31,7 @@ interface ExportDialogProps {
   selectedIndex: number;
   steps: boolean[][];
   stepDetails?: StepDetail[][];
+  sequencerState?: Pick<PatternState, "patternBanks" | "selectedBank" | "chain">;
   musicLabPattern?: { pattern: unknown; voiceMap: Record<string, string> };
   renderPatternAudio?: (sampleRate: number) => Float32Array[];
   bpm: number;
@@ -48,6 +50,7 @@ export default function ExportDialog({
   selectedIndex,
   steps,
   stepDetails,
+  sequencerState,
   musicLabPattern,
   renderPatternAudio,
   bpm,
@@ -144,7 +147,7 @@ export default function ExportDialog({
         });
         const manifest = {
           application: "HOTPLATE / Kitchen",
-          version: 2,
+          version: 3,
           sampleRate: settings.sampleRate,
           bitDepth: settings.bitDepth,
           channels: 1,
@@ -154,6 +157,7 @@ export default function ExportDialog({
           swing,
           steps,
           stepDetails,
+          ...sequencerState,
           musicLabPattern,
           muted,
           sounds: entries.map(({ filename, samples, sound }) => ({
