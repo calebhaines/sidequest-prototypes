@@ -1,0 +1,285 @@
+/* GALLEY BUTTER · original clean and reduced-order analog dynamics families. */
+(function (scope) {
+  'use strict';
+  function createLoomCompressorDSP() {
+    'use strict';
+    // Every dependency lives inside this function: AudioWorklet serializes it.
+    const PI = Math.PI, TAU = PI * 2;
+    const specifications = {
+      threshold: [-48, 0, -18], ratio: [1, 40, 4], attack: [.02, 100, 12], release: [20, 5000, 180], knee: [0, 18, 6], makeup: [-12, 24, 3], sidechain: [20, 500, 30], mix: [0, 1, 1],
+      model: ['clean', 'fet-76', 'opto-2a', 'opto-3a', 'vari-670', 'bus-4k', 'vca-160', 'bus-2500', 'diode-609'], input: [-24, 24, 0], colour: [0, 1, .35], timing: ['manual', 'classic'], link: [0, 1, 1], fetMode: ['normal', 'all-buttons'], thrust: ['off', 'medium', 'loud']
+    };
+    const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    const bound = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const db = value => Math.pow(10, value / 20);
+    const levelDb = value => 20 * Math.log10(Math.max(value, 1e-12));
+    const mixSample = (dry, wet, mix) => bound(dry + (wet - dry) * mix);
+    function normalize(params) {
+      const source = params && typeof params === 'object' ? params : {}, result = {};
+      for (const key of Object.keys(specifications)) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true; return result;
+    }
+    function saturate(x) { if (x >= 3) return 1; if (x <= -3) return -1; const square = x*x; return x*(27+square)/(27+9*square); }
+    function lowpassCoefficients(frequency, q, rate) {
+      const w = TAU*frequency/rate, c = Math.cos(w), alpha = Math.sin(w)/(2*q), a0 = 1+alpha;
+      return new Float64Array([(1-c)*.5/a0, (1-c)/a0, (1-c)*.5/a0, -2*c/a0, (1-alpha)/a0]);
+    }
+    function filter(x, c, state, offset) {
+      const y = bound(c[0]*x+state[offset]);
+      state[offset] = bound(c[1]*x-c[3]*y+state[offset+1]); state[offset+1] = bound(c[2]*x-c[4]*y); return y;
+    }
+    function create(sampleRate, params) {
+      let p = normalize(params);
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr*4;
+      const meters = {reductionDb:0, reductionLeftDb:0, reductionRightDb:0, inputDb:-120, outputDb:-120, detectorDb:-120};
+      // Clean retains the original arithmetic and coefficients. Independent
+      // envelopes only add optional dual-mono linking; the stock shared loop
+      // is unchanged, including the original max-rectified stereo detector.
+      let envelope = 0, previousL = 0, previousR = 0, hpL = 0, hpR = 0, attack = 0, release = 0, hp = 0, makeup = 1;
+      const cleanMono = new Float64Array(2);
+      const detector = new Float64Array(2), detectorPrevious = new Float64Array(2), detectorHP = new Float64Array(2), thrustLow = new Float64Array(2), thrustHigh = new Float64Array(2);
+      const reduction = new Float64Array(2), slowCell = new Float64Array(2), exposure = new Float64Array(2), hold = new Float64Array(2), applied = new Float64Array(2);
+      const colourPrevious = new Float64Array(2), colourDCPrevious = new Float64Array(2), colourDC = new Float64Array(2), core = new Float64Array(2), colourState = new Float64Array(8), colourActive = new Int32Array(2);
+      const colourFilters = [lowpassCoefficients(sr*.39, .5411961, osr), lowpassCoefficients(sr*.39, 1.306563, osr)];
+      const smoothKeys = ['threshold','ratio','knee','input','makeup','mix','colour','link'], smooth = new Float64Array(8), target = new Float64Array(8), slew = 1-Math.exp(-1/(sr*.004));
+      const declickFrames = Math.max(1, Math.round(sr*.004)), lastWet = new Float64Array(2), offset = new Float64Array(2), declickLeft = new Int32Array(2), declickPending = new Int32Array(2);
+      const thrustLowCoefficient = 1-Math.exp(-TAU*300/sr), thrustHighCoefficient = 1-Math.exp(-TAU*2200/sr), coreCoefficient = 1-Math.exp(-TAU*45/osr), dcCoefficient = Math.exp(-TAU*9/sr);
+      let initialized = false, topology = '', cleanInput = 1, cleanInputTarget = 1, cleanLink = 1, cleanLinkTarget = 1, model = 0, baseAttack = .012, baseRelease = .18, detectorAttack = 1, detectorRelease = 1, rmsCoefficient = 1, attackStep = 1, releaseStep = 1, slowAttack = 1, slowRelease = 1, memoryAttack = 1, memoryRelease = 1;
+      const profileIndex = {'clean':0,'fet-76':1,'opto-2a':2,'opto-3a':3,'vari-670':4,'bus-4k':5,'vca-160':6,'bus-2500':7,'diode-609':8};
+      // Seconds. These are deliberately simplified program laws, not claims of
+      // measured component values or exact hardware revisions.
+      const classicAttack = [0,.00008,.01,.0018,.0003,.01,.002,.003,.003];
+      const classicRelease = [0,.08,.06,.05,.3,.1,.1,.1,.1];
+      function update() {
+        const priorModel = model;
+        attack = Math.exp(-1/(sr*p.attack*.001)); release = Math.exp(-1/(sr*p.release*.001)); hp = Math.exp(-TAU*Math.min(p.sidechain, sr*.4)/sr); makeup = db(p.makeup);
+        cleanInputTarget = db(p.input); cleanLinkTarget = p.link; model = profileIndex[p.model];
+        if (initialized && model !== priorModel) {
+          const wasEnergy = priorModel === 4 || priorModel === 6 || priorModel === 7, usesEnergy = model === 4 || model === 6 || model === 7;
+          if (priorModel === 0) {
+            detector[0] = cleanMono[0]; detector[1] = cleanMono[1];
+            detectorHP[0] = hpL; detectorHP[1] = hpR; detectorPrevious[0] = previousL; detectorPrevious[1] = previousR;
+          }
+          if (wasEnergy !== usesEnergy) for (let channel=0;channel<2;channel++) detector[channel] = usesEnergy ? detector[channel]*detector[channel] : Math.sqrt(Math.max(0,detector[channel]));
+          if (model === 0) {
+            envelope = Math.max(detector[0],detector[1]);cleanMono.set(detector);
+            hpL = detectorHP[0]; hpR = detectorHP[1]; previousL = detectorPrevious[0]; previousR = detectorPrevious[1];
+          }
+          reduction.set(applied); slowCell.set(applied); exposure.fill(0); hold.fill(0);
+          colourState.fill(0);colourDCPrevious.fill(0);colourDC.fill(0);core.fill(0);colourActive.fill(0);
+        }
+        baseAttack = p.timing === 'classic' && model ? classicAttack[model] : p.attack*.001;
+        baseRelease = p.timing === 'classic' && model ? classicRelease[model] : p.release*.001;
+        if (model === 1 && p.fetMode === 'all-buttons' && p.timing === 'classic') { baseAttack = .000035; baseRelease = .045; }
+        attackStep = 1-Math.exp(-1/(sr*baseAttack)); releaseStep = 1-Math.exp(-1/(sr*baseRelease));
+        // Rectifier/energy integration remains part of the family in manual
+        // mode; manual attack/release controls its gain element, not a renamed
+        // copy of the original peak follower.
+        const detectorAttackSeconds = model === 6 ? .01 : model === 2 ? .0015 : model === 3 ? .00045 : model === 4 ? .0002 : model === 1 ? .000025 : .00015;
+        detectorAttack = 1-Math.exp(-1/(sr*detectorAttackSeconds));
+        detectorRelease = 1-Math.exp(-1/(sr*(model === 6 ? .01 : model === 2 ? .018 : model === 3 ? .009 : model === 4 ? .025 : .012)));
+        rmsCoefficient = 1-Math.exp(-1/(sr*(model === 6 ? .01 : model === 7 ? .0035 : .006)));
+        slowAttack = 1-Math.exp(-1/(sr*(model === 1 ? .03 : model === 2 ? .35 : model === 3 ? .12 : model === 4 ? .2 : .16)));
+        slowRelease = 1-Math.exp(-1/(sr*(model === 1 ? .3 : model === 2 ? 1 : model === 3 ? .8 : model === 4 ? 1.2 : .8)));
+        memoryAttack = 1-Math.exp(-1/(sr*(model === 2 ? .3 : model === 3 ? .18 : .25))); memoryRelease = 1-Math.exp(-1/(sr*(model === 2 ? 2.5 : model === 3 ? 1.2 : 1.5)));
+        for (let i=0;i<target.length;i++) target[i] = p[smoothKeys[i]];
+        if (!initialized) { smooth.set(target); cleanInput = cleanInputTarget; cleanLink = cleanLinkTarget; initialized = true; }
+        const nextTopology = [p.model,model===1?p.fetMode:'normal',model===7?p.thrust:'off'].join('|');
+        if (topology && topology !== nextTopology && (lastWet[0] !== 0 || lastWet[1] !== 0)) declickPending.fill(1);
+        topology = nextTopology;
+      }
+      // A knee-controlled feedforward curve. Feedback families below use its
+      // calibrated feedback equivalent, so requested 4:1 does not collapse to
+      // the ~1.75:1 caused by applying (1-1/R) to an output detector directly.
+      function curve(over, ratio, knee) {
+        const strength = 1-1/ratio, half = knee*.5;
+        if (knee > 0 && over > -half && over < half) return strength*(over+half)*(over+half)/(2*knee);
+        return over >= half ? strength*over : 0;
+      }
+      function peakOrEnergy(value, channel) {
+        const magnitude = Math.abs(value);
+        if (model === 6 || model === 7 || model === 4) {
+          detector[channel] += rmsCoefficient*(value*value-detector[channel]);
+          return Math.sqrt(Math.max(0,detector[channel]));
+        }
+        detector[channel] += (magnitude > detector[channel] ? detectorAttack : detectorRelease)*(magnitude-detector[channel]); return detector[channel];
+      }
+      function dynamics(level, channel, threshold, ratio, knee) {
+        const over = level-threshold;
+        let requested = curve(over,ratio,knee), gr = reduction[channel];
+        const memoryTarget = clamp(requested/24,0,1);
+        exposure[channel] += (memoryTarget > exposure[channel] ? memoryAttack : memoryRelease)*(memoryTarget-exposure[channel]);
+        if (ratio === 1) requested = 0;
+        if (model === 1) {
+          // Implicit one-pole solution of a calibrated feedback gain law. Its
+          // equilibrium is the requested ratio; the denominator bounds even
+          // sub-sample attack constants and high-ratio all-buttons operation.
+          const all = p.fetMode === 'all-buttons';
+          const effectiveRatio = all && ratio > 1 ? Math.max(12,ratio*1.35) : ratio;
+          requested = curve(over,effectiveRatio,all ? Math.max(.5,knee*.35) : knee);
+          const feedbackStrength = Math.max(0,effectiveRatio-1), desiredFeedback = requested*effectiveRatio-feedbackStrength*gr;
+          let coefficient = desiredFeedback > gr ? attackStep : releaseStep/(1+exposure[channel]*(all ? 3.8 : .8));
+          coefficient /= 1+coefficient*feedbackStrength;
+          gr += coefficient*(desiredFeedback-gr);
+          if (all) { slowCell[channel] += (requested > slowCell[channel] ? slowAttack : slowRelease)*(requested-slowCell[channel]); gr += .035*(slowCell[channel]-gr)*releaseStep; }
+        } else if (model === 2 || model === 3) {
+          // Photocell conductance has a fast path and a slow trapped-charge
+          // reservoir. Equal final level after a long exposure recovers more
+          // slowly than after a short note, even with identical release knobs.
+          const weight = model === 2 ? .35 : .15;
+          const coefficient = requested > gr ? attackStep*(1+(model===2?.2:.1)*exposure[channel]) : releaseStep;
+          gr += Math.min(1,coefficient)*(requested-gr);
+          const cellRelease = slowRelease/(1+exposure[channel]*(model===2?4:1.25));
+          slowCell[channel] += (requested > slowCell[channel] ? slowAttack : cellRelease)*(requested-slowCell[channel]);
+          reduction[channel] = clamp(gr,0,72);
+          return clamp(gr*(1-weight)+slowCell[channel]*weight,0,72);
+        } else if (model === 4) {
+          // Variable-mu gain cells gradually increase their slope with level;
+          // their control-voltage history makes sustained material recover
+          // more slowly than isolated transients.
+          const variableRatio = ratio === 1 ? 1 : 1+(ratio-1)*(.55+.45*clamp(Math.max(0,over)/18,0,1));
+          requested = curve(over,variableRatio,Math.max(knee,5));
+          const strength = Math.max(0,variableRatio-1), feedbackTarget = requested*variableRatio-strength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : releaseStep/(1+exposure[channel]*9);
+          coefficient /= 1+coefficient*strength; gr += coefficient*(feedbackTarget-gr);
+        } else if (model === 5) {
+          // Feedforward bus peak detector with a program-dependent second
+          // release component; transients retain the selected attack timing.
+          const coefficient = requested > gr ? attackStep : releaseStep/(1+exposure[channel]*2.5);
+          gr += coefficient*(requested-gr);
+        } else if (model === 6) {
+          // RMS energy detector above plus gain-dependent OverEasy curvature.
+          requested = curve(over,ratio,Math.min(18,knee+(ratio>1?2:0)));
+          gr += (requested > gr ? attackStep : releaseStep)*(requested-gr);
+        } else if (model === 7) {
+          // RMS VCA bus law with a modest feedback contribution. Thrust only
+          // changes detector frequency weighting, never the audible signal.
+          const feedbackStrength = (ratio-1)*.22, feedbackTarget = requested*(1+feedbackStrength)-feedbackStrength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : releaseStep/(1+exposure[channel]*1.2);
+          coefficient /= 1+coefficient*feedbackStrength; gr += coefficient*(feedbackTarget-gr);
+        } else {
+          // Diode-bridge feedback softens near threshold; rectifier storage
+          // adds a short hold and a separate recovery reservoir.
+          requested = curve(over,ratio,Math.max(knee,3));
+          if (requested > gr) hold[channel] = sr*.012;
+          else if (hold[channel] > 0) hold[channel]--;
+          const strength = Math.max(0,ratio-1)*.65, feedbackTarget = requested*(1+strength)-strength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : hold[channel] > 0 ? 0 : releaseStep/(1+exposure[channel]*3);
+          coefficient /= 1+coefficient*strength; gr += coefficient*(feedbackTarget-gr);
+          slowCell[channel] += (requested > slowCell[channel] ? slowAttack : slowRelease)*(requested-slowCell[channel]);
+          reduction[channel] = clamp(gr,0,72); return clamp(gr*.82+slowCell[channel]*.18,0,72);
+        }
+        reduction[channel] = clamp(gr,0,72); return reduction[channel];
+      }
+      function diode(value) {
+        // Three bounded Newton steps for a resistor-loaded, polynomial diode
+        // pair (a low-order approximation to its exponential I/V relation).
+        const x = clamp(value,-12,12); let v = x/(1+.35*Math.abs(x));
+        for(let n=0;n<3;n++){const square=v*v, fourth=square*square;v -= (v+.18*v*square+.008*v*fourth-x)/(1+.54*square+.04*fourth);v=clamp(v,-4,4);} return v;
+      }
+      function coloured(value, channel, amount, gr) {
+        if (amount < 1e-8) {
+          if (colourActive[channel]) { for(let n=0;n<4;n++)colourState[channel*4+n]=0;colourDCPrevious[channel]=colourDC[channel]=core[channel]=0;colourActive[channel]=0; }
+          colourPrevious[channel] = value; return value;
+        }
+        colourActive[channel]=1;
+        const previous = colourPrevious[channel], index = channel*4;
+        let delta = 0;
+        for(let sub=1;sub<=4;sub++){
+          const x=previous+(value-previous)*sub*.25;
+          let shaped=x;
+          if(model===1){const gain=1.6+(p.fetMode==='all-buttons'?.9:0)+gr*.012;shaped=(saturate(x*gain+.045)-saturate(.045))/gain;}
+          else if(model===2){const gain=1.7, bias=.11;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          else if(model===3)shaped=x/Math.sqrt(1+x*x*.65);
+          else if(model===4){const gain=1.5,bias=.065+gr*.002;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          else if(model===5)shaped=saturate(x*1.15)/1.15;
+          else if(model===6)shaped=x/(1+.09*Math.abs(x));
+          else if(model===7){core[channel]+=coreCoefficient*(x-core[channel]);const memory=core[channel]*.3;shaped=(saturate((x+memory)*1.35)-saturate(memory*1.35))/1.35;}
+          else shaped=diode(x*1.7)/1.7;
+          delta=filter(shaped-x,colourFilters[0],colourState,index);delta=filter(delta,colourFilters[1],colourState,index+2);
+        }
+        colourPrevious[channel]=value;
+        const dc=delta-colourDCPrevious[channel]+dcCoefficient*colourDC[channel];colourDCPrevious[channel]=delta;colourDC[channel]=dc;
+        return bound(value+amount*dc);
+      }
+      function finish(value,channel){
+        if(declickPending[channel]){declickPending[channel]=0;offset[channel]=lastWet[channel]-value;declickLeft[channel]=declickFrames;}
+        if(declickLeft[channel]>0){value=bound(value+offset[channel]*declickLeft[channel]/declickFrames);declickLeft[channel]--;}
+        lastWet[channel]=value;return value;
+      }
+      function cleanRun(left,right){
+        const mix=p.mix,strength=1-1/p.ratio,halfKnee=p.knee*.5;
+        let inEnergy=0,outEnergy=0,lastGRL=0,lastGRR=0;
+        for(let i=0;i<left.length;i++){
+          const dryL=bound(left[i]),dryR=bound(right[i]);
+          cleanInput+=slew*(cleanInputTarget-cleanInput);cleanLink+=slew*(cleanLinkTarget-cleanLink);
+          const drivenL=bound(dryL*cleanInput),drivenR=bound(dryR*cleanInput);
+          hpL=drivenL-previousL+hp*hpL;hpR=drivenR-previousR+hp*hpR;previousL=drivenL;previousR=drivenR;
+          const peak=Math.max(Math.abs(hpL),Math.abs(hpR));
+          const coefficient=peak>envelope?attack:release;
+          envelope=coefficient*envelope+(1-coefficient)*peak;
+          const over=20*Math.log10(Math.max(envelope,1e-12))-p.threshold;
+          let sharedReduction=0;
+          if(p.knee>0&&over>-halfKnee&&over<halfKnee)sharedReduction=strength*(over+halfKnee)*(over+halfKnee)/(2*p.knee);
+          else if(over>=halfKnee)sharedReduction=strength*over;
+          let grL=sharedReduction,grR=sharedReduction;
+          for(let channel=0;channel<2;channel++){
+            const magnitude=Math.abs(channel?hpR:hpL),c=magnitude>cleanMono[channel]?attack:release;
+            cleanMono[channel]=c*cleanMono[channel]+(1-c)*magnitude;
+          }
+          if(cleanLink!==1){grL=curve(levelDb(cleanMono[0])-p.threshold,p.ratio,p.knee);grR=curve(levelDb(cleanMono[1])-p.threshold,p.ratio,p.knee);grL+=(sharedReduction-grL)*cleanLink;grR+=(sharedReduction-grR)*cleanLink;}
+          // Literal original gain arithmetic on the stock shared path.
+          const gain=db(-sharedReduction)*makeup;
+          let wetL=cleanLink===1?drivenL*gain:drivenL*db(-grL)*makeup,wetR=cleanLink===1?drivenR*gain:drivenR*db(-grR)*makeup;
+          if(declickPending[0]||declickPending[1]||declickLeft[0]||declickLeft[1]){wetL=finish(wetL,0);wetR=finish(wetR,1);}else{lastWet[0]=wetL;lastWet[1]=wetR;}
+          left[i]=mixSample(dryL,wetL,mix);right[i]=mixSample(dryR,wetR,mix);
+          lastGRL=grL;lastGRR=grR;inEnergy+=dryL*dryL+dryR*dryR;outEnergy+=left[i]*left[i]+right[i]*right[i];
+        }
+        applied[0]=lastGRL;applied[1]=lastGRR;setMeters(left.length,inEnergy,outEnergy,levelDb(envelope));
+      }
+      function setMeters(frames,inEnergy,outEnergy,detectorLevel){
+        meters.reductionLeftDb=applied[0];meters.reductionRightDb=applied[1];meters.reductionDb=Math.max(applied[0],applied[1]);
+        meters.inputDb=10*Math.log10(Math.max(1e-12,inEnergy/Math.max(1,frames*2)));meters.outputDb=10*Math.log10(Math.max(1e-12,outEnergy/Math.max(1,frames*2)));meters.detectorDb=Math.max(-120,detectorLevel);
+      }
+      function analogRun(left,right){
+        let inEnergy=0,outEnergy=0,detectorLevel=-120;
+        for(let i=0;i<left.length;i++){
+          for(let k=0;k<smooth.length;k++){smooth[k]+=slew*(target[k]-smooth[k]);if(Math.abs(target[k]-smooth[k])<1e-10)smooth[k]=target[k];}
+          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=db(smooth[3]),makeupGain=db(smooth[4]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
+          const drivenL=bound(dryL*inputGain),drivenR=bound(dryR*inputGain);
+          for(let channel=0;channel<2;channel++){
+            const x=channel?drivenR:drivenL;
+            detectorHP[channel]=x-detectorPrevious[channel]+hp*detectorHP[channel];detectorPrevious[channel]=x;
+            let detect=detectorHP[channel];
+            if(model===7&&p.thrust!=='off'){
+              thrustLow[channel]+=thrustLowCoefficient*(detect-thrustLow[channel]);thrustHigh[channel]+=thrustHighCoefficient*(detect-thrustHigh[channel]);
+              detect=p.thrust==='loud'?detect*.6-thrustLow[channel]*.5+(detect-thrustHigh[channel])*1.1:detect*.85-thrustLow[channel]*.35+(detect-thrustHigh[channel])*.4;
+            }
+            const peak=peakOrEnergy(detect,channel),detected=levelDb(peak);detectorLevel=Math.max(detectorLevel,detected);
+            applied[channel]=dynamics(detected,channel,threshold,ratio,knee);
+          }
+          const shared=Math.max(applied[0],applied[1]);applied[0]+=(shared-applied[0])*link;applied[1]+=(shared-applied[1])*link;
+          let wetL=coloured(drivenL*db(-applied[0]),0,colour,applied[0])*makeupGain,wetR=coloured(drivenR*db(-applied[1]),1,colour,applied[1])*makeupGain;
+          wetL=finish(wetL,0);wetR=finish(wetR,1);
+          left[i]=mix===0?dryL:mixSample(dryL,wetL,mix);right[i]=mix===0?dryR:mixSample(dryR,wetR,mix);
+          inEnergy+=dryL*dryL+dryR*dryR;outEnergy+=left[i]*left[i]+right[i]*right[i];
+        }
+        setMeters(left.length,inEnergy,outEnergy,detectorLevel);
+      }
+      update();
+      return {
+        setParams(next){if(!next||typeof next!=='object')return;let changed=false;for(const key of Object.keys(next)){if(key!=='bypass'&&!Object.prototype.hasOwnProperty.call(specifications,key))continue;const rule=specifications[key],value=key==='bypass'?next[key]===true:typeof rule[0]==='number'?clamp(finite(next[key],rule[2]),rule[0],rule[1]):rule.includes(next[key])?next[key]:rule[0];if(p[key]!==value){p[key]=value;changed=true;}}if(changed)update();},
+        process(left,right){if(!left||!right||left.length!==right.length)throw new Error('BUTTER requires equal stereo blocks.');if(p.bypass){for(let i=0;i<left.length;i++){left[i]=bound(left[i]);right[i]=bound(right[i]);}meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;return;}if(model===0)cleanRun(left,right);else analogRun(left,right);},
+        reset(){envelope=previousL=previousR=hpL=hpR=0;for(const state of [cleanMono,detector,detectorPrevious,detectorHP,thrustLow,thrustHigh,reduction,slowCell,exposure,hold,applied,colourPrevious,colourDCPrevious,colourDC,core,colourState,colourActive,lastWet,offset,declickLeft,declickPending])state.fill(0);smooth.set(target);cleanInput=cleanInputTarget;cleanLink=cleanLinkTarget;meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;meters.inputDb=meters.outputDb=meters.detectorDb=-120;},
+        getTailTime(){return model===0?0:.25;},
+        getMeters(){return Object.assign({},meters);}
+      };
+    }
+    return {specifications,normalize,create};
+  }
+  scope.createLoomCompressorDSP=createLoomCompressorDSP;
+})(typeof window==='undefined'?globalThis:window);

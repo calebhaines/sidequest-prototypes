@@ -112,7 +112,7 @@
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.14.0"><meta name="galley-service-version" content="1.0.0">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.15.0"><meta name="galley-service-version" content="1.0.0">
 <meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play fourteen instruments, monitor microphone input through four effects per track, and align recordings. Fourteen effects include STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
@@ -1353,6 +1353,88 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 }
 @media(prefers-reduced-motion:reduce){.broiler-rig *{transition:none!important}}
 
+/* BUTTER · a warm brass face for nine distinct dynamics characters. */
+.effect-editor.compressor-editor{border-color:#9d8952}
+.compressor-editor .effect-editor-layout{grid-template-columns:214px minmax(0,1fr)}
+.compressor-editor .effect-hero{background:repeating-linear-gradient(0deg,#ffffff02 0 1px,transparent 1px 5px),linear-gradient(155deg,#3e3929,#242b28 74%)}
+.compressor-editor .effect-hero h2{color:#e6cc81;font-size:37px;letter-spacing:.015em}
+.compressor-editor .effect-hero .effect-art{height:145px;margin:23px 0}
+.compressor-editor .effect-info{font-size:11px;line-height:1.9;color:#bdc0a9}
+.compressor-editor .effect-right{padding:22px;background:linear-gradient(135deg,#30372d,#232c28)}
+.compressor-editor .effect-toolbar{margin-bottom:20px}
+.compressor-editor .effect-toolbar>span{color:#c6c7ac;font-size:9px}
+.compressor-console{display:grid;gap:23px;min-width:0}
+.compressor-recipe-bar{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(0,1.15fr);gap:22px;align-items:center}
+.compressor-recipe-bar>label{display:grid;gap:8px;min-width:0}
+.compressor-recipe-bar .eyebrow{color:#d5c48d;font-size:9px;letter-spacing:.11em}
+.compressor-recipe-bar select{width:100%;max-width:100%;min-width:0;min-height:42px;padding:10px 11px;background:#222c24;border-color:#818266;color:#eee5c6;font-size:12px}
+.compressor-recipe-bar p{color:#bec4af;font-size:12px;line-height:1.75;max-width:490px}
+.compressor-face{position:relative;min-width:0;padding:24px 26px 20px;border:1px solid #b29c60;border-radius:7px;color:#3f432f;background:linear-gradient(145deg,#e5d99c,#d2c48c 60%,#cbbc82);box-shadow:0 5px 0 #162019,inset 0 1px 0 #fff6}
+.compressor-face::before,.compressor-face::after{content:'';position:absolute;top:11px;width:5px;height:5px;background:linear-gradient(45deg,#605b3b 43%,#b4a76a 43%,#b4a76a 56%,#605b3b 56%);border-radius:50%;box-shadow:0 0 0 1px #776a3b44}
+.compressor-face::before{left:11px}.compressor-face::after{right:11px}
+.compressor-face-heading{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid #85774a55}
+.compressor-face-heading>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:15px}
+.compressor-face-brand{font:bold italic 34px Georgia,serif;letter-spacing:-1.2px;color:#41472e;text-shadow:0 1px 0 #fff4}
+.compressor-face-edition{font:8px var(--kk-mono,monospace);letter-spacing:.14em;color:#5e6140}
+.compressor-signal-light{display:flex;align-items:center;gap:8px;font-size:10px;color:#595f3e;white-space:nowrap}
+.compressor-signal-light i{width:7px;height:7px;background:#a96031;border:1px solid #975528;border-radius:50%;box-shadow:0 0 7px #b56d3a55,inset 0 1px 1px #f5d195}
+.compressor-is-bypassed .compressor-signal-light i{background:#8c8d69;border-color:#767956;box-shadow:inset 0 1px 2px #454e4055}
+.compressor-model-row{display:grid;grid-template-columns:minmax(200px,.85fr) minmax(0,1.15fr);gap:25px;align-items:center;padding:22px 0 17px}
+.compressor-model-note strong{display:block;font-size:11px;font-weight:600;line-height:1.6;color:#505738}
+.compressor-model-note p{margin-top:6px;color:#5e6242;font-size:11px;line-height:1.7}
+.compressor-classic-row{display:flex;align-items:center;gap:17px;padding-bottom:20px}
+.compressor-face #compressorClassicSettings{flex-shrink:0;min-height:39px;padding:9px 12px;font-size:11px;font-weight:600;white-space:normal;background:#eee2ad;color:#485033;border:1px solid #8d8b57;border-radius:4px;box-shadow:0 1px 0 #fff4}
+.compressor-face #compressorClassicSettings:hover{background:#f4ebc5;border-color:#5e6c3f}
+.compressor-classic-row p{font-size:10px;line-height:1.7;color:#626647;max-width:430px}
+.compressor-readings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr);gap:20px;padding:18px 20px 14px;border:1px solid #777c5055;border-radius:5px;background:#ede5bb80;box-shadow:inset 0 1px 4px #5b603418}
+.compressor-meter{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 8px;min-width:0;align-items:center}
+.compressor-meter>span{font-size:9px;letter-spacing:.035em;color:#565e3c}
+.compressor-meter>output{font:11px var(--kk-mono,monospace);color:#3e492f;font-variant-numeric:tabular-nums;white-space:nowrap}
+.compressor-gr>span,.compressor-gr>output{color:#7c5327}
+.compressor-meter-track{grid-column:1/-1;height:7px;overflow:hidden;background:#87916c55;border:1px solid #78816044;border-radius:2px;box-shadow:inset 0 1px 2px #58624522}
+.compressor-meter-track i{display:block;height:100%;width:0;background:#687850;transition:width .08s linear}
+.compressor-gr .compressor-meter-track i{background:#a1743b}
+.compressor-meter small{grid-column:1/-1;display:flex;justify-content:space-between;gap:5px;font:7px var(--kk-mono,monospace);color:#747a57}
+.compressor-core-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 24px;padding:24px 0 20px;border-bottom:1px solid #85774a55}
+.compressor-core-controls .compressor-control:last-child{grid-column:1/-1;max-width:440px;width:100%}
+.compressor-control{min-width:0;gap:8px}
+.compressor-control>label{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:11px;line-height:1.5;letter-spacing:0;text-transform:none;white-space:normal;color:#c5cdb8}
+.compressor-control output{font:10px var(--kk-mono,monospace);white-space:nowrap;color:#e6dcba}
+.compressor-control select{width:100%;min-width:0;max-width:100%;min-height:41px;font-size:12px;padding:9px 10px;background:#1c2a23;border-color:#697a60;color:#e6e9ce}
+.compressor-value-row{display:grid;grid-template-columns:minmax(0,1fr) 60px;gap:9px;align-items:center;min-width:0}
+.compressor-value-row input[type=range]{width:100%;min-width:0;min-height:36px;padding:0;accent-color:#d6c781;touch-action:pan-y}
+.compressor-value-row input[type=number]{width:100%;min-width:0;min-height:36px;padding:6px 4px;background:#17271f;border:1px solid #65765a;border-radius:3px;color:#e4dfb9;font:11px var(--kk-mono,monospace);text-align:center;appearance:textfield;-moz-appearance:textfield}
+.compressor-value-row input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
+.compressor-face .compressor-control>label{color:#505b36;font-weight:600}
+.compressor-face .compressor-control output{color:#62603d;font-weight:400}
+.compressor-face .compressor-control select{background:#eee5b9;border-color:#969267;color:#3b4b2c}
+.compressor-face .compressor-value-row input[type=range]{accent-color:#657349}
+.compressor-face .compressor-value-row input[type=number]{color:#415130;background:#eee5b8;border-color:#a29c70;box-shadow:inset 0 1px 2px #676d3f18}
+.compressor-control-inactive>label{opacity:.57}
+.compressor-console input:disabled,.compressor-console select:disabled{opacity:.4;cursor:default}
+.compressor-timing-hint{margin-top:15px;font-size:11px;line-height:1.8;color:#5c6440;max-width:850px}
+.compressor-advanced{min-width:0;border:1px solid #737a5a;border-radius:5px;background:#263329}
+.compressor-advanced>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;cursor:pointer;list-style:none;color:#e3d5a1}
+.compressor-advanced>summary::-webkit-details-marker{display:none}
+.compressor-advanced>summary>span:first-child{display:grid;gap:4px;min-width:0}
+.compressor-advanced summary strong{font-size:13px;font-weight:600}
+.compressor-advanced summary small{font-size:10px;line-height:1.5;color:#acb99c}
+.compressor-advanced summary>span:last-child{font-size:18px;line-height:1;transition:transform .15s}
+.compressor-advanced[open]>summary{border-bottom:1px solid #67725266}
+.compressor-advanced[open] summary>span:last-child{transform:rotate(45deg)}
+.compressor-advanced-content{padding:22px 18px 18px}
+.compressor-advanced-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 22px}
+.compressor-advanced-content>p{font-size:11px;line-height:1.8;color:#bbc7aa;margin-top:20px;max-width:800px}
+.compressor-advanced-content>.compressor-model-disclosure{color:#96a78e;font-size:10px;margin-top:10px}
+.compressor-editor summary:focus-visible{outline:2px solid #e2c784;outline-offset:3px;border-radius:3px}
+.compressor-editor .compressor-face input:focus-visible,.compressor-editor .compressor-face select:focus-visible,.compressor-editor .compressor-face button:focus-visible{outline-color:#52673c;outline-offset:3px}
+@media(min-width:901px){.compressor-editor{scroll-margin-top:153px}}
+@media(max-width:1150px){.compressor-editor .effect-editor-layout{grid-template-columns:185px minmax(0,1fr)}.compressor-editor .effect-hero{padding:18px 16px}.compressor-editor .effect-hero h2{font-size:32px}.compressor-face{padding:22px 20px 18px}.compressor-model-row{gap:20px;grid-template-columns:minmax(180px,1fr) minmax(0,1.1fr)}.compressor-core-controls{gap:21px 18px}.compressor-readings{gap:15px;padding:16px 14px 12px}.compressor-meter{grid-template-columns:1fr;gap:4px}.compressor-meter>output{font-size:12px}.compressor-advanced-controls{gap:22px 18px}}
+@media(max-width:900px){.compressor-editor .effect-editor-layout{grid-template-columns:1fr}.compressor-editor .effect-hero{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:0 15px;border-right:0;border-bottom:1px solid #77704d}.compressor-editor .effect-hero>.eyebrow,.compressor-editor .effect-hero>h2,.compressor-editor .effect-hero>p{grid-column:1}.compressor-editor .effect-hero .effect-art{grid-column:2;grid-row:1/4;height:102px;margin:0}.compressor-editor .effect-info{display:none}.compressor-editor .effect-right{padding:20px}.compressor-model-row{grid-template-columns:minmax(190px,.9fr) minmax(0,1.1fr)}.compressor-meter{grid-template-columns:minmax(0,1fr) auto}}
+@media(max-width:650px){.compressor-editor .effect-hero{grid-template-columns:minmax(0,1fr) 92px;padding:17px}.compressor-editor .effect-hero h2{font-size:29px}.compressor-editor .effect-hero .effect-art{height:80px;align-self:center}.compressor-editor .effect-hero>p{font-size:11px;line-height:1.6}.compressor-editor .effect-right{padding:17px 14px}.compressor-editor .effect-toolbar{gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.compressor-editor .effect-toolbar>div{flex-wrap:wrap}.compressor-console{gap:20px}.compressor-recipe-bar{grid-template-columns:1fr;gap:10px}.compressor-recipe-bar p{font-size:11px;line-height:1.7}.compressor-face{padding:22px 17px 17px}.compressor-face-heading{gap:12px}.compressor-face-heading>div{gap:6px}.compressor-face-brand{font-size:30px}.compressor-face-edition{font-size:7px}.compressor-signal-light{font-size:8px;gap:6px}.compressor-model-row{grid-template-columns:1fr;gap:13px;padding:19px 0 15px}.compressor-model-note p{font-size:11px}.compressor-classic-row{flex-wrap:wrap;gap:9px;padding-bottom:18px}.compressor-classic-row p{font-size:10px}.compressor-face #compressorClassicSettings{min-height:40px;font-size:11px}.compressor-readings{gap:12px;padding:14px 11px 11px;grid-template-columns:repeat(3,minmax(0,1fr))}.compressor-meter{grid-template-columns:1fr;gap:6px}.compressor-meter>span{font-size:8px;min-height:25px;line-height:1.5;display:flex;align-items:flex-end}.compressor-meter>output{font-size:11px}.compressor-meter small{font-size:6px}.compressor-meter small span{display:none}.compressor-core-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 17px;padding:23px 0 18px}.compressor-core-controls .compressor-control:last-child{max-width:none}.compressor-control>label{font-size:10px}.compressor-value-row{grid-template-columns:minmax(0,1fr) 49px;gap:6px}.compressor-value-row input[type=number]{font-size:10px}.compressor-control output{font-size:9px}.compressor-timing-hint{font-size:10px;line-height:1.8}.compressor-advanced>summary{padding:14px}.compressor-advanced summary small{font-size:9px}.compressor-advanced-content{padding:19px 14px 16px}.compressor-advanced-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 16px}.compressor-advanced-content>p{font-size:10px}.compressor-control select{font-size:11px}}
+@media(max-width:360px){.compressor-editor .effect-right{padding:15px 11px}.compressor-face{padding:22px 14px 16px}.compressor-face-heading{align-items:flex-start}.compressor-face-heading>div{flex-direction:column;gap:3px}.compressor-face-brand{font-size:29px}.compressor-signal-light{padding-top:8px}.compressor-core-controls,.compressor-advanced-controls{grid-template-columns:1fr;gap:18px}.compressor-value-row{grid-template-columns:minmax(0,1fr) 62px;gap:11px}.compressor-core-controls .compressor-control:last-child{grid-column:1}.compressor-readings{gap:9px;padding:12px 9px 10px}.compressor-meter>output{font-size:10px}.compressor-advanced summary small{max-width:190px}}
+@media(prefers-reduced-motion:reduce){.compressor-meter-track i,.compressor-advanced summary>span:last-child{transition:none}}
+
 </style>
 
 <style>
@@ -1589,7 +1671,7 @@ body {
 </div>
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.14.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.15.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
@@ -1611,7 +1693,7 @@ body {
 <dialog id="instrumentDialog" class="instrument-dialog"><div class="dialog-top"><div><span class="eyebrow">THE EQUIPMENT ROSTER</span><h2 id="instrumentDialogTitle">Choose a voice for track 01.</h2></div><button id="closeInstrument" class="close-button" aria-label="Close instrument editor">×</button></div><div id="instrumentBrowser"><p class="dialog-intro">The complete Kitchen instruments, with their original controls. Choose one, arm its track, and Record a take into your arrangement.</p><div id="instrumentGrid" class="instrument-grid"></div><div class="custom-instrument"><div><h3>Bring the next peculiar invention.</h3><p>Upload a self-contained HTML instrument, or use a same-origin URL. Audio must use Web Audio.</p></div><div><button id="uploadAppButton">Upload instrument HTML</button><label><input id="customAppUrl" type="url" placeholder="https://this-site/music/your-app/" aria-label="Same-origin instrument URL"><button id="loadAppUrlButton">Load URL</button></label></div></div></div><div id="instrumentEditorBar" class="instrument-editor-bar" hidden><strong id="instrumentEditorName">INSTRUMENT</strong><span id="instrumentHostStatus">Preparing the audio bridge…</span><button id="instrumentBackButton">Other instruments</button><button id="unloadInstrumentButton">Unload</button></div><div id="instrumentFrames" class="instrument-frames" hidden></div></dialog>
 <dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">FOURTEEN FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
 <dialog id="exportDialog" class="export-dialog"><div class="dialog-top"><div><span class="eyebrow">PACK THE FINISHED ORDER</span><h2>Export / ready to go.</h2></div><button id="closeExport" class="close-button" aria-label="Close export">×</button></div><p>Render audio and note clips through their complete effect chains. Note clips use the track’s saved instrument; live performances can be recorded into audio clips.</p><div class="export-fields"><label>EXPORT<select id="exportMode"><option value="mix">Stereo master mix</option><option value="stem">Selected track stem</option><option value="all">All eight track stems</option></select></label><label>RANGE<select id="exportRange"><option value="session">Whole session</option><option value="loop">Loop region</option></select></label><label>EFFECT TAIL<select id="exportTail"><option value="0">None</option><option value="2" selected>2 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option></select></label></div><progress id="exportProgress" max="1" value="0" hidden></progress><div class="export-bottom"><span id="exportSummary">Stereo PCM WAV · 48 kHz · 16 bit</span><button id="cancelExport" hidden>Cancel render</button><button id="renderButton" class="play-button">Render WAV ↗</button></div></dialog>
-<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of fourteen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s four effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the eleven effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight tracks and four insert slots per track. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
+<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of fourteen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s four effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>BUTTER · classic compression</h3><p><strong>BUTTER</strong> adds eight recognizable analog compressor families alongside its original Clean model: Seventy-six FET, Optical 2A, Optical 3A, Vari 670, Bus 4K, VCA 160, Bus 2500 and Diode 609. Each model has its own detector, gain response and recovery. Model notes identify the hardware inspirations and explain what to listen for.</p><p>Changing <strong>Model</strong> keeps your settings. <strong>Use classic settings</strong> loads that family’s suggested timing and character; complete recipes provide ready-to-use starting points. Classic timing follows the model’s program-dependent recovery, while Manual timing makes Attack and Release editable. Input trim drives the detector and analog path. Threshold, Ratio, Knee, Makeup and Dry / wet shape the result.</p><p>Open the advanced controls for analog colour, stereo link, detector high-pass, Seventy-six all-buttons behaviour and Bus 2500 Thrust weighting. The live meters report input, output and actual gain reduction. Colour changes analog models; Clean keeps the original compressor sound. Settings and numeric automation stay in the project and WAV export. These are reduced-order models of classic behaviour rather than measured replicas of particular hardware units.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the fourteen effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight tracks and four insert slots per track. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
 <input id="audioFile" type="file" accept="audio/*" hidden><input id="projectFile" type="file" accept=".json,.loom.json,application/json" hidden><input id="appFile" type="file" accept=".html,text/html" hidden>
 <script>
 /* GLAZE · a vocal finishing station. All processing is local. */
@@ -1976,10 +2058,45 @@ body {
       defaults: { low: 0, mid: 0, high: 0, midFreq: 1000, filter: 'off', cutoff: 12000, resonance: 0.707, mix: 1, bypass: false }
     },
     {
-      id: 'velvet', name: 'BUTTER', subtitle: 'Smooth the peaks. Chef asked for more.', color: '#e4c365', accent: '#f6e1a0', visual: 'ribbons',
-      description: 'A stereo-linked compressor with a soft knee and a filtered detector.',
-      params: [range('threshold', 'Threshold', -48, 0, 0.1, -18, 'dB'), range('ratio', 'Ratio', 1, 20, 0.1, 4, ':1'), range('attack', 'Attack', 0.2, 100, 0.1, 12, 'ms'), range('release', 'Release', 20, 1500, 1, 180, 'ms'), range('knee', 'Soft knee', 0, 18, 0.1, 6, 'dB'), range('makeup', 'Makeup gain', -12, 24, 0.1, 3, 'dB'), range('sidechain', 'Detector high-pass', 20, 500, 1, 30, 'Hz')],
-      defaults: { threshold: -18, ratio: 4, attack: 12, release: 180, knee: 6, makeup: 3, sidechain: 30, mix: 1, bypass: false }
+      id: 'velvet', name: 'BUTTER', subtitle: 'Smooth the peaks. Chef asked for more.', color: '#e4c365', accent: '#f6e1a0', visual: 'ribbons', panel: 'compressor',
+      description: 'The original clean compressor plus eight classic analog-inspired characters: FET, tube and solid-state optical, variable-mu, VCA, and diode bridge. Distinct detector, timing, memory, and colour responses use reduced-order models rather than measured, circuit-exact hardware recreations.',
+      params: [
+        select('model', 'Compressor model', 'clean', [['clean', 'Clean · original BUTTER'], ['fet-76', 'Seventy-six · FET'], ['opto-2a', 'Optical 2A · tube opto'], ['opto-3a', 'Optical 3A · solid-state opto'], ['vari-670', 'Vari 670 · variable-mu'], ['bus-4k', 'Bus 4K · console VCA'], ['vca-160', 'VCA 160 · RMS'], ['bus-2500', 'Bus 2500 · Thrust VCA'], ['diode-609', 'Diode 609 · diode bridge']]),
+        range('input', 'Input gain', -24, 24, 0.1, 0, 'dB'),
+        range('threshold', 'Threshold', -48, 0, 0.1, -18, 'dB'), range('ratio', 'Ratio', 1, 40, 0.1, 4, ':1'), range('attack', 'Attack', 0.02, 100, 0.01, 12, 'ms'), range('release', 'Release', 20, 5000, 1, 180, 'ms'), range('knee', 'Soft knee', 0, 18, 0.1, 6, 'dB'), range('makeup', 'Makeup gain', -12, 24, 0.1, 3, 'dB'), range('sidechain', 'Detector high-pass', 20, 500, 1, 30, 'Hz'),
+        range('colour', 'Analog colour', 0, 1, 0.01, 0.35, ''), select('timing', 'Timing', 'manual', [['manual', 'Manual attack / release'], ['classic', 'Classic program timing']]), range('link', 'Stereo link', 0, 1, 0.01, 1, ''),
+        select('fetMode', 'FET mode', 'normal', [['normal', 'Normal'], ['all-buttons', 'All buttons']]), select('thrust', 'Thrust detector', 'off', [['off', 'Off'], ['medium', 'Medium'], ['loud', 'Loud']])
+      ],
+      groups: [
+        { id: 'main', section: 'main', label: 'Compressor face', help: 'Choosing a model preserves the knobs. Use classic settings loads that model’s suggested timing and curve; a complete recipe replaces every compressor setting.', keys: ['model', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'] },
+        { id: 'advanced', section: 'advanced', label: 'Detector, timing & colour', help: 'Classic timing uses the selected family’s program response. Manual timing keeps that character with your attack and release values. Stereo link at 1 shares the stronger gain reduction; 0 is dual mono. All buttons is FET-only; Thrust is Bus 2500-only.', keys: ['knee', 'sidechain', 'colour', 'timing', 'link', 'fetMode', 'thrust'] }
+      ],
+      models: [
+        { id: 'clean', name: 'Clean', inspiration: 'Original GALLEY BUTTER compressor', description: 'The original clean, filtered-peak compressor with a soft knee. Analog colour, classic timing, All buttons, and Thrust are inactive; input gain and stereo link remain available.', timingDescription: 'Manual Attack and Release use the displayed millisecond values. Classic timing does not change Clean.', defaults: { ratio: 4, attack: 12, release: 180, knee: 6, colour: 0.35, timing: 'manual', fetMode: 'normal', thrust: 'off' } },
+        { id: 'fet-76', name: 'Seventy-six', inspiration: 'UREI / Universal Audio 1176 FET family', description: 'Fast FET-style gain control and a feedback character for urgent vocals and punchy drums. All buttons adds the more aggressive compression character as an explicit mode.', timingDescription: 'Classic: 0.08 ms attack and 80 ms base release. All buttons: 0.035 ms / 45 ms with program-dependent recovery. Manual keeps the FET character with your base times.', defaults: { ratio: 4, attack: 0.08, release: 80, knee: 2, colour: 0.35, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'opto-2a', name: 'Optical 2A', inspiration: 'Teletronix LA-2A tube optical family', description: 'A softer tube-opto leveller. The optical envelope remembers stronger, longer compression, so release depends on the preceding phrase rather than a single fixed timer.', timingDescription: 'Classic: 10 ms attack, 60 ms fast release, and an exposure-dependent 1–5 s optical memory tail. Manual changes the base times while keeping optical memory.', defaults: { ratio: 4, attack: 10, release: 60, knee: 8, colour: 0.35, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'opto-3a', name: 'Optical 3A', inspiration: 'UREI LA-3A solid-state optical family', description: 'A firmer, faster optical character with solid-state colour. It retains optical program memory while presenting a more immediate attack than Optical 2A.', timingDescription: 'Classic: 1.8 ms attack, 50 ms fast release, and a lighter 0.8–1.8 s optical memory tail. Manual keeps that memory with your base times.', defaults: { ratio: 3, attack: 1.8, release: 50, knee: 8, colour: 0.3, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'vari-670', name: 'Vari 670', inspiration: 'Fairchild 670 variable-mu family', description: 'A broad, soft variable-mu transfer and a program-shaped valve response for rounded ensemble and bus control. This is one continuous character, not six exact hardware time-constant positions.', timingDescription: 'Classic: 0.3 ms attack and 300 ms base release, with up to 3 s sustained-program memory. Manual changes the base times without removing the soft transfer or program history.', defaults: { ratio: 4, attack: 0.3, release: 300, knee: 12, colour: 0.4, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'bus-4k', name: 'Bus 4K', inspiration: 'SSL 4000 G-series stereo bus compressor family', description: 'Console VCA-style bus control with a firm, coherent envelope. A useful starting point for gluing a drum bus while preserving the front of the hit.', timingDescription: 'Classic: 10 ms attack and 100 ms base release with a slower program component. Choose Manual for a deliberate slow attack or your own pumping release.', defaults: { ratio: 4, attack: 10, release: 100, knee: 4, colour: 0.25, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'vca-160', name: 'VCA 160', inspiration: 'dbx 160 RMS / VCA compressor family', description: 'RMS sensing and an OverEasy-style soft transition make this a punchy level controller for bass and drums. Ratio and Soft knee stay continuously adjustable.', timingDescription: 'Classic: 10 ms RMS integration, 2 ms gain attack, and 100 ms base release. Manual adjusts the gain-control base times while retaining RMS averaging.', defaults: { ratio: 4, attack: 2, release: 100, knee: 10, colour: 0.25, timing: 'classic', fetMode: 'normal', thrust: 'off' } },
+        { id: 'bus-2500', name: 'Bus 2500', inspiration: 'API 2500 stereo bus compressor family', description: 'A forward VCA bus character with selectable Thrust detector weighting. Medium and Loud reduce low-frequency dominance in the detector; they do not EQ the audible signal directly.', timingDescription: 'Classic: 3 ms attack and 100 ms base release with program recovery. Manual provides your own base times; Thrust remains an independent detector choice.', defaults: { ratio: 4, attack: 3, release: 100, knee: 4, colour: 0.3, timing: 'classic', fetMode: 'normal', thrust: 'medium' } },
+        { id: 'diode-609', name: 'Diode 609', inspiration: 'Neve 33609 diode-bridge compressor family', description: 'A weighty diode-bridge character with a feedback-style response and restrained analog colour. It evokes the compressor section; there is no separate hidden limiter.', timingDescription: 'Classic: 3 ms attack, 100 ms fast release, and about 1 s slow recovery. Manual adjusts the base timing while preserving the detector and colour character.', defaults: { ratio: 3, attack: 3, release: 100, knee: 8, colour: 0.35, timing: 'classic', fetMode: 'normal', thrust: 'off' } }
+      ],
+      defaults: { threshold: -18, ratio: 4, attack: 12, release: 180, knee: 6, makeup: 3, sidechain: 30, mix: 1, bypass: false, model: 'clean', input: 0, colour: 0.35, timing: 'manual', link: 1, fetMode: 'normal', thrust: 'off' },
+      presets: [
+        { id: 'house-smooth', name: 'House smooth', description: 'Original BUTTER at its original settings. Clean, linked, and familiar.', params: {} },
+        { id: 'seventy-six-vocal', name: 'Fast service vocal', description: 'Seventy-six catches peaks with a firm FET attack and a little colour.', params: { model: 'fet-76', threshold: -21, ratio: 4, attack: 0.08, release: 80, knee: 3, makeup: 3, sidechain: 80, colour: 0.32, timing: 'classic' } },
+        { id: 'seventy-six-parallel', name: 'All-in drum crush', description: 'All-buttons FET compression blended behind the dry drums. Strong character, restrained blend.', params: { model: 'fet-76', threshold: -28, ratio: 20, attack: 0.04, release: 45, knee: 2, makeup: 4, sidechain: 60, colour: 0.45, timing: 'classic', fetMode: 'all-buttons', mix: 0.35 } },
+        { id: 'optical-vocal', name: 'Warm optical vocal', description: 'Optical 2A smooths a phrase with a soft curve and a slow memory tail.', params: { model: 'opto-2a', threshold: -24, ratio: 3, attack: 10, release: 60, knee: 10, makeup: 3, sidechain: 70, colour: 0.3, timing: 'classic' } },
+        { id: 'optical-bass', name: 'Solid optical bass', description: 'Optical 3A offers a firmer start and sustained bass levelling.', params: { model: 'opto-3a', threshold: -22, ratio: 4, attack: 1.8, release: 50, knee: 7, makeup: 3, sidechain: 45, colour: 0.25, timing: 'classic' } },
+        { id: 'vari-strings', name: 'Slow-simmer ensemble', description: 'Vari 670 gently rounds a sustained ensemble with a broad knee and program recovery.', params: { model: 'vari-670', threshold: -20, ratio: 2, attack: 0.3, release: 300, knee: 12, makeup: 2, sidechain: 55, colour: 0.35, timing: 'classic' } },
+        { id: 'bus-glue', name: 'Console bus glue', description: 'Bus 4K at 2:1 with a manual 30 ms attack to keep the front of the hit.', params: { model: 'bus-4k', threshold: -18, ratio: 2, attack: 30, release: 300, knee: 3, makeup: 2, sidechain: 90, colour: 0.2, timing: 'manual' } },
+        { id: 'vca-punch', name: 'RMS punch', description: 'VCA 160 adds firm RMS-based control to a bass or drum part.', params: { model: 'vca-160', threshold: -18, ratio: 4, attack: 2, release: 100, knee: 2, makeup: 2, sidechain: 70, colour: 0.25, timing: 'classic' } },
+        { id: 'thrust-drums', name: 'Thrust the pan', description: 'Bus 2500 with Medium Thrust and manual timing. Keep low hits from steering the whole drum bus.', params: { model: 'bus-2500', threshold: -20, ratio: 3, attack: 10, release: 150, knee: 4, makeup: 2, sidechain: 60, colour: 0.3, timing: 'manual', thrust: 'medium' } },
+        { id: 'diode-room', name: 'Diode room', description: 'Diode 609 brings rounded recovery and a little weight to room mics or a roomy bus.', params: { model: 'diode-609', threshold: -24, ratio: 3, attack: 3, release: 100, knee: 6, makeup: 3, sidechain: 80, colour: 0.4, timing: 'classic' } },
+        { id: 'optical-level', name: 'Gentle night shift', description: 'A lower-ratio Optical 2A leveller with a soft knee and a little dry signal.', params: { model: 'opto-2a', threshold: -19, ratio: 1.8, attack: 10, release: 60, knee: 12, makeup: 1.5, sidechain: 80, colour: 0.2, timing: 'classic', mix: 0.8 } },
+        { id: 'clean-transients', name: 'Clean transient trim', description: 'Original Clean with a short manual attack, filtered detector, and a partial blend.', params: { threshold: -15, ratio: 2.5, attack: 3, release: 90, knee: 5, makeup: 1.5, sidechain: 100, mix: 0.7 } }
+      ]
     },
     {
       id: 'cinder', name: 'CHAR', subtitle: 'A little colour. A small incident.', color: '#ef7648', accent: '#f5bc69', visual: 'embers',
@@ -3461,10 +3578,296 @@ body {
   scope.createLoomBroilerPedalsDSP = createLoomBroilerPedalsDSP;
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* GALLEY BUTTER · original clean and reduced-order analog dynamics families. */
+(function (scope) {
+  'use strict';
+  function createLoomCompressorDSP() {
+    'use strict';
+    // Every dependency lives inside this function: AudioWorklet serializes it.
+    const PI = Math.PI, TAU = PI * 2;
+    const specifications = {
+      threshold: [-48, 0, -18], ratio: [1, 40, 4], attack: [.02, 100, 12], release: [20, 5000, 180], knee: [0, 18, 6], makeup: [-12, 24, 3], sidechain: [20, 500, 30], mix: [0, 1, 1],
+      model: ['clean', 'fet-76', 'opto-2a', 'opto-3a', 'vari-670', 'bus-4k', 'vca-160', 'bus-2500', 'diode-609'], input: [-24, 24, 0], colour: [0, 1, .35], timing: ['manual', 'classic'], link: [0, 1, 1], fetMode: ['normal', 'all-buttons'], thrust: ['off', 'medium', 'loud']
+    };
+    const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    const bound = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const db = value => Math.pow(10, value / 20);
+    const levelDb = value => 20 * Math.log10(Math.max(value, 1e-12));
+    const mixSample = (dry, wet, mix) => bound(dry + (wet - dry) * mix);
+    function normalize(params) {
+      const source = params && typeof params === 'object' ? params : {}, result = {};
+      for (const key of Object.keys(specifications)) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true; return result;
+    }
+    function saturate(x) { if (x >= 3) return 1; if (x <= -3) return -1; const square = x*x; return x*(27+square)/(27+9*square); }
+    function lowpassCoefficients(frequency, q, rate) {
+      const w = TAU*frequency/rate, c = Math.cos(w), alpha = Math.sin(w)/(2*q), a0 = 1+alpha;
+      return new Float64Array([(1-c)*.5/a0, (1-c)/a0, (1-c)*.5/a0, -2*c/a0, (1-alpha)/a0]);
+    }
+    function filter(x, c, state, offset) {
+      const y = bound(c[0]*x+state[offset]);
+      state[offset] = bound(c[1]*x-c[3]*y+state[offset+1]); state[offset+1] = bound(c[2]*x-c[4]*y); return y;
+    }
+    function create(sampleRate, params) {
+      let p = normalize(params);
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr*4;
+      const meters = {reductionDb:0, reductionLeftDb:0, reductionRightDb:0, inputDb:-120, outputDb:-120, detectorDb:-120};
+      // Clean retains the original arithmetic and coefficients. Independent
+      // envelopes only add optional dual-mono linking; the stock shared loop
+      // is unchanged, including the original max-rectified stereo detector.
+      let envelope = 0, previousL = 0, previousR = 0, hpL = 0, hpR = 0, attack = 0, release = 0, hp = 0, makeup = 1;
+      const cleanMono = new Float64Array(2);
+      const detector = new Float64Array(2), detectorPrevious = new Float64Array(2), detectorHP = new Float64Array(2), thrustLow = new Float64Array(2), thrustHigh = new Float64Array(2);
+      const reduction = new Float64Array(2), slowCell = new Float64Array(2), exposure = new Float64Array(2), hold = new Float64Array(2), applied = new Float64Array(2);
+      const colourPrevious = new Float64Array(2), colourDCPrevious = new Float64Array(2), colourDC = new Float64Array(2), core = new Float64Array(2), colourState = new Float64Array(8), colourActive = new Int32Array(2);
+      const colourFilters = [lowpassCoefficients(sr*.39, .5411961, osr), lowpassCoefficients(sr*.39, 1.306563, osr)];
+      const smoothKeys = ['threshold','ratio','knee','input','makeup','mix','colour','link'], smooth = new Float64Array(8), target = new Float64Array(8), slew = 1-Math.exp(-1/(sr*.004));
+      const declickFrames = Math.max(1, Math.round(sr*.004)), lastWet = new Float64Array(2), offset = new Float64Array(2), declickLeft = new Int32Array(2), declickPending = new Int32Array(2);
+      const thrustLowCoefficient = 1-Math.exp(-TAU*300/sr), thrustHighCoefficient = 1-Math.exp(-TAU*2200/sr), coreCoefficient = 1-Math.exp(-TAU*45/osr), dcCoefficient = Math.exp(-TAU*9/sr);
+      let initialized = false, topology = '', cleanInput = 1, cleanInputTarget = 1, cleanLink = 1, cleanLinkTarget = 1, model = 0, baseAttack = .012, baseRelease = .18, detectorAttack = 1, detectorRelease = 1, rmsCoefficient = 1, attackStep = 1, releaseStep = 1, slowAttack = 1, slowRelease = 1, memoryAttack = 1, memoryRelease = 1;
+      const profileIndex = {'clean':0,'fet-76':1,'opto-2a':2,'opto-3a':3,'vari-670':4,'bus-4k':5,'vca-160':6,'bus-2500':7,'diode-609':8};
+      // Seconds. These are deliberately simplified program laws, not claims of
+      // measured component values or exact hardware revisions.
+      const classicAttack = [0,.00008,.01,.0018,.0003,.01,.002,.003,.003];
+      const classicRelease = [0,.08,.06,.05,.3,.1,.1,.1,.1];
+      function update() {
+        const priorModel = model;
+        attack = Math.exp(-1/(sr*p.attack*.001)); release = Math.exp(-1/(sr*p.release*.001)); hp = Math.exp(-TAU*Math.min(p.sidechain, sr*.4)/sr); makeup = db(p.makeup);
+        cleanInputTarget = db(p.input); cleanLinkTarget = p.link; model = profileIndex[p.model];
+        if (initialized && model !== priorModel) {
+          const wasEnergy = priorModel === 4 || priorModel === 6 || priorModel === 7, usesEnergy = model === 4 || model === 6 || model === 7;
+          if (priorModel === 0) {
+            detector[0] = cleanMono[0]; detector[1] = cleanMono[1];
+            detectorHP[0] = hpL; detectorHP[1] = hpR; detectorPrevious[0] = previousL; detectorPrevious[1] = previousR;
+          }
+          if (wasEnergy !== usesEnergy) for (let channel=0;channel<2;channel++) detector[channel] = usesEnergy ? detector[channel]*detector[channel] : Math.sqrt(Math.max(0,detector[channel]));
+          if (model === 0) {
+            envelope = Math.max(detector[0],detector[1]);cleanMono.set(detector);
+            hpL = detectorHP[0]; hpR = detectorHP[1]; previousL = detectorPrevious[0]; previousR = detectorPrevious[1];
+          }
+          reduction.set(applied); slowCell.set(applied); exposure.fill(0); hold.fill(0);
+          colourState.fill(0);colourDCPrevious.fill(0);colourDC.fill(0);core.fill(0);colourActive.fill(0);
+        }
+        baseAttack = p.timing === 'classic' && model ? classicAttack[model] : p.attack*.001;
+        baseRelease = p.timing === 'classic' && model ? classicRelease[model] : p.release*.001;
+        if (model === 1 && p.fetMode === 'all-buttons' && p.timing === 'classic') { baseAttack = .000035; baseRelease = .045; }
+        attackStep = 1-Math.exp(-1/(sr*baseAttack)); releaseStep = 1-Math.exp(-1/(sr*baseRelease));
+        // Rectifier/energy integration remains part of the family in manual
+        // mode; manual attack/release controls its gain element, not a renamed
+        // copy of the original peak follower.
+        const detectorAttackSeconds = model === 6 ? .01 : model === 2 ? .0015 : model === 3 ? .00045 : model === 4 ? .0002 : model === 1 ? .000025 : .00015;
+        detectorAttack = 1-Math.exp(-1/(sr*detectorAttackSeconds));
+        detectorRelease = 1-Math.exp(-1/(sr*(model === 6 ? .01 : model === 2 ? .018 : model === 3 ? .009 : model === 4 ? .025 : .012)));
+        rmsCoefficient = 1-Math.exp(-1/(sr*(model === 6 ? .01 : model === 7 ? .0035 : .006)));
+        slowAttack = 1-Math.exp(-1/(sr*(model === 1 ? .03 : model === 2 ? .35 : model === 3 ? .12 : model === 4 ? .2 : .16)));
+        slowRelease = 1-Math.exp(-1/(sr*(model === 1 ? .3 : model === 2 ? 1 : model === 3 ? .8 : model === 4 ? 1.2 : .8)));
+        memoryAttack = 1-Math.exp(-1/(sr*(model === 2 ? .3 : model === 3 ? .18 : .25))); memoryRelease = 1-Math.exp(-1/(sr*(model === 2 ? 2.5 : model === 3 ? 1.2 : 1.5)));
+        for (let i=0;i<target.length;i++) target[i] = p[smoothKeys[i]];
+        if (!initialized) { smooth.set(target); cleanInput = cleanInputTarget; cleanLink = cleanLinkTarget; initialized = true; }
+        const nextTopology = [p.model,model===1?p.fetMode:'normal',model===7?p.thrust:'off'].join('|');
+        if (topology && topology !== nextTopology && (lastWet[0] !== 0 || lastWet[1] !== 0)) declickPending.fill(1);
+        topology = nextTopology;
+      }
+      // A knee-controlled feedforward curve. Feedback families below use its
+      // calibrated feedback equivalent, so requested 4:1 does not collapse to
+      // the ~1.75:1 caused by applying (1-1/R) to an output detector directly.
+      function curve(over, ratio, knee) {
+        const strength = 1-1/ratio, half = knee*.5;
+        if (knee > 0 && over > -half && over < half) return strength*(over+half)*(over+half)/(2*knee);
+        return over >= half ? strength*over : 0;
+      }
+      function peakOrEnergy(value, channel) {
+        const magnitude = Math.abs(value);
+        if (model === 6 || model === 7 || model === 4) {
+          detector[channel] += rmsCoefficient*(value*value-detector[channel]);
+          return Math.sqrt(Math.max(0,detector[channel]));
+        }
+        detector[channel] += (magnitude > detector[channel] ? detectorAttack : detectorRelease)*(magnitude-detector[channel]); return detector[channel];
+      }
+      function dynamics(level, channel, threshold, ratio, knee) {
+        const over = level-threshold;
+        let requested = curve(over,ratio,knee), gr = reduction[channel];
+        const memoryTarget = clamp(requested/24,0,1);
+        exposure[channel] += (memoryTarget > exposure[channel] ? memoryAttack : memoryRelease)*(memoryTarget-exposure[channel]);
+        if (ratio === 1) requested = 0;
+        if (model === 1) {
+          // Implicit one-pole solution of a calibrated feedback gain law. Its
+          // equilibrium is the requested ratio; the denominator bounds even
+          // sub-sample attack constants and high-ratio all-buttons operation.
+          const all = p.fetMode === 'all-buttons';
+          const effectiveRatio = all && ratio > 1 ? Math.max(12,ratio*1.35) : ratio;
+          requested = curve(over,effectiveRatio,all ? Math.max(.5,knee*.35) : knee);
+          const feedbackStrength = Math.max(0,effectiveRatio-1), desiredFeedback = requested*effectiveRatio-feedbackStrength*gr;
+          let coefficient = desiredFeedback > gr ? attackStep : releaseStep/(1+exposure[channel]*(all ? 3.8 : .8));
+          coefficient /= 1+coefficient*feedbackStrength;
+          gr += coefficient*(desiredFeedback-gr);
+          if (all) { slowCell[channel] += (requested > slowCell[channel] ? slowAttack : slowRelease)*(requested-slowCell[channel]); gr += .035*(slowCell[channel]-gr)*releaseStep; }
+        } else if (model === 2 || model === 3) {
+          // Photocell conductance has a fast path and a slow trapped-charge
+          // reservoir. Equal final level after a long exposure recovers more
+          // slowly than after a short note, even with identical release knobs.
+          const weight = model === 2 ? .35 : .15;
+          const coefficient = requested > gr ? attackStep*(1+(model===2?.2:.1)*exposure[channel]) : releaseStep;
+          gr += Math.min(1,coefficient)*(requested-gr);
+          const cellRelease = slowRelease/(1+exposure[channel]*(model===2?4:1.25));
+          slowCell[channel] += (requested > slowCell[channel] ? slowAttack : cellRelease)*(requested-slowCell[channel]);
+          reduction[channel] = clamp(gr,0,72);
+          return clamp(gr*(1-weight)+slowCell[channel]*weight,0,72);
+        } else if (model === 4) {
+          // Variable-mu gain cells gradually increase their slope with level;
+          // their control-voltage history makes sustained material recover
+          // more slowly than isolated transients.
+          const variableRatio = ratio === 1 ? 1 : 1+(ratio-1)*(.55+.45*clamp(Math.max(0,over)/18,0,1));
+          requested = curve(over,variableRatio,Math.max(knee,5));
+          const strength = Math.max(0,variableRatio-1), feedbackTarget = requested*variableRatio-strength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : releaseStep/(1+exposure[channel]*9);
+          coefficient /= 1+coefficient*strength; gr += coefficient*(feedbackTarget-gr);
+        } else if (model === 5) {
+          // Feedforward bus peak detector with a program-dependent second
+          // release component; transients retain the selected attack timing.
+          const coefficient = requested > gr ? attackStep : releaseStep/(1+exposure[channel]*2.5);
+          gr += coefficient*(requested-gr);
+        } else if (model === 6) {
+          // RMS energy detector above plus gain-dependent OverEasy curvature.
+          requested = curve(over,ratio,Math.min(18,knee+(ratio>1?2:0)));
+          gr += (requested > gr ? attackStep : releaseStep)*(requested-gr);
+        } else if (model === 7) {
+          // RMS VCA bus law with a modest feedback contribution. Thrust only
+          // changes detector frequency weighting, never the audible signal.
+          const feedbackStrength = (ratio-1)*.22, feedbackTarget = requested*(1+feedbackStrength)-feedbackStrength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : releaseStep/(1+exposure[channel]*1.2);
+          coefficient /= 1+coefficient*feedbackStrength; gr += coefficient*(feedbackTarget-gr);
+        } else {
+          // Diode-bridge feedback softens near threshold; rectifier storage
+          // adds a short hold and a separate recovery reservoir.
+          requested = curve(over,ratio,Math.max(knee,3));
+          if (requested > gr) hold[channel] = sr*.012;
+          else if (hold[channel] > 0) hold[channel]--;
+          const strength = Math.max(0,ratio-1)*.65, feedbackTarget = requested*(1+strength)-strength*gr;
+          let coefficient = feedbackTarget > gr ? attackStep : hold[channel] > 0 ? 0 : releaseStep/(1+exposure[channel]*3);
+          coefficient /= 1+coefficient*strength; gr += coefficient*(feedbackTarget-gr);
+          slowCell[channel] += (requested > slowCell[channel] ? slowAttack : slowRelease)*(requested-slowCell[channel]);
+          reduction[channel] = clamp(gr,0,72); return clamp(gr*.82+slowCell[channel]*.18,0,72);
+        }
+        reduction[channel] = clamp(gr,0,72); return reduction[channel];
+      }
+      function diode(value) {
+        // Three bounded Newton steps for a resistor-loaded, polynomial diode
+        // pair (a low-order approximation to its exponential I/V relation).
+        const x = clamp(value,-12,12); let v = x/(1+.35*Math.abs(x));
+        for(let n=0;n<3;n++){const square=v*v, fourth=square*square;v -= (v+.18*v*square+.008*v*fourth-x)/(1+.54*square+.04*fourth);v=clamp(v,-4,4);} return v;
+      }
+      function coloured(value, channel, amount, gr) {
+        if (amount < 1e-8) {
+          if (colourActive[channel]) { for(let n=0;n<4;n++)colourState[channel*4+n]=0;colourDCPrevious[channel]=colourDC[channel]=core[channel]=0;colourActive[channel]=0; }
+          colourPrevious[channel] = value; return value;
+        }
+        colourActive[channel]=1;
+        const previous = colourPrevious[channel], index = channel*4;
+        let delta = 0;
+        for(let sub=1;sub<=4;sub++){
+          const x=previous+(value-previous)*sub*.25;
+          let shaped=x;
+          if(model===1){const gain=1.6+(p.fetMode==='all-buttons'?.9:0)+gr*.012;shaped=(saturate(x*gain+.045)-saturate(.045))/gain;}
+          else if(model===2){const gain=1.7, bias=.11;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          else if(model===3)shaped=x/Math.sqrt(1+x*x*.65);
+          else if(model===4){const gain=1.5,bias=.065+gr*.002;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          else if(model===5)shaped=saturate(x*1.15)/1.15;
+          else if(model===6)shaped=x/(1+.09*Math.abs(x));
+          else if(model===7){core[channel]+=coreCoefficient*(x-core[channel]);const memory=core[channel]*.3;shaped=(saturate((x+memory)*1.35)-saturate(memory*1.35))/1.35;}
+          else shaped=diode(x*1.7)/1.7;
+          delta=filter(shaped-x,colourFilters[0],colourState,index);delta=filter(delta,colourFilters[1],colourState,index+2);
+        }
+        colourPrevious[channel]=value;
+        const dc=delta-colourDCPrevious[channel]+dcCoefficient*colourDC[channel];colourDCPrevious[channel]=delta;colourDC[channel]=dc;
+        return bound(value+amount*dc);
+      }
+      function finish(value,channel){
+        if(declickPending[channel]){declickPending[channel]=0;offset[channel]=lastWet[channel]-value;declickLeft[channel]=declickFrames;}
+        if(declickLeft[channel]>0){value=bound(value+offset[channel]*declickLeft[channel]/declickFrames);declickLeft[channel]--;}
+        lastWet[channel]=value;return value;
+      }
+      function cleanRun(left,right){
+        const mix=p.mix,strength=1-1/p.ratio,halfKnee=p.knee*.5;
+        let inEnergy=0,outEnergy=0,lastGRL=0,lastGRR=0;
+        for(let i=0;i<left.length;i++){
+          const dryL=bound(left[i]),dryR=bound(right[i]);
+          cleanInput+=slew*(cleanInputTarget-cleanInput);cleanLink+=slew*(cleanLinkTarget-cleanLink);
+          const drivenL=bound(dryL*cleanInput),drivenR=bound(dryR*cleanInput);
+          hpL=drivenL-previousL+hp*hpL;hpR=drivenR-previousR+hp*hpR;previousL=drivenL;previousR=drivenR;
+          const peak=Math.max(Math.abs(hpL),Math.abs(hpR));
+          const coefficient=peak>envelope?attack:release;
+          envelope=coefficient*envelope+(1-coefficient)*peak;
+          const over=20*Math.log10(Math.max(envelope,1e-12))-p.threshold;
+          let sharedReduction=0;
+          if(p.knee>0&&over>-halfKnee&&over<halfKnee)sharedReduction=strength*(over+halfKnee)*(over+halfKnee)/(2*p.knee);
+          else if(over>=halfKnee)sharedReduction=strength*over;
+          let grL=sharedReduction,grR=sharedReduction;
+          for(let channel=0;channel<2;channel++){
+            const magnitude=Math.abs(channel?hpR:hpL),c=magnitude>cleanMono[channel]?attack:release;
+            cleanMono[channel]=c*cleanMono[channel]+(1-c)*magnitude;
+          }
+          if(cleanLink!==1){grL=curve(levelDb(cleanMono[0])-p.threshold,p.ratio,p.knee);grR=curve(levelDb(cleanMono[1])-p.threshold,p.ratio,p.knee);grL+=(sharedReduction-grL)*cleanLink;grR+=(sharedReduction-grR)*cleanLink;}
+          // Literal original gain arithmetic on the stock shared path.
+          const gain=db(-sharedReduction)*makeup;
+          let wetL=cleanLink===1?drivenL*gain:drivenL*db(-grL)*makeup,wetR=cleanLink===1?drivenR*gain:drivenR*db(-grR)*makeup;
+          if(declickPending[0]||declickPending[1]||declickLeft[0]||declickLeft[1]){wetL=finish(wetL,0);wetR=finish(wetR,1);}else{lastWet[0]=wetL;lastWet[1]=wetR;}
+          left[i]=mixSample(dryL,wetL,mix);right[i]=mixSample(dryR,wetR,mix);
+          lastGRL=grL;lastGRR=grR;inEnergy+=dryL*dryL+dryR*dryR;outEnergy+=left[i]*left[i]+right[i]*right[i];
+        }
+        applied[0]=lastGRL;applied[1]=lastGRR;setMeters(left.length,inEnergy,outEnergy,levelDb(envelope));
+      }
+      function setMeters(frames,inEnergy,outEnergy,detectorLevel){
+        meters.reductionLeftDb=applied[0];meters.reductionRightDb=applied[1];meters.reductionDb=Math.max(applied[0],applied[1]);
+        meters.inputDb=10*Math.log10(Math.max(1e-12,inEnergy/Math.max(1,frames*2)));meters.outputDb=10*Math.log10(Math.max(1e-12,outEnergy/Math.max(1,frames*2)));meters.detectorDb=Math.max(-120,detectorLevel);
+      }
+      function analogRun(left,right){
+        let inEnergy=0,outEnergy=0,detectorLevel=-120;
+        for(let i=0;i<left.length;i++){
+          for(let k=0;k<smooth.length;k++){smooth[k]+=slew*(target[k]-smooth[k]);if(Math.abs(target[k]-smooth[k])<1e-10)smooth[k]=target[k];}
+          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=db(smooth[3]),makeupGain=db(smooth[4]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
+          const drivenL=bound(dryL*inputGain),drivenR=bound(dryR*inputGain);
+          for(let channel=0;channel<2;channel++){
+            const x=channel?drivenR:drivenL;
+            detectorHP[channel]=x-detectorPrevious[channel]+hp*detectorHP[channel];detectorPrevious[channel]=x;
+            let detect=detectorHP[channel];
+            if(model===7&&p.thrust!=='off'){
+              thrustLow[channel]+=thrustLowCoefficient*(detect-thrustLow[channel]);thrustHigh[channel]+=thrustHighCoefficient*(detect-thrustHigh[channel]);
+              detect=p.thrust==='loud'?detect*.6-thrustLow[channel]*.5+(detect-thrustHigh[channel])*1.1:detect*.85-thrustLow[channel]*.35+(detect-thrustHigh[channel])*.4;
+            }
+            const peak=peakOrEnergy(detect,channel),detected=levelDb(peak);detectorLevel=Math.max(detectorLevel,detected);
+            applied[channel]=dynamics(detected,channel,threshold,ratio,knee);
+          }
+          const shared=Math.max(applied[0],applied[1]);applied[0]+=(shared-applied[0])*link;applied[1]+=(shared-applied[1])*link;
+          let wetL=coloured(drivenL*db(-applied[0]),0,colour,applied[0])*makeupGain,wetR=coloured(drivenR*db(-applied[1]),1,colour,applied[1])*makeupGain;
+          wetL=finish(wetL,0);wetR=finish(wetR,1);
+          left[i]=mix===0?dryL:mixSample(dryL,wetL,mix);right[i]=mix===0?dryR:mixSample(dryR,wetR,mix);
+          inEnergy+=dryL*dryL+dryR*dryR;outEnergy+=left[i]*left[i]+right[i]*right[i];
+        }
+        setMeters(left.length,inEnergy,outEnergy,detectorLevel);
+      }
+      update();
+      return {
+        setParams(next){if(!next||typeof next!=='object')return;let changed=false;for(const key of Object.keys(next)){if(key!=='bypass'&&!Object.prototype.hasOwnProperty.call(specifications,key))continue;const rule=specifications[key],value=key==='bypass'?next[key]===true:typeof rule[0]==='number'?clamp(finite(next[key],rule[2]),rule[0],rule[1]):rule.includes(next[key])?next[key]:rule[0];if(p[key]!==value){p[key]=value;changed=true;}}if(changed)update();},
+        process(left,right){if(!left||!right||left.length!==right.length)throw new Error('BUTTER requires equal stereo blocks.');if(p.bypass){for(let i=0;i<left.length;i++){left[i]=bound(left[i]);right[i]=bound(right[i]);}meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;return;}if(model===0)cleanRun(left,right);else analogRun(left,right);},
+        reset(){envelope=previousL=previousR=hpL=hpR=0;for(const state of [cleanMono,detector,detectorPrevious,detectorHP,thrustLow,thrustHigh,reduction,slowCell,exposure,hold,applied,colourPrevious,colourDCPrevious,colourDC,core,colourState,colourActive,lastWet,offset,declickLeft,declickPending])state.fill(0);smooth.set(target);cleanInput=cleanInputTarget;cleanLink=cleanLinkTarget;meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;meters.inputDb=meters.outputDb=meters.detectorDb=-120;},
+        getTailTime(){return model===0?0:.25;},
+        getMeters(){return Object.assign({},meters);}
+      };
+    }
+    return {specifications,normalize,create};
+  }
+  scope.createLoomCompressorDSP=createLoomCompressorDSP;
+})(typeof window==='undefined'?globalThis:window);
+
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -3477,6 +3880,8 @@ body {
     const creative = makeCreative ? makeCreative() : null;
     const makeBroilerPedals = typeof broilerPedalsFactory === 'function' ? broilerPedalsFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomBroilerPedalsDSP === 'function' ? globalThis.createLoomBroilerPedalsDSP : null;
     const broilerPedals = makeBroilerPedals ? makeBroilerPedals() : null;
+    const makeCompressor = typeof compressorFactory === 'function' ? compressorFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomCompressorDSP === 'function' ? globalThis.createLoomCompressorDSP : null;
+    const compressor = makeCompressor ? makeCompressor() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -3504,6 +3909,7 @@ body {
     if (utility) specifications.scales = utility.specifications;
     if (filters) Object.assign(specifications, filters.specifications);
     if (creative) Object.assign(specifications, creative.specifications);
+    if (compressor) specifications.velvet = compressor.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -3515,6 +3921,8 @@ body {
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'velvet' && compressor) return compressor.normalize(params);
+      if (type === 'velvet' && params?.model && params.model !== 'clean') throw new Error('BUTTER analog models require createLoomCompressorDSP.');
       if (type === 'glaze' && vocal) return vocal.normalize(params);
       if (type === 'scales' && utility) return utility.normalize(params);
       if (filters && Object.prototype.hasOwnProperty.call(filters.specifications, type)) return filters.normalize(type, params);
@@ -3573,6 +3981,7 @@ body {
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'velvet' && compressor) return compressor.create(sampleRate, params);
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
       if (type === 'scales' && utility) return utility.create(sampleRate, params);
       if (filters && Object.prototype.hasOwnProperty.call(filters.specifications, type)) return filters.create(type, sampleRate, params);
@@ -4447,7 +4856,8 @@ body {
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.14.0';
+  const VERSION = '1.15.0';
+  const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
@@ -4651,6 +5061,7 @@ body {
     const s = p.state;
     const savedVersion = typeof p.appVersion === 'string' && /^(\d+)\.(\d+)\.(\d+)$/.exec(p.appVersion);
     const legacyBroiler = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 14);
+    const legacyButter = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 15);
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || s.tracks.length !== 8 || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain eight complete tracks.');
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack > 7 || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
@@ -4684,6 +5095,10 @@ body {
       if (legacyBroiler) for (const slot of t.effects) if (slot?.type === 'broiler' && plain(slot.params)) {
         const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'broiler');
         for (const param of definition?.params || []) if (BROILER_WORKSHOP_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
+      }
+      if (legacyButter) for (const slot of t.effects) if (slot?.type === 'velvet' && plain(slot.params)) {
+        const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'velvet');
+        for (const param of definition?.params || []) if (BUTTER_ANALOG_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
       }
       t.effects.forEach(e => effect(e, true));
       if (t.automation !== undefined) {
@@ -5598,9 +6013,10 @@ body {
               const createFilter=${window.createLoomFilterDSP ? window.createLoomFilterDSP.toString() : 'null'};
               const createCreative=${window.createLoomCreativeDSP ? window.createLoomCreativeDSP.toString() : 'null'};
               const createBroilerPedals=${window.createLoomBroilerPedalsDSP ? window.createLoomBroilerPedalsDSP.toString() : 'null'};
+              const createCompressor=${window.createLoomCompressorDSP ? window.createLoomCompressorDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -9263,6 +9679,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   let vocalEditorView = 'basic';
   const vocalHelpOpen = new Set();
   const broilerDetailsOpen = new Set();
+  let compressorAdvancedOpen = false;
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -9395,6 +9812,69 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function effectControl(p, params) {
     if(p.type==='select')return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}</label><select id="fx-${p.key}" data-effect-param="${p.key}">${p.options.map(o=>`<option value="${escape(o.value)}" ${o.value===params[p.key]?'selected':''}>${escape(o.label)}</option>`).join('')}</select></div>`;
     return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}<output>${formatParam(p,params[p.key])}</output></label>${effectRange(p,params[p.key])}</div>`;
+  }
+  function compressorControl(param, params) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control compressor-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const logarithmic = param.min > 0 && ['attack', 'release'].includes(param.key);
+    const range = logarithmic ? `<input id="fx-${param.key}" data-effect-param="${param.key}" data-log="true" type="range" min="0" max="1" step="0.001" value="${Math.log(value / param.min) / Math.log(param.max / param.min)}">` : effectRange(param, value);
+    return `<div class="control compressor-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${formatParam(param, value)}</output></label><div class="compressor-value-row">${range}<input id="fx-number-${param.key}" data-compressor-number="${param.key}" type="number" min="${param.min}" max="${param.max}" step="${param.step}" value="${Number(value.toFixed(4))}" aria-label="${escape(param.label)} exact value${param.unit ? ' in ' + escape(param.unit) : ''}"></div></div>`;
+  }
+  function compressorControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param]));
+    const controls = keys => keys.map(key => compressorControl(descriptors.get(key), params)).join('');
+    const core = ['model', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'];
+    const advanced = effectParams(def).filter(param => !core.includes(param.key)).map(param => param.key);
+    return `<div class="compressor-console"><div class="compressor-recipe-bar"><label for="compressorPreset"><span class="eyebrow">COMPRESSOR RECIPE</span><select id="compressorPreset"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="compressorPresetDescription">A recipe replaces every compressor setting. Changing the model keeps your adjustments.</p></div>
+      <section class="compressor-face" aria-labelledby="compressorFaceTitle"><div class="compressor-face-heading"><div><span id="compressorFaceTitle" class="compressor-face-brand">Butter</span><span class="compressor-face-edition">STEREO DYNAMICS</span></div><span class="compressor-signal-light"><i aria-hidden="true"></i><span id="compressorSignalStatus">Signal ready</span></span></div>
+      <div class="compressor-model-row">${controls(['model'])}<div class="compressor-model-note"><strong id="compressorModelInspiration"></strong><p id="compressorModelDescription"></p></div></div>
+      <div class="compressor-classic-row"><button id="compressorClassicSettings" type="button">Use classic settings</button><p>Set this model’s suggested ratio, timing and character. Keep your threshold and gain staging.</p></div>
+      <div class="compressor-readings" aria-label="Live compressor readings">${[['inputDb', 'Input'], ['reductionDb', 'Gain reduction'], ['outputDb', 'Output']].map(([key, label]) => `<div class="compressor-meter ${key === 'reductionDb' ? 'compressor-gr' : ''}"><span>${label}</span><output data-compressor-meter="${key}">—</output><div class="compressor-meter-track" aria-hidden="true"><i data-compressor-meter-bar="${key}"></i></div>${key === 'reductionDb' ? '<small>0 <span>12</span> 24 dB</small>' : '<small>−60 <span>−30</span> 0 dB</small>'}</div>`).join('')}</div>
+      <div class="compressor-core-controls">${controls(core.filter(key => key !== 'model'))}</div><p id="compressorTimingHint" class="compressor-timing-hint"></p></section>
+      <details id="compressorAdvanced" class="compressor-advanced" ${compressorAdvancedOpen ? 'open' : ''}><summary><span><strong>Advanced</strong><small>Detector, timing, colour & stereo behaviour</small></span><span aria-hidden="true">＋</span></summary><div class="compressor-advanced-content"><div class="compressor-advanced-controls">${controls(advanced)}</div><p id="compressorSpecialHint"></p><p class="compressor-model-disclosure">Musical models inspired by classic circuit families. These are reduced-order interpretations, not measured replicas of individual units.</p></div></details></div>`;
+  }
+  function renderCompressorState() {
+    const slot = track().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'velvet' || !$('compressorFaceTitle')) return;
+    const params = slot.params, model = def.models?.find(model => model.id === params.model), clean = params.model === 'clean', classic = !clean && params.timing === 'classic';
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === preset.params[param.key]) && params.bypass === preset.params.bypass);
+    updateProperty($('compressorPreset'), 'value', recipe?.id || '');
+    updateText($('compressorPresetDescription'), recipe?.description || 'A recipe replaces every compressor setting. Changing the model keeps your adjustments.');
+    updateText($('compressorModelInspiration'), model?.inspiration || (clean ? 'The original BUTTER compressor' : model?.name || 'Stereo compressor'));
+    updateText($('compressorModelDescription'), model?.description || 'Smooth peaks with a stereo-linked detector and a soft knee.');
+    const timing = clean ? 'Original manual timing. Attack and release stay active; analogue colour and special modes are inactive.' : classic ? 'Classic timing. ' + (model?.timingDescription || 'This model follows its own programme-dependent time constants.') + ' Manual attack and release are kept for when you switch back.' : 'Manual timing. Attack and release set the base response; this model keeps its own detector and envelope character.';
+    updateText($('compressorTimingHint'), timing);
+    updateText($('compressorSpecialHint'), clean ? 'Clean preserves the original BUTTER sound. Stereo link and input trim remain available.' : params.model === 'fet-76' ? 'All-buttons adds the FET family’s more aggressive gain behaviour. Thrust applies only to Bus 2500.' : params.model === 'bus-2500' ? 'Thrust changes the Bus 2500 detector weighting. All-buttons applies only to Seventy-six.' : 'All-buttons applies to Seventy-six. Thrust applies to Bus 2500. Their settings stay here while you use another model.');
+    updateAttribute($('compressorClassicSettings'), 'title', 'Use ' + (model?.name || 'this model') + ' recommended ratio, timing and character settings');
+    updateText($('compressorSignalStatus'), params.bypass ? 'Bypassed' : 'Stereo active');
+    updateClass($('compressorFaceTitle').closest('.compressor-face'), 'compressor-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-compressor-number]');
+      if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') {
+        updateText(control.querySelector('output'), formatParam(param, value));
+        if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number(value.toFixed(4)));
+      }
+      const disabled = classic && ['attack', 'release'].includes(param.key) || clean && ['colour', 'timing'].includes(param.key) || param.key === 'fetMode' && params.model !== 'fet-76' || param.key === 'thrust' && params.model !== 'bus-2500';
+      input.disabled = disabled; if (exact) exact.disabled = disabled;
+      if (control) updateClass(control, 'compressor-control-inactive', disabled);
+      if (['attack', 'release', 'timing'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'compressorTimingHint');
+      if (['colour', 'fetMode', 'thrust'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'compressorSpecialHint');
+    }
+    renderCompressorMeters();
+  }
+  function renderCompressorMeters(meters = engine.getMeters()) {
+    const slot = track().effects[selectedSlot]; if (slot?.type !== 'velvet' || $('effectEditor').hidden || !$('compressorFaceTitle')) return;
+    const reading = meters.effects?.[state.selectedTrack]?.[selectedSlot], valid = reading?.type === 'velvet' && !reading.bypass;
+    for (const output of $('effectEditor').querySelectorAll('[data-compressor-meter]')) {
+      const key = output.dataset.compressorMeter, value = reading?.[key], available = valid && Number.isFinite(value), reduction = key === 'reductionDb';
+      updateText(output, available ? !reduction && value <= -90 ? '−∞ dB' : (reduction ? Math.max(0, value) : value).toFixed(1) + ' dB' : '—');
+      const fraction = !available ? 0 : reduction ? Math.min(1, Math.max(0, value) / 24) : Math.min(1, Math.max(0, (value + 60) / 60));
+      const bar = $('effectEditor').querySelector('[data-compressor-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
+    }
   }
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
   function broilerValue(param, value) {
@@ -9581,11 +10061,11 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   function renderEffectEditor() {
     const slot=selectedSlot!==null&&track().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
     const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
     editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / TRACK ${String(state.selectedTrack+1).padStart(2,'0')}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();
+    renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();
   }
   function renderVocalState() {
     const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='glaze')return;
@@ -9934,6 +10414,12 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     const pedalToggle=e.target.closest('[data-broiler-pedal-toggle]'),ampToggle=e.target.closest('[data-broiler-amp-toggle]');
     if(pedalToggle||ampToggle){const slot=track().effects[selectedSlot];if(slot?.type!=='broiler')return;const key=ampToggle?'ampEnable':'pedal'+pedalToggle.dataset.broilerPedalToggle+'Enabled';remember();slot.params[key]=slot.params[key]==='on'?'off':'on';changed();renderAmpState();return;}
     if(e.target.closest('#broilerMatchedCab')){const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.ampModels?.find(model=>model.id===slot.params.model);if(def?.id!=='broiler'||!model?.matchedCab)return;if(slot.params.cabinet!==model.matchedCab){remember();slot.params.cabinet=model.matchedCab;changed();renderAmpState();}status('Matched cabinet selected. Your amplifier controls and pedalboard stay as set.');return;}
+    if(e.target.closest('#compressorClassicSettings')){
+      const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.models?.find(model=>model.id===slot.params.model);if(def?.id!=='velvet'||!model?.defaults)return;
+      const keys=['ratio','attack','release','knee','colour','timing','fetMode','thrust'];
+      if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderCompressorState();}
+      status(model.name+' settings loaded. Your threshold, input, makeup gain, detector filter, stereo link and blend stay as set.');return;
+    }
     if(e.target.closest('#broilerSaveRig')){saveBroilerRig();return;}
     if(e.target.closest('#broilerLoadRig')){$('broilerRigFile')?.click();return;}
     const vocalView=e.target.closest('[data-vocal-view]');if(vocalView){vocalEditorView=vocalView.dataset.vocalView;renderEffectEditor();$('effectEditor').querySelector('[data-vocal-view="'+vocalEditorView+'"]').focus({preventScroll:true});return;}
@@ -9942,7 +10428,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     if(e.target.id==='utilityInputShortcut'){openAudioSettings({practice:'utility'});return;}
     const effectActions={effectBypass:'bypass',effectReset:'reset',effectUp:'up',effectDown:'down',effectRemove:'remove'};if(effectActions[e.target.id]){changeEffect(effectActions[e.target.id]);return;}if(e.target.id==='effectReplace')openEffects(selectedSlot);
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=track().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -9957,7 +10443,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();}
+    else{renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -9973,10 +10459,23 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     renderAmpState();
   });
   document.addEventListener('change',e=>{if(e.target.id!=='vocalPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('vocalPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
+  document.addEventListener('change',e=>{
+    if(e.target.id==='compressorPreset'){
+      const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),recipe=def?.presets?.find(preset=>preset.id===e.target.value);if(def?.id!=='velvet'||!recipe)return;
+      remember();slot.params={...clone(def.defaults),...clone(recipe.params)};changed({rack:true,mixer:true,automation:true});renderCompressorState();status(recipe.name+' loaded. '+recipe.description);return;
+    }
+    const input=e.target,key=input.dataset.compressorNumber;if(!key)return;
+    const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),param=def&&effectParams(def).find(param=>param.key===key);if(def?.id!=='velvet'||!param||input.disabled)return;
+    const value=input.valueAsNumber;
+    if(!Number.isFinite(value)||value<param.min||value>param.max){input.value=slot.params[key];status(param.label+': use a value from '+param.min+' to '+param.max+'.');return;}
+    if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true});changed();}
+    renderCompressorState();
+  });
   document.addEventListener('change',e=>{if(e.target.id!=='utilityPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(def?.id!=='scales'||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('utilityPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='creativePreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!isCreativeEffect(def)||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('creativePreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('toggle',e=>{const help=e.target;if(!help.matches?.('.vocal-stage-help'))return;if(help.open)vocalHelpOpen.add(help.dataset.vocalHelp);else vocalHelpOpen.delete(help.dataset.vocalHelp);},true);
   document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-broiler-details]'))return;if(detail.open)broilerDetailsOpen.add(detail.dataset.broilerDetails);else broilerDetailsOpen.delete(detail.dataset.broilerDetails);},true);
+  document.addEventListener('toggle',e=>{if(e.target.id==='compressorAdvanced')compressorAdvancedOpen=e.target.open;},true);
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
   $('playButton').addEventListener('click',transportStart);$('pauseButton').addEventListener('click',pause);$('stopButton').addEventListener('click',stop);$('panicButton').addEventListener('click',()=>panic());$('recordButton').addEventListener('click',startRecording);
@@ -10046,7 +10545,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');

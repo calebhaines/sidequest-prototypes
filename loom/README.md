@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.14.0.
+SERVICE is version 1.0.0; GALLEY is version 1.15.0.
 
 ## Making a piece
 
@@ -341,7 +341,7 @@ is unavailable, keep a WAV or packet for the next session.
 | Effect | Processing |
 | --- | --- |
 | MANDOLINE | Three EQ bands and a resonant filter |
-| BUTTER | Stereo-linked compressor with a soft knee |
+| BUTTER | Eight classic analog compressor families, the original Clean model, program-dependent timing, colour and stereo linking |
 | CHAR | Saturation, diode distortion, or wavefolding |
 | DOUBLE | Stereo chorus and flanging |
 | LEFTOVERS | Tempo-synced or free ping-pong echo |
@@ -354,6 +354,34 @@ is unavailable, keep a WAV or packet for the next session.
 | STRAINER | Multimode filtering with clean, ladder, diode, and comb resonance; input envelope following, synced modulation, and stereo motion |
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
+
+### BUTTER: classic compression
+
+The existing `velvet` insert now offers the original Clean compressor and eight
+analog-inspired models: Seventy-six (1176), Optical 2A (LA-2A), Optical 3A
+(LA-3A), Vari 670 (Fairchild 670), Bus 4K (SSL G bus), VCA 160 (dbx 160),
+Bus 2500 (API 2500), and Diode 609 (Neve 33609). Their detector, gain law,
+release memory and coloration differ in the audio engine. See
+[BUTTER-MODELS.md](BUTTER-MODELS.md) for each family's response and controls.
+
+Model selection preserves the knobs. Use classic settings applies that model's
+suggested compression/timing character; complete recipes replace the full
+compressor settings. Core level and timing controls stay visible, with the
+remaining analog and linking options folded away. Classic timing uses the
+model's recovery behaviour and disables manual attack/release controls. Manual
+timing exposes the chosen base times while retaining the model's detector and
+recovery characteristics. Colour is available on analog models; Clean preserves
+the original compressor loop. Stereo link blends shared gain reduction with
+independent channel detection without summing opposite-polarity inputs.
+
+Input/output and gain-reduction readings come from the actual processing.
+Settings, numeric automation and Undo work through the same DSP in live
+monitoring, fallback and WAV export. Existing projects inherit Clean and retain
+every old setting and sample. The compressor remains one effect in the existing
+four-slot track rack. Run `npm run check:compressor` and
+`npm run check:compressor-browser`; extracted sources use
+`node compressor-checks.cjs`, `node compressor-project-checks.cjs` and
+`LOOM_COMPRESSOR_QA_BUILT=1 node compressor-browser-checks.cjs` after rebuilding.
 
 ### STRAINER: shape a sound with its own envelope
 
@@ -568,7 +596,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.14.0.
+font license notices. Version 1.15.0.
 
 ## Compatibility
 
