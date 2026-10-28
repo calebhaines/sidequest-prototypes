@@ -8,6 +8,7 @@
   'use strict';
   if (global.MusicLabPatternSchema) return;
   const VERSION = 1, MAX_NOTES = 4096, MAX_VOICES = 64, MAX_BEATS = 256, MAX_BYTES = 1024 * 1024;
+  const LOCK_RANGES = Object.freeze({ cutoff: Object.freeze([20, 20000]), resonance: Object.freeze([.1, 20]), decay: Object.freeze([.005, 10]), pan: Object.freeze([-1, 1]), level: Object.freeze([0, 1]), tone: Object.freeze([0, 1]), drive: Object.freeze([0, 1]) });
   const object = value => value && Object.prototype.toString.call(value) === '[object Object]';
   function text(value, name, max, fallback) {
     if (value === undefined && fallback !== undefined) return fallback;
@@ -23,6 +24,19 @@
     const id = text(value, name, 80);
     if (!id || ['__proto__', 'prototype', 'constructor'].includes(id)) throw new Error(name + ' is invalid.');
     return id;
+  }
+  function normalizeLocks(value) {
+    if (value === undefined) return {};
+    if (!object(value)) throw new Error('Note locks must be a sound-control object.');
+    for (const key of Object.keys(value)) if (!Object.prototype.hasOwnProperty.call(LOCK_RANGES, key)) throw new Error('Unsupported note lock: ' + key + '.');
+    const result = {};
+    // Fixed order makes identical overrides share an identity even when their
+    // source object was assembled in a different order. Empty locks are omitted
+    // from notes so existing version-1 identities remain byte-for-byte stable.
+    for (const key of Object.keys(LOCK_RANGES)) if (Object.prototype.hasOwnProperty.call(value, key)) {
+      const range = LOCK_RANGES[key]; result[key] = number(value[key], 'Note ' + key + ' lock', range[0], range[1]);
+    }
+    return result;
   }
   function normalize(input) {
     if (!object(input)) throw new Error('Choose a Kitchen note-pattern object.');
@@ -55,7 +69,9 @@
       if (beat >= lengthBeats || beat + duration > lengthBeats + 1e-8) throw new Error('Notes must fit within the pattern length.');
       const voice = note.voice === undefined && voices.length === 1 ? voices[0].id : identity(note.voice, 'Note voice');
       if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
-      return { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      const result = { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      if (note.locks !== undefined) { const locks = normalizeLocks(note.locks); if (Object.keys(locks).length) result.locks = locks; }
+      return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;
     if (!Array.isArray(tags) || tags.length > 24) throw new Error('Use at most 24 pattern tags.');
@@ -92,7 +108,7 @@
     return 'pattern-v1-' + (hash >>> 0).toString(16).padStart(8, '0');
   }
   function durationSeconds(value, tempo) { const pattern = normalize(value); return pattern.lengthBeats * 60 / number(tempo === undefined ? pattern.tempo : tempo, 'Playback tempo', 20, 400); }
-  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, normalize, parse, serialize, clone, fingerprint, durationSeconds });
+  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
@@ -2524,7 +2540,7 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
         if(respectMute&&(s.muted?.[voiceIndex]||s.solo!==undefined&&s.solo!==null&&s.solo!==voiceIndex))return;
         events.push({voice:voiceIndex,at:(cycle*packet.lengthBeats+eventBeat(packet,note))*seconds,
           duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*seconds,
-          velocity:note.velocity,pitch:note.pitch-voice.pitch});
+          velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})});
       });
       return{events,durationSeconds:packet.lengthBeats*repetitions*seconds,lengthBeats:packet.lengthBeats,name:packet.name,tempo:bpm};
     }
@@ -2532,6 +2548,10 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
       if(s.musicLabPattern){
         const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
         return schema().normalize({...packet,sourceApp:id,kind:'drums',voices:available.filter(v=>used.has(v.id)),notes:packet.notes.map(note=>({...note,voice:map[note.voice]}))});
+      }
+      if (typeof native().getSequencerPattern === 'function') {
+        const request = { ...options }; if (request.scope === 'sequence') delete request.scope;
+        return schema().normalize(native().getSequencerPattern(request));
       }
       const all=voicesFor(s), notes=[], selected=Number(options.voice??0), scope=options.scope||'pattern';
       let lengthBeats=4, counter=0;
@@ -2606,7 +2626,7 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
           if(when<current-.03)continue;
           const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
-          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
+          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern',...(note.locks?{locks:clone(note.locks)}:{})});
         }
         const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
@@ -2615,9 +2635,12 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
     }
     const adapter={
       app:id,
-      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternExport(){return typeof native().getSequencerPattern === 'function'
+        ? {scopes:[{id:'sequence',label:'Current sequence'},{id:'pattern',label:'Current pattern'},{id:'chain',label:'Complete chain'},{id:'voice',label:'Selected voice pattern'}],defaultScope:'sequence'}
+        : {scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
       get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'&&s.sequenceMode!=='pattern'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
       get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
+      get nativeSequenceLoop(){return viewState().musicLabPattern ? true : native().sequenceLoop !== false;},
       validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
       exportPattern(options={}){return packetFromNative(viewState(),options);},
       async importPattern({pattern,options={},signal}={}){
@@ -2634,6 +2657,10 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
         const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        if (note.locks !== undefined) { const locks = schema().normalizeLocks(note.locks); if (Object.keys(locks).length) options.locks = locks; }
+        // Public app snapshots are copies. Preserve lane identity separately
+        // so a hosted modal voice keeps the same polyphony budget on each hit.
+        if(id==='grain'||id==='tine')options.voiceKey='voice-'+index;
         if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
         if(id==='form')return native().scheduleNativeNote(index,note.when,options);
         return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);
@@ -2645,7 +2672,7 @@ MusicLabExchange.register({...{"id":"fable","name":"STOCK","sourceApp":"FABLE","
         if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
         const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
         const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
-        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})};});
         if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
         const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
         if(id==='form'){

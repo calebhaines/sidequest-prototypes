@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic']
-SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'app.js']
+SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -39,7 +39,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text() + '\n' + (ROOT / 'broiler.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -62,12 +62,18 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     target.parent.mkdir(parents=True, exist_ok=True)
     sources = ['app.html', 'styles.css', 'automation.css', 'piano-roll.css', 'kitchen.css', *SCRIPTS, 'build.py', 'checks.cjs', 'note-checks.cjs', 'amp-checks.cjs', 'vocal-checks.cjs', 'vocal-browser-checks.cjs', 'utility-checks.cjs', 'utility-integration-checks.cjs', 'utility-browser-checks.cjs', 'batter-integration-checks.cjs', 'microphone-engine-checks.cjs', 'microphone-browser-checks.cjs', 'audio-interface-checks.cjs', 'audio-interface-browser-checks.cjs', 'README.md', 'HOSTING.md', 'demo-assets.json', 'demo-session.json']
     sources += ['service.css', 'service-schema-checks.cjs', 'service-engine-checks.cjs', 'service-note-checks.cjs', 'service-capture-checks.cjs', 'service-midi-checks.cjs', 'service-controller-checks.cjs', 'service-browser-checks.cjs', 'host-navigation-checks.cjs', 'creative-effects.css', 'filter-checks.cjs', 'creative-checks.cjs', 'creative-effects-integration-checks.cjs', 'creative-effects-browser-checks.cjs', 'tonal-print-timing-checks.cjs', 'tonal-live-timing-checks.cjs', 'tonal-fallback-clock-checks.cjs', 'transport-count-in-checks.cjs']
+    sources += ['clip-loop-continuity-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs', 'percussion-integration-checks.cjs']
+    sources += ['broiler.css', 'BROILER-MODELS.md', 'broiler-workshop-checks.cjs', 'broiler-pedal-checks.cjs', 'broiler-browser-checks.cjs', 'broiler-project-checks.cjs', 'broiler-legacy-fixtures.json']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.
     timing_fixtures = ['shared/pattern-schema.js', 'proof/schema.js', 'proof/arp.js', 'proof/audio-engine.js', 'marinade/analysis.js', 'marinade/sources.js', 'marinade/schema.js', 'marinade/sequence.js', 'marinade/audio-engine.js']
+    timing_fixtures += ['tine/' + name for name in ['app.html', 'styles.css', 'cancellation-checks.cjs']]
+    timing_fixtures += ['tine/' + source.name for source in sorted((ROOT.parent / 'tine').glob('*.js'))]
     files += [('timing-fixtures/' + name, (ROOT.parent / name).read_bytes()) for name in timing_fixtures]
     files += exchange_helpers['exchange_sources'](ROOT)
+    files += [('shared/pattern-lock-checks.cjs', (exchange_dir / 'pattern-lock-checks.cjs').read_bytes())]
+    files += [('shared/percussion-browser-checks.cjs', (exchange_dir / 'percussion-browser-checks.cjs').read_bytes())]
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]
     files += [('instruments/' + name + '.html', data) for name, data in instrument_files.items()]
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:

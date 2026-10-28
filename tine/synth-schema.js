@@ -149,10 +149,10 @@
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2, 3].includes(project.version)) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected', ...(project?.version === 4 ? ['bankLocks'] : [])]) || project.app !== 'TINE' || ![1, 2, 3, 4].includes(project.version)) return false;
     const state = project.state;
-    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version === 3 ? ['stepCount'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
-    if (project.version === 3 && ![16, 32].includes(state.stepCount)) return false;
+    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version >= 3 ? ['stepCount'] : []), ...(project.version === 4 ? ['chain'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (project.version >= 3 && ![16, 32].includes(state.stepCount)) return false;
     if (state.musicLabPattern !== undefined) {
       try {
         const overlay = state.musicLabPattern;
@@ -166,6 +166,7 @@
     const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
     if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
+    if (project.version === 4 && (!validChain(state.chain, state.stepCount) || !Array.isArray(project.bankLocks) || project.bankLocks.length !== 4 || !project.bankLocks.every((locks, bank) => Array.isArray(locks) && locks.length === 8 && locks.every((steps, voice) => Array.isArray(steps) && steps.length === project.banks[bank][voice].length && Array.from(steps).every(validLocks))))) return false;
     const patterns = [...state.tracks.map((track) => track.steps), ...project.banks.flat()];
     if ((project.version < 3 && patterns.some((steps) => steps.length !== 16)) || (state.stepCount === 32 && patterns.some((steps) => steps.length !== 32))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
@@ -180,7 +181,73 @@
       upgraded.version = 2;
     }
     if (upgraded.version === 2) { upgraded.state.stepCount = 16; upgraded.version = 3; }
+    if (upgraded.version === 3) {
+      upgraded.state.chain = defaultChain();
+      upgraded.bankLocks = upgraded.banks.map(bank => bank.map(steps => steps.map(() => ({}))));
+      upgraded.version = 4;
+    }
     return upgraded;
+  }
+
+  const lockRanges = Object.freeze({ cutoff: [20, 20000], resonance: [.1, 20], decay: [.005, 10], pan: [-1, 1], level: [0, 1], tone: [0, 1], drive: [0, 1] });
+  function validLocks(value) {
+    return isRecord(value) && Object.keys(value).every(key => Object.hasOwn(lockRanges, key) && finite(value[key], ...lockRanges[key]));
+  }
+  function normalizeLocks(value) {
+    if (value === undefined) return {};
+    if (!validLocks(value)) throw new Error('Invalid CLATTER step locks.');
+    return Object.assign({}, value);
+  }
+  function defaultChain() { return { enabled: false, loop: true, entries: [] }; }
+  function emptyLocks(length = 16) { return Array.from({ length: 8 }, () => Array.from({ length }, () => ({}))); }
+  function validChain(chain, stepCount = 16) {
+    return exactKeys(chain, ['enabled', 'loop', 'entries']) && typeof chain.enabled === 'boolean' && typeof chain.loop === 'boolean'
+      && Array.isArray(chain.entries) && chain.entries.length <= 32 && (!chain.enabled || chain.entries.length > 0)
+      && new Set(chain.entries.map(entry => entry?.id)).size === chain.entries.length
+      && chain.entries.every(entry => exactKeys(entry, ['id', 'bank', 'repeats']) && typeof entry.id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(entry.id) && Number.isInteger(entry.bank) && entry.bank >= 0 && entry.bank <= 3 && Number.isInteger(entry.repeats) && entry.repeats >= 1 && entry.repeats <= 16)
+      && chain.entries.reduce((sum, entry) => sum + entry.repeats * stepCount / 4, 0) <= 256;
+  }
+  function nextSequenceFrame(project, previous) {
+    const chain = project.state.chain || defaultChain(), length = project.state.stepCount === 32 ? 32 : 16;
+    if (!chain.enabled || !chain.entries.length) return { chain: false, bank: project.bank, entry: 0, entryId: null, repeat: 1, repeats: 1, length };
+    let index = previous?.chain ? chain.entries.findIndex(entry => entry.id === previous.entryId) : -1, repeat = 1;
+    if (index < 0) {
+      index = previous?.chain ? previous.entry : 0;
+      // Removing the playing entry hands off to its successor at the same
+      // position, rather than unexpectedly returning to the first pattern.
+      if (index >= chain.entries.length) { if (!chain.loop) return null; index = 0; }
+    }
+    else if (previous.repeat < chain.entries[index].repeats) repeat = previous.repeat + 1;
+    else if (++index >= chain.entries.length) { if (!chain.loop) return null; index = 0; }
+    const entry = chain.entries[index];
+    return { chain: true, bank: entry.bank, entry: index, entryId: entry.id, repeat, repeats: entry.repeats, length };
+  }
+  function sequencerPattern(project, options = {}) {
+    const s = project.state, stepCount = s.stepCount === 32 ? 32 : 16, scope = options.scope;
+    if (scope !== undefined && !['pattern', 'chain', 'voice', 'sequence'].includes(scope)) throw new Error('Choose the current pattern, chain, or selected voice.');
+    const useChain = scope === 'chain' || ((scope === undefined || scope === 'sequence') && s.chain?.enabled);
+    const entries = useChain ? s.chain?.entries || [] : [{ bank: project.bank, repeats: 1 }];
+    if (!entries.length) throw new Error('Add a pattern to the CLATTER chain first.');
+    const lengthBeats = entries.reduce((total, entry) => total + entry.repeats * stepCount / 4, 0);
+    if (lengthBeats > 256) throw new Error('The chain is longer than 256 beats. Use fewer repeats.');
+    const voices = s.tracks.map((track, index) => ({ id: 'voice-' + index, name: track.name, pitch: 36 + index })), notes = [];
+    const solo = s.tracks.some(track => track.solo), selected = options.voice === undefined ? project.selected : options.voice;
+    if (scope === 'voice' && (!Number.isInteger(selected) || selected < 0 || selected > 7)) throw new Error('Choose a CLATTER voice from 1 to 8.');
+    let offset = 0, ordinal = 0;
+    for (const entry of entries) for (let repeat = 0; repeat < entry.repeats; repeat++) {
+      s.tracks.forEach((track, index) => {
+        if (scope === 'voice' ? index !== selected : track.mute || solo && !track.solo) return;
+        project.banks[entry.bank][index].slice(0, stepCount).forEach((hit, step) => {
+          if (!hit) return;
+          if (notes.length >= 4096) throw new Error('This sequence exceeds 4,096 shared notes. Use fewer hits or repeats.');
+          const beat = offset + step / 4 + (step % 2 ? s.swing / 4 : 0), locks = normalizeLocks(project.bankLocks?.[entry.bank]?.[index]?.[step]);
+          notes.push({ id: 'note-' + ordinal++, voice: voices[index].id, pitch: voices[index].pitch, beat, duration: Math.min(.25, lengthBeats - beat), velocity: hit === 2 ? 1 : .73, probability: 1, ...(Object.keys(locks).length ? { locks } : {}) });
+        });
+      });
+      offset += stepCount / 4;
+    }
+    const packet = { format: 'musiclab-pattern', version: 1, name: s.name + (useChain ? ' · chain' : ' · CLATTER'), sourceApp: 'tine', kind: 'drums', tempo: s.bpm, swing: 0, lengthBeats, meter: [4, 4], voices, notes, seed: 0x5A17C0DE };
+    return window.MusicLabPatternSchema ? window.MusicLabPatternSchema.normalize(packet) : packet;
   }
 
   function format(parameter, value) {
@@ -197,5 +264,5 @@
     }
   }
 
-  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format });
+  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format, lockRanges, validLocks, normalizeLocks, defaultChain, emptyLocks, validChain, nextSequenceFrame, sequencerPattern });
 }());

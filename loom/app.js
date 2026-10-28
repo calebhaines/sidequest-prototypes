@@ -22,6 +22,7 @@
   let audioSettingsBusy = false, audioDeviceBusy = false, ampPracticeBusy = false, audioDeviceOperation = 0, audioSettingsOperation = 0, audioDiagnosticsTime = 0, audioDevices = null;
   let vocalEditorView = 'basic';
   const vocalHelpOpen = new Set();
+  const broilerDetailsOpen = new Set();
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -155,6 +156,89 @@
     if(p.type==='select')return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}</label><select id="fx-${p.key}" data-effect-param="${p.key}">${p.options.map(o=>`<option value="${escape(o.value)}" ${o.value===params[p.key]?'selected':''}>${escape(o.label)}</option>`).join('')}</select></div>`;
     return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}<output>${formatParam(p,params[p.key])}</output></label>${effectRange(p,params[p.key])}</div>`;
   }
+  function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
+  function broilerValue(param, value) {
+    if (/^pedal[1-4](Drive|Tone|Mix)$/.test(param.key)) return Math.round(value * 100) + '%';
+    return formatParam(param, value);
+  }
+  function broilerControl(param, params, label = param?.label) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control broiler-control"><label for="fx-${param.key}"><span class="broiler-param-name">${escape(label)}</span></label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    return `<div class="control broiler-control"><label for="fx-${param.key}"><span class="broiler-param-name">${escape(label)}</span><output>${broilerValue(param, value)}</output></label><div class="broiler-value-row">${effectRange(param, value)}<input id="fx-number-${param.key}" data-broiler-number="${param.key}" type="number" min="${param.min}" max="${param.max}" step="${param.step}" value="${escape(Number(value.toFixed(4)))}" aria-label="${escape(label)} exact value"></div></div>`;
+  }
+  function broilerControls(def, params) {
+    const controls = keys => keys.map(key => broilerControl(broilerParam(def, key), params)).join('');
+    const essentials = ['model', 'ampEnable', 'drive', 'bass', 'mid', 'treble', 'presence', 'master', 'input', 'output', 'cabinet', 'mix'];
+    const covered = new Set(essentials), workshop = [];
+    for (const group of def.groups || []) {
+      const keys = group.keys.filter(key => !covered.has(key) && !/^pedal[1-4]/.test(key));
+      keys.forEach(key => covered.add(key));
+      if (keys.length) workshop.push({ ...group, keys });
+    }
+    const remaining = effectParams(def).filter(param => !covered.has(param.key) && !/^pedal[1-4]/.test(param.key)).map(param => param.key);
+    if (remaining.length) workshop.push({ label: 'More amplifier controls', keys: remaining });
+    const pedals = Array.from({ length: 4 }, (_, offset) => {
+      const number = offset + 1, prefix = 'pedal' + number, type = broilerParam(def, prefix + 'Type');
+      if (!type) return '';
+      return `<article class="broiler-pedal" data-broiler-pedal="${number}"><div class="broiler-pedal-top"><span class="broiler-pedal-number">${String(number).padStart(2, '0')}</span><button type="button" id="fx-${prefix}Enabled" data-effect-param="${prefix}Enabled" data-broiler-pedal-toggle="${number}" class="broiler-footswitch" aria-pressed="${params[prefix + 'Enabled'] === 'on'}"><i aria-hidden="true"></i><span>Bypass</span></button></div>${broilerControl(type, params, 'Pedal ' + number)}<p id="broilerPedalState${number}" class="broiler-pedal-state"></p>${broilerControl(broilerParam(def, prefix + 'Route'), params, 'Position')}<div class="broiler-pedal-actions"><button type="button" data-broiler-pedal-action="left" data-pedal-slot="${number}" ${number === 1 ? 'disabled' : ''} aria-label="Move pedal ${number} earlier">←</button><button type="button" data-broiler-pedal-action="right" data-pedal-slot="${number}" ${number === 4 ? 'disabled' : ''} aria-label="Move pedal ${number} later">→</button><button type="button" data-broiler-pedal-action="clear" data-pedal-slot="${number}" aria-label="Remove pedal ${number}">Clear</button></div><details data-broiler-details="pedal${number}" ${broilerDetailsOpen.has('pedal' + number) ? 'open' : ''}><summary>Adjust sound <span aria-hidden="true">＋</span></summary><div class="broiler-pedal-detail"><p id="broilerPedalDescription${number}"></p><div class="broiler-pedal-controls">${['Drive', 'Tone', 'Level', 'Mix'].map(suffix => broilerControl(broilerParam(def, prefix + suffix), params)).join('')}</div></div></details></article>`;
+    }).join('');
+    const enable = broilerParam(def, 'ampEnable');
+    return `<div class="broiler-rig"><div class="broiler-recipe-bar"><label for="broilerPreset"><span class="eyebrow">COMPLETE RIG RECIPE</span><select id="broilerPreset"><option value="">Custom rig</option>${def.presets.map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="broilerPresetDescription">A recipe replaces the amplifier, cabinet and all four pedals.</p></div>
+      <section class="broiler-head" aria-labelledby="broilerHeadTitle"><div class="broiler-face-heading"><div><span class="broiler-face-brand" id="broilerHeadTitle">Broiler</span><span class="broiler-face-edition">AMPLIFIER / NO. 01</span></div>${enable ? `<button type="button" id="fx-ampEnable" data-effect-param="ampEnable" data-broiler-amp-toggle class="broiler-power" aria-pressed="${params.ampEnable !== 'off'}"><i aria-hidden="true"></i><span>Head on</span></button>` : ''}</div><div class="broiler-model-row">${controls(['model'])}<div class="broiler-model-note"><strong id="broilerAmpInspiration"></strong><p id="broilerAmpDescription"></p></div></div><div class="broiler-face-controls">${controls(['drive', 'bass', 'mid', 'treble', 'presence', 'master', 'input', 'output'])}</div><div class="broiler-cab-row">${controls(['cabinet'])}<button id="broilerMatchedCab" type="button">Match cabinet to amp</button>${controls(['mix'])}</div><p id="broilerCabinetStatus" class="broiler-cabinet-status"></p><div class="broiler-readings" aria-label="Live amplifier readings"><span>LIVE SIGNAL</span>${[['inputDb', 'Input'], ['outputDb', 'Output'], ['reductionDb', 'Power sag']].map(([key, label]) => `<div><span>${label}</span><output data-broiler-meter="${key}">—</output></div>`).join('')}</div></section>
+      <section class="broiler-board" aria-labelledby="broilerPedalboardTitle"><div class="broiler-section-heading"><div><span class="eyebrow">FOUR PLACES / ONE SIGNAL PATH</span><h3 id="broilerPedalboardTitle">The pedalboard.</h3></div><span>Before amp → amplifier → cabinet → after cabinet</span></div><div class="broiler-pedalboard">${pedals}</div><p class="broiler-board-hint">Pedals play in slot order within each position. Move a pedal to change that order. Bypass keeps its settings.</p></section>
+      <details id="broilerWorkshop" class="broiler-workshop" data-broiler-details="workshop" ${broilerDetailsOpen.has('workshop') ? 'open' : ''}><summary><span><strong>Workshop</strong><small>Valves, tone circuits, power supply & microphone</small></span><span aria-hidden="true">＋</span></summary><div class="broiler-workshop-content">${workshop.map(group => `<fieldset class="broiler-workshop-group" data-broiler-group="${escape(group.id || group.label)}"><legend>${escape(group.label)}</legend>${group.help ? `<p>${escape(group.help)}</p>` : ''}<div class="broiler-workshop-controls">${controls(group.keys)}</div></fieldset>`).join('')}<div class="broiler-rig-files"><div><strong>Keep this rig.</strong><p>Save the head, cabinet and pedalboard for another session.</p></div><div><button id="broilerSaveRig" type="button">Save rig</button><button id="broilerLoadRig" type="button">Load rig</button><input id="broilerRigFile" type="file" accept=".json,application/json" hidden></div></div><p class="broiler-workshop-note">Modelled circuit behaviour and familiar inspirations. These are musical approximations, not measured replicas of specific amplifiers or pedals.</p></div></details></div>`;
+  }
+  function broilerPedalAction(number, action) {
+    const slot = track().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'broiler') return;
+    const next = number + (action === 'left' ? -1 : 1);
+    if (action !== 'clear' && (next < 1 || next > 4)) return;
+    const prefix = 'pedal' + number, keys = effectParams(def).filter(param => param.key.startsWith(prefix)).map(param => param.key), targetPrefix = 'fx:' + selectedSlot + ':';
+    if (!keys.length) return;
+    remember();
+    if (action === 'clear') {
+      for (const key of keys) slot.params[key] = def.defaults[key];
+      track().automation = track().automation.filter(lane => !lane.target.startsWith(targetPrefix + prefix));
+    } else {
+      const other = 'pedal' + next;
+      for (const key of keys) { const otherKey = other + key.slice(prefix.length); [slot.params[key], slot.params[otherKey]] = [slot.params[otherKey], slot.params[key]]; }
+      const remap = target => target.replace(new RegExp('^(fx:' + selectedSlot + ':)pedal(' + number + '|' + next + ')([A-Z])'), (_, base, index, suffix) => base + 'pedal' + (Number(index) === number ? next : number) + suffix);
+      for (const lane of track().automation) lane.target = remap(lane.target);
+      if (automationEditor) automationEditor.target = remap(automationEditor.target);
+    }
+    changed({ automation: true }); renderEffectEditor();
+    const focusedNumber = action === 'clear' ? number : next;
+    const actionButton = $('effectEditor').querySelector('[data-broiler-pedal="' + focusedNumber + '"] [data-broiler-pedal-action="' + action + '"]');
+    (actionButton && !actionButton.disabled ? actionButton : $('fx-pedal' + focusedNumber + 'Type'))?.focus({ preventScroll: true });
+    status(action === 'clear' ? 'Pedal ' + number + ' removed. Undo restores its sound and automation.' : 'Pedal moved to slot ' + next + '. Settings and automation travel with it.');
+  }
+  function saveBroilerRig() {
+    const slot = track().effects[selectedSlot], def = slot && effectById(slot.type); if (def?.id !== 'broiler') return;
+    const model = def.ampModels?.find(model => model.id === slot.params.model), name = (model?.name || 'My Broiler') + ' rig';
+    const rig = { format: 'broiler-rig', version: 1, name, params: clone(slot.params) };
+    const filename = 'broiler-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.json';
+    download(new Blob([JSON.stringify(rig, null, 2)], { type: 'application/json' }), filename);
+    status(name + ' saved. Load it into any BROILER insert.');
+  }
+  async function loadBroilerRig(file, input) {
+    if (!file) return;
+    const target = track().effects[selectedSlot], def = target && effectById(target.type), trackId = track().id, slotIndex = selectedSlot, generation = lifecycle;
+    if (def?.id !== 'broiler') return;
+    try {
+      if (file.size > 128 * 1024) throw Error('Choose a BROILER rig file smaller than 128 KB.');
+      const rig = JSON.parse(await file.text());
+      if (!rig || typeof rig !== 'object' || Array.isArray(rig) || rig.format !== 'broiler-rig' || rig.version !== 1 || typeof rig.name !== 'string' || !rig.name.trim() || rig.name.length > 80 || /[\u0000-\u001f\u007f]/.test(rig.name) || Object.keys(rig).some(key => !['format', 'version', 'name', 'params'].includes(key))) throw Error('Choose a valid BROILER rig file.');
+      const keys = new Set([...effectParams(def).map(param => param.key), 'bypass']);
+      if (!rig.params || typeof rig.params !== 'object' || Array.isArray(rig.params) || Object.keys(rig.params).length !== keys.size || Object.keys(rig.params).some(key => !keys.has(key))) throw Error('The rig must contain the complete BROILER settings.');
+      const validated = S.effect({ type: 'broiler', params: rig.params }, true);
+      for (const param of effectParams(def)) if (param.type === 'range' && (rig.params[param.key] < param.min || rig.params[param.key] > param.max)) throw Error(param.label + ' is outside this rig’s supported range.');
+      if (generation !== lifecycle || track().id !== trackId || selectedSlot !== slotIndex || track().effects[slotIndex] !== target) { status('The selected insert changed. Choose BROILER and load the rig again.'); return; }
+      remember(); target.params = validated.params; changed({ rack: true, mixer: true }); renderEffectEditor(); $('broilerLoadRig')?.focus({ preventScroll: true });
+      status(rig.name + ' loaded into this insert. Undo restores your previous rig.');
+    } catch (error) { status(error instanceof SyntaxError ? 'That file is not valid BROILER rig JSON.' : error.message); }
+    finally { input.value = ''; }
+  }
   function vocalStageHelp(g) {
     if (!g.help) return '';
     return `<details class="vocal-stage-help" data-vocal-help="${escape(g.id)}" ${vocalHelpOpen.has(g.id) ? 'open' : ''}><summary aria-label="How it works: ${escape(g.shortLabel)}"><span>How it works</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m4 2 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></summary><div class="vocal-help-content"><p><strong>Use it for</strong> ${escape(g.help.use)}</p><dl>${g.help.controls.map(([name, description]) => `<dt>${escape(name)}</dt><dd>${escape(description)}</dd>`).join('')}</dl></div></details>`;
@@ -258,8 +342,8 @@
   function renderEffectEditor() {
     const slot=selectedSlot!==null&&track().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
     const def=effectById(slot.type),amp=def.id==='broiler',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?`<div class="amp-presets"><div class="amp-presets-heading"><span class="eyebrow">HOUSE RECIPES / BASS FIRST</span><span>Choose a starting point. Then turn up the peculiar.</span></div><div class="amp-preset-grid">${def.presets.map(p=>`<button class="amp-preset" data-amp-preset="${escape(p.id)}" title="${escape(p.description)}" aria-pressed="false">${escape(p.name)}</button>`).join('')}</div></div><div class="amp-control-groups">${def.groups.map(g=>`<fieldset class="amp-control-group"><legend>${escape(g.label)}</legend><div class="effect-controls">${g.keys.map(key=>effectParams(def).find(p=>p.key===key)).filter(Boolean).map(p=>effectControl(p,slot.params)).join('')}</div></fieldset>`).join('')}</div>`:vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
-    const route=amp?'<div class="amp-signal-route">INPUT → PREAMP → TONE → POWER<br>↳ CLEAN LOWS → SPEAKER → MIC → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
+    const controls=amp?broilerControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
     editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / TRACK ${String(state.selectedTrack+1).padStart(2,'0')}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
     renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();
   }
@@ -367,12 +451,67 @@
   }
   function renderAmpState() {
     const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='broiler')return;
-    $('effectEditor').querySelector('.effect-toolbar>span').textContent=slot.params.bypass?'BYPASSED':'AMP / CABINET / '+(slot.params.stereo==='mono'?'MONO':'STEREO');
-    for(const button of $('effectEditor').querySelectorAll('[data-amp-preset]')){const preset=def.presets.find(p=>p.id===button.dataset.ampPreset);button.setAttribute('aria-pressed',String(Object.keys(preset.params).every(key=>preset.params[key]===slot.params[key])));}
-    const direct=slot.params.cabinet==='di';for(const key of ['speakerDrive','mic','distance','air']){const input=$('fx-'+key);if(input){input.disabled=direct;input.closest('.control').style.opacity=direct?'.4':'';}}
-    $('ampCabinetHint').textContent=direct?'Direct head output. Speaker drive, mic position, distance, and air are bypassed.':'Mic position: edge → center. Distance: close → distant. Cabinet controls include speaker breakup and room air.';
+    const editor = $('effectEditor'), params = slot.params, descriptors = new Map(effectParams(def).map(param => [param.key, param]));
+    editor.querySelector('.effect-toolbar>span').textContent=params.bypass?'BYPASSED / ORIGINAL AUDIO':'AMP / FOUR PEDALS / '+(params.stereo==='mono'?'MONO':'STEREO');
+    const preset = def.presets.find(recipe => Object.keys(recipe.params).every(key => recipe.params[key] === params[key]));
+    if ($('broilerPreset')) {
+      if (document.activeElement !== $('broilerPreset')) updateProperty($('broilerPreset'), 'value', preset?.id || '');
+      updateText($('broilerPresetDescription'), preset ? preset.description + ' Complete rig recipe.' : 'Custom rig. A recipe replaces the amplifier, cabinet and all four pedals.');
+    }
+    const model = def.ampModels?.find(model => model.id === params.model);
+    updateText($('broilerAmpInspiration'), model?.inspiration || descriptors.get('model').options.find(option => option.value === params.model)?.label || 'Your amplifier');
+    updateText($('broilerAmpDescription'), model?.description || 'Choose the head for its feel. Your cabinet and pedalboard stay as you set them.');
+    const ampOn = params.ampEnable !== 'off', power = $('fx-ampEnable');
+    if (power) { updateAttribute(power, 'aria-pressed', ampOn); updateAttribute(power, 'aria-label', ampOn ? 'Bypass amplifier head only' : 'Enable amplifier head'); updateText(power.querySelector('span'), ampOn ? 'Head on' : 'Head off'); }
+    editor.querySelector('.broiler-head')?.classList.toggle('amp-off', !ampOn);
+    const direct = params.cabinet === 'di', cabinetKeys = new Set(['speakerDrive', 'mic', 'distance', 'air', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance']);
+    const ampKeys = new Set(effectParams(def).map(param => param.key).filter(key => !/^pedal[1-4]/.test(key) && !['model', 'ampEnable', 'input', 'output', 'mix', 'cabinet', 'stereo'].includes(key) && !cabinetKeys.has(key)));
+    const pedalColours = { 'green-808': '#80956b', 'gold-klone': '#d0ae67', rodent: '#a7a396', 'orange-one': '#d8945f', 'wool-fuzz': '#a798b8', muffin: '#aa7e74', 'treble-boost': '#d4bd8a', 'studio-comp': '#a5bac0', wah: '#8eaa9d', chorus: '#a1b8c5', phaser: '#c69b70', echo: '#8ca59b', spring: '#adbaa6', none: '#6e8177' };
+    for (let number = 1; number <= 4; number++) {
+      const prefix = 'pedal' + number, card = editor.querySelector('[data-broiler-pedal="' + number + '"]'); if (!card) continue;
+      const type = params[prefix + 'Type'], empty = type === 'none', enabled = params[prefix + 'Enabled'] === 'on';
+      const pedal = def.pedalModels?.find(pedal => pedal.id === type), toggle = $('fx-' + prefix + 'Enabled');
+      updateProperty(card.dataset, 'type', type); updateClass(card, 'pedal-on', enabled && !empty); updateClass(card, 'pedal-empty', empty); card.style.setProperty('--broiler-pedal-color', pedalColours[type] || '#a3b39b');
+      toggle.disabled = empty; updateAttribute(toggle, 'aria-pressed', enabled && !empty); updateAttribute(toggle, 'aria-label', (enabled ? 'Bypass' : 'Enable') + ' pedal ' + number); updateText(toggle.querySelector('span'), empty ? 'Empty' : enabled ? 'On' : 'Bypassed');
+      updateText($('broilerPedalState' + number), empty ? 'Choose an effect to get started.' : enabled ? 'On · ' + (params[prefix + 'Route'] === 'post' ? 'after cabinet' : 'before amp') : 'Bypassed · settings kept');
+      updateText($('broilerPedalDescription' + number), empty ? 'An open place on the board. Choose a pedal above, then switch it on.' : [pedal?.inspiration, pedal?.description].filter(Boolean).join(' · ') || 'Adjust this pedal to taste. Its settings stay here when bypassed.');
+      for (const suffix of ['Drive', 'Tone']) {
+        const key = prefix + suffix, input = $('fx-' + key), label = suffix === 'Drive' ? pedal?.driveLabel : pedal?.toneLabel;
+        if (input) { const name = label || suffix; updateText(input.closest('.control').querySelector('.broiler-param-name'), name); updateAttribute($('fx-number-' + key), 'aria-label', 'Pedal ' + number + ' ' + name + ' exact value'); }
+      }
+      for (const suffix of ['Drive', 'Tone', 'Level', 'Mix']) for (const input of editor.querySelectorAll('[data-effect-param="' + prefix + suffix + '"],[data-broiler-number="' + prefix + suffix + '"]')) input.disabled = empty;
+      for (const option of $('fx-' + prefix + 'Route').options) updateText(option, option.value === 'pre' ? 'Before amp' : 'After cabinet');
+      card.querySelector('[data-broiler-pedal-action="clear"]').disabled = empty && !effectParams(def).some(param => param.key.startsWith(prefix) && params[param.key] !== def.defaults[param.key]) && !track().automation.some(lane => lane.target.startsWith('fx:' + selectedSlot + ':' + prefix));
+    }
+    for (const input of editor.querySelectorAll('[data-effect-param]')) {
+      const param = descriptors.get(input.dataset.effectParam); if (!param) continue;
+      const value = params[param.key] ?? param.default;
+      if (input.matches('input,select') && document.activeElement !== input) {
+        const displayed = input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : input.type === 'number' ? Number(value.toFixed(4)) : value;
+        updateProperty(input, 'value', displayed);
+      }
+      const control = input.closest('.control');
+      if (control && param.type === 'range') {
+        updateText(control.querySelector('output'), broilerValue(param, value));
+        const exact = control.querySelector('[data-broiler-number]'); if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number(value.toFixed(4)));
+      }
+      if (cabinetKeys.has(param.key)) { input.disabled = direct; const exact = control?.querySelector('[data-broiler-number]'); if (exact) exact.disabled = direct; if (control) updateClass(control, 'broiler-control-inactive', direct); }
+      if (ampKeys.has(param.key)) { input.disabled = !ampOn; const exact = control?.querySelector('[data-broiler-number]'); if (exact) exact.disabled = !ampOn; if (control) updateClass(control, 'broiler-control-inactive', !ampOn); }
+    }
+    if ($('broilerMatchedCab')) { $('broilerMatchedCab').disabled = !model?.matchedCab; updateAttribute($('broilerMatchedCab'), 'title', model?.matchedCab ? 'Use ' + (descriptors.get('cabinet').options.find(option => option.value === model.matchedCab)?.label || model.matchedCab) : 'Choose an amplifier with a matching cabinet'); }
+    updateText($('broilerCabinetStatus'), direct ? ampOn ? 'Cabinet off. After-cabinet pedals still follow the head.' : 'Head and cabinet off. Hear the pedalboard on its own.' : ampOn ? 'Your cabinet stays in place when changing heads. Match cabinet changes only the speaker choice.' : 'Head bypassed. The cabinet, microphone and pedalboard remain active.');
+    $('ampCabinetHint').textContent=direct?'Direct head output. Its cabinet and microphone controls are inactive; their settings stay yours.':'Explore valves, tone circuits and microphone placement in the Workshop.';
+    renderBroilerMeters();
   }
-  function effectRange(p,value){const log=p.unit==='Hz'&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
+  function renderBroilerMeters(meters = engine.getMeters()) {
+    const slot = track().effects[selectedSlot]; if (slot?.type !== 'broiler' || $('effectEditor').hidden) return;
+    const reading = meters.effects?.[state.selectedTrack]?.[selectedSlot], valid = reading?.type === 'broiler' && !reading.bypass;
+    for (const output of $('effectEditor').querySelectorAll('[data-broiler-meter]')) {
+      const value = reading?.[output.dataset.broilerMeter];
+      updateText(output, valid && Number.isFinite(value) ? value <= -90 ? '−∞ dB' : value.toFixed(1) + ' dB' : '—');
+    }
+  }
+  function effectRange(p,value){const log=p.unit==='Hz'&&p.min>0&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
   function formatParam(p,value) { if(p.key==='balance')return panLabel(value);if(p.key==='targetNote')return utilityNoteName(value)+' / '+Math.round(value);if(p.key==='carrierNote'){const notes=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'],note=Math.round(value);return notes[note%12]+(Math.floor(note/12)-1)+' / '+note;} if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; if (p.key==='mix'||(!p.unit&&['depth','spread','width','size','diffusion','pan','duty','cleanLow','presence','master','sag','speakerDrive','mic','distance','air'].includes(p.key))) return Math.round(value*100)+'%'; if(p.unit==='%')return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
   function transportLocked() { return audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
   function renderTransport() {
@@ -551,6 +690,12 @@
     const add=e.target.closest('[data-add-effect]');if(add){remember();clearEffectAutomation(track(),selectedSlot);track().effects[selectedSlot]={type:add.dataset.addEffect,params:clone(effectById(add.dataset.addEffect).defaults)};$('effectDialog').close();changed({arrangement:true,mixer:true,rack:true});renderEffectEditor();automationEditor?.render();revealEffectEditor();return;}
     const app=e.target.closest('[data-app]');if(app){const descriptor=instrumentOptions()[Number(app.dataset.app)],index=browserTrack??state.selectedTrack;selectedTrack(index);ensureInstrument(track(),{open:true,replace:true,descriptor:{id:descriptor.id,name:descriptor.name,url:descriptor.url}}).catch(e=>status(e.message));return;}
     const presetButton=e.target.closest('[data-amp-preset]');if(presetButton){const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===presetButton.dataset.ampPreset);if(preset){remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();status(preset.name+' loaded. '+preset.description);}return;}
+    const pedalAction=e.target.closest('[data-broiler-pedal-action]');if(pedalAction){broilerPedalAction(Number(pedalAction.dataset.pedalSlot),pedalAction.dataset.broilerPedalAction);return;}
+    const pedalToggle=e.target.closest('[data-broiler-pedal-toggle]'),ampToggle=e.target.closest('[data-broiler-amp-toggle]');
+    if(pedalToggle||ampToggle){const slot=track().effects[selectedSlot];if(slot?.type!=='broiler')return;const key=ampToggle?'ampEnable':'pedal'+pedalToggle.dataset.broilerPedalToggle+'Enabled';remember();slot.params[key]=slot.params[key]==='on'?'off':'on';changed();renderAmpState();return;}
+    if(e.target.closest('#broilerMatchedCab')){const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.ampModels?.find(model=>model.id===slot.params.model);if(def?.id!=='broiler'||!model?.matchedCab)return;if(slot.params.cabinet!==model.matchedCab){remember();slot.params.cabinet=model.matchedCab;changed();renderAmpState();}status('Matched cabinet selected. Your amplifier controls and pedalboard stay as set.');return;}
+    if(e.target.closest('#broilerSaveRig')){saveBroilerRig();return;}
+    if(e.target.closest('#broilerLoadRig')){$('broilerRigFile')?.click();return;}
     const vocalView=e.target.closest('[data-vocal-view]');if(vocalView){vocalEditorView=vocalView.dataset.vocalView;renderEffectEditor();$('effectEditor').querySelector('[data-vocal-view="'+vocalEditorView+'"]').focus({preventScroll:true});return;}
     const utilityTarget=e.target.closest('[data-utility-target],[data-utility-auto]');if(utilityTarget){const slot=track().effects[selectedSlot];if(slot?.type!=='scales')return;const automatic=utilityTarget.hasAttribute('data-utility-auto'),note=Number(utilityTarget.dataset.utilityTarget);if(slot.params.target!==(automatic?'auto':'manual')||(!automatic&&slot.params.targetNote!==note)){remember();slot.params.target=automatic?'auto':'manual';if(!automatic)slot.params.targetNote=note;changed();$('fx-target').value=slot.params.target;const descriptor=effectParams(effectById('scales')).find(p=>p.key==='targetNote');$('fx-targetNote').value=slot.params.targetNote;$('fx-targetNote').closest('.control').querySelector('output').textContent=formatParam(descriptor,slot.params.targetNote);renderUtilityState();}return;}
     if(e.target.id==='utilityResetMeters'){if(engine.resetEffectMeters(track().id,selectedSlot)){renderUtilityMeters();status('SCALES peak holds and clip flags reset. Your sound settings are unchanged.');}return;}
@@ -558,11 +703,40 @@
     const effectActions={effectBypass:'bypass',effectReset:'reset',effectUp:'up',effectDown:'down',effectRemove:'remove'};if(effectActions[e.target.id]){changeEffect(effectActions[e.target.id]);return;}if(e.target.id==='effectReplace')openEffects(selectedSlot);
   });
   document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();} });
-  document.addEventListener('change',e=>{if(e.target.dataset.effectParam&&e.target.tagName==='SELECT'){remember();const key=e.target.dataset.effectParam,slot=track().effects[selectedSlot],def=effectById(slot.type);slot.params[key]=e.target.value;changed();if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}else{renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();}}});
+  document.addEventListener('change',e=>{
+    const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
+    const key=input.dataset.effectParam,slot=track().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
+    if(previous===input.value)return;
+    remember();slot.params[key]=input.value;
+    const pedalType=def.id==='broiler'&&/^pedal([1-4])Type$/.exec(key);
+    if(pedalType){
+      const prefix='pedal'+pedalType[1],model=def.pedalModels?.find(model=>model.id===input.value);
+      for(const suffix of ['Drive','Tone','Level','Mix']){const field=prefix+suffix;slot.params[field]=model?.defaults?.[suffix.toLowerCase()]??def.defaults[field];}
+      slot.params[prefix+'Enabled']=input.value==='none'?'off':'on';
+      track().automation=track().automation.filter(lane=>!lane.target.startsWith('fx:'+selectedSlot+':'+prefix));
+    }
+    changed(pedalType?{automation:true}:{});
+    if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
+    else{renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();}
+  });
+  document.addEventListener('change',e=>{
+    if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
+    if(e.target.id==='broilerPreset'){
+      const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),recipe=def?.presets?.find(recipe=>recipe.id===e.target.value);if(def?.id!=='broiler'||!recipe)return;
+      remember();slot.params={...clone(def.defaults),...clone(recipe.params)};changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('broilerPreset').focus({preventScroll:true});status(recipe.name+' loaded. Complete amplifier, cabinet and pedalboard recipe.');return;
+    }
+    const input=e.target,key=input.dataset.broilerNumber;if(!key)return;
+    const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),param=def&&broilerParam(def,key);if(def?.id!=='broiler'||!param)return;
+    const value=input.valueAsNumber;
+    if(!Number.isFinite(value)||value<param.min||value>param.max){input.value=slot.params[key];status(param.label+': use a value from '+param.min+' to '+param.max+'.');return;}
+    if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true});changed();}
+    renderAmpState();
+  });
   document.addEventListener('change',e=>{if(e.target.id!=='vocalPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('vocalPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='utilityPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(def?.id!=='scales'||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('utilityPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='creativePreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!isCreativeEffect(def)||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('creativePreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('toggle',e=>{const help=e.target;if(!help.matches?.('.vocal-stage-help'))return;if(help.open)vocalHelpOpen.add(help.dataset.vocalHelp);else vocalHelpOpen.delete(help.dataset.vocalHelp);},true);
+  document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-broiler-details]'))return;if(detail.open)broilerDetailsOpen.add(detail.dataset.broilerDetails);else broilerDetailsOpen.delete(detail.dataset.broilerDetails);},true);
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
   $('playButton').addEventListener('click',transportStart);$('pauseButton').addEventListener('click',pause);$('stopButton').addEventListener('click',stop);$('panicButton').addEventListener('click',()=>panic());$('recordButton').addEventListener('click',startRecording);
@@ -632,7 +806,7 @@
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');

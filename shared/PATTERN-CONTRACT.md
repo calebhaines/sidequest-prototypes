@@ -6,7 +6,18 @@ All existing apps and future compatible apps retain standalone offline HTML oper
 
 `window.MusicLabPatternSchema` exposes `VERSION:1`, `MAX_NOTES:4096`, `MAX_BEATS:256`, strict `normalize`, `parse`, `serialize`, `clone`, `fingerprint`, `durationSeconds`.
 
-Packet: `{format:'musiclab-pattern',version:1,name,sourceApp,kind?:'notes'|'drums',tempo:20..400,swing:0..0.75,lengthBeats:0.25..256,meter:[4,4],voices:[{id:string,name,pitch?:0..127}],notes:[{id:string,pitch:0..127,beat:number,duration:number,velocity:0..1,voice:string,probability?:0..1}],seed?:uint32,tags?:string[]}`. Maximum 64 voices, 4096 notes, 1 MiB JSON. All numbers finite; note duration positive and end within pattern. IDs unique, voices referenced explicitly. Preserve probability and deterministic seed. Existing pattern defaults can supply swing; adapters should bake native swing into exported event beats and set packet swing to zero to avoid applying it twice.
+Packet: `{format:'musiclab-pattern',version:1,name,sourceApp,kind?:'notes'|'drums',tempo:20..400,swing:0..0.75,lengthBeats:0.25..256,meter:[4,4],voices:[{id:string,name,pitch?:0..127}],notes:[{id:string,pitch:0..127,beat:number,duration:number,velocity:0..1,voice:string,probability?:0..1,locks?:object}],seed?:uint32,tags?:string[]}`. Maximum 64 voices, 4096 notes, 1 MiB JSON. All numbers finite; note duration positive and end within pattern. IDs unique, voices referenced explicitly. Preserve probability and deterministic seed. Existing pattern defaults can supply swing; adapters should bake native swing into exported event beats and set packet swing to zero to avoid applying it twice.
+
+Optional `note.locks` contains per-strike sound overrides: `cutoff` 20–20000 Hz,
+`resonance` 0.1–20 Q, `decay` 0.005–10 seconds, `pan` −1–1, and `level`, `tone`,
+or `drive` 0–1. These are finite numeric values; unknown keys and malformed
+objects reject before import or scheduling. Pitch and velocity remain note
+fields. Each instrument applies its supported controls to a private strike
+snapshot and clamps to its native control range; an override never changes the
+base patch or the following unlocked strike. `normalizeLocks(value)` returns a
+new canonical lock object. Empty locks are omitted, and packets without locks
+retain their original version-1 serialization and fingerprints. Printed sources,
+projects, shared-library storage, and editable note clips preserve the overrides.
 
 ## Native adapter (all apps)
 
@@ -15,7 +26,7 @@ Each app exposes `window.MusicLabPatternInstrument`, independently of frozen leg
 - `patternExport:{scopes:[{id,label}],defaultScope}`; `exportPattern({scope}={})` returns packet (may be async).
 - `patternImport:{targets:[{id,name,occupied}],voices:[{id,name,pitch?}],mode:'notes'|'drums'|'bands'|'decks',description}`; `importPattern({pattern,options:{target,voiceMap,replace},signal})` validates fully before mutation. `voiceMap` maps source string IDs to target string IDs. Existing native sequences require explicit replacement. Unsupported durations, pitch ranges, or grids must be explained or rejected; never silently discard notes. Future exact-pattern overlay storage is acceptable if complete native state/project carries it.
 - `notes:{voices:[{id,name,pitch?,pitchRange?:[min,max]}],polyphonic:boolean,pitched:boolean,scheduledCancel?:boolean,pitchRange?:[min,max]}`. Declare `scheduledCancel:true` only when `cancelNotes({source,when})` honors future audio timestamps. Optional synchronous `validateNote({pitch,voice})` and `validatePattern({pattern,voiceMap})` permit pure preflight without changing the patch.
-- `async prepare()`; synchronous `scheduleNote({id,pitch,velocity,voice,when,durationSeconds,source='loom'})` after preparation. `when` absolute shared AudioContext seconds. Returns a token or nothing. Native engine schedules exact event time; no asynchronous promise timer per note. Pitch supplied per event, no future global-patch mutation.
+- `async prepare()`; synchronous `scheduleNote({id,pitch,velocity,voice,when,durationSeconds,source='loom',locks?})` after preparation. `when` absolute shared AudioContext seconds. Returns a token or nothing. Native engine schedules exact event time; no asynchronous promise timer per note. Pitch and locks are supplied per event, without future global-patch mutation. The shared percussion adapter forwards canonical locks into native `scheduleNativeNote` options and each `renderNativeEvents` event, including HOTPLATE's snapshot and received-pattern paths.
 - `cancelNotes({source='loom',when}={})` clears future events and releases held notes belonging to that source only; do not close the shared context. With an absolute context timestamp `when`, retain earlier events and release/cancel that source precisely at the boundary. Other sources continue. GALLEY uses distinct source IDs for pending Live pattern revisions so changes can enter at the next bar or loop boundary without duplicate notes. `panic()` optional.
 - `async renderPattern({pattern,state,tempo,tailSeconds=0,signal})` returns `{pcm:interleavedStereoFloat32Array,sampleRate,name,tempo,sourceApp}` or `{blob:WAV,sampleRate,name,...}`. Capture state before any await. Use actual native DSP, support event pitches and polyphony, cancellation and finite/budget guards; render no longer than 120 seconds per source asset. Source rendering must not mutate the editor or auto-start its sequencer.
 - optional `transport({beat,tempo,when,playing,revision})` for continuous native engines. Shared scheduler handles discrete native patterns without autonomous clocks. Continuous ROTISSERIE/STEAM can follow musical seek/phase via this hook.
@@ -42,6 +53,27 @@ rather than continuous bands/decks, so GALLEY does not start an autonomous patte
 alongside its note scheduler. Native-mode changes must explicitly leave an exact
 imported overlay; sound edits preserve that overlay. See `music/SEQUENCING.md` in
 the repository for the interface and rollback instructions.
+
+Percussion apps with banks and chains may expose the pure, synchronous facade
+hook `getSequencerPattern(options={})`. It returns a complete canonical packet
+with realized swing and per-note locks. No explicit scope exports the enabled
+chain or the current bank. `scope:'pattern'` exports the current bank,
+`scope:'chain'` the complete finite chain, and `scope:'voice'` the selected
+voice's current-bank pattern (`voice` may explicitly choose its index). Shared
+adapters delegate to this hook instead of flattening the first bank. The Patterns
+dialog's **Current sequence** choice uses the automatic scope; its other choices
+remain explicit. Exact received patterns keep precedence until a native rhythm
+edit or **Use native sequence** clears that overlay. Chains must fit the packet
+and audio-render budgets; reject an overlong expansion with a useful message.
+
+An adapter may expose `nativeSequenceLoop:false` for an enabled once-only native
+chain. Other adapters retain looping Live behavior by default. The shared
+percussion adapter reads this from native facade `sequenceLoop`, while exact
+received patterns retain their existing loop behavior. GALLEY captures this flag
+with its Live pattern revision; changes enter at the same musical boundary as
+note changes. A finite chain runs once per transport cycle, and a global GALLEY
+arrangement loop restarts it at the loop start. This runtime flag adds no
+metadata to portable note patterns or older projects.
 
 `audio.getTransport()` returns `{beat,contextTime,tempo,playing,revision,loopEnabled,loopStart,loopEnd,endBeat,countInBeatsRemaining,anchorBeat,anchorTime}`. `audio.subscribeTransport(fn)` returns unsubscribe. Worklet and fallback report context-time anchors; command changes issue new revisions. Future schedules cancel on seek/stop/panic/loop discontinuities and tempo changes.
 

@@ -276,6 +276,8 @@
   }
 
   function synthesize(environment, trackData, time, accent, bpm = 120, expression = {}) {
+    const sourceTrack = trackData;
+    if (expression.locks !== undefined) trackData = window.GrainSynth.applyLocks(trackData, expression.locks);
     const track = readTrack(trackData);
     if (track.level <= 0) return null;
     const settings = readSynth(trackData, track);
@@ -289,7 +291,8 @@
     // Long edited envelopes can otherwise accumulate hundreds of resonant
     // filters. Steal the oldest hits gently; the same limits apply offline.
     const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now);
-    const sameTrack = active.filter(voice => voice.track === trackData);
+    const voiceKey = typeof expression.voiceKey === 'string' ? expression.voiceKey : sourceTrack;
+    const sameTrack = active.filter(voice => voice.voiceKey === voiceKey);
     if (sameTrack.length >= 16) fadeVoice(sameTrack[0], now);
     if (active.filter(voice => !voice.stolen).length >= 128) fadeVoice(active.find(voice => !voice.stolen), now);
     const frequencyLimit = context.sampleRate * 0.46;
@@ -307,7 +310,7 @@
     bus.gain.value = volume;
     bus.connect(panner);
     panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: trackData, stolen: false };
+    const voice = { scopeSource: expression.source || 'native', voiceKey, sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: sourceTrack, stolen: false };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => {
@@ -398,7 +401,12 @@
       dc.type = 'highpass'; dc.frequency.value = 20; dc.Q.value = 0.707;
       noiseFilter = add(context.createBiquadFilter());
       noiseFilter.type = noise.filter;
-      noiseFilter.Q.value = noise.resonance;
+      // Existing patches store the original native Web Audio Q value. Portable
+      // locks express physical, linear Q; low/high-pass AudioParams use dB.
+      // Read explicit locks here, after legacy readSynth clamps, so Q up to 20
+      // stays meaningful without changing any unlocked patch's sound.
+      const lockedQ = expression.locks?.resonance;
+      noiseFilter.Q.value = lockedQ === undefined ? noise.resonance : ['lowpass', 'highpass'].includes(noise.filter) ? 20 * Math.log10(lockedQ) : lockedQ;
       const cutoff = clamp(noise.cutoff, 20, frequencyLimit);
       const initialCutoff = clamp(cutoff * Math.pow(2, noise.envAmount / 12), 20, frequencyLimit);
       noiseFilter.frequency.setValueAtTime(initialCutoff, now);
@@ -485,12 +493,13 @@
   }
   function sequenceLength(state) { return state.stepCount === 32 ? 32 : 16; }
 
-  function playStep(environment, state, step, time) {
+  function playStep(environment, state, step, time, pattern) {
     const tracks = Array.isArray(state.tracks) ? state.tracks : [];
     const hasSolo = tracks.some(track => track.solo);
-    tracks.forEach(track => {
-      const hit = track.steps && track.steps[step];
-      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, state.bpm);
+    tracks.forEach((track, index) => {
+      const hit = pattern ? pattern.steps[index]?.[step] : track.steps && track.steps[step];
+      const locks = pattern?.locks?.[index]?.[step] ?? state.stepLocks?.[index]?.[step];
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, pattern?.bpm ?? state.bpm, locks && Object.keys(locks).length ? { locks } : {});
     });
   }
 
@@ -543,6 +552,9 @@
       this.values = { master: 0.8, drive: 0, space: 0.15 };
       this._initPromise = null;
       this._disposingPromise = null;
+      this.sequenceSource = null;
+      this.nativePattern = null;
+      this.sequenceEnded = false;
     }
 
     async init() {
@@ -573,6 +585,8 @@
       this.onStep = typeof onStep === 'function' ? onStep : null;
       this.running = true;
       this.currentStep = 0;
+      this.nativePattern = this.sequenceSource ? this.sequenceSource.next(null) : null;
+      this.sequenceEnded = false;
       this.nextNoteTime = this.context.currentTime + 0.045;
       this.values = {
         master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1),
@@ -608,30 +622,58 @@
 
     _schedule() {
       if (!this.running || !this.context || this.context.state !== 'running') return;
+      if (this.sequenceEnded) return;
       const currentTime = this.context.currentTime;
       let skipped = 0;
       while (this.nextNoteTime < currentTime - 0.035 && skipped < 4096) {
-        this.nextNoteTime += stepLength(this.state, this.currentStep);
-        this.currentStep = (this.currentStep + 1) % sequenceLength(this.state);
+        this.nextNoteTime += stepLength(this.nativePattern || this.state, this.currentStep);
+        this._advanceNativeStep();
+        if (this.sequenceEnded) return;
         skipped++;
       }
       if (skipped >= 4096) this.nextNoteTime = currentTime + 0.025;
       while (this.nextNoteTime < currentTime + 0.13) {
         const step = this.currentStep;
         const when = Math.max(this.nextNoteTime, currentTime);
-        playStep(this.environment, this.state, step, when);
+        const position = this.nativePattern && { ...this.nativePattern };
+        const pattern = this.sequenceSource ? { ...this.sequenceSource.read(position), bpm: position.bpm } : null;
+        playStep(this.environment, this.state, step, when, pattern);
         if (this.onStep) {
           const generation = this.generation;
           const latency = Math.min(0.06, this.context.outputLatency || this.context.baseLatency || 0);
           const displayTimer = setTimeout(() => {
             this.displayTimers.delete(displayTimer);
-            if (this.running && generation === this.generation && this.onStep) this.onStep(step);
+            if (this.running && generation === this.generation && this.onStep) this.onStep(step, position);
           }, Math.max(0, (when - this.context.currentTime + latency) * 1000));
           this.displayTimers.add(displayTimer);
         }
-        this.nextNoteTime += stepLength(this.state, step);
-        this.currentStep = (step + 1) % sequenceLength(this.state);
+        this.nextNoteTime += stepLength(this.nativePattern || this.state, step);
+        this._advanceNativeStep();
+        if (this.sequenceEnded) return;
       }
+    }
+
+    _advanceNativeStep() {
+      this.currentStep++;
+      if (this.currentStep < sequenceLength(this.nativePattern || this.state)) return;
+      this.currentStep = 0;
+      if (!this.sequenceSource) return;
+      const next = this.sequenceSource.next(this.nativePattern);
+      if (next) { this.nativePattern = next; return; }
+      this.sequenceEnded = true;
+      const generation = this.generation;
+      const timer = setTimeout(() => {
+        this.displayTimers.delete(timer);
+        if (!this.running || generation !== this.generation) return;
+        this.running = false;
+        if (this.timer) clearInterval(this.timer);
+        this.timer = null;
+        if (this.worker) this.worker.terminate();
+        this.worker = null;
+        // Let the last strike and reverb decay naturally when a chain ends.
+        this.sequenceSource?.ended?.();
+      }, Math.max(0, (this.nextNoteTime - this.context.currentTime) * 1000));
+      this.displayTimers.add(timer);
     }
 
     _stopTransport() {
@@ -652,11 +694,11 @@
       this.currentStep = 0;
     }
 
-    async preview(track, bpm) {
+    async preview(track, bpm, locks) {
       const generation = this.generation;
       await this.init();
       if (generation !== this.generation || !this.environment || this.context.state === 'closed') return;
-      synthesize(this.environment, track, this.context.currentTime + 0.005, false, bpm === undefined ? this.state && this.state.bpm || 120 : bpm);
+      synthesize(this.environment, track, this.context.currentTime + 0.005, false, bpm === undefined ? this.state && this.state.bpm || 120 : bpm, locks === undefined ? {} : { locks });
     }
 
     setMasterVolume(value) {
@@ -722,22 +764,31 @@
       if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       // Snapshot the instrument so changes during rendering cannot alter the file.
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] }));
+      const sequence = options.scope === 'hit' || options.sequence === undefined ? null : JSON.parse(JSON.stringify(options.sequence));
+      if (sequence && (!Array.isArray(sequence) || !sequence.length || sequence.length > 256 || sequence.some(pattern => ![16, 32].includes(pattern.stepCount) || !Number.isFinite(pattern.bpm) || pattern.bpm < 40 || pattern.bpm > 240 || !Array.isArray(pattern.steps) || pattern.steps.length !== snapshot.tracks.length))) throw new Error('Choose a valid pattern chain to render.');
       const sampleRate = 44100;
       const hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4)));
-      const duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 30, 300);
+      const duration = hit ? 0 : sequence ? sequence.reduce((seconds, pattern) => seconds + pattern.stepCount * 15 / pattern.bpm, 0) : bars * 240 / clamp(snapshot.bpm || 120, 30, 300);
       const tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks : [];
       const hasSolo = tracks.some(track => track.solo);
       let longest = 0;
-      tracks.forEach(data => {
-        if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.slice(0, sequenceLength(snapshot)).some(Boolean)) return;
-        const track = readTrack(data);
-        if (track.level <= 0) return;
-        const settings = readSynth(data, track);
-        longest = Math.max(longest, settings.body.level > 0 ? envelopeLength(settings.body) : 0, settings.noise.level > 0 ? noiseLength(settings.noise) : 0);
+      tracks.forEach((data, index) => {
+        if (data.mute || hasSolo && !data.solo) return;
+        const frames = sequence || [{ steps: tracks.map(track => track.steps), locks: snapshot.stepLocks, stepCount: sequenceLength(snapshot) }];
+        frames.forEach(frame => (frame.steps[index] || []).slice(0, frame.stepCount).forEach((hit, step) => {
+          if (!hit) return;
+          const locked = frame.locks?.[index]?.[step];
+          const source = locked && Object.keys(locked).length ? window.GrainSynth.applyLocks(data, locked) : data;
+          const track = readTrack(source);
+          if (track.level <= 0) return;
+          const settings = readSynth(source, track);
+          longest = Math.max(longest, settings.body.level > 0 ? envelopeLength(settings.body) : 0, settings.noise.level > 0 ? noiseLength(settings.noise) : 0);
+        }));
       });
       const naturalTail = Math.max(0.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
       const extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0));
       const tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail;
+      if (sequence && duration + tail > 120) throw new Error('This chain exceeds the 120-second audio limit including its tail. Shorten its repeats or raise the tempo.');
       const context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, {
         master: snapshot.master === undefined ? this.values.master : snapshot.master,
@@ -746,15 +797,19 @@
       });
       const environment = createRenderEnvironment(context, graph, 0x5A17C0DE);
       let time = 0.015;
-      for (let i = 0; i < (hit ? 1 : bars * 16); i++) {
+      const totalSteps = sequence ? sequence.reduce((count, pattern) => count + pattern.stepCount, 0) : hit ? 1 : bars * 16;
+      let patternIndex = 0, patternStep = 0;
+      for (let i = 0; i < totalSteps; i++) {
         if (i % 16 === 0) {
           checkCancelled();
           if (options.signal) await new Promise(resolve => setTimeout(resolve, 0));
           checkCancelled();
         }
-        const step = i % sequenceLength(snapshot);
-        playStep(environment, snapshot, step, time);
-        time += stepLength(snapshot, step);
+        const pattern = sequence?.[patternIndex];
+        const step = pattern ? patternStep : i % sequenceLength(snapshot);
+        playStep(environment, snapshot, step, time, pattern);
+        time += stepLength(pattern || snapshot, step);
+        if (pattern && ++patternStep >= pattern.stepCount) { patternStep = 0; patternIndex++; }
       }
       // Preserve long texture and reverb decays, then end at a silent boundary.
       graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - 0.12);

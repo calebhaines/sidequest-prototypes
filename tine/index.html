@@ -8,6 +8,7 @@
   'use strict';
   if (global.MusicLabPatternSchema) return;
   const VERSION = 1, MAX_NOTES = 4096, MAX_VOICES = 64, MAX_BEATS = 256, MAX_BYTES = 1024 * 1024;
+  const LOCK_RANGES = Object.freeze({ cutoff: Object.freeze([20, 20000]), resonance: Object.freeze([.1, 20]), decay: Object.freeze([.005, 10]), pan: Object.freeze([-1, 1]), level: Object.freeze([0, 1]), tone: Object.freeze([0, 1]), drive: Object.freeze([0, 1]) });
   const object = value => value && Object.prototype.toString.call(value) === '[object Object]';
   function text(value, name, max, fallback) {
     if (value === undefined && fallback !== undefined) return fallback;
@@ -23,6 +24,19 @@
     const id = text(value, name, 80);
     if (!id || ['__proto__', 'prototype', 'constructor'].includes(id)) throw new Error(name + ' is invalid.');
     return id;
+  }
+  function normalizeLocks(value) {
+    if (value === undefined) return {};
+    if (!object(value)) throw new Error('Note locks must be a sound-control object.');
+    for (const key of Object.keys(value)) if (!Object.prototype.hasOwnProperty.call(LOCK_RANGES, key)) throw new Error('Unsupported note lock: ' + key + '.');
+    const result = {};
+    // Fixed order makes identical overrides share an identity even when their
+    // source object was assembled in a different order. Empty locks are omitted
+    // from notes so existing version-1 identities remain byte-for-byte stable.
+    for (const key of Object.keys(LOCK_RANGES)) if (Object.prototype.hasOwnProperty.call(value, key)) {
+      const range = LOCK_RANGES[key]; result[key] = number(value[key], 'Note ' + key + ' lock', range[0], range[1]);
+    }
+    return result;
   }
   function normalize(input) {
     if (!object(input)) throw new Error('Choose a Kitchen note-pattern object.');
@@ -55,7 +69,9 @@
       if (beat >= lengthBeats || beat + duration > lengthBeats + 1e-8) throw new Error('Notes must fit within the pattern length.');
       const voice = note.voice === undefined && voices.length === 1 ? voices[0].id : identity(note.voice, 'Note voice');
       if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
-      return { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      const result = { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
+      if (note.locks !== undefined) { const locks = normalizeLocks(note.locks); if (Object.keys(locks).length) result.locks = locks; }
+      return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;
     if (!Array.isArray(tags) || tags.length > 24) throw new Error('Use at most 24 pattern tags.');
@@ -92,14 +108,14 @@
     return 'pattern-v1-' + (hash >>> 0).toString(16).padStart(8, '0');
   }
   function durationSeconds(value, tempo) { const pattern = normalize(value); return pattern.lengthBeats * 60 / number(tempo === undefined ? pattern.tempo : tempo, 'Playback tempo', 20, 400); }
-  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, normalize, parse, serialize, clone, fingerprint, durationSeconds });
+  global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141719">
-  <meta name="tine-version" content="1.1.2">
+  <meta name="tine-version" content="1.2.0">
   <meta name="description" content="CLATTER — a physical modeling drum machine from Kitchen. Eight voices, sixteen or thirty-two steps, and cookware with unexpected sustain.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%23111517'/%3E%3Cg fill='none' stroke='%23dcc85e' stroke-width='1.4'%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Cellipse cx='24' cy='24' rx='10' ry='16' opacity='.7'/%3E%3Cellipse cx='24' cy='24' rx='4' ry='16' opacity='.45'/%3E%3C/g%3E%3C/svg%3E">
   <title>CLATTER — Kitchen</title>
@@ -492,6 +508,17 @@ body[data-kitchen-app="clatter"] dialog { border-radius:3px;background:#20272a;b
 @media(max-width:650px){body[data-kitchen-app="clatter"] h1{font-size:45px}body[data-kitchen-app="clatter"] .brand-word{font-size:31px}body[data-kitchen-app="clatter"] .music-link span{display:none}body[data-kitchen-app="clatter"] .music-link svg{width:16px;height:16px}body[data-kitchen-app="clatter"] .intro-art{padding:8px 5px;min-width:83px}body[data-kitchen-app="clatter"] .art-top{font-size:5px;letter-spacing:0}body[data-kitchen-app="clatter"] .art-bottom{font-size:5px;letter-spacing:0}body[data-kitchen-app="clatter"] .intro-art::before{font-size:5px;left:8px;padding:2px 4px}}
 @media(max-width:380px){body[data-kitchen-app="clatter"] h1{font-size:37px}body[data-kitchen-app="clatter"] .brand-word{font-size:29px}body[data-kitchen-app="clatter"] .intro-art{min-width:73px}body[data-kitchen-app="clatter"] .topbar-right{gap:5px}}
 
+/* Optional sequence tools keep the familiar grid and sound editor in place. */
+.sequencer-footer{flex-wrap:wrap}.pattern-banks{flex-wrap:wrap;min-width:0}.chain-launch{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chain-position{font:9px var(--mono);color:var(--accent);max-width:100%}
+.step.locked::after{content:'◆';position:absolute;right:3px;bottom:2px;font-size:6px;color:var(--text)}
+.step{position:relative}.sequencing-dialog{width:min(680px,calc(100% - 24px));max-width:calc(100% - 24px);max-height:calc(100dvh - 24px);overflow:auto;padding:22px;color:var(--text);background:var(--panel,#202629);border:1px solid var(--line,#485252);border-radius:5px}
+.sequencing-dialog::backdrop{background:#060b0cbb}.sequencing-dialog .dialog-heading{gap:12px;align-items:flex-start}.sequencing-dialog .dialog-heading h2{font-size:22px;letter-spacing:.3px;line-height:1.25;flex:1;min-width:0;overflow-wrap:anywhere}.sequencing-dialog .dialog-heading button{flex-shrink:0;min-width:62px;white-space:nowrap}.sequencing-dialog p{font-size:12px;line-height:1.6;color:#b7c0b8}.sequencing-dialog button{min-height:36px;padding:6px 10px;border:1px solid var(--line);border-radius:3px;font-size:12px}.sequencing-dialog select,.sequencing-dialog input[type=number]{min-width:0;min-height:36px;border:1px solid #57625c;border-radius:3px;background:#151d1e;color:var(--text);padding:6px 8px;font-size:12px}.sequencing-dialog input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+.chain-settings,.chain-add{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}.chain-settings label{display:flex;gap:7px;align-items:center;font-size:12px}.chain-settings>span{font-size:10px;color:#aab7ad}.chain-add label{display:flex;gap:7px;align-items:center}.chain-entries{display:grid;gap:8px;margin:16px 0}.chain-entry{display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid var(--line);min-width:0}.chain-ordinal{font:10px var(--mono);color:var(--accent)}.chain-entry>select{flex:1;width:90px}.chain-entry label{font-size:10px;display:flex;align-items:center;gap:5px}.chain-entry input{width:53px}.chain-entry button{padding:5px 9px}.sequencing-note{font-size:10px!important}
+.step-hit-label{display:flex;align-items:center;gap:12px;font-size:12px}.step-lock-fields{display:grid;gap:9px;margin:18px 0}.step-lock-row{display:grid;grid-template-columns:minmax(120px,1fr) 100px 90px;align-items:center;gap:7px}.step-lock-row>label{display:flex;align-items:center;gap:7px;font-size:12px}.step-lock-row>span,.step-lock-row>small{font-size:10px;color:#b6c0b9}.step-lock-row>small{grid-column:2/4}.step-lock-row input[type=range]{grid-column:1/-1;min-width:0;width:100%;height:30px;accent-color:var(--accent)}.step-inspector-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:650px){.sequencer-footer{gap:10px}.sequencer-footer .pattern-banks{flex-basis:100%}.sequencer-footer .beat-indicator{margin-left:auto}.chain-launch{max-width:140px}.sequencing-dialog{padding:16px}.sequencing-dialog .dialog-heading h2{font-size:19px}.chain-entry{flex-wrap:wrap;gap:5px}.chain-entry>select{flex:0 0 calc(50% - 22px);width:auto}.chain-entry>label{flex:1}.chain-entry>button:first-of-type{margin-left:20px}.step-lock-row{grid-template-columns:minmax(100px,1fr) 80px 72px}.step-lock-row>label{font-size:11px}.sequencing-dialog .text-button{white-space:normal}.master-panel,.master-knobs{min-width:0}.master-knobs{gap:14px}.master-intro{min-width:0}.topbar-right{flex-wrap:wrap;min-width:0}.topbar{height:auto;min-height:76px;gap:8px;flex-wrap:wrap;padding:12px 0}}
+
+.step-lock-labels{display:flex;flex-direction:column;gap:3px;min-width:0}.step-lock-name{font-size:12px;line-height:1.25}.step-inherit-label{display:flex;align-items:center;gap:5px;font-size:10px;color:#b6c0b9}.step-inherit-label input[type=checkbox]{margin:0;flex-shrink:0}
+
 </style>
 
 <style>
@@ -730,7 +757,7 @@ body {
       <section class="sequencer panel" aria-labelledby="sequencer-title">
         <div class="section-heading"><div class="heading-label"><span class="section-number">01</span><h2 id="sequencer-title">THE SEQUENCE</h2><select id="sequence-length" class="sequence-select" aria-label="Sequence length"><option value="16">16 STEPS</option><option value="32">32 STEPS</option></select><select id="sequence-page" class="sequence-select" aria-label="Visible sequence steps" hidden><option value="0">1–16</option><option value="1">17–32</option></select></div><div class="sequencer-actions"><button class="text-button" id="undo-button" aria-label="Undo" disabled title="Undo (Ctrl / Cmd + Z)"><svg><use href="#i-reset"/></svg><span>Undo</span></button><span class="action-divider"></span><button class="text-button" id="clear-button" title="Clear the current pattern"><svg><use href="#i-trash"/></svg><span>Clear</span></button><button class="text-button" id="random-button" title="Generate a new groove"><svg><use href="#i-shuffle"/></svg><span>New groove</span></button></div></div>
         <div class="sequencer-scroll" tabindex="0" aria-label="Sequencer grid. Scroll horizontally on small screens."><div class="sequencer-inner"><div class="step-ruler"><div class="ruler-voice">VOICE <span>SELECT TO SHAPE</span></div><div class="step-numbers" id="step-numbers"></div><div class="ruler-mix">M / S</div></div><div id="track-rows" class="track-rows"></div></div></div>
-        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button></div><span class="sequencer-hint"><span class="hint-dot"></span>Click for a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
+        <div class="sequencer-footer"><div class="pattern-banks"><span class="control-label">PATTERN</span><div class="bank-buttons" role="group" aria-label="Pattern banks"><button data-bank="0" class="bank-button active" aria-pressed="true">A</button><button data-bank="1" class="bank-button" aria-pressed="false">B</button><button data-bank="2" class="bank-button" aria-pressed="false">C</button><button data-bank="3" class="bank-button" aria-pressed="false">D</button></div><button id="copy-pattern" class="icon-button tiny" aria-label="Copy pattern to next bank" title="Copy pattern to the next bank"><svg><use href="#i-copy"/></svg></button><button id="chain-button" class="text-button chain-launch" aria-controls="chain-dialog" aria-expanded="false">Chain off</button><button id="step-edit-button" class="text-button" aria-pressed="false" title="Choose a step to edit its sound; E or right-click also opens the inspector">Edit step</button></div><span id="chain-position" class="chain-position" role="status"></span><span class="sequencer-hint"><span class="hint-dot"></span>Click for a hit <span class="hint-separator">/</span> Shift + click to accent</span><div class="beat-indicator"><span id="beat-position">1 . 1 . 1</span><span class="tag time-signature">4/4</span></div></div>
       </section>
 
       <section class="instrument panel" aria-labelledby="instrument-title">
@@ -760,11 +787,13 @@ body {
       <section class="master-panel panel" aria-labelledby="master-title"><div class="master-intro"><div class="heading-label"><span class="section-number">03</span><h2 id="master-title">THE ROOM</h2><div class="master-led" id="master-led"></div></div><p>The dish pit has remarkable acoustics.</p></div><div id="master-knobs" class="master-knobs"></div><div class="master-volume"><div class="control-label"><label for="master-volume">OUTPUT LEVEL</label><span id="volume-value">78%</span></div><div class="volume-slider"><svg><use href="#i-speaker"/></svg><input id="master-volume" type="range" min="0" max="100" value="78" aria-label="Master volume"></div></div><span class="master-end-label">CHECK THE<br>RING TIME.</span></section>
     </main>
 
-    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.1.2</span></span></footer>
+    <footer class="footer"><span><span class="status-dot" id="status-dot"></span><span id="audio-status">READY WHEN YOU ARE</span></span><span class="footer-motto">CUTLERY MUST REMAIN IN TIME WITH SERVICE.</span><span class="footer-version">CLATTER <span>v1.2.0</span></span></footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / IMPACT & RESONANCE</div><h2 id="help-title">Conduct the cookware.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. Its resonances turn that impact into a drum, bell, or string. The kitchen calls this a perfectly reasonable use of a saucepan.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent, or press and hold a step on a touchscreen. Select a voice to shape it. M mutes a track; S hears it solo. Choose 16 or 32 steps above the grid; at 32, use 1–16 / 17–32 to edit either half. Returning to 16 keeps the second half for later. Pattern banks A–D hold four variations.</p></div><div><h3>Find your body</h3><p>Choose one of nine resonators, including a bell, a singing bowl, and a tube. Tune its pitch, structure, decay, damping, and strike position. Motion + mix adds movement and places the voice in the stereo field.</p></div><div><h3>Choose your contact</h3><p>Exciter offers felt, rubber, wood, nylon, ceramic, and metal alongside the original neutral mallet. Each shapes the contact differently. Refine hardness and contact time, add surface texture, or let the mallet rebound. Noise has its own color, filter, and envelope. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div class="help-shortcuts"><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause <span class="shortcut-divider">·</span> <kbd>1</kbd>–<kbd>8</kbd> Audition <span class="shortcut-divider">·</span> <kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob <span class="shortcut-divider">·</span> <kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><div><div class="eyebrow">STATION BRIEFING / IMPACT & RESONANCE</div><h2 id="help-title">Conduct the cookware.</h2></div><button class="icon-button" id="close-help" aria-label="Close help"><svg><use href="#i-close"/></svg></button></div><p>A mallet and a burst of noise put energy into a vibrating body. Its resonances turn that impact into a drum, bell, or string. The kitchen calls this a perfectly reasonable use of a saucepan.</p><div class="help-grid"><div><h3>Build your beat</h3><p>Click a step to add a hit. Shift + click for an accent. Edit step, right-click, E on a focused step, or a touchscreen hold opens per-hit sound overrides. Select a voice to shape it. M mutes a track; S hears it solo. Choose 16 or 32 steps above the grid; at 32, use 1–16 / 17–32 to edit either half. Returning to 16 keeps the second half for later. Pattern banks A–D hold four variations. Chain beside the banks arranges whole patterns with repeats, reordering, and loop or once playback. Per-hit locks and all chain edits save with projects and support Undo.</p></div><div><h3>Find your body</h3><p>Choose one of nine resonators, including a bell, a singing bowl, and a tube. Tune its pitch, structure, decay, damping, and strike position. Motion + mix adds movement and places the voice in the stereo field.</p></div><div><h3>Choose your contact</h3><p>Exciter offers felt, rubber, wood, nylon, ceramic, and metal alongside the original neutral mallet. Each shapes the contact differently. Refine hardness and contact time, add surface texture, or let the mallet rebound. Noise has its own color, filter, and envelope. Drag knobs vertically; hold Shift for fine adjustments.</p></div><div><h3>Keep a good idea</h3><p>Your changes save in this browser automatically. Save project downloads an editable JSON file; the folder opens it again. Export WAV renders four bars with a natural decay tail as a stereo audio file.</p></div><div class="help-shortcuts"><h3>At your fingertips</h3><p class="shortcuts"><kbd>Space</kbd> Play / pause <span class="shortcut-divider">·</span> <kbd>1</kbd>–<kbd>8</kbd> Audition <span class="shortcut-divider">·</span> <kbd>Ctrl / ⌘ Z</kbd> Undo<br><kbd>↑ ↓</kbd> Adjust a focused knob <span class="shortcut-divider">·</span> <kbd>Shift + click</kbd> Accent a step</p></div></div><div class="help-note"><span class="status-dot ready"></span>Works offline. Synthesized from impact and resonance.</div><p class="inspiration-note">Inspired by exciter/resonator instruments such as Intellijel Plonk. Original browser implementation.</p></dialog>
+  <dialog id="chain-dialog" class="sequencing-dialog" aria-labelledby="chain-title"><div class="dialog-heading"><h2 id="chain-title">Pattern chain</h2><button id="close-chain" class="text-button">Close ×</button></div><p>Each entry plays a complete pattern. Changes enter at the next pattern boundary; the grid stays on the bank you are editing.</p><div class="chain-settings"><label><input id="chain-enabled" type="checkbox"> Play chain</label><label><input id="chain-loop" type="checkbox" checked> Loop chain</label><span>Uncheck Loop for one pass with natural tails.</span></div><div id="chain-entries" class="chain-entries"></div><div class="chain-add"><label>Append <select id="chain-add-bank" aria-label="Pattern to append"><option value="0">Pattern A</option><option value="1">Pattern B</option><option value="2">Pattern C</option><option value="3">Pattern D</option></select></label><button id="chain-add" class="text-button">Add pattern</button><button id="chain-clear" class="text-button">Clear chain</button><button id="chain-undo" class="text-button" disabled>Undo</button></div><p class="sequencing-note">Up to 32 entries, 1–16 repeats each, and 256 beats. Clear and every chain edit support Undo. Audio exports are limited to 120 seconds.</p></dialog>
+  <dialog id="step-dialog" class="sequencing-dialog" aria-labelledby="step-inspector-title"><div class="dialog-heading"><h2 id="step-inspector-title">Step sound</h2><button id="close-step" class="text-button">Close ×</button></div><p>Uncheck Inherit to change only this strike. Check it to return to the voice. Output cutoff filters the whole hit, including the resonator.</p><label class="step-hit-label">Hit <select id="step-hit" aria-label="Inspected step hit"><option value="0">Off</option><option value="1">Hit</option><option value="2">Accent</option></select></label><div id="step-lock-fields" class="step-lock-fields"></div><div class="step-inspector-actions"><button id="step-hear" class="button">Hear step</button><button id="step-clear-locks" class="text-button">Inherit all</button><button id="step-undo" class="text-button" disabled>Undo</button></div></dialog>
   <script>
 /* CLATTER uses physical units throughout its voice editor and synthesis engine. */
 (function () {
@@ -917,10 +946,10 @@ body {
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected']) || project.app !== 'TINE' || ![1, 2, 3].includes(project.version)) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected', ...(project?.version === 4 ? ['bankLocks'] : [])]) || project.app !== 'TINE' || ![1, 2, 3, 4].includes(project.version)) return false;
     const state = project.state;
-    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version === 3 ? ['stepCount'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
-    if (project.version === 3 && ![16, 32].includes(state.stepCount)) return false;
+    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version >= 3 ? ['stepCount'] : []), ...(project.version === 4 ? ['chain'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (project.version >= 3 && ![16, 32].includes(state.stepCount)) return false;
     if (state.musicLabPattern !== undefined) {
       try {
         const overlay = state.musicLabPattern;
@@ -934,6 +963,7 @@ body {
     const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
     if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
+    if (project.version === 4 && (!validChain(state.chain, state.stepCount) || !Array.isArray(project.bankLocks) || project.bankLocks.length !== 4 || !project.bankLocks.every((locks, bank) => Array.isArray(locks) && locks.length === 8 && locks.every((steps, voice) => Array.isArray(steps) && steps.length === project.banks[bank][voice].length && Array.from(steps).every(validLocks))))) return false;
     const patterns = [...state.tracks.map((track) => track.steps), ...project.banks.flat()];
     if ((project.version < 3 && patterns.some((steps) => steps.length !== 16)) || (state.stepCount === 32 && patterns.some((steps) => steps.length !== 32))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
@@ -948,7 +978,73 @@ body {
       upgraded.version = 2;
     }
     if (upgraded.version === 2) { upgraded.state.stepCount = 16; upgraded.version = 3; }
+    if (upgraded.version === 3) {
+      upgraded.state.chain = defaultChain();
+      upgraded.bankLocks = upgraded.banks.map(bank => bank.map(steps => steps.map(() => ({}))));
+      upgraded.version = 4;
+    }
     return upgraded;
+  }
+
+  const lockRanges = Object.freeze({ cutoff: [20, 20000], resonance: [.1, 20], decay: [.005, 10], pan: [-1, 1], level: [0, 1], tone: [0, 1], drive: [0, 1] });
+  function validLocks(value) {
+    return isRecord(value) && Object.keys(value).every(key => Object.hasOwn(lockRanges, key) && finite(value[key], ...lockRanges[key]));
+  }
+  function normalizeLocks(value) {
+    if (value === undefined) return {};
+    if (!validLocks(value)) throw new Error('Invalid CLATTER step locks.');
+    return Object.assign({}, value);
+  }
+  function defaultChain() { return { enabled: false, loop: true, entries: [] }; }
+  function emptyLocks(length = 16) { return Array.from({ length: 8 }, () => Array.from({ length }, () => ({}))); }
+  function validChain(chain, stepCount = 16) {
+    return exactKeys(chain, ['enabled', 'loop', 'entries']) && typeof chain.enabled === 'boolean' && typeof chain.loop === 'boolean'
+      && Array.isArray(chain.entries) && chain.entries.length <= 32 && (!chain.enabled || chain.entries.length > 0)
+      && new Set(chain.entries.map(entry => entry?.id)).size === chain.entries.length
+      && chain.entries.every(entry => exactKeys(entry, ['id', 'bank', 'repeats']) && typeof entry.id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(entry.id) && Number.isInteger(entry.bank) && entry.bank >= 0 && entry.bank <= 3 && Number.isInteger(entry.repeats) && entry.repeats >= 1 && entry.repeats <= 16)
+      && chain.entries.reduce((sum, entry) => sum + entry.repeats * stepCount / 4, 0) <= 256;
+  }
+  function nextSequenceFrame(project, previous) {
+    const chain = project.state.chain || defaultChain(), length = project.state.stepCount === 32 ? 32 : 16;
+    if (!chain.enabled || !chain.entries.length) return { chain: false, bank: project.bank, entry: 0, entryId: null, repeat: 1, repeats: 1, length };
+    let index = previous?.chain ? chain.entries.findIndex(entry => entry.id === previous.entryId) : -1, repeat = 1;
+    if (index < 0) {
+      index = previous?.chain ? previous.entry : 0;
+      // Removing the playing entry hands off to its successor at the same
+      // position, rather than unexpectedly returning to the first pattern.
+      if (index >= chain.entries.length) { if (!chain.loop) return null; index = 0; }
+    }
+    else if (previous.repeat < chain.entries[index].repeats) repeat = previous.repeat + 1;
+    else if (++index >= chain.entries.length) { if (!chain.loop) return null; index = 0; }
+    const entry = chain.entries[index];
+    return { chain: true, bank: entry.bank, entry: index, entryId: entry.id, repeat, repeats: entry.repeats, length };
+  }
+  function sequencerPattern(project, options = {}) {
+    const s = project.state, stepCount = s.stepCount === 32 ? 32 : 16, scope = options.scope;
+    if (scope !== undefined && !['pattern', 'chain', 'voice', 'sequence'].includes(scope)) throw new Error('Choose the current pattern, chain, or selected voice.');
+    const useChain = scope === 'chain' || ((scope === undefined || scope === 'sequence') && s.chain?.enabled);
+    const entries = useChain ? s.chain?.entries || [] : [{ bank: project.bank, repeats: 1 }];
+    if (!entries.length) throw new Error('Add a pattern to the CLATTER chain first.');
+    const lengthBeats = entries.reduce((total, entry) => total + entry.repeats * stepCount / 4, 0);
+    if (lengthBeats > 256) throw new Error('The chain is longer than 256 beats. Use fewer repeats.');
+    const voices = s.tracks.map((track, index) => ({ id: 'voice-' + index, name: track.name, pitch: 36 + index })), notes = [];
+    const solo = s.tracks.some(track => track.solo), selected = options.voice === undefined ? project.selected : options.voice;
+    if (scope === 'voice' && (!Number.isInteger(selected) || selected < 0 || selected > 7)) throw new Error('Choose a CLATTER voice from 1 to 8.');
+    let offset = 0, ordinal = 0;
+    for (const entry of entries) for (let repeat = 0; repeat < entry.repeats; repeat++) {
+      s.tracks.forEach((track, index) => {
+        if (scope === 'voice' ? index !== selected : track.mute || solo && !track.solo) return;
+        project.banks[entry.bank][index].slice(0, stepCount).forEach((hit, step) => {
+          if (!hit) return;
+          if (notes.length >= 4096) throw new Error('This sequence exceeds 4,096 shared notes. Use fewer hits or repeats.');
+          const beat = offset + step / 4 + (step % 2 ? s.swing / 4 : 0), locks = normalizeLocks(project.bankLocks?.[entry.bank]?.[index]?.[step]);
+          notes.push({ id: 'note-' + ordinal++, voice: voices[index].id, pitch: voices[index].pitch, beat, duration: Math.min(.25, lengthBeats - beat), velocity: hit === 2 ? 1 : .73, probability: 1, ...(Object.keys(locks).length ? { locks } : {}) });
+        });
+      });
+      offset += stepCount / 4;
+    }
+    const packet = { format: 'musiclab-pattern', version: 1, name: s.name + (useChain ? ' · chain' : ' · CLATTER'), sourceApp: 'tine', kind: 'drums', tempo: s.bpm, swing: 0, lengthBeats, meter: [4, 4], voices, notes, seed: 0x5A17C0DE };
+    return window.MusicLabPatternSchema ? window.MusicLabPatternSchema.normalize(packet) : packet;
   }
 
   function format(parameter, value) {
@@ -965,7 +1061,7 @@ body {
     }
   }
 
-  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format });
+  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format, lockRanges, validLocks, normalizeLocks, defaultChain, emptyLocks, validChain, nextSequenceFrame, sequencerPattern });
 }());
 
 /* Eight original kits. Every sound is an exciter driving a modeled resonator. */
@@ -1105,7 +1201,7 @@ body {
 /* TINE: force-driven modal physical percussion. No samples, oscillators, or dependencies. */
 (function () {
   'use strict';
-  const TAU = Math.PI * 2, LOG1000 = Math.log(1000), EPSILON = 0.000001;
+  const TAU = Math.PI * 2, LOG1000 = Math.log(1000);
   const MODELS = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate', 'bell', 'bowl', 'tube'];
   const COLORS = ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'];
   // Contact compliance changes the force itself, before it reaches the body.
@@ -1305,14 +1401,46 @@ body {
   function fadeVoice(voice, at, duration = .01) {
     if (!voice || voice.disposed) return;
     voice.stolen = true;
-    voice.bus.gain.cancelScheduledValues(at); voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at); voice.bus.gain.linearRampToValueAtTime(0, at + duration);
-    voice.stopTime = Math.min(voice.stopTime, at + duration + .002);
-    voice.sources.forEach(source => { try { source.stop(at + duration + .002); } catch (_) {} });
+    // A second stop must not restore the full level halfway through an already
+    // audible fade, or extend an earlier cancellation into a new tail.
+    if (voice.fadeAt !== undefined && at >= voice.fadeAt) return;
+    const naturalEnd = voice.naturalStopTime ?? voice.stopTime;
+    voice.naturalStopTime = naturalEnd;
+    if (at >= naturalEnd) return;
+    const gain = voice.bus.gain, end = Math.min(naturalEnd, at + duration);
+    if (voice.startTime > at) {
+      // A prepared future note has no audible envelope to release. Do not let
+      // it start at partial volume inside the cancellation fade window.
+      gain.cancelScheduledValues(at); gain.setValueAtTime(0, at);
+      voice.fadeAt = at; voice.stopTime = at;
+      voice.sources.forEach(source => { try { source.stop(at); } catch (_) {} });
+      return;
+    }
+    const level = voice.volume * clamp((naturalEnd - at) / .02, 0, 1);
+    if (typeof gain.cancelAndHoldAtTime === 'function') {
+      gain.cancelAndHoldAtTime(at);
+      // Explicitly anchor the following ramp even when the original envelope
+      // had no automation event before `at` (only its initial .value).
+      gain.setValueAtTime(level, at);
+    } else {
+      // The only uncancelled bus envelope is its final twenty-millisecond
+      // linear fade. Preserve that level on browsers without cancel-and-hold.
+      gain.cancelScheduledValues(at);
+      if (at > naturalEnd - .02) gain.linearRampToValueAtTime(level, at);
+      else gain.setValueAtTime(level, at);
+    }
+    gain.linearRampToValueAtTime(0, end);
+    voice.fadeAt = at;
+    voice.stopTime = Math.min(naturalEnd, end + .002);
+    voice.sources.forEach(source => { try { source.stop(voice.stopTime); } catch (_) {} });
   }
   function synthesize(environment, data, time, accent, expression = {}) {
-    const t = readTrack(data); t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
+    const t = readTrack(data), locks = window.TineModel?.normalizeLocks(expression.locks) || expression.locks || {};
+    for (const key of ['decay', 'pan', 'level', 'tone']) if (locks[key] !== undefined) t[key] = clamp(locks[key], key === 'decay' ? .04 : key === 'pan' ? -1 : 0, key === 'decay' ? 4 : 1);
+    t.pitchHz = clamp(t.pitchHz * Math.pow(2, clamp(expression.pitch || 0, -48, 48) / 12), 10, 16000); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return null;
     const { context, graph, random } = environment, now = Math.max(time, context.currentTime);
-    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.track === data);
+    const voiceKey = typeof expression.voiceKey === 'string' ? expression.voiceKey : data;
+    const active = Array.from(environment.voices).filter(voice => !voice.disposed && !voice.stolen && voice.startTime <= now && voice.stopTime > now), sameTrack = active.filter(voice => voice.voiceKey === voiceKey);
     if (sameTrack.length >= 6) { fadeVoice(sameTrack[0], now); environment.stolen++; }
     if (active.filter(voice => !voice.stolen).length >= 48) { fadeVoice(active.find(voice => !voice.stolen), now); environment.stolen++; }
     if (t.variation) { t.pitchHz *= Math.pow(2, (random() * 2 - 1) * t.variation * .4 / 12); t.position = clamp(t.position + (random() * 2 - 1) * t.variation * .045, .02, .98); t.decay = clamp(t.decay * (1 + (random() * 2 - 1) * t.variation * .08), .04, 4); }
@@ -1322,15 +1450,32 @@ body {
     const longest = Math.max(t.decay, ...modes.map(mode => mode.t60));
     const duration = excitationDuration + longest + .035;
     const bus = context.createGain(), panner = context.createStereoPanner(), force = context.createGain();
-    const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1; bus.connect(panner); panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', track: data, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force], disposed: false, stolen: false, modes };
+    const volume = t.level * (expression.velocity === undefined ? (accent ? 1.12 : .86) : clamp(expression.velocity, 0, 1)); bus.gain.value = volume; panner.pan.value = t.pan; force.gain.value = 1;
+    // Keep the existing envelope after any per-hit filter/drive so resonant
+    // filter state also fades before cleanup or voice stealing. Unlocked hits
+    // retain their original graph, node count and sound exactly.
+    const lockedNodes = [], processing = locks.cutoff !== undefined || locks.resonance !== undefined || locks.drive > 0;
+    const resonatorInput = processing ? context.createGain() : bus;
+    if (processing) lockedNodes.push(resonatorInput);
+    let output = resonatorInput;
+    if (locks.cutoff !== undefined || locks.resonance !== undefined) {
+      const filter = context.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = Math.min(locks.cutoff ?? 20000, context.sampleRate * .43); filter.Q.value = 20 * Math.log10(locks.resonance ?? Math.SQRT1_2);
+      output.connect(filter); output = filter; lockedNodes.push(filter);
+    }
+    if (locks.drive > 0) {
+      const shaper = context.createWaveShaper(), trim = context.createGain(); shaper.curve = saturation(locks.drive); shaper.oversample = '2x'; trim.gain.value = 1 / (1 + locks.drive * 2);
+      output.connect(shaper); shaper.connect(trim); output = trim; lockedNodes.push(shaper, trim);
+    }
+    if (processing) output.connect(bus);
+    bus.connect(panner); panner.connect(graph.input);
+    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force, ...lockedNodes], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
     let pending = 0;
     const source = (buffer, amount, directScale, offset = 0) => {
       const node = add(context.createBufferSource()), level = add(context.createGain()); node.buffer = buffer; level.gain.value = amount; node.connect(level); level.connect(force);
-      if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(bus); }
+      if (t.direct > 0) { const direct = add(context.createGain()); direct.gain.value = t.direct * directScale; level.connect(direct); direct.connect(resonatorInput); }
       // Excitation ends naturally while the resonator lifetime clock keeps
       // the filter state alive. Offline nodes stay connected before rendering.
       node.loop = false; node.onended = () => { pending--; if (!pending && context.currentTime >= voice.stopTime - .005) clean(); };
@@ -1347,7 +1492,7 @@ body {
       gain.gain.value = mode.weight * .74 / radiusTerm * bodyGain;
       // Compensation precedes the filter: browsers otherwise prune the tiny
       // unamplified filter tail while it is still audible after compensation.
-      force.connect(gain); gain.connect(filter); filter.connect(bus);
+      force.connect(gain); gain.connect(filter); filter.connect(resonatorInput);
     });
     if (t.mallet > 0) { exciter.contacts.forEach(contact => { const mallet = makeMallet(context, t, exciter, contact, random); source(mallet.buffer, t.mallet * contact.gain, mallet.directScale, contact.time); }); }
     if (t.noise > 0) { const noise = makeNoise(context, t, random); source(noise.buffer, t.noise, noise.directScale); }
@@ -1363,7 +1508,13 @@ body {
   function stopVoices(environment, at) { if (environment) environment.voices.forEach(voice => fadeVoice(voice, at)); }
   function stepLength(state, step) { const seconds = 60 / clamp(state.bpm || 120, 40, 240) / 4, swing = clamp(state.swing || 0, 0, .6); return seconds * (step % 2 === 0 ? 1 + swing : 1 - swing); }
   function sequenceLength(state) { return state.stepCount === 32 ? 32 : 16; }
-  function playStep(environment, state, step, time) { const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); tracks.forEach(track => { const hit = track.steps && track.steps[step]; if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2); }); }
+  function playStep(environment, state, step, time, sequence, frame) {
+    const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo);
+    tracks.forEach((track, index) => {
+      const hit = sequence && frame ? sequence.banks[frame.bank][index][step] : track.steps?.[step];
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, sequence && frame ? { locks: sequence.bankLocks[frame.bank][index][step], voiceKey: 'voice-' + index } : {});
+    });
+  }
   function encodeWav(audio) {
     const frames = audio.length, left = audio.getChannelData(0), right = audio.getChannelData(1), buffer = new ArrayBuffer(44 + frames * 4), view = new DataView(buffer);
     const string = (at, value) => { for (let i = 0; i < value.length; i++) view.setUint8(at + i, value.charCodeAt(i)); };
@@ -1382,9 +1533,9 @@ body {
       if (!this.context) { this._initPromise = (async () => { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) throw new Error('This browser does not support Web Audio. Please use a current browser.'); try { this.context = new AudioContext({ latencyHint: 'interactive' }); } catch (_) { this.context = new AudioContext(); } this.graph = buildGraph(this.context, this.values); this.environment = createEnvironment(this.context, this.graph, Date.now()); })(); try { await this._initPromise; } catch (error) { this._initPromise = null; throw error; } }
       if (this.context && this.context.state === 'suspended') await this.context.resume(); return this;
     }
-    async start(state, onStep) {
+    async start(state, onStep, sequenceProvider) {
       const generation = ++this.generation; await this.init(); if (generation !== this.generation) return;
-      this._stopTransport(); this.state = state || { bpm: 120, tracks: [] }; this.onStep = typeof onStep === 'function' ? onStep : null; this.running = true; this.currentStep = 0; this.nextNoteTime = this.context.currentTime + .045;
+      this._stopTransport(); this.state = state || { bpm: 120, tracks: [] }; this.onStep = typeof onStep === 'function' ? onStep : null; this.sequenceProvider = typeof sequenceProvider === 'function' ? sequenceProvider : null; this.sequenceFrame = null; this.sequenceNeedsFrame = true; this.sequenceEnding = false; this.running = true; this.currentStep = 0; this.nextNoteTime = this.context.currentTime + .045;
       this.values = { master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1), drive: clamp(this.state.drive || 0, 0, 1), space: clamp(this.state.space || 0, 0, 1) }; updateGraph(this.context, this.graph, this.values, false); this._schedule(); this._startTimer();
     }
     _startTimer() {
@@ -1392,11 +1543,26 @@ body {
       this.timer = setInterval(() => this._schedule(), 25);
     }
     _schedule() {
-      if (!this.running || !this.context || this.context.state !== 'running') return;
+      if (!this.running || this.sequenceEnding || !this.context || this.context.state !== 'running') return;
       const currentTime = this.context.currentTime; let skipped = 0;
-      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { this.nextNoteTime += stepLength(this.state, this.currentStep); this.currentStep = (this.currentStep + 1) % sequenceLength(this.state); skipped++; }
+      const prepare = () => {
+        if (!this.sequenceProvider || !this.sequenceNeedsFrame) return true;
+        const next = window.TineModel.nextSequenceFrame(this.sequenceProvider(), this.sequenceFrame);
+        if (next) { this.sequenceFrame = next; this.sequenceNeedsFrame = false; return true; }
+        this.sequenceEnding = true; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null;
+        const generation = this.generation, timer = setTimeout(() => { this.displayTimers.delete(timer); if (generation !== this.generation) return; this.running = false; this.onStep?.(-1, { ended: true }); }, Math.max(0, (this.nextNoteTime - this.context.currentTime + Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0)) * 1000));
+        this.displayTimers.add(timer); return false;
+      };
+      const advance = () => { this.currentStep++; if (this.currentStep >= (this.sequenceFrame?.length || sequenceLength(this.state))) { this.currentStep = 0; this.sequenceNeedsFrame = true; } };
+      while (this.nextNoteTime < currentTime - .035 && skipped < 4096) { if (!prepare()) return; this.nextNoteTime += stepLength(this.state, this.currentStep); advance(); skipped++; }
       if (skipped >= 4096) this.nextNoteTime = currentTime + .025;
-      while (this.nextNoteTime < currentTime + .13) { const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime); playStep(this.environment, this.state, step, when); if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); } this.nextNoteTime += stepLength(this.state, step); this.currentStep = (step + 1) % sequenceLength(this.state); }
+      while (this.nextNoteTime < currentTime + .13) {
+        if (!prepare()) return;
+        const step = this.currentStep, when = Math.max(this.nextNoteTime, currentTime), frame = this.sequenceFrame && { ...this.sequenceFrame };
+        playStep(this.environment, this.state, step, when, this.sequenceProvider?.(), frame);
+        if (this.onStep) { const generation = this.generation, latency = Math.min(.06, this.context.outputLatency || this.context.baseLatency || 0); const timer = setTimeout(() => { this.displayTimers.delete(timer); if (this.running && generation === this.generation && this.onStep) this.onStep(step, frame); }, Math.max(0, (when - this.context.currentTime + latency) * 1000)); this.displayTimers.add(timer); }
+        this.nextNoteTime += stepLength(this.state, step); advance();
+      }
     }
     _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
     stop() { this.generation++; this._stopTransport(); this.currentStep = 0; }
@@ -1439,7 +1605,7 @@ body {
       for (let i = 0; i < events.length; i++) {
         const event = events[i], track = snapshot.tracks[event.voice];
         if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
-        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, event);
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, options.nativeHits ? { ...event, velocity: undefined } : event);
         if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       const end = duration + tail, fade = Math.min(.03, end / 2);
@@ -1480,10 +1646,12 @@ body {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rangeKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
   function presetState(preset, master = .78) {
-    return { name: preset.name, bpm: preset.bpm, swing: preset.swing, drive: preset.drive, space: preset.space, master, stepCount: 16, tracks: preset.tracks.map((track) => model.normalizeTrack(track)) };
+    return { name: preset.name, bpm: preset.bpm, swing: preset.swing, drive: preset.drive, space: preset.space, master, stepCount: 16, chain: model.defaultChain(), tracks: preset.tracks.map((track) => model.normalizeTrack(track)) };
   }
   let state = presetState(presets[0]);
   let banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)];
+  let bankLocks = Array.from({ length: 4 }, () => model.emptyLocks());
+  let editSteps = false, inspectedStep = null, chainId = 0;
   let bank = 0, selected = 0, sequencePage = 0, tab = 'resonance';
   let playing = false, loading = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let exporting = false, history = [], saveTimer, toastTimer;
@@ -1493,15 +1661,17 @@ body {
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
     banks[bank] = state.tracks.map((track) => [...track.steps]);
-    return { app: 'TINE', version: 3, state: clone(state), banks: clone(banks), bank, selected };
+    return { app: 'TINE', version: 4, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), bank, selected };
   }
+  function sequenceView() { return { state, banks: banks.map((pattern, index) => index === bank ? state.tracks.map(track => track.steps) : pattern), bankLocks, bank, selected }; }
+  function getSequencerPattern(options = {}) { return model.sequencerPattern(sequenceView(), options); }
   function validateProject(data) {
     try { return model.upgradeProject(data); }
     catch (_) { throw new Error('Please choose a valid CLATTER project. Its sound and pattern settings must be complete.'); }
   }
   function restore(data) {
     const valid = validateProject(data);
-    state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    state = clone(valid.state); banks = clone(valid.banks); bankLocks = clone(valid.bankLocks); bank = valid.bank; selected = valid.selected;
     if (state.stepCount === 16) sequencePage = 0;
     state.tracks = state.tracks.map((track, index) => { const next = model.normalizeTrack(track); next.steps = [...banks[bank][index]]; return next; });
   }
@@ -1513,7 +1683,7 @@ body {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 240);
   }
-  function remember() { history.push(project()); if (history.length > 70) history.shift(); $('undo-button').disabled = false; }
+  function remember() { history.push(project()); if (history.length > 70) history.shift(); for (const id of ['undo-button', 'chain-undo', 'step-undo']) $(id).disabled = false; }
   function focusKey() {
     const active = document.activeElement;
     return active && (active.dataset.focusKey || active.id) || null;
@@ -1535,6 +1705,11 @@ body {
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3500);
   }
   function syncEffects() { engine.setMasterVolume(state.master); engine.setEffects({ drive: state.drive, space: state.space }); }
+  function nativeGrid() {
+    if (!state.musicLabPattern) return;
+    const resume = playing || loading; if (resume) stop(); delete state.musicLabPattern;
+    if (resume) queueMicrotask(play);
+  }
   function audioReady() {
     $('audio-status').textContent = engine.context ? 'AUDIO ON · ' + (engine.context.sampleRate / 1000).toFixed(1) + ' KHZ' : 'AUDIO ON';
     $('status-dot').classList.add('ready');
@@ -1557,12 +1732,15 @@ body {
     const generation = ++playGeneration; loading = true; currentBar = 0;
     $('play-button').setAttribute('aria-busy', 'true');
     try {
-      await engine.start(state, (step) => {
+      await engine.start(state, (step, frame) => {
         if (!playing || generation !== playGeneration) return;
-        if (step % 16 === 0) currentBar = currentBar % 4 + 1;
+        if (frame?.ended) { playing = false; setPlayhead(-1); playButton(false); stopHeroAnimation(); $('chain-position').textContent = 'Finished'; return; }
+        if (frame?.chain && step === 0 && frame.entry === 0 && frame.repeat === 1) currentBar = 0;
+        if (step % 16 === 0) currentBar = frame?.chain ? currentBar + 1 : currentBar % 4 + 1;
         setPlayhead(step);
         $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step % 16 / 4) + 1) + ' . ' + (step % 4 + 1);
-      });
+        if (frame) { const label = frame.chain ? 'Entry ' + (frame.entry + 1) + ' · ' + 'ABCD'[frame.bank] + ' · ' + frame.repeat + '/' + frame.repeats : 'Pattern ' + 'ABCD'[frame.bank]; if ($('chain-position').textContent !== label) $('chain-position').textContent = label; }
+      }, sequenceView);
       if (generation !== playGeneration || !engine.running) return;
       playing = true; startHeroAnimation(); syncEffects(); audioReady(); playButton(true);
     } catch (error) { if (generation === playGeneration) { stop(); toast(error.message || 'Your browser could not start audio.'); } }
@@ -1572,6 +1750,7 @@ body {
     ++playGeneration; loading = false; playing = false; engine.stop(); setPlayhead(-1); playButton(false);
     stopHeroAnimation();
     $('play-button').removeAttribute('aria-busy'); $('beat-position').textContent = '1 . 1 . 1';
+    $('chain-position').textContent = '';
   }
   function setPlayhead(step) {
     if (currentStep >= 0) playheadColumns[currentStep].forEach((item) => item.classList.remove('current'));
@@ -1580,10 +1759,11 @@ body {
   }
   function updateStep(button, row, step) {
     const track = state.tracks[row], value = track.steps[step];
-    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (currentStep === step ? ' current' : '');
+    const locked = Object.keys(bankLocks[bank][row][step] || {}).length > 0;
+    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (locked ? ' locked' : '') + (currentStep === step ? ' current' : '');
     button.setAttribute('aria-pressed', value > 0);
-    button.setAttribute('aria-label', track.name + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off'));
-    button.title = 'Step ' + (step + 1) + ' · Shift + click or touch and hold to accent';
+    button.setAttribute('aria-label', track.name + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off') + (locked ? ', sound locks' : ''));
+    button.title = 'Step ' + (step + 1) + ' · Shift + click to accent · Right click or E to edit sound';
   }
   function glyph(id) {
     const paths = {
@@ -1628,15 +1808,17 @@ body {
         const button = document.createElement('button'); button.dataset.step = stepIndex; button.dataset.track = index; button.dataset.focusKey = 'step-' + index + '-' + stepIndex; updateStep(button, index, stepIndex);
         let holdTimer, touchX = 0, touchY = 0, held = false;
         const edit = (accent) => {
-          remember(); const previous = track.steps[stepIndex]; track.steps[stepIndex] = accent ? previous === 2 ? 1 : 2 : previous ? 0 : 1;
+          remember(); nativeGrid(); const previous = track.steps[stepIndex]; track.steps[stepIndex] = accent ? previous === 2 ? 1 : 2 : previous ? 0 : 1;
+          if (!track.steps[stepIndex]) bankLocks[bank][index][stepIndex] = {};
           updateStep(button, index, stepIndex); persist(); if (track.steps[stepIndex] && !playing) audition(track);
         };
-        button.addEventListener('click', (event) => { if (held) { held = false; return; } edit(event.shiftKey); });
-        button.addEventListener('pointerdown', (event) => { if (event.pointerType !== 'touch') return; held = false; touchX = event.clientX; touchY = event.clientY; holdTimer = setTimeout(() => { held = true; edit(true); }, 450); });
+        button.addEventListener('click', (event) => { if (held) { held = false; return; } if (editSteps && !event.shiftKey) openStep(index, stepIndex); else edit(event.shiftKey); });
+        button.addEventListener('pointerdown', (event) => { if (event.pointerType !== 'touch') return; held = false; touchX = event.clientX; touchY = event.clientY; holdTimer = setTimeout(() => { held = true; openStep(index, stepIndex); }, 450); });
         button.addEventListener('pointermove', (event) => { if (event.pointerType === 'touch' && (Math.abs(event.clientX - touchX) > 8 || Math.abs(event.clientY - touchY) > 8)) clearTimeout(holdTimer); });
         ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => button.addEventListener(type, () => clearTimeout(holdTimer)));
-        button.addEventListener('contextmenu', (event) => event.preventDefault());
+        button.addEventListener('contextmenu', (event) => { event.preventDefault(); if (!held) openStep(index, stepIndex); });
         button.addEventListener('keydown', (event) => {
+          if (event.key.toLowerCase() === 'e') { event.preventDefault(); openStep(index, stepIndex); return; }
           const delta = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key]; if (!delta) return;
           event.preventDefault(); const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + state.stepCount) % state.stepCount;
           if (Math.floor(nextStep / 16) !== sequencePage) { sequencePage = Math.floor(nextStep / 16); renderRows(); }
@@ -1655,6 +1837,88 @@ body {
     restoreFocus(focus);
   }
   function renderBanks() { document.querySelectorAll('[data-bank]').forEach((button) => { const active = Number(button.dataset.bank) === bank; button.classList.toggle('active', active); button.setAttribute('aria-pressed', active); }); }
+  const stepParameters = [
+    { key: 'cutoff', label: 'Output cutoff', min: 20, max: 20000, step: 1, unit: 'Hz', base: () => 20000 },
+    { key: 'resonance', label: 'Filter resonance', min: .1, max: 20, step: .01, unit: 'Q', base: () => .707 },
+    { key: 'decay', label: 'Body decay', min: .04, max: 4, step: .001, unit: 'seconds', base: track => track.decay },
+    { key: 'tone', label: 'Brightness', min: 0, max: 1, step: .01, unit: '0–1', base: track => track.tone },
+    { key: 'level', label: 'Voice level', min: 0, max: 1, step: .01, unit: '0–1', base: track => track.level },
+    { key: 'pan', label: 'Pan', min: -1, max: 1, step: .01, unit: '−1 L / +1 R', base: track => track.pan },
+    { key: 'drive', label: 'Hit drive', min: 0, max: 1, step: .01, unit: '0–1', base: () => 0 }
+  ];
+  function openStep(voice, step) {
+    inspectedStep = { bank, voice, step }; renderStepInspector();
+    if (!$('step-dialog').open) $('step-dialog').showModal();
+  }
+  function renderStepInspector() {
+    if (!inspectedStep) return;
+    const current = inspectedStep, track = state.tracks[current.voice], locks = bankLocks[current.bank][current.voice][current.step];
+    if (!track || !locks) { $('step-dialog').close(); inspectedStep = null; return; }
+    $('step-inspector-title').textContent = 'Pattern ' + 'ABCD'[current.bank] + ' · ' + track.name + ' · step ' + (current.step + 1);
+    $('step-hit').value = String((current.bank === bank ? track.steps : banks[current.bank][current.voice])[current.step]);
+    $('step-lock-fields').replaceChildren();
+    stepParameters.forEach(parameter => {
+      const row = document.createElement('div'); row.className = 'step-lock-row';
+      const labels = document.createElement('div'); labels.className = 'step-lock-labels';
+      const caption = document.createElement('span'); caption.className = 'step-lock-name'; caption.textContent = parameter.label;
+      const label = document.createElement('label'), enabled = document.createElement('input'), name = document.createElement('span'); label.className = 'step-inherit-label';
+      enabled.type = 'checkbox'; enabled.id = 'step-inherit-' + parameter.key; enabled.checked = !Object.hasOwn(locks, parameter.key); enabled.setAttribute('aria-label', 'Inherit voice ' + parameter.label.toLowerCase()); name.textContent = 'Inherit'; label.append(enabled, name); labels.append(caption, label);
+      const input = document.createElement('input'); input.type = 'number'; input.id = 'step-lock-' + parameter.key; input.min = parameter.min; input.max = parameter.max; input.step = parameter.step; input.value = enabled.checked ? parameter.base(track) : locks[parameter.key]; input.disabled = enabled.checked; input.setAttribute('aria-label', 'Step ' + parameter.label.toLowerCase());
+      const unit = document.createElement('span'); unit.textContent = parameter.unit;
+      let frequencyRange = null;
+      if (parameter.key === 'cutoff') {
+        frequencyRange = document.createElement('input'); frequencyRange.type = 'range'; frequencyRange.id = 'step-lock-cutoff-range'; frequencyRange.min = 0; frequencyRange.max = 1000; frequencyRange.step = 1; frequencyRange.disabled = enabled.checked; frequencyRange.setAttribute('aria-label', 'Step output cutoff logarithmic slider');
+        const readout = () => { frequencyRange.value = Math.round(Math.log(Number(input.value) / 20) / Math.log(1000) * 1000); unit.textContent = Number(input.value) >= 1000 ? (Number(input.value) / 1000).toFixed(2) + ' kHz' : input.value + ' Hz'; };
+        readout(); input.addEventListener('input', readout);
+        frequencyRange.addEventListener('input', () => { input.value = Math.round(20 * 1000 ** (Number(frequencyRange.value) / 1000)); readout(); });
+        frequencyRange.addEventListener('change', () => { change(Number(input.value)); });
+      }
+      const inherit = document.createElement('small'); inherit.textContent = enabled.checked ? 'Inherit voice' : 'This hit only';
+      const change = value => { remember(); nativeGrid(); if (value === undefined) delete locks[parameter.key]; else locks[parameter.key] = value; renderRows(); persist(); };
+      enabled.addEventListener('change', () => { change(enabled.checked ? undefined : clamp(Number(input.value), parameter.min, parameter.max)); input.disabled = enabled.checked; if (frequencyRange) frequencyRange.disabled = enabled.checked; inherit.textContent = enabled.checked ? 'Inherit voice' : 'This hit only'; });
+      input.addEventListener('change', () => { const value = Number(input.value); if (!Number.isFinite(value)) { input.value = locks[parameter.key]; return; } input.value = clamp(value, parameter.min, parameter.max); if (frequencyRange) input.dispatchEvent(new Event('input')); change(Number(input.value)); });
+      row.append(labels, input, unit, inherit); if (frequencyRange) row.append(frequencyRange); $('step-lock-fields').append(row);
+    });
+  }
+  function chainTransaction(change) {
+    const next = clone(state.chain); change(next);
+    if (!model.validChain(next, state.stepCount)) { toast('Keep the chain within 32 entries and 256 beats. Each repeat is 1–16.'); renderChain(); return; }
+    remember(); nativeGrid(); state.chain = next; renderChain(); persist();
+  }
+  function newChainId() {
+    let id; do { id = 'entry-' + (++chainId); } while (state.chain.entries.some(entry => entry.id === id)); return id;
+  }
+  function renderChain() {
+    const chain = state.chain;
+    $('chain-enabled').checked = chain.enabled; $('chain-enabled').disabled = !chain.entries.length; $('chain-loop').checked = chain.loop;
+    $('chain-button').textContent = chain.enabled ? 'Chain · ' + chain.entries.map(entry => 'ABCD'[entry.bank] + (entry.repeats > 1 ? '×' + entry.repeats : '')).join(' → ') : 'Chain off';
+    $('chain-button').setAttribute('aria-expanded', $('chain-dialog').open);
+    const focus = $('chain-entries').contains(document.activeElement) ? document.activeElement.dataset.chainFocus : null;
+    $('chain-entries').replaceChildren();
+    chain.entries.forEach((entry, index) => {
+      const row = document.createElement('div'); row.className = 'chain-entry'; row.dataset.chainEntry = entry.id; row.dataset.chainIndex = index;
+      const ordinal = document.createElement('span'); ordinal.textContent = String(index + 1).padStart(2, '0'); ordinal.className = 'chain-ordinal';
+      const pattern = document.createElement('select'); pattern.dataset.chainBank = entry.id; pattern.dataset.chainFocus = entry.id + '-bank'; pattern.setAttribute('aria-label', 'Pattern for chain entry ' + (index + 1));
+      'ABCD'.split('').forEach((name, value) => { const option = document.createElement('option'); option.value = value; option.textContent = 'Pattern ' + name; pattern.append(option); }); pattern.value = entry.bank;
+      pattern.addEventListener('change', () => chainTransaction(next => { next.entries[index].bank = Number(pattern.value); }));
+      const repeatLabel = document.createElement('label'); repeatLabel.textContent = 'Repeats ';
+      const repeats = document.createElement('input'); repeats.type = 'number'; repeats.min = 1; repeats.max = 16; repeats.step = 1; repeats.value = entry.repeats; repeats.dataset.chainRepeats = entry.id; repeats.dataset.chainFocus = entry.id + '-repeats'; repeats.setAttribute('aria-label', 'Repeats for chain entry ' + (index + 1)); repeatLabel.append(repeats);
+      repeats.addEventListener('change', () => chainTransaction(next => { next.entries[index].repeats = Number(repeats.value); }));
+      row.append(ordinal, pattern, repeatLabel);
+      [['up', '↑'], ['down', '↓'], ['duplicate', 'Copy'], ['remove', '×']].forEach(([action, text]) => {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = text; button.dataset.chainAction = action; button.dataset.chainFocus = entry.id + '-' + action; button.setAttribute('aria-label', action + ' chain entry ' + (index + 1));
+        button.disabled = action === 'up' && index === 0 || action === 'down' && index === chain.entries.length - 1;
+        button.addEventListener('click', () => chainTransaction(next => {
+          if (action === 'remove') { next.entries.splice(index, 1); if (!next.entries.length) next.enabled = false; }
+          else if (action === 'duplicate') next.entries.splice(index + 1, 0, { ...next.entries[index], id: newChainId() });
+          else { const other = index + (action === 'up' ? -1 : 1); [next.entries[index], next.entries[other]] = [next.entries[other], next.entries[index]]; }
+        })); row.append(button);
+      });
+      $('chain-entries').append(row);
+    });
+    if (!chain.entries.length) { const empty = document.createElement('p'); empty.textContent = 'Add A–D in playing order. Repeats use each complete 16- or 32-step pattern.'; $('chain-entries').append(empty); }
+    if (focus) Array.from($('chain-entries').querySelectorAll('[data-chain-focus]')).find(element => element.dataset.chainFocus === focus)?.focus({ preventScroll: true });
+  }
   function normalized(descriptor, value) {
     return clamp(descriptor.log ? Math.log(value / descriptor.min) / Math.log(descriptor.max / descriptor.min) : (value - descriptor.min) / (descriptor.max - descriptor.min), 0, 1);
   }
@@ -1753,7 +2017,7 @@ body {
   function renderAll() {
     $('tempo').value = state.bpm; $('swing').value = Math.round(state.swing * 100); $('swing-value').textContent = Math.round(state.swing * 100) + '%';
     const preset = presets.findIndex((item) => item.name === state.name); $('preset-select').value = preset >= 0 ? String(preset) : 'custom';
-    renderRows(); renderBanks(); renderVoice(); renderMaster(); $('undo-button').disabled = !history.length;
+    renderRows(); renderBanks(); renderVoice(); renderMaster(); renderChain(); if ($('step-dialog').open) renderStepInspector(); for (const id of ['undo-button', 'chain-undo', 'step-undo']) $(id).disabled = !history.length;
   }
   function mutateVoice() {
     remember(); const track = state.tracks[selected];
@@ -1769,7 +2033,7 @@ body {
     renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Voice mutated. The saucepan has changed its mind.');
   }
   function randomPattern() {
-    remember(); state.tracks.forEach((track, row) => {
+    remember(); nativeGrid(); state.tracks.forEach((track, row) => {
       const hidden = track.steps.slice(state.stepCount);
       track.steps = Array.from({ length: state.stepCount }, (_, index) => {
         const step = index % 16;
@@ -1778,32 +2042,51 @@ body {
         if (row === 7 && step === 0) return 1;
         const chance = row === 2 ? step % 2 ? .28 : .85 : row === 3 ? .2 : row === 4 ? .15 : row === 5 ? .17 : row === 6 ? .16 : .1;
         return Math.random() < chance ? Math.random() < .15 ? 2 : 1 : 0;
-      }).concat(hidden);
+      }).concat(hidden); bankLocks[bank][row] = bankLocks[bank][row].map((locks, step) => step < state.stepCount ? {} : locks);
     }); renderRows(); persist(); toast('New groove generated. The dish pit approves.');
   }
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
   function safeName(name = state.name) { return String(name || 'my-pattern').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-pattern'; }
-  async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
+  async function renderSequenceAudio(snapshot, scope, bars, tailSeconds, signal) {
+    const packet = getSequencerPattern({ scope: scope === 'sequence' ? undefined : scope }), completeChain = scope === 'chain' || scope === 'sequence' && state.chain.enabled;
+    if (!Number.isInteger(bars) || bars < 1 || bars > 16) throw new Error('Choose one to sixteen bars.');
+    const length = completeChain ? packet.lengthBeats : bars * 4, secondsPerBeat = 60 / snapshot.bpm;
+    let longest = Math.max(.22, ...snapshot.tracks.map(track => track.decay + Math.max(track.noiseAttack + track.noiseDecay + .008, window.TineEngine.inspectExciter(track).duration) + .205));
+    for (const note of packet.notes) if (note.locks?.decay) longest = Math.max(longest, clamp(note.locks.decay, .04, 4) + 1.5);
+    const tail = tailSeconds === undefined ? Math.min(15, longest + (snapshot.space > 0 ? 1.8 : 0) + (packet.notes.some(note => note.locks?.cutoff || note.locks?.resonance) ? 2.5 : 0)) : Number(tailSeconds);
+    if (!Number.isFinite(tail) || tail < 0 || tail > 15) throw new Error('Choose an effect tail between zero and fifteen seconds.');
+    if (length * secondsPerBeat + tail > 120) throw new Error('This audio is longer than 120 seconds. Shorten the chain, use fewer repeats, or increase tempo.');
+    const events = [];
+    for (let offset = 0; offset < length; offset += packet.lengthBeats) for (const note of packet.notes) {
+      const beat = offset + note.beat; if (beat >= length) continue;
+      if (events.length >= 8192) throw new Error('This audio export has too many hits. Use fewer bars or repeats.');
+      events.push({ voice: Number(note.voice.slice(6)), at: beat * secondsPerBeat, velocity: note.velocity, ...(note.locks ? { locks: clone(note.locks) } : {}) });
+    }
+    events.sort((a, b) => a.at - b.at || a.voice - b.voice);
+    return engine.renderNativeEvents(snapshot, events, { durationSeconds: length * secondsPerBeat, tailSeconds: tail, signal, nativeHits: true });
+  }
+  async function exportAudio({ scope = 'sequence', bars = 1, tailSeconds, signal } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
-    if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
+    if (!['sequence', 'chain', 'pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a sequence, pattern, chain, selected voice pattern, or selected voice hit.');
     if (exporting) throw new Error('Wait for the current CLATTER render to finish.');
     const snapshot = clone(state), voice = selected;
-    if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
+    const enhanced = scope !== 'hit' && (scope === 'chain' || scope === 'sequence' && state.chain.enabled || bankLocks[bank].some(steps => steps.slice(0, state.stepCount).some(locks => Object.keys(locks).length)));
+    if (!enhanced && ['voice', 'hit'].includes(scope)) snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
     if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
-    const sourceLabel = scope === 'pattern' ? snapshot.name : snapshot.tracks[0].name || 'Voice ' + (voice + 1);
+    const sourceLabel = ['voice', 'hit'].includes(scope) ? state.tracks[voice].name || 'Voice ' + (voice + 1) : snapshot.name;
     exporting = true;
     try {
-      const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
-      return { blob, sampleRate: 44100, name: 'clatter-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
+      const rendered = enhanced ? await renderSequenceAudio(snapshot, scope, bars, tailSeconds, signal) : { blob: await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal }), sampleRate: 44100 };
+      return { blob: rendered.blob, sampleRate: rendered.sampleRate, name: 'clatter-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
     } finally { exporting = false; }
   }
   async function exportWav() {
     if (exporting) return; exporting = true; $('export-button').disabled = true;
     const oldChildren = Array.from($('export-button').childNodes, (node) => node.cloneNode(true)); $('export-button').textContent = 'Rendering…'; $('export-button').setAttribute('aria-busy', 'true');
-    const snapshot = clone(state); toast('Rendering four bars and the full resonator tail…');
-    try { const blob = await engine.exportWav(snapshot); download(blob, 'clatter-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Four bars rendered. The natural decay and effect tail are included.'); }
+    const snapshot = clone(state), enhanced = state.chain.enabled || bankLocks[bank].some(steps => steps.slice(0, state.stepCount).some(locks => Object.keys(locks).length)); toast(state.chain.enabled ? 'Rendering the complete chain and natural tails…' : 'Rendering four bars and the full resonator tail…');
+    try { const blob = enhanced ? (await renderSequenceAudio(snapshot, 'sequence', 4)).blob : await engine.exportWav(snapshot); download(blob, 'clatter-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Audio rendered. Natural decay and effect tails included.'); }
     catch (error) { toast(error.message || 'Audio could not render. Please try again.'); }
     finally { exporting = false; $('export-button').disabled = false; $('export-button').replaceChildren(...oldChildren); $('export-button').removeAttribute('aria-busy'); }
   }
@@ -1963,25 +2246,49 @@ body {
   $('preset-select').addEventListener('change', () => {
     const preset = presets[Number($('preset-select').value)]; if (!preset) return;
     remember(); const resume = playing || loading; if (resume) stop(); const master = state.master;
-    state = presetState(preset, master); banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)]; bank = 0; sequencePage = 0;
+    state = presetState(preset, master); banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)]; bankLocks = Array.from({ length: 4 }, () => model.emptyLocks()); bank = 0; sequencePage = 0;
     renderAll(); persist(); toast(preset.tagline || preset.name + ' loaded.'); if (resume) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
-    const next = Number(button.dataset.bank); if (next === bank) return; remember(); banks[bank] = state.tracks.map((track) => [...track.steps]); bank = next;
+    const next = Number(button.dataset.bank); if (next === bank) return; remember(); nativeGrid(); banks[bank] = state.tracks.map((track) => [...track.steps]); bank = next;
     state.tracks.forEach((track, index) => { track.steps = [...banks[bank][index]]; }); renderRows(); renderBanks(); persist();
   }));
-  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((track) => [...track.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
+  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((track) => [...track.steps]); bankLocks[next] = clone(bankLocks[bank]); persist(); toast('Pattern and sound locks ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
   $('sequence-length').addEventListener('change', () => {
     const length = Number($('sequence-length').value); if (length === state.stepCount) return;
-    remember(); const resume = playing || loading; if (resume) stop(); state.stepCount = length;
+    if (!model.validChain(state.chain, length)) { $('sequence-length').value = state.stepCount; toast('Shorten the chain before doubling this pattern length beyond 256 beats.'); return; }
+    remember(); nativeGrid(); state.stepCount = length;
     if (length === 32) {
       const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
       state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
+      bankLocks = bankLocks.map(pattern => pattern.map(steps => steps.concat(Array.from({ length: Math.max(0, 32 - steps.length) }, () => ({})))));
     } else sequencePage = 0;
-    renderRows(); persist(); if (resume) play();
+    renderRows(); renderChain(); persist();
   });
   $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared. Your sounds are preserved.'); });
+  $('clear-button').addEventListener('click', () => { remember(); nativeGrid(); state.tracks.forEach((track, voice) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); bankLocks[bank][voice] = bankLocks[bank][voice].map((locks, step) => step < state.stepCount ? {} : locks); }); renderRows(); persist(); toast('Pattern and active-step locks cleared. Your sounds and hidden steps are preserved.'); });
+  $('chain-button').addEventListener('click', () => { renderChain(); $('chain-dialog').showModal(); $('chain-button').setAttribute('aria-expanded', 'true'); });
+  $('close-chain').addEventListener('click', () => $('chain-dialog').close());
+  $('chain-dialog').addEventListener('close', () => $('chain-button').setAttribute('aria-expanded', 'false'));
+  $('chain-enabled').addEventListener('change', () => chainTransaction(next => { next.enabled = $('chain-enabled').checked; }));
+  $('chain-loop').addEventListener('change', () => chainTransaction(next => { next.loop = $('chain-loop').checked; }));
+  $('chain-add').addEventListener('click', () => chainTransaction(next => { next.entries.push({ id: newChainId(), bank: Number($('chain-add-bank').value), repeats: 1 }); }));
+  $('chain-clear').addEventListener('click', () => chainTransaction(next => { next.entries = []; next.enabled = false; }));
+  $('chain-undo').addEventListener('click', undo); $('step-undo').addEventListener('click', undo);
+  $('step-edit-button').addEventListener('click', () => { editSteps = !editSteps; $('step-edit-button').setAttribute('aria-pressed', editSteps); $('step-edit-button').textContent = editSteps ? 'Choose step…' : 'Edit step'; });
+  $('close-step').addEventListener('click', () => $('step-dialog').close());
+  $('step-hit').addEventListener('change', () => {
+    if (!inspectedStep) return; remember(); nativeGrid(); const current = inspectedStep, steps = current.bank === bank ? state.tracks[current.voice].steps : banks[current.bank][current.voice];
+    steps[current.step] = Number($('step-hit').value); if (!steps[current.step]) bankLocks[current.bank][current.voice][current.step] = {};
+    renderRows(); renderStepInspector(); persist();
+  });
+  $('step-clear-locks').addEventListener('click', () => { if (!inspectedStep) return; remember(); nativeGrid(); const current = inspectedStep; bankLocks[current.bank][current.voice][current.step] = {}; renderRows(); renderStepInspector(); persist(); });
+  $('step-hear').addEventListener('click', async () => {
+    if (!inspectedStep) return; const current = inspectedStep;
+    try { await engine.init(); syncEffects(); engine.scheduleNativeNote(state.tracks[current.voice], engine.context.currentTime + .005, { locks: clone(bankLocks[current.bank][current.voice][current.step]), source: 'step-preview', voiceKey: 'voice-' + current.voice }); audioReady(); }
+    catch (error) { toast(error.message || 'This step could not be heard.'); }
+  });
+  for (const id of ['step-dialog', 'chain-dialog']) $(id).addEventListener('click', event => { if (event.target !== $(id)) return; const bounds = $(id).getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) $(id).close(); });
   $('random-button').addEventListener('click', randomPattern); $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'clatter-' + safeName() + '.json'); toast('Project saved. Sounds, patterns, and all four banks included.'); });
   $('open-button').addEventListener('click', () => $('project-file').click());
@@ -1998,6 +2305,7 @@ body {
     if ($('help-dialog').open || event.target.isContentEditable) return;
     const field = event.target.matches('input,select,textarea');
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && (!field || event.target.matches('input[type=range]'))) { event.preventDefault(); undo(); return; }
+    if ($('step-dialog').open || $('chain-dialog').open) return;
     if (field) return;
     if (event.code === 'Space' && !event.target.matches('button,[role=slider]')) { event.preventDefault(); playing || loading ? stop() : play(); }
     if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-8]$/.test(event.key)) { selected = Number(event.key) - 1; renderRows(); renderVoice(); persist(); audition(); }
@@ -2008,13 +2316,13 @@ body {
   let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawVoice(); drawHero(heroTime); }, 80); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   renderAll(); drawHero();
-  window.TineApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+  window.TineApp = { getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !(state.chain.enabled && state.chain.loop === false); }, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
       validateProject(next); remember(); stop(); restore(next); renderAll(); persist();
     },
     loadState(data) { const next = validateProject(clone(data)); remember(); stop(); restore(next); renderAll(); persist(); },
-    audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
+    get audioExport() { return { scopes: [{ id: 'sequence', label: 'Current sequence · pattern or chain', usesBars: !state.chain.enabled }, { id: 'pattern', label: 'Current pattern mix' }, { id: 'chain', label: 'Complete chain', usesBars: false }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultScope: 'sequence', defaultBars: 1, maxBars: 16 }; } };
 }());
 
 </script>
@@ -2568,6 +2876,13 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
     }
     if (appId === 'bower') {
       const selected = /^voice-[0-3]$/.test(scope) ? Number(scope.slice(-1)) : null, voices = voicesFor(s).filter(v => selected === null || v.id === String(selected));
+      if(s.sequenceMode!=='pattern'&&window.BowerDSP?.captureEvents){
+        const length=s.sequenceMode==='pattern'?s.pattern.banks[s.pattern.selected].length/4:16;
+        const out=packetBase(s,s.name+(s.sequenceMode==='pattern'?' · Pattern '+String.fromCharCode(65+s.pattern.selected):' · four-bar phrase'),length,voices);
+        const sampleRate=engine.context?.sampleRate||48000;
+        for(const hit of window.BowerDSP.captureEvents(sampleRate,s,length))if(selected===null||hit.lane===selected)addNote(out,hit.note,hit.beat,hit.durationBeats,hit.velocity,String(hit.lane));
+        out.notes.sort((a,b)=>a.beat-b.beat);return P.normalize(out);
+      }
       if(s.sequenceMode==='pattern') {
         const bank=s.pattern.banks[s.pattern.selected],out=packetBase(s,s.name+' · Pattern '+String.fromCharCode(65+s.pattern.selected),bank.length/4,voices),solo=s.lanes.some(l=>l.solo);
         for(let i=0;i<4;i++) {const lane=s.lanes[i];if(selected!==null&&i!==selected||lane.mute||solo&&!lane.solo)continue;let beat=0;for(let step=0;step<bank.length;step++){const hit=bank.lanes[i].steps[step],interval=.25*(1+(step%2===0?1:-1)*s.swing*.5);if(hit.on)addNote(out,hit.note,beat,lane.decay*s.tempo/60,hit.velocity,String(i),hit.probability);beat+=interval;}}
@@ -2773,7 +3088,7 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
         if(respectMute&&(s.muted?.[voiceIndex]||s.solo!==undefined&&s.solo!==null&&s.solo!==voiceIndex))return;
         events.push({voice:voiceIndex,at:(cycle*packet.lengthBeats+eventBeat(packet,note))*seconds,
           duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*seconds,
-          velocity:note.velocity,pitch:note.pitch-voice.pitch});
+          velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})});
       });
       return{events,durationSeconds:packet.lengthBeats*repetitions*seconds,lengthBeats:packet.lengthBeats,name:packet.name,tempo:bpm};
     }
@@ -2781,6 +3096,10 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
       if(s.musicLabPattern){
         const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
         return schema().normalize({...packet,sourceApp:id,kind:'drums',voices:available.filter(v=>used.has(v.id)),notes:packet.notes.map(note=>({...note,voice:map[note.voice]}))});
+      }
+      if (typeof native().getSequencerPattern === 'function') {
+        const request = { ...options }; if (request.scope === 'sequence') delete request.scope;
+        return schema().normalize(native().getSequencerPattern(request));
       }
       const all=voicesFor(s), notes=[], selected=Number(options.voice??0), scope=options.scope||'pattern';
       let lengthBeats=4, counter=0;
@@ -2855,7 +3174,7 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
           if(when<current-.03)continue;
           const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
-          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
+          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern',...(note.locks?{locks:clone(note.locks)}:{})});
         }
         const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
@@ -2864,9 +3183,12 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
     }
     const adapter={
       app:id,
-      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternExport(){return typeof native().getSequencerPattern === 'function'
+        ? {scopes:[{id:'sequence',label:'Current sequence'},{id:'pattern',label:'Current pattern'},{id:'chain',label:'Complete chain'},{id:'voice',label:'Selected voice pattern'}],defaultScope:'sequence'}
+        : {scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
       get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'&&s.sequenceMode!=='pattern'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
       get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
+      get nativeSequenceLoop(){return viewState().musicLabPattern ? true : native().sequenceLoop !== false;},
       validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
       exportPattern(options={}){return packetFromNative(viewState(),options);},
       async importPattern({pattern,options={},signal}={}){
@@ -2883,6 +3205,10 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
         const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        if (note.locks !== undefined) { const locks = schema().normalizeLocks(note.locks); if (Object.keys(locks).length) options.locks = locks; }
+        // Public app snapshots are copies. Preserve lane identity separately
+        // so a hosted modal voice keeps the same polyphony budget on each hit.
+        if(id==='grain'||id==='tine')options.voiceKey='voice-'+index;
         if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
         if(id==='form')return native().scheduleNativeNote(index,note.when,options);
         return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);
@@ -2894,7 +3220,7 @@ MusicLabExchange.register({...{"id":"tine","name":"CLATTER","sourceApp":"TINE","
         if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
         const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
         const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
-        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})};});
         if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
         const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
         if(id==='form'){

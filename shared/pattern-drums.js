@@ -78,7 +78,7 @@
         if(respectMute&&(s.muted?.[voiceIndex]||s.solo!==undefined&&s.solo!==null&&s.solo!==voiceIndex))return;
         events.push({voice:voiceIndex,at:(cycle*packet.lengthBeats+eventBeat(packet,note))*seconds,
           duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*seconds,
-          velocity:note.velocity,pitch:note.pitch-voice.pitch});
+          velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})});
       });
       return{events,durationSeconds:packet.lengthBeats*repetitions*seconds,lengthBeats:packet.lengthBeats,name:packet.name,tempo:bpm};
     }
@@ -86,6 +86,10 @@
       if(s.musicLabPattern){
         const packet=schema().normalize(s.musicLabPattern.pattern),map=validateMap(packet,s.musicLabPattern.voiceMap,s),available=voicesFor(s),used=new Set(Object.values(map));
         return schema().normalize({...packet,sourceApp:id,kind:'drums',voices:available.filter(v=>used.has(v.id)),notes:packet.notes.map(note=>({...note,voice:map[note.voice]}))});
+      }
+      if (typeof native().getSequencerPattern === 'function') {
+        const request = { ...options }; if (request.scope === 'sequence') delete request.scope;
+        return schema().normalize(native().getSequencerPattern(request));
       }
       const all=voicesFor(s), notes=[], selected=Number(options.voice??0), scope=options.scope||'pattern';
       let lengthBeats=4, counter=0;
@@ -160,7 +164,7 @@
           if(when<current-.03)continue;
           const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
-          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern'});
+          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern',...(note.locks?{locks:clone(note.locks)}:{})});
         }
         const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
@@ -169,9 +173,12 @@
     }
     const adapter={
       app:id,
-      get patternExport(){return{scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
+      get patternExport(){return typeof native().getSequencerPattern === 'function'
+        ? {scopes:[{id:'sequence',label:'Current sequence'},{id:'pattern',label:'Current pattern'},{id:'chain',label:'Complete chain'},{id:'voice',label:'Selected voice pattern'}],defaultScope:'sequence'}
+        : {scopes:[{id:'pattern',label:id==='spool'&&viewState().sequenceMode!=='pattern'?'Deck arrangement':'Current pattern'}],defaultScope:'pattern'};},
       get patternImport(){const s=viewState();return{targets:[{id:'current',name:'Received pattern',occupied:!!s.musicLabPattern||packetFromNative(s).notes.length>0}],voices:voicesFor(s),mode:id==='spool'&&s.sequenceMode!=='pattern'?'decks':'drums',description:id==='spool'?'Exact notes trigger four tape decks. Each deck is monophonic; overlapping notes need separate decks. Received patterns keep all timing and play from Play.':'Received patterns keep exact notes, velocity and timing. Drum voices retain their natural decay; Play uses the received part until Use native sequence.'};},
       get notes(){return{voices:voicesFor(viewState()),polyphonic:true,pitched:true,scheduledCancel:true};},
+      get nativeSequenceLoop(){return viewState().musicLabPattern ? true : native().sequenceLoop !== false;},
       validatePattern({pattern,voiceMap}={}){const s=viewState(),packet=schema().normalize(pattern),map=validateMap(packet,voiceMap,s);validateNotes(packet,map,s);return true;},
       exportPattern(options={}){return packetFromNative(viewState(),options);},
       async importPattern({pattern,options={},signal}={}){
@@ -188,6 +195,10 @@
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
         const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        if (note.locks !== undefined) { const locks = schema().normalizeLocks(note.locks); if (Object.keys(locks).length) options.locks = locks; }
+        // Public app snapshots are copies. Preserve lane identity separately
+        // so a hosted modal voice keeps the same polyphony budget on each hit.
+        if(id==='grain'||id==='tine')options.voiceKey='voice-'+index;
         if(options.pitch<-48||options.pitch>48)throw new Error('Note exceeds the native four-octave transpose range.');
         if(id==='form')return native().scheduleNativeNote(index,note.when,options);
         return audio.scheduleNativeNote(id==='grain'||id==='tine'?s.tracks[index]:index,note.when,options);
@@ -199,7 +210,7 @@
         if(!Number.isFinite(bpm)||bpm<5||bpm>1920||!Number.isFinite(tailSeconds)||tailSeconds<0||tailSeconds>15)throw new Error('Invalid pattern render tempo or tail.');
         const seconds=packet.lengthBeats*60/bpm;if(seconds+tailSeconds>120)throw new Error('Split this part into patterns of no more than 120 seconds including the tail.');
         const map=explicitMap?validateMap(packet,explicitMap,s):packet.voices.every(voice=>voicesFor(s).some(target=>target.id===voice.id))?nativeMap(packet,s):s.musicLabPattern?validateMap(packet,s.musicLabPattern.voiceMap,s):nativeMap(packet,s);validateNotes(packet,map,s);const rng=random(packet.seed||0x5a17c0de),available=voicesFor(s);
-        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch};});
+        const events=id==='form'?formOverlayEvents({...s,musicLabPattern:{pattern:packet,voiceMap:map}},bpm,1,false).events:packet.notes.filter(note=>rng()<(note.probability??1)).map(note=>{const voice=available.find(v=>v.id===map[note.voice]);return{voice:available.indexOf(voice),at:eventBeat(packet,note)*60/bpm,duration:Math.min(note.duration,packet.lengthBeats-eventBeat(packet,note))*60/bpm,velocity:note.velocity,pitch:note.pitch-voice.pitch,...(note.locks?{locks:clone(note.locks)}:{})};});
         if(id==='grain'||id==='tine')s.bpm=bpm;else s.tempo=bpm;
         const options={durationSeconds:seconds,tailSeconds,signal,tempo:bpm};let result;
         if(id==='form'){

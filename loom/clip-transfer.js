@@ -17,10 +17,9 @@
     if (selectedSeconds > limit + 1e-9) throw new Error('This clip lasts ' + selectedSeconds.toFixed(2) + ' seconds. The destination accepts up to ' + limit + ' seconds. Shorten the clip before sending it.');
     const sourceStart = clamp(clip.sourceStart, 0, sourceDuration, 0), sourceEnd = clamp(clip.sourceEnd, sourceStart, sourceDuration, sourceDuration), span = sourceEnd - sourceStart;
     if (span <= 0) throw new Error('The selected source region is empty.');
-    const sourceOffset = clamp(clip.sourceOffset, 0, 120, 0), rate = clamp(clip.rate, .125, 8, 1), reverse = clip.reverse === true, loop = clip.loop === true;
-    const level = clamp(clip.gain, 0, 4, 1), minimumFade = .003 / secondsPerBeat;
-    const fadeIn = Math.min(length * .5, Math.max(minimumFade, clamp(clip.fadeIn, 0, 32, 0)));
-    const fadeOut = Math.min(length * .5, Math.max(minimumFade, clamp(clip.fadeOut, 0, 32, 0)));
+    const playback = window.LoomClipPlayback;
+    if (!playback) throw new Error('The GALLEY clip renderer is unavailable.');
+    const compiled = playback.compile(clip, decodedAsset), pair = [0, 0];
     const frames = Math.max(2, Math.round(selectedSeconds * sampleRate)), pcm = new Float32Array(frames * 2);
     const start = Number(clip.start) || 0, advance = clamp(tempo, 40, 240, 120) / 60 / sampleRate;
     let beat = start + fromSeconds / secondsPerBeat;
@@ -28,21 +27,10 @@
       cancelled(signal);
       const end = Math.min(frames, from + 32768);
       for (let frame = from; frame < end; frame++, beat += advance) {
-        const localBeat = beat - start;
-        if (localBeat >= length) continue;
-        let offset = localBeat * secondsPerBeat * rate + sourceOffset;
-        if (loop) offset %= span;
-        else if (offset >= span) continue;
-        const position = (reverse ? sourceEnd - 1 / sourceRate - offset : sourceStart + offset) * sourceRate;
-        if (position < 0 || position >= left.length) continue;
-        const index = Math.floor(position), fraction = position - index;
-        let gain = level * Math.min(1, localBeat / fadeIn, (length - localBeat) / fadeOut);
-        if(fromSeconds>0||toSeconds<seconds)gain*=Math.min(1,frame/sampleRate/.003,(selectedSeconds-frame/sampleRate)/.003);
-        if (!loop) gain *= Math.min(1, offset / .003, (span - offset) / .003);
-        for (let channel = 0; channel < 2; channel++) {
-          const data = channel ? right : left;
-          pcm[frame * 2 + channel] = ((data[index] || 0) * (1 - fraction) + (data[Math.min(index + 1, data.length - 1)] || 0) * fraction) * gain;
-        }
+        playback.read(compiled, beat, secondsPerBeat, pair);
+        const regionFade = fromSeconds > 0 || toSeconds < seconds ? Math.min(1, frame / sampleRate / .003, (selectedSeconds - frame / sampleRate) / .003) : 1;
+        pcm[frame * 2] = pair[0] * regionFade;
+        pcm[frame * 2 + 1] = pair[1] * regionFade;
       }
       if (end < frames) await pause();
     }

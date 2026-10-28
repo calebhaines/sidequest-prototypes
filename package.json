@@ -15,6 +15,8 @@
     "second-pour:build": "npm --prefix second-pour run build && node scripts/sync-second-pour.mjs",
     "second-pour:sync": "node scripts/sync-second-pour.mjs",
     "check:loom": "node loom/checks.cjs",
+    "check:loom-playback": "node loom/clip-loop-continuity-checks.cjs",
+    "check:loom-playback-browser": "node loom/host-node-lifecycle-checks.cjs && node loom/clatter-polyphony-checks.cjs && node tine/cancellation-checks.cjs",
     "check:loom-navigation": "node loom/host-navigation-checks.cjs",
     "picnic:build": "python3 picnic/build.py",
     "check:picnic": "node picnic/sequence-checks.cjs && node picnic/audio-engine-checks.cjs",
@@ -38,6 +40,9 @@
     "check:fable-audio": "node fable/engine-checks.cjs",
     "check:fable-zip": "node fable/zip-checks.cjs",
     "check:patterns": "node shared/pattern-checks.cjs",
+    "check:percussion": "node shared/pattern-lock-checks.cjs && node grain/chain-lock-checks.cjs && node grain/resonance-lock-checks.cjs && node tine/chain-lock-checks.cjs && npm --prefix form run test:chain-locks && node batter/sequencing-checks.cjs",
+    "check:percussion-browser": "node shared/percussion-browser-checks.cjs",
+    "check:percussion-integration": "node loom/percussion-integration-checks.cjs",
     "check:patterns-drums": "node shared/pattern-drums-checks.cjs",
     "check:sequencing-adapters": "node shared/sequencing-adapter-checks.cjs",
     "check:sequencing": "node shared/sequencing-adapter-checks.cjs && node bower/sequence-checks.cjs && node mire/sequence-checks.cjs && node ravel/sequence-checks.cjs && node haze/sequence-checks.cjs && node spool/sequence-checks.cjs && node roux/engine-checks.cjs && node proof/engine-checks.cjs && node marinade/engine-checks.cjs",
@@ -70,7 +75,9 @@
     "check:loom-tonal-print": "node loom/tonal-print-timing-checks.cjs",
     "check:loom-tonal-live": "node loom/tonal-live-timing-checks.cjs",
     "check:bower-native-timing": "node bower/native-pattern-timing-checks.cjs",
-    "check:loom-tonal-clocks": "node loom/transport-count-in-checks.cjs && node loom/tonal-fallback-clock-checks.cjs"
+    "check:loom-tonal-clocks": "node loom/transport-count-in-checks.cjs && node loom/tonal-fallback-clock-checks.cjs",
+    "check:broiler": "node loom/broiler-pedal-checks.cjs && node loom/broiler-workshop-checks.cjs && node loom/broiler-project-checks.cjs && node loom/amp-checks.cjs",
+    "check:broiler-browser": "node loom/broiler-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

@@ -17,6 +17,7 @@ import {
 import { createHybridPresets } from "./hybrid-presets";
 import { createFactoryPresets, FACTORY_KITS } from "./factory-sounds";
 import { eventsForStep, normalizeStepDetail } from "./sequencing";
+import { normalizeSoundLocks, type SoundLocks } from "./sound-locks";
 export { FACTORY_KITS } from "./factory-sounds";
 export {
   createDefaultArchitecture,
@@ -734,6 +735,39 @@ export function renderSound(
   return output;
 }
 
+/** A strike receives its own patch; the saved burner never changes. */
+export function applySoundLocks(input: SoundParams, value?: SoundLocks): SoundParams {
+  const locks = normalizeSoundLocks(value, true), p = cloneParams(input);
+  if (locks.pan !== undefined) p.mix.pan = locks.pan;
+  if (locks.level !== undefined) p.mix.volume = locks.level;
+  if (locks.drive !== undefined) p.effects.drive = locks.drive;
+  if (locks.tone !== undefined) p.noise.filter = 40 * (20000 / 40) ** locks.tone;
+  if (locks.decay !== undefined) {
+    p.tone.decay = locks.decay * 1000; p.noise.decay = locks.decay * 1000;
+    if (p.architecture) p.architecture.layers.forEach(layer => { layer.envelope.decay = locks.decay! * 1000; });
+  }
+  return p;
+}
+/** Match a per-hit Web Audio low-pass after pitch playback, not before it. */
+function lockedFilterSamples(samples: Float32Array, sampleRate: number, pitch: number, locks?: SoundLocks): { samples: Float32Array; rate: number } {
+  const rate = 2 ** (clamp(pitch, -48, 48) / 12);
+  if (locks?.cutoff === undefined && locks?.resonance === undefined) return { samples, rate };
+  const frames = Math.ceil(samples.length / rate), output = new Float32Array(frames);
+  const frequency = clamp(locks.cutoff ?? 20000, 20, sampleRate * .45), q = locks.resonance ?? Math.SQRT1_2;
+  const w = TAU * frequency / sampleRate, cosine = Math.cos(w), alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha;
+  const b0 = (1 - cosine) / 2 / a0, b1 = (1 - cosine) / a0, b2 = b0, a1 = -2 * cosine / a0, a2 = (1 - alpha) / a0;
+  let z1 = 0, z2 = 0;
+  const fade = Math.min(Math.round(sampleRate * .008), Math.floor(frames / 2));
+  for (let frame = 0; frame < frames; frame++) {
+    const position = frame * rate, at = Math.floor(position), fraction = position - at;
+    const x = (samples[at] ?? 0) * (1 - fraction) + (samples[at + 1] ?? 0) * fraction;
+    const y = clamp(b0 * x + z1, -8, 8);
+    z1 = b1 * x - a1 * y + z2; z2 = b2 * x - a2 * y;
+    output[frame] = y * Math.min(1, (frames - frame - 1) / Math.max(1, fade));
+  }
+  return { samples: output, rate: 1 };
+}
+
 export function waveformPeaks(samples: Float32Array, count = 96): number[] {
   count = Math.floor(clamp(finite(count, 96), 1, 8192));
   const peaks = new Array<number>(count).fill(0);
@@ -877,6 +911,7 @@ export function renderPattern(
       track,
       samples: renderSound(track.params, sampleRate),
       variations: new Map<number, Float32Array>(),
+      strikes: new Map<string, { samples: Float32Array; rate: number }>(),
       hits: 0,
     }));
   const sequence = tracks.map(track => Array.from({ length: stepsPerBar }, (_, step) =>
@@ -889,7 +924,7 @@ export function renderPattern(
       velocity: track.velocities?.[position] ?? 1,
     }, position);
   }));
-  const tail =
+  let tail =
     options.tail === false
       ? 0
       : Math.max(
@@ -901,6 +936,15 @@ export function renderPattern(
             return samples.length / sampleRate / 2 ** (lowestPitch / 12);
           }),
         );
+  if (options.tail !== false) tracks.forEach((track, voice) => {
+    const durations = new Map<number, number>();
+    details[voice].forEach((detail, step) => {
+      if (!sequence[voice][step] || detail.velocity === 0 || detail.probability === 0 || detail.locks?.decay === undefined) return;
+      let duration = durations.get(detail.locks.decay);
+      if (duration === undefined) { duration = renderSound(applySoundLocks(track.params, detail.locks), sampleRate).length / sampleRate; durations.set(detail.locks.decay, duration); }
+      tail = Math.max(tail, duration / 2 ** (detail.pitch / 12));
+    });
+  });
   const length = Math.ceil((stepsPerBar * bars * stepTime + tail) * sampleRate);
   const left = new Float32Array(length),
     right = new Float32Array(length);
@@ -909,13 +953,15 @@ export function renderPattern(
     const events = eventsForStep(sequence, details, position, Math.floor(step / stepsPerBar), bpm, swing * 100);
     for (const event of events) {
       const renderedVoice = rendered[event.voice];
-      const { track, samples, variations } = renderedVoice;
-      const pan = clamp(finite(track.params.mix.pan, 0), -1, 1);
+      const { track, samples, variations, strikes } = renderedVoice;
+      const sound = event.locks ? applySoundLocks(track.params, event.locks) : track.params;
+      const pan = clamp(finite(sound.mix.pan, 0), -1, 1);
       const leftGain = Math.cos(((pan + 1) * Math.PI) / 4);
       const rightGain = Math.sin(((pan + 1) * Math.PI) / 4);
       let hitSamples = samples;
+      let variation = 0;
       if (hasHitRandom(track.params)) {
-        const variation = renderedVoice.hits++ % RANDOM_VARIATIONS;
+        variation = renderedVoice.hits++ % RANDOM_VARIATIONS;
         if (variation > 0) {
           if (!variations.has(variation))
             variations.set(
@@ -925,8 +971,18 @@ export function renderPattern(
           hitSamples = variations.get(variation)!;
         }
       }
+      let rate = 2 ** (event.pitch / 12);
+      if (event.locks) {
+        const key = JSON.stringify([event.locks, variation, event.pitch]);
+        let strike = strikes.get(key);
+        if (!strike) {
+          strike = lockedFilterSamples(renderSound(hitVariation(sound, variation), sampleRate), sampleRate, event.pitch, event.locks);
+          if (strikes.size >= 64) strikes.delete(strikes.keys().next().value!);
+          strikes.set(key, strike);
+        }
+        hitSamples = strike.samples; rate = strike.rate;
+      }
       const offset = Math.max(0, Math.round((step * stepTime + event.offset) * sampleRate));
-      const rate = 2 ** (event.pitch / 12);
       const frames = Math.min(length - offset, Math.ceil(hitSamples.length / rate));
       for (let i = 0; i < frames; i++) {
         const source = i * rate, at = Math.floor(source), blend = source - at;
@@ -947,7 +1003,7 @@ export function renderPattern(
   return [left, right];
 }
 
-export type NativePatternEvent = { voice: number; at: number; velocity: number; pitch?: number; duration?: number };
+export type NativePatternEvent = { voice: number; at: number; velocity: number; pitch?: number; duration?: number; locks?: SoundLocks };
 /** Exact imported note clips use the same sound renderer as native sequencer hits. */
 export function renderExactPatternEvents(
   sounds: SoundParams[],
@@ -966,21 +1022,23 @@ export function renderExactPatternEvents(
     throw new Error("Invalid HOTPLATE exact pattern render bounds.");
   const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
   const left = new Float32Array(frames), right = new Float32Array(frames);
-  const cache = new Map<string, Float32Array>();
+  const cache = new Map<string, { samples: Float32Array; rate: number }>();
   for (let index = 0; index < events.length; index++) {
-    const event = events[index], sound = sounds[event.voice];
-    if (!Number.isInteger(event.voice) || !sound || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds ||
+    const event = events[index], base = sounds[event.voice];
+    if (!Number.isInteger(event.voice) || !base || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds ||
         !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1 ||
         (event.pitch !== undefined && !Number.isFinite(event.pitch)))
       throw new Error("Invalid HOTPLATE exact scheduled note.");
+    const locks = normalizeSoundLocks(event.locks, true), sound = Object.keys(locks).length ? applySoundLocks(base, locks) : base;
     const variation = hasHitRandom(sound) ? index % RANDOM_VARIATIONS : 0;
-    const key = `${event.voice}:${variation}`;
-    let samples = cache.get(key);
-    if (!samples) {
-      samples = renderSound(hitVariation(sound, variation), sampleRate);
-      cache.set(key, samples);
+    const key = JSON.stringify([event.voice, variation, event.pitch ?? 0, locks]);
+    let strike = cache.get(key);
+    if (!strike) {
+      strike = lockedFilterSamples(renderSound(hitVariation(sound, variation), sampleRate), sampleRate, event.pitch ?? 0, locks);
+      if (cache.size >= 64) cache.delete(cache.keys().next().value!);
+      cache.set(key, strike);
     }
-    const rate = 2 ** (clamp(event.pitch ?? 0, -48, 48) / 12);
+    const { samples, rate } = strike;
     const offset = Math.round(event.at * sampleRate);
     const pan = clamp(finite(sound.mix.pan, 0), -1, 1);
     const gain = event.velocity * master;
@@ -1011,20 +1069,26 @@ export async function renderNativeEvents(
   const seconds = options.durationSeconds, tail = options.tailSeconds ?? 3;
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 600 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192)
     throw new Error("Invalid FORM pattern render bounds.");
-  const snapshot = sounds.map(cloneParams), sampleRate = 48000;
+  const master = options.master ?? .72;
+  const snapshot = sounds.map(cloneParams), eventSnapshot = events.map(event => ({ ...event, ...(event.locks ? { locks: normalizeSoundLocks(event.locks, true) } : {}) })), sampleRate = 48000;
   const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
-  const pcm = new Float32Array(frames * 2), cache = new Map<string, Float32Array>();
-  for (let index = 0; index < events.length; index++) {
-    const event = events[index], sound = snapshot[event.voice];
-    if (!sound || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1)
+  const pcm = new Float32Array(frames * 2), cache = new Map<string, { samples: Float32Array; rate: number }>();
+  for (let index = 0; index < eventSnapshot.length; index++) {
+    const event = eventSnapshot[index], base = snapshot[event.voice];
+    if (!base || !Number.isFinite(event.at) || event.at < 0 || event.at >= seconds || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1)
       throw new Error("Invalid FORM scheduled note.");
+    const locks = normalizeSoundLocks(event.locks, true), sound = Object.keys(locks).length ? applySoundLocks(base, locks) : base;
     const variation = hasHitRandom(sound) ? index % RANDOM_VARIATIONS : 0;
-    const key = `${event.voice}:${variation}`;
-    let samples = cache.get(key);
-    if (!samples) { samples = renderSound(hitVariation(sound, variation), sampleRate); cache.set(key, samples); }
-    const rate = Math.pow(2, clamp(finite(event.pitch ?? 0, 0), -48, 48) / 12);
+    const key = JSON.stringify([event.voice, variation, event.pitch ?? 0, locks]);
+    let strike = cache.get(key);
+    if (!strike) {
+      strike = lockedFilterSamples(renderSound(hitVariation(sound, variation), sampleRate), sampleRate, event.pitch ?? 0, locks);
+      if (cache.size >= 64) cache.delete(cache.keys().next().value!);
+      cache.set(key, strike);
+    }
+    const { samples, rate } = strike;
     const offset = Math.round(event.at * sampleRate), count = Math.min(frames - offset, Math.ceil(samples.length / rate));
-    const pan = clamp(sound.mix.pan, -1, 1), gain = event.velocity * (options.master ?? .72);
+    const pan = clamp(sound.mix.pan, -1, 1), gain = event.velocity * master;
     const left = Math.cos((pan + 1) * Math.PI / 4) * gain, right = Math.sin((pan + 1) * Math.PI / 4) * gain;
     for (let frame = 0; frame < count; frame++) {
       const position = frame * rate, at = Math.floor(position), mix = position - at;
@@ -1129,18 +1193,19 @@ export class AudioEngine {
     }
   }
 
-  async play(params: SoundParams, velocity = 1, when?: number, pitch = 0): Promise<void> {
+  async play(params: SoundParams, velocity = 1, when?: number, pitch = 0, locks?: SoundLocks): Promise<void> {
     const epoch = this.epoch;
     await this.resume();
     if (epoch !== this.epoch || !this.context || !this.master) return;
-    this.schedulePrepared(params, velocity, when, pitch);
+    this.schedulePrepared(params, velocity, when, pitch, "native", locks);
   }
 
-  schedulePrepared(params: SoundParams, velocity = 1, when?: number, pitch = 0, scope = "native"): void {
+  schedulePrepared(params: SoundParams, velocity = 1, when?: number, pitch = 0, scope = "native", inputLocks?: SoundLocks): void {
     if (!this.context || !this.master) throw new Error("Prepare FORM before scheduling notes.");
     const at = Math.max(this.context.currentTime, when ?? this.context.currentTime);
     if (at >= (this.sourceCuts.get(scope) ?? Infinity)) return;
-    let p = sanitizeParams(params);
+    const locks = normalizeSoundLocks(inputLocks, true);
+    let p = sanitizeParams(Object.keys(locks).length ? applySoundLocks(params, locks) : params);
     if (hasHitRandom(p))
       p = hitVariation(p, Math.floor(Math.random() * RANDOM_VARIATIONS));
     const buffer = this.cachedBuffer(p);
@@ -1151,7 +1216,17 @@ export class AudioEngine {
     gain.gain.value = clamp(finite(velocity, 1), 0, 1);
     const pan = this.context.createStereoPanner();
     pan.pan.value = p.mix.pan;
-    source.connect(gain).connect(pan).connect(this.master);
+    let filter: BiquadFilterNode | undefined;
+    if (locks.cutoff !== undefined || locks.resonance !== undefined) {
+      filter = this.context.createBiquadFilter(); filter.type = "lowpass";
+      filter.frequency.value = clamp(locks.cutoff ?? 20000, 20, this.context.sampleRate * .45);
+      filter.Q.value = 20 * Math.log10(locks.resonance ?? Math.SQRT1_2);
+      source.connect(filter).connect(gain);
+      const duration = buffer.duration / source.playbackRate.value, fade = Math.min(.008, duration / 2);
+      gain.gain.setValueAtTime(gain.gain.value, at + duration - fade);
+      gain.gain.linearRampToValueAtTime(0, at + duration);
+    } else source.connect(gain);
+    gain.connect(pan).connect(this.master);
     this.sources.add(source);
     this.sourceNotes.set(source, { scope, gain, start: at, velocity: gain.gain.value });
     source.onended = () => {
@@ -1160,6 +1235,7 @@ export class AudioEngine {
       source.disconnect();
       gain.disconnect();
       pan.disconnect();
+      filter?.disconnect();
     };
     source.start(
       Math.max(this.context.currentTime, when ?? this.context.currentTime),

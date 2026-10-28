@@ -232,5 +232,50 @@
     }
   }
 
-  window.GrainSynth = Object.freeze({ version: VERSION, descriptors, enums, defaults, ensureTrack, validate, toNormalized, fromNormalized, format });
+  // Portable locks use physical units. Every hit gets its own sound snapshot;
+  // no AudioParam or subsequent hit inherits an override from a previous hit.
+  const lockRanges = Object.freeze({ cutoff: [20, 20000], resonance: [.1, 20], decay: [.005, 10], pan: [-1, 1], level: [0, 1], tone: [0, 1], drive: [0, 1] });
+  function normalizeLocks(value) {
+    if (!isRecord(value)) throw new Error('Step overrides must be an object.');
+    const result = {};
+    for (const key of Object.keys(value)) {
+      const range = lockRanges[key], number = value[key];
+      if (!Object.prototype.hasOwnProperty.call(lockRanges, key) || typeof number !== 'number' || !Number.isFinite(number) || number < range[0] || number > range[1]) throw new Error('Invalid step override: ' + key + '.');
+      result[key] = number;
+    }
+    return result;
+  }
+  function applyLocks(track, locks) {
+    if (locks === undefined) return track;
+    const values = normalizeLocks(locks);
+    if (!Object.keys(values).length) return track;
+    const result = JSON.parse(JSON.stringify(track));
+    const synth = ensureTrack(result);
+    for (const [key, value] of Object.entries(values)) {
+      if (['pan', 'level', 'tone'].includes(key)) result[key] = value;
+      else {
+        const descriptor = descriptors.noise.find(item => item.key === key);
+        synth.noise[key] = clamp(value, descriptor.min, descriptor.max);
+      }
+    }
+    return result;
+  }
+  function validateChain(chain) {
+    if (!isRecord(chain) || Object.keys(chain).some(key => !['enabled', 'loop', 'entries'].includes(key)) || typeof chain.enabled !== 'boolean' || typeof chain.loop !== 'boolean' || !Array.isArray(chain.entries) || chain.entries.length > 16) throw new Error('The project contains an invalid pattern chain.');
+    chain.entries.forEach(entry => {
+      if (!isRecord(entry) || Object.keys(entry).some(key => !['bank', 'repeats'].includes(key)) || !Number.isInteger(entry.bank) || entry.bank < 0 || entry.bank > 3 || !Number.isInteger(entry.repeats) || entry.repeats < 1 || entry.repeats > 16) throw new Error('Chain entries need a bank A–D and 1–16 repeats.');
+    });
+    if (chain.enabled && !chain.entries.length) throw new Error('Add a pattern before enabling its chain.');
+    return chain;
+  }
+  window.GrainSynth = Object.freeze({ version: VERSION, descriptors, enums, defaults, ensureTrack, validate, toNormalized, fromNormalized, format, lockRanges, normalizeLocks, applyLocks });
+  window.GrainSequence = Object.freeze({
+    emptyChain: () => ({ enabled: false, loop: true, entries: [] }),
+    emptyLocks: banks => banks.map(pattern => pattern.map(steps => steps.map(() => ({})))),
+    validateChain,
+    validateLocks(banks, locks) {
+      if (!Array.isArray(locks) || locks.length !== 4 || !locks.every((pattern, bank) => Array.isArray(pattern) && pattern.length === 8 && pattern.every((row, voice) => Array.isArray(row) && row.length === banks[bank][voice].length && Array.from(row).every(lock => { normalizeLocks(lock); return true; })))) throw new Error('The project contains invalid bank step overrides.');
+      return locks;
+    }
+  });
 }());

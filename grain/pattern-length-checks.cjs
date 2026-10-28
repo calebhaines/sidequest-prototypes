@@ -36,6 +36,13 @@ function compareWavs(actual, expected, tolerance) {
   assert(maximum <= tolerance, 'Legacy native audio differs by ' + maximum + ' PCM units');
   return maximum;
 }
+function withoutNewDefaults(state, id) {
+  if (id === 'tine') {
+    assert.deepEqual(state.chain, { enabled: false, loop: true, entries: [] }, 'Legacy CLATTER starts with its new chain disabled');
+    delete state.chain;
+  }
+  return state;
+}
 (async () => {
   const server = http.createServer((request, response) => {
     const html = pages.get(request.url);
@@ -58,7 +65,7 @@ function compareWavs(actual, expected, tolerance) {
         await old.locator('#preset-select').selectOption(String(preset)); await page.locator('#preset-select').selectOption(String(preset));
         const expected = await old.evaluate(name => window[name].getState(), facade);
         const actual = await page.evaluate(name => window[name].getState(), facade);
-        assert.equal(actual.stepCount, 16); delete actual.stepCount; assert.deepEqual(actual, expected);
+        assert.equal(actual.stepCount, 16); delete actual.stepCount; assert.deepEqual(withoutNewDefaults(actual, id), expected);
         const render = name => window[name].exportAudio({ bars: 1, tailSeconds: .2 }).then(async result => {
           const bytes = new Uint8Array(await result.blob.arrayBuffer()); let encoded = '';
           for (let start = 0; start < bytes.length; start += 8192) encoded += String.fromCharCode(...bytes.subarray(start, start + 8192));
@@ -72,7 +79,7 @@ function compareWavs(actual, expected, tolerance) {
         try { document.querySelector('#random-button').click(); return window[name].getState(); } finally { Math.random = original; }
       };
       const oldGroove = await old.evaluate(seededGroove, facade), newGroove = await page.evaluate(seededGroove, facade);
-      delete newGroove.stepCount; assert.deepEqual(newGroove, oldGroove, '16-step groove generation retains the original RNG order');
+      delete newGroove.stepCount; assert.deepEqual(withoutNewDefaults(newGroove, id), oldGroove, '16-step groove generation retains the original RNG order');
       await page.locator('#preset-select').selectOption('0');
       await old.locator('#preset-select').selectOption('0');
       const legacy = await old.evaluate(name => window[name].getProject(), facade);
@@ -83,7 +90,7 @@ function compareWavs(actual, expected, tolerance) {
       });
       await page.evaluate(({ name, project }) => window[name].loadState(project), { name: facade, project: legacyOne });
       const upgraded = await page.evaluate(name => window[name].getState(), facade);
-      delete upgraded.stepCount; assert.deepEqual(upgraded, legacy.state, 'Version1 migration retains the original16-step sound and hits');
+      delete upgraded.stepCount; assert.deepEqual(withoutNewDefaults(upgraded, id), legacy.state, 'Version1 migration retains the original16-step sound and hits');
       assert.equal(await page.locator('#sequence-length').inputValue(), '16');
       assert(await page.locator('#sequence-page').isHidden());
       assert.equal(await page.locator('#track-rows .step').count(), 128);

@@ -51,6 +51,7 @@ import {
   renderPattern,
   renderNativeEvents,
   renderExactPatternEvents,
+  applySoundLocks,
   FACTORY_KITS,
   buildFactoryKit,
   sanitizeParams,
@@ -68,6 +69,8 @@ import LayerLab from "./LayerLab";
 import BurnerPanel from "./BurnerPanel";
 import HotplateSequencer, { LANE_COLORS, type SequenceProject } from "./HotplateSequencer";
 import { eventsForStep } from "./sequencing";
+import { syncPatternState, validPatternState, validStepDetail, chainLength, sequenceRuns, sequencerEvents, sequencerPattern } from "./pattern-chain";
+import { normalizeSoundLocks, type SoundLocks } from "./sound-locks";
 import { FACTORY_GROOVES } from "./grooves";
 import { Knob, MiniWave, WaveformDisplay, EnvelopeDisplay } from "./Visuals";
 import ExportDialog from "./ExportDialog";
@@ -190,7 +193,8 @@ function validProject(input: unknown): input is Project {
         row.length === p.steps[0].length &&
         row.every((v) => typeof v === "boolean"),
     ) &&
-    (p.stepDetails === undefined || (Array.isArray(p.stepDetails) && p.stepDetails.length === 8 && p.stepDetails.every((row, voice) => Array.isArray(row) && row.length === p.steps[voice].length && row.every(detail => !!detail && typeof detail === "object" && Number.isFinite(detail.velocity) && detail.velocity >= 0 && detail.velocity <= 1 && Number.isFinite(detail.probability) && detail.probability >= 0 && detail.probability <= 1 && Number.isInteger(detail.ratchet) && detail.ratchet >= 1 && detail.ratchet <= 4 && Number.isFinite(detail.timing) && detail.timing >= -.45 && detail.timing <= .45 && Number.isInteger(detail.pitch) && detail.pitch >= -24 && detail.pitch <= 24)))) &&
+    (p.stepDetails === undefined || (Array.isArray(p.stepDetails) && p.stepDetails.length === 8 && p.stepDetails.every((row, voice) => Array.isArray(row) && row.length === p.steps[voice].length && row.every(validStepDetail)))) &&
+    validPatternState(p) &&
     (p.grooveId === undefined || typeof p.grooveId === "string" && p.grooveId.length <= 80) &&
     Array.isArray(p.muted) &&
     p.muted.length === 8 &&
@@ -235,7 +239,7 @@ function initialProject(): Project {
     STORAGE,
     readStorage<Project | null>("form-studio-v1", null),
   );
-  return saved && validProject(saved)
+  return syncPatternState(saved && validProject(saved)
     ? { ...saved, sounds: saved.sounds.map(migrateSound) }
     : {
         name: "Opening service",
@@ -246,9 +250,9 @@ function initialProject(): Project {
         muted: Array(8).fill(false),
         bpm: FACTORY_GROOVES[0].tempo,
         swing: FACTORY_GROOVES[0].swing,
-      };
+      });
 }
-type PatternAudioOptions = { sampleRate: number; repetitions?: number; tail?: boolean; tailSeconds?: number };
+type PatternAudioOptions = { sampleRate: number; repetitions?: number; tail?: boolean; tailSeconds?: number; scope?: string };
 function renderProjectPattern(p: Project, solo: number | null, options: PatternAudioOptions): { channels: Float32Array[]; bars: number } {
   const sampleRate = options.sampleRate, repetitions = options.repetitions ?? 1;
   let channels: Float32Array[], bars = repetitions * p.steps[0].length / 16;
@@ -258,14 +262,15 @@ function renderProjectPattern(p: Project, solo: number | null, options: PatternA
     const source = imported.getImportedPatternEvents({ state: { ...p, solo }, tempo: p.bpm, repetitions });
     let tailSeconds = options.tailSeconds ?? 0;
     if (options.tailSeconds === undefined && options.tail) {
-      const durations = new Map<number, number>();
+      const durations = new Map<string, number>();
       let finalFrame = Math.ceil(source.durationSeconds * sampleRate);
       for (const event of source.events) {
         if (event.velocity <= 0) continue;
-        let frames = durations.get(event.voice);
+        const durationKey = event.voice + ":" + (event.locks?.decay ?? "base");
+        let frames = durations.get(durationKey);
         if (frames === undefined) {
-          frames = renderSound(p.sounds[event.voice], sampleRate).length;
-          durations.set(event.voice, frames);
+          frames = renderSound(applySoundLocks(p.sounds[event.voice], event.locks), sampleRate).length;
+          durations.set(durationKey, frames);
         }
         const rate = 2 ** (Math.max(-48, Math.min(48, event.pitch ?? 0)) / 12);
         finalFrame = Math.max(finalFrame, Math.round(event.at * sampleRate) + Math.ceil(frames / rate));
@@ -275,6 +280,20 @@ function renderProjectPattern(p: Project, solo: number | null, options: PatternA
     }
     channels = renderExactPatternEvents(p.sounds, source.events, { sampleRate, durationSeconds: source.durationSeconds, tailSeconds, master: 1 });
     bars = source.lengthBeats * repetitions / 4;
+  } else if (options.scope === "chain" || options.scope === undefined && p.chain?.enabled) {
+    const source = sequencerEvents(p, { scope: options.scope, repetitions, solo });
+    if (source.durationSeconds > 120) throw new Error("This HOTPLATE chain exceeds 120 seconds. Reduce repeats or increase the tempo before exporting audio.");
+    if (source.events.length > 8192) throw new Error("This HOTPLATE chain has too many strikes to render. Reduce repeats or ratchets.");
+    let tailSeconds = options.tailSeconds ?? 0;
+    if (options.tailSeconds === undefined && options.tail) {
+      let end = source.durationSeconds; const durations = new Map<string, number>();
+      for (const event of source.events) { const key = event.voice + ":" + (event.locks?.decay ?? "base"); let duration = durations.get(key); if (duration === undefined) { duration = renderSound(applySoundLocks(p.sounds[event.voice], event.locks), sampleRate).length / sampleRate; durations.set(key, duration); } end = Math.max(end, event.at + duration / 2 ** (event.pitch / 12)); }
+      tailSeconds = Math.max(0, end - source.durationSeconds);
+      if (tailSeconds > 15) throw new Error(`These down-pitched notes need ${tailSeconds.toFixed(1)} seconds of decay after the chain. Full-tail export supports up to 15 seconds. Raise their pitch, or choose a shorter effect tail in the Samples panel.`);
+    }
+    if (source.durationSeconds + tailSeconds > 120) throw new Error("The HOTPLATE chain plus its effect tail exceeds 120 seconds. Shorten the chain or request a smaller tail.");
+    channels = renderExactPatternEvents(p.sounds, source.events, { durationSeconds: source.durationSeconds, sampleRate, tailSeconds, master: 1 });
+    bars = source.steps / 16;
   } else {
     channels = renderPattern(p.sounds.map((params, index) => ({ params, steps: p.steps[index], muted: p.muted[index] || (solo !== null && solo !== index), velocities: p.steps[index].map((_, step) => step % 4 === 0 ? 1 : .86), stepDetails: p.stepDetails?.[index] })), p.bpm, { sampleRate, swing: p.swing / 100, bars: repetitions, tail: options.tail === true || (options.tailSeconds ?? 0) > 0 });
     if (options.tailSeconds !== undefined) {
@@ -306,11 +325,11 @@ function reducer(state: History, action: HistoryAction): History {
       : state;
   }
   if (action.type === "load")
-    return { past: [], present: action.project!, future: [] };
+    return { past: [], present: syncPatternState(action.project!), future: [] };
   if (action.type === "change")
     return {
       past: action.gesture !== undefined && action.gesture === state.gesture ? state.past : [...state.past.slice(-49), state.present],
-      present: action.update(state.present),
+      present: syncPatternState(action.update(state.present)),
       future: [],
       gesture: action.gesture,
     };
@@ -419,7 +438,7 @@ export default function App() {
   const [recipeTempo, setRecipeTempo] = useState(true);
   const [fill, setFill] = useState(false);
   const [transportRevision, setTransportRevision] = useState(0);
-  const resumePosition = useRef({ step: 0, cycle: 0 });
+  const resumePosition = useRef({ step: 0, cycle: 0, run: 0, boundary: false });
   const transportRequest = useRef(0);
   const [scope, setScope] = useState<"waveform" | "spectrum">("waveform");
   const [zoom, setZoom] = useState(1);
@@ -428,6 +447,7 @@ export default function App() {
   const [burnerPulses, setBurnerPulses] = useState<number[]>(Array(8).fill(0));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
+  const [sequencePosition, setSequencePosition] = useState<{ bank: number; entry: number; repeat: number } | null>(null);
   const [modal, setModal] = useState<
     "library" | "projects" | "help" | "savePreset" | null
   >(null);
@@ -458,8 +478,8 @@ export default function App() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [solo, setSolo] = useState<number | null>(null);
   const engineRef = useRef<AudioEngine | null>(null);
-  const latest = useRef({ project, masterVolume, solo, selected, isPlaying, fill });
-  latest.current = { project, masterVolume, solo, selected, isPlaying, fill };
+  const latest = useRef({ project, masterVolume, solo, selected, isPlaying, fill, sequencePosition });
+  latest.current = { project, masterVolume, solo, selected, isPlaying, fill, sequencePosition };
   const padTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
@@ -491,15 +511,15 @@ export default function App() {
     if (latest.current.project.musicLabPattern) {
       transportRequest.current++;
       setIsPlaying(false);
-      resumePosition.current = { step: 0, cycle: 0 };
+      resumePosition.current = { step: 0, cycle: 0, run: 0, boundary: false };
       notify("Native grid restored. Undo returns the exact shared pattern.");
     }
     change(p => { const next = { ...update(p) }; delete next.musicLabPattern; return next; });
   }, [change, notify]);
   const stopTransport = useCallback(() => {
     transportRequest.current++; latest.current.isPlaying = false;
-    setIsPlaying(false); setFill(false); setCurrentStep(-1); setActiveBurners([]);
-    resumePosition.current = { step: 0, cycle: 0 };
+    setIsPlaying(false); setFill(false); setCurrentStep(-1); setSequencePosition(null); setActiveBurners([]);
+    resumePosition.current = { step: 0, cycle: 0, run: 0, boundary: false };
     engineRef.current?.stopAll();
     (window as typeof window & { MusicLabPatternInstrument?: { stopPattern: () => void } }).MusicLabPatternInstrument?.stopPattern();
   }, []);
@@ -507,7 +527,7 @@ export default function App() {
     transportRequest.current++;
     engineRef.current?.stopAll();
     (window as typeof window & { MusicLabPatternInstrument?: { stopPattern: () => void } }).MusicLabPatternInstrument?.stopPattern();
-    resumePosition.current = { step: 0, cycle: 0 }; setCurrentStep(-1); setIsPlaying(true); setTransportRevision(value => value + 1);
+    resumePosition.current = { step: 0, cycle: 0, run: 0, boundary: false }; setCurrentStep(-1); setIsPlaying(true); setTransportRevision(value => value + 1);
   }, []);
   const replaceSelectedSound = useCallback((replacement: SoundParams) => {
     change(p => ({ ...p, sounds: p.sounds.map((voice, index) => index === selected ? replacement : voice) }));
@@ -660,11 +680,13 @@ export default function App() {
   useEffect(() => {
     if (!isPlaying) return;
     const audio = engine();
-    let cancelled = false,
-      timer: ReturnType<typeof setInterval> | undefined;
-    let nextStep = resumePosition.current.step % latest.current.project.steps[0].length,
-      cycle = resumePosition.current.cycle,
-      nextTime = 0;
+    let cancelled = false, endedNaturally = false, schedulingDone = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const initial = latest.current.project;
+    let runs = sequenceRuns(initial), runIndex = Math.min(resumePosition.current.run, runs.length - 1);
+    let active = runs[runIndex], chained = initial.chain?.enabled === true;
+    let nextStep = resumePosition.current.step % active.pattern.length, cycle = resumePosition.current.cycle;
+    let pendingBoundary = resumePosition.current.boundary, activeBpm = initial.bpm, activeSwing = initial.swing, nextTime = 0;
     const indicators = new Set<ReturnType<typeof setTimeout>>();
     const activityVersion = Array(8).fill(0);
     const activityTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -672,79 +694,95 @@ export default function App() {
     const clearActivity = () => { activityEnabled = false; for (let voice = 0; voice < 8; voice++) activityVersion[voice]++; for (const timer of activityTimers) { clearTimeout(timer); indicators.delete(timer); } activityTimers.clear(); setActiveBurners([]); };
     const resumeActivity = () => { activityEnabled = true; };
     window.addEventListener("blur", clearActivity); window.addEventListener("focus", resumeActivity);
-    Promise.resolve(audio.preload(latest.current.project.sounds))
-      .then(() => {
-        if (cancelled) return;
-        const patternInstrument = (window as typeof window & { MusicLabPatternInstrument?: { startPattern: () => void; stopPattern: () => void } }).MusicLabPatternInstrument;
-        if (latest.current.project.musicLabPattern && patternInstrument) { patternInstrument.startPattern(); return; }
-        const advance = Math.max(0, ...(latest.current.project.stepDetails?.flat().map(detail => -detail.timing) ?? [0])) * 60 / latest.current.project.bpm / 4;
-        nextTime = audio.now() + Math.max(.05, advance + .04);
-        const schedule = () => {
+    const finishOnce = () => {
+      schedulingDone = true;
+      const finish = setTimeout(() => {
+        indicators.delete(finish); if (cancelled) return;
+        endedNaturally = true; latest.current.isPlaying = false;
+        resumePosition.current = { step: 0, cycle: 0, run: 0, boundary: false };
+        setIsPlaying(false); setCurrentStep(-1); setSequencePosition(null); setFill(false);
+        notify("Pattern chain complete. The last voices can finish ringing.");
+      }, Math.max(0, (nextTime - audio.now()) * 1000));
+      indicators.add(finish);
+    };
+    const latchBoundary = (): boolean => {
+      if (!pendingBoundary) return true;
+      const p = latest.current.project, previous = active, wasChained = chained;
+      runs = sequenceRuns(p); chained = p.chain?.enabled === true;
+      if (chained && wasChained) {
+        const sameEntry = p.chain?.entries[previous.entry]?.bank === previous.bank;
+        runIndex = sameEntry
+          ? runs.findIndex(run => run.entry === previous.entry && run.repeat > previous.repeat || run.entry > previous.entry)
+          : runs.findIndex(run => run.entry >= previous.entry);
+        if (runIndex < 0) {
+          if (p.chain?.loop === false) { finishOnce(); return false; }
+          runIndex = 0;
+        }
+      } else runIndex = 0;
+      active = runs[runIndex]; activeBpm = p.bpm; activeSwing = p.swing; pendingBoundary = false;
+      return true;
+    };
+    const advanceStep = () => { nextStep++; if (nextStep >= active.pattern.length) { nextStep = 0; cycle++; pendingBoundary = true; } };
+    const preloads = new Map<string, SoundParams>();
+    initial.sounds.forEach(sound => preloads.set(JSON.stringify(sound), sound));
+    for (const run of runs) run.pattern.stepDetails.forEach((row, voice) => row.forEach(detail => {
+      if (!detail.locks || !Object.keys(detail.locks).some(key => !["cutoff", "resonance", "pan"].includes(key))) return;
+      const sound = applySoundLocks(initial.sounds[voice], detail.locks); preloads.set(JSON.stringify(sound), sound);
+    }));
+    Promise.resolve(audio.preload([...preloads.values()])).then(() => {
+      if (cancelled) return;
+      const patternInstrument = (window as typeof window & { MusicLabPatternInstrument?: { startPattern: () => void; stopPattern: () => void } }).MusicLabPatternInstrument;
+      if (latest.current.project.musicLabPattern && patternInstrument) { patternInstrument.startPattern(); return; }
+      const advance = Math.max(0, ...active.pattern.stepDetails.flat().map(detail => -detail.timing)) * 15 / activeBpm;
+      nextTime = audio.now() + Math.max(.05, advance + .04);
+      const schedule = () => {
+        if (schedulingDone) return;
+        let skipped = 0;
+        while (nextTime < audio.now() - .12 && skipped++ < 4096) {
+          if (!latchBoundary()) return;
+          nextTime += 15 / activeBpm; advanceStep();
+        }
+        let scheduled = 0;
+        while (nextTime < audio.now() + .18 && scheduled++ < 32) {
+          if (!latchBoundary()) return;
           const { project: p, solo: soloIndex } = latest.current;
-          const stepTime = 60 / p.bpm / 4;
-          const maxAdvance = Math.max(0, ...(p.stepDetails?.flat().map(detail => -detail.timing) ?? [0])) * stepTime;
-          const lookahead = Math.max(.12, maxAdvance + .06);
-          // Schedule early steps before their nominal boundary; skip only genuinely missed notes.
-          while (nextTime - maxAdvance < audio.now() - .12) {
-            nextTime += stepTime;
-            nextStep = (nextStep + 1) % p.steps[0].length;
-            if (nextStep === 0) cycle++;
+          const step = nextStep, at = nextTime, eventCycle = cycle, eventRun = runIndex, eventPattern = active;
+          const events = eventsForStep(active.pattern.steps, active.pattern.stepDetails, step, cycle, activeBpm, activeSwing, 0x48504c54, latest.current.fill);
+          const activityGroups = new Map<number, number[]>();
+          for (const event of events) if (!p.muted[event.voice] && (soloIndex === null || soloIndex === event.voice)) {
+            const activityAt = Math.round((at + event.offset) * 100000) / 100000;
+            const group = activityGroups.get(activityAt) ?? []; if (!group.includes(event.voice)) group.push(event.voice); activityGroups.set(activityAt, group);
+            audio.play(p.sounds[event.voice], event.velocity, at + event.offset, event.pitch, event.locks).catch(() => { setIsPlaying(false); notify("Playback paused because audio became unavailable."); });
           }
-          let scheduled = 0;
-          while (nextTime < audio.now() + lookahead && scheduled++ < 16) {
-            const step = nextStep, at = nextTime, eventCycle = cycle;
-            const events = eventsForStep(p.steps, p.stepDetails, step, cycle, p.bpm, p.swing, 0x48504c54, latest.current.fill);
-            const activityGroups = new Map<number, number[]>();
-            for (const event of events) {
-              if (!p.muted[event.voice] && (soloIndex === null || soloIndex === event.voice)) {
-                const activityAt = Math.round((at + event.offset) * 100000) / 100000;
-                const group = activityGroups.get(activityAt) ?? []; if (!group.includes(event.voice)) group.push(event.voice); activityGroups.set(activityAt, group);
-                audio.play(p.sounds[event.voice], event.velocity, at + event.offset, event.pitch).catch(() => { setIsPlaying(false); notify("Playback paused because audio became unavailable."); });
-              }
-            }
-            for (const [activityAt, voices] of activityGroups) {
-              const onset = setTimeout(() => {
-                indicators.delete(onset); activityTimers.delete(onset); if (cancelled || !activityEnabled || document.hidden) return;
-                const versions = voices.map(voice => ++activityVersion[voice]);
-                setActiveBurners(active => [...new Set([...active, ...voices])]);
-                setBurnerPulses(pulses => pulses.map((pulse, voice) => voices.includes(voice) ? pulse + 1 : pulse));
-                const off = setTimeout(() => {
-                  indicators.delete(off); activityTimers.delete(off);
-                  if (!cancelled) setActiveBurners(active => active.filter(voice => { const index = voices.indexOf(voice); return index < 0 || activityVersion[voice] !== versions[index]; }));
-                }, 100);
-                indicators.add(off); activityTimers.add(off);
-              }, Math.max(0, (activityAt - audio.now()) * 1000));
-              indicators.add(onset); activityTimers.add(onset);
-            }
-            const indicator = setTimeout(() => {
-              if (!cancelled) {
-                setCurrentStep(step);
-                const following = (step + 1) % p.steps[0].length;
-                resumePosition.current = { step: following, cycle: eventCycle + (following === 0 ? 1 : 0) };
-              }
-              indicators.delete(indicator);
-            }, Math.max(0, (at - audio.now()) * 1000));
-            indicators.add(indicator);
-            nextTime += stepTime;
-            nextStep = (nextStep + 1) % p.steps[0].length;
-            if (nextStep === 0) cycle++;
+          for (const [activityAt, voices] of activityGroups) {
+            const onset = setTimeout(() => {
+              indicators.delete(onset); activityTimers.delete(onset); if (cancelled || !activityEnabled || document.hidden) return;
+              const versions = voices.map(voice => ++activityVersion[voice]);
+              setActiveBurners(active => [...new Set([...active, ...voices])]);
+              setBurnerPulses(pulses => pulses.map((pulse, voice) => voices.includes(voice) ? pulse + 1 : pulse));
+              const off = setTimeout(() => { indicators.delete(off); activityTimers.delete(off); if (!cancelled) setActiveBurners(active => active.filter(voice => { const index = voices.indexOf(voice); return index < 0 || activityVersion[voice] !== versions[index]; })); }, 100);
+              indicators.add(off); activityTimers.add(off);
+            }, Math.max(0, (activityAt - audio.now()) * 1000));
+            indicators.add(onset); activityTimers.add(onset);
           }
-        };
-        schedule();
-        timer = setInterval(schedule, 25);
-      })
-      .catch(() => {
-        setIsPlaying(false);
-        notify("Audio is unavailable in this browser.");
-      });
+          const indicator = setTimeout(() => {
+            if (!cancelled) {
+              setCurrentStep(step); setSequencePosition({ bank: eventPattern.bank, entry: eventPattern.entry, repeat: eventPattern.repeat });
+              const following = (step + 1) % eventPattern.pattern.length;
+              resumePosition.current = { step: following, cycle: eventCycle + (following === 0 ? 1 : 0), run: eventRun, boundary: following === 0 };
+            }
+            indicators.delete(indicator);
+          }, Math.max(0, (at - audio.now()) * 1000));
+          indicators.add(indicator); nextTime += 15 / activeBpm; advanceStep();
+        }
+      };
+      schedule(); timer = setInterval(schedule, 25);
+    }).catch(error => { setIsPlaying(false); notify(error instanceof Error ? error.message : "Audio is unavailable in this browser."); });
     return () => {
-      cancelled = true;
-      window.removeEventListener("blur", clearActivity); window.removeEventListener("focus", resumeActivity);
-      if (timer) clearInterval(timer);
-      indicators.forEach(clearTimeout);
+      cancelled = true; window.removeEventListener("blur", clearActivity); window.removeEventListener("focus", resumeActivity);
+      if (timer) clearInterval(timer); indicators.forEach(clearTimeout);
       (window as typeof window & { MusicLabPatternInstrument?: { stopPattern: () => void } }).MusicLabPatternInstrument?.stopPattern();
-      audio.stopAll();
-      setActiveBurners([]);
+      if (!endedNaturally) audio.stopAll(); setActiveBurners([]);
     };
   }, [isPlaying, transportRevision, engine, notify]);
   const randomize = useCallback(
@@ -1012,7 +1050,7 @@ export default function App() {
   const downloadProject = () => {
     downloadBlob(
       new Blob(
-        [JSON.stringify({ app: "FORM", version: 2, project }, null, 2)],
+        [JSON.stringify({ app: "FORM", version: 3, project }, null, 2)],
         { type: "application/json" },
       ),
       `${project.name.replace(/[^a-z0-9-]/gi, "-")}.form.json`,
@@ -1046,7 +1084,7 @@ export default function App() {
   const activeGroove = FACTORY_GROOVES.find(groove => groove.id === project.grooveId);
   const loadGroove = (id: string) => {
     const groove = FACTORY_GROOVES.find(item => item.id === id); if (!groove) return;
-    stopTransport();
+    if (chainLength({ ...project, steps: groove.steps }) > 256) { notify("This recipe would make the chain exceed 256 beats. Reduce repeats first."); return; }
     nativeChange(p => ({ ...p, steps: clone(groove.steps), stepDetails: clone(groove.stepDetails), grooveId: groove.id, ...(recipeTempo ? { bpm: groove.tempo, swing: groove.swing } : {}) }));
     notify(`${groove.name} rhythm loaded. Your sounds are unchanged; Undo restores the previous order.`);
   };
@@ -1062,11 +1100,11 @@ export default function App() {
       transportRequest.current++;
       latest.current.isPlaying = false;
       setIsPlaying(false);
-      setCurrentStep(-1);
+      setCurrentStep(-1); setSequencePosition(null);
       engineRef.current?.stopAll();
       (window as typeof window & { MusicLabPatternInstrument?: { stopPattern: () => void } }).MusicLabPatternInstrument?.stopPattern();
       setActiveBurners([]);
-      resumePosition.current = { step: 0, cycle: 0 };
+      resumePosition.current = { step: 0, cycle: 0, run: 0, boundary: false };
       setFill(false);
     };
     const targets = () => latest.current.project.sounds.flatMap((voice, index) =>
@@ -1079,8 +1117,8 @@ export default function App() {
         assetName: layer.granular.sample?.name || (layer.enabled ? `${layer.engine} layer` : ""),
       })),
     );
-    const commit = (next: Project, load = false) => {
-      latest.current.project = next;
+    const commit = (input: Project, load = false) => {
+      const next = syncPatternState(input); latest.current.project = next;
       if (load) dispatch({ type: "load", project: next });
       else change(() => next);
     };
@@ -1121,11 +1159,11 @@ export default function App() {
       document.dispatchEvent(new CustomEvent("musiclab:state-change", { bubbles: true, detail: { app: "form", target: target.id } }));
       return { app: "form", target: target.id, name: sample.name, sampleRate: sample.sampleRate, duration: sample.data.length / sample.sampleRate };
     };
-    const exportAudio = (options: { scope?: "voice" | "pattern"; mode?: "voice" | "pattern"; voice?: number; sampleRate?: number; bars?: number; tail?: boolean; tailSeconds?: number; signal?: AbortSignal } = {}) => {
+    const exportAudio = (options: { scope?: "voice" | "pattern" | "chain"; mode?: "voice" | "pattern" | "chain"; voice?: number; sampleRate?: number; bars?: number; tail?: boolean; tailSeconds?: number; signal?: AbortSignal } = {}) => {
       options.signal?.throwIfAborted();
       const scope = options.scope ?? options.mode ?? "voice";
-      if (!["voice", "pattern"].includes(scope)) throw new Error("Choose a HOTPLATE voice or pattern export.");
-      const p = latest.current.project;
+      if (!["voice", "pattern", "chain"].includes(scope)) throw new Error("Choose a HOTPLATE voice, current sequence, or complete chain export.");
+      const p = clone(latest.current.project);
       const sampleRate = options.sampleRate ?? 44100;
       if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 96000)
         throw new Error("Choose an export sample rate between 8 and 96 kHz.");
@@ -1135,12 +1173,12 @@ export default function App() {
       if (!Number.isInteger(voiceIndex) || voiceIndex < 0 || voiceIndex > 7) throw new Error("Choose a HOTPLATE voice from 1 to 8.");
       let left: Float32Array, right: Float32Array, name: string;
       let bars = 0;
-      if (scope === "pattern") {
-        const repetitions = options.bars ?? 1;
+      if (scope === "pattern" || scope === "chain") {
+        const repetitions = scope === "chain" ? 1 : options.bars ?? 1;
         if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 4) throw new Error("Export one to four repetitions of the HOTPLATE pattern.");
-        const rendered = renderProjectPattern(p, latest.current.solo, { sampleRate, repetitions, tail: options.tail, tailSeconds: options.tailSeconds });
+        const rendered = renderProjectPattern(p, latest.current.solo, { sampleRate, repetitions, tail: options.tail, tailSeconds: options.tailSeconds, scope: scope === "chain" ? "chain" : "pattern" });
         [left, right] = rendered.channels; bars = rendered.bars;
-        name = `${p.name} · HOTPLATE pattern`;
+        name = `${p.name} · HOTPLATE ${scope === "chain" ? "chain" : "pattern"}`;
       } else {
         const voice = p.sounds[voiceIndex];
         const mono = renderSound(voice, sampleRate);
@@ -1151,7 +1189,7 @@ export default function App() {
         name = `${voice.name} · HOTPLATE`;
       }
       options.signal?.throwIfAborted();
-      return { pcm: interleaveStereo(left, right), sampleRate, name, tempo: p.bpm, bpm: p.bpm, bars, sourceApp: "form", sourceLabel: scope === "pattern" ? "Current pattern" : `Voice ${voiceIndex + 1}`, channels: 2, duration: left.length / sampleRate };
+      return { pcm: interleaveStereo(left, right), sampleRate, name, tempo: p.bpm, bpm: p.bpm, bars, sourceApp: "form", sourceLabel: scope === "chain" ? "Complete chain" : scope === "pattern" ? "Current pattern" : `Voice ${voiceIndex + 1}`, channels: 2, duration: left.length / sampleRate };
     };
     const api = Object.freeze({
       version: 1,
@@ -1161,6 +1199,9 @@ export default function App() {
         return { name: p.name, bpm: p.bpm, swing: p.swing, muted: p.muted, solo: latest.current.solo, seed: 0x48504c54, steps: p.steps, stepDetails: p.stepDetails, musicLabPattern: p.musicLabPattern, sounds: p.sounds.map(voice => ({ name: voice.name })) };
       },
       getProject: () => clone(latest.current.project),
+      get sequencePosition() { return latest.current.sequencePosition ? { ...latest.current.sequencePosition } : null; },
+      get sequenceLoop() { const p = latest.current.project; return !!p.musicLabPattern || !p.chain?.enabled || p.chain.loop !== false; },
+      getSequencerPattern: (options: { scope?: string; voice?: number } = {}) => sequencerPattern(latest.current.project, { ...options, voice: options.voice ?? latest.current.selected, solo: latest.current.solo }),
       get engine() { return engineRef.current; },
       isPlaying: () => latest.current.isPlaying,
       prepare: () => engine().preload(latest.current.project.sounds),
@@ -1187,10 +1228,10 @@ export default function App() {
         setSelected(0);
         setSolo(null);
       },
-      scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string } = {}) => {
+      scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string; locks?: SoundLocks } = {}) => {
         const sound = latest.current.project.sounds[voice];
         if (!sound || !Number.isFinite(when)) throw new Error("Choose a valid HOTPLATE voice and audio timestamp.");
-        return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native");
+        return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native", normalizeSoundLocks(options.locks, true));
       },
       renderNativeEvents: (events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
         renderNativeEvents(latest.current.project.sounds, events, options),
@@ -1213,7 +1254,7 @@ export default function App() {
       exportAudio,
       listImportTargets: targets,
       get audioImport() { return { maxSeconds: SAMPLE_SECONDS, decks: 8, targets: targets(), channels: 1, sampleRate: 22050 }; },
-      get audioExport() { return { scopes: [{ id: "voice", label: "Selected voice" }, { id: "pattern", label: "Current pattern" }], defaultScope: "voice", defaultBars: 1, maxBars: 4 }; },
+      get audioExport() { return { scopes: [{ id: "voice", label: "Selected voice" }, { id: "pattern", label: "Current pattern" }, { id: "chain", label: "Complete chain", usesBars: false }], defaultScope: "voice", defaultBars: 1, maxBars: 4 }; },
     });
     const scope = window as typeof window & { FormApp?: typeof api };
     scope.FormApp = api;
@@ -1350,7 +1391,7 @@ export default function App() {
           <div className="hotplate-recipe-group"><label htmlFor="hotplate-kit">Sound kit</label><select id="hotplate-kit" aria-label="Sound kit" value={kitId} onChange={e => loadKit(e.target.value)}><option value="custom" disabled>Custom sound kit</option>{FACTORY_KITS.map(kit => <option key={kit.id} value={kit.id}>{kit.name}</option>)}</select><p className="hotplate-recipe-note">{FACTORY_KITS.find(kit => kit.id === kitId)?.description ?? "Your own ingredients. Chef declines to interfere."} Changes sounds only.</p></div>
           <div className="hotplate-recipe-group"><label htmlFor="hotplate-groove">Rhythm recipe</label><select id="hotplate-groove" aria-label="Rhythm recipe" value={activeGroove?.id ?? "custom"} onChange={e => loadGroove(e.target.value)}><option value="custom" disabled>Custom rhythm</option>{FACTORY_GROOVES.map(groove => <option key={groove.id} value={groove.id}>{groove.name} · {groove.tempo} BPM</option>)}</select><p className="hotplate-recipe-note">{activeGroove?.description ?? "Your own order. Chef is taking notes."} Changes rhythm only.</p><label className="hp-recipe-tempo"><input type="checkbox" checked={recipeTempo} onChange={e => setRecipeTempo(e.target.checked)} />Use recipe tempo and swing</label></div>
         </section>
-        <HotplateSequencer project={project} selected={selected} solo={solo} playing={isPlaying} currentStep={currentStep} fill={fill} onSelect={setSelected} onAudition={audition} onChange={change} onNativeChange={nativeChange} onPlay={() => setIsPlaying(value => !value)} onStop={stopTransport} onRestart={restartTransport} onSolo={setSolo} onFill={setFill} onUndo={() => dispatch({ type: "undo" })} canUndo={!!history.past.length} onRedo={() => dispatch({ type: "redo" })} canRedo={!!history.future.length} volume={masterVolume} onVolume={setMasterVolume} onExport={() => { setExportMode("pattern"); setExportOpen(true); }} onNotice={notify} />
+        <HotplateSequencer project={project} selected={selected} solo={solo} playing={isPlaying} currentStep={currentStep} playback={sequencePosition} fill={fill} onSelect={setSelected} onAudition={audition} onChange={change} onNativeChange={nativeChange} onPlay={() => setIsPlaying(value => !value)} onStop={stopTransport} onRestart={restartTransport} onSolo={setSolo} onFill={setFill} onUndo={() => dispatch({ type: "undo" })} canUndo={!!history.past.length} onRedo={() => dispatch({ type: "redo" })} canRedo={!!history.future.length} volume={masterVolume} onVolume={setMasterVolume} onExport={() => { setExportMode("pattern"); setExportOpen(true); }} onNotice={notify} />
 
         <section className="pad-bank hotplate-pad-deck" aria-label="Drum pads">
           {project.sounds.map((pad, i) => (
@@ -2066,6 +2107,7 @@ export default function App() {
         steps={project.steps}
         stepDetails={project.stepDetails}
         musicLabPattern={project.musicLabPattern}
+        sequencerState={{ patternBanks: project.patternBanks, selectedBank: project.selectedBank, chain: project.chain }}
         renderPatternAudio={sampleRate => renderProjectPattern(project, solo, { sampleRate, tail: true }).channels}
         bpm={project.bpm}
         swing={project.swing}
@@ -2346,7 +2388,7 @@ export default function App() {
                 <Drum size={22} />
               </span>
               <p>
-                Pick a rhythm recipe and press Play. Tap the sixteen steps to change the order; Bar B holds the second half of a two-bar rhythm. Select a burner and season it with Pitch, Length, Body, Snap, Air, and Heat. Open recipe for its three synthesis layers, modulation, and effects. Sound kits change sounds; rhythm recipes change notes. Undo brings either back.
+                Pick a rhythm recipe and press Play. Tap the sixteen steps to change the order; Steps 17–32 show the second half of a two-bar pattern. Pattern banks A–D hold variations; open Chain for an ordered service. Step details can override one strike without changing its burner. Select a burner and season it with Pitch, Length, Body, Snap, Air, and Heat. Open recipe for its three synthesis layers, modulation, and effects. Sound kits change sounds; rhythm recipes change notes. Undo brings either back.
               </p>
             </div>
             <div className="shortcut-list">

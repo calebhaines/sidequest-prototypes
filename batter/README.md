@@ -1,6 +1,10 @@
 # BATTER
 
-Interface refresh v1.1.1. The compact workspace puts the acoustic step grid first. Sequence, Drum, Hit and Output links jump to the existing editors. On touch screens, long-press a step to select it without adding or removing a hit; this mirrors Shift-click on a computer. Larger mute/solo, bank and source-audition targets improve touch access. The sample cupboard, blending, LFO, every advanced fold, recorded samples and drum engine remain unchanged.
+Version 1.2.0 adds a folded chain editor beside the existing banks. Append bank entries, repeat each 1–16 times, reorder, duplicate or remove them, and choose Loop or Once. The compact summary shows the playing entry and repeat. Once finishes the chain and lets the last drums ring. Clear chain supports Undo. Changes to the bank order, selected bank or pattern length during playback enter at the next complete pattern boundary without restarting the transport. Older A–H string chains reopen as equivalent repeat entries, preserving global polymeter and seeded performance.
+
+Edit selected hit, Shift-click, right-click or touch long-press opens the existing Hit inspector without toggling that hit. Sound for this hit shows inherited drum values and marks explicit locks. Cutoff uses an octave-scaled slider plus exact Hz entry; resonance, decay, drive, level, pan, high-pass and A/B blend use the same lock/inherit controls. Inherit clears one override; Clear locks clears the selected hit's overrides. Locked steps carry a small marker. Hidden steps, bank copying, rotation, protection, Undo, projects and recovery retain their full hit details. Unlocked strikes keep the original drum sound.
+
+Native WAV exports follow the same realized chain, chance, fills, flams, ratchets, lane clocks and sound snapshots as playback. Patterns and GALLEY default to the enabled chain, with explicit current-pattern and selected-voice scopes available. Portable notes preserve cutoff, resonance, decay, pan, level and drive locks. Native resonance retains its existing Web Audio dB scale; portable note resonance uses linear Q. Explicit native references retain the richer hit settings through same-instrument imported performances and GALLEY snapshots; BATTER's richer trim, source and blend locks remain in its native state. Portable patterns are limited to 256 beats / 4,096 notes / 1 MiB, and sample renders to 120 seconds including tails; shorter exports are requested when a limit is exceeded.
 
 BATTER is Kitchen's recorded acoustic drum sequencer: twelve lanes, eight pattern banks, and precise control over small, unruly rhythms. Open `index.html` in a browser and press Play. The starter kit is embedded; it does not need a server, a login, or an audio download.
 
@@ -8,7 +12,7 @@ BATTER is Kitchen's recorded acoustic drum sequencer: twelve lanes, eight patter
 
 - Twelve acoustic lanes, each with an audition pad, Mute and Solo.
 - Eight A–H banks; 16, 32 or 64 steps, displayed in pages of sixteen.
-- Pattern chains, global swing, reproducible chance and gentle timing / velocity humanization.
+- Compact repeated bank chains with Loop / Once, global swing, reproducible chance and gentle timing / velocity humanization.
 - Independent lane lengths and rotation, Euclidean distribution, seeded mutation, end fills and bank copying.
 - Per-hit velocity, probability, timing offset, pitch, natural or explicit beat gate, reverse, flam, ratchets and ratchet decay.
 - Cycle conditions, parameter locks (including per-hit A/B blend), protected lanes and protected hits; Undo / Redo.
@@ -48,3 +52,5 @@ Space plays / pauses; Escape clears sound. Ctrl / Command Z undoes; Ctrl / Comma
 ## Build
 
 Run `python build.py` from the extracted source folder, or `python batter/build.py` in the repository. The build embeds the recorded starter manifest, native code, fonts and Kitchen exchange code into `index.html`. The repository build also creates `music/batter/BATTER-source.zip`. Optional online bundles remain separate to keep the HTML comfortably below GALLEY's hosted-instrument file limit; the starter is fully offline and the source archive rebuilds it without the original repository.
+
+Run `node engine-checks.cjs` for engine checks and `node sequencing-checks.cjs` for maintained-source Chromium chain, parameter-lock, export and layout regression checks. Browser checks use Playwright and Chromium (`PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` can select installed runtimes). `BATTER_BASELINE_ENGINE` optionally supplies a previous engine source for an additional native PCM comparison; ordinary checks need no Git history.

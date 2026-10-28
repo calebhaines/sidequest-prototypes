@@ -1,4 +1,6 @@
 /** The native HOTPLATE grid, shared by the live scheduler and offline renderer. */
+import { normalizeSoundLocks, type SoundLocks } from "./sound-locks";
+export type { SoundLocks } from "./sound-locks";
 export type StepDetail = {
   velocity: number;
   probability: number;
@@ -7,6 +9,8 @@ export type StepDetail = {
   timing: number;
   /** Semitones relative to the saved burner sound. */
   pitch: number;
+  /** Sound overrides for this strike only; missing keys inherit the burner. */
+  locks?: SoundLocks;
 };
 
 export type StepEvent = {
@@ -16,6 +20,7 @@ export type StepEvent = {
   velocity: number;
   pitch: number;
   ratchetIndex: number;
+  locks?: SoundLocks;
 };
 
 export const STEP_DEFAULTS: Readonly<StepDetail> = Object.freeze({
@@ -38,12 +43,14 @@ export function normalizeStepDetail(input: unknown, stepIndex = 0): StepDetail {
   const value = input && typeof input === "object" && !Array.isArray(input)
     ? input as Partial<StepDetail>
     : {};
+  const locks = normalizeSoundLocks(value.locks);
   return {
     velocity: bound(finite(value.velocity, stepIndex % 4 === 0 ? 1 : 0.86), 0, 1),
     probability: bound(finite(value.probability, 1), 0, 1),
     ratchet: Math.round(bound(finite(value.ratchet, 1), 1, 4)),
     timing: bound(finite(value.timing, 0), -0.45, 0.45),
     pitch: Math.round(bound(finite(value.pitch, 0), -24, 24)),
+    ...(Object.keys(locks).length ? { locks } : {}),
   };
 }
 
@@ -129,6 +136,7 @@ export function eventsForStep(
         velocity: detail.velocity,
         pitch: detail.pitch,
         ratchetIndex: repeat,
+        ...(detail.locks ? { locks: { ...detail.locks } } : {}),
       });
     }
   }

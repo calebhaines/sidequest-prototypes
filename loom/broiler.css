@@ -1,0 +1,140 @@
+/* BROILER · a head, a cabinet, and a small board on the kitchen floor. */
+.amp-editor .effect-editor-layout{grid-template-columns:214px minmax(0,1fr)}
+.amp-editor .effect-hero{background:repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 5px),linear-gradient(150deg,#3d3028,#202927 72%)}
+.amp-editor .effect-hero h2{font-size:38px;letter-spacing:.01em}
+.amp-editor .effect-hero .effect-art{height:145px;margin-top:20px}
+.amp-editor .effect-info{line-height:1.8;color:#b9c3b7}
+.amp-editor .amp-signal-route{font-size:8px;line-height:1.8;color:#d9b28b}
+.amp-editor .effect-right{padding:20px;background:linear-gradient(135deg,#303735,#212a29 70%)}
+.amp-editor .effect-toolbar{margin-bottom:18px}
+.amp-editor .effect-toolbar>span{font-size:9px;color:#b8c4b8}
+.broiler-rig{display:grid;gap:24px;min-width:0}
+.broiler-recipe-bar{display:grid;grid-template-columns:minmax(200px,.9fr) minmax(0,1.2fr);gap:20px;align-items:center;padding:0 0 1px}
+.broiler-recipe-bar>label{display:grid;gap:8px;min-width:0}
+.broiler-recipe-bar .eyebrow{font:9px var(--kk-mono,monospace);letter-spacing:.1em;color:#d7b083}
+.broiler-recipe-bar select{width:100%;min-width:0;min-height:42px;padding:9px 12px;border:1px solid #77816c;background:#202a26;color:#f1e6cd;font-size:13px;border-radius:4px}
+.broiler-recipe-bar p{font-size:12px;line-height:1.7;margin:0;color:#b4c1b3;max-width:470px}
+
+.broiler-head{position:relative;min-width:0;padding:22px 24px 17px;border:1px solid #bb9b6b;border-radius:7px;color:#30332a;background:linear-gradient(150deg,#f0e5c9,#e4d8b9 66%,#dfd0ad);box-shadow:0 5px 0 #101915,inset 0 1px 0 #fff5}
+.broiler-head::before,.broiler-head::after{content:'';position:absolute;top:11px;width:5px;height:5px;background:linear-gradient(45deg,#514c3e 43%,#ada183 43%,#ada183 56%,#514c3e 56%);border-radius:50%;box-shadow:0 0 0 1px #90836966}
+.broiler-head::before{left:10px}.broiler-head::after{right:10px}
+.broiler-face-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:1px solid #8f7f5d55}
+.broiler-face-heading>div{display:flex;align-items:baseline;gap:13px;flex-wrap:wrap}
+.broiler-face-brand{font:bold italic 31px Georgia,serif;letter-spacing:-1px;color:#343b2d;text-shadow:0 1px 0 #fff7}
+.broiler-face-edition{font:8px var(--kk-mono,monospace);letter-spacing:.12em;color:#6e6c52}
+.broiler-head .broiler-power{display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:40px;padding:9px 11px;color:#434738;border:1px solid #999170;background:#ddd3b6;border-radius:4px;font:11px var(--kk-mono,monospace)}
+.broiler-power i,.broiler-footswitch i{width:7px;height:7px;background:#8c8c77;border:1px solid #656a55;border-radius:50%;box-shadow:inset 0 1px 2px #0005;flex-shrink:0}
+.broiler-power[aria-pressed=true] i{background:#db8647;border-color:#af5e32;box-shadow:0 0 7px #c8713f66,inset 0 1px 1px #ffe1aa}
+.broiler-model-row{display:grid;grid-template-columns:minmax(200px,.9fr) minmax(0,1.2fr);gap:24px;align-items:center;padding:20px 0}
+.broiler-model-note strong{display:block;font-size:11px;line-height:1.6;font-weight:600;color:#5d573f}
+.broiler-model-note p{font-size:11px;line-height:1.65;color:#6c674f;margin:5px 0 0}
+.broiler-face-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px 20px;padding:21px 0;border-top:1px solid #8f7f5d44;border-bottom:1px solid #8f7f5d55}
+.broiler-control{min-width:0;gap:8px}
+.broiler-control>label{display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;line-height:1.5;letter-spacing:0;text-transform:none;white-space:normal;color:#bdcabb}
+.broiler-control output{font:10px var(--kk-mono,monospace);color:#e1d5b9;white-space:nowrap}
+.broiler-control select{min-width:0;max-width:100%;width:100%;min-height:40px;padding:9px 8px;font-size:12px;color:#e5e8d5;background:#172422;border:1px solid #637265;border-radius:4px}
+.broiler-head .broiler-control>label{color:#575d45;font-weight:600}
+.broiler-head .broiler-control output{color:#6c5b3d;font-weight:400}
+.broiler-head .broiler-control select{background:#f5ecd5;color:#353c2d;border-color:#9c9679}
+.broiler-value-row{display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:8px;align-items:center;min-width:0}
+.broiler-value-row input[type=range]{min-width:0;width:100%;min-height:36px;accent-color:#dbad75;touch-action:pan-y;cursor:ns-resize}
+.broiler-value-row input[type=number]{min-width:0;width:100%;height:36px;padding:6px 4px;border:1px solid #607165;border-radius:3px;background:#15241f;color:#e7ddc1;font:11px var(--kk-mono,monospace);text-align:center;appearance:textfield;-moz-appearance:textfield}
+.broiler-value-row input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
+.broiler-head .broiler-value-row input[type=number]{background:#f4ead0;border-color:#aaa180;color:#3e4533;box-shadow:inset 0 1px 2px #7d78541a}
+.broiler-head .broiler-value-row input[type=range]{accent-color:#7c6e47}
+.broiler-control-inactive>label{opacity:.58}
+.broiler-rig input:disabled{opacity:.35;cursor:default}
+.broiler-cab-row{display:grid;grid-template-columns:minmax(0,1.2fr) auto minmax(0,.8fr);gap:18px;align-items:end;padding-top:20px}
+.broiler-head #broilerMatchedCab{min-height:40px;padding:9px 11px;color:#62613f;border-color:#a4a078;background:#ddd5b8;border-radius:4px;font-size:10px;white-space:normal;line-height:1.5}
+.broiler-head #broilerMatchedCab:hover{background:#f5e8c6}
+.broiler-cabinet-status{font-size:10px;line-height:1.7;color:#757052;margin:12px 0 0}
+.broiler-readings{display:grid;grid-template-columns:1fr repeat(3,auto);align-items:center;gap:20px;padding-top:13px;margin-top:13px;border-top:1px solid #8f7f5d44}
+.broiler-readings>span{font:8px var(--kk-mono,monospace);letter-spacing:.1em;color:#777455}
+.broiler-readings>div{display:flex;gap:8px;align-items:baseline;font-size:9px;color:#6d6c50}
+.broiler-readings output{font:10px var(--kk-mono,monospace);color:#454d36}
+
+.broiler-section-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:14px}
+.broiler-section-heading .eyebrow{font-size:8px;letter-spacing:.1em;color:#9eaf9c}
+.broiler-section-heading h3{font-family:var(--kk-heading,Georgia,serif);font-size:24px;font-weight:500;line-height:1.2;letter-spacing:-.3px;color:#e0dfc7;margin:7px 0 0}
+.broiler-section-heading>span{font-size:10px;line-height:1.7;color:#a0b09f;text-align:right;max-width:220px}
+.broiler-pedalboard{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+.broiler-pedal{min-width:0;padding:13px 11px 0;border:1px solid color-mix(in srgb,var(--broiler-pedal-color) 60%,#2b3932);border-radius:7px;background:linear-gradient(150deg,color-mix(in srgb,var(--broiler-pedal-color) 15%,#2b3832),#1e2c26 65%);box-shadow:0 4px 0 #111c17,inset 0 1px 0 #ffffff0b;overflow:hidden}
+.broiler-pedal-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}
+.broiler-pedal-number{font:12px var(--kk-mono,monospace);color:var(--broiler-pedal-color);letter-spacing:.08em}
+.broiler-pedal .broiler-footswitch{display:flex;gap:6px;align-items:center;min-height:34px;max-width:100%;padding:7px 8px;border-color:#68746888;background:#18231f;color:#b8c9b6;border-radius:4px;font-size:10px}
+.broiler-footswitch[aria-pressed=true] i{background:var(--broiler-pedal-color);border-color:var(--broiler-pedal-color);box-shadow:0 0 8px color-mix(in srgb,var(--broiler-pedal-color) 50%,transparent)}
+.broiler-footswitch:disabled{opacity:.45}
+.broiler-pedal .broiler-control>label{font-size:10px;color:#afbea9}
+.broiler-pedal .broiler-control select{font-size:11px;padding:8px 5px;min-height:39px;background:#17251f;border-color:#687c65;color:#dce4cd}
+.broiler-pedal-state{font-size:9px;line-height:1.6;color:#92a38b;min-height:29px;margin:8px 0}
+.broiler-pedal.pedal-on .broiler-pedal-state{color:#c7d3b6}
+.broiler-pedal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,.7fr)) minmax(0,1fr);gap:5px;margin:12px 0}
+.broiler-pedal-actions button{min-width:0;min-height:36px;padding:6px 3px;font-size:11px;border-color:#526750;background:#223328;color:#b6c5ad;border-radius:3px}
+.broiler-pedal-actions button:disabled{opacity:.28}
+.broiler-pedal details{margin:0 -11px;border-top:1px solid #627a514d;background:#15231e55}
+.broiler-pedal summary{display:flex;justify-content:space-between;gap:7px;align-items:center;min-height:41px;padding:10px 11px;cursor:pointer;font-size:10px;color:#c7d4bc;list-style:none}
+.broiler-pedal summary::-webkit-details-marker{display:none}
+.broiler-pedal summary>span{font-size:14px;transition:transform .15s}
+.broiler-pedal details[open]>summary>span{transform:rotate(45deg)}
+.broiler-pedal-detail{padding:0 11px 17px}
+.broiler-pedal-detail>p{font-size:10px;line-height:1.75;color:#a9b99f;margin:0 0 15px}
+.broiler-pedal-controls{display:grid;gap:17px}
+.broiler-pedal .broiler-value-row{grid-template-columns:minmax(0,1fr) 48px;gap:6px}
+.broiler-board-hint{font-size:10px;line-height:1.7;color:#91a48d;margin:13px 0 0}
+
+.broiler-workshop{min-width:0;border:1px solid #596e58;border-radius:5px;background:#1a2923}
+.broiler-workshop>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;cursor:pointer;list-style:none;color:#d6ddc6}
+.broiler-workshop>summary::-webkit-details-marker{display:none}
+.broiler-workshop>summary strong{font:500 21px var(--kk-heading,Georgia,serif);letter-spacing:.01em}
+.broiler-workshop>summary small{display:block;font-size:10px;line-height:1.6;color:#99ad91;margin-top:4px}
+.broiler-workshop>summary>span:last-child{font-size:22px;color:#a4b59a;transition:transform .15s}
+.broiler-workshop[open]>summary>span:last-child{transform:rotate(45deg)}
+.broiler-workshop-content{padding:2px 18px 18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px 18px}
+.broiler-workshop-group{min-width:0;margin:0;padding:16px 13px;border:1px solid #52694f;background:#1e3026;border-radius:4px}
+.broiler-workshop-group legend{padding:0 7px;font-size:13px;color:#c4d2b5}
+.broiler-workshop-group>p{font-size:10px;line-height:1.7;color:#94aa8c;margin:0 0 18px}
+.broiler-workshop-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:21px 16px}
+.broiler-workshop-controls .broiler-control:has(select){grid-column:1/-1}
+.broiler-workshop-note{grid-column:1/-1;font-size:10px;color:#94a98a;line-height:1.7;margin:0}
+.broiler-rig-files{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:15px 0 0;border-top:1px solid #52694f}
+.broiler-rig-files strong{font-size:12px;font-weight:500;color:#cad7bb}.broiler-rig-files p{font-size:10px;line-height:1.6;color:#94aa8c;margin:5px 0 0}.broiler-rig-files>div:last-child{display:flex;gap:8px}.broiler-rig-files button{min-height:40px;padding:9px 13px;font-size:11px;border-color:#667f5f;color:#d2ddbf;background:#253c2d}
+.amp-editor summary:focus-visible{outline:2px solid #e9bc79;outline-offset:3px;border-radius:3px}
+.amp-editor .broiler-head input:focus-visible,.amp-editor .broiler-head select:focus-visible,.amp-editor .broiler-head button:focus-visible{outline-color:#645d3e;outline-offset:3px}
+
+@media(max-width:1250px){
+ .amp-editor .effect-editor-layout{grid-template-columns:185px minmax(0,1fr)}
+ .amp-editor .effect-hero{padding:18px 16px}.amp-editor .effect-hero h2{font-size:32px}
+ .broiler-face-controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 16px}
+ .broiler-pedalboard{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .broiler-pedal{padding-left:14px;padding-right:14px}.broiler-pedal details{margin-left:-14px;margin-right:-14px}
+ .broiler-pedal-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 12px}
+ .broiler-cab-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .broiler-cab-row>#broilerMatchedCab{order:3;justify-self:start}.broiler-cab-row>.control:last-of-type{grid-column:2;grid-row:1}
+ .broiler-workshop-content{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+ .amp-editor .effect-editor-layout{grid-template-columns:1fr}.amp-editor .effect-hero{display:grid;grid-template-columns:minmax(0,1fr) 130px;border-right:0;border-bottom:1px solid #66553e}
+ .amp-editor .effect-hero>.eyebrow,.amp-editor .effect-hero>h2,.amp-editor .effect-hero>p{grid-column:1}.amp-editor .effect-hero .effect-art{grid-column:2;grid-row:1/4;height:110px;margin:0}
+ .amp-editor .amp-signal-route,.amp-editor .effect-hero .effect-info{display:none}
+ .amp-editor .effect-right{padding:18px}.broiler-head{padding:20px}.broiler-face-controls{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .broiler-workshop-content{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px){
+ .broiler-recipe-bar{grid-template-columns:1fr;gap:9px}.broiler-recipe-bar p{font-size:11px}.broiler-model-row{grid-template-columns:1fr;gap:12px}
+ .broiler-face-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 17px}.broiler-head{padding:18px 16px 15px}
+ .broiler-face-heading{gap:9px}.broiler-face-heading>div{gap:5px;display:grid}.broiler-face-brand{font-size:28px}.broiler-face-edition{font-size:7px}
+ .broiler-cab-row{grid-template-columns:1fr;gap:14px}.broiler-cab-row>.control:last-of-type{grid-column:auto;grid-row:auto}.broiler-cab-row>#broilerMatchedCab{order:0;justify-self:start}
+ .broiler-readings{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.broiler-readings>span{grid-column:1/-1}.broiler-readings>div{display:grid;gap:5px;font-size:9px}
+ .broiler-workshop-content{grid-template-columns:1fr;padding:0 12px 14px}.broiler-workshop>summary{padding:15px 13px}.broiler-workshop-group{padding:15px 11px}
+ .broiler-section-heading{align-items:start;gap:12px}.broiler-section-heading h3{font-size:23px}.broiler-section-heading>span{font-size:9px;max-width:140px}
+ .broiler-pedalboard{gap:10px}.broiler-pedal{padding:11px 9px 0}.broiler-pedal details{margin-left:-9px;margin-right:-9px}.broiler-pedal-controls{grid-template-columns:1fr}
+ .broiler-pedal .broiler-footswitch{font-size:9px;padding:7px 6px;gap:4px}.broiler-pedal-number{font-size:10px}.broiler-pedal-top{gap:5px}
+ .broiler-control>label{font-size:10px}.broiler-control output{font-size:9px}.broiler-value-row{grid-template-columns:minmax(0,1fr) 52px;gap:6px}
+ .broiler-rig{gap:22px}.amp-editor .effect-right{padding:14px 12px}
+}
+@media(max-width:360px){
+ .broiler-pedalboard{grid-template-columns:1fr}.broiler-pedal-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.broiler-pedal{padding:13px 13px 0}.broiler-pedal details{margin-left:-13px;margin-right:-13px}
+ .broiler-pedal-top{margin-bottom:11px}.broiler-pedal-state{min-height:0}.broiler-pedal-actions{grid-template-columns:40px 40px minmax(0,1fr)}
+ .broiler-workshop-controls{grid-template-columns:1fr}.broiler-face-controls{gap:20px 12px}.broiler-head{padding-left:13px;padding-right:13px}
+}
+@media(prefers-reduced-motion:reduce){.broiler-rig *{transition:none!important}}

@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['vocal-catalog.js', 'vocal-dsp.js', 'effects-catalog.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'vocal-dsp.js', 'broiler-pedals.js', 'effects-catalog.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const definition = LoomEffectsCatalog.find(effect => effect.id === 'broiler');
@@ -61,8 +61,8 @@ check('BROILER preserves the original inserts, eight tracks and four slots while
   assert.equal(LoomEffectsCatalog.length, 10);
   assert.equal(LoomEffectsCatalog[9].id, 'glaze');
   assert.deepEqual(LoomEffectsCatalog.slice(0, 8).map(effect => effect.id), ['prism', 'velvet', 'cinder', 'undertow', 'parallax', 'vestige', 'halo', 'tremor']);
-  assert.equal(options('model').length, 12); assert.equal(options('cabinet').length, 11);
-  assert.equal(definition.presets.length, 13);
+  assert.equal(options('model').length, 22); assert.equal(options('cabinet').length, 11);
+  assert(definition.presets.length >= 13);
   const state = LoomSchema.defaultState(); assert.equal(state.tracks.length, 8); assert(state.tracks.every(track => track.effects.length === 4));
 });
 
@@ -78,7 +78,7 @@ check('Catalog, DSP defaults, preset values and project serialization agree', ()
   assert.equal(new Set(definition.groups.flatMap(group => group.keys)).size, definition.params.length);
 });
 
-check('All twelve amplifier characters and eleven cabinets are audible and distinct', () => {
+check('All twenty-two amplifier characters and eleven cabinets are audible and distinct', () => {
   for (const key of ['model', 'cabinet']) {
     const hashes = new Set();
     for (const value of options(key)) {

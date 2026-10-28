@@ -24,7 +24,9 @@
   state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
   let voiceLab;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
+  let bankLocks = window.GrainSequence.emptyLocks(banks), chain = window.GrainSequence.emptyChain();
   let bank = 0, selected = 0, sequencePage = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
+  let stepEditMode = false, stepTarget = null, playbackPosition = null;
   let history = [], toastTimer, saveTimer, exporting = false;
   // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
   let playheadColumns = Array.from({ length: 32 }, () => []);
@@ -34,10 +36,10 @@
 
   function project() {
     banks[bank] = state.tracks.map((t) => [...t.steps]);
-    return { format: 'grain-project', version: 3, state: clone(state), banks: clone(banks), bank, selected };
+    return { format: 'grain-project', version: 4, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), chain: clone(chain), bank, selected };
   }
   function validateProject(data) {
-    if (!data || data.format !== 'grain-project' || ![1, 2, 3].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
+    if (!data || data.format !== 'grain-project' || ![1, 2, 3, 4].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
     const s = data.state;
     if (s.musicLabPattern !== undefined) {
       const overlay = s.musicLabPattern;
@@ -48,20 +50,24 @@
     if (typeof s.name !== 'string' || !s.name.trim() || s.name.length > 80) throw new Error('The project needs a valid name.');
     const isNumber = (n, min, max) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
     if (!isNumber(s.bpm, 40, 240) || !isNumber(s.swing, 0, .6) || !['master', 'drive', 'space'].every((key) => isNumber(s[key], 0, 1))) throw new Error('The project contains invalid sound settings.');
-    if (data.version === 3 && ![16, 32].includes(s.stepCount)) throw new Error('The project contains an invalid sequence length.');
-    const stepLengths = data.version === 3 ? (s.stepCount === 32 ? [32] : [16, 32]) : [16];
+    if (data.version >= 3 && ![16, 32].includes(s.stepCount)) throw new Error('The project contains an invalid sequence length.');
+    const stepLengths = data.version >= 3 ? (s.stepCount === 32 ? [32] : [16, 32]) : [16];
     const validSteps = (steps) => Array.isArray(steps) && stepLengths.includes(steps.length) && Array.from(steps).every((v) => v === 0 || v === 1 || v === 2);
     s.tracks.forEach((track) => {
       if (!track || typeof track.name !== 'string' || track.name.length > 40 || !sources.some((n) => n.id === track.noise) || !modes.includes(track.mode) || !validSteps(track.steps) || !['level', 'tone', 'decay', 'pitch'].every((key) => isNumber(track[key], 0, 1)) || !isNumber(track.pan, -1, 1) || typeof track.mute !== 'boolean' || typeof track.solo !== 'boolean') throw new Error('The project contains an invalid voice.');
       if ((data.version >= 2 || track.synth !== undefined) && !window.GrainSynth.validate(track.synth)) throw new Error('The project contains invalid synthesis settings.');
     });
     if (!Array.isArray(data.banks) || data.banks.length !== 4 || !data.banks.every((b) => Array.isArray(b) && b.length === 8 && b.every(validSteps))) throw new Error('The project contains an invalid pattern.');
+    if (data.version === 4) { window.GrainSequence.validateChain(data.chain); window.GrainSequence.validateLocks(data.banks, data.bankLocks); }
+    else if (data.chain !== undefined || data.bankLocks !== undefined) throw new Error('Step overrides and chains require a version 4 project.');
     if (!Number.isInteger(data.bank) || data.bank < 0 || data.bank > 3 || !Number.isInteger(data.selected) || data.selected < 0 || data.selected > 7) throw new Error('The project contains invalid bank settings.');
     return data;
   }
   function restore(data) {
     const valid = validateProject(data);
-    state = { ...clone(valid.state), stepCount: valid.version === 3 ? valid.state.stepCount : 16 }; banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    state = { ...clone(valid.state), stepCount: valid.version >= 3 ? valid.state.stepCount : 16 }; banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    bankLocks = valid.version === 4 ? clone(valid.bankLocks) : window.GrainSequence.emptyLocks(banks);
+    chain = valid.version === 4 ? clone(valid.chain) : window.GrainSequence.emptyChain();
     if (state.stepCount === 16) sequencePage = 0;
     state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; window.GrainSynth.ensureTrack(t); });
   }
@@ -71,6 +77,59 @@
   function persist() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 250);
+  }
+  function useNativeGrid() {
+    if (!state.musicLabPattern) return;
+    const resume = playing || busy;
+    if (resume) stop();
+    delete state.musicLabPattern;
+    if (resume) queueMicrotask(play);
+  }
+  function bankSteps(index) { return index === bank ? state.tracks.map(track => track.steps) : banks[index]; }
+  function nextPattern(previous) {
+    const signature = JSON.stringify(chain);
+    let entry = 0, repeat = 0;
+    if (chain.enabled && chain.entries.length) {
+      if (previous?.chain && previous.signature === signature) {
+        entry = previous.entry; repeat = previous.repeat + 1;
+        if (repeat >= chain.entries[entry].repeats) { entry++; repeat = 0; }
+        if (entry >= chain.entries.length) { if (!chain.loop) return null; entry = 0; }
+      }
+      return { bank: chain.entries[entry].bank, entry, repeat, repeats: chain.entries[entry].repeats, totalEntries: chain.entries.length, chain: true, signature, bpm: state.bpm, swing: state.swing, stepCount: state.stepCount };
+    }
+    return { bank, entry: -1, repeat: 0, chain: false, signature, bpm: state.bpm, swing: state.swing, stepCount: state.stepCount };
+  }
+  function sequenceFrames(scope) {
+    const useChain = scope === 'chain' || scope === undefined && chain.enabled;
+    if (useChain && !chain.entries.length) throw new Error('Add a bank to the chain first.');
+    const entries = useChain ? chain.entries : [{ bank, repeats: 1 }];
+    const frames = [];
+    entries.forEach(entry => {
+      for (let repeat = 0; repeat < entry.repeats; repeat++) frames.push({ bank: entry.bank, steps: clone(bankSteps(entry.bank)), locks: clone(bankLocks[entry.bank]), bpm: state.bpm, swing: state.swing, stepCount: state.stepCount });
+    });
+    return frames;
+  }
+  function getSequencerPattern(options = {}) {
+    const scope = options.scope, voice = options.voice === undefined ? selected : Number(options.voice);
+    if (![undefined, 'pattern', 'chain', 'voice'].includes(scope) || scope === 'voice' && (!Number.isInteger(voice) || voice < 0 || voice > 7)) throw new Error('Choose a current pattern, chain, or voice pattern.');
+    const frames = sequenceFrames(scope === 'voice' ? 'pattern' : scope);
+    const lengthBeats = frames.length * state.stepCount / 4;
+    if (lengthBeats > 256) throw new Error('This chain exceeds 256 beats. Remove entries or reduce repeats before sharing it.');
+    const voices = state.tracks.map((track, index) => ({ id: 'voice-' + index, name: track.name, pitch: 36 + index }));
+    const hasSolo = state.tracks.some(track => track.solo), notes = [];
+    frames.forEach((frame, frameIndex) => state.tracks.forEach((track, index) => {
+      if (scope === 'voice' ? index !== voice : track.mute || hasSolo && !track.solo) return;
+      frame.steps[index].slice(0, frame.stepCount).forEach((hit, step) => {
+        if (!hit) return;
+        const beat = frameIndex * frame.stepCount / 4 + step / 4 + (step % 2 ? frame.swing / 4 : 0);
+        const note = { id: 'note-' + notes.length, voice: voices[index].id, pitch: voices[index].pitch, beat, duration: Math.min(.25, frame.stepCount / 4 - step / 4 - (step % 2 ? frame.swing / 4 : 0)), velocity: hit >= 2 ? 1 : .73, probability: 1 };
+        const locks = frame.locks[index][step]; if (Object.keys(locks).length) note.locks = clone(locks);
+        notes.push(note);
+      });
+    }));
+    if (notes.length > 4096) throw new Error('This sequence exceeds 4,096 notes. Shorten the chain or reduce its hits before sharing it.');
+    const packet = { format: 'musiclab-pattern', version: 1, name: state.name + ' · SIZZLE', sourceApp: 'grain', kind: 'drums', tempo: state.bpm, swing: 0, lengthBeats, meter: [4, 4], voices, notes, seed: 0x5a17c0de };
+    return window.MusicLabPatternSchema ? window.MusicLabPatternSchema.normalize(packet) : packet;
   }
   function remember() {
     history.push(project());
@@ -100,8 +159,8 @@
     $('audio-status').textContent = 'AUDIO ON · ' + (engine.context ? (engine.context.sampleRate / 1000).toFixed(1) + ' KHZ' : 'PURE SYNTHESIS');
     $('status-dot').classList.add('ready');
   }
-  async function audition(track) {
-    try { await engine.preview(track, state.bpm); syncEffects(); audioReady(); } catch (error) { toast(error.message || 'Audio could not start. Please try again.'); }
+  async function audition(track, locks) {
+    try { await engine.preview(track, state.bpm, locks); syncEffects(); audioReady(); } catch (error) { toast(error.message || 'Audio could not start. Please try again.'); }
   }
   async function play() {
     if (busy || playing) return;
@@ -109,11 +168,13 @@
     busy = true;
     try {
       currentBar = 0;
-      await engine.start(state, (step) => {
+      await engine.start(state, (step, position) => {
         if (!playing) return;
+        playbackPosition = position;
         if (step % 16 === 0) currentBar = currentBar % 4 + 1;
         setPlayhead(step);
         $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step % 16 / 4) + 1) + ' . ' + (step % 4 + 1);
+        renderChainStatus();
       });
       if (generation !== playGeneration || !engine.running) return;
       playing = true;
@@ -129,7 +190,10 @@
   }
   function stop() {
     playGeneration++; busy = false;
-    playing = false; engine.stop(); setPlayhead(-1);
+    playing = false; engine.stop(); finishPlayback();
+  }
+  function finishPlayback() {
+    playing = false; playbackPosition = null; setPlayhead(-1);
     stopHeroAnimation();
     $('play-button').innerHTML = icon('play') + '<span>Play</span>';
     $('play-button').setAttribute('aria-label', 'Play sequencer');
@@ -137,10 +201,11 @@
     $('master-led').classList.remove('playing');
     document.body.classList.remove('is-playing');
     $('beat-position').textContent = '1 . 1 . 1';
+    renderChainStatus();
   }
   function setPlayhead(step) {
     if (currentStep >= 0) playheadColumns[currentStep].forEach((el) => el.classList.remove('current'));
-    if (step >= 0) playheadColumns[step].forEach((el) => el.classList.add('current'));
+    if (step >= 0 && (!playbackPosition || playbackPosition.bank === bank)) playheadColumns[step].forEach((el) => el.classList.add('current'));
     currentStep = step;
   }
 
@@ -162,7 +227,7 @@
     for (let index = 0; index < 16; index++) {
       const step = sequencePage * 16 + index;
       const label = document.createElement('span');
-      label.className = 'step-number' + (step % 4 === 0 ? ' beat' : '') + (currentStep === step ? ' current' : '');
+      label.className = 'step-number' + (step % 4 === 0 ? ' beat' : '') + (currentStep === step && (!playbackPosition || playbackPosition.bank === bank) ? ' current' : '');
       label.dataset.step = step; label.textContent = String(step + 1).padStart(2, '0'); $('step-numbers').append(label);
     }
   }
@@ -192,25 +257,27 @@
         updateStep(button, index, stepIndex);
         let holdTimer, touchStartX, touchStartY, held = false;
         const edit = (accent) => {
-          remember();
+          remember(); useNativeGrid();
           const previous = track.steps[stepIndex];
           track.steps[stepIndex] = accent ? (previous === 2 ? 1 : 2) : (previous ? 0 : 1);
           updateStep(button, index, stepIndex); persist();
-          if (track.steps[stepIndex] && !playing) audition(track);
+          if (track.steps[stepIndex] && !playing) audition(track, bankLocks[bank][index][stepIndex]);
         };
         button.addEventListener('click', (event) => {
           if (held) { held = false; return; }
+          if (stepEditMode && !event.shiftKey) { openStep(index, stepIndex); return; }
           edit(event.shiftKey);
         });
         button.addEventListener('pointerdown', (event) => {
           if (event.pointerType !== 'touch') return;
           held = false; touchStartX = event.clientX; touchStartY = event.clientY;
-          holdTimer = setTimeout(() => { held = true; edit(true); }, 450);
+          holdTimer = setTimeout(() => { held = true; openStep(index, stepIndex); }, 450);
         });
         button.addEventListener('pointermove', (event) => { if (event.pointerType === 'touch' && (Math.abs(event.clientX - touchStartX) > 8 || Math.abs(event.clientY - touchStartY) > 8)) clearTimeout(holdTimer); });
         ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => button.addEventListener(type, () => clearTimeout(holdTimer)));
-        button.addEventListener('contextmenu', (event) => event.preventDefault());
+        button.addEventListener('contextmenu', (event) => { event.preventDefault(); openStep(index, stepIndex); });
         button.addEventListener('keydown', (event) => {
+          if (event.key.toLowerCase() === 'e') { event.preventDefault(); openStep(index, stepIndex); return; }
           const delta = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key];
           if (!delta) return;
           event.preventDefault();
@@ -238,13 +305,117 @@
   }
   function updateStep(button, row, step) {
     const value = state.tracks[row].steps[step];
-    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (currentStep === step ? ' current' : '');
+    const locked = Object.keys(bankLocks[bank][row][step] || {}).length > 0;
+    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (locked ? ' has-locks' : '') + (currentStep === step && (!playbackPosition || playbackPosition.bank === bank) ? ' current' : '');
     button.setAttribute('aria-pressed', value > 0);
-    button.setAttribute('aria-label', pretty(state.tracks[row].name) + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off'));
-    button.title = 'Step ' + (step + 1) + (value === 2 ? ' · Accent' : '') + ' · Shift + click to accent';
+    button.setAttribute('aria-label', pretty(state.tracks[row].name) + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off') + (locked ? ', sound overrides' : ''));
+    button.title = 'Step ' + (step + 1) + (value === 2 ? ' · Accent' : '') + (locked ? ' · Sound overrides' : '') + ' · Shift + click to accent · Right-click or E to edit sound';
   }
   function renderBanks() {
     document.querySelectorAll('[data-bank]').forEach((button) => { const active = Number(button.dataset.bank) === bank; button.classList.toggle('active', active); button.setAttribute('aria-pressed', active); });
+  }
+  function renderChainStatus() {
+    if (!$('chain-button')) return;
+    const position = playbackPosition;
+    $('chain-button').textContent = playing && position?.chain ? 'Chain ' + 'ABCD'[position.bank] + ' · ' + (position.entry + 1) + '/' + position.totalEntries + ' · ×' + (position.repeat + 1) + '/' + position.repeats : 'Chain · ' + (chain.enabled ? chain.entries.length + (chain.loop ? ' ↻' : ' once') : 'off');
+    const status = playing && position ? 'Playing ' + 'ABCD'[position.bank] + (position.chain ? ' · entry ' + (position.entry + 1) + '/' + position.totalEntries + ' · repeat ' + (position.repeat + 1) + '/' + position.repeats : '') : chain.enabled ? 'Ready · ' + (chain.loop ? 'loop chain' : 'play once') : 'Chain off';
+    $('chain-position').textContent = status + (playing && position && position.signature !== JSON.stringify(chain) ? ' · revised sequence queued' : '');
+    $('chain-button').setAttribute('aria-label', 'Edit chain. ' + $('chain-position').textContent);
+    document.querySelectorAll('[data-bank]').forEach(button => button.classList.toggle('playing-bank', playing && position?.bank === Number(button.dataset.bank)));
+    document.querySelectorAll('[data-chain-index]').forEach(row => row.classList.toggle('chain-playing', playing && position?.chain && position.signature === JSON.stringify(chain) && Number(row.dataset.chainIndex) === position.entry));
+  }
+  function changeChain(edit) {
+    remember(); useNativeGrid(); edit();
+    if (!chain.entries.length) chain.enabled = false;
+    renderChainEditor(); persist();
+  }
+  function renderChainEditor() {
+    if (!$('chain-entries')) return;
+    const focus = document.activeElement?.dataset.chainFocus;
+    $('chain-enabled').checked = chain.enabled;
+    $('chain-enabled').disabled = !chain.entries.length;
+    $('chain-loop').checked = chain.loop;
+    $('chain-add').disabled = chain.entries.length >= 16;
+    $('chain-clear').disabled = !chain.entries.length;
+    const list = $('chain-entries'); list.replaceChildren();
+    chain.entries.forEach((entry, index) => {
+      const row = document.createElement('div'); row.className = 'chain-entry'; row.dataset.chainIndex = index;
+      const label = document.createElement('span'); label.className = 'chain-entry-number'; label.textContent = String(index + 1).padStart(2, '0');
+      const select = document.createElement('select'); select.dataset.chainBank = ''; select.dataset.chainFocus = index + '-bank'; select.setAttribute('aria-label', 'Pattern for chain entry ' + (index + 1));
+      ['A', 'B', 'C', 'D'].forEach((name, value) => { const option = document.createElement('option'); option.value = value; option.textContent = 'Pattern ' + name; select.append(option); });
+      select.value = entry.bank; select.addEventListener('change', () => changeChain(() => { entry.bank = Number(select.value); }));
+      const repeats = document.createElement('input'); repeats.type = 'number'; repeats.min = 1; repeats.max = 16; repeats.step = 1; repeats.value = entry.repeats; repeats.dataset.chainRepeats = ''; repeats.dataset.chainFocus = index + '-repeats'; repeats.setAttribute('aria-label', 'Repeats for chain entry ' + (index + 1));
+      repeats.addEventListener('change', () => { const value = Math.round(clamp(repeats.value || entry.repeats, 1, 16)); changeChain(() => { entry.repeats = value; }); });
+      const repeatLabel = document.createElement('label'); repeatLabel.className = 'chain-repeat-label'; repeatLabel.append(document.createTextNode('× '), repeats);
+      const actions = document.createElement('div'); actions.className = 'chain-entry-actions';
+      [['up', '↑', 'Move up'], ['down', '↓', 'Move down'], ['duplicate', '+', 'Duplicate'], ['remove', '×', 'Remove']].forEach(([action, text, name]) => {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'chain-action'; button.dataset.chainAction = action; button.dataset.chainFocus = index + '-' + action; button.textContent = text; button.setAttribute('aria-label', name + ' chain entry ' + (index + 1));
+        button.disabled = action === 'up' && index === 0 || action === 'down' && index === chain.entries.length - 1 || action === 'duplicate' && chain.entries.length >= 16;
+        button.addEventListener('click', () => changeChain(() => {
+          if (action === 'remove') chain.entries.splice(index, 1);
+          else if (action === 'duplicate') chain.entries.splice(index + 1, 0, clone(entry));
+          else { const next = index + (action === 'up' ? -1 : 1); [chain.entries[index], chain.entries[next]] = [chain.entries[next], chain.entries[index]]; }
+        })); actions.append(button);
+      });
+      row.append(label, select, repeatLabel, actions); list.append(row);
+    });
+    $('chain-empty').hidden = chain.entries.length > 0;
+    renderChainStatus();
+    if (focus) list.querySelector('[data-chain-focus="' + focus + '"]')?.focus({ preventScroll: true });
+  }
+  const stepLockFields = [
+    ['cutoff', 'Noise cutoff · Hz', 40, 18000, 1], ['resonance', 'Noise resonance · Q', .1, 20, .1],
+    ['decay', 'Noise decay · seconds', .005, 3, .005], ['drive', 'Noise saturation · 0–1', 0, 1, .01],
+    ['pan', 'Pan · −1 left / +1 right', -1, 1, .01], ['level', 'Voice level · 0–1', 0, 1, .01]
+  ];
+  function openStep(voice, step) {
+    stepTarget = { bank, voice, step }; selected = voice;
+    renderRows(); renderVoice(); renderStepInspector();
+    if (!$('step-dialog').open) $('step-dialog').showModal();
+  }
+  function renderStepInspector() {
+    if (!stepTarget) return;
+    const { bank: targetBank, voice, step } = stepTarget;
+    if (!bankLocks[targetBank]?.[voice]?.[step]) { stepTarget = null; $('step-dialog').close(); return; }
+    const track = state.tracks[voice], synth = window.GrainSynth.ensureTrack(track), locks = bankLocks[targetBank][voice][step];
+    $('step-title').textContent = 'Pattern ' + 'ABCD'[targetBank] + ' · ' + pretty(track.name) + ' · step ' + (step + 1);
+    $('step-hit').value = bankSteps(targetBank)[voice][step];
+    const fields = $('step-lock-fields'); fields.replaceChildren();
+    stepLockFields.forEach(([key, title, min, max, increment]) => {
+      const field = document.createElement('div'); field.className = 'step-lock-field';
+      const label = document.createElement('label'); label.htmlFor = 'step-lock-' + key; label.textContent = title;
+      const input = document.createElement('input'); input.type = 'number'; input.id = 'step-lock-' + key; input.min = min; input.max = max; input.step = increment;
+      const inherited = locks[key] === undefined;
+      const base = ['pan', 'level'].includes(key) ? track[key] : key === 'resonance' && ['lowpass', 'highpass'].includes(synth.noise.filter) ? Math.pow(10, synth.noise.resonance / 20) : synth.noise[key];
+      input.value = inherited ? Number(base.toFixed(4)) : locks[key]; input.disabled = inherited;
+      const cutoffDescriptor = key === 'cutoff' ? window.GrainSynth.descriptors.noise.find(item => item.key === 'cutoff') : null;
+      const slider = cutoffDescriptor ? document.createElement('input') : null;
+      if (slider) {
+        slider.type = 'range'; slider.min = 0; slider.max = 1000; slider.step = 1; slider.className = 'step-cutoff-slider'; slider.id = 'step-range-cutoff'; slider.disabled = inherited;
+        slider.setAttribute('aria-label', 'Noise cutoff, logarithmic frequency');
+        slider.value = window.GrainSynth.toNormalized(Number(input.value), cutoffDescriptor) * 1000;
+        slider.setAttribute('aria-valuetext', input.value + ' Hz');
+        slider.addEventListener('input', () => { input.value = Math.round(window.GrainSynth.fromNormalized(Number(slider.value) / 1000, cutoffDescriptor)); slider.setAttribute('aria-valuetext', input.value + ' Hz'); });
+        slider.addEventListener('change', () => commit(Number(input.value)));
+      }
+      const inherit = document.createElement('input'); inherit.type = 'checkbox'; inherit.id = 'step-inherit-' + key; inherit.checked = inherited;
+      const inheritLabel = document.createElement('label'); inheritLabel.className = 'step-inherit'; inheritLabel.append(inherit, document.createTextNode('Inherit'));
+      const commit = (value) => {
+        remember(); useNativeGrid();
+        if (value === undefined) delete locks[key]; else locks[key] = value;
+        renderRows(); persist();
+      };
+      inherit.addEventListener('change', () => { commit(inherit.checked ? undefined : clamp(base, min, max)); renderStepInspector(); if (!inherit.checked) $('step-lock-' + key).focus(); });
+      input.addEventListener('change', () => {
+        if (input.value === '' || !Number.isFinite(input.valueAsNumber) || input.valueAsNumber < min || input.valueAsNumber > max) { input.value = locks[key]; toast('Use a value from ' + min + ' to ' + max + '.'); return; }
+        commit(input.valueAsNumber);
+        if (slider) { slider.value = window.GrainSynth.toNormalized(input.valueAsNumber, cutoffDescriptor) * 1000; slider.setAttribute('aria-valuetext', input.value + ' Hz'); }
+      });
+      field.append(label); if (slider) field.append(slider); field.append(input, inheritLabel); fields.append(field);
+    });
+    $('step-clear-locks').disabled = !Object.keys(locks).length;
+    const silentNoise = synth.noise.level === 0;
+    $('step-lock-note').textContent = silentNoise ? 'This voice’s noise layer is silent. Raise NOISE in Voice Station to hear its cutoff, resonance, decay and saturation overrides.' : 'Adjust a control for this strike. Inherit returns it to the voice’s sound; following unlocked steps keep their original sound.';
   }
   function knobControl(param, label, value, formatter, change) {
     const control = document.createElement('div'); control.className = 'knob-control';
@@ -342,10 +513,10 @@
     $('swing-value').innerHTML = Math.round(state.swing * 100) + '<span>%</span>';
     const presetIndex = window.NOISE_PRESETS.findIndex((p) => p.name === state.name);
     $('preset-select').value = presetIndex >= 0 ? String(presetIndex) : 'custom';
-    renderRows(); renderBanks(); renderVoice(); renderMaster();
+    renderRows(); renderBanks(); renderVoice(); renderMaster(); renderChainEditor();
   }
   function random() {
-    remember();
+    remember(); useNativeGrid();
     state.tracks.forEach((track, row) => {
       const hidden = track.steps.slice(state.stepCount);
       track.steps = Array.from({ length: state.stepCount }, (_, index) => {
@@ -361,6 +532,7 @@
         return Math.random() < chance ? (Math.random() < .15 ? 2 : 1) : 0;
       }).concat(hidden);
     });
+    bankLocks[bank] = bankLocks[bank].map(row => row.map((lock, step) => step < state.stepCount ? {} : lock));
     renderRows(); persist(); toast('New groove. The crumbs have rearranged themselves.');
   }
   function download(blob, name) {
@@ -369,15 +541,19 @@
   function safeName(name = state.name) { return String(name || 'my-groove').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-groove'; }
   async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
-    if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
+    if (!['pattern', 'chain', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, chain, selected voice pattern, or selected voice hit.');
     if (exporting) throw new Error('Wait for the current SIZZLE render to finish.');
     const snapshot = clone(state), voice = selected;
-    if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
+    snapshot.stepLocks = clone(bankLocks[bank]);
+    if (scope === 'voice' || scope === 'hit') { snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }]; snapshot.stepLocks = [snapshot.stepLocks[voice]]; }
     if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
-    const sourceLabel = scope === 'pattern' ? snapshot.name : snapshot.tracks[0].name || 'Voice ' + (voice + 1);
+    if (scope === 'hit') delete snapshot.stepLocks;
+    const sequence = scope === 'chain' ? sequenceFrames('chain') : undefined;
+    if (sequence) getSequencerPattern({ scope: 'chain' });
+    const sourceLabel = scope === 'pattern' || scope === 'chain' ? snapshot.name : snapshot.tracks[0].name || 'Voice ' + (voice + 1);
     exporting = true;
     try {
-      const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
+      const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal, sequence });
       return { blob, sampleRate: 44100, name: 'sizzle-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'grain', sourceLabel, scope };
     } finally { exporting = false; }
   }
@@ -385,8 +561,13 @@
     if (exporting) return;
     exporting = true; $('export-button').disabled = true; $('export-button').innerHTML = icon('download') + '<span>Rendering…</span>';
     const snapshot = clone(state), filename = 'sizzle-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav';
-    toast('Rendering four bars of audio…');
-    try { const blob = await engine.exportWav(snapshot); download(blob, filename); toast('Your four-bar loop is ready. Effect tail included.'); }
+    snapshot.stepLocks = clone(bankLocks[bank]);
+    toast(chain.enabled ? 'Rendering the complete chain…' : 'Rendering four bars of audio…');
+    try {
+      const sequence = chain.enabled ? sequenceFrames('chain') : undefined;
+      if (sequence) getSequencerPattern({ scope: 'chain' });
+      const blob = await engine.exportWav(snapshot, { sequence }); download(blob, filename); toast(chain.enabled ? 'Your full chain is ready. Effect tail included.' : 'Your four-bar loop is ready. Effect tail included.');
+    }
     catch (error) { toast(error.message || 'Could not render audio. Please try again.'); }
     finally { exporting = false; $('export-button').disabled = false; $('export-button').innerHTML = icon('download') + '<span>Export WAV</span>'; }
   }
@@ -494,25 +675,28 @@
     const preset = window.NOISE_PRESETS[Number($('preset-select').value)]; if (!preset) return;
     remember(); const wasPlaying = playing || busy; if (wasPlaying) stop();
     state = { ...clone(preset), master: state.master, stepCount: 16 }; banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))]; bank = 0; sequencePage = 0;
+    bankLocks = window.GrainSequence.emptyLocks(banks); chain = window.GrainSequence.emptyChain();
     state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
     renderAll(); persist(); toast(preset.tagline); if (wasPlaying) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
     const next = Number(button.dataset.bank); if (next === bank) return;
+    remember(); useNativeGrid();
     banks[bank] = state.tracks.map((t) => [...t.steps]); bank = next; state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; }); renderRows(); renderBanks(); persist();
   }));
-  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((t) => [...t.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
+  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((t) => [...t.steps]); bankLocks[next] = clone(bankLocks[bank]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' and its overrides copied to ' + 'ABCD'[next] + '.'); });
   $('sequence-length').addEventListener('change', () => {
     const length = Number($('sequence-length').value); if (length === state.stepCount) return;
-    remember(); const resume = playing || busy; if (resume) stop(); state.stepCount = length;
+    remember(); useNativeGrid(); state.stepCount = length;
     if (length === 32) {
       const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
       state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
+      bankLocks = bankLocks.map(pattern => pattern.map(row => row.concat(Array.from({ length: Math.max(0, 32 - row.length) }, () => ({})))));
     } else sequencePage = 0;
-    renderRows(); persist(); if (resume) play();
+    renderRows(); persist();
   });
   $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared.'); });
+  $('clear-button').addEventListener('click', () => { remember(); useNativeGrid(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); bankLocks[bank] = bankLocks[bank].map(row => row.map((lock, step) => step < state.stepCount ? {} : lock)); renderRows(); persist(); toast('Pattern and active step overrides cleared.'); });
   $('random-button').addEventListener('click', random);
   $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'sizzle-' + safeName() + '.json'); toast('Project saved.'); });
@@ -531,9 +715,33 @@
   $('help-button').addEventListener('click', () => $('help-dialog').showModal());
   $('close-help').addEventListener('click', () => $('help-dialog').close());
   $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) { const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); } });
+  $('chain-button').addEventListener('click', () => { renderChainEditor(); $('chain-dialog').showModal(); });
+  $('chain-close').addEventListener('click', () => $('chain-dialog').close());
+  $('chain-enabled').addEventListener('change', () => changeChain(() => { chain.enabled = $('chain-enabled').checked; }));
+  $('chain-loop').addEventListener('change', () => changeChain(() => { chain.loop = $('chain-loop').checked; }));
+  $('chain-add').addEventListener('click', () => { if (chain.entries.length < 16) changeChain(() => chain.entries.push({ bank: Number($('chain-add-bank').value), repeats: 1 })); });
+  $('chain-clear').addEventListener('click', () => changeChain(() => { chain.entries = []; }));
+  $('chain-undo').addEventListener('click', () => { undo(); renderChainEditor(); });
+  $('step-edit-button').addEventListener('click', () => { stepEditMode = !stepEditMode; $('step-edit-button').setAttribute('aria-pressed', stepEditMode); toast(stepEditMode ? 'Choose a step to edit its sound. Shift + click still accents.' : 'Step editing off. Click steps to toggle hits.'); });
+  $('step-close').addEventListener('click', () => $('step-dialog').close());
+  $('step-hit').addEventListener('change', () => {
+    if (!stepTarget) return;
+    remember(); useNativeGrid(); bankSteps(stepTarget.bank)[stepTarget.voice][stepTarget.step] = Number($('step-hit').value);
+    renderRows(); persist();
+  });
+  $('step-clear-locks').addEventListener('click', () => {
+    if (!stepTarget) return;
+    remember(); useNativeGrid(); bankLocks[stepTarget.bank][stepTarget.voice][stepTarget.step] = {};
+    renderRows(); renderStepInspector(); persist();
+  });
+  $('step-undo').addEventListener('click', () => { undo(); renderStepInspector(); });
+  $('step-audition').addEventListener('click', () => { if (stepTarget) audition(state.tracks[stepTarget.voice], bankLocks[stepTarget.bank][stepTarget.voice][stepTarget.step]); });
+  [$('chain-dialog'), $('step-dialog')].forEach(dialog => dialog.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.target.matches('input,select')) { event.preventDefault(); undo(); renderChainEditor(); renderStepInspector(); }
+  }));
   document.querySelector('.brand').addEventListener('click', (event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' }); });
   document.addEventListener('keydown', (event) => {
-    if ($('help-dialog').open || event.target.matches('input,select,textarea') || event.target.isContentEditable) return;
+    if (document.querySelector('dialog[open]') || event.target.matches('input,select,textarea') || event.target.isContentEditable) return;
     if (event.code === 'Space' && !event.target.matches('button,[role=slider]')) { event.preventDefault(); playing || busy ? stop() : play(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
     if (!event.ctrlKey && !event.metaKey && /^[1-8]$/.test(event.key)) { selected = Number(event.key) - 1; renderRows(); renderVoice(); audition(state.tracks[selected]); persist(); }
@@ -542,12 +750,13 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  engine.sequenceSource = { next: nextPattern, read: position => ({ steps: bankSteps(position.bank), locks: bankLocks[position.bank] }), ended: finishPlayback };
   renderAll(); drawHero(0);
-  window.GrainApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+  window.GrainApp = { getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !chain.enabled || chain.loop; }, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
       validateProject(next); remember(); stop(); restore(next); renderAll(); persist();
     },
     loadState(data) { const next = validateProject(clone(data)); remember(); stop(); restore(next); renderAll(); persist(); },
-    audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
+    audioExport: { scopes: [{ id: 'pattern', label: 'Current bank mix' }, { id: 'chain', label: 'Complete chain', usesBars: false }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
 }());

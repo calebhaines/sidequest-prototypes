@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; the existing GALLEY engine and arrangement remain 1.12.0.
+SERVICE is version 1.0.0; GALLEY is version 1.14.0.
 
 ## Making a piece
 
@@ -109,6 +109,16 @@ rendering uses each browser audio block’s timestamp rather than carrying a
 clock lead into new notes. Internal instrument takes use their musical clock;
 microphone delay correction applies only to microphone input.
 
+Recorded audio can end while a resonator is still ringing. Repeating a source
+or an arrangement loop now joins discontinuous clip audio with a brief correction
+before the track inserts. Loop lengths, note timing, source trims, instrument
+input, and effect tails retain their original timing; already seamless repeats
+keep their waveform. This also applies to existing recorded takes.
+
+CLATTER keeps its six-voice limit per lane when GALLEY schedules notes from saved
+settings. Repeated stops preserve an ongoing release instead of restoring its
+full volume, and finished instrument nodes are released during long sessions.
+
 Choose **+ Note clip** to write a part directly in the piano roll. Click to add
 notes, drag to move, and drag their ends to resize. Select several notes to move
 or quantize them together; edit velocity, probability, and destination voices.
@@ -126,6 +136,18 @@ as a GALLEY note clip. Map voices explicitly when instruments differ. Portable
 pattern JSON carries notes between devices and standalone HTML files. Imported
 parts retain their exact timing, durations, velocity, and probability. Choose
 **Use native sequence** in an instrument to return to its own sequencer.
+
+SIZZLE, CLATTER, HOTPLATE, and BATTER also have compact native pattern chains.
+Open **Chain** beside the pattern banks to arrange entries and repeats, then
+choose Loop or Once. Per-step sound overrides live in the selected-step editor;
+cutoff and the supported sound settings apply to that strike, with an explicit
+way to inherit the instrument's normal sound again.
+
+**Patterns → Current sequence** sends the enabled chain or current native
+pattern. Explicit pattern and chain choices remain available. Supported sound
+overrides travel with each note through the shared library, projects, native
+playback, and revisable prints. GALLEY Live follows native Once mode within each
+host transport cycle; GALLEY's own arrangement loop remains the outer clock.
 
 GALLEY supplies a shared musical clock. Live instrument patterns follow its tempo,
 position, and loops; pattern changes enter at the next bar or loop boundary. Seeks cancel pending
@@ -368,22 +390,39 @@ All three effects have grouped controls, described recipes, actual DSP meters,
 Dry / wet, bypass, and numeric automation targets. They use the same processing
 in live monitoring and WAV export; their settings travel in normal projects.
 
-BROILER contains nine bass models: the original clean solid-state, flip-top,
-valve stack, modern grind, and doom fuzz, plus four characters inspired by the
-Ampeg B-15 Portaflex, classic SVT, V-4B, and SVT-PRO. These additional models use
-distinct gain staging, tone shaping, power curves, and sag response. American
-clean, British crunch, and high-gain guitar models remain available.
-Its four control groups follow the signal: input/preamp, low end
-and tone, power/dynamics, then cabinet/output. Clean low blend protects the
-fundamental under heavy drive; its crossover sets the clean band's edge. Tone,
-presence, depth, power drive, sag, gate threshold/release, speaker breakup,
-microphone position/distance, cabinet air, and output are independently adjustable.
-Eleven cabinet choices include six bass cabs, three guitar cabs, DI, and an
-unlikely steel cupboard. The new bass cabinets are a Portaflex-style 1×15,
-sealed 8×10, and ported 4×10. DI disables the cabinet-only controls. Stereo/mono
-input options, thirteen complete recipe presets, dry/wet, bypass, and automation
-work on clips, instruments, and monitored microphone input. No impulse-response
-downloads or network audio are needed.
+BROILER contains 22 amplifier models, eleven cabinets and four independent pedal
+slots inside one insert. Its ten new guitar heads span small tweed and black-panel
+American combos, Copper 30 chime, Royal 68 and Iron 800 British stacks, Dual red 92,
+Cali IV and Fifty-one high gain, Citrus verb and Jazz 120 clean. The original nine
+bass and three guitar characters, their IDs and thirteen original rigs remain.
+Model notes identify the real amplifier and pedal families behind the aliases;
+see [BROILER-MODELS.md](BROILER-MODELS.md) for the signal models and limitations.
+
+The main amp face keeps gain, tone, dynamics and cabinet choices close. Changing a
+head preserves the pedalboard and chosen cabinet; matching a cabinet is explicit.
+A whole-rig recipe replaces the complete sound. Four compact pedal cards offer
+independent bypass, removal, ordering and routing before the amp or after its
+cabinet. Their detail panels contain pedal-specific amount, tone, level and blend
+controls. Seven overdrive, distortion, fuzz and boost characters join compression,
+wah, chorus, phaser, echo and spring. Switch the head off to keep just pedals and the selected cabinet; DI removes the cabinet too.
+All processing stays in the same four-slot GALLEY rack and the same track mixer.
+Save rig and Load rig in the Workshop transfer complete sound settings between
+sessions without changing other inserts, clips or track automation. Loading a
+rig supports Undo and validates the complete file before changing the insert.
+
+The folded Workshop exposes preamp and power valves, tone-stack topology,
+coupling/cathode response, bias, supply voltage, negative feedback, transformer
+character, power scaling and cabinet mic/cut/resonance controls. Stateful RC,
+nonlinear clipping and valve models are used where they help tone and playing
+response; this is a reduced-order simulation rather than an exact measured
+replica or a general schematic solver. Old stock settings preserve the original
+PCM, and old projects inherit disabled pedals and neutral Workshop controls.
+
+Clean low blend protects the fundamental under drive. DI bypasses cabinet-only
+controls. Mono/stereo routing, whole-rig dry/wet, bypass, project recovery and
+numeric automation work on clips, instruments and monitored input. Microphone
+takes remain dry. The same deterministic DSP runs in AudioWorklet, fallback and
+WAV export, including pedal tails. All models and assets work offline.
 
 GLAZE is a complete vocal channel strip occupying one insert. Each stage has a plain-language description visible even when switched off, plus an expandable guide explaining its controls and modes. Start with a
 recipe and the Essentials view; Full pantry exposes every stage. The signal
@@ -469,7 +508,7 @@ Run `npm run check:loom` for the dependency-free Node engine checks. These verif
 project compatibility, automation in playback and export, sample-exact
 count-in/punch recording, and cropped stereo transfers with clip edits and limits.
 From an extracted archive, run `node checks.cjs`.
-Run `npm run check:loom-amp`, `npm run check:loom-vocal`, and `npm run check:loom-mic` for BROILER, GLAZE, and
+Run `npm run check:broiler`, `npm run check:broiler-browser`, `npm run check:loom-amp`, `npm run check:loom-vocal`, and `npm run check:loom-mic` for BROILER, GLAZE, and
 microphone timing/routing checks. The extracted equivalents are
 `node amp-checks.cjs`, `node vocal-checks.cjs`, and `node microphone-engine-checks.cjs`.
 `npm run check:loom-vocal-browser` verifies real GLAZE monitoring, dry takes,
@@ -512,15 +551,24 @@ source printing, including rests, swing, rate, source trim, and placement.
 44.1, 48, and 96 kHz and count-in interpolation across render boundaries.
 `npm run check:loom-tonal-live` records them through the shared clock in both
 audio paths and checks native/arranged switching, count-in, and seeks.
+`npm run check:loom-playback` checks audio loop continuity and transfer parity.
+`npm run check:loom-playback-browser` checks actual hosted node cleanup, CLATTER
+lane limits, and native cancellation envelopes in Chromium.
+`npm run check:percussion-integration` checks all four native percussion apps
+through GALLEY's actual host, once-mode scheduling, private printing, saved
+origins, and arrangement WAV export with per-step sound overrides.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
 archive includes all fourteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
+The extracted percussion checks are `node percussion-integration-checks.cjs`
+and `PERCUSSION_BUILT=1 node shared/percussion-browser-checks.cjs` with Playwright
+and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.12.0.
+font license notices. Version 1.14.0.
 
 ## Compatibility
 

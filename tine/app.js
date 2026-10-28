@@ -11,10 +11,12 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rangeKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
   function presetState(preset, master = .78) {
-    return { name: preset.name, bpm: preset.bpm, swing: preset.swing, drive: preset.drive, space: preset.space, master, stepCount: 16, tracks: preset.tracks.map((track) => model.normalizeTrack(track)) };
+    return { name: preset.name, bpm: preset.bpm, swing: preset.swing, drive: preset.drive, space: preset.space, master, stepCount: 16, chain: model.defaultChain(), tracks: preset.tracks.map((track) => model.normalizeTrack(track)) };
   }
   let state = presetState(presets[0]);
   let banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)];
+  let bankLocks = Array.from({ length: 4 }, () => model.emptyLocks());
+  let editSteps = false, inspectedStep = null, chainId = 0;
   let bank = 0, selected = 0, sequencePage = 0, tab = 'resonance';
   let playing = false, loading = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let exporting = false, history = [], saveTimer, toastTimer;
@@ -24,15 +26,17 @@
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
     banks[bank] = state.tracks.map((track) => [...track.steps]);
-    return { app: 'TINE', version: 3, state: clone(state), banks: clone(banks), bank, selected };
+    return { app: 'TINE', version: 4, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), bank, selected };
   }
+  function sequenceView() { return { state, banks: banks.map((pattern, index) => index === bank ? state.tracks.map(track => track.steps) : pattern), bankLocks, bank, selected }; }
+  function getSequencerPattern(options = {}) { return model.sequencerPattern(sequenceView(), options); }
   function validateProject(data) {
     try { return model.upgradeProject(data); }
     catch (_) { throw new Error('Please choose a valid CLATTER project. Its sound and pattern settings must be complete.'); }
   }
   function restore(data) {
     const valid = validateProject(data);
-    state = clone(valid.state); banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
+    state = clone(valid.state); banks = clone(valid.banks); bankLocks = clone(valid.bankLocks); bank = valid.bank; selected = valid.selected;
     if (state.stepCount === 16) sequencePage = 0;
     state.tracks = state.tracks.map((track, index) => { const next = model.normalizeTrack(track); next.steps = [...banks[bank][index]]; return next; });
   }
@@ -44,7 +48,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 240);
   }
-  function remember() { history.push(project()); if (history.length > 70) history.shift(); $('undo-button').disabled = false; }
+  function remember() { history.push(project()); if (history.length > 70) history.shift(); for (const id of ['undo-button', 'chain-undo', 'step-undo']) $(id).disabled = false; }
   function focusKey() {
     const active = document.activeElement;
     return active && (active.dataset.focusKey || active.id) || null;
@@ -66,6 +70,11 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3500);
   }
   function syncEffects() { engine.setMasterVolume(state.master); engine.setEffects({ drive: state.drive, space: state.space }); }
+  function nativeGrid() {
+    if (!state.musicLabPattern) return;
+    const resume = playing || loading; if (resume) stop(); delete state.musicLabPattern;
+    if (resume) queueMicrotask(play);
+  }
   function audioReady() {
     $('audio-status').textContent = engine.context ? 'AUDIO ON · ' + (engine.context.sampleRate / 1000).toFixed(1) + ' KHZ' : 'AUDIO ON';
     $('status-dot').classList.add('ready');
@@ -88,12 +97,15 @@
     const generation = ++playGeneration; loading = true; currentBar = 0;
     $('play-button').setAttribute('aria-busy', 'true');
     try {
-      await engine.start(state, (step) => {
+      await engine.start(state, (step, frame) => {
         if (!playing || generation !== playGeneration) return;
-        if (step % 16 === 0) currentBar = currentBar % 4 + 1;
+        if (frame?.ended) { playing = false; setPlayhead(-1); playButton(false); stopHeroAnimation(); $('chain-position').textContent = 'Finished'; return; }
+        if (frame?.chain && step === 0 && frame.entry === 0 && frame.repeat === 1) currentBar = 0;
+        if (step % 16 === 0) currentBar = frame?.chain ? currentBar + 1 : currentBar % 4 + 1;
         setPlayhead(step);
         $('beat-position').textContent = currentBar + ' . ' + (Math.floor(step % 16 / 4) + 1) + ' . ' + (step % 4 + 1);
-      });
+        if (frame) { const label = frame.chain ? 'Entry ' + (frame.entry + 1) + ' · ' + 'ABCD'[frame.bank] + ' · ' + frame.repeat + '/' + frame.repeats : 'Pattern ' + 'ABCD'[frame.bank]; if ($('chain-position').textContent !== label) $('chain-position').textContent = label; }
+      }, sequenceView);
       if (generation !== playGeneration || !engine.running) return;
       playing = true; startHeroAnimation(); syncEffects(); audioReady(); playButton(true);
     } catch (error) { if (generation === playGeneration) { stop(); toast(error.message || 'Your browser could not start audio.'); } }
@@ -103,6 +115,7 @@
     ++playGeneration; loading = false; playing = false; engine.stop(); setPlayhead(-1); playButton(false);
     stopHeroAnimation();
     $('play-button').removeAttribute('aria-busy'); $('beat-position').textContent = '1 . 1 . 1';
+    $('chain-position').textContent = '';
   }
   function setPlayhead(step) {
     if (currentStep >= 0) playheadColumns[currentStep].forEach((item) => item.classList.remove('current'));
@@ -111,10 +124,11 @@
   }
   function updateStep(button, row, step) {
     const track = state.tracks[row], value = track.steps[step];
-    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (currentStep === step ? ' current' : '');
+    const locked = Object.keys(bankLocks[bank][row][step] || {}).length > 0;
+    button.className = 'step' + (step % 4 === 0 ? ' beat' : '') + (value ? ' active' : '') + (value === 2 ? ' accent' : '') + (locked ? ' locked' : '') + (currentStep === step ? ' current' : '');
     button.setAttribute('aria-pressed', value > 0);
-    button.setAttribute('aria-label', track.name + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off'));
-    button.title = 'Step ' + (step + 1) + ' · Shift + click or touch and hold to accent';
+    button.setAttribute('aria-label', track.name + ', step ' + (step + 1) + ', ' + (value === 2 ? 'accent' : value ? 'on' : 'off') + (locked ? ', sound locks' : ''));
+    button.title = 'Step ' + (step + 1) + ' · Shift + click to accent · Right click or E to edit sound';
   }
   function glyph(id) {
     const paths = {
@@ -159,15 +173,17 @@
         const button = document.createElement('button'); button.dataset.step = stepIndex; button.dataset.track = index; button.dataset.focusKey = 'step-' + index + '-' + stepIndex; updateStep(button, index, stepIndex);
         let holdTimer, touchX = 0, touchY = 0, held = false;
         const edit = (accent) => {
-          remember(); const previous = track.steps[stepIndex]; track.steps[stepIndex] = accent ? previous === 2 ? 1 : 2 : previous ? 0 : 1;
+          remember(); nativeGrid(); const previous = track.steps[stepIndex]; track.steps[stepIndex] = accent ? previous === 2 ? 1 : 2 : previous ? 0 : 1;
+          if (!track.steps[stepIndex]) bankLocks[bank][index][stepIndex] = {};
           updateStep(button, index, stepIndex); persist(); if (track.steps[stepIndex] && !playing) audition(track);
         };
-        button.addEventListener('click', (event) => { if (held) { held = false; return; } edit(event.shiftKey); });
-        button.addEventListener('pointerdown', (event) => { if (event.pointerType !== 'touch') return; held = false; touchX = event.clientX; touchY = event.clientY; holdTimer = setTimeout(() => { held = true; edit(true); }, 450); });
+        button.addEventListener('click', (event) => { if (held) { held = false; return; } if (editSteps && !event.shiftKey) openStep(index, stepIndex); else edit(event.shiftKey); });
+        button.addEventListener('pointerdown', (event) => { if (event.pointerType !== 'touch') return; held = false; touchX = event.clientX; touchY = event.clientY; holdTimer = setTimeout(() => { held = true; openStep(index, stepIndex); }, 450); });
         button.addEventListener('pointermove', (event) => { if (event.pointerType === 'touch' && (Math.abs(event.clientX - touchX) > 8 || Math.abs(event.clientY - touchY) > 8)) clearTimeout(holdTimer); });
         ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => button.addEventListener(type, () => clearTimeout(holdTimer)));
-        button.addEventListener('contextmenu', (event) => event.preventDefault());
+        button.addEventListener('contextmenu', (event) => { event.preventDefault(); if (!held) openStep(index, stepIndex); });
         button.addEventListener('keydown', (event) => {
+          if (event.key.toLowerCase() === 'e') { event.preventDefault(); openStep(index, stepIndex); return; }
           const delta = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[event.key]; if (!delta) return;
           event.preventDefault(); const nextRow = (index + delta[0] + 8) % 8, nextStep = (stepIndex + delta[1] + state.stepCount) % state.stepCount;
           if (Math.floor(nextStep / 16) !== sequencePage) { sequencePage = Math.floor(nextStep / 16); renderRows(); }
@@ -186,6 +202,88 @@
     restoreFocus(focus);
   }
   function renderBanks() { document.querySelectorAll('[data-bank]').forEach((button) => { const active = Number(button.dataset.bank) === bank; button.classList.toggle('active', active); button.setAttribute('aria-pressed', active); }); }
+  const stepParameters = [
+    { key: 'cutoff', label: 'Output cutoff', min: 20, max: 20000, step: 1, unit: 'Hz', base: () => 20000 },
+    { key: 'resonance', label: 'Filter resonance', min: .1, max: 20, step: .01, unit: 'Q', base: () => .707 },
+    { key: 'decay', label: 'Body decay', min: .04, max: 4, step: .001, unit: 'seconds', base: track => track.decay },
+    { key: 'tone', label: 'Brightness', min: 0, max: 1, step: .01, unit: '0–1', base: track => track.tone },
+    { key: 'level', label: 'Voice level', min: 0, max: 1, step: .01, unit: '0–1', base: track => track.level },
+    { key: 'pan', label: 'Pan', min: -1, max: 1, step: .01, unit: '−1 L / +1 R', base: track => track.pan },
+    { key: 'drive', label: 'Hit drive', min: 0, max: 1, step: .01, unit: '0–1', base: () => 0 }
+  ];
+  function openStep(voice, step) {
+    inspectedStep = { bank, voice, step }; renderStepInspector();
+    if (!$('step-dialog').open) $('step-dialog').showModal();
+  }
+  function renderStepInspector() {
+    if (!inspectedStep) return;
+    const current = inspectedStep, track = state.tracks[current.voice], locks = bankLocks[current.bank][current.voice][current.step];
+    if (!track || !locks) { $('step-dialog').close(); inspectedStep = null; return; }
+    $('step-inspector-title').textContent = 'Pattern ' + 'ABCD'[current.bank] + ' · ' + track.name + ' · step ' + (current.step + 1);
+    $('step-hit').value = String((current.bank === bank ? track.steps : banks[current.bank][current.voice])[current.step]);
+    $('step-lock-fields').replaceChildren();
+    stepParameters.forEach(parameter => {
+      const row = document.createElement('div'); row.className = 'step-lock-row';
+      const labels = document.createElement('div'); labels.className = 'step-lock-labels';
+      const caption = document.createElement('span'); caption.className = 'step-lock-name'; caption.textContent = parameter.label;
+      const label = document.createElement('label'), enabled = document.createElement('input'), name = document.createElement('span'); label.className = 'step-inherit-label';
+      enabled.type = 'checkbox'; enabled.id = 'step-inherit-' + parameter.key; enabled.checked = !Object.hasOwn(locks, parameter.key); enabled.setAttribute('aria-label', 'Inherit voice ' + parameter.label.toLowerCase()); name.textContent = 'Inherit'; label.append(enabled, name); labels.append(caption, label);
+      const input = document.createElement('input'); input.type = 'number'; input.id = 'step-lock-' + parameter.key; input.min = parameter.min; input.max = parameter.max; input.step = parameter.step; input.value = enabled.checked ? parameter.base(track) : locks[parameter.key]; input.disabled = enabled.checked; input.setAttribute('aria-label', 'Step ' + parameter.label.toLowerCase());
+      const unit = document.createElement('span'); unit.textContent = parameter.unit;
+      let frequencyRange = null;
+      if (parameter.key === 'cutoff') {
+        frequencyRange = document.createElement('input'); frequencyRange.type = 'range'; frequencyRange.id = 'step-lock-cutoff-range'; frequencyRange.min = 0; frequencyRange.max = 1000; frequencyRange.step = 1; frequencyRange.disabled = enabled.checked; frequencyRange.setAttribute('aria-label', 'Step output cutoff logarithmic slider');
+        const readout = () => { frequencyRange.value = Math.round(Math.log(Number(input.value) / 20) / Math.log(1000) * 1000); unit.textContent = Number(input.value) >= 1000 ? (Number(input.value) / 1000).toFixed(2) + ' kHz' : input.value + ' Hz'; };
+        readout(); input.addEventListener('input', readout);
+        frequencyRange.addEventListener('input', () => { input.value = Math.round(20 * 1000 ** (Number(frequencyRange.value) / 1000)); readout(); });
+        frequencyRange.addEventListener('change', () => { change(Number(input.value)); });
+      }
+      const inherit = document.createElement('small'); inherit.textContent = enabled.checked ? 'Inherit voice' : 'This hit only';
+      const change = value => { remember(); nativeGrid(); if (value === undefined) delete locks[parameter.key]; else locks[parameter.key] = value; renderRows(); persist(); };
+      enabled.addEventListener('change', () => { change(enabled.checked ? undefined : clamp(Number(input.value), parameter.min, parameter.max)); input.disabled = enabled.checked; if (frequencyRange) frequencyRange.disabled = enabled.checked; inherit.textContent = enabled.checked ? 'Inherit voice' : 'This hit only'; });
+      input.addEventListener('change', () => { const value = Number(input.value); if (!Number.isFinite(value)) { input.value = locks[parameter.key]; return; } input.value = clamp(value, parameter.min, parameter.max); if (frequencyRange) input.dispatchEvent(new Event('input')); change(Number(input.value)); });
+      row.append(labels, input, unit, inherit); if (frequencyRange) row.append(frequencyRange); $('step-lock-fields').append(row);
+    });
+  }
+  function chainTransaction(change) {
+    const next = clone(state.chain); change(next);
+    if (!model.validChain(next, state.stepCount)) { toast('Keep the chain within 32 entries and 256 beats. Each repeat is 1–16.'); renderChain(); return; }
+    remember(); nativeGrid(); state.chain = next; renderChain(); persist();
+  }
+  function newChainId() {
+    let id; do { id = 'entry-' + (++chainId); } while (state.chain.entries.some(entry => entry.id === id)); return id;
+  }
+  function renderChain() {
+    const chain = state.chain;
+    $('chain-enabled').checked = chain.enabled; $('chain-enabled').disabled = !chain.entries.length; $('chain-loop').checked = chain.loop;
+    $('chain-button').textContent = chain.enabled ? 'Chain · ' + chain.entries.map(entry => 'ABCD'[entry.bank] + (entry.repeats > 1 ? '×' + entry.repeats : '')).join(' → ') : 'Chain off';
+    $('chain-button').setAttribute('aria-expanded', $('chain-dialog').open);
+    const focus = $('chain-entries').contains(document.activeElement) ? document.activeElement.dataset.chainFocus : null;
+    $('chain-entries').replaceChildren();
+    chain.entries.forEach((entry, index) => {
+      const row = document.createElement('div'); row.className = 'chain-entry'; row.dataset.chainEntry = entry.id; row.dataset.chainIndex = index;
+      const ordinal = document.createElement('span'); ordinal.textContent = String(index + 1).padStart(2, '0'); ordinal.className = 'chain-ordinal';
+      const pattern = document.createElement('select'); pattern.dataset.chainBank = entry.id; pattern.dataset.chainFocus = entry.id + '-bank'; pattern.setAttribute('aria-label', 'Pattern for chain entry ' + (index + 1));
+      'ABCD'.split('').forEach((name, value) => { const option = document.createElement('option'); option.value = value; option.textContent = 'Pattern ' + name; pattern.append(option); }); pattern.value = entry.bank;
+      pattern.addEventListener('change', () => chainTransaction(next => { next.entries[index].bank = Number(pattern.value); }));
+      const repeatLabel = document.createElement('label'); repeatLabel.textContent = 'Repeats ';
+      const repeats = document.createElement('input'); repeats.type = 'number'; repeats.min = 1; repeats.max = 16; repeats.step = 1; repeats.value = entry.repeats; repeats.dataset.chainRepeats = entry.id; repeats.dataset.chainFocus = entry.id + '-repeats'; repeats.setAttribute('aria-label', 'Repeats for chain entry ' + (index + 1)); repeatLabel.append(repeats);
+      repeats.addEventListener('change', () => chainTransaction(next => { next.entries[index].repeats = Number(repeats.value); }));
+      row.append(ordinal, pattern, repeatLabel);
+      [['up', '↑'], ['down', '↓'], ['duplicate', 'Copy'], ['remove', '×']].forEach(([action, text]) => {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = text; button.dataset.chainAction = action; button.dataset.chainFocus = entry.id + '-' + action; button.setAttribute('aria-label', action + ' chain entry ' + (index + 1));
+        button.disabled = action === 'up' && index === 0 || action === 'down' && index === chain.entries.length - 1;
+        button.addEventListener('click', () => chainTransaction(next => {
+          if (action === 'remove') { next.entries.splice(index, 1); if (!next.entries.length) next.enabled = false; }
+          else if (action === 'duplicate') next.entries.splice(index + 1, 0, { ...next.entries[index], id: newChainId() });
+          else { const other = index + (action === 'up' ? -1 : 1); [next.entries[index], next.entries[other]] = [next.entries[other], next.entries[index]]; }
+        })); row.append(button);
+      });
+      $('chain-entries').append(row);
+    });
+    if (!chain.entries.length) { const empty = document.createElement('p'); empty.textContent = 'Add A–D in playing order. Repeats use each complete 16- or 32-step pattern.'; $('chain-entries').append(empty); }
+    if (focus) Array.from($('chain-entries').querySelectorAll('[data-chain-focus]')).find(element => element.dataset.chainFocus === focus)?.focus({ preventScroll: true });
+  }
   function normalized(descriptor, value) {
     return clamp(descriptor.log ? Math.log(value / descriptor.min) / Math.log(descriptor.max / descriptor.min) : (value - descriptor.min) / (descriptor.max - descriptor.min), 0, 1);
   }
@@ -284,7 +382,7 @@
   function renderAll() {
     $('tempo').value = state.bpm; $('swing').value = Math.round(state.swing * 100); $('swing-value').textContent = Math.round(state.swing * 100) + '%';
     const preset = presets.findIndex((item) => item.name === state.name); $('preset-select').value = preset >= 0 ? String(preset) : 'custom';
-    renderRows(); renderBanks(); renderVoice(); renderMaster(); $('undo-button').disabled = !history.length;
+    renderRows(); renderBanks(); renderVoice(); renderMaster(); renderChain(); if ($('step-dialog').open) renderStepInspector(); for (const id of ['undo-button', 'chain-undo', 'step-undo']) $(id).disabled = !history.length;
   }
   function mutateVoice() {
     remember(); const track = state.tracks[selected];
@@ -300,7 +398,7 @@
     renderVoice(); refreshTrackMeta(); persist(); audition(track); toast('Voice mutated. The saucepan has changed its mind.');
   }
   function randomPattern() {
-    remember(); state.tracks.forEach((track, row) => {
+    remember(); nativeGrid(); state.tracks.forEach((track, row) => {
       const hidden = track.steps.slice(state.stepCount);
       track.steps = Array.from({ length: state.stepCount }, (_, index) => {
         const step = index % 16;
@@ -309,32 +407,51 @@
         if (row === 7 && step === 0) return 1;
         const chance = row === 2 ? step % 2 ? .28 : .85 : row === 3 ? .2 : row === 4 ? .15 : row === 5 ? .17 : row === 6 ? .16 : .1;
         return Math.random() < chance ? Math.random() < .15 ? 2 : 1 : 0;
-      }).concat(hidden);
+      }).concat(hidden); bankLocks[bank][row] = bankLocks[bank][row].map((locks, step) => step < state.stepCount ? {} : locks);
     }); renderRows(); persist(); toast('New groove generated. The dish pit approves.');
   }
   function download(blob, name) {
     const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
   function safeName(name = state.name) { return String(name || 'my-pattern').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-pattern'; }
-  async function exportAudio({ scope = 'pattern', bars = 1, tailSeconds, signal } = {}) {
+  async function renderSequenceAudio(snapshot, scope, bars, tailSeconds, signal) {
+    const packet = getSequencerPattern({ scope: scope === 'sequence' ? undefined : scope }), completeChain = scope === 'chain' || scope === 'sequence' && state.chain.enabled;
+    if (!Number.isInteger(bars) || bars < 1 || bars > 16) throw new Error('Choose one to sixteen bars.');
+    const length = completeChain ? packet.lengthBeats : bars * 4, secondsPerBeat = 60 / snapshot.bpm;
+    let longest = Math.max(.22, ...snapshot.tracks.map(track => track.decay + Math.max(track.noiseAttack + track.noiseDecay + .008, window.TineEngine.inspectExciter(track).duration) + .205));
+    for (const note of packet.notes) if (note.locks?.decay) longest = Math.max(longest, clamp(note.locks.decay, .04, 4) + 1.5);
+    const tail = tailSeconds === undefined ? Math.min(15, longest + (snapshot.space > 0 ? 1.8 : 0) + (packet.notes.some(note => note.locks?.cutoff || note.locks?.resonance) ? 2.5 : 0)) : Number(tailSeconds);
+    if (!Number.isFinite(tail) || tail < 0 || tail > 15) throw new Error('Choose an effect tail between zero and fifteen seconds.');
+    if (length * secondsPerBeat + tail > 120) throw new Error('This audio is longer than 120 seconds. Shorten the chain, use fewer repeats, or increase tempo.');
+    const events = [];
+    for (let offset = 0; offset < length; offset += packet.lengthBeats) for (const note of packet.notes) {
+      const beat = offset + note.beat; if (beat >= length) continue;
+      if (events.length >= 8192) throw new Error('This audio export has too many hits. Use fewer bars or repeats.');
+      events.push({ voice: Number(note.voice.slice(6)), at: beat * secondsPerBeat, velocity: note.velocity, ...(note.locks ? { locks: clone(note.locks) } : {}) });
+    }
+    events.sort((a, b) => a.at - b.at || a.voice - b.voice);
+    return engine.renderNativeEvents(snapshot, events, { durationSeconds: length * secondsPerBeat, tailSeconds: tail, signal, nativeHits: true });
+  }
+  async function exportAudio({ scope = 'sequence', bars = 1, tailSeconds, signal } = {}) {
     if (signal?.aborted) throw new DOMException('Audio export cancelled.', 'AbortError');
-    if (!['pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a pattern, selected voice pattern, or selected voice hit.');
+    if (!['sequence', 'chain', 'pattern', 'voice', 'hit'].includes(scope)) throw new Error('Choose a sequence, pattern, chain, selected voice pattern, or selected voice hit.');
     if (exporting) throw new Error('Wait for the current CLATTER render to finish.');
     const snapshot = clone(state), voice = selected;
-    if (scope !== 'pattern') snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
+    const enhanced = scope !== 'hit' && (scope === 'chain' || scope === 'sequence' && state.chain.enabled || bankLocks[bank].some(steps => steps.slice(0, state.stepCount).some(locks => Object.keys(locks).length)));
+    if (!enhanced && ['voice', 'hit'].includes(scope)) snapshot.tracks = [{ ...snapshot.tracks[voice], mute: false, solo: false }];
     if (scope === 'hit') snapshot.tracks[0].steps = [1, ...Array(15).fill(0)];
-    const sourceLabel = scope === 'pattern' ? snapshot.name : snapshot.tracks[0].name || 'Voice ' + (voice + 1);
+    const sourceLabel = ['voice', 'hit'].includes(scope) ? state.tracks[voice].name || 'Voice ' + (voice + 1) : snapshot.name;
     exporting = true;
     try {
-      const blob = await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal });
-      return { blob, sampleRate: 44100, name: 'clatter-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
+      const rendered = enhanced ? await renderSequenceAudio(snapshot, scope, bars, tailSeconds, signal) : { blob: await engine.exportWav(snapshot, { bars, scope: scope === 'hit' ? 'hit' : 'pattern', tailSeconds, signal }), sampleRate: 44100 };
+      return { blob: rendered.blob, sampleRate: rendered.sampleRate, name: 'clatter-' + safeName(sourceLabel) + '-' + scope + '.wav', tempo: snapshot.bpm, sourceApp: 'tine', sourceLabel, scope };
     } finally { exporting = false; }
   }
   async function exportWav() {
     if (exporting) return; exporting = true; $('export-button').disabled = true;
     const oldChildren = Array.from($('export-button').childNodes, (node) => node.cloneNode(true)); $('export-button').textContent = 'Rendering…'; $('export-button').setAttribute('aria-busy', 'true');
-    const snapshot = clone(state); toast('Rendering four bars and the full resonator tail…');
-    try { const blob = await engine.exportWav(snapshot); download(blob, 'clatter-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Four bars rendered. The natural decay and effect tail are included.'); }
+    const snapshot = clone(state), enhanced = state.chain.enabled || bankLocks[bank].some(steps => steps.slice(0, state.stepCount).some(locks => Object.keys(locks).length)); toast(state.chain.enabled ? 'Rendering the complete chain and natural tails…' : 'Rendering four bars and the full resonator tail…');
+    try { const blob = enhanced ? (await renderSequenceAudio(snapshot, 'sequence', 4)).blob : await engine.exportWav(snapshot); download(blob, 'clatter-' + safeName(snapshot.name) + '-' + snapshot.bpm + 'bpm.wav'); toast('Audio rendered. Natural decay and effect tails included.'); }
     catch (error) { toast(error.message || 'Audio could not render. Please try again.'); }
     finally { exporting = false; $('export-button').disabled = false; $('export-button').replaceChildren(...oldChildren); $('export-button').removeAttribute('aria-busy'); }
   }
@@ -494,25 +611,49 @@
   $('preset-select').addEventListener('change', () => {
     const preset = presets[Number($('preset-select').value)]; if (!preset) return;
     remember(); const resume = playing || loading; if (resume) stop(); const master = state.master;
-    state = presetState(preset, master); banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)]; bank = 0; sequencePage = 0;
+    state = presetState(preset, master); banks = [state.tracks.map((track) => [...track.steps]), ...Array.from({ length: 3 }, emptyBank)]; bankLocks = Array.from({ length: 4 }, () => model.emptyLocks()); bank = 0; sequencePage = 0;
     renderAll(); persist(); toast(preset.tagline || preset.name + ' loaded.'); if (resume) play();
   });
   document.querySelectorAll('[data-bank]').forEach((button) => button.addEventListener('click', () => {
-    const next = Number(button.dataset.bank); if (next === bank) return; remember(); banks[bank] = state.tracks.map((track) => [...track.steps]); bank = next;
+    const next = Number(button.dataset.bank); if (next === bank) return; remember(); nativeGrid(); banks[bank] = state.tracks.map((track) => [...track.steps]); bank = next;
     state.tracks.forEach((track, index) => { track.steps = [...banks[bank][index]]; }); renderRows(); renderBanks(); persist();
   }));
-  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((track) => [...track.steps]); persist(); toast('Pattern ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
+  $('copy-pattern').addEventListener('click', () => { remember(); const next = (bank + 1) % 4; banks[next] = state.tracks.map((track) => [...track.steps]); bankLocks[next] = clone(bankLocks[bank]); persist(); toast('Pattern and sound locks ' + 'ABCD'[bank] + ' copied to ' + 'ABCD'[next] + '.'); });
   $('sequence-length').addEventListener('change', () => {
     const length = Number($('sequence-length').value); if (length === state.stepCount) return;
-    remember(); const resume = playing || loading; if (resume) stop(); state.stepCount = length;
+    if (!model.validChain(state.chain, length)) { $('sequence-length').value = state.stepCount; toast('Shorten the chain before doubling this pattern length beyond 256 beats.'); return; }
+    remember(); nativeGrid(); state.stepCount = length;
     if (length === 32) {
       const extend = (steps) => steps.concat(Array(Math.max(0, 32 - steps.length)).fill(0));
       state.tracks.forEach((track) => { track.steps = extend(track.steps); }); banks = banks.map((pattern) => pattern.map(extend));
+      bankLocks = bankLocks.map(pattern => pattern.map(steps => steps.concat(Array.from({ length: Math.max(0, 32 - steps.length) }, () => ({})))));
     } else sequencePage = 0;
-    renderRows(); persist(); if (resume) play();
+    renderRows(); renderChain(); persist();
   });
   $('sequence-page').addEventListener('change', () => { sequencePage = Number($('sequence-page').value); renderRows(); });
-  $('clear-button').addEventListener('click', () => { remember(); state.tracks.forEach((track) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); }); renderRows(); persist(); toast('Pattern cleared. Your sounds are preserved.'); });
+  $('clear-button').addEventListener('click', () => { remember(); nativeGrid(); state.tracks.forEach((track, voice) => { track.steps = track.steps.map((value, step) => step < state.stepCount ? 0 : value); bankLocks[bank][voice] = bankLocks[bank][voice].map((locks, step) => step < state.stepCount ? {} : locks); }); renderRows(); persist(); toast('Pattern and active-step locks cleared. Your sounds and hidden steps are preserved.'); });
+  $('chain-button').addEventListener('click', () => { renderChain(); $('chain-dialog').showModal(); $('chain-button').setAttribute('aria-expanded', 'true'); });
+  $('close-chain').addEventListener('click', () => $('chain-dialog').close());
+  $('chain-dialog').addEventListener('close', () => $('chain-button').setAttribute('aria-expanded', 'false'));
+  $('chain-enabled').addEventListener('change', () => chainTransaction(next => { next.enabled = $('chain-enabled').checked; }));
+  $('chain-loop').addEventListener('change', () => chainTransaction(next => { next.loop = $('chain-loop').checked; }));
+  $('chain-add').addEventListener('click', () => chainTransaction(next => { next.entries.push({ id: newChainId(), bank: Number($('chain-add-bank').value), repeats: 1 }); }));
+  $('chain-clear').addEventListener('click', () => chainTransaction(next => { next.entries = []; next.enabled = false; }));
+  $('chain-undo').addEventListener('click', undo); $('step-undo').addEventListener('click', undo);
+  $('step-edit-button').addEventListener('click', () => { editSteps = !editSteps; $('step-edit-button').setAttribute('aria-pressed', editSteps); $('step-edit-button').textContent = editSteps ? 'Choose step…' : 'Edit step'; });
+  $('close-step').addEventListener('click', () => $('step-dialog').close());
+  $('step-hit').addEventListener('change', () => {
+    if (!inspectedStep) return; remember(); nativeGrid(); const current = inspectedStep, steps = current.bank === bank ? state.tracks[current.voice].steps : banks[current.bank][current.voice];
+    steps[current.step] = Number($('step-hit').value); if (!steps[current.step]) bankLocks[current.bank][current.voice][current.step] = {};
+    renderRows(); renderStepInspector(); persist();
+  });
+  $('step-clear-locks').addEventListener('click', () => { if (!inspectedStep) return; remember(); nativeGrid(); const current = inspectedStep; bankLocks[current.bank][current.voice][current.step] = {}; renderRows(); renderStepInspector(); persist(); });
+  $('step-hear').addEventListener('click', async () => {
+    if (!inspectedStep) return; const current = inspectedStep;
+    try { await engine.init(); syncEffects(); engine.scheduleNativeNote(state.tracks[current.voice], engine.context.currentTime + .005, { locks: clone(bankLocks[current.bank][current.voice][current.step]), source: 'step-preview', voiceKey: 'voice-' + current.voice }); audioReady(); }
+    catch (error) { toast(error.message || 'This step could not be heard.'); }
+  });
+  for (const id of ['step-dialog', 'chain-dialog']) $(id).addEventListener('click', event => { if (event.target !== $(id)) return; const bounds = $(id).getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) $(id).close(); });
   $('random-button').addEventListener('click', randomPattern); $('undo-button').addEventListener('click', undo);
   $('save-button').addEventListener('click', () => { download(new Blob([JSON.stringify(project(), null, 2)], { type: 'application/json' }), 'clatter-' + safeName() + '.json'); toast('Project saved. Sounds, patterns, and all four banks included.'); });
   $('open-button').addEventListener('click', () => $('project-file').click());
@@ -529,6 +670,7 @@
     if ($('help-dialog').open || event.target.isContentEditable) return;
     const field = event.target.matches('input,select,textarea');
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && (!field || event.target.matches('input[type=range]'))) { event.preventDefault(); undo(); return; }
+    if ($('step-dialog').open || $('chain-dialog').open) return;
     if (field) return;
     if (event.code === 'Space' && !event.target.matches('button,[role=slider]')) { event.preventDefault(); playing || loading ? stop() : play(); }
     if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-8]$/.test(event.key)) { selected = Number(event.key) - 1; renderRows(); renderVoice(); persist(); audition(); }
@@ -539,11 +681,11 @@
   let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawVoice(); drawHero(heroTime); }, 80); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   renderAll(); drawHero();
-  window.TineApp = { getState: () => clone(state), getProject: project, isPlaying: () => playing, play, stop, engine, exportAudio,
+  window.TineApp = { getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !(state.chain.enabled && state.chain.loop === false); }, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
       validateProject(next); remember(); stop(); restore(next); renderAll(); persist();
     },
     loadState(data) { const next = validateProject(clone(data)); remember(); stop(); restore(next); renderAll(); persist(); },
-    audioExport: { scopes: [{ id: 'pattern', label: 'Pattern mix' }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultBars: 1, maxBars: 16 } };
+    get audioExport() { return { scopes: [{ id: 'sequence', label: 'Current sequence · pattern or chain', usesBars: !state.chain.enabled }, { id: 'pattern', label: 'Current pattern mix' }, { id: 'chain', label: 'Complete chain', usesBars: false }, { id: 'voice', label: 'Selected voice pattern' }, { id: 'hit', label: 'Selected voice hit', usesBars: false }], defaultScope: 'sequence', defaultBars: 1, maxBars: 16 }; } };
 }());
