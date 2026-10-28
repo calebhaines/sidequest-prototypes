@@ -1,7 +1,8 @@
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.14.0';
+  const VERSION = '1.15.0';
+  const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
   const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
@@ -205,6 +206,7 @@
     const s = p.state;
     const savedVersion = typeof p.appVersion === 'string' && /^(\d+)\.(\d+)\.(\d+)$/.exec(p.appVersion);
     const legacyBroiler = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 14);
+    const legacyButter = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 15);
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || s.tracks.length !== 8 || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain eight complete tracks.');
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack > 7 || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
@@ -238,6 +240,10 @@
       if (legacyBroiler) for (const slot of t.effects) if (slot?.type === 'broiler' && plain(slot.params)) {
         const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'broiler');
         for (const param of definition?.params || []) if (BROILER_WORKSHOP_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
+      }
+      if (legacyButter) for (const slot of t.effects) if (slot?.type === 'velvet' && plain(slot.params)) {
+        const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'velvet');
+        for (const param of definition?.params || []) if (BUTTER_ANALOG_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
       }
       t.effects.forEach(e => effect(e, true));
       if (t.automation !== undefined) {

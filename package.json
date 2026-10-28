@@ -77,7 +77,9 @@
     "check:bower-native-timing": "node bower/native-pattern-timing-checks.cjs",
     "check:loom-tonal-clocks": "node loom/transport-count-in-checks.cjs && node loom/tonal-fallback-clock-checks.cjs",
     "check:broiler": "node loom/broiler-pedal-checks.cjs && node loom/broiler-workshop-checks.cjs && node loom/broiler-project-checks.cjs && node loom/amp-checks.cjs",
-    "check:broiler-browser": "node loom/broiler-browser-checks.cjs"
+    "check:broiler-browser": "node loom/broiler-browser-checks.cjs",
+    "check:compressor": "node loom/compressor-checks.cjs && node loom/compressor-project-checks.cjs",
+    "check:compressor-browser": "node loom/compressor-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

@@ -23,6 +23,7 @@
   let vocalEditorView = 'basic';
   const vocalHelpOpen = new Set();
   const broilerDetailsOpen = new Set();
+  let compressorAdvancedOpen = false;
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -155,6 +156,69 @@
   function effectControl(p, params) {
     if(p.type==='select')return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}</label><select id="fx-${p.key}" data-effect-param="${p.key}">${p.options.map(o=>`<option value="${escape(o.value)}" ${o.value===params[p.key]?'selected':''}>${escape(o.label)}</option>`).join('')}</select></div>`;
     return `<div class="control"><label for="fx-${p.key}">${escape(p.label)}<output>${formatParam(p,params[p.key])}</output></label>${effectRange(p,params[p.key])}</div>`;
+  }
+  function compressorControl(param, params) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control compressor-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const logarithmic = param.min > 0 && ['attack', 'release'].includes(param.key);
+    const range = logarithmic ? `<input id="fx-${param.key}" data-effect-param="${param.key}" data-log="true" type="range" min="0" max="1" step="0.001" value="${Math.log(value / param.min) / Math.log(param.max / param.min)}">` : effectRange(param, value);
+    return `<div class="control compressor-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${formatParam(param, value)}</output></label><div class="compressor-value-row">${range}<input id="fx-number-${param.key}" data-compressor-number="${param.key}" type="number" min="${param.min}" max="${param.max}" step="${param.step}" value="${Number(value.toFixed(4))}" aria-label="${escape(param.label)} exact value${param.unit ? ' in ' + escape(param.unit) : ''}"></div></div>`;
+  }
+  function compressorControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param]));
+    const controls = keys => keys.map(key => compressorControl(descriptors.get(key), params)).join('');
+    const core = ['model', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'];
+    const advanced = effectParams(def).filter(param => !core.includes(param.key)).map(param => param.key);
+    return `<div class="compressor-console"><div class="compressor-recipe-bar"><label for="compressorPreset"><span class="eyebrow">COMPRESSOR RECIPE</span><select id="compressorPreset"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="compressorPresetDescription">A recipe replaces every compressor setting. Changing the model keeps your adjustments.</p></div>
+      <section class="compressor-face" aria-labelledby="compressorFaceTitle"><div class="compressor-face-heading"><div><span id="compressorFaceTitle" class="compressor-face-brand">Butter</span><span class="compressor-face-edition">STEREO DYNAMICS</span></div><span class="compressor-signal-light"><i aria-hidden="true"></i><span id="compressorSignalStatus">Signal ready</span></span></div>
+      <div class="compressor-model-row">${controls(['model'])}<div class="compressor-model-note"><strong id="compressorModelInspiration"></strong><p id="compressorModelDescription"></p></div></div>
+      <div class="compressor-classic-row"><button id="compressorClassicSettings" type="button">Use classic settings</button><p>Set this model’s suggested ratio, timing and character. Keep your threshold and gain staging.</p></div>
+      <div class="compressor-readings" aria-label="Live compressor readings">${[['inputDb', 'Input'], ['reductionDb', 'Gain reduction'], ['outputDb', 'Output']].map(([key, label]) => `<div class="compressor-meter ${key === 'reductionDb' ? 'compressor-gr' : ''}"><span>${label}</span><output data-compressor-meter="${key}">—</output><div class="compressor-meter-track" aria-hidden="true"><i data-compressor-meter-bar="${key}"></i></div>${key === 'reductionDb' ? '<small>0 <span>12</span> 24 dB</small>' : '<small>−60 <span>−30</span> 0 dB</small>'}</div>`).join('')}</div>
+      <div class="compressor-core-controls">${controls(core.filter(key => key !== 'model'))}</div><p id="compressorTimingHint" class="compressor-timing-hint"></p></section>
+      <details id="compressorAdvanced" class="compressor-advanced" ${compressorAdvancedOpen ? 'open' : ''}><summary><span><strong>Advanced</strong><small>Detector, timing, colour & stereo behaviour</small></span><span aria-hidden="true">＋</span></summary><div class="compressor-advanced-content"><div class="compressor-advanced-controls">${controls(advanced)}</div><p id="compressorSpecialHint"></p><p class="compressor-model-disclosure">Musical models inspired by classic circuit families. These are reduced-order interpretations, not measured replicas of individual units.</p></div></details></div>`;
+  }
+  function renderCompressorState() {
+    const slot = track().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'velvet' || !$('compressorFaceTitle')) return;
+    const params = slot.params, model = def.models?.find(model => model.id === params.model), clean = params.model === 'clean', classic = !clean && params.timing === 'classic';
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === preset.params[param.key]) && params.bypass === preset.params.bypass);
+    updateProperty($('compressorPreset'), 'value', recipe?.id || '');
+    updateText($('compressorPresetDescription'), recipe?.description || 'A recipe replaces every compressor setting. Changing the model keeps your adjustments.');
+    updateText($('compressorModelInspiration'), model?.inspiration || (clean ? 'The original BUTTER compressor' : model?.name || 'Stereo compressor'));
+    updateText($('compressorModelDescription'), model?.description || 'Smooth peaks with a stereo-linked detector and a soft knee.');
+    const timing = clean ? 'Original manual timing. Attack and release stay active; analogue colour and special modes are inactive.' : classic ? 'Classic timing. ' + (model?.timingDescription || 'This model follows its own programme-dependent time constants.') + ' Manual attack and release are kept for when you switch back.' : 'Manual timing. Attack and release set the base response; this model keeps its own detector and envelope character.';
+    updateText($('compressorTimingHint'), timing);
+    updateText($('compressorSpecialHint'), clean ? 'Clean preserves the original BUTTER sound. Stereo link and input trim remain available.' : params.model === 'fet-76' ? 'All-buttons adds the FET family’s more aggressive gain behaviour. Thrust applies only to Bus 2500.' : params.model === 'bus-2500' ? 'Thrust changes the Bus 2500 detector weighting. All-buttons applies only to Seventy-six.' : 'All-buttons applies to Seventy-six. Thrust applies to Bus 2500. Their settings stay here while you use another model.');
+    updateAttribute($('compressorClassicSettings'), 'title', 'Use ' + (model?.name || 'this model') + ' recommended ratio, timing and character settings');
+    updateText($('compressorSignalStatus'), params.bypass ? 'Bypassed' : 'Stereo active');
+    updateClass($('compressorFaceTitle').closest('.compressor-face'), 'compressor-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-compressor-number]');
+      if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') {
+        updateText(control.querySelector('output'), formatParam(param, value));
+        if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number(value.toFixed(4)));
+      }
+      const disabled = classic && ['attack', 'release'].includes(param.key) || clean && ['colour', 'timing'].includes(param.key) || param.key === 'fetMode' && params.model !== 'fet-76' || param.key === 'thrust' && params.model !== 'bus-2500';
+      input.disabled = disabled; if (exact) exact.disabled = disabled;
+      if (control) updateClass(control, 'compressor-control-inactive', disabled);
+      if (['attack', 'release', 'timing'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'compressorTimingHint');
+      if (['colour', 'fetMode', 'thrust'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'compressorSpecialHint');
+    }
+    renderCompressorMeters();
+  }
+  function renderCompressorMeters(meters = engine.getMeters()) {
+    const slot = track().effects[selectedSlot]; if (slot?.type !== 'velvet' || $('effectEditor').hidden || !$('compressorFaceTitle')) return;
+    const reading = meters.effects?.[state.selectedTrack]?.[selectedSlot], valid = reading?.type === 'velvet' && !reading.bypass;
+    for (const output of $('effectEditor').querySelectorAll('[data-compressor-meter]')) {
+      const key = output.dataset.compressorMeter, value = reading?.[key], available = valid && Number.isFinite(value), reduction = key === 'reductionDb';
+      updateText(output, available ? !reduction && value <= -90 ? '−∞ dB' : (reduction ? Math.max(0, value) : value).toFixed(1) + ' dB' : '—');
+      const fraction = !available ? 0 : reduction ? Math.min(1, Math.max(0, value) / 24) : Math.min(1, Math.max(0, (value + 60) / 60));
+      const bar = $('effectEditor').querySelector('[data-compressor-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
+    }
   }
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
   function broilerValue(param, value) {
@@ -341,11 +405,11 @@
   }
   function renderEffectEditor() {
     const slot=selectedSlot!==null&&track().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
     const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
     editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / TRACK ${String(state.selectedTrack+1).padStart(2,'0')}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();
+    renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();
   }
   function renderVocalState() {
     const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='glaze')return;
@@ -694,6 +758,12 @@
     const pedalToggle=e.target.closest('[data-broiler-pedal-toggle]'),ampToggle=e.target.closest('[data-broiler-amp-toggle]');
     if(pedalToggle||ampToggle){const slot=track().effects[selectedSlot];if(slot?.type!=='broiler')return;const key=ampToggle?'ampEnable':'pedal'+pedalToggle.dataset.broilerPedalToggle+'Enabled';remember();slot.params[key]=slot.params[key]==='on'?'off':'on';changed();renderAmpState();return;}
     if(e.target.closest('#broilerMatchedCab')){const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.ampModels?.find(model=>model.id===slot.params.model);if(def?.id!=='broiler'||!model?.matchedCab)return;if(slot.params.cabinet!==model.matchedCab){remember();slot.params.cabinet=model.matchedCab;changed();renderAmpState();}status('Matched cabinet selected. Your amplifier controls and pedalboard stay as set.');return;}
+    if(e.target.closest('#compressorClassicSettings')){
+      const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.models?.find(model=>model.id===slot.params.model);if(def?.id!=='velvet'||!model?.defaults)return;
+      const keys=['ratio','attack','release','knee','colour','timing','fetMode','thrust'];
+      if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderCompressorState();}
+      status(model.name+' settings loaded. Your threshold, input, makeup gain, detector filter, stereo link and blend stay as set.');return;
+    }
     if(e.target.closest('#broilerSaveRig')){saveBroilerRig();return;}
     if(e.target.closest('#broilerLoadRig')){$('broilerRigFile')?.click();return;}
     const vocalView=e.target.closest('[data-vocal-view]');if(vocalView){vocalEditorView=vocalView.dataset.vocalView;renderEffectEditor();$('effectEditor').querySelector('[data-vocal-view="'+vocalEditorView+'"]').focus({preventScroll:true});return;}
@@ -702,7 +772,7 @@
     if(e.target.id==='utilityInputShortcut'){openAudioSettings({practice:'utility'});return;}
     const effectActions={effectBypass:'bypass',effectReset:'reset',effectUp:'up',effectDown:'down',effectRemove:'remove'};if(effectActions[e.target.id]){changeEffect(effectActions[e.target.id]);return;}if(e.target.id==='effectReplace')openEffects(selectedSlot);
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);if(t===track())automationEditor?.capture(key,t[key],{remembered:true});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=track().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=track().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -717,7 +787,7 @@
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderVocalState();renderUtilityState();renderCreativeState();}
+    else{renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -733,10 +803,23 @@
     renderAmpState();
   });
   document.addEventListener('change',e=>{if(e.target.id!=='vocalPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('vocalPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
+  document.addEventListener('change',e=>{
+    if(e.target.id==='compressorPreset'){
+      const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),recipe=def?.presets?.find(preset=>preset.id===e.target.value);if(def?.id!=='velvet'||!recipe)return;
+      remember();slot.params={...clone(def.defaults),...clone(recipe.params)};changed({rack:true,mixer:true,automation:true});renderCompressorState();status(recipe.name+' loaded. '+recipe.description);return;
+    }
+    const input=e.target,key=input.dataset.compressorNumber;if(!key)return;
+    const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),param=def&&effectParams(def).find(param=>param.key===key);if(def?.id!=='velvet'||!param||input.disabled)return;
+    const value=input.valueAsNumber;
+    if(!Number.isFinite(value)||value<param.min||value>param.max){input.value=slot.params[key];status(param.label+': use a value from '+param.min+' to '+param.max+'.');return;}
+    if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true});changed();}
+    renderCompressorState();
+  });
   document.addEventListener('change',e=>{if(e.target.id!=='utilityPreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(def?.id!=='scales'||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('utilityPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='creativePreset')return;const slot=track().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!isCreativeEffect(def)||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('creativePreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('toggle',e=>{const help=e.target;if(!help.matches?.('.vocal-stage-help'))return;if(help.open)vocalHelpOpen.add(help.dataset.vocalHelp);else vocalHelpOpen.delete(help.dataset.vocalHelp);},true);
   document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-broiler-details]'))return;if(detail.open)broilerDetailsOpen.add(detail.dataset.broilerDetails);else broilerDetailsOpen.delete(detail.dataset.broilerDetails);},true);
+  document.addEventListener('toggle',e=>{if(e.target.id==='compressorAdvanced')compressorAdvancedOpen=e.target.open;},true);
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
   $('playButton').addEventListener('click',transportStart);$('pauseButton').addEventListener('click',pause);$('stopButton').addEventListener('click',stop);$('panicButton').addEventListener('click',()=>panic());$('recordButton').addEventListener('click',startRecording);
@@ -806,7 +889,7 @@
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');
