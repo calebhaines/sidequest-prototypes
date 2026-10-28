@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.13.0.
+SERVICE is version 1.0.0; GALLEY is version 1.14.0.
 
 ## Making a piece
 
@@ -390,22 +390,39 @@ All three effects have grouped controls, described recipes, actual DSP meters,
 Dry / wet, bypass, and numeric automation targets. They use the same processing
 in live monitoring and WAV export; their settings travel in normal projects.
 
-BROILER contains nine bass models: the original clean solid-state, flip-top,
-valve stack, modern grind, and doom fuzz, plus four characters inspired by the
-Ampeg B-15 Portaflex, classic SVT, V-4B, and SVT-PRO. These additional models use
-distinct gain staging, tone shaping, power curves, and sag response. American
-clean, British crunch, and high-gain guitar models remain available.
-Its four control groups follow the signal: input/preamp, low end
-and tone, power/dynamics, then cabinet/output. Clean low blend protects the
-fundamental under heavy drive; its crossover sets the clean band's edge. Tone,
-presence, depth, power drive, sag, gate threshold/release, speaker breakup,
-microphone position/distance, cabinet air, and output are independently adjustable.
-Eleven cabinet choices include six bass cabs, three guitar cabs, DI, and an
-unlikely steel cupboard. The new bass cabinets are a Portaflex-style 1×15,
-sealed 8×10, and ported 4×10. DI disables the cabinet-only controls. Stereo/mono
-input options, thirteen complete recipe presets, dry/wet, bypass, and automation
-work on clips, instruments, and monitored microphone input. No impulse-response
-downloads or network audio are needed.
+BROILER contains 22 amplifier models, eleven cabinets and four independent pedal
+slots inside one insert. Its ten new guitar heads span small tweed and black-panel
+American combos, Copper 30 chime, Royal 68 and Iron 800 British stacks, Dual red 92,
+Cali IV and Fifty-one high gain, Citrus verb and Jazz 120 clean. The original nine
+bass and three guitar characters, their IDs and thirteen original rigs remain.
+Model notes identify the real amplifier and pedal families behind the aliases;
+see [BROILER-MODELS.md](BROILER-MODELS.md) for the signal models and limitations.
+
+The main amp face keeps gain, tone, dynamics and cabinet choices close. Changing a
+head preserves the pedalboard and chosen cabinet; matching a cabinet is explicit.
+A whole-rig recipe replaces the complete sound. Four compact pedal cards offer
+independent bypass, removal, ordering and routing before the amp or after its
+cabinet. Their detail panels contain pedal-specific amount, tone, level and blend
+controls. Seven overdrive, distortion, fuzz and boost characters join compression,
+wah, chorus, phaser, echo and spring. Switch the head off to keep just pedals and the selected cabinet; DI removes the cabinet too.
+All processing stays in the same four-slot GALLEY rack and the same track mixer.
+Save rig and Load rig in the Workshop transfer complete sound settings between
+sessions without changing other inserts, clips or track automation. Loading a
+rig supports Undo and validates the complete file before changing the insert.
+
+The folded Workshop exposes preamp and power valves, tone-stack topology,
+coupling/cathode response, bias, supply voltage, negative feedback, transformer
+character, power scaling and cabinet mic/cut/resonance controls. Stateful RC,
+nonlinear clipping and valve models are used where they help tone and playing
+response; this is a reduced-order simulation rather than an exact measured
+replica or a general schematic solver. Old stock settings preserve the original
+PCM, and old projects inherit disabled pedals and neutral Workshop controls.
+
+Clean low blend protects the fundamental under drive. DI bypasses cabinet-only
+controls. Mono/stereo routing, whole-rig dry/wet, bypass, project recovery and
+numeric automation work on clips, instruments and monitored input. Microphone
+takes remain dry. The same deterministic DSP runs in AudioWorklet, fallback and
+WAV export, including pedal tails. All models and assets work offline.
 
 GLAZE is a complete vocal channel strip occupying one insert. Each stage has a plain-language description visible even when switched off, plus an expandable guide explaining its controls and modes. Start with a
 recipe and the Essentials view; Full pantry exposes every stage. The signal
@@ -491,7 +508,7 @@ Run `npm run check:loom` for the dependency-free Node engine checks. These verif
 project compatibility, automation in playback and export, sample-exact
 count-in/punch recording, and cropped stereo transfers with clip edits and limits.
 From an extracted archive, run `node checks.cjs`.
-Run `npm run check:loom-amp`, `npm run check:loom-vocal`, and `npm run check:loom-mic` for BROILER, GLAZE, and
+Run `npm run check:broiler`, `npm run check:broiler-browser`, `npm run check:loom-amp`, `npm run check:loom-vocal`, and `npm run check:loom-mic` for BROILER, GLAZE, and
 microphone timing/routing checks. The extracted equivalents are
 `node amp-checks.cjs`, `node vocal-checks.cjs`, and `node microphone-engine-checks.cjs`.
 `npm run check:loom-vocal-browser` verifies real GLAZE monitoring, dry takes,
@@ -551,7 +568,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.13.0.
+font license notices. Version 1.14.0.
 
 ## Compatibility
 

@@ -19,7 +19,7 @@ function dspChecks() {
   const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {} };
   scope.window = scope;
   vm.createContext(scope);
-  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP), rate = 8000;
   const legacy = scope.LoomSchema.defaultState();
   delete legacy.recording.micCompensation; delete legacy.recording.micOffsetMs; delete legacy.recording.micInputGainDb;
@@ -95,7 +95,7 @@ async function serve() {
     const name = new URL(request.url, 'http://localhost').pathname;
     if (name === '/engine.html') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
+      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
       return;
     }
     // Both the repository and the extracted source archive expose identical
@@ -380,21 +380,21 @@ async function uiChecks(browser, url) {
     await page.locator('[data-slot="0"]').click();
     const chooser = await page.locator('#effectDialog').evaluate(el => ({ open: el.open, client: el.clientWidth, scroll: el.scrollWidth })); assert(chooser.open && chooser.scroll <= chooser.client + 1, 'The effect chooser fits ' + width + 'px.');
     await page.locator('[data-add-effect="broiler"]').click();
-    assert.equal(await page.locator('[data-amp-preset]').count(), 13);
+    assert.equal(await page.locator('#broilerPreset option').count(), 1 + await page.evaluate(() => LoomEffectsCatalog.find(effect => effect.id === 'broiler').presets.length));
     const presetIds = await page.evaluate(() => window.LoomEffectsCatalog.find(e => e.id === 'broiler').presets.map(p => p.id));
     for (const id of presetIds) {
-      await page.locator('[data-amp-preset="' + id + '"]').click();
+      await page.locator('#broilerPreset').selectOption(id);
       const recipe = await page.evaluate(id => ({ actual: window.LoomApp.getState().tracks[1].effects[0].params, expected: window.LoomEffectsCatalog.find(e => e.id === 'broiler').presets.find(p => p.id === id).params }), id);
       assert.deepEqual(recipe.actual, recipe.expected, 'The ' + id + ' house recipe updates every amp control.');
-      assert.equal(await page.locator('[data-amp-preset="' + id + '"]').getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('#broilerPreset').inputValue(), id);
     }
     await page.selectOption('#fx-cabinet', 'di'); assert(await page.locator('#fx-mic').isDisabled() && await page.locator('#fx-speakerDrive').isDisabled());
-    assert.match(await page.locator('#ampCabinetHint').textContent(), /direct head output/i);
+    assert.match(await page.locator('#ampCabinetHint').textContent(), /cabinet off|direct head output/i);
     const ampLayout = await page.evaluate(() => ({ document: document.documentElement.scrollWidth, body: document.body.scrollWidth, editor: document.getElementById('effectEditor').scrollWidth, client: document.getElementById('effectEditor').clientWidth, saved: window.LoomSchema.serializeProject(window.LoomApp.getState()) }));
     assert(ampLayout.document <= width + 1 && ampLayout.body <= width + 1 && ampLayout.editor <= ampLayout.client + 1, 'The grouped amp editor fits ' + width + 'px.');
     const portable = await page.evaluate(serialized => { const restored = window.LoomSchema.parseProject(serialized); return { cabinet: restored.tracks[1].effects[0].params.cabinet, type: restored.tracks[1].effects[0].type, recording: restored.recording }; }, ampLayout.saved);
     assert.equal(portable.type, 'broiler'); assert.equal(portable.cabinet, 'di'); assert.equal(portable.recording.micOffsetMs, 75);
-    results.push(width + 'px BROILER chooser / thirteen complete presets / DI control clarity / amp and microphone project round-trip');
+    results.push(width + 'px BROILER chooser / ' + presetIds.length + ' complete rig recipes / DI control clarity / amp and microphone project round-trip');
     await page.locator('#panicButton').click(); await page.waitForFunction(() => !window.LoomApp.engine.getMicrophoneStatus().active);
     await page.selectOption('#recordSource', 'microphone');
     await page.locator('#microphoneMonitorButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().enabled);
