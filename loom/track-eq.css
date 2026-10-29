@@ -1,0 +1,32 @@
+/* Channel EQ · four small rotary controls, without spending an insert. */
+.track-eq{border-top:1px solid #62706a55;border-bottom:1px solid #62706a55;padding:7px 0 9px;margin:0 0 10px;min-width:0;cursor:default}
+.track-eq-heading{display:flex;align-items:center;justify-content:space-between;gap:5px;margin:0 1px 6px}
+.track-eq-heading>span{font-size:7px;font-weight:700;letter-spacing:.13em;color:#a4b1a5}
+.track-eq-heading>[data-eq-flat]{padding:3px 5px;min-height:20px;font-size:7px;letter-spacing:.01em;background:transparent;border-color:#68776a66;border-radius:3px;color:#b7c1ae}
+.track-eq-heading>[data-eq-flat]:hover{background:#c5cfaf0c;border-color:#b3bd9b;color:#dce1ca}
+.track-eq-knobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 3px;min-width:0}
+.track-eq-control{display:flex;flex-direction:column;align-items:center;min-width:0;gap:1px;position:relative}
+.track-eq-band{font-size:6px;line-height:1.5;font-weight:700;letter-spacing:.045em;color:#b6c1b0;white-space:nowrap}
+button.track-eq-knob{display:block;position:relative;width:100%;max-width:46px;min-width:0;aspect-ratio:1;height:auto;padding:0;border:0;border-radius:50%;background:transparent;color:var(--track,#d7c98f);box-shadow:none;cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none;transition:none}
+button.track-eq-knob:hover,button.track-eq-knob:active{background:transparent;border:0}
+button.track-eq-knob .track-eq-dial{display:block;width:100%;height:auto;overflow:visible;pointer-events:none}
+.track-eq-ring{fill:none;stroke:#748373;stroke-width:1.8;opacity:.45;stroke-linecap:round}
+.track-eq-arc{fill:none;stroke:var(--track,#d7c98f);stroke-width:2.6;stroke-linecap:round}
+.track-eq-centre-mark{fill:none;stroke:#acb8a2;stroke-width:1.6;stroke-linecap:round;opacity:.7}
+.track-eq-cap-shadow{fill:#0b130e;opacity:.5}
+.track-eq-cap{fill:#2d3a2d;stroke:#6f7e66;stroke-width:1.2}
+.track-eq-cap-inner{fill:#344334;stroke:#455441;stroke-width:.6}
+.track-eq-pointer{fill:none;stroke:var(--track,#d7c98f);stroke-width:2.7;stroke-linecap:round}
+.track-eq-knob.is-flat .track-eq-pointer{stroke:#aebb9f}
+.track-eq-knob.is-cut .track-eq-arc{stroke:#a2b9ad}
+.track-eq-knob:hover .track-eq-cap,.track-eq-knob.is-adjusting .track-eq-cap{stroke:#c1cfa7;fill:#3d4b35}
+.track-eq-knob:focus-visible{outline:2px solid #dccea0;outline-offset:1px}
+.track-eq-knob.is-adjusting{filter:drop-shadow(0 0 4px #d5dd9c26)}
+.track-eq-knob.is-automated .track-eq-centre-mark{stroke:var(--acid);opacity:1}
+.track-eq-value{display:block;font-size:7px;line-height:1.35;color:#d7d9c3;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap;letter-spacing:-.015em;min-width:0}
+.track-eq-value::after{content:' dB';font-size:5px;color:#8f9e8b}
+.track-eq-frequency{font-size:5px;line-height:1.45;color:#91a08d;white-space:nowrap;letter-spacing:.025em}
+@media(min-width:1450px){.track-eq-band{font-size:7px}.track-eq-value{font-size:8px}.track-eq-frequency{font-size:6px}.track-eq-heading>span{font-size:8px}.track-eq-heading>[data-eq-flat]{font-size:8px}}
+@media(max-width:1180px){.mixer{grid-template-columns:repeat(4,minmax(0,1fr))}.mixer-channel{border-bottom:1px solid var(--line);padding-left:10px;padding-right:10px}.mixer-channel:nth-child(4n){border-right:0}.mixer-channel:nth-last-child(-n+4){border-bottom:0}.track-eq{margin-bottom:10px;padding:8px 0 10px}.track-eq-knobs{gap:10px 6px}.track-eq-band{font-size:7px}.track-eq-value{font-size:8px}.track-eq-frequency{font-size:6px}.track-eq-heading>span{font-size:8px}.track-eq-heading>[data-eq-flat]{font-size:8px;min-height:22px}}
+@media(max-width:620px){.mixer{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 6px}.mixer-channel{padding:13px 14px 14px}.mixer-channel:nth-child(4n){border-right:1px solid #404b4e}.mixer-channel:nth-child(2n){border-right:0}.mixer-channel:nth-last-child(-n+4){border-bottom:1px solid var(--line)}.mixer-channel:nth-last-child(-n+2){border-bottom:0}.track-eq{padding:8px 0 12px;margin-bottom:13px}.track-eq-knobs{gap:11px 7px}.track-eq-band{font-size:8px}.track-eq-frequency{font-size:7px}.track-eq-value{font-size:9px}.track-eq-value::after{font-size:6px}.track-eq-heading>span{font-size:8px}.track-eq-heading>[data-eq-flat]{font-size:8px;padding:4px 6px;min-height:25px}.channel-name{font-size:10px;height:27px}.channel-slots button{width:23px;min-height:20px;font-size:7px}.channel-ms button{min-height:27px;min-width:27px}}
+@media(prefers-reduced-motion:reduce){.track-eq-knob{transition:none}}

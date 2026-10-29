@@ -26,6 +26,13 @@
   const broilerDetailsOpen = new Set();
   let compressorAdvancedOpen = false;
   const preampDetailsOpen = new Set();
+  let trackEqDrag = null, trackEqKeyboard = null;
+  const trackEqBands = [
+    { key: 'low', label: 'LOW', frequency: '100 Hz', shape: 'low shelf' },
+    { key: 'lowMid', label: 'LO MID', frequency: '400 Hz', shape: 'bell' },
+    { key: 'highMid', label: 'HI MID', frequency: '2.5 kHz', shape: 'bell' },
+    { key: 'high', label: 'HIGH', frequency: '10 kHz', shape: 'high shelf' }
+  ];
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -145,7 +152,54 @@
   function renderLanes() { $('trackLanes').innerHTML = state.tracks.map((t,i)=>`<div class="track-lane ${i===state.selectedTrack?'selected':''}" data-lane="${i}" style="--track:${escape(t.color)}">${!t.clips.length?'<span class="lane-empty">IMPORT AUDIO OR RECORD A TAKE</span>':''}${t.clips.map(c=>`<div class="clip ${c.id===selectedClip?'selected':''} ${c.type==='notes'?'clip-notes':c.origin?'clip-printed':''}" data-clip="${escape(c.id)}" data-track="${i}" role="button" tabindex="0" aria-label="${escape(c.name)} on track ${i+1}, starts at beat ${c.start+1}, length ${c.length} beats. Arrow keys move; Shift arrows trim." style="left:${c.start*state.view.zoom}px;width:${Math.max(5,c.length*state.view.zoom)}px"><span class="clip-label">${c.type==='notes'?'♪ ':c.origin?'↪ ':''}${escape(c.name)}${c.reverse?' ↶':''}${c.loop?' ⟳':''}</span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i></div>`).join('')}</div>`).join(''); queueWaveforms(); }
   function queueWaveforms() { if (waveformFrame) return; waveformFrame = requestAnimationFrame(() => { waveformFrame = 0; drawWaveforms(); }); }
   function drawWaveforms() { for (const el of $('trackLanes').querySelectorAll('.clip')) { const found = state.tracks[Number(el.dataset.track)].clips.find(c=>c.id===el.dataset.clip), pcm = found && assetMap[found.assetId]; if (found?.type === 'notes') { drawNotePreview(el, found); continue; } if (!found || !pcm) continue; const canvas = el.querySelector('canvas'), width = Math.max(1,Math.min(2400,Math.floor(el.clientWidth))), height = 32, dpr = Math.min(2,devicePixelRatio || 1); canvas.width = Math.min(8192,width*dpr); canvas.height = height*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.strokeStyle = state.tracks[Number(el.dataset.track)].color; ctx.lineWidth = 1; const duration = pcm.left.length / pcm.sampleRate, sourceSpan = Math.max(.0001,found.sourceEnd-found.sourceStart), secondsPerBeat = 60/state.tempo; ctx.beginPath(); const step = Math.max(1,Math.ceil(width/1200)); for (let x=0;x<width;x+=step) { let seconds = x/width * found.length * secondsPerBeat * found.rate; seconds += found.sourceOffset || 0; if (!found.loop && seconds >= sourceSpan) continue; seconds = found.loop ? seconds % sourceSpan : seconds; const position = found.reverse ? found.sourceEnd-seconds : found.sourceStart+seconds; const index = Math.max(0,Math.min(pcm.left.length-1,Math.floor(position*pcm.sampleRate))); const samples = Math.max(1,Math.ceil(pcm.sampleRate*found.length*secondsPerBeat*found.rate/width)); let peak = 0; for (let k=0;k<Math.min(96,samples);k++) { const n = Math.min(pcm.left.length-1,index+Math.floor(k*samples/Math.min(96,samples))); peak = Math.max(peak,Math.abs(pcm.left[n]),Math.abs(pcm.right[n])); } const fade = Math.min(1,(x/width*found.length)/Math.max(.0001,found.fadeIn),((1-x/width)*found.length)/Math.max(.0001,found.fadeOut)), amp = Math.min(1,peak*found.gain)*13*fade; ctx.moveTo(x,16-amp); ctx.lineTo(x,16+amp); } ctx.stroke(); } }
-  function renderMixer() { $('mixer').innerHTML = state.tracks.map((t,i)=>`<div class="mixer-channel ${i===state.selectedTrack?'selected':''}" data-channel="${i}" style="--track:${escape(t.color)}"><span class="channel-number">${String(i+1).padStart(2,'0')}</span><div class="channel-name">${escape(t.name)}</div><div class="channel-pan"><label for="pan-${i}">PAN</label><input id="pan-${i}" data-mix="pan" data-track="${i}" type="range" min="-1" max="1" step="0.01" value="${t.pan}"><output>${panLabel(t.pan)}</output></div><div class="fader-wrap"><input class="channel-fader" id="level-${i}" data-mix="level" data-track="${i}" type="range" min="0" max="1.5" step="0.01" value="${t.level}" aria-label="Track ${i+1} level"><div class="channel-meter"><i id="meter-${i}"></i></div></div><output class="channel-db">${levelLabel(t.level)}</output><div class="channel-ms"><button data-mute="${i}" class="${t.mute?'active':''}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button data-solo="${i}" class="${t.solo?'active':''}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><button data-arm="${i}" class="${t.armed?'active':''}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1}">R</button></div><div class="channel-sends">${[0,1].map(send=>`<label><span>${send===0?'A':'B'}</span><input data-track-send="${send}" data-track="${i}" type="range" min="0" max="1" step="0.01" value="${t.sends[send]}" aria-label="Track ${i+1} send ${send===0?'A':'B'}"><output data-send-value="${send}" data-track="${i}">${Math.round(t.sends[send]*100)}%</output></label>`).join('')}</div><div class="channel-slots">${t.effects.map((f,s)=>`<button data-effect-track="${i}" data-effect-slot="${s}" title="Track ${i+1}, effect slot ${s+1}${f?': '+effectById(f.type).name:''}" style="${f?'--effect-color:'+effectById(f.type).color:''}">${f?effectById(f.type).name.slice(0,3):'+'}</button>`).join('')}</div></div>`).join(''); renderBuses(); renderSendState(); }
+  const trackEqGain = value => Math.round(num(value, -12, 12) * 10) / 10 || 0;
+  const trackEqLabel = value => (value > 0 ? '+' : value < 0 ? '−' : '') + Math.abs(value).toFixed(1);
+  function trackEqKnobs(t, index) {
+    return `<section class="track-eq" data-track-eq="${index}" aria-label="Track ${index + 1} four-band equalizer"><div class="track-eq-heading"><span>EQ</span><button type="button" data-eq-flat="${index}" aria-label="Reset all four EQ bands on track ${index + 1}" title="Reset the four manual EQ gains to 0 dB. Enabled automation continues to control the sound.">Flat</button></div><div class="track-eq-knobs">${trackEqBands.map(band => {
+      const value = trackEqGain(t.eq?.[band.key]), id = `eq-${index}-${band.key}`;
+      return `<div class="track-eq-control"><span id="${id}-label" class="track-eq-band">${band.label}</span><button type="button" id="${id}" class="track-eq-knob" role="slider" tabindex="0" data-eq-band="${band.key}" data-track="${index}" aria-label="Track ${index + 1} ${band.label.toLowerCase()} EQ, ${band.frequency} ${band.shape}" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="${value}" aria-valuetext="${trackEqLabel(value)} dB, ${band.frequency} ${band.shape}" aria-orientation="vertical" title="${band.frequency} ${band.shape} · drag up/down; Shift for fine control. Arrows: 0.1 dB; Shift + arrows or Page: 1 dB. Home/End: −12/+12 dB. Double-click, Enter or Space: 0 dB."><svg class="track-eq-dial" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="track-eq-ring" d="M14.32 49.68A25 25 0 1 1 49.68 49.68"/><path class="track-eq-arc" data-eq-arc d="M32 7"/><path class="track-eq-centre-mark" d="M32 2v3"/><circle class="track-eq-cap-shadow" cx="32" cy="34" r="19"/><circle class="track-eq-cap" cx="32" cy="32" r="18"/><circle class="track-eq-cap-inner" cx="32" cy="32" r="14.5"/><path class="track-eq-pointer" data-eq-pointer d="M32 30V18"/></svg></button><output class="track-eq-value" data-eq-value="${band.key}" data-track="${index}" for="${id}">${trackEqLabel(value)}</output><span class="track-eq-frequency">${band.frequency}</span></div>`;
+    }).join('')}</div></section>`;
+  }
+  function paintTrackEqKnob(button, value, automated = false) {
+    if (!button) return;
+    value = trackEqGain(value);
+    const band = trackEqBands.find(band => band.key === button.dataset.eqBand), angle = value * 11.25, radians = angle * Math.PI / 180;
+    updateAttribute(button, 'aria-valuenow', value);
+    updateAttribute(button, 'aria-valuetext', trackEqLabel(value) + ' dB, ' + band.frequency + ' ' + band.shape + (automated ? ', automation read' : ''));
+    updateAttribute(button.querySelector('[data-eq-pointer]'), 'transform', `rotate(${angle} 32 32)`);
+    updateAttribute(button.querySelector('[data-eq-arc]'), 'd', value === 0 ? 'M32 7' : `M32 7A25 25 0 0 ${value > 0 ? 1 : 0} ${(32 + 25 * Math.sin(radians)).toFixed(3)} ${(32 - 25 * Math.cos(radians)).toFixed(3)}`);
+    updateText(button.parentElement.querySelector('[data-eq-value]'), trackEqLabel(value));
+    updateClass(button, 'is-flat', value === 0); updateClass(button, 'is-cut', value < 0); updateClass(button, 'is-automated', automated);
+  }
+  function renderTrackEqState(meters = engine.getMeters()) {
+    for (const button of $('mixer').querySelectorAll('[data-eq-band]')) {
+      const owner = state.tracks[Number(button.dataset.track)], key = button.dataset.eqBand;
+      if (!owner || trackEqDrag?.element === button || trackEqKeyboard?.element === button) continue;
+      const lane = owner.automation?.find(lane => lane.target === 'eq:' + key && lane.enabled !== false && lane.points?.length), manual = trackEqGain(owner.eq?.[key]);
+      paintTrackEqKnob(button, lane ? S.automationValue(lane, meters.beat || 0, manual) : manual, !!lane);
+    }
+  }
+  function finishTrackEqDrag(event) {
+    const gesture = trackEqDrag; if (!gesture || event && event.pointerId !== gesture.pointer) return;
+    trackEqDrag = null; gesture.element.classList.remove('is-adjusting');
+    if (gesture.element.hasPointerCapture?.(gesture.pointer)) gesture.element.releasePointerCapture(gesture.pointer);
+    renderTrackEqState();
+  }
+  function endTrackEqKeyboard() {
+    const gesture = trackEqKeyboard; if (!gesture) return;
+    trackEqKeyboard = null; gesture.element.classList.remove('is-adjusting'); renderTrackEqState();
+  }
+  function setTrackEqGain(owner, key, next, gesture, element, forceWrite = false) {
+    if (!owner || !trackEqBands.some(band => band.key === key) || !state.tracks.includes(owner)) return false;
+    next = trackEqGain(next);
+    const writing = forceWrite && automationEditor?.write && automationEditor.trackId === owner.id && rackTarget === 'track' && track().id === owner.id && engine.getMeters().playing;
+    if (trackEqGain(owner.eq?.[key]) === next && !writing) return false;
+    if (!gesture.remembered) { remember(); gesture.remembered = true; }
+    owner.eq ||= { low: 0, lowMid: 0, highMid: 0, high: 0 }; owner.eq[key] = next;
+    automationEditor?.capture('eq:' + key, next, { remembered: true, ownerId: owner.id });
+    changed(); paintTrackEqKnob(element, next); return true;
+  }
+  function renderMixer() { finishTrackEqDrag(); endTrackEqKeyboard(); $('mixer').innerHTML = state.tracks.map((t,i)=>`<div class="mixer-channel ${i===state.selectedTrack?'selected':''}" data-channel="${i}" style="--track:${escape(t.color)}"><span class="channel-number">${String(i+1).padStart(2,'0')}</span><div class="channel-name">${escape(t.name)}</div>${trackEqKnobs(t,i)}<div class="channel-pan"><label for="pan-${i}">PAN</label><input id="pan-${i}" data-mix="pan" data-track="${i}" type="range" min="-1" max="1" step="0.01" value="${t.pan}"><output>${panLabel(t.pan)}</output></div><div class="fader-wrap"><input class="channel-fader" id="level-${i}" data-mix="level" data-track="${i}" type="range" min="0" max="1.5" step="0.01" value="${t.level}" aria-label="Track ${i+1} level"><div class="channel-meter"><i id="meter-${i}"></i></div></div><output class="channel-db">${levelLabel(t.level)}</output><div class="channel-ms"><button data-mute="${i}" class="${t.mute?'active':''}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button data-solo="${i}" class="${t.solo?'active':''}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><button data-arm="${i}" class="${t.armed?'active':''}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1}">R</button></div><div class="channel-sends">${[0,1].map(send=>`<label><span>${send===0?'A':'B'}</span><input data-track-send="${send}" data-track="${i}" type="range" min="0" max="1" step="0.01" value="${t.sends[send]}" aria-label="Track ${i+1} send ${send===0?'A':'B'}"><output data-send-value="${send}" data-track="${i}">${Math.round(t.sends[send]*100)}%</output></label>`).join('')}</div><div class="channel-slots">${t.effects.map((f,s)=>`<button data-effect-track="${i}" data-effect-slot="${s}" title="Track ${i+1}, effect slot ${s+1}${f?': '+effectById(f.type).name:''}" style="${f?'--effect-color:'+effectById(f.type).color:''}">${f?effectById(f.type).name.slice(0,3):'+'}</button>`).join('')}</div></div>`).join(''); renderBuses(); renderSendState(); renderTrackEqState(); }
   function renderRack() { const t=track(); $('trackName').value=t.name;$('trackColor').value=t.color; $('rackTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0'); $('rack').innerHTML=t.effects.map((f,i)=>{const def=f&&effectById(f.type);return `<button class="rack-slot ${f?'':'empty'} ${rackTarget==='track'&&selectedSlot===i?'selected':''}" data-slot="${i}" style="${def?'--effect-color:'+def.color:''}"><span class="slot-index">${i+1}</span>${def?`<span class="slot-tiny-art">${effectArt(def,true)}</span><span class="slot-name"><strong>${def.name}</strong><small>${escape(def.description)}</small></span>${f.params.bypass?'<span class="slot-bypass">BYPASSED</span>':'<span class="slot-arrow">↗</span>'}`:'<span class="slot-name">Add an effect</span><span class="slot-arrow">+</span>'}</button>`;}).join(''); $('trackInstrumentName').textContent=t.instrument ? S.instrumentName(t.instrument) : 'No instrument loaded'; $('openInstrumentButton').hidden=!t.instrument; const browseLabel=t.instrument?'Replace instrument':'Choose instrument';if($('browseInstrumentButton').textContent!==browseLabel)$('browseInstrumentButton').textContent=browseLabel; $('instrumentLive').checked=t.instrumentLive; $('instrumentLive').disabled=!t.instrument; renderSendControls(); renderBuses(); }
   function renderBuses() {
     if (!$('busChannels')) return;
@@ -911,6 +965,56 @@
   $('trackLanes').addEventListener('pointerup',finishDrag);$('trackLanes').addEventListener('pointercancel',e=>{if(drag&&e.pointerId===drag.pointer){const c=clipLocation()?.clip;if(c)Object.assign(c,drag.original);drag=null;changed({arrangement:true,inspector:true});}});
   $('trackLanes').addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey)return;const el=e.target.closest('.clip');if(!el)return;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();selectClipElement(el);if(e.key==='Enter'||e.key===' ')return;remember();const c=clipLocation().clip,step=state.view.snap||.0625;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){const sign=e.key==='ArrowLeft'?-1:1;if(e.shiftKey)c.length=num(c.length+sign*step,1/64,state.lengthBars*4-c.start);else c.start=num(c.start+sign*step,0,state.lengthBars*4-c.length);}else{const target=state.selectedTrack+(e.key==='ArrowUp'?-1:1);if(target>=0&&target<8&&state.tracks[target].clips.length<128){const t=track();t.clips=t.clips.filter(a=>a.id!==c.id);state.tracks[target].clips.push(c);state.selectedTrack=target;}}changed({arrangement:true,mixer:true,rack:true,inspector:true});requestAnimationFrame(()=>{for(const item of $('trackLanes').querySelectorAll('[data-clip]'))if(item.dataset.clip===selectedClip)item.focus();});}});
   const activeRanges=new WeakSet();
+  $('mixer').addEventListener('pointerdown', e => {
+    const element = e.target.closest('[data-eq-band]'); if (!element || e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault(); e.stopPropagation(); if (trackEqDrag) return;
+    endTrackEqKeyboard();
+    const owner = state.tracks[Number(element.dataset.track)], key = element.dataset.eqBand;
+    element.focus({ preventScroll: true });
+    trackEqDrag = { pointer: e.pointerId, element, owner, key, lastY: e.clientY, value: trackEqGain(Number(element.getAttribute('aria-valuenow'))), remembered: false, lifecycle };
+    element.classList.add('is-adjusting');
+    try { element.setPointerCapture(e.pointerId); } catch (_) { /* Synthetic pointer events have no active capture. */ }
+  });
+  $('mixer').addEventListener('pointermove', e => {
+    const gesture = trackEqDrag; if (!gesture || gesture.pointer !== e.pointerId) return;
+    if (!gesture.element.isConnected || gesture.lifecycle !== lifecycle || state.tracks[Number(gesture.element.dataset.track)] !== gesture.owner) { finishTrackEqDrag(); return; }
+    e.preventDefault(); e.stopPropagation();
+    const movement = gesture.lastY - e.clientY; if (movement === 0) return;
+    gesture.value = num(gesture.value + movement * (e.shiftKey ? .025 : .15), -12, 12); gesture.lastY = e.clientY;
+    setTrackEqGain(gesture.owner, gesture.key, gesture.value, gesture, gesture.element);
+  });
+  for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) $('mixer').addEventListener(name, e => { if (trackEqDrag?.pointer === e.pointerId) { e.stopPropagation(); finishTrackEqDrag(e); } });
+  $('mixer').addEventListener('dblclick', e => {
+    const element = e.target.closest('[data-eq-band]'); if (!element) return;
+    e.preventDefault(); e.stopPropagation(); finishTrackEqDrag(); endTrackEqKeyboard();
+    setTrackEqGain(state.tracks[Number(element.dataset.track)], element.dataset.eqBand, 0, { remembered: false }, element, true); renderTrackEqState();
+  });
+  $('mixer').addEventListener('click', e => {
+    const element = e.target.closest('[data-eq-band]'), reset = e.target.closest('[data-eq-flat]'); if (!element && !reset) return;
+    e.stopPropagation(); if (!reset) return;
+    finishTrackEqDrag(); endTrackEqKeyboard();
+    const index = Number(reset.dataset.eqFlat), owner = state.tracks[index], gesture = { remembered: false };
+    for (const band of trackEqBands) setTrackEqGain(owner, band.key, 0, gesture, $('eq-' + index + '-' + band.key), true);
+    renderTrackEqState();
+    const reading = owner.automation?.some(lane => lane.target.startsWith('eq:') && lane.enabled !== false && lane.points?.length);
+    status('Track ' + (index + 1) + (reading ? ' manual EQ gains are flat. Automation remains active.' : ' EQ is flat.'));
+  });
+  $('mixer').addEventListener('keydown', e => {
+    const element = e.target.closest('[data-eq-band]'); if (!element || e.ctrlKey || e.metaKey) return;
+    if (e.altKey) { e.stopPropagation(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finishTrackEqDrag(); endTrackEqKeyboard(); return; }
+    if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'PageUp', 'PageDown', 'Home', 'End', 'Enter', ' '].includes(e.key)) return;
+    e.preventDefault(); e.stopPropagation(); finishTrackEqDrag();
+    const owner = state.tracks[Number(element.dataset.track)], key = element.dataset.eqBand;
+    if (trackEqKeyboard?.element !== element || trackEqKeyboard.owner !== owner) { endTrackEqKeyboard(); trackEqKeyboard = { element, owner, remembered: false }; }
+    element.classList.add('is-adjusting');
+    const current = trackEqGain(Number(element.getAttribute('aria-valuenow'))), amount = e.shiftKey || e.key.startsWith('Page') ? 1 : .1;
+    const next = e.key === 'Home' ? -12 : e.key === 'End' ? 12 : ['Enter', ' '].includes(e.key) ? 0 : current + (['ArrowUp', 'ArrowRight', 'PageUp'].includes(e.key) ? amount : -amount);
+    setTrackEqGain(owner, key, next, trackEqKeyboard, element, ['Enter', ' '].includes(e.key));
+  });
+  $('mixer').addEventListener('keyup', e => { if (e.target.closest('[data-eq-band]')) endTrackEqKeyboard(); });
+  $('mixer').addEventListener('focusout', e => { if (trackEqDrag?.element === e.target) finishTrackEqDrag(); if (trackEqKeyboard?.element === e.target) endTrackEqKeyboard(); });
+  window.addEventListener('blur', () => { finishTrackEqDrag(); endTrackEqKeyboard(); });
   document.addEventListener('pointerdown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'){remember();activeRanges.add(e.target);}});
   document.addEventListener('keydown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)&&!activeRanges.has(e.target)){remember();activeRanges.add(e.target);}});
   document.addEventListener('change',e=>{if(e.target.matches('input[type=range]'))activeRanges.delete(e.target);});
@@ -1115,7 +1219,7 @@
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderTrackEqState(m);renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');

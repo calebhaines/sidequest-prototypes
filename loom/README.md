@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.17.0.
+SERVICE is version 1.0.0; GALLEY is version 1.18.0.
 
 ## Making a piece
 
@@ -356,6 +356,42 @@ is unavailable, keep a WAV or packet for the next session.
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
 
+### Built-in four-knob track EQ
+
+Each of the eight mixer strips has four rotary EQ controls, separate from its
+four insert slots: **Low** shelf at 100 Hz, **Low Mid** bell at 400 Hz,
+**High Mid** bell at 2.5 kHz, and **High** shelf at 10 kHz. All four offer
+−12 to +12 dB gain in 0.1 dB steps. The bells use Q = 0.707; corner frequencies
+are bounded below Nyquist at lower session sample rates.
+
+Drag a knob vertically, holding Shift for fine adjustment. Arrow keys change
+0.1 dB, Shift + arrows and Page Up / Down change 1 dB, and Home / End select the
+range endpoints. Double-click restores one band to zero; **Flat** resets all
+four manual gains. Enabled EQ automation still controls the sound in Read mode;
+its knobs show the current playhead value while playing or paused. Disable a
+lane for manual adjustment, or enable Write during playback to record a move.
+Values and rotary indicators stay visible, with keyboard focus and
+screen-reader gain/frequency labels. The compact two-by-two layout adds no
+frequency knobs or hidden EQ windows.
+
+The source track's four inserts feed its EQ, then track pan, level and the
+pre/post sends. EQ is included exactly once in direct stems, shared wet returns
+and the master WAV. Raw microphone and hosted-instrument recordings stay dry.
+Each stereo channel keeps separate filter history; gain changes are smoothed
+and the EQ adds no buffer latency. Zero-gain defaults preserve legacy audio.
+
+Projects save `track.eq = { low: 0, lowMid: 0, highMid: 0, high: 0 }`.
+Projects before 1.18 inherit only missing flat EQ; supplied malformed settings
+are rejected. Numeric automation targets are `eq:low`, `eq:lowMid`,
+`eq:highMid`, and `eq:high`, available on source tracks. SERVICE macros and
+captured takes retain these controls. Existing effect IDs and slot counts stay
+the same.
+
+Run `npm run check:track-eq` and `npm run check:track-eq-browser`. Extracted
+sources use `node track-eq-checks.cjs`, `node track-eq-project-checks.cjs`,
+`node track-eq-review-checks.cjs` and, after rebuilding,
+`LOOM_TRACK_EQ_QA_BUILT=1 node track-eq-browser-checks.cjs`.
+
 ### Master and shared effect returns
 
 GALLEY retains eight instrument/audio tracks with four inserts each. The master
@@ -377,7 +413,7 @@ Microphone and hosted-instrument takes stay dry.
 
 ```mermaid
 flowchart LR
-  Tracks[Eight tracks and their inserts] --> Mix[Dry mix]
+  Tracks[Eight tracks: inserts then channel EQ] --> Mix[Dry mix]
   Tracks -->|Send A| A[Return A: four inserts]
   Tracks -->|Send B| B[Return B: four inserts]
   A --> Mix
@@ -701,7 +737,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.17.0.
+font license notices. Version 1.18.0.
 
 ## Compatibility
 

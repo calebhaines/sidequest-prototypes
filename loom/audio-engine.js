@@ -22,6 +22,87 @@
       const a = points[lo], b = points[lo + 1];
       return !b || lane.interpolation === 'hold' ? a.value : a.value + (b.value - a.value) * ((beat - a.beat) / Math.max(1e-12, b.beat - a.beat));
     };
+    // Built-in channel EQ follows the four inserts without consuming a slot.
+    // Fixed frequencies keep four gain controls useful on a narrow mixer strip.
+    // The whole class is inside this serialized factory for Worklet parity.
+    const trackEqKeys = ['low', 'lowMid', 'highMid', 'high'];
+    const trackEqFrequencies = [100, 400, 2500, 10000];
+    class TrackEQ {
+      constructor(sampleRate, params = {}) {
+        this.sampleRate = clamp(sampleRate, 8000, 192000, 48000);
+        this.rampFrames = Math.max(1, Math.round(this.sampleRate * .006));
+        this.params = {}; this.mask = 0;
+        this.bands = trackEqKeys.map((key, index) => {
+          const frequency = Math.min(trackEqFrequencies[index], this.sampleRate * .45), angle = 2 * Math.PI * frequency / this.sampleRate;
+          return { key, index, sine: Math.sin(angle), cosine: Math.cos(angle), coefficients: new Float64Array(5), target: new Float64Array(5), step: new Float64Array(5), state: new Float64Array(4), remaining: 0 };
+        });
+        this.setParams(params); this.reset();
+      }
+      _coefficients(band, gain, target) {
+        const A = Math.pow(10, gain / 40), c = band.cosine, alpha = band.sine / (2 * Math.SQRT1_2), t = 2 * Math.sqrt(A) * alpha;
+        let b0, b1, b2, a0, a1, a2;
+        if (band.index === 0) {
+          b0 = A * ((A + 1) - (A - 1) * c + t); b1 = 2 * A * ((A - 1) - (A + 1) * c); b2 = A * ((A + 1) - (A - 1) * c - t);
+          a0 = (A + 1) + (A - 1) * c + t; a1 = -2 * ((A - 1) + (A + 1) * c); a2 = (A + 1) + (A - 1) * c - t;
+        } else if (band.index === 3) {
+          b0 = A * ((A + 1) + (A - 1) * c + t); b1 = -2 * A * ((A - 1) + (A + 1) * c); b2 = A * ((A + 1) + (A - 1) * c - t);
+          a0 = (A + 1) - (A - 1) * c + t; a1 = 2 * ((A - 1) - (A + 1) * c); a2 = (A + 1) - (A - 1) * c - t;
+        } else {
+          b0 = 1 + alpha * A; b1 = -2 * c; b2 = 1 - alpha * A; a0 = 1 + alpha / A; a1 = -2 * c; a2 = 1 - alpha / A;
+        }
+        target[0] = gain === 0 ? 1 : b0 / a0; target[1] = b1 / a0; target[2] = b2 / a0; target[3] = a1 / a0; target[4] = a2 / a0;
+      }
+      setParams(params = {}) {
+        for (const band of this.bands) {
+          const key = band.key;
+          if (!Object.prototype.hasOwnProperty.call(params, key) && Object.prototype.hasOwnProperty.call(this.params, key)) continue;
+          const gain = clamp(params[key], -12, 12, 0);
+          if (gain === this.params[key]) continue;
+          this.params[key] = gain;
+          this._coefficients(band, gain, band.target);
+          // Retain the fixed-frequency unity-transfer denominator at zero. A
+          // coefficient ramp can then cross zero without moving its poles to
+          // DC or instantly deleting an audible filter history.
+          if (!(this.mask & (1 << band.index))) this._coefficients(band, 0, band.coefficients);
+          for (let j = 0; j < 5; j++) band.step[j] = (band.target[j] - band.coefficients[j]) / this.rampFrames;
+          band.remaining = this.rampFrames;
+          this.mask |= 1 << band.index;
+        }
+      }
+      reset() {
+        this.mask = 0;
+        for (const band of this.bands) {
+          band.coefficients.set(band.target); band.state.fill(0); band.remaining = 0;
+          if (this.params[band.key] !== 0) this.mask |= 1 << band.index;
+        }
+      }
+      process(left, right) {
+        if (!this.mask) return; // Missing/flat legacy EQ does no arithmetic.
+        const safe = value => Number.isFinite(value) ? Math.max(-65536, Math.min(65536, value)) : 0;
+        for (let frame = 0; frame < left.length; frame++) {
+          let l = safe(left[frame]), r = safe(right[frame]);
+          for (const band of this.bands) {
+            const bit = 1 << band.index;
+            if (!(this.mask & bit)) continue;
+            const c = band.coefficients, state = band.state;
+            if (band.remaining) {
+              if (--band.remaining === 0) c.set(band.target);
+              else for (let j = 0; j < 5; j++) c[j] += band.step[j];
+            }
+            const nextL = safe(c[0] * l + state[0]), nextR = safe(c[0] * r + state[2]);
+            state[0] = safe(c[1] * l - c[3] * nextL + state[1]); state[1] = safe(c[2] * l - c[4] * nextL);
+            state[2] = safe(c[1] * r - c[3] * nextR + state[3]); state[3] = safe(c[2] * r - c[4] * nextR);
+            l = nextL; r = nextR;
+            // At exactly flat, keep the old filter tail until it is inaudible,
+            // then clear it and restore the arithmetic-free dry path. New
+            // boosts cannot resurrect samples from a previous EQ setting.
+            if (!band.remaining && this.params[band.key] === 0 && Math.max(Math.abs(state[0]), Math.abs(state[1]), Math.abs(state[2]), Math.abs(state[3])) < 1e-12) { state.fill(0); this.mask &= ~bit; }
+          }
+          left[frame] = l; right[frame] = r;
+          if (!this.mask) return;
+        }
+      }
+    }
     const emptyMeter = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
     const sampleData = (data, position) => {
@@ -125,6 +206,8 @@
         this.microphonePeak = 0;
         this.slots = Array.from({ length: 8 }, () => Array(4).fill(null));
         this.buffers = [];
+        this.trackEq = Array.from({ length: 8 }, () => null);
+        this.eqAutomationValues = Array(8).fill(null);
         this.returnSlots = Array.from({ length: 2 }, () => Array(4).fill(null));
         this.masterSlots = Array(4).fill(null);
         this.returnBuffers = [];
@@ -179,7 +262,16 @@
         this.automation = this.tracks.map(track => this._compileAutomation(track));
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus));
         this.masterAutomation = this._compileAutomation(this.master);
-        for (let t = 0; t < 8; t++) this._updateRack(this.tracks[t], this.slots[t]);
+        for (let t = 0; t < 8; t++) {
+          this._updateRack(this.tracks[t], this.slots[t]);
+          const params = {};
+          for (const key of trackEqKeys) params[key] = this.automation[t].eq[key] && this.eqAutomationValues[t]?.[key] !== undefined ? this.eqAutomationValues[t][key] : clamp(this.tracks[t].eq?.[key], -12, 12, 0);
+          // Performance macros and a compiled take share the absolute control
+          // clock. An event between ticks must not start its live EQ ramp
+          // earlier than the corresponding captured automation point.
+          if (this.trackEq[t]) { if (!this.service) this.trackEq[t].setParams(params); }
+          else this.trackEq[t] = new TrackEQ(this.sampleRate, params);
+        }
         for (let bus = 0; bus < 2; bus++) this._updateRack(this.returns[bus], this.returnSlots[bus], this.returnAutomation[bus]);
         this._updateRack(this.master, this.masterSlots, this.masterAutomation);
         if (!this.routingInitialized) {
@@ -190,13 +282,14 @@
         }
       }
       _compileAutomation(owner) {
-        const result = { level: null, pan: null, sends: [null, null], effects: Array.from({ length: 4 }, () => []) };
+        const result = { level: null, pan: null, sends: [null, null], eq: { low: null, lowMid: null, highMid: null, high: null }, effects: Array.from({ length: 4 }, () => []) };
         for (const lane of owner.automation || []) {
           if (lane.enabled === false || !lane.points?.length) continue;
           const compiled = { ...lane, points: lane.points.filter(p => Number.isFinite(p.beat) && Number.isFinite(p.value)).slice().sort((a, b) => a.beat - b.beat) };
           if (!compiled.points.length) continue;
           if (lane.target === 'level' || lane.target === 'pan') result[lane.target] = compiled;
           else if (/^send:[01]$/.test(lane.target || '')) result.sends[Number(lane.target.slice(5))] = compiled;
+          else if (/^eq:(low|lowMid|highMid|high)$/.test(lane.target || '') && /^track-[1-8]$/.test(owner.id || '')) result.eq[lane.target.slice(3)] = compiled;
           else {
             const match = /^fx:([0-3]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(lane.target || ''), spec = match && owner.effects?.[Number(match[1])];
             if (spec && (!lane.effectType || lane.effectType === spec.type) && typeof spec.params?.[match[2]] === 'number') result.effects[Number(match[1])].push({ key: match[2], lane: compiled });
@@ -236,6 +329,27 @@
           }
         }
       }
+      _processTrackEq(index, left, right) {
+        const track = this.tracks[index], eq = this.trackEq[index], lanes = this.automation[index].eq;
+        if (!this.service && !trackEqKeys.some(key => lanes[key])) { eq.process(left, right); return; }
+        for (let start = 0; start < left.length;) {
+          const length = Math.min(left.length - start, 32 - ((this.sampleClock + start) % 32));
+          if ((this.sampleClock + start) % 32 === 0) {
+            const values = {};
+            for (const key of trackEqKeys) values[key] = clamp(automationValue(lanes[key], this.timelineBeats[start], track.eq?.[key]), -12, 12, 0);
+            eq.setParams(values); this.eqAutomationValues[index] = values;
+          }
+          eq.process(left.subarray(start, start + length), right.subarray(start, start + length));
+          start += length;
+        }
+      }
+      _resetTrackEq() {
+        for (let index = 0; index < 8; index++) {
+          const values = {}, track = this.tracks[index], lanes = this.automation[index].eq;
+          for (const key of trackEqKeys) values[key] = clamp(automationValue(lanes[key], this.beat, track.eq?.[key]), -12, 12, 0);
+          this.trackEq[index].setParams(values); this.trackEq[index].reset(); this.eqAutomationValues[index] = values;
+        }
+      }
       _resetBuses() {
         for (const row of this.returnSlots) for (const slot of row) if (slot) slot.dsp.reset();
         for (const slot of this.masterSlots) if (slot) slot.dsp.reset();
@@ -262,6 +376,7 @@
           this.seekFadeRemaining = this.playing || Math.abs(this.lastOutput[0]) + Math.abs(this.lastOutput[1]) > 1e-8 ? this.seekFadeFrames : 0;
           for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         }
+        this._resetTrackEq();
         this._resetBuses();
         this.meters = { ...this.meters, beat: this.beat, cycle: 0, playing: this.playing, ended: false };
         return this.beat;
@@ -290,6 +405,7 @@
         for (const pair of this.gains) pair.fill(0);
         for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         for (const pair of this.buffers) for (const buffer of pair) buffer.fill(0);
+        this._resetTrackEq();
         this._resetBuses();
         this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() };
       }
@@ -319,7 +435,7 @@
         this.service = { baseState, arrangementBeat, options, scene: this._serviceScene(scene), sceneBeat: this.beat, sceneStarts: Array(8).fill(this.beat), padBeat: this.beat, padBeats: Array(8).fill(this.beat), phaseOrigins: Array(8).fill(0), performance: { drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [] }, pending: [] };
         if (performance) this.service.performance = this._servicePerformance(performance);
         this.options = { ...options, linear: true };
-        this._setState(this._serviceState()); this.playing = true; this.silent = false; this.ended = false;
+        this._setState(this._serviceState()); this._resetTrackEq(); this.playing = true; this.silent = false; this.ended = false;
         this.meters = { ...this.meters, beat: this.beat, cycle: 0, playing: true, ended: false };
         this._emitService('start', seq); this._emitService('scene', seq); this._emitService('performance', seq);
       }
@@ -345,11 +461,12 @@
         const { baseState, performance } = this.service;
         const tracks = Array.from({ length: 8 }, (_, index) => {
           const base = baseState.tracks?.[index] || { id: 'track-' + (index + 1), effects: [], automation: [] }, overrides = performance.overrides.filter(item => indexFor(item.trackId, baseState.tracks || []) === index);
-          const track = { ...base, sends: [clamp(base.sends?.[0], 0, 1, 0), clamp(base.sends?.[1], 0, 1, 0)], clips: [], instrumentLive: false, notePlayback: false, effects: Array.from({ length: 4 }, (_, slot) => { const effect = base.effects?.[slot]; return effect ? { ...effect, params: { ...effect.params } } : null; }), automation: [] };
+          const track = { ...base, eq: Object.fromEntries(trackEqKeys.map(key => [key, clamp(base.eq?.[key], -12, 12, 0)])), sends: [clamp(base.sends?.[0], 0, 1, 0), clamp(base.sends?.[1], 0, 1, 0)], clips: [], instrumentLive: false, notePlayback: false, effects: Array.from({ length: 4 }, (_, slot) => { const effect = base.effects?.[slot]; return effect ? { ...effect, params: { ...effect.params } } : null; }), automation: [] };
           for (const item of overrides) {
             if (item.target === 'level') track.level = clamp(item.value, 0, 1.5, base.level);
             else if (item.target === 'pan') track.pan = clamp(item.value, -1, 1, base.pan);
             else if (/^send:[01]$/.test(item.target || '')) track.sends[Number(item.target.slice(5))] = clamp(item.value, 0, 1, 0);
+            else if (/^eq:(low|lowMid|highMid|high)$/.test(item.target || '')) track.eq[item.target.slice(3)] = clamp(item.value, -12, 12, 0);
             else { const match = /^fx:([0-3]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(item.target || ''), effect = match && track.effects[Number(match[1])]; if (effect && typeof effect.params?.[match[2]] === 'number') effect.params[match[2]] = item.value; }
           }
           if (performance.drops[index]) { track.level = 0; track.automation = track.automation.filter(lane => lane.target !== 'level'); for (let bus = 0; bus < 2; bus++) if (base.sendPre?.[bus] === true) track.sends[bus] = 0; }
@@ -538,6 +655,7 @@
         for (let t = 0; t < 8; t++) {
           const [l, r] = this.buffers[t], track = this.tracks[t];
           this._processRack(track, this.slots[t], this.automation[t], l, r, blockBeat, blockPlaying);
+          this._processTrackEq(t, l, r);
           const gain = this.gains[t]; let peak = 0, powerL = 0, powerR = 0;
           for (let f = 0; f < n; f++) {
             const beat = this.timelineBeats[f], pan = clamp(automationValue(this.automation[t].pan, beat, track.pan), -1, 1, 0), level = audible[t] ? clamp(automationValue(this.automation[t].level, beat, track.level), 0, 1.5, .8) : 0;
@@ -739,7 +857,7 @@
       }
       cancel() { this.active = false; this.stage = 'idle'; this.frames = 0; this.used = 0; this.buffers = []; }
     }
-    return { Core, Recorder, ServiceTiming: { geometry: serviceGeometry }, ClipPlayback: { compile: compileClip, read: readClip } };
+    return { Core, Recorder, TrackEQ, ServiceTiming: { geometry: serviceGeometry }, ClipPlayback: { compile: compileClip, read: readClip } };
   }
 
   const silenceMeters = beat => ({ beat: beat || 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), returns: Array.from({ length: 2 }, () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 })), returnEffects: Array.from({ length: 2 }, () => Array(4).fill(null)), masterEffects: Array(4).fill(null), master: { peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 } });
@@ -757,7 +875,7 @@
       returns: state.returns ? Array.from({ length: 2 }, (_, index) => { const bus = state.returns[index] || {}; return { id: 'return-' + (index + 1), name: bus.name, level: bus.level, pan: bus.pan, mute: bus.mute, solo: bus.solo, ...rack(bus) }; }) : undefined,
       tracks: Array.from({ length: 8 }, (_, index) => {
         const track = state.tracks?.[index] || {};
-        return { id: track.id, level: track.level, pan: track.pan, mute: track.mute, solo: track.solo, sends: [track.sends?.[0] ?? 0, track.sends?.[1] ?? 0], sendPre: [track.sendPre?.[0] === true, track.sendPre?.[1] === true], instrumentLive: track.instrumentLive, notePlayback: (track.clips || []).some(clip => clip.type === 'notes'),
+        return { id: track.id, level: track.level, pan: track.pan, mute: track.mute, solo: track.solo, eq: { low: track.eq?.low ?? 0, lowMid: track.eq?.lowMid ?? 0, highMid: track.eq?.highMid ?? 0, high: track.eq?.high ?? 0 }, sends: [track.sends?.[0] ?? 0, track.sends?.[1] ?? 0], sendPre: [track.sendPre?.[0] === true, track.sendPre?.[1] === true], instrumentLive: track.instrumentLive, notePlayback: (track.clips || []).some(clip => clip.type === 'notes'),
           automation: (track.automation || []).map(lane => ({ target: lane.target, effectType: lane.effectType, enabled: lane.enabled, interpolation: lane.interpolation, points: (lane.points || []).map(p => ({ beat: p.beat, value: p.value })) })),
           effects: Array.from({ length: 4 }, (_, slot) => { const effect = track.effects?.[slot]; return effect ? { type: effect.type, bypass: effect.bypass, params: { ...effect.params } } : null; }),
           clips: (track.clips || []).map(clip => ({ assetId: clip.assetId, start: clip.start, length: clip.length, sourceStart: clip.sourceStart, sourceEnd: clip.sourceEnd,

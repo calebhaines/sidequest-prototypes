@@ -83,7 +83,9 @@
     "check:buses": "node loom/bus-schema-checks.cjs && node loom/bus-routing-checks.cjs && node loom/bus-review-checks.cjs && node loom/bus-automation-checks.cjs",
     "check:buses-browser": "node loom/bus-browser-checks.cjs",
     "check:preamp": "node loom/preamp-checks.cjs && node loom/preamp-project-checks.cjs && node loom/preamp-review-checks.cjs",
-    "check:preamp-browser": "node loom/preamp-browser-checks.cjs"
+    "check:preamp-browser": "node loom/preamp-browser-checks.cjs",
+    "check:track-eq": "node loom/track-eq-checks.cjs && node loom/track-eq-project-checks.cjs && node loom/track-eq-review-checks.cjs",
+    "check:track-eq-browser": "node loom/track-eq-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
