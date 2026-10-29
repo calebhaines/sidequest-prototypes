@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
-const sourceFiles = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'effects.js', 'audio-engine.js'];
+const sourceFiles = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'audio-engine.js'];
 const clone = value => JSON.parse(JSON.stringify(value));
 function loadSources(read = name => fs.readFileSync(path.join(__dirname, name), 'utf8')) {
   const scope = { Math, Number, Object, Map, Set, Promise, Float32Array, Float64Array, Int32Array, Uint8Array, Blob, DOMException, TextEncoder, setTimeout, navigator: {} };

@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const legacy = JSON.parse(fs.readFileSync(path.join(__dirname, 'compressor-legacy-fixtures.json'), 'utf8'));
@@ -57,7 +57,7 @@ check('Every classic model, its analog controls and automation survive strict pr
     assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 4));
   }
   assert.deepEqual(dsp.normalize('velvet', {}), definition.defaults);
-  assert.equal(LoomEffectsCatalog.length, 14);
+  assert.equal(LoomEffectsCatalog.length, 15);
 });
 function source(sr) {
   const frames = Math.round(sr * .3), left = new Float32Array(frames), right = new Float32Array(frames);

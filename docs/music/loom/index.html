@@ -112,8 +112,8 @@
 })(typeof window === 'object' ? window : globalThis);
 
 </script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.16.0"><meta name="galley-service-version" content="1.0.0">
-<meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play fourteen instruments, monitor microphone input through four effects per track, and align recordings. Fourteen effects include STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.17.0"><meta name="galley-service-version" content="1.0.0">
+<meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play fourteen instruments, monitor microphone input through four effects per track, and align recordings. Fifteen effects include SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
 <style>
@@ -1518,6 +1518,90 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 @media(max-width:360px){.bus-channels{padding:11px}.bus-channel{padding:15px}.bus-controls{grid-template-columns:1fr;gap:14px}.bus-controls>label>div{grid-template-columns:minmax(0,1fr) 59px;gap:12px}.bus-controls input[type=range],.bus-channel .bus-controls input[type=number]{min-height:38px}.bus-switches button{width:34px;min-height:36px}.channel-sends>label{grid-template-columns:7px minmax(0,1fr);gap:3px}.channel-sends output{display:none}.track-send-values{grid-template-columns:minmax(0,1fr) 58px;gap:8px}}
 @media(prefers-reduced-motion:reduce){.bus-live-meter i{transition:none}}
 
+/* SAUTÉ · a copper face, with the circuit bench folded below. */
+.effect-editor.preamp-editor{border-color:#9a7858}
+.preamp-editor .effect-editor-layout{grid-template-columns:214px minmax(0,1fr)}
+.preamp-editor .effect-hero{background:linear-gradient(150deg,#40332a,#262b26 76%)}
+.preamp-editor .effect-hero h2{color:#e9c39c;font-size:37px;letter-spacing:.025em}
+.preamp-editor .effect-hero .effect-art{height:145px;margin:25px 0 18px}
+.preamp-editor .effect-info{color:#c4b6a4;font-size:11px;line-height:1.9}
+.preamp-signal-route{padding:15px 0;margin-bottom:17px;border-top:1px solid #ab8e6a44;border-bottom:1px solid #ab8e6a44;color:#c5af91;font:8px/2.3 var(--kk-mono,monospace);letter-spacing:.025em;text-align:center}
+.preamp-editor .effect-right{padding:22px;background:linear-gradient(140deg,#30372e,#242b26)}
+.preamp-editor .effect-toolbar{margin-bottom:20px}
+.preamp-editor .effect-toolbar>span{color:#c8b9a3;font-size:9px}
+.preamp-console{display:grid;gap:22px;min-width:0}
+.preamp-recipe-bar{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(0,1.15fr);gap:22px;align-items:center}
+.preamp-recipe-bar>label{display:grid;gap:8px;min-width:0}
+.preamp-recipe-bar .eyebrow{color:#d9bd98;font-size:9px;letter-spacing:.11em}
+.preamp-recipe-bar select{width:100%;max-width:100%;min-width:0;min-height:42px;padding:10px 11px;background:#252c24;border-color:#82775f;color:#eee1c9;font-size:12px}
+.preamp-recipe-bar p{color:#c3c4b1;font-size:11px;line-height:1.75;max-width:490px}
+.preamp-face{position:relative;min-width:0;padding:24px 26px 21px;border:1px solid #bb9066;border-radius:7px;color:#4c3b2a;background:linear-gradient(145deg,#ebd4b4,#d8b68f 65%,#cda982);box-shadow:0 5px 0 #182019,inset 0 1px 0 #fff7}
+.preamp-face::before,.preamp-face::after{content:'';position:absolute;top:11px;width:5px;height:5px;background:linear-gradient(45deg,#796044 43%,#c5a47c 43%,#c5a47c 56%,#796044 56%);border-radius:50%;box-shadow:0 0 0 1px #8c684744}
+.preamp-face::before{left:11px}.preamp-face::after{right:11px}
+.preamp-face-heading{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:18px;border-bottom:1px solid #87694d55}
+.preamp-face-heading>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:15px}
+.preamp-face-brand{font:bold italic 35px Georgia,serif;letter-spacing:-1px;color:#63452e;text-shadow:0 1px 0 #fff5}
+.preamp-face-edition{font:8px var(--kk-mono,monospace);letter-spacing:.12em;color:#725d42}
+.preamp-signal-light{display:flex;align-items:center;gap:8px;font-size:10px;color:#655738;white-space:nowrap}
+.preamp-signal-light i{width:7px;height:7px;background:#74804d;border:1px solid #66713f;border-radius:50%;box-shadow:0 0 7px #78834366,inset 0 1px 1px #e4dda9}
+.preamp-is-bypassed .preamp-signal-light i{background:#9a9276;border-color:#877c62;box-shadow:inset 0 1px 2px #655b4455}
+.preamp-model-row{display:grid;grid-template-columns:minmax(200px,.85fr) minmax(0,1.15fr);gap:25px;align-items:center;padding:22px 0 17px}
+.preamp-model-note strong{display:block;font-size:11px;font-weight:600;line-height:1.6;color:#5e4d34}
+.preamp-model-note p{margin-top:6px;color:#6b5940;font-size:11px;line-height:1.7}
+.preamp-circuit-row{display:flex;align-items:center;gap:17px;padding-bottom:20px}
+.preamp-face #preampCircuitSettings{flex-shrink:0;min-height:39px;padding:9px 12px;font-size:11px;font-weight:600;white-space:normal;background:#f0dfc2;color:#5c4a30;border:1px solid #a08a61;border-radius:4px;box-shadow:0 1px 0 #fff4}
+.preamp-face #preampCircuitSettings:hover:enabled{background:#f5e9d4;border-color:#6c7650}
+.preamp-circuit-row p{font-size:10px;line-height:1.7;color:#726045;max-width:440px}
+.preamp-readings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:16px 18px 12px;border:1px solid #88714d55;border-radius:5px;background:#f3e6c980;box-shadow:inset 0 1px 4px #6b4b2617}
+.preamp-meter{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 8px;min-width:0;align-items:center}
+.preamp-meter>span{font-size:9px;letter-spacing:.035em;color:#665534}
+.preamp-meter>output{font:11px var(--kk-mono,monospace);color:#4e4c30;font-variant-numeric:tabular-nums;white-space:nowrap}
+.preamp-stage-meter>span,.preamp-stage-meter>output{color:#815536}
+.preamp-meter-track{grid-column:1/-1;height:7px;overflow:hidden;background:#9c927055;border:1px solid #8e7f5b44;border-radius:2px;box-shadow:inset 0 1px 2px #65552c22}
+.preamp-meter-track i{display:block;height:100%;width:0;background:#6f7c53;transition:width .08s linear}
+.preamp-stage-meter .preamp-meter-track i{background:#a2744e}
+.preamp-meter small{grid-column:1/-1;display:flex;justify-content:space-between;gap:5px;font:7px var(--kk-mono,monospace);color:#827354}
+.preamp-core-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:23px 24px;padding:24px 0 21px;border-bottom:1px solid #87694d55}
+.preamp-control{min-width:0;gap:8px}
+.preamp-control>label{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:11px;line-height:1.5;letter-spacing:0;text-transform:none;white-space:normal;color:#ced0bc}
+.preamp-control output{font:10px var(--kk-mono,monospace);white-space:nowrap;color:#e3ceab}
+.preamp-control select{width:100%;min-width:0;max-width:100%;min-height:41px;font-size:12px;padding:9px 10px;background:#202b23;border-color:#748065;color:#e6e7cf}
+.preamp-value-row{display:grid;grid-template-columns:minmax(0,1fr) 62px;gap:9px;align-items:center;min-width:0}
+.preamp-value-row input[type=range]{width:100%;min-width:0;min-height:36px;padding:0;accent-color:#cbae79;touch-action:pan-y}
+.preamp-value-row input[type=number]{width:100%;min-width:0;min-height:36px;padding:6px 4px;background:#1c2820;border:1px solid #66765b;border-radius:3px;color:#e1d2b1;font:11px var(--kk-mono,monospace);text-align:center;appearance:textfield;-moz-appearance:textfield}
+.preamp-value-row input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
+.preamp-face .preamp-control>label{color:#5d4b2d;font-weight:600}
+.preamp-face .preamp-control output{color:#735a3b;font-weight:400}
+.preamp-face .preamp-control select{background:#f0dfbf;border-color:#a58c63;color:#57452d}
+.preamp-face .preamp-value-row input[type=range]{accent-color:#795b3a}
+.preamp-face .preamp-value-row input[type=number]{color:#5b492f;background:#eedcba;border-color:#b69a74;box-shadow:inset 0 1px 2px #80633918}
+.preamp-control-inactive>label{opacity:.57}
+.preamp-console input:disabled,.preamp-console select:disabled,.preamp-console button:disabled{opacity:.45;cursor:default}
+.preamp-gain-hint{margin-top:16px;font-size:10px;line-height:1.8;color:#6d5a3c;max-width:850px}
+.preamp-details-list{display:grid;gap:10px;min-width:0}
+.preamp-details{min-width:0;border:1px solid #777c60;border-radius:5px;background:#29352b}
+.preamp-details>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;cursor:pointer;list-style:none;color:#e1cda5}
+.preamp-details>summary::-webkit-details-marker{display:none}
+.preamp-details>summary>span:first-child{display:grid;gap:4px;min-width:0}
+.preamp-details summary strong{font-size:13px;font-weight:600}
+.preamp-details summary small{font-size:10px;line-height:1.5;color:#b4bea3}
+.preamp-details summary>span:last-child{font-size:20px;line-height:1;transition:transform .15s}
+.preamp-details[open]>summary{border-bottom:1px solid #78816166}
+.preamp-details[open] summary>span:last-child{transform:rotate(45deg)}
+.preamp-details-content{padding:19px 18px 20px}
+.preamp-details-content>p{font-size:11px;line-height:1.8;color:#bdc6ac;margin-bottom:20px;max-width:840px}
+.preamp-details-content>.preamp-circuit-hint{margin:18px 0 0;font-size:10px;color:#aebba0}
+.preamp-detail-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:23px 22px}
+.preamp-disclosure{font-size:10px;line-height:1.8;color:#9eac94;max-width:800px}
+.preamp-editor summary:focus-visible{outline:2px solid #e2c39b;outline-offset:3px;border-radius:3px}
+.preamp-editor .preamp-face input:focus-visible,.preamp-editor .preamp-face select:focus-visible,.preamp-editor .preamp-face button:focus-visible{outline-color:#6e6646;outline-offset:3px}
+@media(min-width:901px){.preamp-editor{scroll-margin-top:153px}}
+@media(max-width:1150px){.preamp-editor .effect-editor-layout{grid-template-columns:185px minmax(0,1fr)}.preamp-editor .effect-hero{padding:18px 16px}.preamp-editor .effect-hero h2{font-size:32px}.preamp-face{padding:22px 20px 18px}.preamp-model-row{gap:20px;grid-template-columns:minmax(180px,1fr) minmax(0,1.1fr)}.preamp-core-controls{gap:21px 18px}.preamp-readings{gap:15px;padding:16px 14px 12px}.preamp-meter{grid-template-columns:1fr;gap:4px}.preamp-meter>output{font-size:12px}.preamp-detail-controls{gap:22px 18px}}
+@media(max-width:900px){.preamp-editor .effect-editor-layout{grid-template-columns:1fr}.preamp-editor .effect-hero{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:0 15px;border-right:0;border-bottom:1px solid #856c51}.preamp-editor .effect-hero>.eyebrow,.preamp-editor .effect-hero>h2,.preamp-editor .effect-hero>p{grid-column:1}.preamp-editor .effect-hero .effect-art{grid-column:2;grid-row:1/4;height:102px;margin:0}.preamp-editor .effect-info,.preamp-editor .preamp-signal-route{display:none}.preamp-editor .effect-right{padding:20px}.preamp-model-row{grid-template-columns:minmax(190px,.9fr) minmax(0,1.1fr)}.preamp-meter{grid-template-columns:minmax(0,1fr) auto}}
+@media(max-width:650px){.preamp-editor .effect-hero{grid-template-columns:minmax(0,1fr) 92px;padding:17px}.preamp-editor .effect-hero h2{font-size:29px}.preamp-editor .effect-hero .effect-art{height:80px;align-self:center}.preamp-editor .effect-hero>p{font-size:11px;line-height:1.6}.preamp-editor .effect-right{padding:17px 14px}.preamp-editor .effect-toolbar{gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.preamp-editor .effect-toolbar>div{flex-wrap:wrap}.preamp-console{gap:20px}.preamp-recipe-bar{grid-template-columns:1fr;gap:10px}.preamp-face{padding:22px 17px 17px}.preamp-face-heading{gap:12px}.preamp-face-heading>div{gap:6px}.preamp-face-brand{font-size:30px}.preamp-face-edition{font-size:7px;line-height:1.7}.preamp-signal-light{font-size:8px;gap:6px}.preamp-model-row{grid-template-columns:1fr;gap:13px;padding:19px 0 15px}.preamp-model-note p{font-size:11px}.preamp-circuit-row{flex-wrap:wrap;gap:9px;padding-bottom:18px}.preamp-circuit-row p{font-size:10px}.preamp-face #preampCircuitSettings{min-height:40px;font-size:11px}.preamp-readings{gap:12px;padding:14px 11px 11px}.preamp-meter{grid-template-columns:1fr;gap:6px}.preamp-meter>span{font-size:8px;line-height:1.5}.preamp-meter>output{font-size:11px}.preamp-meter small{font-size:6px}.preamp-meter small span{display:none}.preamp-core-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 17px;padding:23px 0 18px}.preamp-control>label{font-size:10px}.preamp-value-row{grid-template-columns:minmax(0,1fr) 52px;gap:6px}.preamp-value-row input[type=number]{font-size:10px}.preamp-control output{font-size:9px}.preamp-details>summary{padding:14px}.preamp-details summary small{font-size:9px}.preamp-details-content{padding:19px 14px 16px}.preamp-detail-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 16px}.preamp-details-content>p{font-size:10px}.preamp-control select{font-size:11px}}
+@media(max-width:360px){.preamp-editor .effect-right{padding:15px 11px}.preamp-face{padding:22px 14px 16px}.preamp-face-heading{align-items:flex-start}.preamp-face-heading>div{flex-direction:column;gap:3px}.preamp-face-brand{font-size:29px}.preamp-signal-light{padding-top:8px}.preamp-core-controls,.preamp-detail-controls{grid-template-columns:1fr;gap:18px}.preamp-value-row{grid-template-columns:minmax(0,1fr) 68px;gap:11px}.preamp-readings{gap:9px;padding:12px 9px 10px}.preamp-meter>output{font-size:10px}.preamp-details summary small{max-width:190px}}
+@media(prefers-reduced-motion:reduce){.preamp-meter-track i,.preamp-details summary>span:last-child{transition:none}}
+
 </style>
 
 <style>
@@ -1756,7 +1840,7 @@ body {
 
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.16.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.17.0 / 8 × 4</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
@@ -1778,7 +1862,7 @@ body {
 <dialog id="instrumentDialog" class="instrument-dialog"><div class="dialog-top"><div><span class="eyebrow">THE EQUIPMENT ROSTER</span><h2 id="instrumentDialogTitle">Choose a voice for track 01.</h2></div><button id="closeInstrument" class="close-button" aria-label="Close instrument editor">×</button></div><div id="instrumentBrowser"><p class="dialog-intro">The complete Kitchen instruments, with their original controls. Choose one, arm its track, and Record a take into your arrangement.</p><div id="instrumentGrid" class="instrument-grid"></div><div class="custom-instrument"><div><h3>Bring the next peculiar invention.</h3><p>Upload a self-contained HTML instrument, or use a same-origin URL. Audio must use Web Audio.</p></div><div><button id="uploadAppButton">Upload instrument HTML</button><label><input id="customAppUrl" type="url" placeholder="https://this-site/music/your-app/" aria-label="Same-origin instrument URL"><button id="loadAppUrlButton">Load URL</button></label></div></div></div><div id="instrumentEditorBar" class="instrument-editor-bar" hidden><strong id="instrumentEditorName">INSTRUMENT</strong><span id="instrumentHostStatus">Preparing the audio bridge…</span><button id="instrumentBackButton">Other instruments</button><button id="unloadInstrumentButton">Unload</button></div><div id="instrumentFrames" class="instrument-frames" hidden></div></dialog>
 <dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">FOURTEEN FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
 <dialog id="exportDialog" class="export-dialog"><div class="dialog-top"><div><span class="eyebrow">PACK THE FINISHED ORDER</span><h2>Export / ready to go.</h2></div><button id="closeExport" class="close-button" aria-label="Close export">×</button></div><p>The master mix includes both returns and master inserts. Stems follow mute/solo, separate the returns and skip master inserts. Note clips use their saved instrument.</p><div class="export-fields"><label>EXPORT<select id="exportMode"><option value="mix">Stereo master mix</option><option value="stem">Selected track stem</option><option value="return-1">Return A · wet stem</option><option value="return-2">Return B · wet stem</option><option value="all">All ten stems · 8 tracks + 2 returns</option></select></label><label>RANGE<select id="exportRange"><option value="session">Whole session</option><option value="loop">Loop region</option></select></label><label>EFFECT TAIL<select id="exportTail"><option value="0">None</option><option value="2" selected>2 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option></select></label></div><progress id="exportProgress" max="1" value="0" hidden></progress><div class="export-bottom"><span id="exportSummary">Stereo PCM WAV · 48 kHz · 16 bit</span><button id="cancelExport" hidden>Cancel render</button><button id="renderButton" class="play-button">Render WAV ↗</button></div></dialog>
-<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of fourteen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s four effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>BUTTER · classic compression</h3><p><strong>BUTTER</strong> adds eight recognizable analog compressor families alongside its original Clean model: Seventy-six FET, Optical 2A, Optical 3A, Vari 670, Bus 4K, VCA 160, Bus 2500 and Diode 609. Each model has its own detector, gain response and recovery. Model notes identify the hardware inspirations and explain what to listen for.</p><p>Changing <strong>Model</strong> keeps your settings. <strong>Use classic settings</strong> loads that family’s suggested timing and character; complete recipes provide ready-to-use starting points. Classic timing follows the model’s program-dependent recovery, while Manual timing makes Attack and Release editable. Input trim drives the detector and analog path. Threshold, Ratio, Knee, Makeup and Dry / wet shape the result.</p><p>Open the advanced controls for analog colour, stereo link, detector high-pass, Seventy-six all-buttons behaviour and Bus 2500 Thrust weighting. The live meters report input, output and actual gain reduction. Colour changes analog models; Clean keeps the original compressor sound. Settings and numeric automation stay in the project and WAV export. These are reduced-order models of classic behaviour rather than measured replicas of particular hardware units.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the fourteen effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Shared effects and the master</h3><p>Use the mixer’s <strong>A / B sends</strong> to share one effect chain between tracks. Sends start at zero. Return A is ready with fully wet <strong>HOOD</strong> reverb; Return B has fully wet <strong>LEFTOVERS</strong> delay. Each return has four insert slots, a level, pan, Mute and Solo. Open the selected track’s <strong>Sends</strong> fold for exact percentages and a choice of signal before or after its level fader. Both taps follow track pan, mute and solo.</p><p>Solo a return to hear its wet signal alone. Track mute and solo still determine which sources feed it. Return inserts process the combined send signal once. The <strong>Master</strong> has four inserts for the complete mix, before master level. Master mute silences the output. Instrument and microphone recordings stay dry, so you can change these effects afterwards.</p><p>The master WAV includes both shared returns and master inserts. <strong>All ten stems</strong> packs eight direct track stems and two shared wet return stems in one ZIP. Stems follow mute and solo, retain master level, and skip master inserts. A selected track stem always uses the selected instrument track, even when you are editing a return or the master.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight instrument tracks, two shared returns and a master, each with four insert slots. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
+<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of fourteen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s four effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and four effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>BUTTER · classic compression</h3><p><strong>BUTTER</strong> adds eight recognizable analog compressor families alongside its original Clean model: Seventy-six FET, Optical 2A, Optical 3A, Vari 670, Bus 4K, VCA 160, Bus 2500 and Diode 609. Each model has its own detector, gain response and recovery. Model notes identify the hardware inspirations and explain what to listen for.</p><p>Changing <strong>Model</strong> keeps your settings. <strong>Use classic settings</strong> loads that family’s suggested timing and character; complete recipes provide ready-to-use starting points. Classic timing follows the model’s program-dependent recovery, while Manual timing makes Attack and Release editable. Input trim drives the detector and analog path. Threshold, Ratio, Knee, Makeup and Dry / wet shape the result.</p><p>Open the advanced controls for analog colour, stereo link, detector high-pass, Seventy-six all-buttons behaviour and Bus 2500 Thrust weighting. The live meters report input, output and actual gain reduction. Colour changes analog models; Clean keeps the original compressor sound. Settings and numeric automation stay in the project and WAV export. These are reduced-order models of classic behaviour rather than measured replicas of particular hardware units.</p><h3>SAUTÉ · microphone preamps</h3><p><strong>SAUTÉ</strong> brings twelve recognizable microphone preamp families and a transparent mode into one insert. The model notes identify each inspiration. Change <strong>Model</strong> to keep your settings, use <strong>Use circuit starting point</strong> for that model’s suggested character, or choose a complete recipe.</p><p><strong>Input</strong> changes the signal going into the preamp. <strong>Drive</strong> pushes its stages harder; gain compensation removes that added Drive gain while preserving your Input and Output adjustments. It is nominal gain compensation, not automatic loudness matching. <strong>Colour</strong> blends the circuit character. Open the workshop for headroom, transformer memory, bias, feedback, slew, digital pad, wet-path polarity, virtual loading and tone controls. Virtual loading shapes audio already captured by the interface; it cannot change physical microphone loading. No phantom power is simulated.</p><p>Use it on instrument or audio tracks, the shared returns, or the master. Monitoring a microphone through SAUTÉ still records a dry take. Input/output and drive readings follow the actual processing. Numeric automation, recipes, Undo and saved projects retain the complete setup. These are reduced-order circuit interpretations, not measured replicas of individual units.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly four effect slots. Select a slot to edit it; add any of the fifteen effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Shared effects and the master</h3><p>Use the mixer’s <strong>A / B sends</strong> to share one effect chain between tracks. Sends start at zero. Return A is ready with fully wet <strong>HOOD</strong> reverb; Return B has fully wet <strong>LEFTOVERS</strong> delay. Each return has four insert slots, a level, pan, Mute and Solo. Open the selected track’s <strong>Sends</strong> fold for exact percentages and a choice of signal before or after its level fader. Both taps follow track pan, mute and solo.</p><p>Solo a return to hear its wet signal alone. Track mute and solo still determine which sources feed it. Return inserts process the combined send signal once. The <strong>Master</strong> has four inserts for the complete mix, before master level. Master mute silences the output. Instrument and microphone recordings stay dry, so you can change these effects afterwards.</p><p>The master WAV includes both shared returns and master inserts. <strong>All ten stems</strong> packs eight direct track stems and two shared wet return stems in one ZIP. Stems follow mute and solo, retain master level, and skip master inserts. A selected track stem always uses the selected instrument track, even when you are editing a return or the master.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight instrument tracks, two shared returns and a master, each with four insert slots. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
 <input id="audioFile" type="file" accept="audio/*" hidden><input id="projectFile" type="file" accept=".json,.loom.json,application/json" hidden><input id="appFile" type="file" accept=".html,text/html" hidden>
 <script>
 /* GLAZE · a vocal finishing station. All processing is local. */
@@ -2129,6 +2213,71 @@ body {
   ];
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* SAUTÉ · microphone preamp characters and a small circuit workshop. */
+(function (scope) {
+  'use strict';
+  const range = (key, label, min, max, step, value, unit = '') => ({ key, label, type: 'range', min, max, step, default: value, unit });
+  const select = (key, label, value, options) => ({ key, label, type: 'select', default: value, options: options.map(([value, label]) => ({ value, label })) });
+  const startingPoint = (colour, impedance, transformer, headroom, bias, feedback, slew) => ({ colour, impedance, transformer, headroom, bias, feedback, slew });
+  const models = [
+    { id: 'iron-73', name: 'Iron 73', inspiration: 'Neve 1073 class-A transformer preamp family', description: 'A rounded class-A character with a broad low-mid foundation, transformer memory and a restrained high-frequency edge. Push Drive for denser harmonics; lower Feedback for a less restrained transfer.', defaults: startingPoint(.65, 1200, .7, 0, .12, .35, .4) },
+    { id: 'clean', name: 'Clear', inspiration: 'Transparent modern microphone preamp reference', description: 'A transparent gain stage. Gain, pad, polarity and tone controls still work; Colour and the circuit workshop are inactive. Useful for comparing a coloured preamp against a clean gain path.', defaults: startingPoint(0, 2400, 0, 12, 0, 1, 0) },
+    { id: 'punch-312', name: 'Punch 312', inspiration: 'API 312 / 512 discrete op-amp preamp family', description: 'A forward discrete op-amp character with firmer transients, faster recovery and output-transformer weight. A useful starting point for drums, picked bass and close microphones.', defaults: startingPoint(.65, 1500, .55, 3, -.03, .65, .2) },
+    { id: 'console-4k', name: 'Console 4K', inspiration: 'SSL 4000 E / G console microphone preamp family', description: 'A controlled console input with a precise midrange, relatively symmetrical overload and a taut low end. Keep Feedback high for clean service or push the stage into a firmer edge.', defaults: startingPoint(.55, 1200, .12, 5, 0, .8, .18) },
+    { id: 'super-9k', name: 'Super 9K', inspiration: 'SSL 9000 J / K SuperAnalogue microphone preamp family', description: 'A wide-band, high-headroom transformerless console character with fast transient handling. Transformer core is inactive; the remaining circuit controls stay available. Its model stays distinct from Clear while leaving more space before overload.', inactiveControls: ['transformer'], defaults: startingPoint(.45, 1500, 0, 10, 0, .92, .06) },
+    { id: 'tube-610', name: 'Tube 610', inspiration: 'Universal Audio 610 valve microphone preamp family', description: 'A soft valve front end with asymmetric harmonics, a softer high end and slower overload recovery. Drive and Headroom expose the transition from subtle body to a rounded overdrive.', defaults: startingPoint(.7, 2000, .55, -2, .24, .25, .65) },
+    { id: 'redd-47', name: 'Red 47', inspiration: 'EMI REDD.47 valve microphone amplifier', description: 'A lively valve amplifier character with pronounced upper-mid presence and a more immediate bite than Tube 610. Bias shifts the balance of even and odd harmonics without adding constant DC.', defaults: startingPoint(.7, 2400, .6, 1, .18, .4, .32) },
+    { id: 'valve-72', name: 'Valve 72', inspiration: 'Telefunken V72 valve microphone amplifier family', description: 'A dense, rounded valve character with a narrower bandwidth, stronger iron memory and a soft overload knee. Useful when a source needs weight and a gentler leading edge.', defaults: startingPoint(.7, 2000, .8, -1, .2, .45, .7) },
+    { id: 'helios-69', name: 'Helium 69', inspiration: 'Helios Type 69 console microphone preamp family', description: 'A vivid discrete console character with a focused middle, open upper presence and lively overload. Its voicing is a preamp interpretation; it does not reproduce the full Type 69 equalizer.', defaults: startingPoint(.65, 1200, .5, 1, .08, .3, .3) },
+    { id: 'trident-a', name: 'Trident A', inspiration: 'Trident A-Range console microphone preamp family', description: 'A broad discrete console character with a textured midrange and gently rounded transients. The workshop can move it from restrained console colour to a rougher, more asymmetrical sound.', defaults: startingPoint(.6, 1200, .4, 2, .06, .45, .4) },
+    { id: 'isa-110', name: 'Blue 110', inspiration: 'Focusrite ISA 110 transformer microphone preamp family', description: 'A clean, extended transformer input with restrained saturation, a firm bottom end and generous headroom. Virtual loading and Transformer core let you add weight while keeping the stage open.', defaults: startingPoint(.5, 1400, .45, 7, .02, .8, .15) },
+    { id: 'avalon-737', name: 'Air 737', inspiration: 'Avalon VT-737sp valve preamp section', description: 'An open valve character with a smooth overload curve and a subtle upper lift. This models the preamp family only; it adds no hidden optical compressor or channel-strip equalizer.', defaults: startingPoint(.55, 1500, .3, 6, .16, .55, .3) },
+    { id: 'tg-2', name: 'TG Two', inspiration: 'Chandler Limited TG2 / EMI TG transistor amplifier family', description: 'A thick transistor character with assertive upper mids, stronger harmonic density and a transformer-led low end. Lower Headroom and more Drive turn its firm edge into an intentional distortion.', defaults: startingPoint(.7, 1200, .75, -1, -.12, .3, .42) }
+  ];
+  const params = [
+    select('model', 'Preamp model', 'iron-73', models.map(model => [model.id, model.name + (model.id === 'clean' ? ' · transparent' : '')])),
+    range('input', 'Input gain', -24, 24, .1, 0, 'dB'), range('drive', 'Drive', 0, 36, .1, 6, 'dB'), range('colour', 'Colour', 0, 1, .01, .65), range('output', 'Output trim', -36, 18, .1, 0, 'dB'),
+    select('compensate', 'Drive compensation', 'on', [['on', 'On · trim Drive gain'], ['off', 'Off · keep Drive gain']]),
+    select('pad', 'Input pad', 'off', [['off', 'Off'], ['10', '−10 dB'], ['20', '−20 dB']]), select('polarity', 'Wet polarity', 'normal', [['normal', 'Normal'], ['invert', 'Invert']]),
+    range('impedance', 'Virtual input loading', 150, 10000, 1, 2400, 'Ω'), range('transformer', 'Transformer core', 0, 1, .01, .5), range('headroom', 'Stage headroom', -12, 18, .1, 0, 'dB'), range('bias', 'Bias asymmetry', -1, 1, .01, 0), range('feedback', 'Circuit feedback', 0, 1, .01, .5), range('slew', 'Slew character', 0, 1, .01, .5),
+    range('lowCut', 'High-pass', 0, 400, 1, 0, 'Hz'), range('highCut', 'Low-pass', 2000, 22000, 1, 22000, 'Hz'), range('lowFreq', 'Low shelf frequency', 40, 400, 1, 110, 'Hz'), range('lowGain', 'Low shelf gain', -12, 12, .1, 0, 'dB'), range('highFreq', 'High shelf frequency', 2000, 16000, 1, 6000, 'Hz'), range('highGain', 'High shelf gain', -12, 12, .1, 0, 'dB')
+  ];
+  const defaults = Object.assign(Object.fromEntries(params.map(param => [param.key, param.default])), { mix: 1, bypass: false });
+  // A complete recipe is deliberately different from changing a model: it
+  // starts from every house control, then applies that circuit's starting point.
+  const recipe = (id, name, description, model, patch = {}) => ({ id, name, description, params: Object.assign({}, defaults, models.find(item => item.id === model).defaults, { model }, patch) });
+  scope.LoomPreampCatalog = [{
+    id: 'saute', name: 'SAUTÉ', subtitle: 'Prepare the signal. Bring out its character.', color: '#b48b60', accent: '#edcf9b', visual: 'preamp', panel: 'preamp',
+    description: 'Twelve classic microphone preamp families and a transparent reference, with distinct reduced-order transfer, bandwidth, transient and transformer-memory responses. Input and Drive set the push; Output trim sets the serving level. Open the workshop for virtual loading, core saturation, headroom, bias, feedback, slew and tone. These are musical circuit interpretations rather than measured replicas of individual units.',
+    params, defaults, models,
+    groups: [
+      { id: 'main', section: 'main', label: 'Preamp face', help: 'Model changes preserve your adjustments. Drive compensation subtracts only the additional Drive gain; it is nominal gain compensation, not automatic loudness matching.', keys: ['model', 'input', 'drive', 'colour', 'output', 'mix', 'compensate'] },
+      { id: 'input', section: 'advanced', label: 'Input & routing', help: 'The pad is digital attenuation before Input gain. Virtual loading changes the model’s spectral response; it cannot change your microphone or audio interface impedance. Polarity affects the wet signal, so a partial Dry / wet blend can cancel.', keys: ['pad', 'polarity', 'impedance'] },
+      { id: 'circuit', section: 'advanced', label: 'Circuit workshop', help: 'Transformer core changes iron saturation and memory. Headroom shifts the stage’s overload point; Bias changes asymmetry. More Feedback restrains distortion; more Slew character softens fast changes. Clear leaves these circuit controls inactive. Super 9K is transformerless, so its Transformer core control is inactive.', keys: ['transformer', 'headroom', 'bias', 'feedback', 'slew'] },
+      { id: 'tone', section: 'advanced', label: 'Tone & cleanup', help: 'The high-pass is off at 0 Hz and the low-pass is off at 22,000 Hz. The two shelves are additional musical controls, not reproductions of each original preamp’s equalizer. Tone, output and wet polarity remain active when Colour is 0.', keys: ['lowCut', 'highCut', 'lowFreq', 'lowGain', 'highFreq', 'highGain'] }
+    ],
+    meters: [{ key: 'inputDb', label: 'Input', unit: 'dB' }, { key: 'stageDb', label: 'Stage', unit: 'dB' }, { key: 'outputDb', label: 'Output', unit: 'dB' }],
+    presets: [
+      recipe('iron-house', 'House iron', 'Iron 73 body with moderate Drive, neutral shelves and nominal Drive compensation.', 'iron-73'),
+      recipe('punch-close', 'Close-mic punch', 'Punch 312 with a restrained low cut and a little more stage push for close drums.', 'punch-312', { drive: 8, lowCut: 45 }),
+      recipe('console-desk', 'At the desk', 'Console 4K precision with light colour and a tidy subsonic floor.', 'console-4k', { drive: 4, colour: .45, lowCut: 25 }),
+      recipe('super-open', 'Wide-open service', 'Super 9K headroom and light colour for an open stereo source.', 'super-9k', { drive: 3, colour: .3 }),
+      recipe('tube-vocal', 'Warm vocal service', 'Tube 610 at moderate Drive with a vocal high-pass and a soft upper shelf.', 'tube-610', { drive: 9, lowCut: 70, highGain: -.7, highFreq: 9000 }),
+      recipe('red-presence', 'Red presence', 'Red 47 presence and a little extra Drive for a source that needs to step forward.', 'redd-47', { drive: 8, lowCut: 45 }),
+      recipe('valve-weight', 'Valve weight', 'Valve 72 iron and a gentle high cut for a dense, rounded sound.', 'valve-72', { drive: 8, highCut: 14000 }),
+      recipe('helium-room', 'Helium room', 'Helium 69 character for a lively room or rhythm part, with low rumble removed.', 'helios-69', { drive: 7, lowCut: 55 }),
+      recipe('trident-texture', 'Textured console', 'Trident A at a controlled level, leaving room for the source’s dynamics.', 'trident-a', { drive: 6 }),
+      recipe('blue-detail', 'Blue detail', 'Blue 110 transformer weight with ample headroom and a clean upper range.', 'isa-110', { drive: 4, lowCut: 30 }),
+      recipe('air-vocal', 'Air on the pass', 'Air 737 preamp character, a vocal high-pass and a broad upper shelf.', 'avalon-737', { drive: 5, lowCut: 75, highGain: 1.5, highFreq: 10000 }),
+      recipe('tg-forward', 'TG forward', 'TG Two with a lower overload point and a slightly denser midrange.', 'tg-2', { drive: 9, headroom: -3, lowCut: 35 }),
+      recipe('clear-reference', 'Clear reference', 'Transparent unity reference: no extra Drive, no tone shaping and no coloured circuit.', 'clean', { drive: 0 }),
+      recipe('iron-bass', 'Iron for bass', 'Iron 73 foundation with more core memory and a small low shelf.', 'iron-73', { drive: 10, transformer: .85, lowCut: 25, lowFreq: 90, lowGain: 1.5, highCut: 14000 }),
+      recipe('tube-breakup', 'Small valve overdrive', 'A deliberate Tube 610 overdrive with lower headroom, full colour and a softened top. Adjust Output for the source.', 'tube-610', { drive: 24, colour: 1, headroom: -7, feedback: .15, highCut: 9000, output: -2 }),
+      recipe('parallel-tg', 'Parallel TG edge', 'A strongly driven TG Two blended with the original source. Polarity stays normal for predictable parallel colour.', 'tg-2', { drive: 22, colour: 1, headroom: -5, mix: .25, output: -1 })
+    ]
+  }];
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* GALLEY effects · clear controls, finishing tools. No external assets. */
 (function (scope) {
   'use strict';
@@ -2337,6 +2486,7 @@ body {
   if (scope.LoomUtilityCatalog) catalog.push(...(Array.isArray(scope.LoomUtilityCatalog) ? scope.LoomUtilityCatalog : [scope.LoomUtilityCatalog]));
   if (scope.LoomFilterCatalog) catalog.push(...scope.LoomFilterCatalog);
   if (scope.LoomCreativeCatalog) catalog.push(...scope.LoomCreativeCatalog);
+  if (scope.LoomPreampCatalog) catalog.push(...scope.LoomPreampCatalog);
   catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);
@@ -3949,10 +4099,259 @@ body {
   scope.createLoomCompressorDSP=createLoomCompressorDSP;
 })(typeof window==='undefined'?globalThis:window);
 
+/* GALLEY SAUTÉ · deterministic, reduced-order microphone preamp circuit families. */
+(function (scope) {
+  'use strict';
+  function createLoomPreampDSP() {
+    'use strict';
+    // Self-contained: the same factory is serialized into AudioWorklet.
+    const TAU = 2 * Math.PI;
+    const specifications = {
+      model: ['iron-73', 'clean', 'punch-312', 'console-4k', 'super-9k', 'tube-610', 'redd-47', 'valve-72', 'helios-69', 'trident-a', 'isa-110', 'avalon-737', 'tg-2'],
+      input: [-24, 24, 0], drive: [0, 36, 6], output: [-36, 18, 0], compensate: ['on', 'off'], colour: [0, 1, .65], pad: ['off', '10', '20'], polarity: ['normal', 'invert'],
+      impedance: [150, 10000, 2400], transformer: [0, 1, .5], headroom: [-12, 18, 0], bias: [-1, 1, 0], feedback: [0, 1, .5], slew: [0, 1, .5],
+      lowCut: [0, 400, 0], highCut: [2000, 22000, 22000], lowFreq: [40, 400, 110], lowGain: [-12, 12, 0], highFreq: [2000, 16000, 6000], highGain: [-12, 12, 0], mix: [0, 1, 1]
+    };
+    const finite = (x, fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
+    const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+    const bound = x => Number.isFinite(x) ? clamp(x, -8, 8) : 0;
+    const safe = x => Number.isFinite(x) ? clamp(x, -65536, 65536) : 0;
+    const db = x => Math.pow(10, x / 20);
+    const levelDb = x => 20 * Math.log10(Math.max(x, 1e-12));
+    function normalize(params) {
+      const source = params && typeof params === 'object' ? params : {}, result = {};
+      for (const key of Object.keys(specifications)) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true;
+      return result;
+    }
+    // Relative voicing constants, not measured component values. Profiles alter
+    // coupling, low/mid/high response, bandwidth, iron memory, amplifier law,
+    // negative feedback and slew rate. Model selection never rewrites controls.
+    // h, iron, coreHz, LF, mid, HF, bandwidth, slew/s, asymmetry, hardness, loop, second stage
+    const profiles = {
+      'iron-73': [1.35, .90, 55, .10, -.04, -.06, 28000, 80000, .10, .04, 1.6, .18],
+      'punch-312': [1.15, .50, 75, .015, .09, .03, 45000, 180000, .025, .23, 3.0, 0],
+      'console-4k': [1.70, .04, 95, -.01, .025, .025, 60000, 350000, 0, .50, 5.0, 0],
+      'super-9k': [2.80, 0, 110, 0, .008, .008, 95000, 650000, 0, .30, 8.0, 0],
+      'tube-610': [1.20, .65, 38, .08, -.02, -.10, 22000, 25000, .20, .015, .50, .60],
+      'redd-47': [1.00, .70, 65, .01, .08, .01, 30000, 40000, .15, .18, .90, .40],
+      'valve-72': [1.40, .85, 32, .13, -.02, -.13, 16000, 18000, .10, .025, 1.3, .50],
+      'helios-69': [1.10, .70, 58, .03, .14, .06, 35000, 95000, .06, .15, 1.1, .12],
+      'trident-a': [1.50, .25, 72, -.02, .055, .13, 40000, 125000, -.04, .26, 2.3, .08],
+      'isa-110': [2.20, .35, 62, .045, .01, .045, 65000, 280000, .025, .10, 3.5, .05],
+      'avalon-737': [2.50, .08, 42, .035, -.02, .07, 72000, 190000, .12, .01, 2.0, .45],
+      'tg-2': [1.25, .75, 48, .08, .09, -.01, 28000, 65000, -.08, .22, 1.7, .28]
+    };
+    // Rational tanh approximation for the transformer core: unity slope at
+    // zero and a bounded, flat endpoint.
+    function soft(x) {
+      if (x >= 3) return 1; if (x <= -3) return -1;
+      const q = x * x; return x * (27 + q) / (27 + 9 * q);
+    }
+    function coefficients(frequency, q, rate) {
+      const w = TAU * frequency / rate, c = Math.cos(w), alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha;
+      return new Float64Array([(1 - c) * .5 / a0, (1 - c) / a0, (1 - c) * .5 / a0, -2 * c / a0, (1 - alpha) / a0]);
+    }
+    function filter(x, c, state, at) {
+      const y = c[0] * x + state[at];
+      state[at] = c[1] * x - c[3] * y + state[at + 1]; state[at + 1] = c[2] * x - c[4] * y;
+      return y;
+    }
+    function create(sampleRate, params) {
+      let p = normalize(params);
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr * 4;
+      const meter = { inputDb: -120, stageDb: -120, outputDb: -120, inputPeak: 0, outputPeak: 0 };
+      const keys = ['preGain', 'netGain', 'colour', 'mix', 'headroom', 'iron', 'bias', 'loop', 'slewStep', 'load', 'loadLP', 'lowShelf', 'highShelf', 'lowLP', 'highLP', 'hp', 'hpOn', 'lp', 'lpOn', 'polarity'];
+      const values = new Float64Array(keys.length), targets = new Float64Array(keys.length);
+      const smooth = 1 - Math.exp(-1 / (sr * .006));
+      const declickFrames = Math.max(1, Math.round(sr * .006));
+      const lastWet = new Float64Array(2), declickOffset = new Float64Array(2), declickRemaining = new Int32Array(2), pending = new Int32Array(2);
+      const previous = new Float64Array(2), core = new Float64Array(2), magnet = new Float64Array(2), circuitLow = new Float64Array(2), circuitMid = new Float64Array(2), circuitHigh = new Float64Array(2), loaded = new Float64Array(2), bandwidth = new Float64Array(2), slewState = new Float64Array(2);
+      const deltaState = new Float64Array(8), dcPrevious = new Float64Array(2), dcState = new Float64Array(2);
+      const lowTone = new Float64Array(2), highTone = new Float64Array(2), cutLow = new Float64Array(2), cutHigh = new Float64Array(2);
+      const history = [previous, core, magnet, circuitLow, circuitMid, circuitHigh, loaded, bandwidth, slewState, deltaState, dcPrevious, dcState, lowTone, highTone, cutLow, cutHigh];
+      let scrubIn = 1024;
+      const deltaFilters = [coefficients(sr * .39, .5411961, osr), coefficients(sr * .39, 1.306563, osr)];
+      const midCoefficient = 1 - Math.exp(-TAU * 800 / osr), highCoefficient = 1 - Math.exp(-TAU * 4800 / osr), dcCoefficient = Math.exp(-TAU * 6 / sr);
+      let profile = profiles[p.model] || profiles['iron-73'], coreCoefficient = 0, magnetCoefficient = 0, bandwidthCoefficient = 0, initialized = false, oldTopology = '';
+      function clearCircuit() {
+        for (const state of [previous, core, magnet, circuitLow, circuitMid, circuitHigh, loaded, bandwidth, slewState, deltaState, dcPrevious, dcState]) state.fill(0);
+      }
+      function update() {
+        profile = profiles[p.model] || profiles['iron-73'];
+        const topology = p.model + ':' + p.compensate + ':' + p.pad + ':' + p.polarity + ':' + p.bypass;
+        if (initialized && topology !== oldTopology) {
+          pending.fill(1); clearCircuit();
+        }
+        oldTopology = topology;
+        const pad = p.pad === 'off' ? 0 : Number(p.pad);
+        const headroom = profile[0] * db(p.headroom);
+        const load = Math.log(2400 / p.impedance) / Math.log(16);
+        const next = [
+          db(p.input + p.drive - pad), db(p.input - pad + p.output + (p.compensate === 'off' ? p.drive : 0)), p.colour, p.mix,
+          headroom, p.transformer * profile[1], profile[8] + p.bias * .38, profile[10] * (.2 + p.feedback * 2),
+          p.slew <= 0 ? 65536 : headroom * profile[7] / (osr * (.12 + p.slew * 3)), load,
+          1 - Math.exp(-TAU * Math.min(38000 / (1 + (load + .55) * 3), osr * .4) / osr),
+          db(p.lowGain) - 1, db(p.highGain) - 1, 1 - Math.exp(-TAU * p.lowFreq / sr), 1 - Math.exp(-TAU * p.highFreq / sr),
+          1 - Math.exp(-TAU * Math.max(1, p.lowCut) / sr), p.lowCut > 0 ? 1 : 0,
+          1 - Math.exp(-TAU * Math.min(p.highCut, sr * .45) / sr), p.highCut < 22000 ? 1 : 0,
+          p.polarity === 'invert' ? -1 : 1
+        ];
+        targets.set(next);
+        if (!initialized) values.set(targets);
+        coreCoefficient = 1 - Math.exp(-TAU * profile[2] / osr);
+        magnetCoefficient = 1 - Math.exp(-TAU * (profile[2] * .19) / osr);
+        bandwidthCoefficient = 1 - Math.exp(-TAU * Math.min(profile[6], osr * .42) / osr);
+        initialized = true;
+      }
+      // A closed-form solution of y = u/(1+abs(u)),
+      // u=(1+F)*x-F*y. The rationalized quadratic avoids cancellation
+      // at low levels, has unity small-signal gain, and cannot diverge.
+      // This reduced-order local loop is a behaviour model, not a SPICE
+      // simulation of a particular amplifier or its open-loop response.
+      function closedLoop(x, feedback) {
+        const magnitude = Math.abs(x), a = (1 + feedback) * (1 + magnitude);
+        const y = 2 * (1 + feedback) * magnitude / (a + Math.sqrt(a * a - 4 * feedback * (1 + feedback) * magnitude));
+        return x < 0 ? -y : y;
+      }
+      let firstBaseline = 0, firstNormalization = 1, secondBaseline = 0, secondNormalization = 1;
+      function loopNormalization(y, feedback) {
+        const slope = (1 - Math.abs(y)) * (1 - Math.abs(y));
+        return (1 + feedback * slope) / ((1 + feedback) * slope);
+      }
+      function amplifier(x, h, bias, loop, hardness, baseline, normalization) {
+        const u = x / h;
+        return h * (closedLoop(u + hardness * u * u * u + bias, loop) - baseline) * normalization;
+      }
+      function circuit(x, channel) {
+        const h = values[4], iron = values[5], bias = values[6], loop = values[7];
+        loaded[channel] += values[10] * (x - loaded[channel]);
+        const loading = x + (values[9] + .55) * .37 * (loaded[channel] - x);
+        core[channel] += coreCoefficient * (loading - core[channel]);
+        magnet[channel] += magnetCoefficient * (soft(core[channel] / (h * 1.5)) - magnet[channel]);
+        circuitLow[channel] += coreCoefficient * (loading - circuitLow[channel]);
+        circuitMid[channel] += midCoefficient * (loading - circuitMid[channel]);
+        circuitHigh[channel] += highCoefficient * (loading - circuitHigh[channel]);
+        let driven = loading + profile[3] * circuitLow[channel] + profile[4] * (circuitHigh[channel] - circuitMid[channel]) + profile[5] * (loading - circuitHigh[channel]);
+        if (iron > 0) {
+          const magneticBias = magnet[channel] * .12;
+          const transformed = h * 1.8 * (soft(driven / (h * 1.8) + magneticBias) - soft(magneticBias));
+          driven += iron * (.52 * (transformed - driven) + .065 * circuitLow[channel]);
+        }
+        let shaped = amplifier(driven, h, bias, loop, profile[9], firstBaseline, firstNormalization);
+        if (profile[11]) {
+          const second = amplifier(shaped, h * 1.3, -bias * .55, loop * .7, profile[9] * .65, secondBaseline, secondNormalization);
+          shaped += profile[11] * (second - shaped);
+        }
+        const step = values[8];
+        slewState[channel] += clamp(shaped - slewState[channel], -step, step);
+        bandwidth[channel] += bandwidthCoefficient * (slewState[channel] - bandwidth[channel]);
+        return bandwidth[channel];
+      }
+      function tone(x, channel) {
+        cutLow[channel] += values[15] * (x - cutLow[channel]);
+        x -= values[16] * cutLow[channel];
+        lowTone[channel] += values[13] * (x - lowTone[channel]);
+        x += values[11] * lowTone[channel];
+        highTone[channel] += values[14] * (x - highTone[channel]);
+        x += values[12] * (x - highTone[channel]);
+        cutHigh[channel] += values[17] * (x - cutHigh[channel]);
+        return x + values[18] * (cutHigh[channel] - x);
+      }
+      function process(left, right) {
+        if (!left || !right || left.length !== right.length) throw new Error('SAUTÉ requires equal stereo blocks.');
+        let inputEnergy = 0, stageEnergy = 0, outputEnergy = 0, inputPeak = 0, outputPeak = 0;
+        const count = left.length;
+        for (let i = 0; i < count; i++) {
+          // Absolute sample clock keeps denormal cleanup independent of host
+          // block sizes and avoids per-sample branches on each filter cell.
+          if (--scrubIn === 0) {
+            for (const state of history) for (let cell = 0; cell < state.length; cell++) if (Math.abs(state[cell]) < 1e-30) state[cell] = 0;
+            scrubIn = 1024;
+          }
+          for (let j = 0; j < values.length; j++) values[j] += smooth * (targets[j] - values[j]);
+          if (p.model !== 'clean') {
+            firstBaseline = closedLoop(values[6], values[7]); firstNormalization = loopNormalization(firstBaseline, values[7]);
+            if (profile[11]) { secondBaseline = closedLoop(-values[6] * .55, values[7] * .7); secondNormalization = loopNormalization(secondBaseline, values[7] * .7); }
+          }
+          for (let channel = 0; channel < 2; channel++) {
+            const data = channel ? right : left, dry = bound(data[i]);
+            const driven = safe(dry * values[0]);
+            inputEnergy += dry * dry; stageEnergy += driven * driven; inputPeak = Math.max(inputPeak, Math.abs(dry));
+            let coloured = driven;
+            if (p.model !== 'clean') {
+              const prior = previous[channel], increment = (driven - prior) * .25;
+              let delta = 0;
+              for (let sub = 1; sub <= 4; sub++) {
+                const upsampled = prior + increment * sub;
+                delta = circuit(upsampled, channel) - upsampled;
+                delta = filter(delta, deltaFilters[0], deltaState, channel * 4);
+                delta = filter(delta, deltaFilters[1], deltaState, channel * 4 + 2);
+              }
+              previous[channel] = driven;
+              // Remove nonlinear DC only from the delta. The undelayed linear
+              // path survives Colour=0 and neutral clean settings unchanged.
+              const cleaned = delta - dcPrevious[channel] + dcCoefficient * dcState[channel];
+              dcPrevious[channel] = delta; dcState[channel] = Math.abs(cleaned) < 1e-24 ? 0 : cleaned;
+              coloured += values[2] * dcState[channel];
+            }
+            // Smooth stage gain and net linear gain, then derive the output
+            // ratio jointly. Independently smoothing reciprocal stage/output
+            // gains would create a large gain surge during Drive automation.
+            let wet = tone(coloured, channel) * (values[1] / values[0]) * values[19];
+            if (pending[channel]) {
+              declickOffset[channel] = lastWet[channel] - wet; declickRemaining[channel] = declickFrames; pending[channel] = 0;
+            }
+            if (declickRemaining[channel] > 0) {
+              wet += declickOffset[channel] * declickRemaining[channel] / declickFrames;
+              declickRemaining[channel]--;
+            }
+            lastWet[channel] = wet;
+            // Exact dry immediately, irrespective of previous wet/colour history.
+            const output = p.bypass || p.mix === 0 ? dry : bound(dry + (wet - dry) * values[3]);
+            data[i] = output; outputEnergy += output * output; outputPeak = Math.max(outputPeak, Math.abs(output));
+          }
+        }
+        const samples = Math.max(1, count * 2);
+        meter.inputDb = Math.max(-120, levelDb(Math.sqrt(inputEnergy / samples)));
+        meter.stageDb = Math.max(-120, levelDb(Math.sqrt(stageEnergy / samples)));
+        meter.outputDb = Math.max(-120, levelDb(Math.sqrt(outputEnergy / samples)));
+        meter.inputPeak = inputPeak; meter.outputPeak = outputPeak;
+      }
+      update();
+      return {
+        setParams(next) { p = normalize(Object.assign({}, p, next && typeof next === 'object' ? next : {})); update(); },
+        process,
+        reset() {
+          clearCircuit();
+          for (const state of [lowTone, highTone, cutLow, cutHigh, lastWet, declickOffset, declickRemaining, pending]) state.fill(0);
+          values.set(targets); scrubIn = 1024;
+          Object.assign(meter, { inputDb: -120, stageDb: -120, outputDb: -120, inputPeak: 0, outputPeak: 0 });
+        },
+        getTailTime() {
+          if (p.bypass || p.mix === 0 || (p.model === 'clean' && p.lowCut === 0 && p.lowGain === 0 && p.highGain === 0 && p.highCut === 22000)) return 0;
+          // A 1 Hz user high-pass can hold a hot gain-staged DC step well
+          // beyond the circuit's ordinary two-second decay. Bound that pole
+          // from the permitted input, gain and shelf boost rather than hiding
+          // its last samples behind an arbitrarily short advertised tail.
+          const gainBound = 8 * db(p.input + (p.compensate === 'off' ? p.drive : 0) + p.output + Math.max(0, p.lowGain) + Math.max(0, p.highGain));
+          return p.lowCut > 0 ? Math.max(2, (Math.log(Math.max(1, gainBound) / 1e-7) + 4) / (TAU * p.lowCut)) : 2;
+        },
+        getMeters() { return Object.assign({}, meter); }
+      };
+    }
+    return { specifications, normalize, create };
+  }
+  scope.createLoomPreampDSP = createLoomPreampDSP;
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -3967,6 +4366,8 @@ body {
     const broilerPedals = makeBroilerPedals ? makeBroilerPedals() : null;
     const makeCompressor = typeof compressorFactory === 'function' ? compressorFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomCompressorDSP === 'function' ? globalThis.createLoomCompressorDSP : null;
     const compressor = makeCompressor ? makeCompressor() : null;
+    const makePreamp = typeof preampFactory === 'function' ? preampFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPreampDSP === 'function' ? globalThis.createLoomPreampDSP : null;
+    const preamp = makePreamp ? makePreamp() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -3995,6 +4396,7 @@ body {
     if (filters) Object.assign(specifications, filters.specifications);
     if (creative) Object.assign(specifications, creative.specifications);
     if (compressor) specifications.velvet = compressor.specifications;
+    if (preamp) specifications.saute = preamp.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -4006,6 +4408,7 @@ body {
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.normalize(params); }
       if (type === 'velvet' && compressor) return compressor.normalize(params);
       if (type === 'velvet' && params?.model && params.model !== 'clean') throw new Error('BUTTER analog models require createLoomCompressorDSP.');
       if (type === 'glaze' && vocal) return vocal.normalize(params);
@@ -4066,6 +4469,7 @@ body {
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.create(sampleRate, params); }
       if (type === 'velvet' && compressor) return compressor.create(sampleRate, params);
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
       if (type === 'scales' && utility) return utility.create(sampleRate, params);
@@ -4941,7 +5345,7 @@ body {
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.16.0';
+  const VERSION = '1.17.0';
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
@@ -6255,9 +6659,10 @@ body {
               const createCreative=${window.createLoomCreativeDSP ? window.createLoomCreativeDSP.toString() : 'null'};
               const createBroilerPedals=${window.createLoomBroilerPedalsDSP ? window.createLoomBroilerPedalsDSP.toString() : 'null'};
               const createCompressor=${window.createLoomCompressorDSP ? window.createLoomCompressorDSP.toString() : 'null'};
+              const createPreamp=${window.createLoomPreampDSP ? window.createLoomPreampDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -9971,6 +10376,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   const vocalHelpOpen = new Set();
   const broilerDetailsOpen = new Set();
   let compressorAdvancedOpen = false;
+  const preampDetailsOpen = new Set();
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -10049,6 +10455,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     const c = def.color, a = def.accent;
     const drawings = {
       prism: `<path d="m33 93 36-74h99l-36 74Z"/><path d="m49 85 25-55h75l-25 55Z" stroke="${a}"/><path d="m62 71 76-6M66 60l77-6M71 48l77-6"/><path d="m168 19 38 13-30 73-44-12M178 51l14 5"/><path d="M22 109h210" opacity=".3"/>`,
+      saute: `<ellipse cx="93" cy="68" rx="62" ry="17"/><path d="M31 68v10c0 26 124 26 124 0V68m-4 5 70-27 4 9-71 28M52 62q10-17 21-3t22-3 22 4 18-3M60 45q-8-10 1-20m32 17q-8-10 1-20m33 22q-8-10 1-20M24 109h161"/><path d="m52 84 8 2m10 2 9 1m27 0 11-1m10-2 9-2" stroke="${a}"/>`,
       velvet: `<path d="M34 92V44l47-19 121 13v48l-45 20Z"/><path d="m34 44 123 15 45-21M157 59v47M34 92l123 14" stroke="${a}"/><path d="M71 16v7m20-10v7m72-1v8M54 53v28m9-28v29" opacity=".4"/><path d="m17 108 15-5 12 5 15-6 13 6 16-5 14 5 15-5 15 5 15-5 15 5 15-5 15 5 15-5 15 5 16-5" stroke="${a}"/>`,
       cinder: `<path d="M33 17h184v93H33zM43 25h164v76H43z"/><path d="M54 25v76m22-76v76m22-76v76m22-76v76m22-76v76m22-76v76m22-76v76"/><path d="M43 44h164M43 78h164"/><path d="m66 64 9-22 10 13 5-15 10 24m31-3 10-15 5 12 12-27 10 32m-68 41 9-12 5 11 5-7 7 10m33-1 7-15 10 13" stroke="${a}"/>`,
       undertow: `<path d="M22 25h94m18 0h94M61 25v33c-23 0-27 40 0 40s23-40 0-40m114-33v33c-23 0-27 40 0 40s23-40 0-40"/><path d="m42 70 10-11m114 12 12-12M93 49l11-11 12 11m25 38 12 11 12-11" stroke="${a}"/><path d="M9 113h234" stroke="${a}" stroke-dasharray="2 5"/>`,
@@ -10210,6 +10617,80 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       updateText(output, available ? !reduction && value <= -90 ? '−∞ dB' : (reduction ? Math.max(0, value) : value).toFixed(1) + ' dB' : '—');
       const fraction = !available ? 0 : reduction ? Math.min(1, Math.max(0, value) / 24) : Math.min(1, Math.max(0, (value + 60) / 60));
       const bar = $('effectEditor').querySelector('[data-compressor-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
+    }
+  }
+  function preampValue(param, value) {
+    if (param.key === 'lowCut' && value === 0 || param.key === 'highCut' && value === 22000) return 'Off';
+    if (['colour', 'transformer', 'feedback', 'slew', 'mix'].includes(param.key)) return Math.round(value * 100) + '%';
+    if (param.key === 'impedance') return Math.round(value).toLocaleString('en-US') + ' Ω';
+    return formatParam(param, value);
+  }
+  function preampControl(param, params) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control preamp-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const range = param.key === 'impedance' ? `<input id="fx-${param.key}" data-effect-param="${param.key}" data-log="true" type="range" min="0" max="1" step="0.001" value="${Math.log(value / param.min) / Math.log(param.max / param.min)}">` : effectRange(param, value);
+    return `<div class="control preamp-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${preampValue(param, value)}</output></label><div class="preamp-value-row">${range}<input id="fx-number-${param.key}" data-preamp-number="${param.key}" type="number" min="${param.min}" max="${param.max}" step="${param.step}" value="${Number(value.toFixed(4))}" aria-label="${escape(param.label)} exact value${param.unit ? ' in ' + escape(param.unit) : ''}"></div></div>`;
+  }
+  function preampControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param]));
+    const controls = keys => keys.map(key => preampControl(descriptors.get(key), params)).join('');
+    const groups = [
+      { id: 'input', domId: 'preampInputDetails', title: 'Input & polarity', subtitle: 'Pad, polarity & virtual microphone loading', keys: ['pad', 'polarity', 'impedance'], help: 'Pad attenuates the digital signal before Input gain. Polarity reverses the wet signal; a partial Dry / wet blend can cancel. Virtual impedance adjusts the modeled loading response; it does not change your interface or microphone hardware.' },
+      { id: 'circuit', domId: 'preampAdvanced', title: 'Circuit workshop', subtitle: 'Iron, headroom, harmonics & transient response', keys: ['transformer', 'headroom', 'bias', 'feedback', 'slew'], help: 'Explore the model’s circuit character. Transformer adjusts core memory; Headroom moves the saturation threshold; Bias changes harmonic asymmetry. Feedback favors linearity, and Slew sets transient restraint.' },
+      { id: 'tone', domId: 'preampToneDetails', title: 'Tone', subtitle: 'Cleanup filters & broad shelving EQ', keys: ['lowCut', 'highCut', 'lowFreq', 'lowGain', 'highFreq', 'highGain'], help: 'Low cut at 0 Hz and High cut at 22 kHz are off. The shelves are additional tone controls, independent of the selected preamp’s inherent response.' }
+    ];
+    return `<div class="preamp-console"><div class="preamp-recipe-bar"><label for="preampPreset"><span class="eyebrow">COMPLETE PREAMP RECIPE</span><select id="preampPreset"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="preampPresetDescription">A recipe replaces every setting. Choosing a model keeps your adjustments.</p></div>
+      <section class="preamp-face" aria-labelledby="preampFaceTitle"><div class="preamp-face-heading"><div><span id="preampFaceTitle" class="preamp-face-brand">Sauté</span><span class="preamp-face-edition">MICROPHONE PREAMPLIFIER</span></div><span class="preamp-signal-light"><i aria-hidden="true"></i><span id="preampSignalStatus">Stereo active</span></span></div>
+      <div class="preamp-model-row">${controls(['model'])}<div class="preamp-model-note"><strong id="preampModelInspiration"></strong><p id="preampModelDescription"></p></div></div>
+      <div class="preamp-circuit-row"><button id="preampCircuitSettings" type="button">Use circuit starting point</button><p>Load this model’s suggested circuit settings. Keep your gain staging, tone and blend.</p></div>
+      <div class="preamp-readings" aria-label="Live preamp levels">${[['inputDb', 'Input'], ['stageDb', 'Stage in'], ['outputDb', 'Output']].map(([key, label]) => `<div class="preamp-meter ${key === 'stageDb' ? 'preamp-stage-meter' : ''}" ${key === 'stageDb' ? 'title="Level into the modeled circuit, including pad, input and drive; before headroom normalization. Above 0 dB indicates virtual drive, not interface clipping."' : ''}><span>${label}</span><output data-preamp-meter="${key}">—</output><div class="preamp-meter-track" aria-hidden="true"><i data-preamp-meter-bar="${key}"></i></div><small>−60 <span>${key === 'stageDb' ? '−18' : '−30'}</span> ${key === 'stageDb' ? '+24' : '0'} dB</small></div>`).join('')}</div>
+      <div class="preamp-core-controls">${controls(['input', 'drive', 'output', 'colour', 'mix', 'compensate'])}</div><p id="preampGainHint" class="preamp-gain-hint"></p></section>
+      <div class="preamp-details-list">${groups.map(group => `<details id="${group.domId}" class="preamp-details" data-preamp-details="${group.id}" ${preampDetailsOpen.has(group.id) ? 'open' : ''}><summary><span><strong>${group.title}</strong><small>${group.subtitle}</small></span><span aria-hidden="true">+</span></summary><div class="preamp-details-content"><p id="preamp-${group.id}-hint">${group.help}</p><div class="preamp-detail-controls">${controls(group.keys)}</div>${group.id === 'circuit' ? '<p id="preampCircuitHint" class="preamp-circuit-hint"></p>' : ''}</div></details>`).join('')}</div>
+      <p class="preamp-disclosure">Circuit interpretations inspired by familiar preamps. These are reduced-order models, not measured replicas of individual units. Microphone recordings stay dry; the insert processes monitoring and playback.</p></div>`;
+  }
+  function renderPreampState() {
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'saute' || !$('preampFaceTitle')) return;
+    const params = slot.params, clean = params.model === 'clean', model = def.models?.find(model => model.id === params.model);
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === preset.params[param.key]) && params.bypass === preset.params.bypass);
+    updateProperty($('preampPreset'), 'value', recipe?.id || '');
+    updateText($('preampPresetDescription'), recipe?.description || 'A recipe replaces every setting. Choosing a model keeps your adjustments.');
+    updateText($('preampModelInspiration'), model?.inspiration || model?.name || 'Stereo microphone preamp');
+    updateText($('preampModelDescription'), model?.description || 'Shape your source with modeled gain stages, iron and harmonic colour.');
+    updateText($('preampGainHint'), params.compensate === 'on' ? 'Drive compensation is on: extra Drive gain is removed after the circuit. Input, Pad and Output keep their level changes. This is nominal gain compensation, not loudness matching.' : 'Drive compensation is off: Drive adds gain as well as character. Use Output to set the level leaving the preamp.');
+    const inactiveCircuitHint = model?.inactiveControls?.includes('transformer') ? ' This model is transformerless; Transformer core is inactive. Its saved value is kept for other models.' : '';
+    updateText($('preampCircuitHint'), clean ? 'Clean skips the modeled colour, loading and circuit controls. Gain, pad, polarity, tone and blend still work; your circuit settings are kept for another model.' : 'Colour blends this circuit with the gain-staged clean signal. At 0%, circuit and virtual loading changes are inaudible; tone and gain controls still apply.' + inactiveCircuitHint);
+    updateProperty($('preampCircuitSettings'), 'disabled', clean);
+    updateAttribute($('preampCircuitSettings'), 'title', clean ? 'Clean has no modeled circuit to adjust' : 'Load ' + (model?.name || 'this model') + ' circuit settings; keep gain, tone and blend');
+    updateText($('preampSignalStatus'), params.bypass ? 'Bypassed' : 'Stereo active');
+    updateClass($('preampFaceTitle').closest('.preamp-face'), 'preamp-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-preamp-number]');
+      if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') {
+        updateText(control.querySelector('output'), preampValue(param, value));
+        if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number(value.toFixed(4)));
+      }
+      const disabled = clean && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(param.key) || model?.inactiveControls?.includes(param.key) === true;
+      input.disabled = disabled; if (exact) exact.disabled = disabled;
+      updateClass(control, 'preamp-control-inactive', disabled);
+      if (['input', 'drive', 'output', 'compensate'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'preampGainHint');
+      if (['impedance', 'pad', 'polarity'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'preamp-input-hint');
+      if (['colour', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(param.key)) { updateAttribute(input, 'aria-describedby', 'preampCircuitHint'); if (exact) updateAttribute(exact, 'aria-describedby', 'preampCircuitHint'); }
+    }
+    renderPreampMeters();
+  }
+  function renderPreampMeters(meters = engine.getMeters()) {
+    const slot = effectOwner().effects[selectedSlot]; if (slot?.type !== 'saute' || $('effectEditor').hidden || !$('preampFaceTitle')) return;
+    const reading = effectReading(meters), valid = reading?.type === 'saute' && !reading.bypass;
+    for (const output of $('effectEditor').querySelectorAll('[data-preamp-meter]')) {
+      const key = output.dataset.preampMeter, value = reading?.[key], available = valid && Number.isFinite(value), ceiling = key === 'stageDb' ? 24 : 0;
+      updateText(output, available ? value <= -90 ? '−∞ dB' : (value > 0 ? '+' : '') + value.toFixed(1) + ' dB' : '—');
+      const fraction = available ? Math.min(1, Math.max(0, (value + 60) / (60 + ceiling))) : 0;
+      const bar = $('effectEditor').querySelector('[data-preamp-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
     }
   }
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
@@ -10397,11 +10878,11 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   function renderEffectEditor() {
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
-    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
-    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();
   }
   function renderVocalState() {
     const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='glaze')return;
@@ -10810,6 +11291,12 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderCompressorState();}
       status(model.name+' settings loaded. Your threshold, input, makeup gain, detector filter, stereo link and blend stay as set.');return;
     }
+    if(e.target.closest('#preampCircuitSettings')){
+      const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.models?.find(model=>model.id===slot.params.model);if(def?.id!=='saute'||slot.params.model==='clean'||!model?.defaults)return;
+      const keys=['impedance','transformer','headroom','bias','feedback','slew','colour'];
+      if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderPreampState();}
+      status(model.name+' circuit starting point loaded. Your input, drive, output, pad, polarity, tone and blend stay as set.');return;
+    }
     if(e.target.closest('#broilerSaveRig')){saveBroilerRig();return;}
     if(e.target.closest('#broilerLoadRig')){$('broilerRigFile')?.click();return;}
     const vocalView=e.target.closest('[data-vocal-view]');if(vocalView){vocalEditorView=vocalView.dataset.vocalView;renderEffectEditor();$('effectEditor').querySelector('[data-vocal-view="'+vocalEditorView+'"]').focus({preventScroll:true});return;}
@@ -10849,7 +11336,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       if(owner.name!==name){remember();owner.name=name;changed();renderSendControls();automationEditor?.render();if(rackTarget===owner.id&&selectedSlot!==null)renderEffectEditor();}return;
     }
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=effectOwner().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -10864,7 +11351,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();}
+    else{renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -10892,10 +11379,23 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true});changed();}
     renderCompressorState();
   });
+  document.addEventListener('change',e=>{
+    if(e.target.id==='preampPreset'){
+      const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),recipe=def?.presets?.find(preset=>preset.id===e.target.value);if(def?.id!=='saute'||!recipe)return;
+      remember();slot.params={...clone(def.defaults),...clone(recipe.params)};changed({rack:true,mixer:true,automation:true});renderPreampState();status(recipe.name+' loaded. '+recipe.description);return;
+    }
+    const input=e.target,key=input.dataset.preampNumber;if(!key)return;
+    const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),param=def&&effectParams(def).find(param=>param.key===key);if(def?.id!=='saute'||!param||input.disabled)return;
+    const value=input.valueAsNumber;
+    if(!Number.isFinite(value)||value<param.min||value>param.max){input.value=slot.params[key];status(param.label+': use a value from '+param.min+' to '+param.max+'.');return;}
+    if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true,ownerId:effectOwner().id});changed();}
+    renderPreampState();
+  });
   document.addEventListener('change',e=>{if(e.target.id!=='utilityPreset')return;const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(def?.id!=='scales'||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('utilityPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='creativePreset')return;const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!isCreativeEffect(def)||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('creativePreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('toggle',e=>{const help=e.target;if(!help.matches?.('.vocal-stage-help'))return;if(help.open)vocalHelpOpen.add(help.dataset.vocalHelp);else vocalHelpOpen.delete(help.dataset.vocalHelp);},true);
   document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-broiler-details]'))return;if(detail.open)broilerDetailsOpen.add(detail.dataset.broilerDetails);else broilerDetailsOpen.delete(detail.dataset.broilerDetails);},true);
+  document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-preamp-details]'))return;if(detail.open)preampDetailsOpen.add(detail.dataset.preampDetails);else preampDetailsOpen.delete(detail.dataset.preampDetails);},true);
   document.addEventListener('toggle',e=>{if(e.target.id==='compressorAdvanced')compressorAdvancedOpen=e.target.open;},true);
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
@@ -10966,7 +11466,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');

@@ -25,6 +25,7 @@
   const vocalHelpOpen = new Set();
   const broilerDetailsOpen = new Set();
   let compressorAdvancedOpen = false;
+  const preampDetailsOpen = new Set();
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -103,6 +104,7 @@
     const c = def.color, a = def.accent;
     const drawings = {
       prism: `<path d="m33 93 36-74h99l-36 74Z"/><path d="m49 85 25-55h75l-25 55Z" stroke="${a}"/><path d="m62 71 76-6M66 60l77-6M71 48l77-6"/><path d="m168 19 38 13-30 73-44-12M178 51l14 5"/><path d="M22 109h210" opacity=".3"/>`,
+      saute: `<ellipse cx="93" cy="68" rx="62" ry="17"/><path d="M31 68v10c0 26 124 26 124 0V68m-4 5 70-27 4 9-71 28M52 62q10-17 21-3t22-3 22 4 18-3M60 45q-8-10 1-20m32 17q-8-10 1-20m33 22q-8-10 1-20M24 109h161"/><path d="m52 84 8 2m10 2 9 1m27 0 11-1m10-2 9-2" stroke="${a}"/>`,
       velvet: `<path d="M34 92V44l47-19 121 13v48l-45 20Z"/><path d="m34 44 123 15 45-21M157 59v47M34 92l123 14" stroke="${a}"/><path d="M71 16v7m20-10v7m72-1v8M54 53v28m9-28v29" opacity=".4"/><path d="m17 108 15-5 12 5 15-6 13 6 16-5 14 5 15-5 15 5 15-5 15 5 15-5 15 5 15-5 15 5 16-5" stroke="${a}"/>`,
       cinder: `<path d="M33 17h184v93H33zM43 25h164v76H43z"/><path d="M54 25v76m22-76v76m22-76v76m22-76v76m22-76v76m22-76v76m22-76v76"/><path d="M43 44h164M43 78h164"/><path d="m66 64 9-22 10 13 5-15 10 24m31-3 10-15 5 12 12-27 10 32m-68 41 9-12 5 11 5-7 7 10m33-1 7-15 10 13" stroke="${a}"/>`,
       undertow: `<path d="M22 25h94m18 0h94M61 25v33c-23 0-27 40 0 40s23-40 0-40m114-33v33c-23 0-27 40 0 40s23-40 0-40"/><path d="m42 70 10-11m114 12 12-12M93 49l11-11 12 11m25 38 12 11 12-11" stroke="${a}"/><path d="M9 113h234" stroke="${a}" stroke-dasharray="2 5"/>`,
@@ -264,6 +266,80 @@
       updateText(output, available ? !reduction && value <= -90 ? '−∞ dB' : (reduction ? Math.max(0, value) : value).toFixed(1) + ' dB' : '—');
       const fraction = !available ? 0 : reduction ? Math.min(1, Math.max(0, value) / 24) : Math.min(1, Math.max(0, (value + 60) / 60));
       const bar = $('effectEditor').querySelector('[data-compressor-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
+    }
+  }
+  function preampValue(param, value) {
+    if (param.key === 'lowCut' && value === 0 || param.key === 'highCut' && value === 22000) return 'Off';
+    if (['colour', 'transformer', 'feedback', 'slew', 'mix'].includes(param.key)) return Math.round(value * 100) + '%';
+    if (param.key === 'impedance') return Math.round(value).toLocaleString('en-US') + ' Ω';
+    return formatParam(param, value);
+  }
+  function preampControl(param, params) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control preamp-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const range = param.key === 'impedance' ? `<input id="fx-${param.key}" data-effect-param="${param.key}" data-log="true" type="range" min="0" max="1" step="0.001" value="${Math.log(value / param.min) / Math.log(param.max / param.min)}">` : effectRange(param, value);
+    return `<div class="control preamp-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${preampValue(param, value)}</output></label><div class="preamp-value-row">${range}<input id="fx-number-${param.key}" data-preamp-number="${param.key}" type="number" min="${param.min}" max="${param.max}" step="${param.step}" value="${Number(value.toFixed(4))}" aria-label="${escape(param.label)} exact value${param.unit ? ' in ' + escape(param.unit) : ''}"></div></div>`;
+  }
+  function preampControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param]));
+    const controls = keys => keys.map(key => preampControl(descriptors.get(key), params)).join('');
+    const groups = [
+      { id: 'input', domId: 'preampInputDetails', title: 'Input & polarity', subtitle: 'Pad, polarity & virtual microphone loading', keys: ['pad', 'polarity', 'impedance'], help: 'Pad attenuates the digital signal before Input gain. Polarity reverses the wet signal; a partial Dry / wet blend can cancel. Virtual impedance adjusts the modeled loading response; it does not change your interface or microphone hardware.' },
+      { id: 'circuit', domId: 'preampAdvanced', title: 'Circuit workshop', subtitle: 'Iron, headroom, harmonics & transient response', keys: ['transformer', 'headroom', 'bias', 'feedback', 'slew'], help: 'Explore the model’s circuit character. Transformer adjusts core memory; Headroom moves the saturation threshold; Bias changes harmonic asymmetry. Feedback favors linearity, and Slew sets transient restraint.' },
+      { id: 'tone', domId: 'preampToneDetails', title: 'Tone', subtitle: 'Cleanup filters & broad shelving EQ', keys: ['lowCut', 'highCut', 'lowFreq', 'lowGain', 'highFreq', 'highGain'], help: 'Low cut at 0 Hz and High cut at 22 kHz are off. The shelves are additional tone controls, independent of the selected preamp’s inherent response.' }
+    ];
+    return `<div class="preamp-console"><div class="preamp-recipe-bar"><label for="preampPreset"><span class="eyebrow">COMPLETE PREAMP RECIPE</span><select id="preampPreset"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="preampPresetDescription">A recipe replaces every setting. Choosing a model keeps your adjustments.</p></div>
+      <section class="preamp-face" aria-labelledby="preampFaceTitle"><div class="preamp-face-heading"><div><span id="preampFaceTitle" class="preamp-face-brand">Sauté</span><span class="preamp-face-edition">MICROPHONE PREAMPLIFIER</span></div><span class="preamp-signal-light"><i aria-hidden="true"></i><span id="preampSignalStatus">Stereo active</span></span></div>
+      <div class="preamp-model-row">${controls(['model'])}<div class="preamp-model-note"><strong id="preampModelInspiration"></strong><p id="preampModelDescription"></p></div></div>
+      <div class="preamp-circuit-row"><button id="preampCircuitSettings" type="button">Use circuit starting point</button><p>Load this model’s suggested circuit settings. Keep your gain staging, tone and blend.</p></div>
+      <div class="preamp-readings" aria-label="Live preamp levels">${[['inputDb', 'Input'], ['stageDb', 'Stage in'], ['outputDb', 'Output']].map(([key, label]) => `<div class="preamp-meter ${key === 'stageDb' ? 'preamp-stage-meter' : ''}" ${key === 'stageDb' ? 'title="Level into the modeled circuit, including pad, input and drive; before headroom normalization. Above 0 dB indicates virtual drive, not interface clipping."' : ''}><span>${label}</span><output data-preamp-meter="${key}">—</output><div class="preamp-meter-track" aria-hidden="true"><i data-preamp-meter-bar="${key}"></i></div><small>−60 <span>${key === 'stageDb' ? '−18' : '−30'}</span> ${key === 'stageDb' ? '+24' : '0'} dB</small></div>`).join('')}</div>
+      <div class="preamp-core-controls">${controls(['input', 'drive', 'output', 'colour', 'mix', 'compensate'])}</div><p id="preampGainHint" class="preamp-gain-hint"></p></section>
+      <div class="preamp-details-list">${groups.map(group => `<details id="${group.domId}" class="preamp-details" data-preamp-details="${group.id}" ${preampDetailsOpen.has(group.id) ? 'open' : ''}><summary><span><strong>${group.title}</strong><small>${group.subtitle}</small></span><span aria-hidden="true">+</span></summary><div class="preamp-details-content"><p id="preamp-${group.id}-hint">${group.help}</p><div class="preamp-detail-controls">${controls(group.keys)}</div>${group.id === 'circuit' ? '<p id="preampCircuitHint" class="preamp-circuit-hint"></p>' : ''}</div></details>`).join('')}</div>
+      <p class="preamp-disclosure">Circuit interpretations inspired by familiar preamps. These are reduced-order models, not measured replicas of individual units. Microphone recordings stay dry; the insert processes monitoring and playback.</p></div>`;
+  }
+  function renderPreampState() {
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'saute' || !$('preampFaceTitle')) return;
+    const params = slot.params, clean = params.model === 'clean', model = def.models?.find(model => model.id === params.model);
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === preset.params[param.key]) && params.bypass === preset.params.bypass);
+    updateProperty($('preampPreset'), 'value', recipe?.id || '');
+    updateText($('preampPresetDescription'), recipe?.description || 'A recipe replaces every setting. Choosing a model keeps your adjustments.');
+    updateText($('preampModelInspiration'), model?.inspiration || model?.name || 'Stereo microphone preamp');
+    updateText($('preampModelDescription'), model?.description || 'Shape your source with modeled gain stages, iron and harmonic colour.');
+    updateText($('preampGainHint'), params.compensate === 'on' ? 'Drive compensation is on: extra Drive gain is removed after the circuit. Input, Pad and Output keep their level changes. This is nominal gain compensation, not loudness matching.' : 'Drive compensation is off: Drive adds gain as well as character. Use Output to set the level leaving the preamp.');
+    const inactiveCircuitHint = model?.inactiveControls?.includes('transformer') ? ' This model is transformerless; Transformer core is inactive. Its saved value is kept for other models.' : '';
+    updateText($('preampCircuitHint'), clean ? 'Clean skips the modeled colour, loading and circuit controls. Gain, pad, polarity, tone and blend still work; your circuit settings are kept for another model.' : 'Colour blends this circuit with the gain-staged clean signal. At 0%, circuit and virtual loading changes are inaudible; tone and gain controls still apply.' + inactiveCircuitHint);
+    updateProperty($('preampCircuitSettings'), 'disabled', clean);
+    updateAttribute($('preampCircuitSettings'), 'title', clean ? 'Clean has no modeled circuit to adjust' : 'Load ' + (model?.name || 'this model') + ' circuit settings; keep gain, tone and blend');
+    updateText($('preampSignalStatus'), params.bypass ? 'Bypassed' : 'Stereo active');
+    updateClass($('preampFaceTitle').closest('.preamp-face'), 'preamp-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-preamp-number]');
+      if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') {
+        updateText(control.querySelector('output'), preampValue(param, value));
+        if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number(value.toFixed(4)));
+      }
+      const disabled = clean && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(param.key) || model?.inactiveControls?.includes(param.key) === true;
+      input.disabled = disabled; if (exact) exact.disabled = disabled;
+      updateClass(control, 'preamp-control-inactive', disabled);
+      if (['input', 'drive', 'output', 'compensate'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'preampGainHint');
+      if (['impedance', 'pad', 'polarity'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'preamp-input-hint');
+      if (['colour', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(param.key)) { updateAttribute(input, 'aria-describedby', 'preampCircuitHint'); if (exact) updateAttribute(exact, 'aria-describedby', 'preampCircuitHint'); }
+    }
+    renderPreampMeters();
+  }
+  function renderPreampMeters(meters = engine.getMeters()) {
+    const slot = effectOwner().effects[selectedSlot]; if (slot?.type !== 'saute' || $('effectEditor').hidden || !$('preampFaceTitle')) return;
+    const reading = effectReading(meters), valid = reading?.type === 'saute' && !reading.bypass;
+    for (const output of $('effectEditor').querySelectorAll('[data-preamp-meter]')) {
+      const key = output.dataset.preampMeter, value = reading?.[key], available = valid && Number.isFinite(value), ceiling = key === 'stageDb' ? 24 : 0;
+      updateText(output, available ? value <= -90 ? '−∞ dB' : (value > 0 ? '+' : '') + value.toFixed(1) + ' dB' : '—');
+      const fraction = available ? Math.min(1, Math.max(0, (value + 60) / (60 + ceiling))) : 0;
+      const bar = $('effectEditor').querySelector('[data-preamp-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
     }
   }
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
@@ -451,11 +527,11 @@
   }
   function renderEffectEditor() {
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
-    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
-    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();
   }
   function renderVocalState() {
     const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='glaze')return;
@@ -864,6 +940,12 @@
       if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderCompressorState();}
       status(model.name+' settings loaded. Your threshold, input, makeup gain, detector filter, stereo link and blend stay as set.');return;
     }
+    if(e.target.closest('#preampCircuitSettings')){
+      const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),model=def?.models?.find(model=>model.id===slot.params.model);if(def?.id!=='saute'||slot.params.model==='clean'||!model?.defaults)return;
+      const keys=['impedance','transformer','headroom','bias','feedback','slew','colour'];
+      if(keys.some(key=>model.defaults[key]!==undefined&&slot.params[key]!==model.defaults[key])){remember();for(const key of keys)if(model.defaults[key]!==undefined)slot.params[key]=model.defaults[key];changed();renderPreampState();}
+      status(model.name+' circuit starting point loaded. Your input, drive, output, pad, polarity, tone and blend stay as set.');return;
+    }
     if(e.target.closest('#broilerSaveRig')){saveBroilerRig();return;}
     if(e.target.closest('#broilerLoadRig')){$('broilerRigFile')?.click();return;}
     const vocalView=e.target.closest('[data-vocal-view]');if(vocalView){vocalEditorView=vocalView.dataset.vocalView;renderEffectEditor();$('effectEditor').querySelector('[data-vocal-view="'+vocalEditorView+'"]').focus({preventScroll:true});return;}
@@ -903,7 +985,7 @@
       if(owner.name!==name){remember();owner.name=name;changed();renderSendControls();automationEditor?.render();if(rackTarget===owner.id&&selectedSlot!==null)renderEffectEditor();}return;
     }
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=effectOwner().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -918,7 +1000,7 @@
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderCompressorState();renderVocalState();renderUtilityState();renderCreativeState();}
+    else{renderAmpState();renderCompressorState();renderPreampState();renderVocalState();renderUtilityState();renderCreativeState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -946,10 +1028,23 @@
     if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true});changed();}
     renderCompressorState();
   });
+  document.addEventListener('change',e=>{
+    if(e.target.id==='preampPreset'){
+      const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),recipe=def?.presets?.find(preset=>preset.id===e.target.value);if(def?.id!=='saute'||!recipe)return;
+      remember();slot.params={...clone(def.defaults),...clone(recipe.params)};changed({rack:true,mixer:true,automation:true});renderPreampState();status(recipe.name+' loaded. '+recipe.description);return;
+    }
+    const input=e.target,key=input.dataset.preampNumber;if(!key)return;
+    const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),param=def&&effectParams(def).find(param=>param.key===key);if(def?.id!=='saute'||!param||input.disabled)return;
+    const value=input.valueAsNumber;
+    if(!Number.isFinite(value)||value<param.min||value>param.max){input.value=slot.params[key];status(param.label+': use a value from '+param.min+' to '+param.max+'.');return;}
+    if(value!==slot.params[key]){remember();slot.params[key]=value;automationEditor?.capture('fx:'+selectedSlot+':'+key,value,{remembered:true,ownerId:effectOwner().id});changed();}
+    renderPreampState();
+  });
   document.addEventListener('change',e=>{if(e.target.id!=='utilityPreset')return;const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(def?.id!=='scales'||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('utilityPreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('change',e=>{if(e.target.id!=='creativePreset')return;const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type),preset=def?.presets?.find(p=>p.id===e.target.value);if(!isCreativeEffect(def)||!preset)return;remember();slot.params=clone(preset.params);changed({rack:true,mixer:true,automation:true});renderEffectEditor();$('creativePreset').focus({preventScroll:true});status(preset.name+' loaded. '+preset.description);});
   document.addEventListener('toggle',e=>{const help=e.target;if(!help.matches?.('.vocal-stage-help'))return;if(help.open)vocalHelpOpen.add(help.dataset.vocalHelp);else vocalHelpOpen.delete(help.dataset.vocalHelp);},true);
   document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-broiler-details]'))return;if(detail.open)broilerDetailsOpen.add(detail.dataset.broilerDetails);else broilerDetailsOpen.delete(detail.dataset.broilerDetails);},true);
+  document.addEventListener('toggle',e=>{const detail=e.target;if(!detail.matches?.('[data-preamp-details]'))return;if(detail.open)preampDetailsOpen.add(detail.dataset.preampDetails);else preampDetailsOpen.delete(detail.dataset.preampDetails);},true);
   document.addEventListener('toggle',e=>{if(e.target.id==='compressorAdvanced')compressorAdvancedOpen=e.target.open;},true);
   $('clipControls').addEventListener('change',e=>{const key=e.target.dataset.clipParam,location=clipLocation();if(!key||!location)return;remember();const c=location.clip,asset=assetMap[c.assetId],duration=asset?asset.left.length/asset.sampleRate:120,value=e.target.type==='checkbox'?e.target.checked:e.target.type==='text'?e.target.value:Number(e.target.value);if(key==='name')c.name=value.trim().slice(0,80)||'Untitled clip';else if(key==='start')c.start=num(value-1,0,state.lengthBars*4-c.length);else if(key==='length'){c.length=num(value,1/64,state.lengthBars*4-c.start);c.fadeIn=Math.min(c.fadeIn,c.length/2);c.fadeOut=Math.min(c.fadeOut,c.length/2);}else if(key==='sourceStart'){c.sourceStart=num(value,0,c.sourceEnd-1/asset.sampleRate);c.sourceOffset=0;}else if(key==='sourceEnd'){c.sourceEnd=num(value,c.sourceStart+1/asset.sampleRate,duration);c.sourceOffset=0;}else if(key==='rate')c.rate=num(value,.125,8);else if(key==='transpose')c.transpose=Math.round(num(value,-48,48));else if(key==='sourceOffset')c.sourceOffset=num(value,0,c.type==='notes'?c.pattern.lengthBeats:Math.max(0,c.sourceEnd-c.sourceStart));else if(key==='gain')c.gain=num(value,0,2);else if(key==='fadeIn'||key==='fadeOut')c[key]=num(value,0,c.length/2);else c[key]=value;changed({arrangement:true,inspector:true});});
   for(const id of ['ruler','playhead']){const element=$(id);element.addEventListener('pointerdown',beginSeek);element.addEventListener('pointermove',moveSeek);element.addEventListener('pointerup',endSeek);element.addEventListener('pointercancel',endSeek);element.addEventListener('lostpointercapture',endSeek);}
@@ -1020,7 +1115,7 @@
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
       updateText($('clock'),positionLabel(beat));
       updateText($('clockMode'),m.recordStage==='count-in'?'COUNT-IN / '+Math.ceil(m.countInBeatsRemaining||0)+' BEATS':m.recordStage==='waiting'?'PRE-ROLL / WAITING FOR PUNCH IN':m.recording?'RECORDING / '+(m.recordSeconds||0).toFixed(1)+' SECONDS':recordFinishing?'FINISHING TAKE':recordPending?'PREPARING RECORDING':transportPending?'PREPARING PLAYBACK':m.playing?'PLAYING / '+(m.mode||'WEB AUDIO').toUpperCase():m.ended?'SESSION END / READY TO RESTART':'PAUSED / READY FOR SERVICE');
-      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
+      renderPlayhead();renderMicrophone(m.microphone);renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderBusMeters(m);renderUtilityMeters(m);renderCreativeMeters(m);automationEditor?.tick();pianoRoll?.tick();
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateStyle($('masterLeft'),'width',Math.min(100,Math.sqrt(master.rmsLeft||master.rms||0)*140)+'%');updateStyle($('masterRight'),'width',Math.min(100,Math.sqrt(master.rmsRight||master.rms||0)*140)+'%');updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');

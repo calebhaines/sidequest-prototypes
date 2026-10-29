@@ -1,7 +1,7 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -16,6 +16,8 @@
     const broilerPedals = makeBroilerPedals ? makeBroilerPedals() : null;
     const makeCompressor = typeof compressorFactory === 'function' ? compressorFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomCompressorDSP === 'function' ? globalThis.createLoomCompressorDSP : null;
     const compressor = makeCompressor ? makeCompressor() : null;
+    const makePreamp = typeof preampFactory === 'function' ? preampFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPreampDSP === 'function' ? globalThis.createLoomPreampDSP : null;
+    const preamp = makePreamp ? makePreamp() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -44,6 +46,7 @@
     if (filters) Object.assign(specifications, filters.specifications);
     if (creative) Object.assign(specifications, creative.specifications);
     if (compressor) specifications.velvet = compressor.specifications;
+    if (preamp) specifications.saute = preamp.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -55,6 +58,7 @@
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.normalize(params); }
       if (type === 'velvet' && compressor) return compressor.normalize(params);
       if (type === 'velvet' && params?.model && params.model !== 'clean') throw new Error('BUTTER analog models require createLoomCompressorDSP.');
       if (type === 'glaze' && vocal) return vocal.normalize(params);
@@ -115,6 +119,7 @@
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.create(sampleRate, params); }
       if (type === 'velvet' && compressor) return compressor.create(sampleRate, params);
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
       if (type === 'scales' && utility) return utility.create(sampleRate, params);
