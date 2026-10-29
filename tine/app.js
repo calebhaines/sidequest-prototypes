@@ -20,13 +20,14 @@
   let bank = 0, selected = 0, sequencePage = 0, tab = 'resonance';
   let playing = false, loading = false, playGeneration = 0, currentStep = -1, currentBar = 0;
   let exporting = false, history = [], saveTimer, toastTimer;
+  let voiceEffectsEditor = null, voiceEffectsTrack = null, voiceEffectsGesture = null;
   // Playback highlights reuse the current row DOM; audio scheduling stays in the engine.
   let playheadColumns = Array.from({ length: 32 }, () => []);
   function emptyBank() { return Array.from({ length: 8 }, () => Array(16).fill(0)); }
   function modelInfo(id) { return model.models.find((item) => item.id === id) || model.models[0]; }
   function project() {
     banks[bank] = state.tracks.map((track) => [...track.steps]);
-    return { app: 'TINE', version: 4, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), bank, selected };
+    return { app: 'TINE', version: 5, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), bank, selected };
   }
   function sequenceView() { return { state, banks: banks.map((pattern, index) => index === bank ? state.tracks.map(track => track.steps) : pattern), bankLocks, bank, selected }; }
   function getSequencerPattern(options = {}) { return model.sequencerPattern(sequenceView(), options); }
@@ -45,6 +46,7 @@
     if (saved) { restore(JSON.parse(saved)); localStorage.setItem(storageKey, JSON.stringify(project())); }
   } catch (_) { /* A private or offline browser can play without storage. */ }
   function persist() {
+    engine.setVoiceEffects(state.tracks, state.bpm).catch(error => toast(error.message));
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { try { localStorage.setItem(storageKey, JSON.stringify(project())); } catch (_) {} }, 240);
   }
@@ -69,7 +71,7 @@
     $('toast').textContent = String(message); $('toast').classList.add('visible');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3500);
   }
-  function syncEffects() { engine.setMasterVolume(state.master); engine.setEffects({ drive: state.drive, space: state.space }); }
+  function syncEffects() { engine.setMasterVolume(state.master); engine.setEffects({ drive: state.drive, space: state.space }); engine.setVoiceEffects(state.tracks, state.bpm).catch(error => toast(error.message)); }
   function nativeGrid() {
     if (!state.musicLabPattern) return;
     const resume = playing || loading; if (resume) stop(); delete state.musicLabPattern;
@@ -80,7 +82,7 @@
     $('status-dot').classList.add('ready');
   }
   async function audition(track = state.tracks[selected]) {
-    try { await engine.preview(track, state.bpm); syncEffects(); audioReady(); }
+    try { syncEffects(); await engine.preview(track, state.bpm); audioReady(); }
     catch (error) { toast(error.message || 'Audio could not start. Try playing again.'); }
   }
   function playButton(active) {
@@ -320,6 +322,25 @@
     });
     draw(initial); tile.append(control, title, output); tile.updateValue = draw; return tile;
   }
+  function renderVoiceEffects() {
+    if (!window.KitchenVoiceEffects || !$('voice-effects')) return;
+    if (voiceEffectsTrack !== state.tracks[selected]) { voiceEffectsEditor?.close(); voiceEffectsTrack = state.tracks[selected]; voiceEffectsGesture = null; }
+    if (!voiceEffectsEditor) voiceEffectsEditor = window.KitchenVoiceEffects.mount($('voice-effects'), {
+      getSlots: () => state.tracks[selected].galleyFx,
+      getLabel: () => state.tracks[selected].name + ' · CLATTER',
+      getKey: () => selected,
+      onUndo: undo,
+      getMeters: () => engine.environment?.voiceEffects?.getMeters(selected),
+      onChange(slots, metadata = {}) {
+        if (metadata.phase === 'end') { voiceEffectsGesture = null; return; }
+        if (voiceEffectsTrack !== state.tracks[selected]) return;
+        if (!metadata.gesture || metadata.gesture !== voiceEffectsGesture) { remember(); voiceEffectsGesture = metadata.gesture; }
+        state.tracks[selected].galleyFx = model.normalizeVoiceEffects(slots);
+        syncEffects(); persist();
+      }
+    });
+    voiceEffectsEditor.render();
+  }
   function renderVoice() {
     const focus = $('knob-grid').contains(document.activeElement) || $('selectors').contains(document.activeElement) ? focusKey() : null;
     const track = state.tracks[selected], info = modelInfo(track.model);
@@ -367,7 +388,7 @@
       ['white', 'pink', 'brown', 'blue', 'velvet', 'crackle'].forEach((color) => { const option = document.createElement('option'); option.value = color; option.textContent = color.charAt(0).toUpperCase() + color.slice(1); select.append(option); }); select.value = track.noiseColor;
       select.addEventListener('change', () => { remember(); track.noiseColor = select.value; drawVoice(); persist(); }); wrapper.append(label, select); $('selectors').append(wrapper, materialDescription); describeMaterial();
     }
-    drawVoice(); restoreFocus(focus);
+    drawVoice(); renderVoiceEffects(); restoreFocus(focus);
   }
   function refreshTrackMeta() {
     const meta = $('track-rows').children[selected].querySelector('.track-meta'), track = state.tracks[selected];
@@ -418,8 +439,8 @@
     const packet = getSequencerPattern({ scope: scope === 'sequence' ? undefined : scope }), completeChain = scope === 'chain' || scope === 'sequence' && state.chain.enabled;
     if (!Number.isInteger(bars) || bars < 1 || bars > 16) throw new Error('Choose one to sixteen bars.');
     const length = completeChain ? packet.lengthBeats : bars * 4, secondsPerBeat = 60 / snapshot.bpm;
-    let longest = Math.max(.22, ...snapshot.tracks.map(track => track.decay + Math.max(track.noiseAttack + track.noiseDecay + .008, window.TineEngine.inspectExciter(track).duration) + .205));
-    for (const note of packet.notes) if (note.locks?.decay) longest = Math.max(longest, clamp(note.locks.decay, .04, 4) + 1.5);
+    let longest = Math.max(.22, ...snapshot.tracks.map(track => track.decay + Math.max(track.noiseAttack + track.noiseDecay + .008, window.TineEngine.inspectExciter(track).duration) + .205 + (window.KitchenVoiceEffects?.tailTime(track.galleyFx, snapshot.bpm) || 0)));
+    for (const note of packet.notes) if (note.locks?.decay) longest = Math.max(longest, clamp(note.locks.decay, .04, 4) + 1.5 + (window.KitchenVoiceEffects?.tailTime(snapshot.tracks[Number(note.voice.slice(6))]?.galleyFx, snapshot.bpm) || 0));
     const tail = tailSeconds === undefined ? Math.min(15, longest + (snapshot.space > 0 ? 1.8 : 0) + (packet.notes.some(note => note.locks?.cutoff || note.locks?.resonance) ? 2.5 : 0)) : Number(tailSeconds);
     if (!Number.isFinite(tail) || tail < 0 || tail > 15) throw new Error('Choose an effect tail between zero and fifteen seconds.');
     if (length * secondsPerBeat + tail > 120) throw new Error('This audio is longer than 120 seconds. Shorten the chain, use fewer repeats, or increase tempo.');
@@ -599,7 +620,7 @@
   $('restart-button').addEventListener('click', () => { stop(); play(); });
   $('audition-button').addEventListener('click', () => audition());
   $('voice-reset').addEventListener('click', () => {
-    remember(); const previous = state.tracks[selected]; state.tracks[selected] = { ...model.defaults(previous.model), name: previous.name, level: previous.level, pan: previous.pan, mute: previous.mute, solo: previous.solo, steps: [...previous.steps] };
+    remember(); const previous = state.tracks[selected]; state.tracks[selected] = { ...model.defaults(previous.model), name: previous.name, level: previous.level, pan: previous.pan, mute: previous.mute, solo: previous.solo, steps: [...previous.steps], galleyFx: clone(previous.galleyFx) };
     renderVoice(); refreshTrackMeta(); persist(); toast('This model’s sound settings restored.');
   });
   $('voice-mutate').addEventListener('click', mutateVoice);
@@ -667,7 +688,7 @@
   $('help-button').addEventListener('click', () => $('help-dialog').showModal()); $('close-help').addEventListener('click', () => $('help-dialog').close());
   $('help-dialog').addEventListener('click', (event) => { if (event.target !== $('help-dialog')) return; const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); });
   document.addEventListener('keydown', (event) => {
-    if ($('help-dialog').open || event.target.isContentEditable) return;
+    if ($('help-dialog').open || event.target.closest('.voice-fx-dialog') || event.target.isContentEditable) return;
     const field = event.target.matches('input,select,textarea');
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && (!field || event.target.matches('input[type=range]'))) { event.preventDefault(); undo(); return; }
     if ($('step-dialog').open || $('chain-dialog').open) return;
@@ -681,7 +702,7 @@
   let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawVoice(); drawHero(heroTime); }, 80); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   renderAll(); drawHero();
-  window.TineApp = { getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !(state.chain.enabled && state.chain.loop === false); }, isPlaying: () => playing, play, stop, engine, exportAudio,
+  window.TineApp = { async prepare() { await engine.setVoiceEffects(state.tracks, state.bpm); await engine.init(); syncEffects(); }, getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !(state.chain.enabled && state.chain.loop === false); }, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
       validateProject(next); remember(); stop(); restore(next); renderAll(); persist();

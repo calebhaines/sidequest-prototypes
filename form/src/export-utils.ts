@@ -44,14 +44,22 @@ export function prepareSamples(
 export function prepareStereo(
   source: Float32Array[],
   normalize: boolean,
+  trim = false,
 ): Float32Array[] {
-  const channels = source.map((channel) => channel.slice());
+  let channels = source.map((channel) => channel.slice());
   let peak = 0;
   for (const channel of channels) {
     for (let index = 0; index < channel.length; index++) {
       if (!Number.isFinite(channel[index])) channel[index] = 0;
       peak = Math.max(peak, Math.abs(channel[index]));
     }
+  }
+  if (trim && channels.length) {
+    const threshold = peak * .00001;
+    let start = 0, end = channels[0].length;
+    while (start < end && channels.every(channel => Math.abs(channel[start] ?? 0) <= threshold)) start++;
+    while (end > start && channels.every(channel => Math.abs(channel[end - 1] ?? 0) <= threshold)) end--;
+    channels = channels.map(channel => end > start ? channel.slice(start, end) : new Float32Array(1));
   }
   const scale = peak > 0 && (normalize || peak > 1) ? 0.98 / peak : 1;
   if (scale !== 1) {

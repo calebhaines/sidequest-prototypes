@@ -1,7 +1,9 @@
 import { ArrowDownToLine, ChevronDown, Dices, Library, Play } from "lucide-react";
 import { useMemo } from "react";
-import type { SoundParams } from "./types";
+import type { GalleyFxSlots, SoundParams } from "./types";
 import { getBurnerControls, setBurnerControl } from "./burner-controls";
+import VoiceEffectsPanel from "./VoiceEffectsPanel";
+import type { VoiceFxChange } from "./voice-effects";
 import { Knob } from "./Visuals";
 
 const GUIDES = [
@@ -13,9 +15,9 @@ const GUIDES = [
   ["Heat", "Saturation after the layers meet."],
 ] as const;
 
-export default function BurnerPanel({ sound, index, typeLabel, accent, onChange, onAudition, onLibrary, onVariation, onExport, deepOpen, onToggleDeep }: {
+export default function BurnerPanel({ sound, index, typeLabel, accent, onChange, onFxChange, onFxUndo, onFxRedo, getFxMeters, onAudition, onLibrary, onVariation, onExport, deepOpen, onToggleDeep }: {
   sound: SoundParams; index: number; typeLabel: string; accent: string;
-  onChange: (sound: SoundParams) => void; onAudition: () => void; onLibrary: () => void;
+  onChange: (sound: SoundParams) => void; onFxChange: (slots: GalleyFxSlots, change: VoiceFxChange) => void; getFxMeters: () => unknown; onFxUndo: () => void; onFxRedo: () => void; onAudition: () => void; onLibrary: () => void;
   onVariation: () => void; onExport: () => void; deepOpen: boolean; onToggleDeep: () => void;
 }) {
   const values = useMemo(() => getBurnerControls(sound), [sound]);
@@ -39,6 +41,7 @@ export default function BurnerPanel({ sound, index, typeLabel, accent, onChange,
       <Knob label="Pan" value={sound.mix.pan * 100} min={-100} max={100} step={1} format={v => v === 0 ? "C" : `${Math.round(Math.abs(v))}${v < 0 ? "L" : "R"}`} onChange={v => onChange({ ...sound, mix: { ...sound.mix, pan: v / 100 } })} />
     </div>
     <div className="burner-control-guide">{GUIDES.map(([name, description]) => <span key={name}><strong>{name}</strong> {description}</span>)}</div>
+    <VoiceEffectsPanel key={index} sound={sound} index={index} onChange={onFxChange} getMeters={getFxMeters} onUndo={onFxUndo} onRedo={onFxRedo} />
     <button className={`deep-recipe-toggle ${deepOpen ? "is-open" : ""}`} aria-expanded={deepOpen} aria-controls="hotplate-deep-recipe" onClick={onToggleDeep}><ChevronDown size={16} />{deepOpen ? "Close recipe" : "Open recipe"}<span>Three layers · five engines · modulation · effects</span></button>
   </section>;
 }

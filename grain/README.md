@@ -8,6 +8,7 @@ A self-contained, noise-powered drum machine with a compact commercial kitchen i
 - Twelve sources: white, pink, brown, blue, violet, grey, velvet, crackle, metallic, digital, dust, and radio noise.
 - The original six curated grooves, four additional specialist noise kits (Prep surface, Short-order static, Radio misdemeanour, and Crumb counter), four pattern banks, swing, accents, mute, solo, randomization, and undo.
 - Separate BODY and NOISE layer levels, voice level, and stereo pan.
+- Two serial GALLEY effect slots per voice, with independent processing history, presets, bypass and complete parameter editing. Open either slot below the Voice Station. Effects follow voice level/pan and feed the existing master Drive/Space chain; empty racks retain the original sound.
 - Drum-body oscillator waveform, fundamental, harmonics, detune, pitch sweep, sweep time, and its own attack/hold/decay envelope.
 - Noise playback speed, four filter types, cutoff, resonance, filter sweep, saturation, burst count/gap, and an independent envelope.
 - Sine, triangle, square, sawtooth, and sample-and-hold modulation for noise cutoff, amplitude, pitch, or voice pan; free rate or tempo-synced divisions.
@@ -20,7 +21,7 @@ Click a step to toggle it. Shift + click adds an accent. To change one step's so
 
 The compact **16 STEPS / 32 STEPS** chooser in the existing sequence heading changes the loop length. At 32, **1–16 / 17–32** switches the same grid between its two halves; arrow-key navigation crosses between halves. The second half starts empty. Choosing 16 temporarily excludes steps 17–32 from playback and export without deleting them, including in all four pattern banks. Clear and Randomize edit the active length. Undo, browser saving, JSON projects, native playback, and shared patterns include the chosen length. Factory grooves and older projects still start at 16 steps with their original sounds and timing.
 
-Projects now save as version 4; versions 1 and 2 migrate to a 16-step loop, and version 3 keeps its loop length. Earlier projects start with empty step overrides and chaining off. Export lengths for a single bank are musical bars: use two or more bars to hear a complete 32-step pattern. With chaining off, Export WAV still renders four bars.
+Projects now save as version 5 with two GALLEY effect slots on every voice; versions 1 and 2 migrate to a 16-step loop, and versions 3 and 4 keep their loop length. Older voices receive empty effect slots. Earlier projects start with empty step overrides and chaining off. Export lengths for a single bank are musical bars: use two or more bars to hear a complete 32-step pattern. With chaining off, Export WAV still renders four bars.
 
 ## Noise bench (v1.2)
 
@@ -79,3 +80,9 @@ Kitchen links to SIZZLE. Old `/grain/` URLs redirect to the new music route. The
 ## Display identity
 
 The kitchen name is a presentation change. Existing URL routes, JavaScript integration APIs, storage keys, and portable project identifiers remain unchanged so earlier sessions and shared projects still open.
+
+## Voice effects
+
+All fifteen GALLEY inserts are available in each voice’s two slots, including classic BUTTER compression, BROILER amp/pedal rigs and SAUTÉ preamps. Settings belong to the voice and are stored in version 5 projects, Undo, browser recovery and hosted instrument snapshots. Older projects receive empty racks. Supplied malformed effect settings are rejected before changing the current project. Musical pattern packets continue to contain notes and step overrides; the source patch retains the effects.
+
+The native sequencer, hosted notes, selected-voice hits, shared-sample renders and WAV exports use the same independent per-voice chains. Hits overlap before their voice’s effects, so delay and reverb histories span successive strikes. Master Drive and Space follow the voice effects. Explicit pattern tail durations keep their existing meaning; one-shot/default exports include the reported voice effect tail. Current browsers use AudioWorklet for the shared GALLEY DSP.

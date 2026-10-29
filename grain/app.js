@@ -22,7 +22,7 @@
   const engine = new window.NoiseEngine();
   let state = { ...clone(window.NOISE_PRESETS[0]), master: 0.78, stepCount: 16 };
   state.tracks.forEach((track) => window.GrainSynth.ensureTrack(track));
-  let voiceLab;
+  let voiceLab, voiceFxEditor, voiceFxGesture = null;
   let banks = [state.tracks.map((t) => [...t.steps]), ...Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => Array(16).fill(0)))];
   let bankLocks = window.GrainSequence.emptyLocks(banks), chain = window.GrainSequence.emptyChain();
   let bank = 0, selected = 0, sequencePage = 0, playing = false, busy = false, playGeneration = 0, currentStep = -1, currentBar = 0;
@@ -36,10 +36,10 @@
 
   function project() {
     banks[bank] = state.tracks.map((t) => [...t.steps]);
-    return { format: 'grain-project', version: 4, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), chain: clone(chain), bank, selected };
+    return { format: 'grain-project', version: 5, state: clone(state), banks: clone(banks), bankLocks: clone(bankLocks), chain: clone(chain), bank, selected };
   }
   function validateProject(data) {
-    if (!data || data.format !== 'grain-project' || ![1, 2, 3, 4].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
+    if (!data || data.format !== 'grain-project' || ![1, 2, 3, 4, 5].includes(data.version) || !data.state || !Array.isArray(data.state.tracks) || data.state.tracks.length !== 8) throw new Error('Please open a SIZZLE project file.');
     const s = data.state;
     if (s.musicLabPattern !== undefined) {
       const overlay = s.musicLabPattern;
@@ -55,21 +55,24 @@
     const validSteps = (steps) => Array.isArray(steps) && stepLengths.includes(steps.length) && Array.from(steps).every((v) => v === 0 || v === 1 || v === 2);
     s.tracks.forEach((track) => {
       if (!track || typeof track.name !== 'string' || track.name.length > 40 || !sources.some((n) => n.id === track.noise) || !modes.includes(track.mode) || !validSteps(track.steps) || !['level', 'tone', 'decay', 'pitch'].every((key) => isNumber(track[key], 0, 1)) || !isNumber(track.pan, -1, 1) || typeof track.mute !== 'boolean' || typeof track.solo !== 'boolean') throw new Error('The project contains an invalid voice.');
+      if (data.version >= 5 && track.galleyFx === undefined) throw new Error('The project is missing a voice effects rack.');
+      if (track.galleyFx !== undefined) window.GrainSynth.normalizeVoiceEffects(track.galleyFx, true);
       if ((data.version >= 2 || track.synth !== undefined) && !window.GrainSynth.validate(track.synth)) throw new Error('The project contains invalid synthesis settings.');
     });
     if (!Array.isArray(data.banks) || data.banks.length !== 4 || !data.banks.every((b) => Array.isArray(b) && b.length === 8 && b.every(validSteps))) throw new Error('The project contains an invalid pattern.');
-    if (data.version === 4) { window.GrainSequence.validateChain(data.chain); window.GrainSequence.validateLocks(data.banks, data.bankLocks); }
+    if (data.version >= 4) { window.GrainSequence.validateChain(data.chain); window.GrainSequence.validateLocks(data.banks, data.bankLocks); }
     else if (data.chain !== undefined || data.bankLocks !== undefined) throw new Error('Step overrides and chains require a version 4 project.');
     if (!Number.isInteger(data.bank) || data.bank < 0 || data.bank > 3 || !Number.isInteger(data.selected) || data.selected < 0 || data.selected > 7) throw new Error('The project contains invalid bank settings.');
     return data;
   }
   function restore(data) {
     const valid = validateProject(data);
+    voiceFxEditor?.close(); voiceFxGesture = null;
     state = { ...clone(valid.state), stepCount: valid.version >= 3 ? valid.state.stepCount : 16 }; banks = clone(valid.banks); bank = valid.bank; selected = valid.selected;
-    bankLocks = valid.version === 4 ? clone(valid.bankLocks) : window.GrainSequence.emptyLocks(banks);
-    chain = valid.version === 4 ? clone(valid.chain) : window.GrainSequence.emptyChain();
+    bankLocks = valid.version >= 4 ? clone(valid.bankLocks) : window.GrainSequence.emptyLocks(banks);
+    chain = valid.version >= 4 ? clone(valid.chain) : window.GrainSequence.emptyChain();
     if (state.stepCount === 16) sequencePage = 0;
-    state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; window.GrainSynth.ensureTrack(t); });
+    state.tracks.forEach((t, i) => { t.steps = [...banks[bank][i]]; window.GrainSynth.ensureTrack(t); t.galleyFx = window.GrainSynth.normalizeVoiceEffects(t.galleyFx, true); });
   }
   for (const key of [storageKey, 'grain-drum-machine-v1']) {
     try { const stored = localStorage.getItem(key); if (stored) { restore(JSON.parse(stored)); break; } } catch (_) { /* Try the older project, or start fresh if browser storage is unavailable. */ }
@@ -152,6 +155,7 @@
     toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3000);
   }
   function syncEffects() {
+    engine.setVoiceState(state);
     engine.setMasterVolume(state.master);
     engine.setEffects({ drive: state.drive, space: state.space });
   }
@@ -232,6 +236,7 @@
     }
   }
   function renderRows() {
+    engine.setVoiceState(state);
     renderSequenceControls();
     const container = $('track-rows');
     const focused = container.contains(document.activeElement) ? document.activeElement.dataset.focusKey : null;
@@ -455,6 +460,7 @@
     Array.from($('voice-knobs').children).forEach((control) => { const knob = control.querySelector('.knob'); if (knob && control.updateValue) control.updateValue(values[knob.dataset.param]); });
   }
   function renderVoice() {
+    voiceFxEditor?.close();
     const active = document.activeElement;
     const focusedParam = ($('voice-knobs').contains(active) || $('synthesis-knobs').contains(active)) ? active.dataset.param : null;
     const focusedSelector = $('synthesis-selectors').contains(active) ? active.id : null;
@@ -479,6 +485,7 @@
     drawVoice();
     if (voiceLab) voiceLab.render();
     renderNoiseBench();
+    voiceFxEditor?.render();
     if (focusedParam) { const replacement = Array.from(document.querySelectorAll('.knob')).find((knob) => knob.dataset.param === focusedParam); if (replacement) replacement.focus({ preventScroll: true }); }
     else if (focusedSelector && $(focusedSelector)) $(focusedSelector).focus({ preventScroll: true });
   }
@@ -750,9 +757,21 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && playing && engine.context && engine.context.state !== 'running') { stop(); toast('Audio paused. Press play to pick up the rhythm.'); } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopHeroAnimation(); else startHeroAnimation(); });
   voiceLab = new window.GrainVoiceLab({ getTrack: () => state.tracks[selected], getBpm: () => state.bpm, remember, persist, knobControl, onChange: () => { refreshMixer(); drawVoice(); renderNoiseBench(); persist(); }, audition: () => audition(state.tracks[selected]) });
+  if (window.KitchenVoiceEffects) voiceFxEditor = window.KitchenVoiceEffects.mount($('voice-effects'), {
+    getSlots: () => state.tracks[selected].galleyFx,
+    onUndo: undo,
+    getMeters: () => engine.environment?.voiceBank?.getMeters(selected) || [null, null],
+    getLabel: () => 'SIZZLE · Voice ' + (selected + 1) + ' · ' + pretty(state.tracks[selected].name),
+    onChange: (slots, meta = {}) => {
+      if (meta.gesture !== voiceFxGesture || !meta.gesture) { remember(); voiceFxGesture = meta.gesture || null; }
+      state.tracks[selected].galleyFx = window.GrainSynth.normalizeVoiceEffects(slots, true);
+      engine.setVoiceState(state); persist();
+      window.MusicLabHost?.notifyStateChange?.();
+    }
+  });
   engine.sequenceSource = { next: nextPattern, read: position => ({ steps: bankSteps(position.bank), locks: bankLocks[position.bank] }), ended: finishPlayback };
   renderAll(); drawHero(0);
-  window.GrainApp = { getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !chain.enabled || chain.loop; }, isPlaying: () => playing, play, stop, engine, exportAudio,
+  window.GrainApp = { prepare: async () => { await engine.init(); engine.setVoiceState(state); syncEffects(); }, getState: () => clone(state), getProject: project, getSequencerPattern, get sequenceLoop() { return !chain.enabled || chain.loop; }, isPlaying: () => playing, play, stop, engine, exportAudio,
     applyMusicLabPattern(overlay) {
       const next = project(); if (overlay) next.state.musicLabPattern = clone(overlay); else delete next.state.musicLabPattern;
       validateProject(next); remember(); stop(); restore(next); renderAll(); persist();

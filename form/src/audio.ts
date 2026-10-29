@@ -14,6 +14,8 @@ import {
   renderModularDry,
   sanitizeArchitecture,
 } from "./modular";
+import { drySignature, hasVoiceFx, normalizeVoiceFx, processVoiceFx, processVoiceFxAsync, voiceEffects, voiceFxTail, type VoiceFxBank } from "./voice-effects";
+import { prepareStereo } from "./export-utils";
 import { createHybridPresets } from "./hybrid-presets";
 import { createFactoryPresets, FACTORY_KITS } from "./factory-sounds";
 import { eventsForStep, normalizeStepDetail } from "./sequencing";
@@ -40,6 +42,7 @@ export function cloneParams(params: SoundParams): SoundParams {
     noise: { ...params.noise },
     effects: { ...params.effects },
     mix: { ...params.mix },
+    galleyFx: normalizeVoiceFx(params.galleyFx),
     ...(params.architecture
       ? { architecture: cloneArchitecture(params.architecture) }
       : {}),
@@ -393,6 +396,7 @@ export function sanitizeParams(input: SoundParams): SoundParams {
     noise: { ...base.noise, ...input?.noise },
     effects: { ...base.effects, ...input?.effects },
     mix: { ...base.mix, ...input?.mix },
+    galleyFx: normalizeVoiceFx(input?.galleyFx),
   };
   p.seed = Math.trunc(finite(p.seed, 1207)) >>> 0;
   p.type = [
@@ -880,11 +884,29 @@ export function encodeWav(
   return new Blob([buffer], { type: "audio/wav" });
 }
 
+/** The original mono synthesis is kept separate from each voice's stereo rack. */
+export function renderVoiceStereo(input: SoundParams, requestedRate = 44100, tempo = 120, tailSeconds?: number): Float32Array[] {
+  const params = sanitizeParams(input), sampleRate = Math.round(clamp(finite(requestedRate, 44100), 8000, 192000));
+  const tail = tailSeconds ?? voiceFxTail(params.galleyFx, tempo, sampleRate);
+  if (!Number.isFinite(tail) || tail < 0 || tail > 15) throw new Error("Choose a HOTPLATE effect tail between zero and fifteen seconds.");
+  const mono = renderSound(params, sampleRate), pan = params.mix.pan;
+  const frames = mono.length + Math.ceil(tail * sampleRate);
+  const left = new Float32Array(frames), right = new Float32Array(frames);
+  const l = Math.cos((pan + 1) * Math.PI / 4), r = Math.sin((pan + 1) * Math.PI / 4);
+  for (let i = 0; i < mono.length; i++) { left[i] = mono[i] * l; right[i] = mono[i] * r; }
+  processVoiceFx(params.galleyFx, left, right, sampleRate, tempo);
+  return [left, right];
+}
+
 export function exportSound(
   params: SoundParams,
   options: ExportOptions = {},
 ): Blob {
   const sampleRate = options.sampleRate ?? 44100;
+  if (hasVoiceFx(params.galleyFx)) {
+    const channels = prepareStereo(renderVoiceStereo(params, sampleRate), options.normalize === true, options.trim === true);
+    return encodeWav(channels, sampleRate, options.bitDepth ?? 24);
+  }
   let samples = renderSound(params, sampleRate);
   if (options.trim) samples = trimSilence(samples, sampleRate);
   if (options.normalize) samples = normalizeSamples(samples);
@@ -933,7 +955,7 @@ export function renderPattern(
             if (track.muted) return 0;
             const lowestPitch = Math.min(0, ...details[voice].filter((detail, step) =>
               sequence[voice][step] && detail.velocity > 0 && detail.probability > 0).map(detail => detail.pitch));
-            return samples.length / sampleRate / 2 ** (lowestPitch / 12);
+            return samples.length / sampleRate / 2 ** (lowestPitch / 12) + voiceFxTail(track.params.galleyFx, bpm, sampleRate);
           }),
         );
   if (options.tail !== false) tracks.forEach((track, voice) => {
@@ -942,12 +964,13 @@ export function renderPattern(
       if (!sequence[voice][step] || detail.velocity === 0 || detail.probability === 0 || detail.locks?.decay === undefined) return;
       let duration = durations.get(detail.locks.decay);
       if (duration === undefined) { duration = renderSound(applySoundLocks(track.params, detail.locks), sampleRate).length / sampleRate; durations.set(detail.locks.decay, duration); }
-      tail = Math.max(tail, duration / 2 ** (detail.pitch / 12));
+      tail = Math.max(tail, duration / 2 ** (detail.pitch / 12) + voiceFxTail(track.params.galleyFx, bpm, sampleRate));
     });
   });
   const length = Math.ceil((stepsPerBar * bars * stepTime + tail) * sampleRate);
   const left = new Float32Array(length),
     right = new Float32Array(length);
+  const voiceBuffers = tracks.map(track => !track.muted && hasVoiceFx(track.params.galleyFx) ? [new Float32Array(length), new Float32Array(length)] : null);
   for (let step = 0; step < stepsPerBar * bars; step++) {
     const position = step % stepsPerBar;
     const events = eventsForStep(sequence, details, position, Math.floor(step / stepsPerBar), bpm, swing * 100);
@@ -987,11 +1010,16 @@ export function renderPattern(
       for (let i = 0; i < frames; i++) {
         const source = i * rate, at = Math.floor(source), blend = source - at;
         const sample = (hitSamples[at] ?? 0) * (1 - blend) + (hitSamples[at + 1] ?? 0) * blend;
-        left[offset + i] += sample * leftGain * event.velocity;
-        right[offset + i] += sample * rightGain * event.velocity;
+        (voiceBuffers[event.voice]?.[0] ?? left)[offset + i] += sample * leftGain * event.velocity;
+        (voiceBuffers[event.voice]?.[1] ?? right)[offset + i] += sample * rightGain * event.velocity;
       }
     }
   }
+  voiceBuffers.forEach((buffer, index) => {
+    if (!buffer) return;
+    processVoiceFx(tracks[index].params.galleyFx, buffer[0], buffer[1], sampleRate, bpm);
+    for (let i = 0; i < length; i++) { left[i] += buffer[0][i]; right[i] += buffer[1][i]; }
+  });
   let peak = 1;
   for (let i = 0; i < length; i++)
     peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
@@ -1008,7 +1036,7 @@ export type NativePatternEvent = { voice: number; at: number; velocity: number; 
 export function renderExactPatternEvents(
   sounds: SoundParams[],
   events: NativePatternEvent[],
-  options: { durationSeconds: number; sampleRate?: number; tailSeconds?: number; master?: number },
+  options: { durationSeconds: number; sampleRate?: number; tailSeconds?: number; master?: number; tempo?: number },
 ): Float32Array[] {
   const seconds = options.durationSeconds;
   const tail = options.tailSeconds ?? 0;
@@ -1022,6 +1050,7 @@ export function renderExactPatternEvents(
     throw new Error("Invalid HOTPLATE exact pattern render bounds.");
   const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
   const left = new Float32Array(frames), right = new Float32Array(frames);
+  const voiceBuffers = sounds.map(sound => hasVoiceFx(sound.galleyFx) ? [new Float32Array(frames), new Float32Array(frames)] : null);
   const cache = new Map<string, { samples: Float32Array; rate: number }>();
   for (let index = 0; index < events.length; index++) {
     const event = events[index], base = sounds[event.voice];
@@ -1041,16 +1070,21 @@ export function renderExactPatternEvents(
     const { samples, rate } = strike;
     const offset = Math.round(event.at * sampleRate);
     const pan = clamp(finite(sound.mix.pan, 0), -1, 1);
-    const gain = event.velocity * master;
+    const gain = event.velocity * (voiceBuffers[event.voice] ? 1 : master);
     const leftGain = Math.cos((pan + 1) * Math.PI / 4) * gain;
     const rightGain = Math.sin((pan + 1) * Math.PI / 4) * gain;
     for (let frame = 0, count = Math.min(frames - offset, Math.ceil(samples.length / rate)); frame < count; frame++) {
       const position = frame * rate, at = Math.floor(position), blend = position - at;
       const value = (samples[at] ?? 0) * (1 - blend) + (samples[at + 1] ?? 0) * blend;
-      left[offset + frame] += value * leftGain;
-      right[offset + frame] += value * rightGain;
+      (voiceBuffers[event.voice]?.[0] ?? left)[offset + frame] += value * leftGain;
+      (voiceBuffers[event.voice]?.[1] ?? right)[offset + frame] += value * rightGain;
     }
   }
+  voiceBuffers.forEach((buffer, index) => {
+    if (!buffer) return;
+    processVoiceFx(sounds[index].galleyFx, buffer[0], buffer[1], sampleRate, options.tempo ?? 120);
+    for (let i = 0; i < frames; i++) { left[i] += buffer[0][i] * master; right[i] += buffer[1][i] * master; }
+  });
   let peak = 1;
   for (let i = 0; i < frames; i++) peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
   if (peak > 1) for (let i = 0; i < frames; i++) {
@@ -1062,7 +1096,7 @@ export function renderExactPatternEvents(
 /** Arbitrary beat clips use FORM's native synthesis and pan/effect processing. */
 export async function renderNativeEvents(
   sounds: SoundParams[], events: NativePatternEvent[],
-  options: { durationSeconds: number; tailSeconds?: number; signal?: AbortSignal; master?: number },
+  options: { durationSeconds: number; tailSeconds?: number; signal?: AbortSignal; master?: number; tempo?: number },
 ): Promise<{ pcm: Float32Array; sampleRate: number; channels: number; duration: number }> {
   const check = () => options.signal?.throwIfAborted();
   check();
@@ -1072,6 +1106,7 @@ export async function renderNativeEvents(
   const master = options.master ?? .72;
   const snapshot = sounds.map(cloneParams), eventSnapshot = events.map(event => ({ ...event, ...(event.locks ? { locks: normalizeSoundLocks(event.locks, true) } : {}) })), sampleRate = 48000;
   const frames = Math.max(1, Math.ceil((seconds + tail) * sampleRate));
+  const voiceBuffers = snapshot.map(sound => hasVoiceFx(sound.galleyFx) ? [new Float32Array(frames), new Float32Array(frames)] : null);
   const pcm = new Float32Array(frames * 2), cache = new Map<string, { samples: Float32Array; rate: number }>();
   for (let index = 0; index < eventSnapshot.length; index++) {
     const event = eventSnapshot[index], base = snapshot[event.voice];
@@ -1088,14 +1123,21 @@ export async function renderNativeEvents(
     }
     const { samples, rate } = strike;
     const offset = Math.round(event.at * sampleRate), count = Math.min(frames - offset, Math.ceil(samples.length / rate));
-    const pan = clamp(sound.mix.pan, -1, 1), gain = event.velocity * master;
+    const pan = clamp(sound.mix.pan, -1, 1), gain = event.velocity * (voiceBuffers[event.voice] ? 1 : master);
     const left = Math.cos((pan + 1) * Math.PI / 4) * gain, right = Math.sin((pan + 1) * Math.PI / 4) * gain;
     for (let frame = 0; frame < count; frame++) {
       const position = frame * rate, at = Math.floor(position), mix = position - at;
       const value = (samples[at] || 0) * (1 - mix) + (samples[at + 1] || 0) * mix;
-      pcm[(offset + frame) * 2] += value * left; pcm[(offset + frame) * 2 + 1] += value * right;
+      const buffer = voiceBuffers[event.voice];
+      if (buffer) { buffer[0][offset + frame] += value * left; buffer[1][offset + frame] += value * right; }
+      else { pcm[(offset + frame) * 2] += value * left; pcm[(offset + frame) * 2 + 1] += value * right; }
     }
     if (index % 16 === 0) { check(); await new Promise<void>(resolve => setTimeout(resolve, 0)); }
+  }
+  for (let index = 0; index < voiceBuffers.length; index++) {
+    const buffer = voiceBuffers[index]; if (!buffer) continue;
+    await processVoiceFxAsync(snapshot[index].galleyFx, buffer[0], buffer[1], sampleRate, options.tempo ?? 120, options.signal);
+    for (let i = 0; i < frames; i++) { pcm[i * 2] += buffer[0][i] * master; pcm[i * 2 + 1] += buffer[1][i] * master; }
   }
   let peak = 1; for (const value of pcm) peak = Math.max(peak, Math.abs(value));
   const trim = peak > 1 ? .98 / peak : 1, fade = Math.min(1440, Math.floor(frames / 2));
@@ -1111,11 +1153,18 @@ export class AudioEngine {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private sources = new Set<AudioBufferSourceNode>();
-  private sourceNotes = new Map<AudioBufferSourceNode, { scope: string; gain: GainNode; start: number; velocity: number }>();
+  private sourceNotes = new Map<AudioBufferSourceNode, { scope: string; gain: GainNode; start: number; velocity: number; voice: number; cancelledAt?: number; cancelEnd?: number }>();
   private sourceCuts = new Map<string, number>();
   private cache = new Map<string, AudioBuffer>();
   private epoch = 0;
   private masterVolume = 0.72;
+  private voiceBank: VoiceFxBank | null = null;
+  private fxPreparing: Promise<void> | null = null;
+  private voiceState: SoundParams[] = [];
+  private voiceFxActive = Array<boolean>(8).fill(false);
+  private tempo = 120;
+  private fxClock = { tempo: 120, beat: 0, time: 0, playing: false };
+  private hostClock: { tempo?: number; bpm?: number; beat?: number; audioTime?: number; when?: number; time?: number; revision?: number; playing?: boolean } | null = null;
 
   get audioContext(): AudioContext | null {
     return this.context;
@@ -1140,8 +1189,69 @@ export class AudioEngine {
       limiter.attack.value = 0.001;
       limiter.release.value = 0.08;
       this.master.connect(limiter).connect(this.context.destination);
+      const context = this.context, master = this.master, effects = voiceEffects();
+      this.fxPreparing = effects ? effects.prepare(context).then(() => {
+        if (this.context !== context || context.state === "closed") return;
+        this.voiceBank = effects.createBank(context, master, { voiceCount: 8, tempo: this.tempo });
+        this.syncVoiceEffects(); this.voiceBank.setClock(this.fxClock);
+        if (this.hostClock) this.followTransport(this.hostClock);
+      }) : null;
     }
     if (this.context.state === "suspended") await this.context.resume();
+    await this.fxPreparing;
+  }
+
+  private syncVoiceEffects(): void {
+    for (let voice = 0; voice < 8; voice++) {
+      const slots = normalizeVoiceFx(this.voiceState[voice]?.galleyFx);
+      this.voiceFxActive[voice] = hasVoiceFx(slots); this.voiceBank?.setVoice(voice, slots);
+    }
+  }
+
+  setVoiceState(sounds: SoundParams[], tempo = this.tempo): void {
+    const previousTempo = this.tempo;
+    this.voiceState = sounds.map(cloneParams); this.tempo = clamp(finite(tempo, 120), 30, 300);
+    this.syncVoiceEffects();
+    if (!this.hostClock && this.tempo !== previousTempo) this.setVoiceClock({ tempo: this.tempo });
+  }
+
+  setVoiceClock(clock: { tempo?: number; beat?: number; time?: number; playing?: boolean }): void {
+    const now = finite(clock.time ?? NaN, this.context?.currentTime ?? 0);
+    const priorBeat = this.fxClock.beat + (this.fxClock.playing ? now - this.fxClock.time : 0) * this.fxClock.tempo / 60;
+    this.fxClock = { tempo: clamp(finite(clock.tempo ?? NaN, this.fxClock.tempo), 30, 300), beat: finite(clock.beat ?? NaN, priorBeat), time: now, playing: typeof clock.playing === "boolean" ? clock.playing : this.fxClock.playing };
+    this.voiceBank?.setClock(this.fxClock);
+  }
+
+  getVoiceEffectMeters(index: number): unknown { return this.voiceBank?.getMeters(index) ?? [null, null]; }
+
+  followTransport(clock: { tempo?: number; bpm?: number; beat?: number; audioTime?: number; when?: number; time?: number; revision?: number; playing?: boolean }): void {
+    if (!clock || typeof clock !== "object") return;
+    const previous = this.hostClock; this.hostClock = { ...clock };
+    if (!this.context) return;
+    const time = finite(clock.audioTime ?? NaN, finite(clock.when ?? NaN, finite(clock.time ?? NaN, this.context.currentTime)));
+    // A host seek/stop starts a new performance history, while ordinary clock
+    // anchors must leave this voice's delay, reverb and detector memory intact.
+    if ((previous && Number.isFinite(clock.revision) && clock.revision !== previous.revision) || (clock.playing === false && previous?.playing !== false)) {
+      const boundary = Math.max(this.context.currentTime, time);
+      this.finishCancelledVoiceFxSources(boundary); this.voiceBank?.reset(undefined, boundary);
+    }
+    this.setVoiceClock({ tempo: clock.tempo ?? clock.bpm ?? this.tempo, beat: clock.beat ?? 0, time, playing: clock.playing !== false });
+  }
+
+  private finishCancelledVoiceFxSources(boundary: number): void {
+    if (!this.context || !this.voiceBank) return;
+    for (const [source, note] of this.sourceNotes) {
+      // Only old, already-cancelled FX sources can refill the just-reset rack.
+      // A separate live source or a newly queued epoch must keep its schedule.
+      if (!this.voiceFxActive[note.voice] || note.cancelledAt === undefined || note.cancelledAt > boundary || note.cancelEnd === undefined || note.cancelEnd <= boundary) continue;
+      const from = Math.max(this.context.currentTime, note.cancelledAt);
+      const level = note.velocity * clamp(1 - (from - note.cancelledAt) / .008, 0, 1);
+      note.gain.gain.cancelScheduledValues(from);
+      note.gain.gain.setValueAtTime(boundary > from ? level : 0, from);
+      if (boundary > from) note.gain.gain.linearRampToValueAtTime(0, boundary);
+      try { source.stop(boundary); } catch { /* Already ended. */ }
+      note.cancelEnd = boundary;
+    }
   }
 
   now(): number {
@@ -1151,7 +1261,7 @@ export class AudioEngine {
   private cachedBuffer(params: SoundParams): AudioBuffer {
     if (!this.context)
       throw new Error("Resume the audio engine before preparing a sound.");
-    const key = JSON.stringify(params);
+    const key = drySignature(params);
     let buffer = this.cache.get(key);
     if (!buffer) {
       const samples = renderSound(params, this.context.sampleRate);
@@ -1184,7 +1294,7 @@ export class AudioEngine {
       for (let index = 0; index < variations; index++) {
         if (epoch !== this.epoch || !this.context) return;
         const variant = hitVariation(params, index);
-        if (!this.cache.has(JSON.stringify(variant))) {
+        if (!this.cache.has(drySignature(variant))) {
           this.cachedBuffer(variant);
           // Permit a pending stop or UI update between the expensive voice renders.
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -1193,14 +1303,14 @@ export class AudioEngine {
     }
   }
 
-  async play(params: SoundParams, velocity = 1, when?: number, pitch = 0, locks?: SoundLocks): Promise<void> {
+  async play(params: SoundParams, velocity = 1, when?: number, pitch = 0, locks?: SoundLocks, voice = 0): Promise<void> {
     const epoch = this.epoch;
     await this.resume();
     if (epoch !== this.epoch || !this.context || !this.master) return;
-    this.schedulePrepared(params, velocity, when, pitch, "native", locks);
+    this.schedulePrepared(params, velocity, when, pitch, "native", locks, voice);
   }
 
-  schedulePrepared(params: SoundParams, velocity = 1, when?: number, pitch = 0, scope = "native", inputLocks?: SoundLocks): void {
+  schedulePrepared(params: SoundParams, velocity = 1, when?: number, pitch = 0, scope = "native", inputLocks?: SoundLocks, voice = 0): void {
     if (!this.context || !this.master) throw new Error("Prepare FORM before scheduling notes.");
     const at = Math.max(this.context.currentTime, when ?? this.context.currentTime);
     if (at >= (this.sourceCuts.get(scope) ?? Infinity)) return;
@@ -1226,15 +1336,20 @@ export class AudioEngine {
       gain.gain.setValueAtTime(gain.gain.value, at + duration - fade);
       gain.gain.linearRampToValueAtTime(0, at + duration);
     } else source.connect(gain);
-    gain.connect(pan).connect(this.master);
+    if (!Number.isInteger(voice) || voice < 0 || voice > 7) throw new Error("Choose a HOTPLATE voice from 1 to 8.");
+    const slots = normalizeVoiceFx(params.galleyFx);
+    if (hasVoiceFx(slots) && !this.voiceBank) throw new Error("Prepare HOTPLATE’s GALLEY voice effects before scheduling notes.");
+    this.voiceFxActive[voice] = hasVoiceFx(slots); this.voiceBank?.setVoice(voice, slots);
+    gain.connect(pan);
+    const detachFx = this.voiceBank ? this.voiceBank.connectSource(voice, pan) : (pan.connect(this.master), () => {});
     this.sources.add(source);
-    this.sourceNotes.set(source, { scope, gain, start: at, velocity: gain.gain.value });
+    this.sourceNotes.set(source, { scope, gain, start: at, velocity: gain.gain.value, voice });
     source.onended = () => {
       this.sources.delete(source);
       this.sourceNotes.delete(source);
       source.disconnect();
       gain.disconnect();
-      pan.disconnect();
+      detachFx(); pan.disconnect();
       filter?.disconnect();
     };
     source.start(
@@ -1261,6 +1376,7 @@ export class AudioEngine {
     else this.sourceCuts.delete(source);
     for (const [node, note] of this.sourceNotes) {
       if (source !== undefined && note.scope !== source) continue;
+      note.cancelledAt = at; note.cancelEnd = at + .009;
       note.gain.gain.cancelScheduledValues(at);
       note.gain.gain.setValueAtTime(note.start >= at ? 0 : note.velocity, at);
       note.gain.gain.linearRampToValueAtTime(0, at + .008);
@@ -1270,6 +1386,8 @@ export class AudioEngine {
 
   stopAll(): void {
     this.epoch++;
+    this.voiceBank?.reset();
+    this.setVoiceClock({ playing: false });
     this.sourceCuts.clear();
     for (const source of this.sources) {
       try {
@@ -1287,6 +1405,7 @@ export class AudioEngine {
     this.cache.clear();
     if (this.context && this.context.state !== "closed")
       await this.context.close();
+    this.voiceBank?.dispose(); this.voiceBank = null; this.fxPreparing = null;
     this.context = null;
     this.master = null;
   }

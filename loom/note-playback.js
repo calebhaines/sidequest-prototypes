@@ -132,8 +132,8 @@
         entry.sources = new Set(); entry.retired = new Map(); if (entry.live) entry.liveSource = this._newSource(entry);
         if (entry.pending) { const boundary = this._nextBoundary(clock); entry.pending = { ...entry.pending, ...boundary, phaseBeat: entry.pending.signature === entry.signature ? entry.phaseBeat : boundary.phaseBeat, phaseCycle: entry.pending.signature === entry.signature ? entry.phaseCycle || 0 : boundary.phaseCycle, source: this._newSource(entry) }; if (entry.pending.precise) this.host.cancelNotes(entry.id, { source: entry.liveSource, when: boundary.when }); }
       }
-      for (const [id, entry] of this.tracks) if (entry.continuous && this._nativeLive(this.getState().tracks.find(track => track.id === id))) {
-        try { this.host.transportInstrument(id, { ...clock, when: clock.contextTime + .005, playing: true }); } catch (error) { this.onStatus(error.message); }
+      for (const [id, entry] of this.tracks) if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(this.getState().tracks.find(track => track.id === id))) {
+        try { this.host.transportInstrument(id, { ...clock, when: clock.contextTime + (entry.adapter?.voiceEffectsClock ? 0 : .005), playing: true }); } catch (error) { this.onStatus(error.message); }
       }
     }
     stop() {
@@ -182,7 +182,7 @@
         if (this._clockDriven(track, entry)) { this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
         this.tracks.set(track.id, entry);
         if (entry.live) entry.liveSource = this._newSource(entry);
-        if (entry.continuous && this._nativeLive(track)) this.host.transportInstrument(track.id, { ...this.audio.getTransport(), playing: true });
+        if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(track)) this.host.transportInstrument(track.id, { ...this.audio.getTransport(), playing: true });
         this.catchHeld = true; this._tick();
       } catch (error) { if (this.active) this.onStatus(error.message); }
     }
@@ -210,7 +210,7 @@
       try {
         for (const track of state.tracks) {
           const entry = this.tracks.get(track.id); if (!entry) continue;
-          if (entry.continuous && this._nativeLive(track)) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
+          if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(track)) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
             const key = [clock.revision, segment.cycle, track.id, 'transport'].join(':');
             if (!this.scheduled.has(key)) { this.host.transportInstrument(track.id, { ...clock, beat: segment.start, when: segment.when, playing: true }); this.scheduled.set(key, segment.when); }
           }
@@ -266,7 +266,7 @@
         const audibleBeat = Math.max(beat, segment.start, clip.start), when = Math.max(clock.contextTime + .004, segment.when + (audibleBeat - segment.start) * 60 / clock.tempo);
         const remaining = (end - audibleBeat) * 60 / clock.tempo - Math.max(0, when - (segment.when + (audibleBeat - segment.start) * 60 / clock.tempo));
         if (remaining <= .0001) continue;
-        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, durationSeconds: remaining, source, ...(note.locks ? { locks: { ...note.locks } } : {}) });
+        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, beat: audibleBeat, tempo: clock.tempo, durationSeconds: remaining, source, ...(note.locks ? { locks: { ...note.locks } } : {}) });
         if (token !== false) this.scheduled.set(key, when);
         }
       }

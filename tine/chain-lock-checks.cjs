@@ -33,12 +33,12 @@ const html = read('tine/app.html').replace('<!-- STYLES -->', '<style>' + read('
       const successor = M.nextSequenceFrame(removed, { chain: true, entryId: 'b', entry: 1, repeat: 1 });
       return { version: original.version, originalValid: M.validateProject(original), migratedValid: M.validateProject(migrated), migratedChain: migrated.state.chain, migratedLocks: migrated.bankLocks.flat(2).every(locks => Object.keys(locks).length === 0), invalid, packet, noMutation: before === after, successor, explicit: app.getSequencerPattern({ scope: 'pattern' }), voice: app.getSequencerPattern({ scope: 'voice', voice: 0 }), sequenceLoop: app.sequenceLoop };
     });
-    assert.equal(schema.version, 4); assert(schema.originalValid && schema.migratedValid && schema.migratedLocks && schema.noMutation);
+    assert.equal(schema.version, 5); assert(schema.originalValid && schema.migratedValid && schema.migratedLocks && schema.noMutation);
     assert.deepEqual(schema.migratedChain, { enabled: false, loop: true, entries: [] }); assert(schema.invalid.every(valid => valid === false));
     assert.equal(schema.packet.lengthBeats, 16); assert.deepEqual(schema.packet.notes.map(note => note.beat), [0, 4, 8.3, 12]);
     assert.deepEqual(schema.packet.notes.filter(note => note.locks).map(note => note.locks.cutoff), [300, 300]); assert.equal(schema.explicit.lengthBeats, 4); assert.equal(schema.voice.lengthBeats, 4); assert.equal(schema.sequenceLoop, false);
     assert.equal(schema.successor.entryId, 'c');
-    passed.push('Strict v4 validation, v3 migration, pure chain compilation, repeats, swing and canonical note locks');
+    passed.push('Strict v5 validation, v3 migration, pure chain compilation, repeats, swing and canonical note locks');
 
     // Per-hit cutoff must shape the entire resonator, not merely its noise layer.
     const audio = await page.evaluate(async () => {

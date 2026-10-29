@@ -68,6 +68,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['buses.css', 'bus-schema-checks.cjs', 'bus-routing-checks.cjs', 'bus-review-checks.cjs', 'bus-browser-checks.cjs', 'bus-legacy-fixtures.json', 'bus-automation-checks.cjs']
     sources += ['preamp.css', 'SAUTE-MODELS.md', 'preamp-checks.cjs', 'preamp-project-checks.cjs', 'preamp-review-checks.cjs', 'preamp-browser-checks.cjs']
     sources += ['track-eq.css', 'track-eq-checks.cjs', 'track-eq-project-checks.cjs', 'track-eq-review-checks.cjs', 'track-eq-browser-checks.cjs']
+    sources += ['voice-effect-clock-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.

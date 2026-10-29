@@ -164,8 +164,15 @@
     };
   }
 
+  function normalizeVoiceEffects(value, strict = false) {
+    if (window.KitchenVoiceEffects) return window.KitchenVoiceEffects.normalizeSlots(value, { strict });
+    if (value === undefined || Array.isArray(value) && value.length === 2 && value.every(slot => slot === null)) return [null, null];
+    throw new Error('GALLEY voice effects have not loaded. Reopen the complete SIZZLE HTML.');
+  }
+
   function ensureTrack(track) {
     if (!isRecord(track)) throw new TypeError('A voice must be an object.');
+    if (track.galleyFx === undefined) track.galleyFx = [null, null];
     const initial = defaults(track);
     if (track.synth === undefined || track.synth === null) track.synth = initial;
     if (!isRecord(track.synth)) return track.synth;
@@ -268,7 +275,7 @@
     if (chain.enabled && !chain.entries.length) throw new Error('Add a pattern before enabling its chain.');
     return chain;
   }
-  window.GrainSynth = Object.freeze({ version: VERSION, descriptors, enums, defaults, ensureTrack, validate, toNormalized, fromNormalized, format, lockRanges, normalizeLocks, applyLocks });
+  window.GrainSynth = Object.freeze({ version: VERSION, descriptors, enums, defaults, ensureTrack, normalizeVoiceEffects, validate, toNormalized, fromNormalized, format, lockRanges, normalizeLocks, applyLocks });
   window.GrainSequence = Object.freeze({
     emptyChain: () => ({ enabled: false, loop: true, entries: [] }),
     emptyLocks: banks => banks.map(pattern => pattern.map(steps => steps.map(() => ({})))),

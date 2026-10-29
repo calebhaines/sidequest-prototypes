@@ -303,3 +303,12 @@ LEAVEN uses native app ID `proof` and one pitched voice, `synth`. Its Patterns e
 MARINADE uses native app ID `marinade` and one polyphonic pitched voice, `synth`. Both source bays receive finite interleaved stereo PCM of up to 20 seconds; destination IDs are the strings `a` and `b`. The adapter validates duration and replacement before analysis, then rechecks the destination and cancellation before committing. Spectral source data and the complete patch survive native portable projects and GALLEY snapshots.
 
 Native note sequences export realized notes with swing and deterministic probability applied once. Received patterns remain intact in the `musicLabPattern` overlay and play directly, with every source voice mapped explicitly to `synth`. Live scheduling supports timestamped source-specific cancellation; shared transport updates the beat clock without starting a second native sequence for incoming note clips. GALLEY printing uses the same engine with native-rate Float32 PCM, keeping the source patch and audio available for Edit source, Update audio and Restore notes.
+
+## Percussion voice inserts
+
+`voice-effects.js` and `voice-effects.css` provide two independent GALLEY inserts
+per SIZZLE, CLATTER, HOTPLATE or BATTER voice. The shared build helpers embed
+GALLEY’s canonical catalogs and DSP before each app starts, without external
+assets. Editable native archives include those sources in `shared/galley-effects/`.
+See [VOICE-EFFECTS.md](VOICE-EFFECTS.md) for routing, clocks, lifecycle, fallback
+and editor integration.

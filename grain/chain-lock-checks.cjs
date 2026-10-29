@@ -34,7 +34,7 @@ function wavDifference(a, b, from, to) {
     page.setDefaultTimeout(15000); page.on('pageerror', error => errors.push(error.message));
     await page.goto(url); await page.waitForFunction(() => window.GrainApp);
     const initial = await project(page);
-    assert.equal(initial.version, 4); assert.equal(initial.chain.enabled, false);
+    assert.equal(initial.version, 5); assert.equal(initial.chain.enabled, false);
     assert(initial.bankLocks.flat(2).every(lock => Object.keys(lock).length === 0));
     const legacy = JSON.parse(JSON.stringify(initial)); legacy.version = 3; delete legacy.chain; delete legacy.bankLocks;
     await load(page, legacy); assert.deepEqual((await project(page)).state, initial.state);

@@ -109,6 +109,9 @@ export interface SynthArchitecture {
   };
 }
 
+export type GalleyFxSlot = { type: string; params: Record<string, number | string | boolean> } | null;
+export type GalleyFxSlots = [GalleyFxSlot, GalleyFxSlot];
+
 export interface SoundParams {
   name: string;
   type: VoiceType;
@@ -137,6 +140,8 @@ export interface SoundParams {
   };
   mix: { volume: number; pan: number };
   architecture?: SynthArchitecture;
+  /** Two independent serial GALLEY inserts, after this voice’s native synthesis. */
+  galleyFx?: GalleyFxSlots;
 }
 
 export interface Preset {

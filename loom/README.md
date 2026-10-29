@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.18.0.
+SERVICE is version 1.0.0; GALLEY is version 1.19.0.
 
 ## Making a piece
 
@@ -355,6 +355,41 @@ is unavailable, keep a WAV or packet for the next session.
 | STRAINER | Multimode filtering with clean, ladder, diode, and comb resonance; input envelope following, synced modulation, and stereo motion |
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
+
+### Two GALLEY inserts per percussion voice
+
+SIZZLE, CLATTER and HOTPLATE each have eight voices; BATTER has twelve. Every
+voice has two independent serial inserts, available through two compact slot
+buttons in its existing voice editor. All fifteen GALLEY effects use the same
+canonical catalog, parameter definitions, recipes and DSP, including complete
+BROILER, BUTTER, SAUTÉ, GLAZE and SCALES processing. They do not consume GALLEY's
+four track insert slots.
+
+Voice patches save `galleyFx = [null, null]`, or two complete `{type, params}`
+snapshots. Earlier instrument projects inherit empty slots; malformed supplied
+settings are rejected. Changes support the instrument's Undo, recovery and
+project files, and are retained in GALLEY's instrument and printed-source states.
+Musical pattern packets continue to describe notes and step locks.
+
+Each voice sums its overlapping hits before its one effect chain. Other voices
+keep separate histories. The instrument's mastering follows these inserts.
+Processed voice samples, patterns, WAV exports and native GALLEY prints include
+the voice effects; explicitly raw sample/layer exports keep their original
+purpose. These effects are part of the instrument sound, so its recorded output
+already includes them. The GALLEY track inserts and built-in EQ follow that
+instrument output separately.
+
+The shared runtime is documented in `shared/VOICE-EFFECTS.md`. Repository builds
+read the canonical `loom/` effects; editable native source archives carry a
+frozen copy under `shared/galley-effects/`. Native/host clocks anchor synced
+processing without shifting note scheduling. AudioWorklet provides the live and
+OfflineAudioContext processing. The live ScriptProcessor fallback reports its
+256-frame delay; unsupported offline Worklet browsers report a wet-rendering
+error instead of exporting dry audio.
+
+Run `npm run check:voice-fx` and `npm run check:voice-fx-browser` for the shared
+DSP, native projects, independent audio, samples, hosted prints and interface
+checks. See each instrument README for its native test commands.
 
 ### Built-in four-knob track EQ
 
@@ -737,7 +772,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.18.0.
+font license notices. Version 1.19.0.
 
 ## Compatibility
 

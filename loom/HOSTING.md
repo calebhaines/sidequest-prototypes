@@ -160,3 +160,11 @@ isolated child project storage. Library audio uses planar PCM internally; native
 import/export contracts use interleaved stereo. Bundling the shared Samples module
 handles that conversion and supplies the complete interface. See
 [shared/README.md](../shared/README.md) in the repository for the common contract.
+
+Adapters with persistent per-voice effects may expose `voiceEffectsClock: true`
+to receive transport anchors on note-only tracks as well as native Live tracks.
+GALLEY forwards Stop, seek revisions and queued loop-boundary clocks without
+starting a second native sequencer. Implement `transport(clock)` to synchronize
+modulation and clear old histories on Stop or a seek; ordinary loop anchors
+retain natural tails. Scheduled notes also carry optional `beat` and `tempo`
+metadata alongside the unchanged `when` audio timestamp.

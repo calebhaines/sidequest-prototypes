@@ -197,7 +197,51 @@
     set(graph.dry.gain, 1 - space * .12); set(graph.wet.gain, space * .55);
     if (values.master !== undefined) set(graph.master.gain, clamp(values.master, 0, 1));
   }
-  function createEnvironment(context, graph, seed, offline = false) { return { context, graph, random: randomGenerator(seed), voices: new Set(), offline, stolen: 0 }; }
+  function createEnvironment(context, graph, seed, offline = false) { return { context, graph, random: randomGenerator(seed), voices: new Set(), offline, stolen: 0, voiceTracks: [], voiceEffects: null, explicitUntil: Array(8).fill(0) }; }
+  const hasVoiceEffects = tracks => (tracks || []).some(track => (track?.galleyFx || []).some(Boolean));
+  function syncVoiceBank(environment, tracks, tempo = 120) {
+    if (!environment || !window.KitchenVoiceEffects) return;
+    const bank = environment.voiceEffects ||= window.KitchenVoiceEffects.createBank(environment.context, environment.graph.input, { voiceCount: 8, tempo });
+    environment.voiceTracks = tracks || [];
+    const solo = environment.voiceTracks.some(track => track?.solo);
+    for (let index = 0; index < 8; index++) {
+      const track = environment.voiceTracks[index];
+      bank.setVoice(index, track?.galleyFx);
+      // Native M/S filters sequencer hits, not explicitly queued host notes or
+      // auditions. Keep their ring and bounded FX tail open through UI edits.
+      const explicit = environment.explicitUntil[index] > environment.context.currentTime;
+      bank.setAudible(index, !environment.pendingFxStops?.has(index) && (explicit || !!track && !track.mute && (!solo || track.solo)));
+    }
+    if (!environment.fxClock) environment.fxClock = { tempo, beat: 0, time: environment.context.currentTime || 0, playing: false };
+    bank.setClock(environment.fxClock);
+  }
+  async function prepareVoiceBank(environment, tracks, tempo = 120) {
+    if (!window.KitchenVoiceEffects) {
+      if (hasVoiceEffects(tracks)) throw new Error('GALLEY voice effects have not loaded.');
+      environment.voiceTracks = tracks || []; return;
+    }
+    // Live contexts are prepared once even while empty, so adding an effect
+    // later never sends its first strike through a temporary dry fallback.
+    if (!environment.offline || hasVoiceEffects(tracks)) await window.KitchenVoiceEffects.prepare(environment.context);
+    syncVoiceBank(environment, tracks, tempo);
+  }
+  function voiceIndex(environment, data, expression) {
+    const claim = index => {
+      if (!environment.voiceTracks[index]) {
+        environment.voiceTracks[index] = data;
+        environment.voiceEffects?.setAudible(index, !data?.mute && (!environment.voiceTracks.some(track => track?.solo) || data?.solo));
+      }
+      return index;
+    };
+    const key = /^voice-([0-7])$/.exec(expression.voiceKey || '');
+    if (key) return claim(Number(key[1]));
+    if (Number.isInteger(expression.voiceIndex) && expression.voiceIndex >= 0 && expression.voiceIndex < 8) return claim(expression.voiceIndex);
+    const found = environment.voiceTracks.indexOf(data); if (found >= 0) return found;
+    // Direct engine users can schedule a patch before supplying a full kit.
+    // Give its stable object identity a lane rather than silently sharing FX.
+    const available = environment.voiceTracks.findIndex(track => !track), index = available >= 0 ? available : environment.voiceTracks.length < 8 ? environment.voiceTracks.length : 0;
+    return claim(index);
+  }
   function fadeVoice(voice, at, duration = .01) {
     if (!voice || voice.disposed) return;
     voice.stolen = true;
@@ -267,11 +311,22 @@
       output.connect(shaper); shaper.connect(trim); output = trim; lockedNodes.push(shaper, trim);
     }
     if (processing) output.connect(bus);
-    bus.connect(panner); panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force, ...lockedNodes], disposed: false, stolen: false, modes };
+    const lane = voiceIndex(environment, data, expression);
+    if (environment.voiceEffects) environment.voiceEffects.setVoice(lane, data?.galleyFx);
+    if (expression.explicit) {
+      // Shared GALLEY racks advertise at most twenty seconds of serial tails.
+      // This conservative hold avoids constructing DSP just to query a tail
+      // on every live hit, and is cleared by a deliberate transport stop.
+      environment.explicitUntil[lane] = Math.max(environment.explicitUntil[lane], now + duration + 20);
+      environment.voiceEffects?.setAudible(lane, true);
+    }
+    bus.connect(panner);
+    const detachEffects = environment.voiceEffects?.connectSource?.(lane, panner);
+    if (!detachEffects) panner.connect(environment.voiceEffects ? environment.voiceEffects.input(lane) : graph.input);
+    const voice = { scopeSource: expression.source || 'native', track: data, voiceKey, voiceIndex: lane, explicit: !!expression.explicit, detachEffects, bus, volume, startTime: now, stopTime: now + duration, sources: [], nodes: [bus, panner, force, ...lockedNodes], disposed: false, stolen: false, modes };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
-    const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
+    const clean = () => { if (voice.disposed) return; voice.disposed = true; voice.detachEffects?.(); voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }); environment.voices.delete(voice); };
     let pending = 0;
     const source = (buffer, amount, directScale, offset = 0) => {
       const node = add(context.createBufferSource()), level = add(context.createGain()); node.buffer = buffer; level.gain.value = amount; node.connect(level); level.connect(force);
@@ -312,7 +367,7 @@
     const tracks = Array.isArray(state.tracks) ? state.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo);
     tracks.forEach((track, index) => {
       const hit = sequence && frame ? sequence.banks[frame.bank][index][step] : track.steps?.[step];
-      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, sequence && frame ? { locks: sequence.bankLocks[frame.bank][index][step], voiceKey: 'voice-' + index } : {});
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, sequence && frame ? { locks: sequence.bankLocks[frame.bank][index][step], voiceKey: 'voice-' + index, voiceIndex: index } : { voiceIndex: index });
     });
   }
   function encodeWav(audio) {
@@ -324,19 +379,19 @@
     return new Blob([buffer], { type: 'audio/wav' });
   }
   class TineEngine {
-    constructor() { this.context = null; this.graph = null; this.environment = null; this.running = false; this.state = null; this.onStep = null; this.currentStep = 0; this.nextNoteTime = 0; this.timer = null; this.worker = null; this.displayTimers = new Set(); this.generation = 0; this.values = { master: .8, drive: 0, space: .15 }; this._initPromise = null; this._disposingPromise = null; }
+    constructor() { this.context = null; this.graph = null; this.environment = null; this.running = false; this.state = null; this.onStep = null; this.currentStep = 0; this.nextNoteTime = 0; this.timer = null; this.worker = null; this.displayTimers = new Set(); this.generation = 0; this.values = { master: .8, drive: 0, space: .15 }; this._initPromise = null; this._disposingPromise = null; this._voiceTracks = []; this._voiceTempo = 120; this._voiceFxReady = false; }
     static inspectModes(track, sampleRate) { return inspectModes(track, sampleRate); }
     static inspectExciter(track) { return inspectExciter(track); }
     async init() {
       if (this._disposingPromise) await this._disposingPromise;
       if (this._initPromise) await this._initPromise;
-      if (!this.context) { this._initPromise = (async () => { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) throw new Error('This browser does not support Web Audio. Please use a current browser.'); try { this.context = new AudioContext({ latencyHint: 'interactive' }); } catch (_) { this.context = new AudioContext(); } this.graph = buildGraph(this.context, this.values); this.environment = createEnvironment(this.context, this.graph, Date.now()); })(); try { await this._initPromise; } catch (error) { this._initPromise = null; throw error; } }
+      if (!this.context) { this._initPromise = (async () => { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) throw new Error('This browser does not support Web Audio. Please use a current browser.'); try { this.context = new AudioContext({ latencyHint: 'interactive' }); } catch (_) { this.context = new AudioContext(); } this.graph = buildGraph(this.context, this.values); this.environment = createEnvironment(this.context, this.graph, Date.now(), typeof this.context.startRendering === 'function'); await prepareVoiceBank(this.environment, this._voiceTracks, this._voiceTempo); this._voiceFxReady = true; })(); try { await this._initPromise; } catch (error) { this._initPromise = null; throw error; } }
       if (this.context && this.context.state === 'suspended') await this.context.resume(); return this;
     }
     async start(state, onStep, sequenceProvider) {
-      const generation = ++this.generation; await this.init(); if (generation !== this.generation) return;
+      const generation = ++this.generation; this._voiceTracks = state?.tracks || []; this._voiceTempo = state?.bpm || 120; await this.init(); if (generation !== this.generation) return;
       this._stopTransport(); this.state = state || { bpm: 120, tracks: [] }; this.onStep = typeof onStep === 'function' ? onStep : null; this.sequenceProvider = typeof sequenceProvider === 'function' ? sequenceProvider : null; this.sequenceFrame = null; this.sequenceNeedsFrame = true; this.sequenceEnding = false; this.running = true; this.currentStep = 0; this.nextNoteTime = this.context.currentTime + .045;
-      this.values = { master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1), drive: clamp(this.state.drive || 0, 0, 1), space: clamp(this.state.space || 0, 0, 1) }; updateGraph(this.context, this.graph, this.values, false); this._schedule(); this._startTimer();
+      this.values = { master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1), drive: clamp(this.state.drive || 0, 0, 1), space: clamp(this.state.space || 0, 0, 1) }; updateGraph(this.context, this.graph, this.values, false); this.environment.pendingFxStops?.clear(); this.environment.voiceEffects?.reset(); syncVoiceBank(this.environment, this.state.tracks, this.state.bpm); this.followTransport({ tempo: this.state.bpm, beat: 0, time: this.nextNoteTime, playing: true, external: false }); this._schedule(); this._startTimer();
     }
     _startTimer() {
       if (typeof Worker === 'function' && typeof URL.createObjectURL === 'function') { let url; try { url = URL.createObjectURL(new Blob(['setInterval(function(){postMessage(0)},25);'], { type: 'application/javascript' })); this.worker = new Worker(url); this.worker.onmessage = () => this._schedule(); this.worker.onerror = () => { if (this.worker) this.worker.terminate(); this.worker = null; if (this.running && !this.timer) this.timer = setInterval(() => this._schedule(), 25); }; URL.revokeObjectURL(url); return; } catch (_) { if (url) URL.revokeObjectURL(url); } }
@@ -364,17 +419,69 @@
         this.nextNoteTime += stepLength(this.state, step); advance();
       }
     }
-    _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); if (this.context) stopVoices(this.environment, this.context.currentTime); }
+    _stopTransport() { this._sourceCuts?.clear(); this.running = false; if (this.timer) clearInterval(this.timer); this.timer = null; if (this.worker) this.worker.terminate(); this.worker = null; this.displayTimers.forEach(timer => clearTimeout(timer)); this.displayTimers.clear(); this.environment?.explicitUntil.fill(0); if (this.context) stopVoices(this.environment, this.context.currentTime); if (this.environment?.voiceEffects) { this.environment.pendingFxStops = new Set(Array.from({ length: 8 }, (_, index) => index)); for (let index = 0; index < 8; index++) this.environment.voiceEffects.setAudible(index, false); this.environment.voiceEffects.reset(undefined, this.context.currentTime + .016); } this.followTransport({ tempo: this._voiceTempo, beat: 0, time: this.context?.currentTime || 0, playing: false, external: false }); }
     stop() { this.generation++; this._stopTransport(); this.currentStep = 0; }
-    async preview(track, bpm = 120) { const generation = this.generation; await this.init(); if (generation !== this.generation || !this.environment || this.context.state === 'closed') return; synthesize(this.environment, track, this.context.currentTime + .005, false); }
+    async preview(track, bpm = 120) { const generation = this.generation; let index = this._voiceTracks.indexOf(track); if (index < 0) { index = 0; this._voiceTracks = [track]; } this._voiceTempo = bpm; await this.init(); await this.setVoiceEffects(this._voiceTracks, bpm); if (generation !== this.generation || !this.environment || this.context.state === 'closed') return; if (this.environment.pendingFxStops?.delete(index)) this.environment.voiceEffects?.reset(index); this.environment.voiceEffects?.setAudible(index, true); return synthesize(this.environment, track, this.context.currentTime + .005, false, { voiceIndex: index, explicit: true }); }
     setMasterVolume(value) { this.values.master = clamp(value, 0, 1); if (this.context && this.graph) this.graph.master.gain.setTargetAtTime(this.values.master, this.context.currentTime, .015); }
     setEffects(values) { values = values || {}; if (values.drive !== undefined) this.values.drive = clamp(values.drive, 0, 1); if (values.space !== undefined) this.values.space = clamp(values.space, 0, 1); if (this.context && this.graph) updateGraph(this.context, this.graph, this.values, false); }
+    async setVoiceEffects(tracks, tempo = this._voiceTempo) {
+      this._voiceTracks = Array.isArray(tracks) ? tracks : []; this._voiceTempo = clamp(tempo || 120, 5, 1920);
+      if (!this.environment || !this.context) return;
+      const environment = this.environment;
+      if (!this._voiceFxReady) { await prepareVoiceBank(environment, this._voiceTracks, this._voiceTempo); if (environment === this.environment) this._voiceFxReady = true; }
+      if (environment === this.environment) {
+        const prior = environment.fxClock;
+        if (prior && !this._externalVoiceClock && prior.tempo !== this._voiceTempo) {
+          const time = this.context.currentTime;
+          environment.fxClock = { tempo: this._voiceTempo, beat: prior.beat + (prior.playing ? Math.max(0, time - prior.time) * prior.tempo / 60 : 0), time, playing: prior.playing };
+        }
+        syncVoiceBank(environment, this._voiceTracks, this._voiceTempo);
+      }
+    }
+    followTransport(clock = {}) {
+      this._externalVoiceClock = clock.external !== false;
+      const globalClock = this._externalVoiceClock && clock.noteAnchor !== true;
+      const previous = this._voiceTransportClock;
+      const revisionChanged = globalClock && previous && Number.isFinite(clock.revision) && clock.revision !== previous.revision;
+      const stopped = globalClock && clock.playing === false && previous?.playing !== false;
+      if (globalClock) this._voiceTransportClock = { ...previous, ...clock, revision: Number.isFinite(clock.revision) ? clock.revision : previous?.revision };
+      if (!this.environment || !this.context) return;
+      const time = Number.isFinite(clock.audioTime) ? clock.audioTime : Number.isFinite(clock.time) ? clock.time : Number.isFinite(clock.when) ? clock.when : this.context.currentTime;
+      const next = { tempo: Number.isFinite(clock.tempo) ? clock.tempo : Number.isFinite(clock.bpm) ? clock.bpm : this._voiceTempo, beat: Number.isFinite(clock.beat) ? clock.beat : 0, time, playing: clock.playing !== false };
+      if (stopped || revisionChanged) {
+        const at = Math.max(this.context.currentTime, time);
+        this.environment.explicitUntil.fill(0);
+        // A scoped cancellation normally keeps its short native release.
+        // At a global discontinuity that release must not refill the freshly
+        // cleared rack and create a new delayed copy of an old-epoch hit.
+        // Untouched/newly queued voices have no fadeAt and remain intact.
+        for (const voice of this.environment.voices) {
+          if (voice.disposed || !Number.isFinite(voice.fadeAt) || voice.fadeAt > at) continue;
+          if (!this.environment.voiceEffects || this.environment.voiceEffects.input(voice.voiceIndex) === this.environment.graph.input) continue;
+          voice.bus.gain.cancelScheduledValues(at); voice.bus.gain.setValueAtTime(0, at);
+          voice.stopTime = Math.min(voice.stopTime, at); voice.stolen = true;
+          for (const source of voice.sources) try { source.stop(at); } catch (_) {}
+        }
+        if (stopped) {
+          // This is a global Stop, unlike source-scoped note cancellation.
+          // Close the wet output while the native note buses finish fading,
+          // then discard their last input so no old delay can reappear later.
+          this.environment.pendingFxStops = new Set(Array.from({ length: 8 }, (_, index) => index));
+          for (let index = 0; index < 8; index++) this.environment.voiceEffects?.setAudible(index, false);
+          this.environment.voiceEffects?.reset(undefined, at + .016);
+        } else this.environment.voiceEffects?.reset(undefined, at);
+      }
+      this.environment.fxClock = next; this.environment.voiceEffects?.setClock(next);
+    }
     // The Music Lab note scheduler uses the same synthesis graph as the native sequencer.
     scheduleNativeNote(track, when, options = {}) {
       if (!this.context || !this.environment) throw new Error('Prepare the instrument before scheduling notes.');
       if (!Number.isFinite(when)) throw new Error('Provide an audio clock timestamp.');
       if (this._sourceCuts?.has(options.source) && when >= this._sourceCuts.get(options.source)) return null;
-      return synthesize(this.environment, track, when, options.velocity >= .95, options);
+      const index = voiceIndex(this.environment, track, options);
+      if (this.environment.pendingFxStops?.delete(index)) { this.environment.voiceEffects?.reset(index); this.environment.voiceEffects?.setAudible(index, !track?.mute && (!this._voiceTracks.some(track => track?.solo) || track?.solo)); }
+      if (Number.isFinite(options.beat)) this.followTransport({ tempo: this._externalVoiceClock ? this._voiceTransportClock?.tempo || this._voiceTransportClock?.bpm || this.environment.fxClock?.tempo || options.tempo : options.tempo || this._voiceTempo, beat: options.beat, time: when, playing: true, external: !!this._externalVoiceClock, noteAnchor: true });
+      return synthesize(this.environment, track, when, options.velocity >= .95, { ...options, voiceIndex: index, explicit: true });
     }
     cancelNativeNotes({ source, when } = {}) {
       if (!this.context || !this.environment) return;
@@ -402,10 +509,12 @@
       const sampleRate = 48000, context = new Offline(2, Math.max(1, Math.ceil((duration + tail) * sampleRate)), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master ?? this.values.master, drive: snapshot.drive || 0, space: snapshot.space || 0 });
       const environment = createEnvironment(context, graph, 0x5A17C0DE, true);
+      await prepareVoiceBank(environment, snapshot.tracks, snapshot.bpm || 120); check();
+      environment.voiceEffects?.setClock({ tempo: snapshot.bpm || 120, beat: 0, time: 0, playing: true });
       for (let i = 0; i < events.length; i++) {
         const event = events[i], track = snapshot.tracks[event.voice];
         if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
-        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, options.nativeHits ? { ...event, velocity: undefined } : event);
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, options.nativeHits ? { ...event, voiceIndex: event.voice, explicit: true, velocity: undefined } : { ...event, voiceIndex: event.voice, explicit: true });
         if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       const end = duration + tail, fade = Math.min(.03, end / 2);
@@ -418,15 +527,18 @@
       checkCancelled();
       const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OfflineAudioContext) throw new Error('WAV rendering is unavailable in this browser.');
       const snapshot = JSON.parse(JSON.stringify(state || { bpm: 120, tracks: [] })), sampleRate = 44100, hit = options.scope === 'hit', bars = Math.max(1, Math.min(16, Math.round(Number(options.bars) || 4))), duration = hit ? 0 : bars * 240 / clamp(snapshot.bpm || 120, 40, 240), tracks = Array.isArray(snapshot.tracks) ? snapshot.tracks.slice(0, 8) : [], hasSolo = tracks.some(track => track.solo); let longest = 0;
-      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.slice(0, sequenceLength(snapshot)).some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035); });
-      const naturalTail = Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17), extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0)), tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail, context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
+      tracks.forEach(data => { if (data.mute || hasSolo && !data.solo || !data.steps || !data.steps.slice(0, sequenceLength(snapshot)).some(Boolean)) return; const t = readTrack(data); if (t.level <= 0 || t.mallet <= 0 && t.noise <= 0) return; longest = Math.max(longest, t.decay + Math.max(t.mallet > 0 ? inspectExciter(t).duration : 0, t.noise > 0 ? t.noiseAttack + t.noiseDecay + .008 : 0) + .035 + (window.KitchenVoiceEffects?.tailTime(data.galleyFx, snapshot.bpm || 120) || 0)); });
+      const naturalTail = Math.min(15, Math.max(.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + .17)), extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0)), tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail, context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master === undefined ? this.values.master : snapshot.master, drive: snapshot.drive || 0, space: snapshot.space || 0 }), environment = createEnvironment(context, graph, 0x5A17C0DE, true);
+      await prepareVoiceBank(environment, snapshot.tracks, snapshot.bpm || 120); checkCancelled();
+      environment.voiceEffects?.setClock({ tempo: snapshot.bpm || 120, beat: 0, time: .015, playing: !hit });
       let time = .015; for (let i = 0; i < (hit ? 1 : bars * 16); i++) { if (i % 16 === 0) { checkCancelled(); if (options.signal) await new Promise(resolve => setTimeout(resolve, 0)); checkCancelled(); } const step = i % sequenceLength(snapshot); playStep(environment, snapshot, step, time); time += stepLength(snapshot, step); }
       graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - .12); graph.master.gain.linearRampToValueAtTime(0, duration + tail); const rendered = await context.startRendering(); checkCancelled(); return encodeWav(rendered);
     }
     async dispose() {
       if (this._disposingPromise) return this._disposingPromise; this.stop(); const context = this.context;
-      this._disposingPromise = (async () => { try { if (context && context.state !== 'closed') await context.close(); } finally { if (this.context === context) { this.context = null; this.graph = null; this.environment = null; this._initPromise = null; } } })();
+      this.environment?.voiceEffects?.dispose();
+      this._disposingPromise = (async () => { try { if (context && context.state !== 'closed') await context.close(); } finally { if (this.context === context) { this.context = null; this.graph = null; this.environment = null; this._initPromise = null; this._voiceFxReady = false; } } })();
       try { await this._disposingPromise; } finally { this._disposingPromise = null; }
     }
   }

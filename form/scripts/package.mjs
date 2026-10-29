@@ -10,7 +10,7 @@ const dist = resolve(process.env.FORM_DIST_DIR || resolve(root, "dist"));
 const release = resolve(process.env.FORM_RELEASE_DIR || resolve(root, "releases"));
 const exchangeDirectory = [resolve(root,"shared"),resolve(root,"../shared")].find(path=>existsSync(resolve(path,"bundle_audio_exchange.mjs")));
 if(!exchangeDirectory)throw Error("Missing Music Lab audio exchange sources.");
-const {embedExchange,exchangeFiles}=await import(pathToFileURL(resolve(exchangeDirectory,"bundle_audio_exchange.mjs")).href);
+const {embedExchange,exchangeFiles,voiceEffectSources}=await import(pathToFileURL(resolve(exchangeDirectory,"bundle_audio_exchange.mjs")).href);
 await mkdir(release, { recursive: true });
 let html = await readFile(resolve(dist, "index.html"), "utf8");
 const scriptPath = html.match(/<script[^>]+src="([^"]+)"[^>]*><\/script>/)?.[1];
@@ -139,6 +139,7 @@ await writeFile(
 );
 const sourceFiles = [];
 for(const name of exchangeFiles)sourceFiles.push({name:"shared/"+name,data:await readFile(resolve(exchangeDirectory,name))});
+sourceFiles.push(...await voiceEffectSources(root));
 for (const folder of ["src", "public", "scripts"])
   sourceFiles.push(...(await walk(resolve(root, folder), root)));
 for (const name of [
@@ -154,7 +155,7 @@ for (const name of [
 ])
   sourceFiles.push({ name, data: await readFile(resolve(root, name)) });
 await writeFile(resolve(release, "FORM-source.zip"), makeZip(sourceFiles));
-const startHere = `HOTPLATE 3.1 — Kitchen
+const startHere = `HOTPLATE 3.2 — Kitchen
 
 1. Extract this ZIP to a folder.
 2. Open FORM.html in a current Chrome, Edge, Firefox, or Safari browser.
@@ -175,6 +176,10 @@ for ordered complete patterns, repeats, loop/once, and entry controls. Step
 details add cutoff, resonance, decay, heat, and pan overrides for one strike;
 uncheck Override to inherit the saved burner. Export downloads samples,
 complete kits, or WAVs; the main groove WAV follows an enabled chain.
+
+Each voice has two GALLEY insert slots. Open a slot in the selected voice editor
+to choose any of the fifteen effects, edit controls and recipes, bypass, reset
+or change its order. Effects stay with the voice patch and processed exports.
 
 Audition layer A/B/C hears one engine without changing your saved mix.
 Use Undo to restore cleared patterns, recipe changes, and edited steps.

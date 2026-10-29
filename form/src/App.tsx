@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import {
   useCallback,
   useEffect,
@@ -48,6 +49,7 @@ import {
   PRESETS,
   buildDefaultKit,
   renderSound,
+  renderVoiceStereo,
   renderPattern,
   renderNativeEvents,
   renderExactPatternEvents,
@@ -59,12 +61,14 @@ import {
   createLayerPreview,
 } from "./audio";
 import type {
+  GalleyFxSlots,
   SoundParams,
   VoiceType,
   SynthArchitecture,
   LayerId,
   GrainSample,
 } from "./types";
+import { drySignature, hasVoiceFx, validVoiceFx, voiceFxTail, type VoiceFxChange } from "./voice-effects";
 import LayerLab from "./LayerLab";
 import BurnerPanel from "./BurnerPanel";
 import HotplateSequencer, { LANE_COLORS, type SequenceProject } from "./HotplateSequencer";
@@ -133,6 +137,7 @@ function validSound(input: unknown): input is SoundParams {
   if (!input || typeof input !== "object") return false;
   const s = input as SoundParams;
   return (
+    validVoiceFx(s.galleyFx) &&
     typeof s.name === "string" &&
     s.name.length <= 48 &&
     TYPES.includes(s.type) &&
@@ -273,12 +278,12 @@ function renderProjectPattern(p: Project, solo: number | null, options: PatternA
           durations.set(durationKey, frames);
         }
         const rate = 2 ** (Math.max(-48, Math.min(48, event.pitch ?? 0)) / 12);
-        finalFrame = Math.max(finalFrame, Math.round(event.at * sampleRate) + Math.ceil(frames / rate));
+        finalFrame = Math.max(finalFrame, Math.round(event.at * sampleRate) + Math.ceil(frames / rate) + Math.ceil(voiceFxTail(p.sounds[event.voice].galleyFx, p.bpm, sampleRate) * sampleRate));
       }
       tailSeconds = Math.max(0, finalFrame / sampleRate - source.durationSeconds);
       if (tailSeconds > 15) throw new Error(`These down-pitched notes need ${tailSeconds.toFixed(1)} seconds of decay after the pattern. Full-tail export supports up to 15 seconds. Raise their pitch, or choose a shorter effect tail in the Samples panel.`);
     }
-    channels = renderExactPatternEvents(p.sounds, source.events, { sampleRate, durationSeconds: source.durationSeconds, tailSeconds, master: 1 });
+    channels = renderExactPatternEvents(p.sounds, source.events, { sampleRate, durationSeconds: source.durationSeconds, tailSeconds, master: 1, tempo: p.bpm });
     bars = source.lengthBeats * repetitions / 4;
   } else if (options.scope === "chain" || options.scope === undefined && p.chain?.enabled) {
     const source = sequencerEvents(p, { scope: options.scope, repetitions, solo });
@@ -287,12 +292,12 @@ function renderProjectPattern(p: Project, solo: number | null, options: PatternA
     let tailSeconds = options.tailSeconds ?? 0;
     if (options.tailSeconds === undefined && options.tail) {
       let end = source.durationSeconds; const durations = new Map<string, number>();
-      for (const event of source.events) { const key = event.voice + ":" + (event.locks?.decay ?? "base"); let duration = durations.get(key); if (duration === undefined) { duration = renderSound(applySoundLocks(p.sounds[event.voice], event.locks), sampleRate).length / sampleRate; durations.set(key, duration); } end = Math.max(end, event.at + duration / 2 ** (event.pitch / 12)); }
+      for (const event of source.events) { const key = event.voice + ":" + (event.locks?.decay ?? "base"); let duration = durations.get(key); if (duration === undefined) { duration = renderSound(applySoundLocks(p.sounds[event.voice], event.locks), sampleRate).length / sampleRate; durations.set(key, duration); } end = Math.max(end, event.at + duration / 2 ** (event.pitch / 12) + voiceFxTail(p.sounds[event.voice].galleyFx, p.bpm, sampleRate)); }
       tailSeconds = Math.max(0, end - source.durationSeconds);
       if (tailSeconds > 15) throw new Error(`These down-pitched notes need ${tailSeconds.toFixed(1)} seconds of decay after the chain. Full-tail export supports up to 15 seconds. Raise their pitch, or choose a shorter effect tail in the Samples panel.`);
     }
     if (source.durationSeconds + tailSeconds > 120) throw new Error("The HOTPLATE chain plus its effect tail exceeds 120 seconds. Shorten the chain or request a smaller tail.");
-    channels = renderExactPatternEvents(p.sounds, source.events, { durationSeconds: source.durationSeconds, sampleRate, tailSeconds, master: 1 });
+    channels = renderExactPatternEvents(p.sounds, source.events, { durationSeconds: source.durationSeconds, sampleRate, tailSeconds, master: 1, tempo: p.bpm });
     bars = source.steps / 16;
   } else {
     channels = renderPattern(p.sounds.map((params, index) => ({ params, steps: p.steps[index], muted: p.muted[index] || (solo !== null && solo !== index), velocities: p.steps[index].map((_, step) => step % 4 === 0 ? 1 : .86), stepDetails: p.stepDetails?.[index] })), p.bpm, { sampleRate, swing: p.swing / 100, bars: repetitions, tail: options.tail === true || (options.tailSeconds ?? 0) > 0 });
@@ -438,7 +443,7 @@ export default function App() {
   const [recipeTempo, setRecipeTempo] = useState(true);
   const [fill, setFill] = useState(false);
   const [transportRevision, setTransportRevision] = useState(0);
-  const resumePosition = useRef({ step: 0, cycle: 0, run: 0, boundary: false });
+  const resumePosition = useRef<{ step: number; cycle: number; run: number; boundary: boolean; fxBeat?: number }>({ step: 0, cycle: 0, run: 0, boundary: false });
   const transportRequest = useRef(0);
   const [scope, setScope] = useState<"waveform" | "spectrum">("waveform");
   const [zoom, setZoom] = useState(1);
@@ -489,7 +494,7 @@ export default function App() {
   );
   const soundSignature = useMemo(() => JSON.stringify(sound), [sound]);
   const dspSignature = useMemo(
-    () => JSON.stringify({ ...sound, name: "" }),
+    () => drySignature({ ...sound, name: "" }),
     [sound],
   );
   const samples = useMemo(() => renderSound(sound, 44100), [dspSignature]);
@@ -537,17 +542,25 @@ export default function App() {
     window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", finish); window.addEventListener("blur", finish);
     return () => { window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", finish); window.removeEventListener("blur", finish); };
   }, []);
+  const fxGesture = useRef<{ token: unknown; id: number }>({ token: null, id: 0 });
+  const changeVoiceFx = useCallback((slots: GalleyFxSlots, meta: VoiceFxChange) => {
+    const token = meta.gesture ?? Symbol();
+    if (fxGesture.current.token !== token) fxGesture.current = { token, id: ++rangeGesture.current.next };
+    flushSync(() => dispatch({ type: "change", gesture: fxGesture.current.id, update: p => ({ ...p, sounds: p.sounds.map((voice, index) => index === selected ? { ...voice, galleyFx: clone(slots) } : voice) }) }));
+  }, [selected]);
   const closeModal = useCallback(() => setModal(null), []);
   const engine = useCallback(() => {
     if (!engineRef.current) {
       engineRef.current = new AudioEngine();
       engineRef.current.setMasterVolume(0.72 * latest.current.masterVolume);
+      engineRef.current.setVoiceState(latest.current.project.sounds, latest.current.project.bpm);
     }
     return engineRef.current;
   }, []);
   useEffect(() => {
     engineRef.current?.setMasterVolume(0.72 * masterVolume);
   }, [masterVolume]);
+  useEffect(() => { engineRef.current?.setVoiceState(project.sounds, project.bpm); }, [project.sounds, project.bpm]);
   const audition = useCallback(
     (index: number, params?: SoundParams, velocity = 1) => {
       try {
@@ -555,7 +568,7 @@ export default function App() {
         const voice = clone(params || p.sounds[index]);
         const audio = engine();
         Promise.resolve(audio.resume())
-          .then(() => audio.play(voice, velocity))
+          .then(() => audio.play(voice, velocity, undefined, 0, undefined, index))
           .catch(() =>
             notify("Audio could not start. Try your browser’s sound settings."),
           );
@@ -687,6 +700,7 @@ export default function App() {
     let active = runs[runIndex], chained = initial.chain?.enabled === true;
     let nextStep = resumePosition.current.step % active.pattern.length, cycle = resumePosition.current.cycle;
     let pendingBoundary = resumePosition.current.boundary, activeBpm = initial.bpm, activeSwing = initial.swing, nextTime = 0;
+    let fxBeat = resumePosition.current.fxBeat ?? (cycle * active.pattern.length + nextStep) / 4;
     const indicators = new Set<ReturnType<typeof setTimeout>>();
     const activityVersion = Array(8).fill(0);
     const activityTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -720,9 +734,10 @@ export default function App() {
         }
       } else runIndex = 0;
       active = runs[runIndex]; activeBpm = p.bpm; activeSwing = p.swing; pendingBoundary = false;
+      audio.setVoiceClock({ tempo: activeBpm, beat: fxBeat, time: nextTime, playing: true });
       return true;
     };
-    const advanceStep = () => { nextStep++; if (nextStep >= active.pattern.length) { nextStep = 0; cycle++; pendingBoundary = true; } };
+    const advanceStep = () => { fxBeat += .25; nextStep++; if (nextStep >= active.pattern.length) { nextStep = 0; cycle++; pendingBoundary = true; } };
     const preloads = new Map<string, SoundParams>();
     initial.sounds.forEach(sound => preloads.set(JSON.stringify(sound), sound));
     for (const run of runs) run.pattern.stepDetails.forEach((row, voice) => row.forEach(detail => {
@@ -735,6 +750,7 @@ export default function App() {
       if (latest.current.project.musicLabPattern && patternInstrument) { patternInstrument.startPattern(); return; }
       const advance = Math.max(0, ...active.pattern.stepDetails.flat().map(detail => -detail.timing)) * 15 / activeBpm;
       nextTime = audio.now() + Math.max(.05, advance + .04);
+      audio.setVoiceClock({ tempo: activeBpm, beat: fxBeat, time: nextTime, playing: true });
       const schedule = () => {
         if (schedulingDone) return;
         let skipped = 0;
@@ -746,13 +762,13 @@ export default function App() {
         while (nextTime < audio.now() + .18 && scheduled++ < 32) {
           if (!latchBoundary()) return;
           const { project: p, solo: soloIndex } = latest.current;
-          const step = nextStep, at = nextTime, eventCycle = cycle, eventRun = runIndex, eventPattern = active;
+          const step = nextStep, at = nextTime, eventCycle = cycle, eventRun = runIndex, eventPattern = active, eventFxBeat = fxBeat;
           const events = eventsForStep(active.pattern.steps, active.pattern.stepDetails, step, cycle, activeBpm, activeSwing, 0x48504c54, latest.current.fill);
           const activityGroups = new Map<number, number[]>();
           for (const event of events) if (!p.muted[event.voice] && (soloIndex === null || soloIndex === event.voice)) {
             const activityAt = Math.round((at + event.offset) * 100000) / 100000;
             const group = activityGroups.get(activityAt) ?? []; if (!group.includes(event.voice)) group.push(event.voice); activityGroups.set(activityAt, group);
-            audio.play(p.sounds[event.voice], event.velocity, at + event.offset, event.pitch, event.locks).catch(() => { setIsPlaying(false); notify("Playback paused because audio became unavailable."); });
+            audio.play(p.sounds[event.voice], event.velocity, at + event.offset, event.pitch, event.locks, event.voice).catch(() => { setIsPlaying(false); notify("Playback paused because audio became unavailable."); });
           }
           for (const [activityAt, voices] of activityGroups) {
             const onset = setTimeout(() => {
@@ -769,7 +785,7 @@ export default function App() {
             if (!cancelled) {
               setCurrentStep(step); setSequencePosition({ bank: eventPattern.bank, entry: eventPattern.entry, repeat: eventPattern.repeat });
               const following = (step + 1) % eventPattern.pattern.length;
-              resumePosition.current = { step: following, cycle: eventCycle + (following === 0 ? 1 : 0), run: eventRun, boundary: following === 0 };
+              resumePosition.current = { step: following, cycle: eventCycle + (following === 0 ? 1 : 0), run: eventRun, boundary: following === 0, fxBeat: eventFxBeat + .25 };
             }
             indicators.delete(indicator);
           }, Math.max(0, (at - audio.now()) * 1000));
@@ -1050,7 +1066,7 @@ export default function App() {
   const downloadProject = () => {
     downloadBlob(
       new Blob(
-        [JSON.stringify({ app: "FORM", version: 3, project }, null, 2)],
+        [JSON.stringify({ app: "FORM", version: 4, project }, null, 2)],
         { type: "application/json" },
       ),
       `${project.name.replace(/[^a-z0-9-]/gi, "-")}.form.json`,
@@ -1181,11 +1197,7 @@ export default function App() {
         name = `${p.name} · HOTPLATE ${scope === "chain" ? "chain" : "pattern"}`;
       } else {
         const voice = p.sounds[voiceIndex];
-        const mono = renderSound(voice, sampleRate);
-        const pan = Math.max(-1, Math.min(1, voice.mix.pan));
-        const leftGain = Math.cos((pan + 1) * Math.PI / 4), rightGain = Math.sin((pan + 1) * Math.PI / 4);
-        left = Float32Array.from(mono, value => value * leftGain);
-        right = Float32Array.from(mono, value => value * rightGain);
+        [left, right] = renderVoiceStereo(voice, sampleRate, p.bpm, options.tailSeconds);
         name = `${voice.name} · HOTPLATE`;
       }
       options.signal?.throwIfAborted();
@@ -1228,15 +1240,16 @@ export default function App() {
         setSelected(0);
         setSolo(null);
       },
-      scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string; locks?: SoundLocks } = {}) => {
+      scheduleNativeNote: (voice: number, when: number, options: { velocity?: number; pitch?: number; source?: string; locks?: SoundLocks; beat?: number; tempo?: number } = {}) => {
         const sound = latest.current.project.sounds[voice];
         if (!sound || !Number.isFinite(when)) throw new Error("Choose a valid HOTPLATE voice and audio timestamp.");
-        return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native", normalizeSoundLocks(options.locks, true));
+        if (Number.isFinite(options.beat)) engine().setVoiceClock({ tempo: options.tempo ?? latest.current.project.bpm, beat: options.beat, time: when, playing: true });
+        return engine().schedulePrepared(sound, options.velocity ?? 1, when, options.pitch ?? 0, options.source ?? "native", normalizeSoundLocks(options.locks, true), voice);
       },
       renderNativeEvents: (events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
-        renderNativeEvents(latest.current.project.sounds, events, options),
+        renderNativeEvents(latest.current.project.sounds, events, { tempo: latest.current.project.bpm, ...options }),
       renderNativeSnapshotEvents: (snapshot: Project, events: Parameters<typeof renderNativeEvents>[1], options: Parameters<typeof renderNativeEvents>[2]) =>
-        renderNativeEvents(snapshot.sounds, events, options),
+        renderNativeEvents(snapshot.sounds, events, { tempo: snapshot.bpm, ...options }),
       applyMusicLabPattern: (overlay?: Project["musicLabPattern"]) => {
         const next = { ...latest.current.project };
         if (overlay) next.musicLabPattern = clone(overlay); else delete next.musicLabPattern;
@@ -1422,7 +1435,7 @@ export default function App() {
           ))}
         </section>
 
-        <BurnerPanel sound={sound} index={selected} typeLabel={TYPE_LABELS[TYPES.indexOf(sound.type)]} accent={LANE_COLORS[selected]} onChange={replaceSelectedSound} onAudition={() => audition(selected)} onLibrary={() => openLibrary(sound.type)} onVariation={() => randomize(true)} onExport={() => { setExportMode("sample"); setExportOpen(true); }} deepOpen={deepOpen} onToggleDeep={() => setDeepOpen(value => !value)} />
+        <BurnerPanel sound={sound} index={selected} typeLabel={TYPE_LABELS[TYPES.indexOf(sound.type)]} accent={LANE_COLORS[selected]} onChange={replaceSelectedSound} onFxChange={changeVoiceFx} onFxUndo={() => flushSync(() => dispatch({ type: "undo" }))} onFxRedo={() => flushSync(() => dispatch({ type: "redo" }))} getFxMeters={() => engineRef.current?.getVoiceEffectMeters(selected) ?? []} onAudition={() => audition(selected)} onLibrary={() => openLibrary(sound.type)} onVariation={() => randomize(true)} onExport={() => { setExportMode("sample"); setExportOpen(true); }} deepOpen={deepOpen} onToggleDeep={() => setDeepOpen(value => !value)} />
         {deepOpen && <section className="sound-editor hotplate-deep-recipe panel" id="hotplate-deep-recipe">
           <div className="editor-header">
             <div className="voice-heading">

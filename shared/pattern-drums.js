@@ -164,7 +164,7 @@
           if(when<current-.03)continue;
           const rng=id==='form'?formOverlayRoll(pattern,cycle,(cursor-1)%pattern.notes.length,pattern.notes.length):random((pattern.seed||0)^cycle^cursor)();if(rng>= (note.probability??1))continue;
           if(id==='form'){const currentState=viewState(),voice=indexOfVoice(map[note.voice],currentState);if(currentState.muted?.[voice]||currentState.solo!==undefined&&currentState.solo!==null&&currentState.solo!==voice)continue;}
-          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern',...(note.locks?{locks:clone(note.locks)}:{})});
+          adapter.scheduleNote({id:'received-'+cycle+'-'+note.id,pitch:note.pitch,velocity:note.velocity,voice:map[note.voice],when,beat:cycle*pattern.lengthBeats+eventBeat(pattern,note),tempo,durationSeconds:Math.min(note.duration,pattern.lengthBeats-eventBeat(pattern,note))*seconds,source:'pattern',...(note.locks?{locks:clone(note.locks)}:{})});
         }
         const visibleSteps=id==='grain'||id==='tine'?(currentState.stepCount===32?32:16):id==='ravel'?(currentState.patterns[currentState.selectedPattern].length===32?32:16):16;
         if(display)display(Math.floor(Math.max(0,current-startTime)/seconds*4)%visibleSteps);
@@ -187,6 +187,7 @@
         if(adapter.patternImport.targets[0].occupied&&options.replace!==true)throw new Error('Confirm replacing the active part before sending this pattern.');
         abort(signal);abort(options.signal);applyOverlay({pattern:packet,voiceMap:map});adapter.cancelNotes();return{app:id,target:'current',notes:packet.notes.length};
       },
+      voiceEffectsClock:['grain','tine','form'].includes(id),
       get importedPattern(){return viewState().musicLabPattern?.pattern||null;},
       getImportedPattern(){return viewState().musicLabPattern?.pattern||null;},
       clearImportedPattern(){applyOverlay(undefined);adapter.cancelNotes();},
@@ -194,7 +195,8 @@
       scheduleNote(note){
         const s=viewState(),index=indexOfVoice(note.voice,s),voice=voicesFor(s)[index],audio=engine();
         if(!Number.isFinite(note.when)||!Number.isFinite(note.durationSeconds)||note.durationSeconds<=0||!Number.isFinite(note.velocity)||note.velocity<0||note.velocity>1||!Number.isFinite(note.pitch)||note.pitch<0||note.pitch>127)throw new Error('Invalid native note.');
-        const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:tempoOf(s),source:note.source||'loom'};
+        const options={velocity:note.velocity,pitch:note.pitch-voice.pitch,duration:note.durationSeconds,tempo:Number.isFinite(note.tempo)?note.tempo:tempoOf(s),source:note.source||'loom'};
+        if(Number.isFinite(note.beat))options.beat=note.beat;
         if (note.locks !== undefined) { const locks = schema().normalizeLocks(note.locks); if (Object.keys(locks).length) options.locks = locks; }
         // Public app snapshots are copies. Preserve lane identity separately
         // so a hosted modal voice keeps the same polyphony budget on each hit.
@@ -220,7 +222,7 @@
         abort(signal);return{...result,name:packet.name,tempo:bpm,sourceApp:id};
       },
       startPattern,stopPattern,
-      transport(clock){if(id==='spool')engine().followTransport(clock);},
+      transport(clock){const audio=engine();if(audio?.followTransport)audio.followTransport(clock);},
     };
     if(id==='form')adapter.getImportedPatternEvents=(options={})=>formOverlayEvents(clone(unwrap(options.state)||viewState()),options.tempo,options.repetitions??1);
     window.MusicLabPatternInstrument=adapter;
