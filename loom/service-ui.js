@@ -141,7 +141,7 @@
         </section>
         ${this.sceneEditor(snapshot)}
       </div><aside class="loom-service-side" aria-label="Performance controls">
-        <section class="loom-service-panel" aria-labelledby="loomServiceMacrosTitle"><div class="loom-service-panel-head"><div><h3 id="loomServiceMacrosTitle">Four house controls</h3><p>One movement. Several carefully unreasonable instructions.</p></div></div><div class="loom-service-macro-grid">${this.macros(snapshot).map(macro => this.macroControl(macro)).join('')}</div>${this.macroEditor(snapshot)}</section>
+        <section class="loom-service-panel" aria-labelledby="loomServiceMacrosTitle"><div class="loom-service-panel-head"><div><h3 id="loomServiceMacrosTitle">Four house controls</h3><p>Track faders, sends and effect controls. One movement, several instructions.</p></div></div><div class="loom-service-macro-grid">${this.macros(snapshot).map(macro => this.macroControl(macro)).join('')}</div>${this.macroEditor(snapshot)}</section>
         ${this.padPanel(tracks)}
         ${this.capturePanel(snapshot, midiOpen)}
       </aside></div>

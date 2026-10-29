@@ -1,0 +1,2541 @@
+{
+  "format": 1,
+  "baselineCommit": "18edcf6",
+  "authoredAt": "2026-10-29T01:01:14.173Z",
+  "nodeVersion": "v24.19.0",
+  "description": "Whole-buffer interleaved little-endian Float32 and signed PCM16 SHA-256 fingerprints of the real GALLEY Core before sends/returns/master inserts. Authored once using git show 18edcf6; runtime checks use only shipped files and deterministic hash-noise-v1 input.",
+  "sourceSha256": {
+    "vocal-dsp.js": "9c40b82599c7bed428a197ca185062cb6c98604debd60a5a1a83f669d108e6b9",
+    "utility-dsp.js": "1813e2d6f8c9731fe7eb2b2c7be1bacf17e7cdf77510fa86738ecc6dccc543be",
+    "filter-dsp.js": "ad3d356993036a1f2b140abb1ff167038c989c9bd9d251dab7baa2c51a08e816",
+    "creative-dsp.js": "64dd0ca89355032fef6eecc5f442d55d5c8064a4f288c7809062eb1621950470",
+    "broiler-pedals.js": "1627c303b7109186f5fe1f0e71f35d070565aa3130d3fef6402aae6f5510d05c",
+    "compressor-dsp.js": "1881b8ca4067ae83e28cbcfd26c3f626dac1e04fd4cf8e50cab16506a3be525f",
+    "effects.js": "e2406a9ef81c6806b0f636b63066f8dccaf4afae226213032b37ca24742d18c1",
+    "audio-engine.js": "707dc696326c9973e1bac9f6e094f30f0ca82ded49705aa6d213c82c763fea40"
+  },
+  "inputRecipe": "hash-noise-v1: bus-review-checks.cjs signal(frame,track,channel,amplitude); assets use the same integer function with seed as track.",
+  "cases": [
+    {
+      "id": "eight-live-lanes-48k",
+      "sampleRate": 48000,
+      "frames": 8192,
+      "blocks": [
+        137,
+        31,
+        256
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {
+        "linear": true
+      },
+      "assets": [],
+      "inputs": "hash-noise-v1",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "fe424dedddc4a6532fdf200d688feb3b819a3df534f482675866454c12e6b71f",
+        "pcm16StereoSha256": "898886bf34df6fb3d806b3bec6b6c926f94f9a0249dc0b45e1559d6f9fa2cdb9",
+        "peak": 0.11867550760507584,
+        "rms": 0.027436974844159263,
+        "samples": [
+          {
+            "frame": 0,
+            "left": -1.0756811263945565e-7,
+            "right": -3.6370650491335255e-8
+          },
+          {
+            "frame": 1,
+            "left": -4.2934931343552307e-7,
+            "right": 4.1454680399510835e-7
+          },
+          {
+            "frame": 31,
+            "left": -0.00008993643132271245,
+            "right": 0.000025931483833119273
+          },
+          {
+            "frame": 127,
+            "left": -0.001357195433229208,
+            "right": -0.00019003995112143457
+          },
+          {
+            "frame": 128,
+            "left": 0.00007287724292837083,
+            "right": -0.00029463632381521165
+          },
+          {
+            "frame": 511,
+            "left": 0.00935081485658884,
+            "right": -0.02147553488612175
+          },
+          {
+            "frame": 1023,
+            "left": -0.005964732728898525,
+            "right": -0.006784833036363125
+          },
+          {
+            "frame": 2047,
+            "left": -0.014070271514356136,
+            "right": -0.03608643263578415
+          },
+          {
+            "frame": 4096,
+            "left": -0.04738544300198555,
+            "right": 0.05427192896604538
+          },
+          {
+            "frame": 8191,
+            "left": -0.01114595402032137,
+            "right": 0.02854086086153984
+          }
+        ]
+      }
+    },
+    {
+      "id": "nonlinear-track-racks-and-absolute-automation",
+      "sampleRate": 48000,
+      "frames": 8192,
+      "blocks": [
+        128
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "prism",
+                "bypass": false,
+                "params": {
+                  "low": 4,
+                  "mid": -2,
+                  "high": 0,
+                  "midFreq": 1000,
+                  "filter": "lowpass",
+                  "cutoff": 6500,
+                  "resonance": 0.707,
+                  "mix": 1,
+                  "bypass": false
+                }
+              },
+              {
+                "type": "velvet",
+                "bypass": false,
+                "params": {
+                  "threshold": -25,
+                  "ratio": 5,
+                  "attack": 12,
+                  "release": 180,
+                  "knee": 6,
+                  "makeup": 1,
+                  "sidechain": 30,
+                  "mix": 1,
+                  "model": "bus-4k",
+                  "input": 0,
+                  "colour": 0.35,
+                  "timing": "manual",
+                  "link": 1,
+                  "fetMode": "normal",
+                  "thrust": "off",
+                  "bypass": false
+                }
+              },
+              {
+                "type": "cinder",
+                "bypass": false,
+                "params": {
+                  "shape": "diode",
+                  "drive": 14,
+                  "bias": 0,
+                  "tone": 5700,
+                  "output": -3,
+                  "mix": 0.73,
+                  "bypass": false
+                }
+              },
+              null
+            ],
+            "automation": [
+              {
+                "target": "level",
+                "enabled": true,
+                "interpolation": "linear",
+                "points": [
+                  {
+                    "beat": 0,
+                    "value": 0.2
+                  },
+                  {
+                    "beat": 0.2,
+                    "value": 0.9
+                  }
+                ]
+              },
+              {
+                "target": "pan",
+                "enabled": true,
+                "points": [
+                  {
+                    "beat": 0,
+                    "value": -0.8
+                  },
+                  {
+                    "beat": 0.3,
+                    "value": 0.6
+                  }
+                ]
+              },
+              {
+                "target": "fx:2:drive",
+                "effectType": "cinder",
+                "enabled": true,
+                "points": [
+                  {
+                    "beat": 0,
+                    "value": 4
+                  },
+                  {
+                    "beat": 0.3,
+                    "value": 22
+                  }
+                ]
+              }
+            ],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "strainer",
+                "bypass": false,
+                "params": {
+                  "model": "clean",
+                  "mode": "lowpass",
+                  "slope": "12",
+                  "cutoff": 1400,
+                  "resonance": 1,
+                  "drive": 0,
+                  "output": 0,
+                  "envAmount": 12,
+                  "sensitivity": -18,
+                  "envAttack": 8,
+                  "envRelease": 180,
+                  "envMode": "peak",
+                  "detectorHP": 35,
+                  "clock": "free",
+                  "division": "1",
+                  "rate": 0.35,
+                  "shape": "sine",
+                  "lfoAmount": 0,
+                  "stereo": 0,
+                  "phase": 0,
+                  "mix": 1,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "broiler",
+                "bypass": false,
+                "params": {
+                  "model": "royal-68",
+                  "input": 0,
+                  "drive": 6,
+                  "cleanLow": 0.35,
+                  "crossover": 150,
+                  "bass": 2,
+                  "mid": -1,
+                  "midFreq": 550,
+                  "treble": 0,
+                  "presence": 0.35,
+                  "depth": 0.4,
+                  "master": 0.45,
+                  "sag": 0.3,
+                  "gate": -75,
+                  "gateRelease": 160,
+                  "cabinet": "di",
+                  "speakerDrive": 0.2,
+                  "mic": 0.45,
+                  "distance": 0.15,
+                  "air": 0.3,
+                  "stereo": "stereo",
+                  "output": -4,
+                  "mix": 0.45,
+                  "ampEnable": "off",
+                  "preampTube": "stock",
+                  "powerTube": "stock",
+                  "toneStack": "stock",
+                  "bias": 0,
+                  "voltage": 1,
+                  "feedback": 0.5,
+                  "tightness": 0.5,
+                  "bright": 0,
+                  "coupling": 0.5,
+                  "cathode": 0.5,
+                  "transformer": 0,
+                  "powerScale": 1,
+                  "micType": "stock",
+                  "cabLowCut": 0,
+                  "cabHighCut": 20000,
+                  "cabResonance": 0.5,
+                  "pedal1Type": "rodent",
+                  "pedal1Enabled": "on",
+                  "pedal1Route": "pre",
+                  "pedal1Drive": 0.6,
+                  "pedal1Tone": 0.4,
+                  "pedal1Level": 0,
+                  "pedal1Mix": 0.75,
+                  "pedal2Type": "none",
+                  "pedal2Enabled": "off",
+                  "pedal2Route": "pre",
+                  "pedal2Drive": 0.5,
+                  "pedal2Tone": 0.5,
+                  "pedal2Level": 0,
+                  "pedal2Mix": 1,
+                  "pedal3Type": "none",
+                  "pedal3Enabled": "off",
+                  "pedal3Route": "post",
+                  "pedal3Drive": 0.5,
+                  "pedal3Tone": 0.5,
+                  "pedal3Level": 0,
+                  "pedal3Mix": 1,
+                  "pedal4Type": "none",
+                  "pedal4Enabled": "off",
+                  "pedal4Route": "post",
+                  "pedal4Drive": 0.5,
+                  "pedal4Tone": 0.5,
+                  "pedal4Level": 0,
+                  "pedal4Mix": 1,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "swirl",
+                "bypass": false,
+                "params": {
+                  "stages": "8",
+                  "center": 650,
+                  "spread": 1.2,
+                  "feedback": 0.5,
+                  "polarity": "add",
+                  "clock": "free",
+                  "rate": 0.7,
+                  "division": "1",
+                  "shape": "sine",
+                  "depth": 30,
+                  "stereo": 110,
+                  "envAmount": 0,
+                  "sensitivity": 6,
+                  "attack": 8,
+                  "release": 240,
+                  "output": 0,
+                  "mix": 1,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {
+        "linear": true
+      },
+      "assets": [],
+      "inputs": "hash-noise-v1",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        }
+      ],
+      "inputAmplitude": 0.08,
+      "expected": {
+        "float32StereoSha256": "ed669d377c5de4fb2762df101747817db0a6c481a0c5210f1ff3ab3553e35194",
+        "pcm16StereoSha256": "4a819bd9fcbee167269050570689bab3a074d9ee60f5323834aafcec6bcc252f",
+        "peak": 0.4018384516239166,
+        "rms": 0.0886716144425438,
+        "samples": [
+          {
+            "frame": 0,
+            "left": -1.542176590874078e-7,
+            "right": -8.453576327838164e-8
+          },
+          {
+            "frame": 1,
+            "left": -9.110037240134261e-7,
+            "right": 9.296942380387918e-7
+          },
+          {
+            "frame": 31,
+            "left": -0.0004115146875847131,
+            "right": 0.00001564807644172106
+          },
+          {
+            "frame": 127,
+            "left": -0.0010808223159983754,
+            "right": -0.0021506056655198336
+          },
+          {
+            "frame": 128,
+            "left": 0.0006281462265178561,
+            "right": -0.0026204101741313934
+          },
+          {
+            "frame": 511,
+            "left": -0.04230694845318794,
+            "right": -0.050902653485536575
+          },
+          {
+            "frame": 1023,
+            "left": -0.07952411472797394,
+            "right": -0.03928069770336151
+          },
+          {
+            "frame": 2047,
+            "left": 0.01266714558005333,
+            "right": -0.08603855222463608
+          },
+          {
+            "frame": 4096,
+            "left": -0.1257322132587433,
+            "right": 0.0991462916135788
+          },
+          {
+            "frame": 8191,
+            "left": 0.08059737086296082,
+            "right": -0.02185816504061222
+          }
+        ]
+      }
+    },
+    {
+      "id": "clip-loop-reverse-and-time-effect-tail",
+      "sampleRate": 8000,
+      "frames": 10001,
+      "blocks": [
+        137,
+        29,
+        256
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": true,
+        "loopStart": 0,
+        "loopEnd": 0.5,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              {
+                "type": "parallax",
+                "bypass": false,
+                "params": {
+                  "clock": "free",
+                  "division": "1/8.",
+                  "time": 63,
+                  "feedback": 0.61,
+                  "damping": 2600,
+                  "spread": 0.8,
+                  "mix": 0.4,
+                  "bypass": false
+                }
+              },
+              {
+                "type": "vestige",
+                "bypass": false,
+                "params": {
+                  "size": 0.25,
+                  "decay": 1.1,
+                  "damping": 6500,
+                  "predelay": 5,
+                  "diffusion": 0.75,
+                  "width": 0.9,
+                  "mix": 0.27,
+                  "bypass": false
+                }
+              },
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "legacy-clip",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 0.75,
+                "reverse": false,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "reverse",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.04,
+                "sourceEnd": 0.51,
+                "sourceOffset": 0.017,
+                "rate": 1.3,
+                "reverse": true,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {},
+      "assets": [
+        {
+          "id": "legacy-source",
+          "sampleRate": 8000,
+          "frames": 8000,
+          "seed": 19,
+          "amplitude": 0.17
+        }
+      ],
+      "inputs": "none",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "498e4b88aaf529fe77cbbf6f45dd08e7a7c2dac5265b501cfd8e405bcdaaed97",
+        "pcm16StereoSha256": "1d52e496e2b430696e19c9a97a593859b2ad1333f6b4a9fcd15616a91248400d",
+        "peak": 0.08563010394573212,
+        "rms": 0.023286195506930632,
+        "samples": [
+          {
+            "frame": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1,
+            "left": 1.1820900880366025e-7,
+            "right": -3.152178464915778e-7
+          },
+          {
+            "frame": 31,
+            "left": -0.0016844163183122873,
+            "right": -0.0011953325010836124
+          },
+          {
+            "frame": 127,
+            "left": -0.006462013814598322,
+            "right": -0.00678161671385169
+          },
+          {
+            "frame": 128,
+            "left": 0.009449128992855549,
+            "right": 0.0025438598822802305
+          },
+          {
+            "frame": 511,
+            "left": 0.009675220586359501,
+            "right": 0.013416998088359833
+          },
+          {
+            "frame": 1023,
+            "left": -0.02849045768380165,
+            "right": 0.018784059211611748
+          },
+          {
+            "frame": 2047,
+            "left": 0.02883046865463257,
+            "right": -0.013557289727032185
+          },
+          {
+            "frame": 5000,
+            "left": -0.051712799817323685,
+            "right": -0.014286811463534832
+          },
+          {
+            "frame": 10000,
+            "left": -0.028592228889465332,
+            "right": 0.00618772953748703
+          }
+        ]
+      }
+    },
+    {
+      "id": "selected-track-stem-with-pan-and-clips",
+      "sampleRate": 8000,
+      "frames": 5003,
+      "blocks": [
+        2048,
+        137
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-0",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1,
+                "reverse": false,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-1",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.07,
+                "reverse": true,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              {
+                "type": "cinder",
+                "bypass": false,
+                "params": {
+                  "shape": "fold",
+                  "drive": 10,
+                  "bias": 0,
+                  "tone": 10000,
+                  "output": -3,
+                  "mix": 0.4,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-2",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.1400000000000001,
+                "reverse": false,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-3",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.21,
+                "reverse": true,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-4",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.28,
+                "reverse": false,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-5",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.35,
+                "reverse": true,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-6",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.42,
+                "reverse": false,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [
+              {
+                "id": "stem-clip-7",
+                "type": "audio",
+                "assetId": "legacy-source",
+                "start": 0,
+                "length": 2,
+                "sourceStart": 0.02,
+                "sourceEnd": 0.32,
+                "sourceOffset": 0.017,
+                "rate": 1.49,
+                "reverse": true,
+                "loop": true,
+                "gain": 0.8,
+                "fadeIn": 0.005,
+                "fadeOut": 0.017
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "linear": true,
+        "trackId": "track-3"
+      },
+      "assets": [
+        {
+          "id": "legacy-source",
+          "sampleRate": 8000,
+          "frames": 8000,
+          "seed": 19,
+          "amplitude": 0.17
+        }
+      ],
+      "inputs": "none",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "0470d2e37f791c5a6f2b745d881cf119fd5eada43e8cccb0497667130d99bf1c",
+        "pcm16StereoSha256": "3b72da82938b1a3e92f1854b6828b6c69b0f10361669aaafda2832770a033369",
+        "peak": 0.10152193158864975,
+        "rms": 0.032624373552918626,
+        "samples": [
+          {
+            "frame": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1,
+            "left": -1.4946934356885322e-7,
+            "right": 3.4638043189261225e-7
+          },
+          {
+            "frame": 31,
+            "left": 0.0013337376294657588,
+            "right": -0.001079790759831667
+          },
+          {
+            "frame": 127,
+            "left": 0.013175413943827152,
+            "right": -0.0166824609041214
+          },
+          {
+            "frame": 128,
+            "left": -0.031650714576244354,
+            "right": 0.010407649911940098
+          },
+          {
+            "frame": 511,
+            "left": -0.05766608938574791,
+            "right": -0.023598192259669304
+          },
+          {
+            "frame": 1023,
+            "left": -0.004752523731440306,
+            "right": 0.03210972994565964
+          },
+          {
+            "frame": 2047,
+            "left": 0.0323311910033226,
+            "right": -0.005520991049706936
+          },
+          {
+            "frame": 2501,
+            "left": -0.03255326673388481,
+            "right": -0.03190197795629501
+          },
+          {
+            "frame": 5002,
+            "left": -0.027713250368833542,
+            "right": 0.006477970629930496
+          }
+        ]
+      }
+    },
+    {
+      "id": "count-in-click-bypasses-zero-master-level",
+      "sampleRate": 8000,
+      "frames": 3072,
+      "blocks": [
+        137
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "cinder",
+                "bypass": false,
+                "params": {
+                  "shape": "soft",
+                  "drive": 30,
+                  "bias": 0,
+                  "tone": 10000,
+                  "output": -3,
+                  "mix": 1,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {
+        "linear": true
+      },
+      "assets": [],
+      "inputs": "hash-noise-v1",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        },
+        {
+          "at": 0,
+          "method": "beginRecording",
+          "args": [
+            {
+              "countInBeats": 0.25,
+              "startTransport": false
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "996945bcde32b3a1925ef579819d2e7682f24174369080fcb1037f369eb044a8",
+        "pcm16StereoSha256": "a95c98bd5f09c7fbdb7e7d997280df113df87467ef63f6d2f17d00a6214221c1",
+        "peak": 0.11575254797935486,
+        "rms": 0.010246522800624212,
+        "samples": [
+          {
+            "frame": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1,
+            "left": 0.10987788438796997,
+            "right": 0.10987788438796997
+          },
+          {
+            "frame": 31,
+            "left": -0.08230290561914444,
+            "right": -0.08230290561914444
+          },
+          {
+            "frame": 127,
+            "left": -0.02078949846327305,
+            "right": -0.02078949846327305
+          },
+          {
+            "frame": 128,
+            "left": 1.1233127541546693e-15,
+            "right": 1.1233127541546693e-15
+          },
+          {
+            "frame": 511,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1023,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 2047,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1536,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 3071,
+            "left": 0,
+            "right": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "dry-mic-monitor-native-source-gates-and-count-in",
+      "sampleRate": 8000,
+      "frames": 6144,
+      "blocks": [
+        137,
+        31,
+        128
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": true
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": true,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": [],
+            "notePlayback": true
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": true,
+            "instrumentLive": false,
+            "effects": [
+              {
+                "type": "cinder",
+                "bypass": false,
+                "params": {
+                  "shape": "diode",
+                  "drive": 18,
+                  "bias": 0,
+                  "tone": 10000,
+                  "output": -3,
+                  "mix": 0.8,
+                  "bypass": false
+                }
+              },
+              {
+                "type": "prism",
+                "bypass": false,
+                "params": {
+                  "low": 0,
+                  "mid": 0,
+                  "high": 0,
+                  "midFreq": 1000,
+                  "filter": "highpass",
+                  "cutoff": 200,
+                  "resonance": 0.707,
+                  "mix": 1,
+                  "bypass": false
+                }
+              },
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {
+        "linear": true
+      },
+      "assets": [],
+      "inputs": "hash-noise-v1",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        },
+        {
+          "at": 0,
+          "method": "setRecordOnly",
+          "args": [
+            3,
+            true
+          ]
+        },
+        {
+          "at": 0,
+          "method": "setMicrophoneMonitor",
+          "args": [
+            3,
+            true
+          ]
+        },
+        {
+          "at": 0,
+          "method": "resumeAudition",
+          "args": [
+            5
+          ]
+        },
+        {
+          "at": 0,
+          "method": "beginRecording",
+          "args": [
+            {
+              "countInBeats": 0.25,
+              "startTransport": false
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "bfb655f45454e933e9e773842f4f2d17f3b5def7ae49493ca85c0cb87fac66fa",
+        "pcm16StereoSha256": "5c634208b5707bfb26cb6d3ed5a1a30e97a910d7ca63c7e11b3858b06adf334e",
+        "peak": 0.27058908343315125,
+        "rms": 0.09497510459154736,
+        "samples": [
+          {
+            "frame": 0,
+            "left": -0.000007202705546660582,
+            "right": -0.000010224372999800835
+          },
+          {
+            "frame": 1,
+            "left": 0.10992161184549332,
+            "right": 0.1098790243268013
+          },
+          {
+            "frame": 31,
+            "left": -0.08787085115909576,
+            "right": -0.07330167293548584
+          },
+          {
+            "frame": 127,
+            "left": -0.09084542095661163,
+            "right": -0.03790527954697609
+          },
+          {
+            "frame": 128,
+            "left": -0.08128582686185837,
+            "right": 0.030032752081751823
+          },
+          {
+            "frame": 511,
+            "left": -0.022396307438611984,
+            "right": -0.08942462503910065
+          },
+          {
+            "frame": 1023,
+            "left": -0.026435621082782745,
+            "right": 0.07496368885040283
+          },
+          {
+            "frame": 2047,
+            "left": -0.1547371745109558,
+            "right": 0.12557831406593323
+          },
+          {
+            "frame": 3072,
+            "left": -0.17094829678535461,
+            "right": 0.11830850690603256
+          },
+          {
+            "frame": 6143,
+            "left": 0.07143446058034897,
+            "right": -0.03763078525662422
+          }
+        ]
+      }
+    },
+    {
+      "id": "seek-stop-panic-and-stopped-audition",
+      "sampleRate": 8000,
+      "frames": 4096,
+      "blocks": [
+        137
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              {
+                "type": "parallax",
+                "bypass": false,
+                "params": {
+                  "clock": "free",
+                  "division": "1/8.",
+                  "time": 41,
+                  "feedback": 0.5,
+                  "damping": 6000,
+                  "spread": 1,
+                  "mix": 0.4,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": true,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {},
+      "assets": [],
+      "inputs": "hash-noise-v1",
+      "commands": [
+        {
+          "at": 0,
+          "method": "start",
+          "args": [
+            0
+          ]
+        },
+        {
+          "at": 513,
+          "method": "seek",
+          "args": [
+            0.3
+          ]
+        },
+        {
+          "at": 1501,
+          "method": "stop",
+          "args": []
+        },
+        {
+          "at": 2049,
+          "method": "panic",
+          "args": []
+        },
+        {
+          "at": 2561,
+          "method": "resumeAudition",
+          "args": [
+            1
+          ]
+        },
+        {
+          "at": 3073,
+          "method": "start",
+          "args": [
+            0.1
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "8f218894372cde02b9a6d3504ced25e80c3c101dfd0867e1c79516387a528237",
+        "pcm16StereoSha256": "b0516a6a2e73e8d321e552ac1dfe0083385d4b723ac578f9772a602596185193",
+        "peak": 0.10251499712467194,
+        "rms": 0.025259770675114028,
+        "samples": [
+          {
+            "frame": 0,
+            "left": -0.0000038052426134527195,
+            "right": -0.00000121914672490675
+          },
+          {
+            "frame": 1,
+            "left": -0.00001604573662916664,
+            "right": 0.000014289528735389467
+          },
+          {
+            "frame": 31,
+            "left": -0.001990365795791149,
+            "right": 0.0006560963811352849
+          },
+          {
+            "frame": 127,
+            "left": -0.01623644307255745,
+            "right": -0.0026358424220234156
+          },
+          {
+            "frame": 128,
+            "left": -0.00053841044427827,
+            "right": -0.0035702968016266823
+          },
+          {
+            "frame": 511,
+            "left": 0.027709849178791046,
+            "right": -0.05971444025635719
+          },
+          {
+            "frame": 1023,
+            "left": -0.0052693854086101055,
+            "right": -0.009527702815830708
+          },
+          {
+            "frame": 2047,
+            "left": -0.009668627753853798,
+            "right": -0.036558546125888824
+          },
+          {
+            "frame": 2048,
+            "left": -0.01785137876868248,
+            "right": -0.04183501377701759
+          },
+          {
+            "frame": 4095,
+            "left": -0.006824956275522709,
+            "right": 0.05812138319015503
+          }
+        ]
+      }
+    },
+    {
+      "id": "service-shared-source-scene-and-performance",
+      "sampleRate": 8000,
+      "frames": 8192,
+      "blocks": [
+        137,
+        31,
+        256
+      ],
+      "state": {
+        "tempo": 120,
+        "lengthBars": 4,
+        "loopEnabled": false,
+        "loopStart": 0,
+        "loopEnd": 16,
+        "master": {
+          "level": 0.8,
+          "metronome": false
+        },
+        "tracks": [
+          {
+            "id": "track-1",
+            "name": "Legacy 1",
+            "level": 0.35,
+            "pan": -0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              {
+                "type": "cinder",
+                "bypass": false,
+                "params": {
+                  "shape": "soft",
+                  "drive": 7,
+                  "bias": 0,
+                  "tone": 10000,
+                  "output": -3,
+                  "mix": 0.3,
+                  "bypass": false
+                }
+              },
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-2",
+            "name": "Legacy 2",
+            "level": 0.42,
+            "pan": -0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-3",
+            "name": "Legacy 3",
+            "level": 0.49,
+            "pan": -0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-4",
+            "name": "Legacy 4",
+            "level": 0.56,
+            "pan": -0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-5",
+            "name": "Legacy 5",
+            "level": 0.63,
+            "pan": 0.1,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-6",
+            "name": "Legacy 6",
+            "level": 0.7,
+            "pan": 0.3,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-7",
+            "name": "Legacy 7",
+            "level": 0.77,
+            "pan": 0.5,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          },
+          {
+            "id": "track-8",
+            "name": "Legacy 8",
+            "level": 0.8400000000000001,
+            "pan": 0.7,
+            "mute": false,
+            "solo": false,
+            "instrumentLive": false,
+            "effects": [
+              null,
+              null,
+              null,
+              null
+            ],
+            "automation": [],
+            "clips": []
+          }
+        ]
+      },
+      "options": {
+        "linear": true
+      },
+      "assets": [
+        {
+          "id": "legacy-source",
+          "sampleRate": 8000,
+          "frames": 8000,
+          "seed": 19,
+          "amplitude": 0.17
+        }
+      ],
+      "inputs": "none",
+      "commands": [
+        {
+          "at": 0,
+          "method": "startService",
+          "args": [
+            {
+              "id": "legacy-scene",
+              "lengthBeats": 4,
+              "clips": [
+                {
+                  "id": "legacy-clip",
+                  "type": "audio",
+                  "assetId": "legacy-source",
+                  "start": 0,
+                  "length": 2,
+                  "sourceStart": 0.02,
+                  "sourceEnd": 0.32,
+                  "sourceOffset": 0.017,
+                  "rate": 0.75,
+                  "reverse": false,
+                  "loop": true,
+                  "gain": 0.8,
+                  "fadeIn": 0.005,
+                  "fadeOut": 0.017
+                },
+                {
+                  "id": "scene-second",
+                  "type": "audio",
+                  "assetId": "legacy-source",
+                  "start": 0,
+                  "length": 1,
+                  "sourceStart": 0.02,
+                  "sourceEnd": 0.32,
+                  "sourceOffset": 0.017,
+                  "rate": 0.75,
+                  "reverse": true,
+                  "loop": true,
+                  "gain": 0.8,
+                  "fadeIn": 0.005,
+                  "fadeOut": 0.017
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ]
+            },
+            0,
+            1,
+            {
+              "drops": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "stutterBeats": 0,
+              "fill": false,
+              "overrides": [
+                {
+                  "trackId": "track-1",
+                  "target": "level",
+                  "value": 0.62
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "at": 2001,
+          "method": "queueService",
+          "args": [
+            "performance",
+            {
+              "drops": [
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "stutterBeats": 0,
+              "fill": false,
+              "overrides": [
+                {
+                  "trackId": "track-1",
+                  "target": "fx:0:drive",
+                  "value": 18
+                }
+              ]
+            },
+            "immediate",
+            2
+          ]
+        }
+      ],
+      "expected": {
+        "float32StereoSha256": "7dc50aacdbc2f40ac15ee804fb75612946434608779763ade1e818d5c5a127f4",
+        "pcm16StereoSha256": "ea14094fb0019b1e3b83af00fec4faa89d865820a73c5f172d2e7e1a79093dd4",
+        "peak": 0.17397770285606384,
+        "rms": 0.0374385103138326,
+        "samples": [
+          {
+            "frame": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "frame": 1,
+            "left": -5.323477125784848e-7,
+            "right": 1.401667475420254e-7
+          },
+          {
+            "frame": 31,
+            "left": 0.0009585802326910198,
+            "right": 0.0022367665078490973
+          },
+          {
+            "frame": 127,
+            "left": -0.009819083847105503,
+            "right": 0.01310704741626978
+          },
+          {
+            "frame": 128,
+            "left": 0.04444941133260727,
+            "right": 0.010117555037140846
+          },
+          {
+            "frame": 511,
+            "left": 0.007531014271080494,
+            "right": -0.0049753859639167786
+          },
+          {
+            "frame": 1023,
+            "left": 0.07681730389595032,
+            "right": -0.026273338124155998
+          },
+          {
+            "frame": 2047,
+            "left": 0.08396973460912704,
+            "right": 0.03329306095838547
+          },
+          {
+            "frame": 4096,
+            "left": 0.03805217891931534,
+            "right": -0.007423038594424725
+          },
+          {
+            "frame": 8191,
+            "left": 0.05405613034963608,
+            "right": -0.015040257945656776
+          }
+        ]
+      }
+    }
+  ]
+}

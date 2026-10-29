@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.15.0.
+SERVICE is version 1.0.0; GALLEY is version 1.16.0.
 
 ## Making a piece
 
@@ -355,6 +355,77 @@ is unavailable, keep a WAV or packet for the next session.
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
 
+### Master and shared effect returns
+
+GALLEY retains eight instrument/audio tracks with four inserts each. The master
+adds four inserts for the combined mix, and two independent stereo return
+channels each have four inserts. All fourteen effects work in these racks.
+Return A starts with fully wet HOOD reverb; Return B starts with fully wet
+LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
+their original sound. Change either return's effects to build another shared
+chain; a new return insert starts fully wet, with Dry / wet still editable.
+
+Track Send A and Send B feed the corresponding return. Post-fader sends follow
+track level and pan. Pre-fader sends keep the pan and bypass track level, while
+track mute and solo still gate their source. Each shared return processes the
+sum of its sources once, then applies its level and pan before the master.
+Returns feed the master directly and do not feed themselves or one another.
+The master inserts precede the master fader and final output protection.
+The metronome bypasses these inserts; master mute silences the complete output.
+Microphone and hosted-instrument takes stay dry.
+
+```mermaid
+flowchart LR
+  Tracks[Eight tracks and their inserts] --> Mix[Dry mix]
+  Tracks -->|Send A| A[Return A: four inserts]
+  Tracks -->|Send B| B[Return B: four inserts]
+  A --> Mix
+  B --> Mix
+  Mix --> Master[Master: four inserts]
+  Master --> Output[Master level and output protection]
+```
+
+Select a return or the master to edit its rack using the familiar effect panels.
+Track/instrument selection stays independent. Level, pan where applicable,
+track sends and effect parameters can be automated; automation writing follows
+the selected rack owner. Changing owners disarms writing. Bus settings,
+automation and send levels persist through projects, recovery and Undo.
+Return Solo auditions wet audio while preserving normal source-track mute/solo;
+return mute takes precedence. Master mute controls monitoring without altering
+dry recording.
+
+The master mix WAV includes both returns and the master inserts. Track stems
+contain the track's direct contribution; return stems contain each complete
+shared wet return. All stems exports ten WAVs: eight tracks and two returns.
+Stems follow mute/solo, retain the existing master-level/output-protection path,
+and skip master inserts. This keeps shared nonlinear effects in a single return
+stem. Master dynamics or output protection can make the final mix differ from a
+sum of independently rendered stems. Export an individual return when you need
+its wet signal alone.
+
+The project fields are `tracks[].sends: [0,0]`,
+`tracks[].sendPre: [false,false]`, `returns: [returnA,returnB]`, and
+`master.effects` / `master.automation`. Every bus has four fixed slots; the two
+return IDs are `return-1` and `return-2`, and the master ID is `master`.
+`LoomSchema.automationOwner(state,id)` resolves an owner and
+`automationTargets(owner)` supplies only its applicable targets. Track sends use
+`send:0` and `send:1`. Older files inherit missing defaults; malformed supplied
+routing rejects before loading. Buses carry no instruments, clips or outgoing
+sends, and the audio host still exposes eight instrument inputs and one dry
+microphone input.
+
+`LoomAudio.renderWav(state,assets,{trackId})` renders a direct track stem;
+`{returnId:'return-1'}` or `return-2` renders that return from all normally audible
+source tracks. Neither option applies master inserts, and the two selectors are
+mutually exclusive. With neither selector, the complete master mix renders.
+Effect readings are in `meters.masterEffects` and `meters.returnEffects`; the
+existing eight-row `meters.effects` remains the track rack readings.
+
+Run `npm run check:buses` and `npm run check:buses-browser`. Extracted source
+checks are `node bus-schema-checks.cjs`, `node bus-routing-checks.cjs`,
+`node bus-review-checks.cjs`, `node bus-automation-checks.cjs` and
+`LOOM_BUS_QA_BUILT=1 node bus-browser-checks.cjs` after rebuilding.
+
 ### BUTTER: classic compression
 
 The existing `velvet` insert now offers the original Clean compressor and eight
@@ -596,7 +667,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.15.0.
+font license notices. Version 1.16.0.
 
 ## Compatibility
 

@@ -77,6 +77,7 @@
         add(0, targets.find(t => t.target === 'level'), 0, Math.min(1.5, Math.max(track.level, track.level * 1.5)));
         add(3, targets.find(t => t.target === 'pan'), -1, 1, index % 2 ? 'normal' : 'inverse');
         for (const target of targets) {
+          if (/^send:[01]$/.test(target.target)) add(2, target, 0, Math.max(target.value, .65));
           if (/^fx:[0-3]:(drive|grit|fold|saturation)$/.test(target.target)) add(1, target, target.min, target.max);
           if (/^fx:[0-3]:mix$/.test(target.target) && ['vestige', 'parallax', 'undertow', 'halo'].includes(target.effectType)) add(2, target, 0, Math.max(target.value, .65));
         }

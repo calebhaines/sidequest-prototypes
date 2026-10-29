@@ -1,11 +1,11 @@
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.15.0';
+  const VERSION = '1.16.0';
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
-  const LIMITS = Object.freeze({ tracks: 8, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ tracks: 8, returns: 2, slots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 4 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic'];
   // Display branding is independent of legacy IDs, project formats and storage.
   const INSTRUMENT_NAMES = Object.freeze({ grain: 'SIZZLE', form: 'HOTPLATE', tine: 'CLATTER', mire: 'REDUCE', spool: 'ROTISSERIE', haze: 'STEAM', bower: 'SKEWER', ravel: 'DICER', fable: 'STOCK', roux: 'ROUX', batter: 'BATTER', proof: 'LEAVEN', marinade: 'MARINADE', picnic: 'PICNIC' });
@@ -27,16 +27,31 @@
   }
   const uid = (prefix = 'clip') => prefix + '-' + (globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 11));
   function track(index) {
-    return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], automation: [], clips: [] };
+    return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null], sends: [0, 0], sendPre: [false, false], automation: [], clips: [] };
+  }
+  function defaultMaster() {
+    return { id: 'master', name: 'Master', level: 0.8, metronome: false, mute: false, effects: [null, null, null, null], automation: [] };
+  }
+  function defaultReturn(index) {
+    if (index !== 0 && index !== 1) throw Error('Choose Return A or Return B.');
+    const type = index === 0 ? 'vestige' : 'parallax', definition = (window.LoomEffectsCatalog || []).find(e => e.id === type);
+    return { id: 'return-' + (index + 1), name: 'Return ' + (index === 0 ? 'A' : 'B'), level: 1, pan: 0, mute: false, solo: false, effects: [definition ? effect({ type, params: { ...definition.defaults, mix: 1 } }) : null, null, null, null], automation: [] };
   }
   function defaultState() {
-    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: { level: 0.8, metronome: false }, recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16, micCompensation: 'auto', micOffsetMs: 0, micInputGainDb: 0 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+    return { version: 1, name: 'Service is going strangely well', tempo: 96, lengthBars: 16, loopEnabled: true, loopStart: 0, loopEnd: 16, master: defaultMaster(), returns: [defaultReturn(0), defaultReturn(1)], recording: { countInBars: 0, punchEnabled: false, punchStart: 0, punchEnd: 16, micCompensation: 'auto', micOffsetMs: 0, micInputGainDb: 0 }, markers: [], selectedTrack: 0, view: { zoom: 48, snap: 0.25, tab: 'arrange', follow: true }, tracks: Array.from({ length: 8 }, (_, i) => track(i)), assets: [] };
+  }
+  function automationOwner(state, id) {
+    if (typeof id !== 'string') return null;
+    if (id === 'master') return state?.master || null;
+    if (/^return-[12]$/.test(id)) return state?.returns?.find(owner => owner.id === id) || null;
+    if (/^track-[1-8]$/.test(id)) return state?.tracks?.find(owner => owner.id === id) || null;
+    return null;
   }
   function automationTargets(t) {
-    const result = [
-      { target: 'level', label: 'Track volume', min: 0, max: 1.5, step: .01, default: .8, value: number(t?.level, 0, 1.5, .8), unit: '' },
-      { target: 'pan', label: 'Track pan', min: -1, max: 1, step: .01, default: 0, value: number(t?.pan, -1, 1, 0), unit: '' }
-    ];
+    const master = t?.id === 'master', isReturn = /^return-[12]$/.test(t?.id), ownerName = master ? 'Master' : isReturn ? text(t.name, t.id === 'return-1' ? 'Return A' : 'Return B') : 'Track', defaultLevel = isReturn ? 1 : .8;
+    const result = [{ target: 'level', label: ownerName + ' volume', min: 0, max: 1.5, step: .01, default: defaultLevel, value: number(t?.level, 0, 1.5, defaultLevel), unit: '' }];
+    if (!master) result.push({ target: 'pan', label: ownerName + ' pan', min: -1, max: 1, step: .01, default: 0, value: number(t?.pan, -1, 1, 0), unit: '' });
+    if (!master && !isReturn) for (let send = 0; send < 2; send++) result.push({ target: 'send:' + send, label: 'Send ' + (send === 0 ? 'A' : 'B') + ' level', min: 0, max: 1, step: .01, default: 0, value: number(t?.sends?.[send], 0, 1, 0), unit: '' });
     for (let slot = 0; slot < 4; slot++) {
       const effect = t?.effects?.[slot], definition = (window.LoomEffectsCatalog || []).find(e => e.id === effect?.type);
       if (!definition) continue;
@@ -161,7 +176,13 @@
     }
     if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds GALLEY’s 64 MB audio budget. Remove unused audio or shorten a take.');
     const assetMap = new Map(assets.map(a => [a.id, a]));
-    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome) }, selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
+    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { id: 'master', name: text(raw.master?.name, 'Master'), level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome), mute: bool(raw.master?.mute), effects: Array.from({ length: 4 }, (_, slot) => effect(raw.master?.effects?.[slot])), automation: [] }, returns: [], selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
+    s.master.automation = automation(raw.master?.automation, s.master, totalBeats);
+    s.returns = Array.from({ length: 2 }, (_, index) => {
+      const base = d.returns[index], r = raw.returns?.[index] || {};
+      const bus = { ...base, name: text(r.name, base.name), level: number(r.level, 0, 1.5, 1), pan: number(r.pan, -1, 1, 0), mute: bool(r.mute), solo: bool(r.solo), effects: r.effects === undefined ? base.effects : Array.from({ length: 4 }, (_, slot) => effect(r.effects?.[slot])), automation: [] };
+      bus.automation = automation(r.automation, bus, totalBeats); return bus;
+    });
     if (s.loopEnd <= s.loopStart) s.loopEnd = Math.min(totalBeats, s.loopStart + 0.25);
     s.recording = { countInBars: [0, 1, 2].includes(raw.recording?.countInBars) ? raw.recording.countInBars : 0, punchEnabled: bool(raw.recording?.punchEnabled), punchStart: number(raw.recording?.punchStart, 0, totalBeats - .25, 0), punchEnd: number(raw.recording?.punchEnd, .25, totalBeats, Math.min(totalBeats, 16)), micCompensation: ['auto', 'manual', 'off'].includes(raw.recording?.micCompensation) ? raw.recording.micCompensation : 'auto', micOffsetMs: number(raw.recording?.micOffsetMs, -500, 500, 0), micInputGainDb: number(raw.recording?.micInputGainDb, -24, 24, 0) };
     if (s.recording.punchEnd <= s.recording.punchStart) s.recording.punchEnd = Math.min(totalBeats, s.recording.punchStart + .25);
@@ -170,7 +191,7 @@
     const clipIds = new Set(); let snapshotBytes = 0;
     for (let i = 0; i < 8; i++) {
       const r = raw.tracks?.[i] || {}, base = track(i);
-      const t = { ...base, name: text(r.name, base.name), color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : base.color, level: number(r.level, 0, 1.5, 0.8), pan: number(r.pan, -1, 1, 0), mute: bool(r.mute), solo: bool(r.solo), armed: bool(r.armed), instrumentLive: bool(r.instrumentLive), instrument: instrument(r.instrument), effects: Array.from({ length: 4 }, (_, j) => effect(r.effects?.[j])), clips: [] };
+      const t = { ...base, name: text(r.name, base.name), color: /^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : base.color, level: number(r.level, 0, 1.5, 0.8), pan: number(r.pan, -1, 1, 0), mute: bool(r.mute), solo: bool(r.solo), armed: bool(r.armed), instrumentLive: bool(r.instrumentLive), instrument: instrument(r.instrument), effects: Array.from({ length: 4 }, (_, j) => effect(r.effects?.[j])), sends: Array.from({ length: 2 }, (_, send) => number(r.sends?.[send], 0, 1, 0)), sendPre: Array.from({ length: 2 }, (_, send) => bool(r.sendPre?.[send])), clips: [] };
       t.automation = automation(r.automation, t, totalBeats);
       if (t.instrument?.snapshot) snapshotBytes += JSON.stringify(t.instrument.snapshot).length;
       for (const c of (Array.isArray(r.clips) ? r.clips : []).slice(0, LIMITS.clipsPerTrack)) {
@@ -199,6 +220,40 @@
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
+  function migrateEffectFields(effects, legacyBroiler, legacyButter) {
+    for (const slot of Array.isArray(effects) ? effects : []) {
+      const keys = slot?.type === 'broiler' && legacyBroiler ? BROILER_WORKSHOP_KEYS : slot?.type === 'velvet' && legacyButter ? BUTTER_ANALOG_KEYS : null;
+      if (!keys || !plain(slot.params)) continue;
+      const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === slot.type);
+      for (const param of definition?.params || []) if (keys.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
+    }
+  }
+  function validateAutomation(raw, owner, totalBeats, label, required = false) {
+    if (raw === undefined && !required) return;
+    if (!Array.isArray(raw) || raw.length > LIMITS.automationLanes) throw Error(label + ' contains too many or invalid automation lanes.');
+    const descriptors = new Map(automationTargets(owner).map(p => [p.target, p])), targets = new Set();
+    for (const lane of raw) {
+      const descriptor = descriptors.get(lane?.target);
+      if (!plain(lane) || !descriptor || targets.has(lane.target) || typeof lane.enabled !== 'boolean' || !['linear', 'hold'].includes(lane.interpolation) || !Array.isArray(lane.points) || lane.points.length > LIMITS.automationPoints || (descriptor.effectType && lane.effectType !== descriptor.effectType)) throw Error(label + ' contains an invalid automation lane.');
+      targets.add(lane.target);
+      for (const p of lane.points) if (!plain(p) || !Number.isFinite(p.beat) || p.beat < 0 || p.beat > totalBeats || !Number.isFinite(p.value) || p.value < descriptor.min || p.value > descriptor.max) throw Error('An automation point is outside its valid range.');
+    }
+  }
+  function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter) {
+    const master = index === -1, id = master ? 'master' : 'return-' + (index + 1), label = master ? 'The master bus' : 'Return ' + (index === 0 ? 'A' : 'B');
+    const fields = master ? ['id', 'name', 'level', 'metronome', 'mute', 'effects', 'automation'] : ['id', 'name', 'level', 'pan', 'mute', 'solo', 'effects', 'automation'];
+    if (!plain(bus) || bus.id !== id || fields.some(key => !Object.prototype.hasOwnProperty.call(bus, key)) || Object.keys(bus).some(key => !fields.includes(key)) || typeof bus.name !== 'string' || !bus.name.trim() || bus.name.length > 100 || typeof bus.mute !== 'boolean' || !Array.isArray(bus.effects) || bus.effects.length !== 4) throw Error(label + ' contains invalid settings, effects slots, or unsupported routing.');
+    strictNumbers(bus, master ? ['level'] : ['level', 'pan'], label + ' contains invalid mix settings.');
+    if (!master && (bus.level < 0 || bus.level > 1.5 || bus.pan < -1 || bus.pan > 1 || typeof bus.solo !== 'boolean') || master && typeof bus.metronome !== 'boolean') throw Error(label + ' contains invalid mix settings.');
+    migrateEffectFields(bus.effects, legacyBroiler, legacyButter);
+    for (const slot of bus.effects) {
+      effect(slot, true);
+      if (slot === null) continue;
+      const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === slot.type);
+      for (const param of definition.params) if (param.type === 'range' && (slot.params[param.key] < param.min || slot.params[param.key] > param.max)) throw Error(label + ' contains effect settings outside their valid range.');
+    }
+    validateAutomation(bus.automation, bus, totalBeats, label, true);
+  }
   function parseProject(json) {
     if (typeof json !== 'string' || json.length > LIMITS.projectBytes) throw Error('Choose a GALLEY project smaller than 256 MB.');
     let p; try { p = JSON.parse(json); } catch { throw Error('This file is not valid JSON.'); }
@@ -207,12 +262,22 @@
     const savedVersion = typeof p.appVersion === 'string' && /^(\d+)\.(\d+)\.(\d+)$/.exec(p.appVersion);
     const legacyBroiler = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 14);
     const legacyButter = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 15);
+    const legacyBuses = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 16);
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || s.tracks.length !== 8 || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain eight complete tracks.');
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack > 7 || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
     strictNumbers(s.view, ['zoom', 'snap'], 'The project contains invalid view settings.');
     if (typeof s.master.metronome !== 'boolean' || !['arrange', 'mixer'].includes(s.view.tab) || ![0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(s.view.snap)) throw Error('The project contains invalid options.');
+    // Legacy files inherit only absent bus fields. Supplied arrays, IDs,
+    // booleans, and routes must pass the same strict checks as a new project.
+    if (legacyBuses) {
+      for (const [key, value] of Object.entries(defaultMaster())) if (!['level', 'metronome'].includes(key) && !Object.prototype.hasOwnProperty.call(s.master, key)) s.master[key] = copy(value);
+      if (!Object.prototype.hasOwnProperty.call(s, 'returns')) s.returns = [defaultReturn(0), defaultReturn(1)];
+    }
+    validateBus(s.master, -1, s.lengthBars * 4, legacyBroiler, legacyButter);
+    if (!Array.isArray(s.returns) || s.returns.length !== 2) throw Error('A GALLEY project must contain two complete return buses.');
+    s.returns.forEach((bus, index) => validateBus(bus, index, s.lengthBars * 4, legacyBroiler, legacyButter));
     if(s.view.follow !== undefined && typeof s.view.follow !== 'boolean') throw Error('The project contains an invalid playhead follow setting.');
     if (s.recording !== undefined) {
       if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
@@ -234,28 +299,17 @@
       strictNumbers(t, ['level', 'pan'], 'A track contains invalid mix settings.');
       for (const key of ['mute', 'solo', 'armed', 'instrumentLive']) if (typeof t[key] !== 'boolean') throw Error('A track contains invalid options.');
       instrument(t.instrument);
+      if (legacyBuses) {
+        if (!Object.prototype.hasOwnProperty.call(t, 'sends')) t.sends = [0, 0];
+        if (!Object.prototype.hasOwnProperty.call(t, 'sendPre')) t.sendPre = [false, false];
+      }
+      if (!Array.isArray(t.sends) || t.sends.length !== 2 || t.sends.some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) || !Array.isArray(t.sendPre) || t.sendPre.length !== 2 || t.sendPre.some(value => typeof value !== 'boolean')) throw Error('A track contains invalid send levels or pre-fader options.');
       // Workshop controls were introduced in 1.14. Older projects inherit only
       // the new fields; existing controls and any supplied new values still
       // undergo the same strict validation as a current project.
-      if (legacyBroiler) for (const slot of t.effects) if (slot?.type === 'broiler' && plain(slot.params)) {
-        const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'broiler');
-        for (const param of definition?.params || []) if (BROILER_WORKSHOP_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
-      }
-      if (legacyButter) for (const slot of t.effects) if (slot?.type === 'velvet' && plain(slot.params)) {
-        const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === 'velvet');
-        for (const param of definition?.params || []) if (BUTTER_ANALOG_KEYS.has(param.key) && !Object.prototype.hasOwnProperty.call(slot.params, param.key)) slot.params[param.key] = param.default;
-      }
+      migrateEffectFields(t.effects, legacyBroiler, legacyButter);
       t.effects.forEach(e => effect(e, true));
-      if (t.automation !== undefined) {
-        if (!Array.isArray(t.automation) || t.automation.length > LIMITS.automationLanes) throw Error('A track contains too many automation lanes.');
-        const descriptors = new Map(automationTargets(t).map(p => [p.target, p])), targets = new Set();
-        for (const lane of t.automation) {
-          const descriptor = descriptors.get(lane?.target);
-          if (!plain(lane) || !descriptor || targets.has(lane.target) || typeof lane.enabled !== 'boolean' || !['linear', 'hold'].includes(lane.interpolation) || !Array.isArray(lane.points) || lane.points.length > LIMITS.automationPoints || (descriptor.effectType && lane.effectType !== descriptor.effectType)) throw Error('A track contains an invalid automation lane.');
-          targets.add(lane.target);
-          for (const p of lane.points) if (!plain(p) || !Number.isFinite(p.beat) || p.beat < 0 || p.beat > s.lengthBars * 4 || !Number.isFinite(p.value) || p.value < descriptor.min || p.value > descriptor.max) throw Error('An automation point is outside its valid range.');
-        }
-      }
+      validateAutomation(t.automation, t, s.lengthBars * 4, 'A track');
       for (const c of t.clips) {
         if (!plain(c) || typeof c.id !== 'string' || !c.id || clipIds.has(c.id) || typeof c.name !== 'string') throw Error('A clip contains invalid or duplicate identifiers.');
         clipIds.add(c.id);
@@ -311,5 +365,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, demoState, normalize, effect, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

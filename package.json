@@ -79,7 +79,9 @@
     "check:broiler": "node loom/broiler-pedal-checks.cjs && node loom/broiler-workshop-checks.cjs && node loom/broiler-project-checks.cjs && node loom/amp-checks.cjs",
     "check:broiler-browser": "node loom/broiler-browser-checks.cjs",
     "check:compressor": "node loom/compressor-checks.cjs && node loom/compressor-project-checks.cjs",
-    "check:compressor-browser": "node loom/compressor-browser-checks.cjs"
+    "check:compressor-browser": "node loom/compressor-browser-checks.cjs",
+    "check:buses": "node loom/bus-schema-checks.cjs && node loom/bus-routing-checks.cjs && node loom/bus-review-checks.cjs && node loom/bus-automation-checks.cjs",
+    "check:buses-browser": "node loom/bus-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
