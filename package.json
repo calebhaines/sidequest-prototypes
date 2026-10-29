@@ -81,7 +81,9 @@
     "check:compressor": "node loom/compressor-checks.cjs && node loom/compressor-project-checks.cjs",
     "check:compressor-browser": "node loom/compressor-browser-checks.cjs",
     "check:buses": "node loom/bus-schema-checks.cjs && node loom/bus-routing-checks.cjs && node loom/bus-review-checks.cjs && node loom/bus-automation-checks.cjs",
-    "check:buses-browser": "node loom/bus-browser-checks.cjs"
+    "check:buses-browser": "node loom/bus-browser-checks.cjs",
+    "check:preamp": "node loom/preamp-checks.cjs && node loom/preamp-project-checks.cjs && node loom/preamp-review-checks.cjs",
+    "check:preamp-browser": "node loom/preamp-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

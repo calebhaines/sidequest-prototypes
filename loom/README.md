@@ -89,7 +89,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.16.0.
+SERVICE is version 1.0.0; GALLEY is version 1.17.0.
 
 ## Making a piece
 
@@ -336,11 +336,12 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Fourteen effects
+## Fifteen effects
 
 | Effect | Processing |
 | --- | --- |
 | MANDOLINE | Three EQ bands and a resonant filter |
+| SAUTÉ | Twelve classic microphone preamp families plus transparent gain, transformer memory, drive, bias, feedback, slew, virtual loading and tone shaping |
 | BUTTER | Eight classic analog compressor families, the original Clean model, program-dependent timing, colour and stereo linking |
 | CHAR | Saturation, diode distortion, or wavefolding |
 | DOUBLE | Stereo chorus and flanging |
@@ -359,7 +360,7 @@ is unavailable, keep a WAV or packet for the next session.
 
 GALLEY retains eight instrument/audio tracks with four inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
-channels each have four inserts. All fourteen effects work in these racks.
+channels each have four inserts. All fifteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
 LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
 their original sound. Change either return's effects to build another shared
@@ -425,6 +426,39 @@ Run `npm run check:buses` and `npm run check:buses-browser`. Extracted source
 checks are `node bus-schema-checks.cjs`, `node bus-routing-checks.cjs`,
 `node bus-review-checks.cjs`, `node bus-automation-checks.cjs` and
 `LOOM_BUS_QA_BUILT=1 node bus-browser-checks.cjs` after rebuilding.
+
+### SAUTÉ: microphone preamps
+
+The `saute` insert offers twelve analog-inspired microphone preamp families and
+a transparent mode. Neve 1073, API 312, SSL 4000 and 9000, UA 610, EMI REDD.47,
+Telefunken V72, Helios Type 69, Trident A-Range, Focusrite ISA 110, Avalon VT-737SP,
+and Chandler TG2 / EMI TG inform its recognizable aliases. See
+[SAUTE-MODELS.md](SAUTE-MODELS.md) for the models, circuit controls and recipes.
+
+Model selection preserves every adjustment. **Use circuit starting point** loads
+only the suggested circuit character, preserving gain staging, pad, polarity,
+tone, blend and bypass. Complete recipes replace the full effect settings.
+Input, Drive, Colour, Output, compensation and Dry / wet stay visible; the input,
+circuit and tone workshops fold away. Every numeric control has an exact value
+field and can be automated on tracks, the master or either shared return.
+
+Drive raises the modeled stage level. Gain compensation subtracts only the
+added Drive gain, leaving Input, digital pad and manual Output intact; it does
+not perform loudness matching. Colour blends circuit processing against the
+gain-staged clean path before tone, polarity and output. The input/output and
+circuit readings come from the DSP. Microphone takes remain dry.
+
+These deterministic, reduced-order models represent useful circuit behaviours,
+not measured replicas of particular hardware units. Virtual input loading
+changes the frequency response inside the effect; it cannot change the physical
+impedance of your audio interface or the microphone recording. There is no fake
+phantom-power control, random hiss or mains hum. Stereo channels retain separate
+circuit histories, and the effect adds no fixed buffer latency.
+
+Run `npm run check:preamp` and `npm run check:preamp-browser`. From extracted
+sources, use `node preamp-checks.cjs`, `node preamp-project-checks.cjs`,
+`node preamp-review-checks.cjs` and, after rebuilding,
+`LOOM_PREAMP_QA_BUILT=1 node preamp-browser-checks.cjs`.
 
 ### BUTTER: classic compression
 
@@ -667,7 +701,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.16.0.
+font license notices. Version 1.17.0.
 
 ## Compatibility
 

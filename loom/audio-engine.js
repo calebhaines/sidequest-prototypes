@@ -945,9 +945,10 @@
               const createCreative=${window.createLoomCreativeDSP ? window.createLoomCreativeDSP.toString() : 'null'};
               const createBroilerPedals=${window.createLoomBroilerPedalsDSP ? window.createLoomBroilerPedalsDSP.toString() : 'null'};
               const createCompressor=${window.createLoomCompressorDSP ? window.createLoomCompressorDSP.toString() : 'null'};
+              const createPreamp=${window.createLoomPreampDSP ? window.createLoomPreampDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
