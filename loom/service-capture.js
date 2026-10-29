@@ -70,7 +70,11 @@
     const lanes = next.tracks.map(() => new Map()), everTargets = next.tracks.map(() => new Set()), pieceOrigins = new Map();
     for (const event of take.events) if (event.kind === 'performance') {
       event.overrides.forEach(item => everTargets[state.tracks.findIndex(track => track.id === item.trackId)].add(item.target));
-      event.drops.forEach((dropped, index) => { if (dropped) everTargets[index].add('level'); });
+      event.drops.forEach((dropped, index) => { if (dropped) {
+        everTargets[index].add('level');
+        // A dropped performance channel also closes its pre-fader wet taps.
+        for (let send = 0; send < 2; send++) if (state.tracks[index].sendPre?.[send]) everTargets[index].add('send:' + send);
+      } });
     }
     function controls(beat, performance) {
       const overrides = new Map(performance.overrides.map(item => [item.trackId + ':' + item.target, item.value]));
@@ -78,7 +82,7 @@
         for (const target of everTargets[index]) {
           const descriptor = descriptors[index].get(target);
           let value = overrides.has(track.id + ':' + target) ? overrides.get(track.id + ':' + target) : descriptor.value;
-          if (target === 'level' && performance.drops[index]) value = 0;
+          if (performance.drops[index] && (target === 'level' || /^send:[01]$/.test(target) && track.sendPre?.[Number(target.slice(5))])) value = 0;
           let lane = lanes[index].get(target);
           if (!lane) { lane = { target, enabled: true, interpolation: 'hold', points: [], ...(descriptor.effectType ? { effectType: descriptor.effectType } : {}) }; lanes[index].set(target, lane); }
           const previous = lane.points[lane.points.length - 1];
@@ -210,6 +214,18 @@
       if (lanes[index].size > S.LIMITS.automationLanes) fail('this take exceeds the automation lane limit.');
       track.automation = [...lanes[index].values()];
     });
+    // Buses keep reading their existing automation during SERVICE. Cropping a
+    // take must preserve that prefix, rather than moving a later endpoint onto
+    // the new arrangement end and accelerating its ramp.
+    for (const owner of [next.master, ...(next.returns || [])]) {
+      if (!Array.isArray(owner?.automation)) continue;
+      const targets = new Map(S.automationTargets(owner).map(item => [item.target, item]));
+      for (const lane of owner.automation) if (lane.points.some(point => point.beat > take.lengthBeats)) {
+        const descriptor = targets.get(lane.target), endValue = S.automationValue({...lane,enabled:true}, take.lengthBeats, descriptor?.value ?? descriptor?.default ?? 0);
+        lane.points = lane.points.filter(point => point.beat <= take.lengthBeats);
+        if (!lane.points.some(point => point.beat === take.lengthBeats)) lane.points.push({beat:take.lengthBeats,value:endValue});
+      }
+    }
     if (next.recording) { next.recording.punchEnabled = false; next.recording.punchStart = 0; next.recording.punchEnd = Math.min(take.lengthBeats, next.lengthBars * 4); }
     delete next.service;
     const normalized = S.normalize(next);
