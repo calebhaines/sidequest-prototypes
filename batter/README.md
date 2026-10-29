@@ -1,6 +1,8 @@
 # BATTER
 
-Version 1.2.0 adds a folded chain editor beside the existing banks. Append bank entries, repeat each 1–16 times, reorder, duplicate or remove them, and choose Loop or Once. The compact summary shows the playing entry and repeat. Once finishes the chain and lets the last drums ring. Clear chain supports Undo. Changes to the bank order, selected bank or pattern length during playback enter at the next complete pattern boundary without restarting the transport. Older A–H string chains reopen as equivalent repeat entries, preserving global polymeter and seeded performance.
+Version 1.3.0 adds two independent GALLEY effect slots to every drum lane, with complete effect controls, persistent tails, project and kit storage, and the same processing in native playback, hosted printing and exports.
+
+Version 1.2.0 added a folded chain editor beside the existing banks. Append bank entries, repeat each 1–16 times, reorder, duplicate or remove them, and choose Loop or Once. The compact summary shows the playing entry and repeat. Once finishes the chain and lets the last drums ring. Clear chain supports Undo. Changes to the bank order, selected bank or pattern length during playback enter at the next complete pattern boundary without restarting the transport. Older A–H string chains reopen as equivalent repeat entries, preserving global polymeter and seeded performance.
 
 Edit selected hit, Shift-click, right-click or touch long-press opens the existing Hit inspector without toggling that hit. Sound for this hit shows inherited drum values and marks explicit locks. Cutoff uses an octave-scaled slider plus exact Hz entry; resonance, decay, drive, level, pan, high-pass and A/B blend use the same lock/inherit controls. Inherit clears one override; Clear locks clears the selected hit's overrides. Locked steps carry a small marker. Hidden steps, bank copying, rotation, protection, Undo, projects and recovery retain their full hit details. Unlocked strikes keep the original drum sound.
 
@@ -54,3 +56,24 @@ Space plays / pauses; Escape clears sound. Ctrl / Command Z undoes; Ctrl / Comma
 Run `python build.py` from the extracted source folder, or `python batter/build.py` in the repository. The build embeds the recorded starter manifest, native code, fonts and Kitchen exchange code into `index.html`. The repository build also creates `music/batter/BATTER-source.zip`. Optional online bundles remain separate to keep the HTML comfortably below GALLEY's hosted-instrument file limit; the starter is fully offline and the source archive rebuilds it without the original repository.
 
 Run `node engine-checks.cjs` for engine checks and `node sequencing-checks.cjs` for maintained-source Chromium chain, parameter-lock, export and layout regression checks. Browser checks use Playwright and Chromium (`PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` can select installed runtimes). `BATTER_BASELINE_ENGINE` optionally supplies a previous engine source for an additional native PCM comparison; ordinary checks need no Git history.
+
+## Two GALLEY inserts per drum
+
+Every one of the twelve drum lanes has two serial GALLEY effect slots. The
+selected Drum editor shows the compact slots; open one for the complete effect
+controls, model notes, recipes, bypass and reset. Each lane keeps an independent,
+persistent chain, so overlapping strikes and A/B layers share one delay or
+reverb history. The chain follows per-hit preparation and precedes lane volume,
+mute/solo, and the master room and delay sends.
+
+Settings live in `lane.galleyFx` as two null or `{ type, params }` entries. Older
+recipes inherit two empty slots. Provided invalid effects or parameters are
+rejected before replacing the recipe. Project saves, browser recovery, Undo,
+portable kit bundles, GALLEY native patches, and processed pattern/chain/lane
+exports preserve the slots. A/B source sample exports remain explicitly
+unprocessed. Use a release tail when exporting delay or reverb, and Panic to
+clear all buffered sound.
+
+The actual GALLEY DSP is bundled locally. AudioWorklet playback and offline
+rendering use the same two-slot processor; empty racks retain the original
+audio graph. Native and hosted transport supply the effect tempo and clock.

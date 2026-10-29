@@ -37,6 +37,10 @@ function compareWavs(actual, expected, tolerance) {
   return maximum;
 }
 function withoutNewDefaults(state, id) {
+  for (const track of state.tracks) {
+    assert.deepEqual(track.galleyFx, [null, null], 'Legacy percussion voices receive two empty GALLEY slots');
+    delete track.galleyFx;
+  }
   if (id === 'tine') {
     assert.deepEqual(state.chain, { enabled: false, loop: true, entries: [] }, 'Legacy CLATTER starts with its new chain disabled');
     delete state.chain;

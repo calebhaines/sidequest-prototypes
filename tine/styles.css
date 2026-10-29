@@ -393,3 +393,6 @@ body[data-kitchen-app="clatter"] dialog { border-radius:3px;background:#20272a;b
 @media(max-width:650px){.sequencer-footer{gap:10px}.sequencer-footer .pattern-banks{flex-basis:100%}.sequencer-footer .beat-indicator{margin-left:auto}.chain-launch{max-width:140px}.sequencing-dialog{padding:16px}.sequencing-dialog .dialog-heading h2{font-size:19px}.chain-entry{flex-wrap:wrap;gap:5px}.chain-entry>select{flex:0 0 calc(50% - 22px);width:auto}.chain-entry>label{flex:1}.chain-entry>button:first-of-type{margin-left:20px}.step-lock-row{grid-template-columns:minmax(100px,1fr) 80px 72px}.step-lock-row>label{font-size:11px}.sequencing-dialog .text-button{white-space:normal}.master-panel,.master-knobs{min-width:0}.master-knobs{gap:14px}.master-intro{min-width:0}.topbar-right{flex-wrap:wrap;min-width:0}.topbar{height:auto;min-height:76px;gap:8px;flex-wrap:wrap;padding:12px 0}}
 
 .step-lock-labels{display:flex;flex-direction:column;gap:3px;min-width:0}.step-lock-name{font-size:12px;line-height:1.25}.step-inherit-label{display:flex;align-items:center;gap:5px;font-size:10px;color:#b6c0b9}.step-inherit-label input[type=checkbox]{margin:0;flex-shrink:0}
+
+/* Selected-voice inserts share the studio's compact two-slot editor. */
+.voice-effects-mount{min-width:0;margin:18px 0 10px}

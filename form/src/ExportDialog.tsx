@@ -8,7 +8,8 @@ import {
   Package,
   X,
 } from "lucide-react";
-import { encodeWav, renderPattern, renderSound } from "./audio";
+import { encodeWav, renderPattern, renderSound, renderVoiceStereo } from "./audio";
+import { hasVoiceFx } from "./voice-effects";
 import type { SoundParams } from "./types";
 import type { StepDetail } from "./sequencing";
 import type { PatternState } from "./pattern-chain";
@@ -80,8 +81,8 @@ export default function ExportDialog({
   );
   const stepCount = Math.max(1, ...steps.map((row) => row.length));
   const sampleDuration = useMemo(
-    () => (open && selected ? renderSound(selected, 44100).length / 44100 : 0),
-    [open, selected],
+    () => (open && selected ? (hasVoiceFx(selected.galleyFx) ? renderVoiceStereo(selected, 44100, bpm)[0].length : renderSound(selected, 44100).length) / 44100 : 0),
+    [open, selected, bpm],
   );
 
   useEffect(() => {
@@ -137,20 +138,20 @@ export default function ExportDialog({
       // Let the dialog show its rendering state before doing offline synthesis.
       await new Promise<void>((resolve) => window.setTimeout(resolve, 20));
       if (mode === "kit") {
+        const stereo = sounds.some(sound => hasVoiceFx(sound.galleyFx));
         const entries = sounds.map((sound, index) => {
           const filename = `${String(index + 1).padStart(2, "0")} ${safeFilename(soundName(sound, index))}.wav`;
-          const samples = prepareSamples(
-            renderSound(sound, settings.sampleRate),
-            settings,
-          );
+          const samples = stereo
+            ? prepareStereo(renderVoiceStereo(sound, settings.sampleRate, bpm), settings.normalize, settings.trim)
+            : prepareSamples(renderSound(sound, settings.sampleRate), settings);
           return { filename, samples, sound };
         });
         const manifest = {
           application: "HOTPLATE / Kitchen",
-          version: 3,
+          version: 4,
           sampleRate: settings.sampleRate,
           bitDepth: settings.bitDepth,
-          channels: 1,
+          channels: stereo ? 2 : 1,
           normalized: settings.normalize,
           silenceTrimmed: settings.trim,
           bpm,
@@ -162,7 +163,7 @@ export default function ExportDialog({
           muted,
           sounds: entries.map(({ filename, samples, sound }) => ({
             filename,
-            duration: samples.length / settings.sampleRate,
+            duration: (samples instanceof Float32Array ? samples.length : samples[0].length) / settings.sampleRate,
             parameters: sound,
           })),
         };
@@ -174,7 +175,7 @@ export default function ExportDialog({
           { name: "form-kit.json", data: JSON.stringify(manifest, null, 2) },
           {
             name: "README.txt",
-            data: `HOTPLATE / Kitchen\n\n${sounds.length} mono percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
+            data: `HOTPLATE / Kitchen\n\n${sounds.length} ${stereo ? "stereo" : "mono"} percussion samples\n${settings.sampleRate} Hz / ${settings.bitDepth}-bit WAV\n\nDrag the WAV files into your sampler or drum machine.\nform-kit.json contains the sound parameters and sequencer pattern.\n`,
           },
         ]);
         downloadBlob(zip, "HOTPLATE percussion kit.zip");
@@ -182,10 +183,9 @@ export default function ExportDialog({
       } else {
         const samples =
           mode === "sample"
-            ? prepareSamples(
-                renderSound(selected, settings.sampleRate),
-                settings,
-              )
+            ? hasVoiceFx(selected.galleyFx)
+              ? prepareStereo(renderVoiceStereo(selected, settings.sampleRate, bpm), settings.normalize, settings.trim)
+              : prepareSamples(renderSound(selected, settings.sampleRate), settings)
             : prepareStereo(
                 renderPatternAudio ? renderPatternAudio(settings.sampleRate) : renderPattern(
                   sounds.map((params, index) => ({

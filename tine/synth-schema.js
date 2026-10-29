@@ -72,6 +72,17 @@
   const legacyModelIds = ['string', 'beam', 'marimba', 'drumhead', 'membrane', 'plate'];
   const materialIds = strikeMaterials.map((material) => material.id);
   const colorIds = noiseColors.map((color) => color.id);
+  function normalizeVoiceEffects(value) {
+    if (window.KitchenVoiceEffects) return window.KitchenVoiceEffects.normalizeSlots(value, { strict: true });
+    // The empty legacy engine and its portable source checks need no FX code.
+    if (value === undefined || Array.isArray(value) && value.length === 2 && value.every(slot => slot === null)) return [null, null];
+    throw new Error('GALLEY voice effects have not loaded.');
+  }
+  function validVoiceEffects(track, required = false) {
+    if (!Object.prototype.hasOwnProperty.call(track, 'galleyFx')) return !required;
+    if (track.galleyFx === undefined) return false;
+    try { normalizeVoiceEffects(track.galleyFx); return true; } catch (_) { return false; }
+  }
   const newNumericKeys = ['contactTexture', 'rebound', 'reboundTime'];
   const legacyNumeric = numeric.filter((parameter) => !newNumericKeys.includes(parameter.key));
   const legacyTrackKeys = ['name', 'model', 'noiseColor', 'mute', 'solo', 'steps', ...legacyNumeric.map((parameter) => parameter.key)];
@@ -100,7 +111,7 @@
 
   function defaults(model) {
     const id = modelIds.includes(model) ? model : 'membrane';
-    return Object.assign({}, common, voicing[id], { model: id, steps: Array(16).fill(0) });
+    return Object.assign({}, common, voicing[id], { model: id, steps: Array(16).fill(0), galleyFx: [null, null] });
   }
 
   function normalizeTrack(track) {
@@ -118,6 +129,7 @@
     if (materialIds.includes(input.strikeMaterial)) result.strikeMaterial = input.strikeMaterial;
     if (colorIds.includes(input.noiseColor)) result.noiseColor = input.noiseColor;
     for (const key of ['mute', 'solo']) if (typeof input[key] === 'boolean') result[key] = input[key];
+    result.galleyFx = normalizeVoiceEffects(input.galleyFx);
     if (Array.isArray(input.steps)) {
       result.steps = Array.from({ length: input.steps.length > 16 ? 32 : 16 }, (_, index) => {
         const value = input.steps[index];
@@ -141,17 +153,17 @@
   }
 
   function validateTrack(track) {
-    return validTrackShape(track, trackKeys, modelIds, numeric) && materialIds.includes(track.strikeMaterial);
+    return validTrackShape(track, [...trackKeys, ...(Object.prototype.hasOwnProperty.call(track || {}, 'galleyFx') ? ['galleyFx'] : [])], modelIds, numeric) && materialIds.includes(track.strikeMaterial) && validVoiceEffects(track);
   }
 
   function validateLegacyTrack(track) {
-    return validTrackShape(track, legacyTrackKeys, legacyModelIds, legacyNumeric);
+    return validTrackShape(track, [...legacyTrackKeys, ...(Object.prototype.hasOwnProperty.call(track || {}, 'galleyFx') ? ['galleyFx'] : [])], legacyModelIds, legacyNumeric) && validVoiceEffects(track);
   }
 
   function validateProject(project) {
-    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected', ...(project?.version === 4 ? ['bankLocks'] : [])]) || project.app !== 'TINE' || ![1, 2, 3, 4].includes(project.version)) return false;
+    if (!exactKeys(project, ['app', 'version', 'state', 'banks', 'bank', 'selected', ...(project?.version >= 4 ? ['bankLocks'] : [])]) || project.app !== 'TINE' || ![1, 2, 3, 4, 5].includes(project.version)) return false;
     const state = project.state;
-    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version >= 3 ? ['stepCount'] : []), ...(project.version === 4 ? ['chain'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
+    if (!exactKeys(state, ['name', 'bpm', 'swing', 'drive', 'space', 'master', 'tracks', ...(project.version >= 3 ? ['stepCount'] : []), ...(project.version >= 4 ? ['chain'] : []), ...(state?.musicLabPattern === undefined ? [] : ['musicLabPattern'])])) return false;
     if (project.version >= 3 && ![16, 32].includes(state.stepCount)) return false;
     if (state.musicLabPattern !== undefined) {
       try {
@@ -164,9 +176,9 @@
     if (typeof state.name !== 'string' || !state.name.trim() || state.name.length > 80 || /[\u0000-\u001f\u007f]/.test(state.name)) return false;
     if (!finite(state.bpm, 40, 240) || !finite(state.swing, 0, 0.6) || !['drive', 'space', 'master'].every((key) => finite(state[key], 0, 1))) return false;
     const trackValidator = project.version === 1 ? validateLegacyTrack : validateTrack;
-    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator)) return false;
+    if (!Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.from(state.tracks).every(trackValidator) || project.version >= 5 && !state.tracks.every(track => validVoiceEffects(track, true))) return false;
     if (!Array.isArray(project.banks) || project.banks.length !== 4 || !Array.from(project.banks).every((bank) => Array.isArray(bank) && bank.length === 8 && Array.from(bank).every(validSteps))) return false;
-    if (project.version === 4 && (!validChain(state.chain, state.stepCount) || !Array.isArray(project.bankLocks) || project.bankLocks.length !== 4 || !project.bankLocks.every((locks, bank) => Array.isArray(locks) && locks.length === 8 && locks.every((steps, voice) => Array.isArray(steps) && steps.length === project.banks[bank][voice].length && Array.from(steps).every(validLocks))))) return false;
+    if (project.version >= 4 && (!validChain(state.chain, state.stepCount) || !Array.isArray(project.bankLocks) || project.bankLocks.length !== 4 || !project.bankLocks.every((locks, bank) => Array.isArray(locks) && locks.length === 8 && locks.every((steps, voice) => Array.isArray(steps) && steps.length === project.banks[bank][voice].length && Array.from(steps).every(validLocks))))) return false;
     const patterns = [...state.tracks.map((track) => track.steps), ...project.banks.flat()];
     if ((project.version < 3 && patterns.some((steps) => steps.length !== 16)) || (state.stepCount === 32 && patterns.some((steps) => steps.length !== 32))) return false;
     return Number.isInteger(project.bank) && project.bank >= 0 && project.bank <= 3
@@ -185,6 +197,10 @@
       upgraded.state.chain = defaultChain();
       upgraded.bankLocks = upgraded.banks.map(bank => bank.map(steps => steps.map(() => ({}))));
       upgraded.version = 4;
+    }
+    if (upgraded.version === 4) {
+      upgraded.state.tracks.forEach(track => { track.galleyFx = normalizeVoiceEffects(track.galleyFx); });
+      upgraded.version = 5;
     }
     return upgraded;
   }
@@ -264,5 +280,5 @@
     }
   }
 
-  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, validateTrack, validateProject, upgradeProject, format, lockRanges, validLocks, normalizeLocks, defaultChain, emptyLocks, validChain, nextSequenceFrame, sequencerPattern });
+  window.TineModel = Object.freeze({ models, strikeMaterials, noiseColors, groups, defaults, normalizeTrack, normalizeVoiceEffects, validateTrack, validateProject, upgradeProject, format, lockRanges, validLocks, normalizeLocks, defaultChain, emptyLocks, validChain, nextSequenceFrame, sequencerPattern });
 }());

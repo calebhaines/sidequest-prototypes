@@ -14,7 +14,7 @@ Four pattern banks, accents, swing, mute/solo, eight curated grooves, voice muta
 
 The compact **16 STEPS / 32 STEPS** chooser in the sequence heading changes the loop length. At 32, **1–16 / 17–32** switches the existing grid between its two halves; arrow keys also cross between halves. The second half starts empty. Returning to 16 excludes the second half from playback and exports while preserving its hits and accents in all four banks. Clear and New groove edit the active length. Undo, browser saving, project files, native playback, and shared patterns include the chosen length. Factory grooves remain sixteen steps. Pattern export lengths are musical bars: choose at least two bars for a complete 32-step sequence.
 
-Projects save as version 4. Earlier projects migrate to empty sound locks and a disabled chain; versions 1 and 2 retain their sixteen-step loops. Version 1 projects are strictly validated before migration: the original six resonators receive the neutral striker with texture and rebound at zero, preserving their previous synthesis settings. Migration keeps every bank, pattern, mix setting, and voice parameter. Factory grooves keep their original audio when chains and locks are unused.
+Projects save as version 5. Earlier projects migrate to empty sound locks and a disabled chain; versions 1 and 2 retain their sixteen-step loops. Version 1 projects are strictly validated before migration: the original six resonators receive the neutral striker with texture and rebound at zero, preserving their previous synthesis settings. Migration keeps every bank, pattern, mix setting, and voice parameter. Factory grooves keep their original audio when chains and locks are unused.
 
 ## Chain and step sound (v1.2)
 
@@ -62,3 +62,22 @@ Run `node tine/chain-lock-checks.cjs` for maintained-source schema and migration
 ## Display identity
 
 The kitchen name is a presentation change. Existing URL routes, JavaScript integration APIs, storage keys, and portable project identifiers remain unchanged so earlier sessions and shared projects still open.
+
+## GALLEY inserts per voice
+
+Each of CLATTER’s eight voices has two serial GALLEY effect slots in its voice
+editor. The slots use the studio’s full effect catalog, parameter definitions,
+recipes and DSP. Notes from the same voice share a persistent stereo rack, so
+compression reacts to overlapping hits and delays and reverbs retain their
+tails. The rack follows voice level and pan, before CLATTER’s master processing.
+
+Open either slot to choose an effect, edit its controls or load a complete
+recipe. Bypass, Reset, Remove and order changes are local to that voice. Voice
+reset restores the resonator while retaining its insert rack; a complete kit
+preset replaces the whole patch. Effect edits support Undo and saved projects.
+Native project version 5 stores `galleyFx: [null, null]` on every voice. Versions
+1–4 migrate with empty slots, and supplied malformed effect data is rejected.
+
+Voice samples, pattern and chain WAVs, shared samples, and GALLEY source prints
+include these inserts. Empty racks keep the legacy synthesis route unchanged.
+Active offline effects require a browser with Offline AudioWorklet support.

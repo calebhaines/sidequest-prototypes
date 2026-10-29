@@ -257,12 +257,41 @@
     if (values.master !== undefined) set(graph.master.gain, clamp(values.master, 0, 1));
   }
 
-  function createRenderEnvironment(context, graph, seed) {
-    return { context, graph, buffers: new Map(), voices: new Set(), hats: new Set(), random: randomGenerator(seed), modRandom: randomGenerator(seed ^ 0x71A39B5D) };
+  function slotsFor(track) {
+    const value = track?.galleyFx;
+    if (window.KitchenVoiceEffects) return window.KitchenVoiceEffects.normalizeSlots(value, { strict: true });
+    if (value === undefined || Array.isArray(value) && value.length === 2 && value.every(slot => slot === null)) return [null, null];
+    throw new Error('GALLEY voice effects are unavailable. Reopen the complete SIZZLE HTML.');
+  }
+  function syncVoiceBank(environment, state, auditionIndex) {
+    if (!environment) return;
+    environment.voiceTracks = Array.isArray(state?.tracks) ? state.tracks : environment.voiceTracks || [];
+    const bank = environment.voiceBank;
+    if (!bank) return;
+    const solo = environment.voiceTracks.some(track => track.solo);
+    environment.voiceTracks.forEach((track, index) => {
+      bank.setVoice(index, slotsFor(track));
+      bank.setAudible(index, index === auditionIndex || !track.mute && (!solo || track.solo));
+    });
+  }
+  async function attachVoiceBank(context, graph, state, realtime = false) {
+    const tracks = Array.isArray(state?.tracks) ? state.tracks : [];
+    const active = tracks.some(track => slotsFor(track).some(slot => slot && !slot.params.bypass));
+    const fx = window.KitchenVoiceEffects;
+    if (!fx) return;
+    if (realtime || active) await fx.prepare(context);
+    graph.voiceBank = fx.createBank(context, graph.input, { voiceCount: Math.max(8, tracks.length), tempo: state?.bpm || 120 });
+    tracks.forEach((track, index) => graph.voiceBank.setVoice(index, slotsFor(track)));
+    graph.voiceBank.setClock({ tempo: state?.bpm || 120, beat: 0, time: 0, playing: !realtime });
+  }
+
+  function createRenderEnvironment(context, graph, seed, state) {
+    return { context, graph, voiceBank: graph.voiceBank || null, voiceTracks: state?.tracks || [], buffers: new Map(), voices: new Set(), hats: new Set(), random: randomGenerator(seed), modRandom: randomGenerator(seed ^ 0x71A39B5D) };
   }
 
   function fadeVoice(voice, at, duration = 0.008) {
     if (voice.disposed) return;
+    voice.fadeAt = Math.min(voice.fadeAt === undefined ? Infinity : voice.fadeAt, at);
     voice.bus.gain.cancelScheduledValues(at);
     voice.bus.gain.setValueAtTime(voice.startTime > at ? EPSILON : voice.volume, at);
     voice.bus.gain.exponentialRampToValueAtTime(EPSILON, at + duration);
@@ -309,13 +338,18 @@
     const volume = track.level * (expression.velocity === undefined ? (accent ? 1.2 : 0.88) : clamp(expression.velocity, 0, 1));
     bus.gain.value = volume;
     bus.connect(panner);
-    panner.connect(graph.input);
-    const voice = { scopeSource: expression.source || 'native', voiceKey, sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: sourceTrack, stolen: false };
+    const match = typeof expression.voiceKey === 'string' && /^voice-([0-7])$/.exec(expression.voiceKey);
+    const voiceIndex = Number.isInteger(expression.voiceIndex) ? expression.voiceIndex : match ? Number(match[1]) : Math.max(0, (environment.voiceTracks || []).indexOf(sourceTrack));
+    if (environment.voiceBank) environment.voiceBank.setVoice(voiceIndex, slotsFor(sourceTrack));
+    const effectsDetach = environment.voiceBank?.connectSource ? environment.voiceBank.connectSource(voiceIndex, panner) : null;
+    if (!effectsDetach) panner.connect(environment.voiceBank ? environment.voiceBank.input(voiceIndex) : graph.input);
+    const voice = { scopeSource: expression.source || 'native', voiceKey, voiceIndex, effectsDetach, panner, sources: [], sourceEnds: new Map(), nodes: [bus, panner], bus, volume, startTime: now, stopTime: now, ended: 0, disposed: false, mode: track.mode, track: sourceTrack, stolen: false };
     environment.voices.add(voice);
     const add = node => { voice.nodes.push(node); return node; };
     const clean = () => {
       if (voice.disposed) return;
       voice.disposed = true;
+      voice.effectsDetach?.();
       voice.nodes.forEach(node => { try { node.disconnect(); } catch (_) {} });
       environment.voices.delete(voice);
       environment.hats.delete(voice);
@@ -478,6 +512,24 @@
     return voice;
   }
 
+  function finishCancelledFxVoices(environment, at) {
+    const bank = environment?.voiceBank;
+    if (!bank) return;
+    // A global epoch change clears the FX history. An already-cancelled hit
+    // must not feed its remaining release into that newly cleared history.
+    // Ordinary source-scoped cancellation still retains its gentle fade and
+    // unrelated hits; never-active empty racks retain their original graph.
+    for (const voice of environment.voices) {
+      if (voice.disposed || !Number.isInteger(voice.voiceIndex) || voice.fadeAt === undefined || voice.fadeAt > at + 1 / environment.context.sampleRate) continue;
+      if (bank.input(voice.voiceIndex) === environment.graph.input) continue;
+      const end = Math.max(environment.context.currentTime, Math.min(at, voice.stopTime));
+      voice.bus.gain.cancelScheduledValues(end);
+      voice.bus.gain.setValueAtTime(0, end);
+      voice.stopTime = Math.min(voice.stopTime, end);
+      for (const node of voice.sources) { try { node.stop(end); } catch (_) {} }
+    }
+  }
+
   function stopVoices(environment, at) {
     if (!environment) return;
     environment.voices.forEach(voice => {
@@ -496,10 +548,11 @@
   function playStep(environment, state, step, time, pattern) {
     const tracks = Array.isArray(state.tracks) ? state.tracks : [];
     const hasSolo = tracks.some(track => track.solo);
+    syncVoiceBank(environment, state);
     tracks.forEach((track, index) => {
       const hit = pattern ? pattern.steps[index]?.[step] : track.steps && track.steps[step];
       const locks = pattern?.locks?.[index]?.[step] ?? state.stepLocks?.[index]?.[step];
-      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, pattern?.bpm ?? state.bpm, locks && Object.keys(locks).length ? { locks } : {});
+      if (hit && !track.mute && (!hasSolo || track.solo)) synthesize(environment, track, time, Number(hit) >= 2, pattern?.bpm ?? state.bpm, locks && Object.keys(locks).length ? { locks, voiceIndex: index } : { voiceIndex: index });
     });
   }
 
@@ -554,6 +607,7 @@
       this._disposingPromise = null;
       this.sequenceSource = null;
       this.nativePattern = null;
+      this.voiceState = null; this.fxBeat = 0; this.hostClock = null; this.voiceResetUntil = 0;
       this.sequenceEnded = false;
     }
 
@@ -567,7 +621,9 @@
           try { this.context = new AudioContext({ latencyHint: 'interactive' }); }
           catch (_) { this.context = new AudioContext(); }
           this.graph = buildGraph(this.context, this.values);
-          this.environment = createRenderEnvironment(this.context, this.graph, Date.now());
+          await attachVoiceBank(this.context, this.graph, this.voiceState || this.state, true);
+          this.environment = createRenderEnvironment(this.context, this.graph, Date.now(), this.voiceState || this.state);
+          syncVoiceBank(this.environment, this.voiceState || this.state);
         })();
         try { await this._initPromise; }
         catch (error) { this._initPromise = null; throw error; }
@@ -582,12 +638,14 @@
       if (generation !== this.generation) return;
       this._stopTransport();
       this.state = state || { bpm: 120, tracks: [] };
+      this.setVoiceState(this.state); this.fxBeat = 0;
       this.onStep = typeof onStep === 'function' ? onStep : null;
       this.running = true;
       this.currentStep = 0;
       this.nativePattern = this.sequenceSource ? this.sequenceSource.next(null) : null;
       this.sequenceEnded = false;
       this.nextNoteTime = this.context.currentTime + 0.045;
+      this.environment.voiceBank?.setClock({ tempo: this.state.bpm || 120, beat: 0, time: this.nextNoteTime, playing: true });
       this.values = {
         master: this.state.master === undefined ? this.values.master : clamp(this.state.master, 0, 1),
         drive: clamp(this.state.drive || 0, 0, 1),
@@ -626,6 +684,7 @@
       const currentTime = this.context.currentTime;
       let skipped = 0;
       while (this.nextNoteTime < currentTime - 0.035 && skipped < 4096) {
+        this.fxBeat += stepLength(this.nativePattern || this.state, this.currentStep) * ((this.nativePattern || this.state).bpm || 120) / 60;
         this.nextNoteTime += stepLength(this.nativePattern || this.state, this.currentStep);
         this._advanceNativeStep();
         if (this.sequenceEnded) return;
@@ -637,7 +696,9 @@
         const when = Math.max(this.nextNoteTime, currentTime);
         const position = this.nativePattern && { ...this.nativePattern };
         const pattern = this.sequenceSource ? { ...this.sequenceSource.read(position), bpm: position.bpm } : null;
+        this.environment.voiceBank?.setClock({ tempo: pattern?.bpm || this.state.bpm, beat: this.fxBeat, time: when, playing: true });
         playStep(this.environment, this.state, step, when, pattern);
+        this.fxBeat += stepLength(pattern || this.state, step) * (pattern?.bpm || this.state.bpm) / 60;
         if (this.onStep) {
           const generation = this.generation;
           const latency = Math.min(0.06, this.context.outputLatency || this.context.baseLatency || 0);
@@ -685,7 +746,7 @@
       this.worker = null;
       this.displayTimers.forEach(timer => clearTimeout(timer));
       this.displayTimers.clear();
-      if (this.context) stopVoices(this.environment, this.context.currentTime);
+      if (this.context) { stopVoices(this.environment, this.context.currentTime); this.voiceResetUntil = this.context.currentTime + .012; this.environment?.voiceBank?.reset(undefined, this.voiceResetUntil); }
     }
 
     stop() {
@@ -698,7 +759,33 @@
       const generation = this.generation;
       await this.init();
       if (generation !== this.generation || !this.environment || this.context.state === 'closed') return;
-      synthesize(this.environment, track, this.context.currentTime + 0.005, false, bpm === undefined ? this.state && this.state.bpm || 120 : bpm, locks === undefined ? {} : { locks });
+      const voiceIndex = Math.max(0, (this.voiceState?.tracks || this.environment.voiceTracks).indexOf(track));
+      if (this.context.currentTime < this.voiceResetUntil) this.environment.voiceBank?.reset(voiceIndex);
+      syncVoiceBank(this.environment, this.voiceState, voiceIndex);
+      this.environment.voiceBank?.setClock({ tempo: bpm || this.voiceState?.bpm || 120, beat: 0, time: this.context.currentTime + .005, playing: false });
+      synthesize(this.environment, track, this.context.currentTime + 0.005, false, bpm === undefined ? this.state && this.state.bpm || 120 : bpm, locks === undefined ? { voiceIndex } : { locks, voiceIndex });
+    }
+
+    setVoiceState(state) {
+      if (!state || !Array.isArray(state.tracks)) return;
+      state.tracks.forEach(slotsFor);
+      this.voiceState = state;
+      syncVoiceBank(this.environment, state);
+      if (this.environment?.voiceBank && !this.running && !this.hostClock) this.environment.voiceBank.setClock({ tempo: state.bpm || 120, beat: 0, time: this.context.currentTime, playing: false });
+    }
+    followTransport(clock) {
+      if (!clock || typeof clock !== 'object') return;
+      const previous = this.hostClock; this.hostClock = { ...clock };
+      if (!this.context || !this.environment?.voiceBank) return;
+      const tempo = clock.tempo || clock.bpm || this.voiceState?.bpm || 120;
+      const beat = Number.isFinite(clock.beat) ? clock.beat : 0;
+      const time = Number.isFinite(clock.audioTime) ? clock.audioTime : Number.isFinite(clock.when) ? clock.when : this.context.currentTime;
+      if (previous && Number.isFinite(clock.revision) && clock.revision !== previous.revision || clock.playing === false && previous?.playing !== false) {
+        const boundary = Math.max(this.context.currentTime, time);
+        finishCancelledFxVoices(this.environment, boundary);
+        this.environment.voiceBank.reset(undefined, boundary);
+      }
+      this.environment.voiceBank.setClock({ tempo, beat, time, playing: clock.playing !== false });
     }
 
     setMasterVolume(value) {
@@ -718,7 +805,13 @@
       if (!this.context || !this.environment) throw new Error('Prepare the instrument before scheduling notes.');
       if (!Number.isFinite(when)) throw new Error('Provide an audio clock timestamp.');
       if (this._sourceCuts?.has(options.source) && when >= this._sourceCuts.get(options.source)) return null;
-      return synthesize(this.environment, track, when, options.velocity >= .95, options.tempo || 120, options);
+      const match = typeof options.voiceKey === 'string' && /^voice-([0-7])$/.exec(options.voiceKey);
+      const index = Number.isInteger(options.voiceIndex) ? options.voiceIndex : match ? Number(match[1]) : Math.max(0, this.environment.voiceTracks.indexOf(track));
+      if (this.environment.voiceBank) {
+        this.environment.voiceBank.setVoice(index, slotsFor(track)); this.environment.voiceBank.setAudible(index, true);
+        if (Number.isFinite(options.beat)) this.environment.voiceBank.setClock({ tempo: options.tempo || 120, beat: options.beat, time: when, playing: true });
+      }
+      return synthesize(this.environment, track, when, options.velocity >= .95, options.tempo || 120, { ...options, voiceIndex: index });
     }
     cancelNativeNotes({ source, when } = {}) {
       if (!this.context || !this.environment) return;
@@ -729,6 +822,7 @@
         if (when !== undefined && at > this.context.currentTime) this._sourceCuts.set(source, Math.min(this._sourceCuts.get(source) ?? Infinity, at));
         else this._sourceCuts.delete(source);
       } else this._sourceCuts?.clear();
+      if (source === undefined) this.environment.voiceBank?.reset(undefined, at + .012);
       for (const voice of this.environment.voices) {
         if (source !== undefined && voice.scopeSource !== source) continue;
         const stolen = voice.stolen; fadeVoice(voice, at);
@@ -743,18 +837,21 @@
       const snapshot = JSON.parse(JSON.stringify(state));
       const duration = Number(options.durationSeconds), tail = options.tailSeconds === undefined ? 3 : Number(options.tailSeconds);
       if (!Number.isFinite(duration) || duration <= 0 || duration > 600 || !Number.isFinite(tail) || tail < 0 || tail > 15 || !Array.isArray(events) || events.length > 8192) throw new Error('Invalid pattern render bounds.');
+      snapshot.tracks.forEach(slotsFor);
       const sampleRate = 48000, context = new Offline(2, Math.max(1, Math.ceil((duration + tail) * sampleRate)), sampleRate);
       const graph = buildGraph(context, { master: snapshot.master ?? this.values.master, drive: snapshot.drive || 0, space: snapshot.space || 0 });
-      const environment = createRenderEnvironment(context, graph, 0x5A17C0DE);
+      await attachVoiceBank(context, graph, snapshot); check();
+      const environment = createRenderEnvironment(context, graph, 0x5A17C0DE, snapshot);
       for (let i = 0; i < events.length; i++) {
         const event = events[i], track = snapshot.tracks[event.voice];
         if (!track || !Number.isFinite(event.at) || event.at < 0 || event.at >= duration || !Number.isFinite(event.velocity) || event.velocity < 0 || event.velocity > 1) throw new Error('Invalid scheduled drum note.');
-        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, snapshot.bpm || 120, event);
+        synthesize(environment, track, Math.max(0, event.at), event.velocity >= .95, snapshot.bpm || 120, { ...event, voiceIndex: event.voice });
         if (i % 64 === 0) { check(); await new Promise(resolve => setTimeout(resolve, 0)); }
       }
       const end = duration + tail, fade = Math.min(.03, end / 2);
       graph.master.gain.setValueAtTime(graph.master.gain.value, end - fade); graph.master.gain.linearRampToValueAtTime(0, end);
-      const rendered = await context.startRendering(); check(); return {blob: encodeWav(rendered), sampleRate, duration: rendered.duration};
+      try { const rendered = await context.startRendering(); check(); return {blob: encodeWav(rendered), sampleRate, duration: rendered.duration}; }
+      finally { graph.voiceBank?.dispose(); }
     }
 
     async exportWav(state, options = {}) {
@@ -785,9 +882,10 @@
           longest = Math.max(longest, settings.body.level > 0 ? envelopeLength(settings.body) : 0, settings.noise.level > 0 ? noiseLength(settings.noise) : 0);
         }));
       });
-      const naturalTail = Math.max(0.22, longest + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
+      const voiceTail = window.KitchenVoiceEffects ? Math.max(0, ...tracks.filter(track => !track.mute && (!hasSolo || track.solo)).map(track => window.KitchenVoiceEffects.tailTime(slotsFor(track), snapshot.bpm || 120))) : 0;
+      const naturalTail = Math.max(0.22, longest + voiceTail + (clamp(snapshot.space || 0, 0, 1) > 0 ? 1.8 : 0) + 0.17);
       const extraTail = Math.max(0, Math.min(15, Number(options.tailSeconds) || 0));
-      const tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + extraTail + .035) : extraTail;
+      const tail = options.tailSeconds === undefined ? naturalTail : hit ? Math.max(.22, longest + voiceTail + extraTail + .035) : extraTail;
       if (sequence && duration + tail > 120) throw new Error('This chain exceeds the 120-second audio limit including its tail. Shorten its repeats or raise the tempo.');
       const context = new OfflineAudioContext(2, Math.ceil((duration + tail) * sampleRate), sampleRate);
       const graph = buildGraph(context, {
@@ -795,8 +893,10 @@
         drive: snapshot.drive || 0,
         space: snapshot.space || 0
       });
-      const environment = createRenderEnvironment(context, graph, 0x5A17C0DE);
+      await attachVoiceBank(context, graph, snapshot); checkCancelled();
+      const environment = createRenderEnvironment(context, graph, 0x5A17C0DE, snapshot);
       let time = 0.015;
+      environment.voiceBank?.setClock({ tempo: snapshot.bpm || 120, beat: 0, time, playing: true });
       const totalSteps = sequence ? sequence.reduce((count, pattern) => count + pattern.stepCount, 0) : hit ? 1 : bars * 16;
       let patternIndex = 0, patternStep = 0;
       for (let i = 0; i < totalSteps; i++) {
@@ -814,9 +914,8 @@
       // Preserve long texture and reverb decays, then end at a silent boundary.
       graph.master.gain.setValueAtTime(graph.master.gain.value, duration + tail - 0.12);
       graph.master.gain.linearRampToValueAtTime(0, duration + tail);
-      const rendered = await context.startRendering();
-      checkCancelled();
-      return encodeWav(rendered);
+      try { const rendered = await context.startRendering(); checkCancelled(); return encodeWav(rendered); }
+      finally { graph.voiceBank?.dispose(); }
     }
 
     // Optional cleanup for applications that mount and unmount the instrument.
@@ -826,6 +925,7 @@
       const context = this.context;
       this._disposingPromise = (async () => {
         try {
+          this.environment?.voiceBank?.dispose();
           if (context && context.state !== 'closed') await context.close();
         } finally {
           if (this.context === context) {
