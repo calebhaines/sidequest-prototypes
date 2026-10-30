@@ -90,7 +90,9 @@
     "check:track-eq": "node loom/track-eq-checks.cjs && node loom/track-eq-project-checks.cjs && node loom/track-eq-review-checks.cjs",
     "check:track-eq-browser": "node loom/track-eq-browser-checks.cjs",
     "check:voice-fx": "node shared/voice-effects-checks.cjs && node grain/voice-effects-lifecycle-checks.cjs && node tine/voice-effects-checks.cjs && node batter/voice-fx-checks.cjs && node form/scripts/test-voice-effects.mjs && node loom/voice-effect-clock-checks.cjs",
-    "check:voice-fx-browser": "node shared/percussion-voice-fx-browser-checks.cjs"
+    "check:voice-fx-browser": "node shared/percussion-voice-fx-browser-checks.cjs",
+    "check:tape": "node loom/tape-checks.cjs && node loom/tape-project-checks.cjs && node loom/tape-integration-checks.cjs",
+    "check:tape-browser": "node loom/tape-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

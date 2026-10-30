@@ -41,9 +41,9 @@ EXCHANGE_FILES = [
 # carry a frozen copy under shared/galley-effects; repository builds read loom/.
 VOICE_EFFECT_FILES = [
     'vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js',
-    'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js',
+    'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js',
     'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js',
-    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js',
+    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js',
 ]
 PERCUSSION_APPS = {'grain', 'tine', 'form', 'batter'}
 

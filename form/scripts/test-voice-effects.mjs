@@ -9,7 +9,7 @@ const form = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const shared = existsSync(resolve(form, "shared/voice-effects.js")) ? resolve(form, "shared") : resolve(form, "../shared");
 const galley = existsSync(resolve(shared, "galley-effects/effects.js")) ? resolve(shared, "galley-effects") : resolve(form, "../loom");
 globalThis.window = globalThis;
-for (const name of ["vocal-catalog.js", "utility-catalog.js", "filter-catalog.js", "creative-catalog.js", "preamp-catalog.js", "effects-catalog.js", "vocal-dsp.js", "utility-dsp.js", "filter-dsp.js", "creative-dsp.js", "broiler-pedals.js", "compressor-dsp.js", "preamp-dsp.js", "effects.js"]) vm.runInThisContext(readFileSync(resolve(galley, name), "utf8"), { filename: name });
+for (const name of ["vocal-catalog.js", "utility-catalog.js", "filter-catalog.js", "creative-catalog.js", "preamp-catalog.js", "tape-catalog.js", "effects-catalog.js", "vocal-dsp.js", "utility-dsp.js", "filter-dsp.js", "creative-dsp.js", "broiler-pedals.js", "compressor-dsp.js", "preamp-dsp.js", "tape-dsp.js", "effects.js"]) vm.runInThisContext(readFileSync(resolve(galley, name), "utf8"), { filename: name });
 vm.runInThisContext(readFileSync(resolve(shared, "voice-effects.js"), "utf8"), { filename: "voice-effects.js" });
 const { audio, "voice-effects": helpers, cleanup } = await loadDsp(["audio", "voice-effects"]);
 after(cleanup);
@@ -38,8 +38,8 @@ test("the native mono synthesis and cache identity remain dry when rack controls
   assert.equal(engine.cachedBuffer(dry), engine.cachedBuffer(wet), "editing an FX parameter should not render a new source sample");
 });
 
-test("all fifteen canonical GALLEY models render finite stereo one shots", () => {
-  assert.equal(LoomEffectsCatalog.length, 15);
+test("all sixteen canonical GALLEY models render finite stereo one shots", () => {
+  assert.equal(LoomEffectsCatalog.length, 16);
   for (const definition of LoomEffectsCatalog) {
     const base = sound(), source = JSON.stringify(base);
     const channels = renderVoiceStereo({ ...base, galleyFx: [fx(definition.id), null] }, 8000, 123, 0);

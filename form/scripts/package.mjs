@@ -178,7 +178,7 @@ uncheck Override to inherit the saved burner. Export downloads samples,
 complete kits, or WAVs; the main groove WAV follows an enabled chain.
 
 Each voice has two GALLEY insert slots. Open a slot in the selected voice editor
-to choose any of the fifteen effects, edit controls and recipes, bypass, reset
+to choose any of the sixteen effects, edit controls and recipes, bypass, reset
 or change its order. Effects stay with the voice patch and processed exports.
 
 Audition layer A/B/C hears one engine without changing your saved mix.

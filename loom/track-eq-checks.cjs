@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
 globalThis.window = globalThis;
-for (const file of ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'audio-engine.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
+for (const file of ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'audio-engine.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
 const DSP = createLoomEngineDSP(createLoomEffectsDSP), rate = 48000, keys = ['low', 'lowMid', 'highMid', 'high'], flat = Object.fromEntries(keys.map(key => [key, 0])), passed = [];
 const clone = value => JSON.parse(JSON.stringify(value));
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }

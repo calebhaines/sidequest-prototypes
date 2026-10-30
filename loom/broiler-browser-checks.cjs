@@ -12,7 +12,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
 const root = path.resolve(__dirname, '..');
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared') : path.join(root, 'shared');
 const artifacts = process.env.LOOM_BROILER_QA_DIR || '/tmp/broiler-browser-qa';
-const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'];
+const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js'];
 const modernModels = ['tweed-55', 'black-panel-65', 'copper-30', 'royal-68', 'iron-800', 'dual-red-92', 'cali-iv', 'fifty-one', 'citrus-verb', 'jazz-120'];
 const pedalModels = ['green-808', 'gold-klone', 'rodent', 'orange-one', 'wool-fuzz', 'muffin', 'treble-boost', 'studio-comp', 'wah', 'chorus', 'phaser', 'echo', 'spring'];
 // Captured from the released factory before this upgrade, using all stock

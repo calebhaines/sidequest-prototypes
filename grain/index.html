@@ -72,6 +72,9 @@
       if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
       const result = { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
       if (note.locks !== undefined) { const locks = normalizeLocks(note.locks); if (Object.keys(locks).length) result.locks = locks; }
+      // Lyrics are optional musical data. Omitting the field keeps existing
+      // version-one serialization and fingerprints exactly unchanged.
+      if (note.lyric !== undefined) result.lyric = text(note.lyric, 'Note lyric', 160);
       return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;
@@ -528,6 +531,54 @@
   }];
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* PRESERVE · tape colour, kept on the shelf. No external assets. */
+(function (scope) {
+  'use strict';
+  const range = (key, label, min, max, step, value, unit = '') => ({ key, label, type: 'range', min, max, step, default: value, unit });
+  const amount = (key, label, value) => ({ ...range(key, label, 0, 1, .01, value), display: 'percent' });
+  const select = (key, label, value, options) => ({ key, label, type: 'select', default: value, options: options.map(([value, label]) => ({ value, label })) });
+  const models = [
+    { id: 'studio', name: 'Studio two-track', inspiration: 'Precision two-track mastering and multitrack reel machines', description: 'A firm, open reel-machine character with generous headroom, restrained magnetic memory and a focused head bump. Start here for mix-bus colour and smooth drum peaks.' },
+    { id: 'valve', name: 'Valve reel', inspiration: 'Early valve recording electronics and open-reel machines', description: 'A softer recording amplifier, more asymmetric harmonics and a slower magnetic recovery. Useful for rounding vocals, bass and an exposed instrument without adding artificial room sound.' },
+    { id: 'home', name: 'Quarter-track home', inspiration: 'Domestic quarter-track open-reel recorders', description: 'A narrower, more intimate reel character with less overload headroom and stronger low-frequency colour. Speed, tape stock and transport motion remain independent controls.' },
+    { id: 'cassette', name: 'Compact cassette', inspiration: 'Compact-cassette record and playback decks', description: 'A compact, softer-bandwidth character with earlier overload and more head loss. Choose 1⅞ ips for a familiar cassette starting point, then add wear or motion to taste.' }
+  ];
+  const params = [
+    select('model', 'Tape machine', 'studio', models.map(model => [model.id, model.name])),
+    select('speed', 'Tape speed', '15', [['15', '15 ips · balanced'], ['30', '30 ips · open'], ['7.5', '7½ ips · warm'], ['3.75', '3¾ ips · domestic'], ['1.875', '1⅞ ips · cassette']]),
+    select('formula', 'Tape stock', 'oxide', [['oxide', 'Classic oxide'], ['high-output', 'High-output stock'], ['low-noise', 'Low-noise stock']]),
+    range('drive', 'Drive', 0, 24, .1, 4, 'dB'), amount('warmth', 'Warmth', .45), amount('wear', 'Wear', 0), range('output', 'Output', -24, 12, .1, 0, 'dB'),
+    range('input', 'Input trim', -18, 18, .1, 0, 'dB'), range('bias', 'Bias · under / over', -1, 1, .01, 0), range('calibration', 'Record calibration', -6, 6, .1, 0, 'dB'), amount('headBump', 'Head bump', .3), range('lowTrim', 'Low trim', -6, 6, .1, 0, 'dB'), range('highTrim', 'High trim', -6, 6, .1, 0, 'dB'),
+    select('autoGain', 'Drive compensation', 'on', [['on', 'On · trim Drive gain'], ['off', 'Off · keep Drive gain']]),
+    range('wow', 'Wow depth', 0, 1.5, .01, 0, '%'), range('wowRate', 'Wow rate', .1, 2, .01, .4, 'Hz'), range('flutter', 'Flutter depth', 0, .5, .001, 0, '%'), range('flutterRate', 'Flutter rate', 2, 15, .1, 6, 'Hz'), amount('dropouts', 'Dropouts', 0),
+    amount('noise', 'Tape hiss', 0), range('azimuth', 'Head alignment', -1, 1, .01, 0), range('crosstalk', 'Channel crosstalk', 0, .1, .001, 0), amount('stereoLink', 'Transport link', 1)
+  ];
+  const defaults = Object.assign(Object.fromEntries(params.map(param => [param.key, param.default])), { mix: 1, bypass: false });
+  const recipe = (id, name, description, patch = {}) => ({ id, name, description, params: { ...defaults, ...patch } });
+  scope.LoomTapeCatalog = [{
+    id: 'preserve', name: 'PRESERVE', subtitle: 'Keep the good parts. Let the edges soften.', color: '#cfa56b', accent: '#f2dfad', visual: 'tape', panel: 'tape', mixLabel: 'Blend',
+    description: 'Four tape-machine characters, five speeds and three tape stocks. Magnetic softening, recording-electronics colour, head response and optional transport motion share one tape path. Start with the five face knobs; open the folded panels for calibration, wow, flutter, dropouts, hiss and stereo alignment. These are reduced-order musical models, not measured replicas of specific hardware.',
+    params, defaults, models,
+    groups: [
+      { id: 'main', section: 'main', label: 'Tape machine', help: 'Machine, speed and stock changes preserve the knobs. A house recipe replaces the complete setup. Drive records hotter; Warmth shapes magnetic softening; Wear ages the oxide without secretly enabling wow or flutter.', keys: ['model', 'speed', 'formula', 'drive', 'warmth', 'wear', 'output', 'mix'] },
+      { id: 'calibration', section: 'advanced', label: 'Calibration & head response', help: 'Input trim sets the incoming level. Calibration changes the tape overload reference; Bias shifts under- and over-bias character. Head bump adds the speed-dependent low-frequency lift. Low and High trim finish the playback tone. Drive compensation removes nominal Drive gain; it is not automatic loudness matching.', keys: ['input', 'bias', 'calibration', 'headBump', 'lowTrim', 'highTrim', 'autoGain'] },
+      { id: 'transport', section: 'advanced', label: 'Transport & dropouts', help: 'Wow is slow speed wander; Flutter is faster motion. Depth is a percentage of playback speed. Zero depth keeps timing unchanged. With motion enabled, the whole blend follows the moving tape head, keeping its internal colour blend coherent. Dropouts add smoothed, occasional oxide losses.', keys: ['wow', 'wowRate', 'flutter', 'flutterRate', 'dropouts'] },
+      { id: 'stereo', section: 'advanced', label: 'Noise & stereo alignment', help: 'Hiss follows the signal and fades with it. Head alignment adds opposite channel character; Crosstalk leaks a little audio between channels. Transport link at 100% keeps left and right motion together; lower values loosen the stereo image. Noise, alignment error and crosstalk begin at zero.', keys: ['noise', 'azimuth', 'crosstalk', 'stereoLink'] }
+    ],
+    meters: [{ key: 'inputDb', label: 'Input', unit: 'dB' }, { key: 'tapeDb', label: 'Record in', unit: 'dB' }, { key: 'outputDb', label: 'Output', unit: 'dB' }, { key: 'compressionDb', label: 'Softening', unit: 'dB' }, { key: 'transportMs', label: 'Transport', unit: 'ms' }],
+    presets: [
+      recipe('fresh-stock', 'Fresh stock', 'A balanced studio reel: subtle warmth, nominal Drive compensation, and a clean, steady transport.'),
+      recipe('thirty-polish', 'Thirty-IPS polish', 'Open high-speed studio tape with light magnetic colour for a full mix or delicate acoustic part.', { speed: '30', formula: 'low-noise', drive: 2, warmth: .25, headBump: .15 }),
+      recipe('fifteen-glue', 'Fifteen-IPS glue', 'High-output reel stock with firmer peak rounding and a little low-frequency body. Transport remains steady.', { formula: 'high-output', drive: 8, warmth: .65, headBump: .4 }),
+      recipe('valve-bloom', 'Valve bloom', 'A warm valve reel at 7½ ips: broad low colour, rounded edges and a gently over-biased top.', { model: 'valve', speed: '7.5', drive: 7, warmth: .75, headBump: .55, bias: .15, highTrim: -.7 }),
+      recipe('quarter-home', 'Quarter-track home', 'A domestic reel with light age and a small amount of linked transport wander. No added hiss.', { model: 'home', speed: '3.75', drive: 5, warmth: .55, wear: .25, wow: .18, flutter: .035 }),
+      recipe('cassette-lunch', 'Cassette lunch', 'Soft compact tape, modest hiss and gently moving playback. A quick route to a home-recorded colour.', { model: 'cassette', speed: '1.875', formula: 'low-noise', drive: 6, warmth: .65, wear: .45, wow: .32, flutter: .08, noise: .12, highTrim: -.5 }),
+      recipe('worn-field', 'Worn field reel', 'A weathered location reel with audible wander, occasional dropouts and loose stereo transport. An intentional texture.', { model: 'home', speed: '7.5', drive: 8, warmth: .7, wear: .8, wow: .65, flutter: .14, noise: .2, dropouts: .35, azimuth: .25, stereoLink: .65 }),
+      recipe('parallel-drums', 'Parallel drum glue', 'Hot studio tape blended behind the original transients. No transport wobble, hiss or dropout layer.', { formula: 'high-output', drive: 12, warmth: .8, headBump: .45, mix: .65 })
+    ]
+  }];
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* GALLEY effects · clear controls, finishing tools. No external assets. */
 (function (scope) {
   'use strict';
@@ -737,7 +788,8 @@
   if (scope.LoomFilterCatalog) catalog.push(...scope.LoomFilterCatalog);
   if (scope.LoomCreativeCatalog) catalog.push(...scope.LoomCreativeCatalog);
   if (scope.LoomPreampCatalog) catalog.push(...scope.LoomPreampCatalog);
-  catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
+  if (scope.LoomTapeCatalog) catalog.push(...scope.LoomTapeCatalog);
+  catalog.forEach(effect => { effect.params.push(range('mix', effect.mixLabel || 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);
 
@@ -2598,10 +2650,290 @@
   scope.createLoomPreampDSP = createLoomPreampDSP;
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* PRESERVE · a causal, deterministic reduced-order stereo tape machine. */
+(function (scope) {
+  'use strict';
+  function createLoomTapeDSP() {
+    'use strict';
+    // Everything used by this factory travels with its AudioWorklet source.
+    const TAU = Math.PI * 2;
+    const specifications = {
+      model: ['studio', 'valve', 'home', 'cassette'], speed: ['15', '30', '7.5', '3.75', '1.875'], formula: ['oxide', 'high-output', 'low-noise'],
+      input: [-18, 18, 0], drive: [0, 24, 4], warmth: [0, 1, .45], wear: [0, 1, 0], output: [-24, 12, 0],
+      bias: [-1, 1, 0], calibration: [-6, 6, 0], headBump: [0, 1, .3], lowTrim: [-6, 6, 0], highTrim: [-6, 6, 0], autoGain: ['on', 'off'],
+      wow: [0, 1.5, 0], wowRate: [.1, 2, .4], flutter: [0, .5, 0], flutterRate: [2, 15, 6], noise: [0, 1, 0], dropouts: [0, 1, 0],
+      azimuth: [-1, 1, 0], crosstalk: [0, .1, 0], stereoLink: [0, 1, 1], mix: [0, 1, 1]
+    };
+    const parameterKeys = Object.keys(specifications);
+    const finite = (x, fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
+    const clamp = (x, low, high) => Math.max(low, Math.min(high, x));
+    const safe = x => Number.isFinite(x) ? clamp(x, -8, 8) : 0;
+    const db = x => Math.pow(10, x / 20);
+    const toDb = x => Math.max(-120, 20 * Math.log10(Math.max(1e-12, x)));
+    function normalize(source) {
+      source = source && typeof source === 'object' ? source : {};
+      const result = {};
+      for (const key of parameterKeys) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true;
+      return result;
+    }
+    // These musical voicings are not measured replicas. Nominal speed, tape
+    // overload, bandwidth, head gap, LF coupling, asymmetry, magnetic memory.
+    const machines = {
+      studio: [15, .95, 25000, 60, 7, .015, .08],
+      valve: [15, .70, 18500, 78, 13, .16, .22],
+      home: [7.5, .58, 16500, 180, 22, .045, .15],
+      cassette: [1.875, .40, 12000, 600, 32, .025, .20]
+    };
+    const stocks = { oxide: [1, 1, 1], 'high-output': [1.45, 1.08, .8], 'low-noise': [1.18, 1.12, .52] };
+    function soft(x) {
+      if (x >= 3) return 1; if (x <= -3) return -1;
+      const square = x * x; return x * (27 + square) / (27 + 9 * square);
+    }
+    function lowpass(frequency, rate) { return 1 - Math.exp(-TAU * Math.min(rate * .45, Math.max(.5, frequency)) / rate); }
+    function lowpassCoefficients(frequency, q, rate) {
+      const angle = TAU * frequency / rate, cosine = Math.cos(angle), alpha = Math.sin(angle) / (2 * q), a0 = 1 + alpha;
+      return new Float64Array([(1 - cosine) * .5 / a0, (1 - cosine) / a0, (1 - cosine) * .5 / a0, -2 * cosine / a0, (1 - alpha) / a0]);
+    }
+    function peakCoefficients(frequency, gain, rate, target) {
+      const angle = TAU * clamp(frequency, 12, rate * .4) / rate, cosine = Math.cos(angle), alpha = Math.sin(angle) / (2 * .72), amplitude = Math.pow(10, gain / 40), a0 = 1 + alpha / amplitude;
+      target[0] = (1 + alpha * amplitude) / a0; target[1] = -2 * cosine / a0; target[2] = (1 - alpha * amplitude) / a0;
+      target[3] = -2 * cosine / a0; target[4] = (1 - alpha / amplitude) / a0;
+    }
+    function filter(x, c, state, at) {
+      const y = c[0] * x + state[at];
+      state[at] = c[1] * x - c[3] * y + state[at + 1]; state[at + 1] = c[2] * x - c[4] * y;
+      return y;
+    }
+    function create(sampleRate, source) {
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr * 4;
+      let p = normalize(source), dirty = true, first = true, tick = 0;
+      // Numeric derived controls: gain staging is smoothed jointly, so opposing
+      // Drive and compensation gains cannot cause an automation level surge.
+      const V = { pre: 0, net: 1, warmth: 2, wear: 3, headroom: 4, asymmetry: 5, memory: 6, emphasis: 7, lowGain: 8, highGain: 9, lowCut: 10, headL: 11, headR: 12,
+        wowAmplitude: 13, flutterAmplitude: 14, wowRate: 15, flutterRate: 16, noise: 17, dropout: 18, crosstalk: 19, link: 20, mix: 21, inverseCoefficient: 22, ageGain: 23, outputGain: 24, active: 25 };
+      const values = new Float64Array(26), targets = new Float64Array(26), bump = new Float64Array(5), bumpTarget = new Float64Array(5);
+      const smooth = 1 - Math.exp(-1 / (sr * .012));
+      const previous = new Float64Array(2), recordLow = new Float64Array(2), magnet = new Float64Array(2), nonlinearFilters = new Float64Array(8), deEmphasis = new Float64Array(2);
+      const dcPrevious = new Float64Array(2), dcState = new Float64Array(2), bumpState = new Float64Array(4), cutState = new Float64Array(2), head1 = new Float64Array(2), head2 = new Float64Array(2);
+      const lowTone = new Float64Array(2), highTone = new Float64Array(2), hissLow = new Float64Array(2), hissHigh = new Float64Array(2);
+      const dropoutGain = new Float64Array([1, 1]), dropoutTarget = new Float64Array([1, 1]), dropoutFrames = new Int32Array(2);
+      const ringSize = Math.ceil(sr * .15) + 8, dryRing = [new Float32Array(ringSize), new Float32Array(ringSize)], tapeRing = [new Float32Array(ringSize), new Float32Array(ringSize)];
+      const aa = [lowpassCoefficients(sr * .39, .5411961, osr), lowpassCoefficients(sr * .39, 1.306563, osr)];
+      const recordCoefficient = lowpass(4200, osr), memoryCoefficient = lowpass(78, osr), dcDecay = Math.exp(-TAU * 8 / sr), lowToneCoefficient = lowpass(180, sr), highToneCoefficient = lowpass(4200, sr);
+      const hissHighCoefficient = lowpass(1250, sr), hissLowCoefficient = lowpass(Math.min(14000, sr * .4), sr);
+      const gateAttack = 1 - Math.exp(-1 / (sr * .003)), gateRelease = 1 - Math.exp(-1 / (sr * .08)), dropoutSmoothing = 1 - Math.exp(-1 / (sr * .008));
+      let write = 0, wowPhase = 0, flutterPhase = 0, wearPhase = 0, gate = 0, seed = 0x52a9f3c1, scrub = 1024, dormant = false;
+      const meter = { inputDb: -120, tapeDb: -120, outputDb: -120, compressionDb: 0, transportMs: 0 };
+      const history = [previous, recordLow, magnet, nonlinearFilters, deEmphasis, dcPrevious, dcState, bumpState, cutState, head1, head2, lowTone, highTone, hissLow, hissHigh];
+      function random() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+      function clock() {
+        wowPhase += TAU * values[V.wowRate] / sr; flutterPhase += TAU * values[V.flutterRate] / sr; wearPhase += TAU * .41 / sr;
+        if (wowPhase > TAU * 10000) wowPhase -= TAU * 10000;
+        if (flutterPhase > TAU * 10000) flutterPhase -= TAU * 10000;
+        if (wearPhase > TAU) wearPhase -= TAU;
+      }
+      function clearSignal() {
+        for (const state of history) state.fill(0);
+        for (const ring of dryRing) ring.fill(0); for (const ring of tapeRing) ring.fill(0);
+        dropoutGain.fill(1); dropoutTarget.fill(1); dropoutFrames.fill(0); write = 0; gate = 0;
+      }
+      function update() {
+        const machine = machines[p.model], stock = stocks[p.formula], speed = Number(p.speed), bandwidth = machine[2] * Math.pow(speed / machine[0], .44) * stock[1] * (1 - .72 * p.wear) * (1 - .17 * p.bias);
+        targets[V.pre] = db(p.input + p.drive + p.calibration);
+        targets[V.net] = db(p.input + p.output + (p.autoGain === 'off' ? p.drive : 0));
+        targets[V.warmth] = p.warmth; targets[V.wear] = p.wear;
+        targets[V.headroom] = machine[1] * stock[0] * (1 + .18 * p.bias); targets[V.asymmetry] = machine[5] + .035 * p.bias; targets[V.memory] = machine[6];
+        targets[V.emphasis] = 1.25 + .8 * (1 - p.bias) + .6 * p.warmth;
+        targets[V.inverseCoefficient] = lowpass(4200 / targets[V.emphasis], sr);
+        targets[V.ageGain] = db(-p.wear * 1.25);
+        targets[V.outputGain] = db(p.output);
+        targets[V.lowGain] = db(p.lowTrim) - 1; targets[V.highGain] = db(p.highTrim) - 1;
+        targets[V.lowCut] = lowpass(machine[4] * Math.sqrt(machine[0] / speed), sr);
+        targets[V.headL] = lowpass(bandwidth / (1 + Math.max(0, -p.azimuth) * 3 + Math.max(0, p.azimuth) * .55), sr);
+        targets[V.headR] = lowpass(bandwidth / (1 + Math.max(0, p.azimuth) * 3 + Math.max(0, -p.azimuth) * .55), sr);
+        targets[V.wowAmplitude] = p.wow * .01 / (TAU * p.wowRate * (.75 + .25 * .37));
+        targets[V.flutterAmplitude] = p.flutter * .01 / (TAU * p.flutterRate * (.8 + .2 * 2.47));
+        targets[V.wowRate] = p.wowRate; targets[V.flutterRate] = p.flutterRate;
+        targets[V.noise] = p.noise * p.noise * .012 * stock[2] * (p.model === 'cassette' ? 1.3 : 1);
+        targets[V.dropout] = p.dropouts; targets[V.crosstalk] = p.crosstalk; targets[V.link] = p.stereoLink;
+        // Retain the running head position while fading to direct dry. Pulling
+        // its whole delay back to zero would create an artificial pitch swipe.
+        targets[V.mix] = p.mix > 0 ? p.mix : first ? 0 : values[V.mix];
+        targets[V.active] = p.bypass || p.mix === 0 ? 0 : 1;
+        peakCoefficients(machine[3] * speed / 15, p.headBump * (p.model === 'studio' ? 5 : 7), sr, bumpTarget);
+        if (first) { values.set(targets); bump.set(bumpTarget); first = false; }
+        dirty = false;
+      }
+      // Causal cubic Lagrange interpolation uses the current and three older
+      // samples; it never requests an as-yet-unwritten sample at tiny delays.
+      function read(buffer, delay) {
+        if (delay <= 1e-9) return buffer[write];
+        const whole = Math.floor(delay), fraction = delay - whole;
+        let at = write - whole; if (at < 0) at += ringSize;
+        const a = buffer[at], b = buffer[at === 0 ? ringSize - 1 : at - 1], c = buffer[(at + ringSize - 2) % ringSize], d = buffer[(at + ringSize - 3) % ringSize];
+        return a * (1 - fraction) * (2 - fraction) * (3 - fraction) / 6 + b * fraction * (2 - fraction) * (3 - fraction) / 2 - c * fraction * (1 - fraction) * (3 - fraction) / 2 + d * fraction * (1 - fraction) * (2 - fraction) / 6;
+      }
+      function record(x, channel) {
+        const prior = previous[channel], increment = (x - prior) * .25, headroom = values[V.headroom], warmth = values[V.warmth];
+        let delta = 0;
+        for (let sub = 1; sub <= 4; sub++) {
+          const interpolated = prior + increment * sub;
+          recordLow[channel] += recordCoefficient * (interpolated - recordLow[channel]);
+          const emphasized = interpolated + (values[V.emphasis] - 1) * (interpolated - recordLow[channel]);
+          magnet[channel] += memoryCoefficient * (soft(emphasized / (headroom * 1.7)) - magnet[channel]);
+          const bias = values[V.asymmetry] + values[V.memory] * magnet[channel], baseline = soft(bias), square = bias * bias;
+          // Near-zero slope normalization prevents a model's bias from acting
+          // as an unlabelled input gain. Magnetic memory still changes shape.
+          const slope = 1 / Math.max(.4, (729 - 162 * square + 9 * square * square) / ((27 + 9 * square) * (27 + 9 * square)));
+          const saturated = headroom * (soft(emphasized / headroom + bias) - baseline) * slope;
+          delta = saturated - emphasized;
+          delta = filter(delta, aa[0], nonlinearFilters, channel * 4);
+          delta = filter(delta, aa[1], nonlinearFilters, channel * 4 + 2);
+        }
+        previous[channel] = x;
+        // Apply the inverse record emphasis to the nonlinear delta only. The
+        // undelayed linear path remains intact when Warmth is zero.
+        const inverse = 1 / values[V.emphasis];
+        deEmphasis[channel] += values[V.inverseCoefficient] * (delta - deEmphasis[channel]);
+        delta = inverse * delta + (1 - inverse) * deEmphasis[channel];
+        const cleaned = delta - dcPrevious[channel] + dcDecay * dcState[channel];
+        dcPrevious[channel] = delta; dcState[channel] = Math.abs(cleaned) < 1e-26 ? 0 : cleaned;
+        return x + warmth * dcState[channel];
+      }
+      function reproduce(x, channel) {
+        cutState[channel] += values[V.lowCut] * (x - cutState[channel]); x -= cutState[channel];
+        x = filter(x, bump, bumpState, channel * 2);
+        const coefficient = values[channel ? V.headR : V.headL];
+        head1[channel] += coefficient * (x - head1[channel]); head2[channel] += coefficient * (head1[channel] - head2[channel]); x = head2[channel];
+        lowTone[channel] += lowToneCoefficient * (x - lowTone[channel]); x += values[V.lowGain] * lowTone[channel];
+        highTone[channel] += highToneCoefficient * (x - highTone[channel]); x += values[V.highGain] * (x - highTone[channel]);
+        return x;
+      }
+      function process(left, right) {
+        if (!left || !right || left.length !== right.length) throw new Error('PRESERVE requires equal stereo blocks.');
+        let inputPower = 0, tapePower = 0, magneticPower = 0, outputPower = 0, transport = 0;
+        if (!dirty && values[V.active] === 0 && targets[V.active] === 0) {
+          // Settled dry does not pay for an oversampled tape circuit. Retain
+          // the independent transport/random clock, and discard stale signal
+          // memory before a later fade-in can reveal it.
+          dormant = true;
+          for (let frame = 0; frame < left.length; frame++) {
+            for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+            for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+            const l = safe(left[frame]), r = safe(right[frame]); left[frame] = l; right[frame] = r;
+            inputPower += l * l + r * r;
+            random(); random(); random(); random(); clock(); tick++;
+            if (--scrub === 0) scrub = 1024;
+          }
+          meter.inputDb = meter.outputDb = toDb(Math.sqrt(inputPower / Math.max(1, left.length * 2)));
+          meter.tapeDb = -120; meter.compressionDb = 0; meter.transportMs = 0;
+          return;
+        }
+        for (let frame = 0; frame < left.length; frame++) {
+          if (tick++ % 32 === 0 && dirty) update();
+          if (dormant && targets[V.active] > 0) { clearSignal(); dormant = false; }
+          for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+          if (targets[V.active] === 0 && values[V.active] < 1e-7) {
+            values[V.active] = 0; dormant = true;
+            if (p.mix === 0) values[V.mix] = targets[V.mix] = 0;
+          }
+          for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+          if (--scrub === 0) { for (const state of history) for (let cell = 0; cell < state.length; cell++) if (Math.abs(state[cell]) < 1e-28) state[cell] = 0; scrub = 1024; }
+          const dryL = safe(left[frame]), dryR = safe(right[frame]), maximum = Math.max(Math.abs(dryL), Math.abs(dryR));
+          gate += (maximum > gate ? gateAttack : gateRelease) * (maximum - gate);
+          if (gate < 1e-8) gate = 0;
+          const gateGain = gate / (gate + .003);
+          const drivenL = clamp(dryL * values[V.pre], -65536, 65536), drivenR = clamp(dryR * values[V.pre], -65536, 65536);
+          inputPower += dryL * dryL + dryR * dryR; tapePower += drivenL * drivenL + drivenR * drivenR;
+          const magneticL = record(drivenL, 0), magneticR = record(drivenR, 1);
+          magneticPower += magneticL * magneticL + magneticR * magneticR;
+          let wetL = reproduce(magneticL, 0) * values[V.net] / values[V.pre], wetR = reproduce(magneticR, 1) * values[V.net] / values[V.pre];
+          const commonRandom = random(), randomL = random(), randomR = random(), noiseRandom = random();
+          for (let channel = 0; channel < 2; channel++) {
+            const eventRandom = noiseRandom < values[V.link] ? commonRandom : channel ? randomR : randomL;
+            if (dropoutFrames[channel] > 0) dropoutFrames[channel]--;
+            else {
+              dropoutTarget[channel] = 1;
+              if (values[V.dropout] > 1e-6 && eventRandom < values[V.dropout] * 1.7 / sr) {
+                dropoutTarget[channel] = 1 - values[V.dropout] * (.35 + .6 * noiseRandom);
+                dropoutFrames[channel] = Math.round(sr * (.035 + .19 * noiseRandom));
+              }
+            }
+            dropoutGain[channel] += dropoutSmoothing * (dropoutTarget[channel] - dropoutGain[channel]);
+            const noise = ((channel ? randomR : randomL) * 2 - 1);
+            hissHigh[channel] += hissHighCoefficient * (noise - hissHigh[channel]);
+            hissLow[channel] += hissLowCoefficient * (noise - hissHigh[channel] - hissLow[channel]);
+            const age = values[V.ageGain] * (values[V.wear] > 1e-8 ? 1 - .01957 * values[V.wear] * Math.sin(wearPhase + channel * (1 - values[V.link])) : 1);
+            const gain = age * dropoutGain[channel], hiss = hissLow[channel] * values[V.noise] * gateGain * values[V.outputGain];
+            if (channel) wetR = wetR * gain + hiss; else wetL = wetL * gain + hiss;
+          }
+          const beforeL = wetL; wetL += (wetR - wetL) * values[V.crosstalk]; wetR += (beforeL - wetR) * values[V.crosstalk];
+          dryRing[0][write] = dryL; dryRing[1][write] = dryR; tapeRing[0][write] = safe(wetL); tapeRing[1][write] = safe(wetR);
+          let outputL = dryL, outputR = dryR;
+          for (let channel = 0; channel < 2; channel++) {
+            let delay = 0;
+            if (values[V.wowAmplitude] > 1e-12 || values[V.flutterAmplitude] > 1e-12) {
+              const loose = channel * (1 - values[V.link]), wow = .75 * Math.sin(wowPhase + loose * .83) + .25 * Math.sin(wowPhase * .37 + loose * 1.37), flutter = .8 * Math.sin(flutterPhase + loose * 1.1) + .2 * Math.sin(flutterPhase * 2.47 + loose * .73);
+              delay = clamp((values[V.wowAmplitude] * (1 - wow) + values[V.flutterAmplitude] * (1 - flutter)) * sr * values[V.mix], 0, ringSize - 5);
+            }
+            const dry = read(dryRing[channel], delay), wet = read(tapeRing[channel], delay);
+            const direct = channel ? dryR : dryL, blended = dry + (wet - dry) * values[V.mix];
+            const output = values[V.active] === 0 ? direct : safe(direct + (blended - direct) * values[V.active]);
+            if (channel) outputR = output; else outputL = output;
+            transport += delay / sr * 500 * values[V.active];
+          }
+          left[frame] = outputL; right[frame] = outputR; outputPower += outputL * outputL + outputR * outputR;
+          if (++write === ringSize) write = 0;
+          // Keep the phase clock long enough for the incommensurate components
+          // without a discontinuity each time the primary oscillator wraps.
+          clock();
+        }
+        const count = Math.max(1, left.length * 2);
+        meter.inputDb = toDb(Math.sqrt(inputPower / count)); meter.tapeDb = toDb(Math.sqrt(tapePower / count)); meter.outputDb = toDb(Math.sqrt(outputPower / count));
+        meter.compressionDb = tapePower > 1e-18 ? clamp(10 * Math.log10((tapePower + 1e-24) / (magneticPower + 1e-24)), 0, 60) : 0;
+        meter.transportMs = transport / Math.max(1, left.length);
+      }
+      update();
+      function setParams(next) {
+        if (!next || typeof next !== 'object') return;
+        for (const key of parameterKeys) if (Object.prototype.hasOwnProperty.call(next, key)) {
+          const rule = specifications[key], value = typeof rule[0] === 'number' ? clamp(finite(next[key], rule[2]), rule[0], rule[1]) : rule.includes(next[key]) ? next[key] : rule[0];
+          if (p[key] !== value) { p[key] = value; dirty = true; }
+        }
+        if (Object.prototype.hasOwnProperty.call(next, 'bypass') && p.bypass !== (next.bypass === true)) { p.bypass = next.bypass === true; dirty = true; }
+      }
+      return {
+        setParams, process,
+        reset() {
+          clearSignal(); dormant = false;
+          write = 0; wowPhase = 0; flutterPhase = 0; wearPhase = 0; gate = 0; seed = 0x52a9f3c1; scrub = 1024; tick = 0;
+          first = true; update();
+          Object.assign(meter, { inputDb: -120, tapeDb: -120, outputDb: -120, compressionDb: 0, transportMs: 0 });
+        },
+        getTailTime() {
+          if (p.bypass || p.mix === 0) return values[V.active] === 0 ? 0 : .25;
+          const wow = p.wow * .01 / (TAU * p.wowRate * (.75 + .25 * .37)), flutter = p.flutter * .01 / (TAU * p.flutterRate * (.8 + .2 * 2.47));
+          // Include the slowest permitted head-bump/filter decay, nonlinear DC
+          // cleanup, finite signal-following hiss release and transport buffer.
+          return (p.noise > 0 ? 2.2 : 1.5) + Math.min(.15, (wow + flutter) * 2) * p.mix;
+        },
+        getLatencyTime() { return meter.transportMs * .001; },
+        getMeters() { return Object.assign({}, meter); }
+      };
+    }
+    return { specifications, normalize, create };
+  }
+  scope.createLoomTapeDSP = createLoomTapeDSP;
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -2618,6 +2950,8 @@
     const compressor = makeCompressor ? makeCompressor() : null;
     const makePreamp = typeof preampFactory === 'function' ? preampFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPreampDSP === 'function' ? globalThis.createLoomPreampDSP : null;
     const preamp = makePreamp ? makePreamp() : null;
+    const makeTape = typeof tapeFactory === 'function' ? tapeFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomTapeDSP === 'function' ? globalThis.createLoomTapeDSP : null;
+    const tape = makeTape ? makeTape() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -2647,6 +2981,7 @@
     if (creative) Object.assign(specifications, creative.specifications);
     if (compressor) specifications.velvet = compressor.specifications;
     if (preamp) specifications.saute = preamp.specifications;
+    if (tape) specifications.preserve = tape.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -2658,6 +2993,7 @@
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'preserve') { if (!tape) throw new Error('PRESERVE requires createLoomTapeDSP.'); return tape.normalize(params); }
       if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.normalize(params); }
       if (type === 'velvet' && compressor) return compressor.normalize(params);
       if (type === 'velvet' && params?.model && params.model !== 'clean') throw new Error('BUTTER analog models require createLoomCompressorDSP.');
@@ -2719,6 +3055,7 @@
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'preserve') { if (!tape) throw new Error('PRESERVE requires createLoomTapeDSP.'); return tape.create(sampleRate, params); }
       if (type === 'saute') { if (!preamp) throw new Error('SAUTÉ requires createLoomPreampDSP.'); return preamp.create(sampleRate, params); }
       if (type === 'velvet' && compressor) return compressor.create(sampleRate, params);
       if (type === 'glaze' && vocal) return vocal.create(sampleRate, params);
@@ -3441,7 +3778,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -3457,7 +3794,8 @@
         if (entry.signature === signature) continue;
         const prior = entry.spec;
         if (prior?.type === spec?.type && spec) {
-          if (swapped || !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
+          // Tape owns a continuous transport/blend fade through bypass.
+          if (swapped || spec.type !== 'preserve' && !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
           entry.dsp.setParams(spec.params);
         } else {
           entry.dsp?.reset(); entry.dsp = spec ? effects.create(spec.type, sr, spec.params) : null;
@@ -3474,7 +3812,7 @@
         if (!left || !right || left.length !== right.length) throw new Error('Voice effects need equal stereo blocks.');
         for (const entry of entries) {
           if (!entry.spec && !entry.pending && !entry.remaining) { if (left.length) { entry.last[0] = left[left.length - 1]; entry.last[1] = right[right.length - 1]; } continue; }
-          if (entry.dsp && !entry.spec.params.bypass) entry.dsp.process(left, right, clock || null);
+          if (entry.dsp && (!entry.spec.params.bypass || entry.spec.type === 'preserve')) entry.dsp.process(left, right, clock || null);
           if (entry.pending && left.length) {
             entry.offset[0] = entry.last[0] - left[0]; entry.offset[1] = entry.last[1] - right[0]; entry.remaining = ramp; entry.pending = false;
           }
@@ -3487,7 +3825,7 @@
       },
       reset() { for (const entry of entries) { entry.dsp?.reset(); entry.last[0] = entry.last[1] = entry.offset[0] = entry.offset[1] = 0; entry.pending = false; entry.remaining = 0; } },
       getMeters() { return entries.map(entry => entry.spec ? { type: entry.spec.type, bypass: entry.spec.params.bypass, ...(entry.dsp.getMeters?.() || {}) } : null); },
-      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.params.bypass || entry.spec.params.mix === 0 ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
+      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.type !== 'preserve' && (entry.spec.params.bypass || entry.spec.params.mix === 0) ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
     };
   }
   function createProcessor(sampleRate, slots = empty(), clock = {}) {
@@ -3514,7 +3852,7 @@
   let bankOrdinal = 0;
   const offline = context => typeof context?.startRendering === 'function';
   function workletSource() {
-    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP'];
+    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP'];
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
     return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
@@ -3705,7 +4043,9 @@
     function updateModelNote() {
       const slots = get(), spec = slots[selected], def = spec && definition(spec.type), note = dialog.querySelector('[data-voice-fx-model-note]');
       syncRecipe(); if (!note) return; const models = def.models || def.ampModels || [], model = models.find(model => model.id === spec.params.model);
-      note.textContent = model ? [model.inspiration, model.description].filter(Boolean).join(' · ') : '';
+      const notes = model ? [model.inspiration, model.description].filter(Boolean) : [];
+      if (spec.type === 'preserve' && (spec.params.wow > 0 || spec.params.flutter > 0)) notes.push('Wow/flutter move the whole blend; zero motion keeps timing unchanged.');
+      note.textContent = notes.join(' · ');
       for (const input of dialog.querySelectorAll('[data-voice-fx-param],[data-voice-fx-number]')) { const key = input.dataset.voiceFxParam || input.dataset.voiceFxNumber; const p = spec.params;
         input.disabled = spec.type === 'saute' && (p.model === 'clean' && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(key) || model?.inactiveControls?.includes(key)) || spec.type === 'velvet' && (p.model === 'clean' && ['colour', 'timing', 'fetMode', 'thrust'].includes(key) || p.model !== 'clean' && p.timing === 'classic' && ['attack', 'release'].includes(key) || key === 'fetMode' && p.model !== 'fet-76' || key === 'thrust' && p.model !== 'bus-2500') || spec.type === 'parallax' && (key === 'time' && p.clock === 'sync' || key === 'division' && p.clock === 'free') || ['strainer', 'swirl'].includes(spec.type) && (['rate', 'lfoRate'].includes(key) && (p.clock || p.lfoClock) === 'sync' || ['division', 'lfoDivision'].includes(key) && (p.clock || p.lfoClock) === 'free'); }
     }
@@ -3715,6 +4055,11 @@
           const hz = meter.detectedHz, p = get()[selected]?.params || {}, ready = Number.isFinite(hz) && hz > 0 && meter.confidence >= .5;
           if (ready) { const pitch = 69 + 12 * Math.log2(hz / (meter.reference || 440)), guide = definition('scales')?.tunings?.[p.tuning] || []; let note = p.target === 'manual' ? p.targetNote : Math.round(pitch); if (p.target !== 'manual' && guide.length) note = guide.reduce((best, item) => Math.abs(item - pitch) < Math.abs(best - pitch) ? item : best, guide[0]); const names = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B']; target.textContent = names[((note % 12) + 12) % 12] + (Math.floor(note / 12) - 1) + ' · ' + hz.toFixed(2) + ' Hz · ' + ((pitch - note) * 100).toFixed(1) + ' cents · Output ' + finite(meter.outputDb, -120).toFixed(1) + ' dB'; }
           else target.textContent = 'Tuner: play one clear, sustained pitch. Output ' + finite(meter.outputDb, -120).toFixed(1) + ' dB';
+          return;
+        }
+        if (meter.type === 'preserve') {
+          const values = [['Input', meter.inputDb], ['Tape', meter.tapeDb], ['Output', meter.outputDb], ['Compression', meter.compressionDb]];
+          target.textContent = values.filter(([, value]) => Number.isFinite(value)).map(([name, value]) => name + ' ' + value.toFixed(1) + ' dB').join(' · ') + (meter.transportMs > 0 ? ' · Motion ' + meter.transportMs.toFixed(2) + ' ms' : '');
           return;
         }
         const preferred = ['inputDb',...(['velvet','glaze'].includes(meter.type)?['reductionDb']:[]),'stageDb','outputDb','cutoffLHz','cutoffRHz','envelopeDb','correlation'], values = preferred.filter(k => typeof meter[k] === 'number' && Number.isFinite(meter[k])).slice(0, 4).map(k => [k,meter[k]]); if (values.length) target.textContent = values.map(([k, value]) => k.replace(/Db$/, '').replace(/([A-Z])/g, ' $1') + ' ' + value.toFixed(1) + (/Db$/.test(k) ? ' dB' : '')).join(' · '); }, 100);
@@ -3735,7 +4080,7 @@
       const slots = get(); if (!slots[selected]) return; const value = Number(input.value); if (value === slots[selected].params[key]) return;
       if (!activeGesture || activeGesture.key !== key) activeGesture = { token: 'voice-fx-' + ++gestureOrdinal, started: false, key };
       const gesture = activeGesture; slots[selected].params[key] = value; commit(slots, { gesture: gesture.token, phase: gesture.started ? 'change' : 'start' }); if (activeGesture === gesture) gesture.started = true;
-      const number = dialog.querySelector('[data-voice-fx-number="' + key + '"]'), output = dialog.querySelector('[data-voice-fx-output="' + key + '"]'), param = definition(slots[selected].type).params.find(p => p.key === key); if (number && document.activeElement !== number) number.value = value; if (output) output.textContent = value + ' ' + (param.unit || ''); syncRecipe();
+      const number = dialog.querySelector('[data-voice-fx-number="' + key + '"]'), output = dialog.querySelector('[data-voice-fx-output="' + key + '"]'), param = definition(slots[selected].type).params.find(p => p.key === key); if (number && document.activeElement !== number) number.value = value; if (output) output.textContent = value + ' ' + (param.unit || ''); if (slots[selected].type === 'preserve' && ['wow', 'flutter'].includes(key)) updateModelNote(); else syncRecipe();
     });
     dialog.addEventListener('change', event => {
       const input = event.target, slots = get();
