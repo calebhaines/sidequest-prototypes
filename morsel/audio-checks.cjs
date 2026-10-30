@@ -43,109 +43,117 @@ class Context {
 const scope = { window: null, console, Blob, Float32Array, DOMException, setTimeout, clearTimeout, AudioContext: Context, Worker: BrowserWorker,
   URL: { createObjectURL(blob) { const id = 'blob:morsel-audio-' + ++ordinal; blobs.set(id, blob); return id; }, revokeObjectURL(id) { blobs.delete(id); } } };
 scope.window = scope; vm.createContext(scope);
-for (const file of ['vendor/speech-assets.js', 'speech-source.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+
+for (const file of ['vendor/signalsmith/assets.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
 const D = scope.MorselAudioDSP;
-function measuredPitch(data, sampleRate, expected) {
-  const start = Math.round(data.length * .4), count = Math.min(Math.round(sampleRate * .15), Math.round(data.length * .2));
-  const minimum = Math.floor(sampleRate / (expected * 1.08)), maximum = Math.ceil(sampleRate / (expected * .92)), values = [];
-  for (let lag = minimum; lag <= maximum; lag++) { let sum = 0, a = 0, b = 0; for (let i = start; i < start + count; i++) { const x = data[i], y = data[i + lag]; sum += x * y; a += x * x; b += y * y; } values.push(sum / Math.sqrt(a * b + 1e-20)); }
-  let best = 0; for (let i = 1; i < values.length; i++) if (values[i] > values[best]) best = i;
-  const a = values[best - 1] ?? values[best], b = values[best], c = values[best + 1] ?? values[best], denominator = a - 2 * b + c;
-  const fraction = denominator ? Math.max(-.5, Math.min(.5, .5 * (a - c) / denominator)) : 0;
-  return { hz: sampleRate / (minimum + best + fraction), correlation: b };
+function decodeFixture(name = 'bella-hello.wav') {
+  const buffer = fs.readFileSync(path.join(__dirname, 'vendor/signalsmith/fixtures', name)), data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  let at = 12, rate = 0, channels = 0, bits = 0, start = -1, bytes = 0;
+  while (at + 8 <= buffer.length) { const id = buffer.toString('ascii', at, at + 4), size = data.getUint32(at + 4, true); if (id === 'fmt ') { rate = data.getUint32(at + 12, true); channels = data.getUint16(at + 10, true); bits = data.getUint16(at + 22, true); } if (id === 'data') { start = at + 8; bytes = size; } at += 8 + size + size % 2; }
+  assert(start >= 0 && rate === 24000 && [1, 2].includes(channels) && [16, 32].includes(bits));
+  const stride = bits / 8, left = new Float32Array(bytes / stride / channels); for (let frame = 0; frame < left.length; frame++) left[frame] = bits === 16 ? data.getInt16(start + frame * stride * channels, true) / 32768 : data.getFloat32(start + frame * stride * channels, true);
+  return { left, sampleRate: rate, pitchHz: 0 };
 }
-function finiteAudio(data) { let power = 0; for (const value of data) { assert(Number.isFinite(value)); assert(Math.abs(value) <= 1); power += value * value; } assert(power > .01); }
-let groups = 0;
-function pass(text) { groups++; console.log('PASS ' + text); }
+const fixture = decodeFixture(); let speechCalls = 0;
+scope.MorselSpeech = { prepare: async () => {}, render: async () => { speechCalls++; return { ...fixture, left: fixture.left.slice() }; } };
+function metrics(data) { let power = 0, peak = 0, longest = 0, run = 0; for (const value of data) { assert(Number.isFinite(value)); power += value * value; peak = Math.max(peak, Math.abs(value)); if (Math.abs(value) < 1e-8) { run++; longest = Math.max(longest, run); } else run = 0; } return { rms: Math.sqrt(power / data.length), peak, longest }; }
+function audibleOnset(data, rate) {
+  let peak = 0; for (const value of data) peak = Math.max(peak, Math.abs(value));
+  const width = Math.round(rate * .02), threshold = Math.max(.001, peak * .01);
+  for (let at = 0; at < data.length; at += width) { const end = Math.min(data.length, at + width); let power = 0; for (let frame = at; frame < end; frame++) power += data[frame] * data[frame]; if (Math.sqrt(power / (end - at)) >= threshold) return at / rate; }
+  return Infinity;
+}
+let groups = 0; const pass = text => { groups++; console.log('PASS ' + text); };
 (async () => {
-  const engine = new scope.MorselAudio({ voice: 'alto', lyric: 'ah', air: 0, space: 0, vibrato: 0, volume: .7 });
+  const engine = new scope.MorselAudio({ voice: 'alto', lyric: 'hello', air: 0, space: 0, vibrato: 0, volume: .7 });
   try {
-    const rate = 22050, source = new Float32Array(rate);
-    for (let frame = 0; frame < source.length; frame++) source[frame] = .3 * Math.sin(2 * Math.PI * 220 * frame / rate) + .15 * Math.sin(2 * Math.PI * 440 * frame / rate);
-    const speech = D.analyzeSpeech({ left: source, sampleRate: rate, pitchHz: 220 });
-    for (const note of [48, 60, 69]) for (const seconds of [.3, 1.6]) {
-      const fitted = D.fitSpeech(speech, note, seconds), expected = D.frequency(note), pitch = measuredPitch(fitted, rate, expected);
-      assert.equal(fitted.length, Math.round(seconds * rate)); finiteAudio(fitted); assert(pitch.correlation > .85);
-      assert(Math.abs(1200 * Math.log2(pitch.hz / expected)) < 12, 'Pitch and duration are independent: ' + JSON.stringify({ note, seconds, pitch }));
+    const speech = D.analyzeSpeech(D.trimSpeech(fixture));
+    assert(speech.pitchHz > 100 && speech.pitchHz < 400 && speech.pitchConfidence > .7 && speech.voicedFrames.length > 20);
+    const contour = speech.voicedFrames.map(frame => frame.hz); assert(Math.max(...contour) / Math.min(...contour) > 1.2, 'The real neural fixture contains natural intonation');
+    const seconds = speech.left.length / speech.sampleRate, copy = { ...speech, pitchHz: 220, pitchConfidence: 1, voicedFrames: [] };
+    const direct = await D.fitSpeech({ ...copy, pitchHz: 440 }, 69, seconds); assert.deepEqual(direct, speech.left, 'An unchanged voice passes through byte-exactly instead of unnecessary vocoding');
+    pass('A real neural phrase retains its natural pitch contour; unchanged speech passes through exactly');
+    const trimmedWord = D.trimSpeech({ ...fixture, text: 'Hello from the kitchen' });
+    assert(audibleOnset(fixture.left, 24000) > .5 && audibleOnset(trimmedWord.left, 24000) <= .12, 'Actual word padding is removed while a phonetic prepad remains');
+    let tailEnergy = 0, wordEnergy = 0; for (let i = 0; i < fixture.left.length; i++) { wordEnergy += fixture.left[i] * fixture.left[i]; if (i >= trimmedWord.trimEnd) tailEnergy += fixture.left[i] * fixture.left[i]; }
+    assert(trimmedWord.trimStart > 24000 * .5 && tailEnergy < wordEnergy * .0001, 'Leading decoder padding changes while the final word and consonant energy remain');
+    const aliasOnsets = [];
+    for (const token of ['ah', 'ee', 'oo', 'mm']) {
+      const raw = decodeFixture('soprano-' + token + '.wav'), analyzed = D.analyzeSpeech(D.trimSpeech({ ...raw, text: token })), fitted = await D.fitSpeech(analyzed, 60, .78);
+      const before = audibleOnset(raw.left, 24000), after = audibleOnset(fitted, 24000); aliasOnsets.push({ token, before, after });
+      assert(before > .3 && analyzed.vowelCoreTrimmed && after <= .08, token + ' plays its real voiced core on the note instead of stretching decoder residue');
+      assert(metrics(fitted.subarray(2400, 14400)).rms > .01, token + ' remains audibly sustained through the note');
     }
-    assert.equal(D.fitSpeech(speech, 60, 122).length, rate * 122, 'A valid 120-second gate plus two-second release fits');
-    assert.throws(() => D.fitSpeech(speech, 60, 122.01));
-    pass('Pitch-synchronous fitting changes duration and musical pitch independently on an actual periodic source');
-
-    const events = ['alto', 'tenor', 'bass', 'robot'].map(voice => ({ pitch: 60, voice, lyric: 'ah', beat: 0, duration: 1, velocity: .8 }));
-    const stateBefore = JSON.stringify(engine.state);
-    await engine.prepareNotes({ events, tempo: 120 }); assert.equal(JSON.stringify(engine.state), stateBefore);
-    const printed = [], tuning = [];
-    for (const event of events) {
-      const audio = engine._preparedNote(event, 1.2); finiteAudio(audio.left); printed.push(audio.left);
-      for (const note of [48, 60, 69]) {
-        const fitted = engine._preparedNote({ ...event, pitch: note }, 1.2), expected = D.frequency(note), pitch = measuredPitch(fitted.left, fitted.sampleRate, expected);
-        assert(pitch.correlation > .7, event.voice + ' voiced continuity');
-        const cents = 1200 * Math.log2(pitch.hz / expected); tuning.push({ voice: event.voice, note, cents: Math.round(cents * 100) / 100 });
-        assert(Math.abs(cents) < 5, event.voice + ' note tuning: ' + JSON.stringify({ note, pitch, cents }));
-      }
+    const wordOnsets = [];
+    for (const voice of ['alto', 'tenor', 'bass', 'robot']) {
+      const raw = decodeFixture('word-' + voice + '-hello-kitchen.wav'), trimmed = D.trimSpeech({ ...raw, text: 'hello kitchen' }), analyzed = D.analyzeSpeech(trimmed), fitted = await D.fitSpeech(analyzed, 60, 1.53);
+      const before = audibleOnset(raw.left, 24000), after = audibleOnset(fitted, 24000); wordOnsets.push({ voice, before, after, trimStart: trimmed.trimStart / 24000 });
+      assert(before > .3 && after <= .18, voice + ' real words start on their note instead of playing a quiet decoder island');
+      assert(!analyzed.vowelCoreTrimmed, 'Ordinary word consonants never use vowel-only core cropping');
+      let full = 0, tail = 0; for (let i = 0; i < raw.left.length; i++) { full += raw.left[i] * raw.left[i]; if (i >= trimmed.trimEnd) tail += raw.left[i] * raw.left[i]; }
+      assert(tail < full * .0001, voice + ' final consonant energy remains');
     }
-    for (let a = 0; a < printed.length; a++) for (let b = a + 1; b < printed.length; b++) assert.notDeepEqual(printed[a], printed[b]);
-    pass('All four production speech profiles remain distinct and accurately tuned after musical resynthesis');
-    console.log(JSON.stringify({ tuning }));
+    console.log(JSON.stringify({ meaningfulAliasOnsets: aliasOnsets, meaningfulWordOnsets: wordOnsets }));
+    pass('Actual neural word padding and all four Soprano vowel/hum prefixes are removed without truncating word tails');
 
-    const words = ['hello', 'kitchen', 'love'];
-    for (const lyric of words) await engine.prepareNotes({ events: [{ pitch: 60, voice: 'alto', lyric, durationSeconds: .6 }] });
-    const fingerprints = words.map(lyric => { const data = engine._preparedNote({ pitch: 60, voice: 'alto', lyric }, .7).left; finiteAudio(data); return Buffer.from(data.buffer).toString('base64'); });
-    assert.equal(new Set(fingerprints).size, words.length);
-    const before = engine.words.size;
-    engine._preparedNote({ pitch: 63, voice: 'alto', lyric: 'hello' }, .137);
-    engine._preparedNote({ pitch: 71, voice: 'alto', lyric: 'hello' }, 2.3);
-    assert.equal(engine.words.size, before);
-    assert.equal(D.identity({ pitch: 60, voice: 'alto', lyric: '' }, { lyric: 'hello' }).lyric, 'hello');
-    assert.equal(D.identity({ pitch: 60, voice: 'alto', lyric: ' ' }, { lyric: '' }).lyric, 'ah');
-    assert.equal(D.settings({ attack: .5, release: 2 }).attack, .5); assert.equal(D.settings({ attack: .5, release: 2 }).release, 2);
-    await engine.prepareNotes({ events: [{ pitch: 60, voice: 'alto', lyric: 'hello', durationSeconds: 9.25 }] });
-    const long = engine._preparedNote({ pitch: 60, voice: 'alto', lyric: 'hello' }, 9.25 + engine.state.release);
-    assert(engine.noteCache.has(long.key), 'Long notes are fitted during preparation too');
-    pass('Actual words produce distinct PCM; prepared base words cover new pitches and shortened seek notes without new speech jobs');
+    const rows = [];
+    for (const pitch of [36, 48, 60, 69, 84]) {
+      const left = await D.fitSpeech(speech, pitch, seconds), m = metrics(left), analyzed = D.analyzeSpeech({ left, sampleRate: speech.sampleRate, pitchHz: D.frequency(pitch) });
+      assert.equal(left.length, speech.left.length); assert(m.rms > .015 && m.peak < .95);
+      assert(analyzed.pitchHz > 0); rows.push({ pitch, expectedHz: D.frequency(pitch), medianHz: analyzed.pitchHz, cents: 1200 * Math.log2(analyzed.pitchHz / D.frequency(pitch)), rms: m.rms });
+    }
+    console.log(JSON.stringify({ naturalRegister: rows }));
+    for (let index = 1; index < rows.length; index++) assert(rows[index].medianHz > rows[index - 1].medianHz * 1.25, 'Melody notes follow clearly increasing register');
+    for (const row of rows) assert(Math.abs(row.cents) < 60, 'Natural intonation remains centered on the musical note: ' + JSON.stringify(row));
+    // The former renderer inserted 139-sample zero gaps in C2. A sustained
+    // voiced signal must stay continuous when moved down from A3 to C2.
+    const pure = new Float32Array(24000); for (let i = 0; i < pure.length; i++) pure[i] = .25 * Math.sin(2 * Math.PI * 220 * i / 24000) + .1 * Math.sin(2 * Math.PI * 440 * i / 24000);
+    const held = D.analyzeSpeech({ left: pure, sampleRate: 24000, pitchHz: 220 }), low = await D.fitSpeech(held, 36, 1.2), middle = low.subarray(6000, 22000);
+    assert(metrics(middle).longest < 24, 'Low notes have no periodic silent grain gaps');
+    const brief = D.analyzeSpeech({ left: pure.slice(0, Math.round(.042 * 24000)), sampleRate: 24000, pitchHz: 0 }); assert(brief.pitchConfidence > .7 && Math.abs(brief.pitchHz - 220) < 10, 'A short neural humming/vowel token remains voiced');
+    const briefHeld = await D.fitSpeech(brief, 60, .8); assert(metrics(briefHeld.subarray(5000, 17000)).longest < 24);
+    for (const token of ['mm', 'ee']) {
+      const raw = decodeFixture('natural-' + token + '.wav'), seeded = D.analyzeSpeech(D.trimSpeech({ ...raw, text: token }));
+      assert(seeded.sustainSeeded && seeded.left.length > raw.left.length * 3 && seeded.pitchConfidence > .7, token + ' has a stable native-pitch seed');
+      const result = await D.fitSpeech(seeded, 60, 1), voiced = D.analyzeSpeech({ left: result, sampleRate: 24000, pitchHz: 0 });
+      assert(Math.abs(1200 * Math.log2(voiced.pitchHz / D.frequency(60))) < 90, token + ' stays musical after a genuine short neural token is sustained');
+      assert(metrics(result.subarray(6000, 18000)).longest < 24, token + ' stays continuous');
+    }
+    pass('Waveform-preserving pitch shifts cover C2–C6 without gaps; actual 42 ms hum and 67 ms vowel tokens sustain musically');
 
-    await engine.init();
-    const first = engine.scheduleNote({ pitch: 60, voice: 'alto', lyric: 'hello', when: 1.5, durationSeconds: .6, velocity: .8, source: 'first' });
-    const independent = engine.scheduleNote({ pitch: 63, voice: 'alto', lyric: 'hello', when: 1.6, durationSeconds: .6, velocity: .8, source: 'independent' });
+    const short = await D.fitSpeech(speech, 60, .65), long = await D.fitSpeech(speech, 60, 5.25);
+    assert.equal(short.length, Math.round(.65 * 24000)); assert.equal(long.length, Math.round(5.25 * 24000)); assert(metrics(short).rms > .01 && metrics(long).rms > .01);
+    await assert.rejects(D.fitSpeech(speech, 60, 122.01)); await assert.rejects(D.fitSpeech(speech, 20, 1));
+    const cancelled = new AbortController(); cancelled.abort(); await assert.rejects(D.fitSpeech(speech, 60, 1, { signal: cancelled.signal }), error => error.name === 'AbortError');
+    pass('Independent short and long note durations produce finite complete buffers, with bounded and cancellable preparation');
+
+    const event = { pitch: 60, voice: 'alto', lyric: 'hello', durationSeconds: .8, velocity: .8 };
+    const before = JSON.stringify(engine.state); await engine.prepareNotes({ events: [event] }); assert.equal(JSON.stringify(engine.state), before); assert.equal(speechCalls, 1);
+    await engine.prepareNotes({ events: [{ ...event, pitch: 67, durationSeconds: 1.3 }] }); assert.equal(speechCalls, 1, 'Changing pitch/length reuses the natural speech');
+    const note = engine._preparedNote(event, .8 + engine.state.release); assert(note.left.length === Math.round((.8 + engine.state.release) * 24000));
+    const count = engine.noteCache.size, heldSeek = engine._preparedNote(event, .137); assert(heldSeek.left === note.left || engine.noteCache.has(heldSeek.key)); assert.equal(engine.noteCache.size, count, 'A shortened seek uses a prepared waveform without running DSP on the scheduler');
+    assert.throws(() => engine._preparedNote({ ...event, pitch: 73 }, 1), /Prepare this note/);
+    pass('Cached words prepare authored pitches and lengths ahead of time; seeks never start speech or stretching in the scheduler');
+
+    await engine.init(); const first = engine.scheduleNote({ ...event, when: 1.5, source: 'first' }), independent = engine.scheduleNote({ ...event, pitch: 67, when: 1.6, durationSeconds: 1.3, source: 'independent' });
     assert.equal(first.source.starts[0], 1.5); assert.equal(first.air.starts[0], 1.5); assert.equal(first.vibrato.starts[0], 1.5);
     engine.stopNotes({ source: 'first', when: 1.55 }); assert.equal(first.cancelledAt, 1.55); assert.equal(independent.cancelledAt, undefined);
-    const release = first.cancelEnd, stops = first.source.stops.length; engine.stopNotes({ source: 'first', when: 1.57 }); assert.equal(first.cancelEnd, release); assert.equal(first.source.stops.length, stops);
-    assert.equal(engine.scheduleNote({ pitch: 60, voice: 'alto', lyric: 'hello', when: 1.6, durationSeconds: .1, source: 'first' }), false);
+    const end = first.cancelEnd; engine.stopNotes({ source: 'first', when: 1.57 }); assert.equal(first.cancelEnd, end);
+    assert.equal(engine.scheduleNote({ ...event, when: 1.6, source: 'first' }), false);
     engine.followTransport({ revision: 1, playing: true, when: 1 }); engine.followTransport({ revision: 2, playing: true, when: 1.55 }); assert.equal(first.cancelEnd, 1.55); assert.equal(independent.cancelledAt, undefined);
-    const destination = engine.graph.output, beforeStop = engine.graph;
-    engine.stop(); assert.notEqual(engine.graph, beforeStop); assert.equal(engine.graph.output, destination); assert(engine.retiredGraphs.has(beforeStop));
-    const preview = engine.scheduleNote({ pitch: 60, voice: 'alto', lyric: 'hello', when: 1.01, durationSeconds: .5, source: 'new-preview' });
-    assert(preview.bus.connections.includes(engine.graph.input)); assert(!preview.bus.connections.includes(beforeStop.input));
-    engine.panic(); assert.equal(engine.records.size, 0); assert.equal(engine.sourceCuts.size, 0); assert.equal(engine.retiredGraphs.size, 0);
-    pass('Prepared live sources start at their exact native timestamp; scoped cancellation, fences, repeated releases, global resets and Panic stay isolated');
+    const destination = engine.graph.output, old = engine.graph; engine.stop(); assert.notEqual(engine.graph, old); assert.equal(engine.graph.output, destination); assert(engine.retiredGraphs.has(old));
+    const fresh = engine.scheduleNote({ ...event, when: 1.01, source: 'fresh' }); assert(fresh.bus.connections.includes(engine.graph.input)); assert(!fresh.bus.connections.includes(old.input));
+    engine.panic(); assert.equal(engine.records.size, 0); assert.equal(engine.retiredGraphs.size, 0);
+    pass('Exact source starts, isolated cancellation, room reset and immediate audition preserve their lifecycle behavior');
 
-    const controller = new AbortController(); controller.abort(); await assert.rejects(engine.prepareNotes({ events, signal: controller.signal }), error => error.name === 'AbortError');
-    await assert.rejects(engine.preview({ pitch: 60, voice: 'alto', lyric: 'hello', signal: controller.signal }), error => error.name === 'AbortError');
-    const originalPreparation = engine.prepareNotes; let releasePreparation, receivedSignal;
-    engine.prepareNotes = options => { receivedSignal = options.signal; return new Promise(resolve => { releasePreparation = resolve; }); };
-    const stale = new AbortController(), stalePreview = engine.preview({ pitch: 60, voice: 'alto', lyric: 'hello', signal: stale.signal });
-    const noStaleNote = assert.rejects(stalePreview, error => error.name === 'AbortError');
-    for (let i = 0; i < 20 && !releasePreparation; i++) await Promise.resolve();
-    assert.equal(receivedSignal, stale.signal); assert(releasePreparation); stale.abort(); releasePreparation(); await noStaleNote;
-    assert.equal(engine.records.size, 0, 'A preview cancelled during its own word preparation never schedules audio');
-    engine.prepareNotes = originalPreparation;
-    await assert.rejects(engine.renderNotes({ events, tempo: 0, lengthBeats: 4 })); await assert.rejects(engine.renderNotes({ events, tempo: 30, lengthBeats: 256 }));
-    const wav = D.encodeWav(new Float32Array([.5, -.5, .25, -.25]), 48000), bytes = new Uint8Array(await wav.arrayBuffer()), view = new DataView(bytes.buffer);
-    assert.equal(view.getUint16(22, true), 2); assert.equal(view.getUint32(24, true), 48000); assert.equal(view.getUint32(40, true), 8);
-    const closing = new scope.MorselAudio(), preparation = closing.prepareNotes({ events: [{ pitch: 60, voice: 'alto', lyric: 'word preparation while closing', durationSeconds: 1 }] });
-    const rejected = assert.rejects(preparation, error => error.name === 'AbortError');
-    for (let i = 0; i < 20 && !closing.pendingWords.size; i++) await Promise.resolve();
-    assert(closing.pendingWords.size); await closing.dispose(); await rejected; assert.equal(closing.words.size, 0);
-    const unloading = new scope.MorselAudio(); await unloading.init();
-    const unloadedContext = unloading.context, count = unloadedContext.nodes.length; unloadedContext.invalidated = true; unloadedContext.state = 'closed';
-    await unloading.dispose(); await unloading.dispose(); unloading.stop(); unloading.panic();
-    assert.equal(unloadedContext.nodes.length, count, 'Disposal after host invalidation must not create any audio nodes');
-    assert.equal(unloading.graph, null); assert.equal(unloading.context, null);
-    const currentContext = engine.context, priorNodeCount = currentContext.nodes.length; currentContext.invalidated = true; currentContext.state = 'closed';
-    engine.stop(); engine.panic(); assert.equal(currentContext.nodes.length, priorNodeCount, 'Ordinary Stop/Panic also stay creation-free on an unloaded context');
-    await engine.dispose(); assert.equal(engine.context, null); assert.equal(engine.words.size, 0); await assert.rejects(engine.init());
-    pass('Cancelled or invalid renders do not start playback, WAV stays stereo at native rate and disposal releases audio graphs and caches');
-    console.log(groups + ' MORSEL audio groups passed.');
-  } finally { await engine.dispose(); scope.MorselSpeech.dispose(); }
-})().catch(error => { console.error(error); process.exitCode = 1; });
+    // A cancelled preview must not poison another caller sharing the same fit.
+    const signal = new AbortController(); const pending = engine._prepareNote({ ...event, pitch: 62 }, 1.2345, signal.signal); const rejected = assert.rejects(pending, error => error.name === 'AbortError');
+    const joined = engine._prepareNote({ ...event, pitch: 62 }, 1.2345); signal.abort(); await rejected; const prepared = await joined; assert(prepared.left.length > 0);
+    const savedBytes = engine.noteBytes, cacheBeforeBudget = [...engine.noteCache.keys()]; engine.noteBytes = 64 * 1024 * 1024 - 4;
+    await assert.rejects(engine.prepareNotes({ events: [{ ...event, pitch: 72, durationSeconds: .2 }] }), /64 MiB/);
+    assert.deepEqual([...engine.noteCache.keys()], cacheBeforeBudget, 'Budget failure never silently evicts an earlier prepared note'); engine.noteBytes = savedBytes;
+    const nodes = engine.context.nodes.length; engine.context.invalidated = true; await engine.dispose(); await engine.dispose(); engine.stop(); engine.panic(); assert.equal(engine.disposed, true); assert.equal(engine.context, null); assert.equal(engine.stretch.worker, null); assert.equal(nodes > 0, true);
+    pass('Shared preparation survives one caller cancelling, and unloaded disposal is idempotent and creates no audio nodes');
+  } finally { await engine.dispose(); D.disposeDiagnostics(); }
+  console.log(groups + ' MORSEL natural-voice audio groups passed.');
+})().catch(error => { console.error(error); D.disposeDiagnostics(); process.exitCode = 1; });

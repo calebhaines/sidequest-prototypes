@@ -54,6 +54,8 @@ if any(template.count(slot) != 1 for slot in ['<!-- STYLES -->', '<!-- SCRIPTS -
 html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>').replace('<!-- SCRIPTS -->', '<script>\n' + scripts + '\n</script>')
 html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
 html = exchange_helpers['embed_exchange'](html, 'loom', ROOT)
+if len(html.encode('utf-8')) >= 100 * 1024 * 1024:
+    raise ValueError('GALLEY must remain below GitHub’s 100 MiB per-file limit.')
 (ROOT / 'index.html').write_text(html)
 print(f'Built GALLEY: {len(html.encode()):,} bytes; all {len(INSTRUMENTS)} Kitchen instruments and all assets embedded.')
 
@@ -92,5 +94,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
             archive.writestr(info, data)
+    if target.stat().st_size >= 100 * 1024 * 1024:
+        raise ValueError('GALLEY’s source archive must remain below GitHub’s 100 MiB per-file limit.')
     print(f'Packaged GALLEY source: {target.stat().st_size:,} bytes, {len(files)} files.')
     print('Standalone SHA-256: ' + hashlib.sha256(html.encode()).hexdigest())

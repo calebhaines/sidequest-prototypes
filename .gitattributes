@@ -1,2 +1,8 @@
 # Preserve the speech engine's upstream GPL license verbatim.
 morsel/vendor/COPYING -whitespace
+# Preserve hashed upstream references and compiled releases byte-for-byte.
+morsel/vendor/neural/MODEL-CARD.md -whitespace
+morsel/vendor/neural/UPSTREAM-INFERENCE.py -whitespace
+morsel/vendor/neural/kitten-config.json -whitespace
+morsel/vendor/neural/ort-wasm-simd-threaded.mjs -whitespace
+morsel/vendor/signalsmith/SignalsmithStretch.js -whitespace
