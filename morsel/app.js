@@ -4,10 +4,11 @@
   const S = global.MorselSchema, $ = id => document.getElementById(id), copy = value => JSON.parse(JSON.stringify(value));
   if (!S || !global.MorselAudio) throw new Error('MORSEL needs its recipe and voice engine before opening.');
   const engine = new global.MorselAudio(), RECOVERY = 'kitchen-morsel-project-v1', MAX_HISTORY = 80;
-  let state = S.defaultState(), selectedStep = 0, playingStep = -1, keyboardBase = 48, presetId = '', lastGesture = null, gestureOrdinal = 0;
+  let state = S.defaultState(), selectedStep = 0, playingStep = -1, keyboardBase = 48, presetId = '', lastGesture = null, gestureOrdinal = 0, customDurationStep = -1;
   let history = [], future = [], persistTimer = null, warmTimer = null, warmSignature = '', exporting = null, previewGeneration = 0, playing = false, preparing = false, disposed = false;
   const keyStates = new Set(), downKeys = new Map();
-  const knobDefaults = { tone: .55, air: .12, vibrato: .1, space: .18, volume: .65 };
+  let durationDrag = null;
+  const knobDefaults = { tone: .75, air: .03, vibrato: .02, space: .12, volume: .65 };
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const controller = () => { if (!global.MorselController) throw new Error('MORSEL is still getting ready. Try again in a moment.'); return global.MorselController; };
   function setStatus(message) { $('status').textContent = String(message || ''); }
@@ -39,16 +40,16 @@
   function undo() {
     if (!history.length) return false;
     controller().stop(); future.push(copy(state)); state = history.pop(); lastGesture = null; presetId = '';
-    selectedStep = Math.min(selectedStep, state.length - 1); engine.setState(state); render(true); saveLater(); notify(); setStatus('Previous recipe restored.'); return true;
+    selectedStep = Math.min(selectedStep, state.length - 1); customDurationStep = -1; engine.setState(state); render(true); saveLater(); notify(); setStatus('Previous recipe restored.'); return true;
   }
   function redo() {
     if (!future.length) return false;
     controller().stop(); history.push(copy(state)); state = future.pop(); lastGesture = null; presetId = '';
-    selectedStep = Math.min(selectedStep, state.length - 1); engine.setState(state); render(true); saveLater(); notify(); setStatus('Recipe change restored.'); return true;
+    selectedStep = Math.min(selectedStep, state.length - 1); customDurationStep = -1; engine.setState(state); render(true); saveLater(); notify(); setStatus('Recipe change restored.'); return true;
   }
   async function loadState(value) {
     const next = S.parseProject(value);
-    global.MorselController?.stop(); previewGeneration++; selectedStep = 0;
+    global.MorselController?.stop(); previewGeneration++; selectedStep = 0; customDurationStep = -1;
     replace(next, { message: 'Recipe ready.', force: true });
     render(true); return copy(state);
   }
@@ -57,17 +58,46 @@
     if (force || document.activeElement !== element) element.value = String(value);
   }
   const percent = value => Math.round(value * 100) + '%';
+  const lengthNames = new Map([[.0625, '1/64'], [.125, '1/32'], [.25, '1/16'], [.5, '1/8'], [.75, 'Dotted 1/8'], [1, '1/4'], [1.5, 'Dotted 1/4'], [2, '1/2'], [3, 'Dotted 1/2'], [4, 'Whole'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars']]);
+  const roundBeat = value => Number(value.toFixed(4));
+  const beatLabel = value => roundBeat(value) + (Math.abs(value - 1) < 1e-7 ? ' beat' : ' beats');
+  const lengthBadge = value => (lengthNames.get(value) || roundBeat(value) + 'b').replace('Dotted ', '') + (value === .75 || value === 1.5 || value === 3 ? '.' : '');
+  const noteTiming = index => global.MorselSequence.noteTiming(state, index);
+  function displayedDuration() {
+    const stored = state.steps[selectedStep];
+    if (!durationDrag || durationDrag.state !== state || durationDrag.index !== selectedStep || durationDrag.value === null) return { step: stored, timing: noteTiming(selectedStep), draft: false };
+    const steps = state.steps.slice(), step = { ...stored, duration: durationDrag.value }; steps[selectedStep] = step;
+    return { step, timing: global.MorselSequence.noteTiming({ ...state, steps }, selectedStep), draft: true };
+  }
+  function renderDuration(display = displayedDuration()) {
+    const { step, timing } = display, total = state.length * state.division;
+    const actual = roundBeat(timing.duration), start = timing.beat / total * 100, width = timing.duration / total * 100;
+    $('durationSummary').textContent = (step.duration === null ? 'Auto · ' : '') + (lengthNames.has(actual) ? lengthNames.get(actual) + ' · ' : '') + beatLabel(actual);
+    $('durationRuler').style.setProperty('--step-width', 100 / state.length + '%');
+    $('durationRuler').classList.toggle('off', !step.on);
+    $('durationStart').style.left = start + '%'; $('durationBar').style.left = start + '%'; $('durationBar').style.width = width + '%';
+    $('durationWord').textContent = step.lyric || state.lyric || 'ah';
+    const handle = $('durationHandle'); handle.setAttribute('aria-valuenow', String(actual)); handle.setAttribute('aria-valuemax', String(roundBeat(total - timing.beat))); handle.setAttribute('aria-valuetext', beatLabel(actual));
+    $('durationHint').textContent = timing.clipped ? 'This note ends at the phrase boundary. Add steps or widen spacing for a longer note.' : step.duration === null ? 'Auto fits the gap before the next word. Choose a note length to set this note independently.' : 'Drag the right edge to change this note’s length. Notes can overlap.';
+  }
   function renderStepEditor(force = false) {
     const step = state.steps[selectedStep];
     $('selectedStepNumber').textContent = String(selectedStep + 1).padStart(2, '0'); $('stepOn').checked = step.on;
     setInput('stepLyric', step.lyric, force); setInput('stepPitch', step.pitch, force); setInput('stepVoice', step.voice, force);
     setInput('stepVelocity', step.velocity, force); setInput('stepGate', step.gate, force);
     $('stepVelocityValue').textContent = percent(step.velocity); $('stepGateValue').textContent = percent(step.gate);
+    const display = displayedDuration(), duration = display.step.duration, common = [...$('stepDuration').options].some(option => option.value === String(duration));
+    setInput('stepDuration', duration === null ? 'auto' : display.draft || customDurationStep === selectedStep || !common ? 'custom' : duration, force);
+    setInput('stepDurationBeats', duration === null ? roundBeat(display.timing.duration) : duration, force);
+    $('stepDurationBeats').disabled = duration === null; $('stepGateField').hidden = duration !== null;
+    renderDuration(display);
   }
   function renderSteps() {
     $('steps').innerHTML = state.steps.slice(0, state.length).map((step, index) => {
       const voice = step.voice === 'inherit' ? state.voice : step.voice;
-      return `<div class="word-step${index === selectedStep ? ' selected' : ''}${index === playingStep ? ' playing' : ''}${step.on ? '' : ' off'}" data-step-cell="${index}"><button type="button" class="step-select" data-step="${index}" aria-label="Step ${index + 1}, ${escape(step.lyric || 'keyboard word')}, ${escape(S.noteName(step.pitch))}, ${voice}${step.on ? '' : ', off'}" aria-pressed="${index === selectedStep}"><span class="step-index">${String(index + 1).padStart(2, '0')}</span><span class="step-word">${escape(step.lyric || '—')}</span><span class="step-note"><span>${escape(S.noteName(step.pitch))}</span><span class="step-voice-tag">${step.voice === 'inherit' ? '' : escape(voice[0].toUpperCase())}</span></span></button><label class="step-toggle" title="Step ${index + 1} on / off"><input type="checkbox" data-step-toggle="${index}" aria-label="Step ${index + 1} on"${step.on ? ' checked' : ''}></label></div>`;
+      const voiceName = S.VOICES.find(item => item.id === voice)?.name || voice;
+      const timing = noteTiming(index), duration = timing.duration, durationText = beatLabel(duration);
+      return `<div class="word-step${index === selectedStep ? ' selected' : ''}${index === playingStep ? ' playing' : ''}${step.on ? '' : ' off'}" data-step-cell="${index}"><button type="button" class="step-select" data-step="${index}" aria-label="Step ${index + 1}, ${escape(step.lyric || 'keyboard word')}, ${escape(S.noteName(step.pitch))}, ${escape(voiceName)}, ${durationText}${step.on ? '' : ', off'}" aria-pressed="${index === selectedStep}"><span class="step-index">${String(index + 1).padStart(2, '0')}</span><span class="step-word">${escape(step.lyric || '—')}</span><span class="step-note"><span>${escape(S.noteName(step.pitch))}</span><span class="step-length" title="${step.duration === null ? 'Auto: ' : ''}${durationText}${timing.clipped ? '; ends at phrase boundary' : ''}">${lengthBadge(duration)}</span><span class="step-voice-tag">${step.voice === 'inherit' ? '' : escape(voiceName[0].toUpperCase())}</span></span></button><label class="step-toggle" title="Step ${index + 1} on / off"><input type="checkbox" data-step-toggle="${index}" aria-label="Step ${index + 1} on"${step.on ? ' checked' : ''}></label></div>`;
     }).join('');
   }
   function renderKnobs(force = false) {
@@ -136,10 +166,7 @@
   }
   function selectedNote() {
     const step = state.steps[selectedStep], seconds = 60 / state.tempo;
-    let gap = 4;
-    for (let index = selectedStep + 1; index < Math.min(state.length, selectedStep + 4); index++) if (state.steps[index].on) { gap = index - selectedStep; break; }
-    gap = Math.min(gap, state.length - selectedStep);
-    return { pitch: step.pitch, voice: step.voice === 'inherit' ? state.voice : step.voice, lyric: step.lyric?.trim() ? step.lyric : state.lyric, velocity: step.velocity, durationSeconds: Math.max(.1, gap * state.division * step.gate * seconds) };
+    return { pitch: step.pitch, voice: step.voice === 'inherit' ? state.voice : step.voice, lyric: step.lyric?.trim() ? step.lyric : state.lyric, velocity: step.velocity, durationSeconds: noteTiming(selectedStep).duration * seconds };
   }
   function inputGesture(element) { if (!element._morselGesture) element._morselGesture = 'input-' + ++gestureOrdinal; return element._morselGesture; }
   function bindValue(id, apply, { numeric = false, scale = 1, warm = false, event = 'input' } = {}) {
@@ -209,16 +236,58 @@
 
   bindValue('projectName', (next, value) => { next.name = value; });
   bindValue('phraseInput', (next, value) => { next.phrase = value; });
-  bindValue('playLyric', (next, value) => { next.lyric = value; }, { warm: true });
+  bindValue('playLyric', (next, value) => { next.lyric = value; }, { warm: true, event: 'change' });
   bindValue('tempo', (next, value) => { next.tempo = value; }, { numeric: true, event: 'change' });
   bindValue('swing', (next, value) => { next.swing = value; }, { numeric: true, scale: 100, event: 'change' });
   bindValue('sequenceLength', (next, value) => { next.length = value; }, { numeric: true, event: 'change' });
   bindValue('division', (next, value) => { next.division = value; }, { numeric: true, event: 'change' });
-  bindValue('stepLyric', (next, value) => { next.steps[selectedStep].lyric = value; });
+  bindValue('stepLyric', (next, value) => { next.steps[selectedStep].lyric = value; }, { event: 'change' });
   bindValue('stepPitch', (next, value) => { next.steps[selectedStep].pitch = value; }, { numeric: true, event: 'change' });
   bindValue('stepVoice', (next, value) => { next.steps[selectedStep].voice = value; }, { event: 'change' });
   bindValue('stepVelocity', (next, value) => { next.steps[selectedStep].velocity = value; }, { numeric: true });
   bindValue('stepGate', (next, value) => { next.steps[selectedStep].gate = value; }, { numeric: true });
+  $('stepDuration').addEventListener('change', event => {
+    const value = event.target.value;
+    customDurationStep = value === 'custom' ? selectedStep : -1;
+    const duration = value === 'auto' ? null : value === 'custom' ? state.steps[selectedStep].duration ?? noteTiming(selectedStep).duration : Number(value);
+    change(next => { next.steps[selectedStep].duration = duration; }, { force: true });
+    renderStepEditor(true);
+    if (value === 'custom') { $('stepDurationBeats').focus(); $('stepDurationBeats').select(); }
+  });
+  bindValue('stepDurationBeats', (next, value) => { next.steps[selectedStep].duration = value; customDurationStep = selectedStep; }, { numeric: true, event: 'change' });
+  $('durationHandle').addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
+    durationDrag = { pointer: event.pointerId, index: selectedStep, state, value: null };
+  });
+  $('durationHandle').addEventListener('pointermove', event => {
+    if (!durationDrag || durationDrag.pointer !== event.pointerId || durationDrag.index !== selectedStep || durationDrag.state !== state) return;
+    const bounds = $('durationRuler').getBoundingClientRect(), total = state.length * state.division, start = noteTiming(selectedStep).beat;
+    const max = Math.min(S.DURATION_RANGE[1], total - start), raw = (event.clientX - bounds.left) / bounds.width * total - start;
+    const duration = roundBeat(Math.max(S.DURATION_RANGE[0], Math.min(max, Math.round(raw * 16) / 16)));
+    durationDrag.value = duration;
+    renderStepEditor(true);
+  });
+  const releaseDuration = event => {
+    if (!durationDrag || durationDrag.pointer !== event.pointerId) return;
+    const draft = durationDrag; durationDrag = null; lastGesture = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.type === 'pointerup' && draft.index === selectedStep && draft.state === state && draft.value !== null) {
+      customDurationStep = selectedStep;
+      change(next => { next.steps[draft.index].duration = draft.value; }, { force: true });
+    }
+    renderStepEditor(true);
+  };
+  $('durationHandle').addEventListener('pointerup', releaseDuration); $('durationHandle').addEventListener('pointercancel', releaseDuration);
+  $('durationHandle').addEventListener('lostpointercapture', releaseDuration);
+  $('durationHandle').addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    const timing = noteTiming(selectedStep), maximum = Math.min(S.DURATION_RANGE[1], state.length * state.division - timing.beat), delta = event.key.startsWith('Page') ? 1 : event.shiftKey ? .25 : .0625;
+    const desired = event.key === 'Home' ? S.DURATION_RANGE[0] : event.key === 'End' ? maximum : timing.duration + (['ArrowLeft', 'ArrowDown', 'PageDown'].includes(event.key) ? -delta : delta);
+    const duration = roundBeat(Math.max(S.DURATION_RANGE[0], Math.min(maximum, desired)));
+    customDurationStep = selectedStep; change(next => { next.steps[selectedStep].duration = duration; });
+  });
   $('stepOn').addEventListener('change', event => change(next => { next.steps[selectedStep].on = event.target.checked; }));
 
   $('voices').addEventListener('click', event => {
@@ -248,7 +317,7 @@
   });
   $('presetSelect').addEventListener('change', () => {
     const preset = (global.MorselPresets || []).find(item => item.id === $('presetSelect').value); if (!preset) return;
-    controller().stop(); selectedStep = 0; const next = preset.create(); presetId = preset.id;
+    controller().stop(); selectedStep = 0; customDurationStep = -1; const next = preset.create(); presetId = preset.id;
     replace(next, { keepPreset: true, message: preset.description, force: true }); $('presetDescription').textContent = preset.description; warmKeyboard();
   });
   $('useNativeSequence').addEventListener('click', () => change(next => { delete next.musicLabPattern; }, { message: 'Your original word phrase is ready.' }));

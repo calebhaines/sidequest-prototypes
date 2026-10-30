@@ -45,6 +45,9 @@ function harness() {
 (async () => {
   await check('Four distinct named voices and independent native steps round-trip without shared caller state', () => {
     equal(copy(S.VOICE_IDS), ['alto', 'tenor', 'bass', 'robot']);
+    equal(S.VOICES.map(voice => voice.name), ['Alto', 'Tenor', 'Bass', 'Soprano']);
+    const fresh = S.defaultState(); equal([fresh.tone, fresh.air, fresh.vibrato, fresh.space], [.75, .03, .02, .12]);
+    equal(Q.pattern(S.defaultState()).voices.map(voice => [voice.id, voice.name]), [['alto', 'MORSEL · Alto'], ['tenor', 'MORSEL · Tenor'], ['bass', 'MORSEL · Bass'], ['robot', 'MORSEL · Soprano']]);
     const a = S.defaultState(), b = S.defaultState(), source = copy(a);
     a.steps[0].lyric = 'different'; assert.equal(b.steps[0].lyric, 'hello'); assert.equal(a.steps[1].lyric, 'ah');
     const parsed = S.parseProject(S.serializeProject(b)); equal(copy(parsed), source);
@@ -57,15 +60,22 @@ function harness() {
       value => { value.steps[0].pitch = 35; }, value => { value.steps[0].pitch = 84.1; }, value => { value.steps[0].voice = 'soprano'; },
       value => { value.steps[0].lyric = 'x'.repeat(161); }, value => { value.lyric = 'bad\u0000word'; }, value => { value.phrase = 'x'.repeat(513); },
       value => { value.steps[0].gate = 0; }, value => { value.tempo = '96'; }, value => { value.steps.pop(); }, value => { value.steps[2] = null; },
-      value => { value.unrecognized = 1; }, value => { delete value.tone; }, value => { value.volume = NaN; }
+      value => { value.unrecognized = 1; }, value => { delete value.tone; }, value => { value.volume = NaN; },
+      value => { value.steps[0].duration = 0; }, value => { value.steps[0].duration = 32.1; }, value => { value.steps[0].duration = '1'; },
+      value => { value.steps[0].duration = false; }, value => { value.steps[0].duration = NaN; }, value => { value.steps[0].duration = {}; }
     ];
     for (const mutate of cases) { const input = copy(base); mutate(input); const before = JSON.stringify(input); assert.throws(() => S.parseProject(input)); assert.equal(JSON.stringify(input), before); }
     assert.throws(() => S.parseProject('{no')); assert.throws(() => S.parseProject({ format: 'morsel-project', formatVersion: 2, appVersion: S.VERSION, state: base }));
     assert.throws(() => S.parseProject({ format: 'morsel-project', formatVersion: 1, appVersion: '9.0.0', state: base }));
     assert.throws(() => S.parseProject(' '.repeat(S.MAX_PROJECT_BYTES + 1)));
   });
-  await check('Sparse native words keep rests, exact onsets, gate lengths and per-note voice overrides', () => {
-    const value = S.defaultState(), before = JSON.stringify(value), events = Q.events(value);
+  await check('Released recipes migrate to Auto durations and retain their exact old rests, swing and articulation', () => {
+    const original = S.defaultState(); Object.assign(original, { tone: .55, air: .12, vibrato: .1, space: .18 }); original.steps.forEach(step => { delete step.duration; }); original.steps[0].voice = 'robot';
+    const source = JSON.stringify(original), value = S.parseProject({ format: 'morsel-project', formatVersion: 1, appVersion: '1.0.0', state: original }), before = JSON.stringify(value), events = Q.events(value);
+    assert(value.steps.every(step => step.duration === null)); assert.equal(JSON.stringify(original), source);
+    assert.equal(value.steps[0].voice, 'robot'); assert.equal(events[0].voice, 'robot');
+    equal([value.tone, value.air, value.vibrato, value.space], [.55, .12, .1, .18]);
+    equal(S.parseProject(original), value);
     equal(events.map(note => note.beat), [0, 2, 4, 6]); equal(events.map(note => note.duration), [1.8, 1.8, 1.8, 1.8]);
     equal(events.map(note => note.lyric), ['hello', 'from', 'the', 'kitchen']); assert.equal(JSON.stringify(value), before);
     Object.assign(value.steps[1], { on: true, lyric: 'ee', pitch: 67, voice: 'robot' });
@@ -75,6 +85,37 @@ function harness() {
     assert(Math.abs(odd.duration - .1125) < 1e-12); assert(odd.beat + odd.duration <= following.beat);
     value.steps[31].on = true; value.length = 32; value.swing = .75;
     for (const event of Q.events(value)) { assert(event.beat >= 0); assert(event.duration > 0); assert(event.beat + event.duration <= Q.lengthBeats(value) + 1e-9); }
+    const saved = JSON.parse(S.serializeProject(value)); assert.equal(saved.appVersion, '1.1.0'); assert(saved.state.steps.every(step => step.duration === null));
+    equal(S.parseProject(saved), value);
+  });
+  await check('Each native note keeps its own musical length independently of step spacing, articulation and neighbouring words', () => {
+    const value = S.defaultState(), durations = [.25, .5, .75, 1, 1.5, 2, 4, 8, 3.1875];
+    assert.equal(S.step().duration, 1); equal(Q.events(value).map(note => note.duration), [1.5, .5, .5, 1.5]);
+    value.length = 32; value.division = 1; value.steps.forEach(step => { step.on = false; });
+    durations.forEach((duration, index) => Object.assign(value.steps[index * 2], { on: true, duration, gate: .1, lyric: 'word ' + index }));
+    const before = JSON.stringify(value), notes = Q.events(value);
+    equal(notes.map(note => note.duration), durations); equal(notes.map(note => note.beat), [0, 2, 4, 6, 8, 10, 12, 14, 16]); assert.equal(JSON.stringify(value), before);
+    value.division = .5;
+    const fasterGrid = Q.events(value); equal(fasterGrid.map(note => note.duration), durations); equal(fasterGrid.map(note => note.beat), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    value.steps[1].on = true; value.steps[1].duration = .125;
+    assert.equal(Q.events(value).find(note => note.step === 0).duration, .25);
+    value.steps[0].duration = 4;
+    const overlap = Q.events(value); assert(overlap[0].beat + overlap[0].duration > overlap[1].beat); assert.equal(overlap[0].duration, 4);
+    const packet = Q.pattern(value); equal(packet.notes.map(note => note.duration), overlap.map(note => note.duration));
+  });
+  await check('Custom note lengths round-trip strictly, report phrase-end clipping and leave received musical durations intact', () => {
+    const value = S.defaultState(); value.steps[0].duration = .0625; value.steps[4].duration = 3.1875; value.steps[8].duration = null;
+    value.steps[15].on = true; value.steps[15].duration = 8;
+    const timing = Q.noteTiming(value, 15); equal(copy(timing), { beat: 7.5, duration: .5, requestedDuration: 8, clipped: true });
+    assert.equal(Q.noteDuration(value, 15), .5); assert.equal(Q.events(value).find(note => note.step === 15).duration, .5);
+    assert.equal(Q.noteDuration(value, 1), 1, 'Disabled notes retain their editable selected-note length');
+    equal(S.parseProject(S.serializeProject(value)), value);
+    const current = JSON.parse(S.serializeProject(value)); delete current.state.steps[0].duration;
+    assert.throws(() => S.parseProject(current), /duration/);
+    const malformedOld = copy(current); malformedOld.appVersion = '1.0.0'; malformedOld.state.steps[0].duration = -1;
+    assert.throws(() => S.parseProject(malformedOld), /duration/);
+    value.musicLabPattern = { pattern: packet(), voiceMap: map }; value.division = .25;
+    equal(Q.events(value).map(note => note.duration), [.75, 1]);
   });
   await check('Probability is repeatable per cycle while portable phrases retain editable probabilities and words', () => {
     const value = S.defaultState(); value.steps[0].probability = .5; value.steps[4].probability = 0;
@@ -128,12 +169,15 @@ function harness() {
     h.mutable.state.lyric = ''; assert.equal(h.adapter.preparationSignature, original);
     assert.throws(() => h.adapter.scheduleNote({ pitch: 60, voice: 'alto', when: 12, durationSeconds: 121 }), /120/);
   });
-  await check('Selected-word exports preserve a saved silent velocity instead of turning it into an audible default', async () => {
-    const h = harness(); h.mutable.state.steps[0].velocity = 0;
+  await check('Selected-word exports honor each custom note length, silent velocity and the unchanged source recipe', async () => {
+    const h = harness(); h.mutable.state.steps[0].velocity = 0; h.mutable.state.steps[0].duration = .375;
     const before = JSON.stringify(h.mutable.state); await h.controller.exportAudio({ scope: 'note', tailSeconds: 0 });
-    assert.equal(h.calls.render.at(-1).events[0].velocity, 0); assert.equal(JSON.stringify(h.mutable.state), before);
-    h.mutable.state.steps[0].velocity = .35; await h.controller.exportAudio({ scope: 'note', tailSeconds: 0 });
-    assert.equal(h.calls.render.at(-1).events[0].velocity, .35); assert.equal(h.calls.render.at(-1).events[0].lyric, 'hello');
+    const silent = h.calls.render.at(-1);
+    assert.equal(silent.events[0].velocity, 0); assert.equal(silent.events[0].duration, .375); assert.equal(silent.lengthBeats, .375); assert.equal(JSON.stringify(h.mutable.state), before);
+    h.mutable.state.steps[0].velocity = .35; h.mutable.state.steps[0].duration = 2.5;
+    const longBefore = JSON.stringify(h.mutable.state); await h.controller.exportAudio({ scope: 'note', tailSeconds: .2 });
+    const long = h.calls.render.at(-1);
+    assert.equal(long.events[0].velocity, .35); assert.equal(long.events[0].lyric, 'hello'); assert.equal(long.events[0].duration, 2.5); assert.equal(long.lengthBeats, 2.5); assert.equal(long.tailSeconds, .2); assert.equal(JSON.stringify(h.mutable.state), longBefore);
   });
   await check('Word import validation rejects huge unique preparations and malformed mappings before replacing a recipe', async () => {
     const h = harness(), before = JSON.stringify(h.mutable.state);

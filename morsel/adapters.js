@@ -22,7 +22,7 @@
     const voices = () => S.VOICES.map(({ id, name }) => ({ id, name: 'MORSEL · ' + name, pitchRange: [36, 84] }));
     function validateNote({ pitch, voice, lyric } = {}) {
       if (!Number.isInteger(pitch) || pitch < 36 || pitch > 84) throw new Error('MORSEL sings notes from C2 to C6 (MIDI 36–84).');
-      if (!S.VOICE_IDS.includes(voice)) throw new Error('Choose MORSEL’s Alto, Tenor, Bass or Robot voice.');
+      if (!S.VOICE_IDS.includes(voice)) throw new Error('Choose MORSEL’s Alto, Tenor, Bass or Soprano voice.');
       if (lyric !== undefined && (typeof lyric !== 'string' || lyric.length > S.MAX_LYRIC || /[\u0000-\u001f\u007f]/.test(lyric))) throw new Error('Use words or sounds of at most 160 characters per note.');
       return true;
     }
@@ -185,8 +185,9 @@
       if (scope === 'note' || scope === 'sample') {
         const selected = value.steps[Number.isInteger(app.selectedStep) ? app.selectedStep : 0], voice = selected.voice === 'inherit' ? value.voice : selected.voice;
         const lyric = selected.lyric?.trim() ? selected.lyric : value.lyric;
-        const events = [{ id: 'morsel-word', pitch: selected.pitch, beat: 0, duration: 2, voice, lyric, velocity: selected.velocity ?? .8, probability: 1 }];
-        const result = await audio.renderNotes({ state: value, events, tempo: value.tempo, lengthBeats: 2, tailSeconds, signal, includePCM: true });
+        const duration = Q.noteDuration(value, Number.isInteger(app.selectedStep) ? app.selectedStep : 0);
+        const events = [{ id: 'morsel-word', pitch: selected.pitch, beat: 0, duration, voice, lyric, velocity: selected.velocity ?? .8, probability: 1 }];
+        const result = await audio.renderNotes({ state: value, events, tempo: value.tempo, lengthBeats: duration, tailSeconds, signal, includePCM: true });
         abort(signal); return { ...result, name: lyric + ' · ' + S.VOICES.find(item => item.id === voice).name, tempo: value.tempo, sourceApp: 'morsel' };
       }
       if (!['phrase', 'pattern'].includes(scope)) throw new Error('Choose the word phrase or selected word.');
@@ -216,7 +217,7 @@
       },
       get notes() { return { voices: voices(), lyrics: true, polyphonic: true, pitched: true, scheduledCancel: true, pitchRange: [36, 84], minPitch: 36, maxPitch: 84, latency: 0 }; },
       get patternExport() { return { scopes: [{ id: 'pattern', label: snapshot().musicLabPattern ? 'Received word phrase · exact notes' : 'Current words and melody' }, { id: 'native', label: 'Native word steps' }], defaultScope: 'pattern' }; },
-      get patternImport() { const value = snapshot(); return { targets: [{ id: 'pattern', name: 'Word phrase', occupied: Q.events(value).length > 0 }], voices: voices(), mode: 'notes', description: 'Map notes to Alto, Tenor, Bass or Robot. Words travel with each note; notes without words use your keyboard word.' }; },
+      get patternImport() { const value = snapshot(); return { targets: [{ id: 'pattern', name: 'Word phrase', occupied: Q.events(value).length > 0 }], voices: voices(), mode: 'notes', description: 'Map notes to Alto, Tenor, Bass or Soprano. Words travel with each note; notes without words use your keyboard word.' }; },
       get importedPattern() { return snapshot().musicLabPattern?.pattern || null; }, getImportedPattern() { return this.importedPattern; },
       exportPattern, capturePattern: exportPattern, importPattern, clearImportedPattern, prepare, preparePattern, scheduleNote, cancelNotes, renderPattern, validateNote,
       validatePattern({ pattern, voiceMap } = {}) { const packet = P.parse(pattern), value = snapshot(); mapping(packet, voiceMap || defaultMap(packet, value), value); return true; },

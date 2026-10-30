@@ -106,7 +106,7 @@
           if (!response.ok) throw new Error('The instrument page could not be loaded (' + response.status + ').');
           html = await response.text();
         }
-        if (typeof html !== 'string' || !html.trim() || html.length > 32 * 1024 * 1024) throw new Error('Choose an instrument HTML file smaller than 32 MB.');
+        if (typeof html !== 'string' || !html.trim() || html.length > (global.LoomSchema?.LIMITS.appHtmlBytes || 36 * 1024 * 1024)) throw new Error('Choose an instrument HTML file smaller than 36 MiB.');
         const expectsPattern = html.includes('MusicLabPatternInstrument');
         if (!this._current(record)) throw cancelledError();
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads allow-modals');

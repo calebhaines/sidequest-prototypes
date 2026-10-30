@@ -1,0 +1,81 @@
+{
+  "backend": "kitten-tts-nano-0.8-int8",
+  "sampleRate": 24000,
+  "files": {
+    "MODEL-CARD.md": {
+      "size": 741,
+      "sha256": "ff39adbcb653e9beaa612b405c4e301ee62eb4201b32dd77ae36f4078537b8ef"
+    },
+    "MODEL-LICENSE.txt": {
+      "size": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "ORT-LICENSE.txt": {
+      "size": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    "ORT-ThirdPartyNotices.txt": {
+      "size": 338538,
+      "sha256": "cf7342f7ba482ef715ae58f5f497a8d3564fa255164175aea324cd293c5701a0"
+    },
+    "PHONEMIZER-LICENSE.txt": {
+      "size": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "UPSTREAM-INFERENCE.py": {
+      "size": 6756,
+      "sha256": "f1c1007237ef90dafe9ec3b7613102092671f60ca5c3df13bdb486dda70fbd5b"
+    },
+    "kitten-config.json": {
+      "size": 688,
+      "sha256": "b66006ccbeccd4de5fc3c9272059c47f5725df7215fd889785c03602652fab64"
+    },
+    "model.onnx.gz": {
+      "size": 20660291,
+      "sha256": "d03fd726cc02d71cbc4be97e49a880504543d1a55eab01fdb32004c096e0b388"
+    },
+    "ort-wasm-simd-threaded.mjs": {
+      "size": 24618,
+      "sha256": "745eb7c0ce6f18a6aa521971b2877babc7ffb27eecb58ab3bc6e5ef4692672e8"
+    },
+    "ort-wasm-simd-threaded.wasm.gz": {
+      "size": 2957285,
+      "sha256": "4679412818ec2bf07034e3717930015956bc2f32fb23cdbffae78e3a1cf660da"
+    },
+    "ort.min.js": {
+      "size": 446284,
+      "sha256": "be6e560b64c03c99252eedc0e1989e9e51e44d9f191e7655c9bf011bf9f576c8"
+    },
+    "phonemizer-source.zip": {
+      "size": 1173595,
+      "sha256": "062cf07ec8152795b22e2f3ced0991840d99b2b58be0915d412adb929bdeacb0"
+    },
+    "phonemizer.js": {
+      "size": 1322380,
+      "sha256": "193481f474f7c1ea81df3195d18b45df8ef7254dbdccb3f193d60215c4897bec"
+    },
+    "voices.npz": {
+      "size": 3278902,
+      "sha256": "8aa7cee235abb0739cb51e6559685f65a4dacd95568833d05699b1633f519b3f"
+    },
+    "README.md": {
+      "size": 4063,
+      "sha256": "7ee81b932a6ee1262e8f82f3b686ee2ed80e5872ab9d1c2865d969098982556e"
+    },
+    "SOURCE-OFFER.txt": {
+      "size": 1107,
+      "sha256": "31c7357c98f59f953667ff3784a29771f0c7f0575121fd1082136f2047340c30"
+    },
+    "UPSTREAM-PREPROCESS.py": {
+      "size": 53603,
+      "sha256": "a80265fbbdbbe8f946c046ec53aca79dd560675dcab92f1d2922bd25a854e333"
+    }
+  },
+  "modelSHA256": "f7b0afcbee92870b32b8e0276d855b954dc25470c9f051b376ac7eee537c76fc",
+  "wasmSHA256": "207d02be4591c156b0a98f024f3d58005b5b04c92274d759fb390338c63559ea",
+  "cSourceSupplement": {
+    "release": "eSpeak NG 1.52.0",
+    "sha256": "b4517592e3cbc43703bb1c782702eafb98097659e0b7e96e69c32ee32ae5003a",
+    "url": "https://calebhaines.github.io/sidequest-prototypes/music/morsel/MORSEL-phonemizer-C-source.zip"
+  }
+}

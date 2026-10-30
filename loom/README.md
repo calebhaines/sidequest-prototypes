@@ -2,7 +2,7 @@
 
 Kitchen’s central production station.
 
-**MORSEL** adds pitched words and vocal sounds with Alto, Tenor, Bass and Robot
+**MORSEL** adds pitched words and vocal sounds with Alto, Tenor, Bass and Soprano
 voices. Its 16/32-step phrases retain a separate lyric and voice on every note.
 Type a phrase in its editor, distribute the words, and adjust the melody; the
 keyboard plays its current word. Piano-roll notes expose Words for MORSEL and
@@ -97,7 +97,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.20.0.
+SERVICE is version 1.0.0; GALLEY is version 1.21.0.
 
 ## Making a piece
 
@@ -780,7 +780,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.20.0.
+font license notices. Version 1.21.0.
 
 ## Compatibility
 

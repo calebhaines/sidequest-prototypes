@@ -12,12 +12,13 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-SCRIPTS = ['schema.js', 'sequence.js', 'vendor/speech-assets.js', 'speech-source.js',
+SCRIPTS = ['schema.js', 'sequence.js', 'vendor/speech-assets.js', 'speech-source.js', 'vendor/signalsmith/assets.js',
            'audio-engine.js', 'presets.js', 'app.js', 'adapters.js']
 
 
 def standalone():
-    subprocess.run([sys.executable, str(ROOT / 'vendor' / 'build-assets.py')], check=True)
+    for script in ['vendor/build-assets.py', 'vendor/signalsmith/build-assets.py']:
+        subprocess.run([sys.executable, str(ROOT / script)], check=True)
     directory = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').is_file() else ROOT.parent / 'shared'
     helpers = runpy.run_path(str(directory / 'bundle_audio_exchange.py'))
     template = (ROOT / 'app.html').read_text(encoding='utf-8')
@@ -31,16 +32,20 @@ def standalone():
     scripts = '\n'.join((ROOT / name).read_text(encoding='utf-8') for name in SCRIPTS)
     scripts = re.sub(r'</script', r'<\\/script', scripts, flags=re.IGNORECASE)
     # Keep licensing available inside the offline file as well as its source ZIP.
-    license_text = (ROOT / 'vendor' / 'COPYING').read_text(encoding='utf-8')
-    credits = '<script type="text/plain" id="morsel-speech-license">' + license_text.replace('</script', '<\\/script') + '</script>'
+    licenses = ['vendor/COPYING', 'vendor/neural/MODEL-LICENSE.txt', 'vendor/neural/ORT-LICENSE.txt',
+                'vendor/neural/ORT-ThirdPartyNotices.txt', 'vendor/neural/PHONEMIZER-LICENSE.txt',
+                'vendor/signalsmith/LICENSE.txt']
+    credits = '\n'.join('<script type="text/plain" data-morsel-license="' + name + '">' +
+                        (ROOT / name).read_text(encoding='utf-8').replace('</script', '<\\/script') +
+                        '</script>' for name in licenses)
     html = template.replace('<!-- STYLES -->', '<style>\n' + css + '\n</style>')
     html = html.replace('<!-- SCRIPTS -->', credits + '\n<script>\n' + scripts + '\n</script>')
     html = '\n'.join(line.rstrip() for line in html.splitlines()) + '\n'
     html = helpers['embed_exchange'](html, 'morsel', ROOT)
     if re.search(r'<script\b[^>]*\bsrc\s*=|<link\b[^>]*\bhref\s*=', html, flags=re.IGNORECASE):
         raise ValueError('MORSEL standalone still contains an external source dependency.')
-    if len(html.encode('utf-8')) > 32 * 1024 * 1024:
-        raise ValueError('MORSEL exceeds GALLEY’s 32 MiB hosted instrument limit.')
+    if len(html.encode('utf-8')) > 36 * 1024 * 1024:
+        raise ValueError('MORSEL exceeds GALLEY’s 36 MiB hosted instrument limit.')
     if html.lower().index('<meta charset') > 1024:
         raise ValueError('MORSEL needs an early UTF-8 declaration.')
     return html, helpers
@@ -52,7 +57,7 @@ def source_archive(target, helpers):
         rel = path.relative_to(ROOT)
         if not path.is_file() or any(part in {'node_modules', '__pycache__', '.git'} for part in rel.parts):
             continue
-        if rel.as_posix() == 'index.html' or path.suffix in {'.pyc', '.log'}:
+        if rel.as_posix() in {'index.html', 'vendor/speech-assets.js'} or path.suffix in {'.pyc', '.log'}:
             continue
         files.append((rel.as_posix(), path.read_bytes()))
     # Extracted archives already carry shared sources; avoid duplicate entries.

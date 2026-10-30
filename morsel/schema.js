@@ -1,12 +1,13 @@
 /* MORSEL · saved words, voices and musical notes. No audio or DOM dependencies. */
 (function (global) {
   'use strict';
-  const VERSION = '1.0.0', MAX_PROJECT_BYTES = 2 * 1024 * 1024, MAX_LYRIC = 160;
+  const VERSION = '1.1.0', MAX_PROJECT_BYTES = 2 * 1024 * 1024, MAX_LYRIC = 160;
+  const DURATION_RANGE = Object.freeze([.0625, 32]);
   const VOICES = Object.freeze([
-    Object.freeze({ id: 'alto', name: 'Alto', description: 'Warm, rounded and clear.' }),
-    Object.freeze({ id: 'tenor', name: 'Tenor', description: 'Bright, forward and lyrical.' }),
-    Object.freeze({ id: 'bass', name: 'Bass', description: 'Deep, woody and close.' }),
-    Object.freeze({ id: 'robot', name: 'Robot', description: 'A cheerful singing machine.' })
+    Object.freeze({ id: 'alto', name: 'Alto', description: 'Warm and rounded.' }),
+    Object.freeze({ id: 'tenor', name: 'Tenor', description: 'Clear and forward.' }),
+    Object.freeze({ id: 'bass', name: 'Bass', description: 'Full and grounded.' }),
+    Object.freeze({ id: 'robot', name: 'Soprano', description: 'Bright and airy.' })
   ]);
   const VOICE_IDS = Object.freeze(VOICES.map(voice => voice.id));
   const RANGES = Object.freeze({ tempo: [30, 240], swing: [0, .75], tone: [0, 1], air: [0, 1], vibrato: [0, 1], space: [0, 1], volume: [0, 1], attack: [.001, .5], release: [.005, 2] });
@@ -21,12 +22,12 @@
     return integer ? Math.round(n) : n;
   };
   const text = (value, fallback, limit) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, limit) : fallback;
-  function step() { return { on: false, pitch: 60, lyric: 'ah', voice: 'inherit', velocity: .8, gate: .9, probability: 1 }; }
+  function step() { return { on: false, pitch: 60, lyric: 'ah', voice: 'inherit', velocity: .8, gate: .9, duration: 1, probability: 1 }; }
   function defaultState() {
     const steps = Array.from({ length: 32 }, step);
-    ['hello', 'from', 'the', 'kitchen'].forEach((lyric, index) => Object.assign(steps[index * 4], { on: true, lyric, pitch: [60, 63, 67, 63][index] }));
+    ['hello', 'from', 'the', 'kitchen'].forEach((lyric, index) => Object.assign(steps[index * 4], { on: true, lyric, pitch: [60, 63, 67, 63][index], duration: [1.5, .5, .5, 1.5][index] }));
     return { name: 'First words', tempo: 96, swing: 0, voice: 'alto', lyric: 'ah', phrase: 'hello from the kitchen', length: 16, division: .5,
-      tone: .55, air: .12, vibrato: .1, space: .18, volume: .65, attack: .008, release: .09, steps };
+      tone: .75, air: .03, vibrato: .02, space: .12, volume: .65, attack: .008, release: .09, steps };
   }
   function fail(label) { throw new Error('Invalid ' + label + ' in this MORSEL project.'); }
   function validNumber(value, range, label, integer = false) { if (typeof value !== 'number' || !Number.isFinite(value) || value < range[0] || value > range[1] || integer && !Number.isInteger(value)) fail(label); }
@@ -35,7 +36,7 @@
   function validBool(value, label) { if (typeof value !== 'boolean') fail(label); }
   function checkSize(value) {
     let json;
-    try { json = typeof value === 'string' ? value : JSON.stringify(value); } catch (_) { throw new Error('Choose a plain MORSEL project object.'); }
+    try { json = typeof value === 'string' ? value : JSON.stringify(value, (_, item) => { if (typeof item === 'number' && !Number.isFinite(item)) throw new Error('Non-finite project value.'); return item; }); } catch (_) { throw new Error('Choose a plain MORSEL project object with finite control values.'); }
     if (typeof json !== 'string' || json.length > MAX_PROJECT_BYTES || new TextEncoder().encode(json).length > MAX_PROJECT_BYTES) throw new Error('MORSEL projects must fit within 2 MiB.');
     return json;
   }
@@ -63,24 +64,29 @@
       length: choice(raw.length, [16, 32], d.length), division: choice(raw.division, [.25, .5, 1], d.division) };
     for (const [key, range] of Object.entries(RANGES)) result[key] = number(raw[key], range, d[key]);
     result.steps = Array.from({ length: 32 }, (_, index) => {
-      const input = object(raw.steps?.[index]) ? raw.steps[index] : {}, fallback = d.steps[index];
+      const supplied = object(raw.steps?.[index]), input = supplied ? raw.steps[index] : {}, fallback = d.steps[index];
       const output = { on: typeof input.on === 'boolean' ? input.on : fallback.on, lyric: text(input.lyric, fallback.lyric, MAX_LYRIC), voice: choice(input.voice, ['inherit', ...VOICE_IDS], fallback.voice) };
       for (const [key, range] of Object.entries(STEP_RANGES)) output[key] = number(input[key], range, fallback[key], key === 'pitch');
+      // Version 1.0 stored only Auto articulation. Keep supplied old steps in
+      // that mode; newly created steps have an independent quarter-note length.
+      output.duration = input.duration === null || supplied && !own(input, 'duration') ? null : number(input.duration, DURATION_RANGE, fallback.duration);
       return output;
     });
     if (raw.musicLabPattern !== undefined) result.musicLabPattern = overlay(raw.musicLabPattern, result.lyric);
     return result;
   }
-  function validate(raw) {
+  function validate(raw, legacyDuration = false) {
     if (!object(raw) || Object.keys(raw).some(key => !STATE_KEYS.includes(key))) fail('recipe');
     validText(raw.name, 100, 'recipe name'); validText(raw.lyric, MAX_LYRIC, 'keyboard word'); validText(raw.phrase, 512, 'phrase');
     validChoice(raw.voice, VOICE_IDS, 'voice'); validChoice(raw.length, [16, 32], 'phrase length'); validChoice(raw.division, [.25, .5, 1], 'step division');
     for (const [key, range] of Object.entries(RANGES)) validNumber(raw[key], range, key);
     if (!Array.isArray(raw.steps) || raw.steps.length !== 32 || Object.keys(raw.steps).some(key => !/^\d+$/.test(key) || Number(key) > 31)) fail('step list');
     raw.steps.forEach((item, index) => {
-      if (!object(item) || Object.keys(item).some(key => !['on', 'pitch', 'lyric', 'voice', 'velocity', 'gate', 'probability'].includes(key))) fail('step ' + (index + 1));
+      if (!object(item) || Object.keys(item).some(key => !['on', 'pitch', 'lyric', 'voice', 'velocity', 'gate', 'duration', 'probability'].includes(key))) fail('step ' + (index + 1));
       validBool(item.on, 'step on/off'); validText(item.lyric, MAX_LYRIC, 'step word'); validChoice(item.voice, ['inherit', ...VOICE_IDS], 'step voice');
       for (const [key, range] of Object.entries(STEP_RANGES)) validNumber(item[key], range, 'step ' + key, key === 'pitch');
+      if (!own(item, 'duration')) { if (!legacyDuration) fail('step duration'); }
+      else if (item.duration !== null) validNumber(item.duration, DURATION_RANGE, 'step duration');
     });
     if (raw.musicLabPattern !== undefined) overlay(raw.musicLabPattern, raw.lyric);
     return normalize(raw);
@@ -90,12 +96,13 @@
     let parsed;
     try { parsed = JSON.parse(json); } catch (_) { throw new Error('This MORSEL project is not valid JSON.'); }
     if (object(parsed) && own(parsed, 'format')) {
-      if (parsed.format !== 'morsel-project' || parsed.formatVersion !== 1 || parsed.appVersion !== VERSION || Object.keys(parsed).some(key => !['format', 'formatVersion', 'appVersion', 'state'].includes(key))) throw new Error('Choose a MORSEL 1.0 project.');
-      return validate(parsed.state);
+      if (parsed.format !== 'morsel-project' || parsed.formatVersion !== 1 || !['1.0.0', VERSION].includes(parsed.appVersion) || Object.keys(parsed).some(key => !['format', 'formatVersion', 'appVersion', 'state'].includes(key))) throw new Error('Choose a supported MORSEL project.');
+      return validate(parsed.state, parsed.appVersion === '1.0.0');
     }
-    return validate(parsed);
+    // GALLEY 1.20 also saved raw native states, without an appVersion envelope.
+    return validate(parsed, true);
   }
   const serializeProject = value => JSON.stringify({ format: 'morsel-project', formatVersion: 1, appVersion: VERSION, state: parseProject(value) });
   function noteName(pitch) { const note = Math.round(Math.max(0, Math.min(127, Number(pitch) || 0))); return ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'][note % 12] + (Math.floor(note / 12) - 1); }
-  global.MorselSchema = Object.freeze({ VERSION, MAX_PROJECT_BYTES, MAX_LYRIC, VOICES, VOICE_IDS, RANGES, STEP_RANGES, copy, clone: copy, step, defaultState, normalize, parseProject, serializeProject, serialize: serializeProject, noteName });
+  global.MorselSchema = Object.freeze({ VERSION, MAX_PROJECT_BYTES, MAX_LYRIC, DURATION_RANGE, VOICES, VOICE_IDS, RANGES, STEP_RANGES, copy, clone: copy, step, defaultState, normalize, parseProject, serializeProject, serialize: serializeProject, noteName });
 })(typeof window === 'object' ? window : globalThis);
