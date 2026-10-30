@@ -66,6 +66,9 @@
       if (!voiceIds.has(voice)) throw new Error('A note refers to a missing source voice.');
       const result = { id, pitch, beat, duration, velocity: number(note.velocity, 'Note velocity', 0, 1, .8), voice, probability: number(note.probability, 'Note probability', 0, 1, 1) };
       if (note.locks !== undefined) { const locks = normalizeLocks(note.locks); if (Object.keys(locks).length) result.locks = locks; }
+      // Lyrics are optional musical data. Omitting the field keeps existing
+      // version-one serialization and fingerprints exactly unchanged.
+      if (note.lyric !== undefined) result.lyric = text(note.lyric, 'Note lyric', 160);
       return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;

@@ -1,0 +1,2 @@
+# Preserve the speech engine's upstream GPL license verbatim.
+morsel/vendor/COPYING -whitespace

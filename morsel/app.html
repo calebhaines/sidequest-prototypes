@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#262622">
+<meta name="morsel-version" content="1.0.0">
+<meta name="description" content="MORSEL is Kitchen’s playable voice synthesizer. Choose four voices, give every note a word, and make a mouthful of melody.">
+<title>MORSEL · Kitchen</title>
+<!-- STYLES -->
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="instrument">
+  <header class="masthead">
+    <div class="identity"><a class="kitchen" href="../index.html">KITCHEN <span>INSTRUMENTS</span></a><div class="brand-row"><h1>MORSEL<span>●</span></h1><p class="model">VOICE<br>SYNTHESIZER / 01</p></div><p class="tagline">A mouthful of melody.</p></div>
+    <div class="recipe"><label for="projectName">RECIPE NAME</label><input id="projectName" type="text" maxlength="100" value="First words"><label class="sr-only" for="presetSelect">Factory recipe</label><select id="presetSelect"><option value="">Your recipe</option></select><p id="presetDescription">Four voices. A few words. Something worth repeating.</p></div>
+    <div class="project-actions"><div class="history-actions"><button id="undoButton" title="Undo (Ctrl / Cmd + Z)" disabled>↶ <span>Undo</span></button><button id="redoButton" title="Redo (Ctrl / Cmd + Shift + Z)" disabled>↷ <span>Redo</span></button></div><div><button id="saveButton">Save recipe</button><button id="openButton">Open recipe</button></div></div>
+  </header>
+
+  <section class="transport" aria-label="Playback">
+    <div class="transport-actions"><button id="playButton" class="primary" aria-pressed="false"><span id="playGlyph" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1.5 10 6 2 10.5Z"/></svg></span> <span id="playLabel">Play phrase</span></button><button id="stopButton" title="Stop playback">■ <span>Stop</span></button><button id="panicButton" class="quiet" title="Silence all voices (Escape)">Panic</button></div>
+    <label class="tempo-control" for="tempo"><span>BPM</span><input id="tempo" type="number" inputmode="numeric" min="30" max="240" step="1" value="96"></label>
+    <div class="transport-display"><span class="status-light" id="statusLight"></span><span id="transportLabel">TABLE READY</span><output id="position" aria-label="Current step">01 / 16</output></div>
+  </section>
+
+  <main>
+    <section class="voice-section" aria-labelledby="voiceTitle">
+      <div class="section-heading"><h2 id="voiceTitle"><span class="section-number">01</span> Choose a voice</h2><p>One voice for the phrase. Change individual notes below.</p></div>
+      <div id="voices" class="voices" role="group" aria-label="Voice character">
+        <button class="voice-card selected" data-voice="alto" aria-pressed="true"><span class="voice-top"><span class="voice-index">A / 01</span><i></i></span><span class="voice-name">Alto</span><span class="voice-description">Soft edges. Warm center.</span><svg viewBox="0 0 190 28" aria-hidden="true"><path d="M1 15h9l4-4 4 8 4-17 4 24 4-18 4 11 4-5h8l4-8 4 14 4-10 4 7 4-4h9l4-9 4 16 4-12 4 8 4-3h9l4-5 4 10 4-8 4 6 4-3h11l4-4 4 8 4-6 4 4 4-2h16"/></svg></button>
+        <button class="voice-card" data-voice="tenor" aria-pressed="false"><span class="voice-top"><span class="voice-index">B / 02</span><i></i></span><span class="voice-name">Tenor</span><span class="voice-description">Bright, clear and forward.</span><svg viewBox="0 0 190 28" aria-hidden="true"><path d="M1 15h8l3-11 3 22 3-20 3 17 3-14 3 11 3-7h8l3-12 3 24 3-22 3 19 3-15 3 11 3-6h8l3-10 3 20 3-18 3 15 3-12 3 9 3-5h8l3-9 3 18 3-16 3 13 3-10 3 7 3-4h8l3-6 3 12 3-10 3 8 3-5 3 3h12"/></svg></button>
+        <button class="voice-card" data-voice="bass" aria-pressed="false"><span class="voice-top"><span class="voice-index">C / 03</span><i></i></span><span class="voice-name">Bass</span><span class="voice-description">Low, round and unhurried.</span><svg viewBox="0 0 190 28" aria-hidden="true"><path d="M1 15h10c8 0 8-13 16-13s8 25 16 25 8-24 16-24 8 22 16 22 8-20 16-20 8 18 16 18 8-15 16-15 8 12 16 12 8-8 16-8 8 3 16 3h9"/></svg></button>
+        <button class="voice-card" data-voice="robot" aria-pressed="false"><span class="voice-top"><span class="voice-index">D / 04</span><i></i></span><span class="voice-name">Robot</span><span class="voice-description">The kitchen has opinions.</span><svg viewBox="0 0 190 28" aria-hidden="true"><path d="M1 15h10V3h14v23h13V5h13v19h13V7h13v15h13V8h13v13h13v-9h13v6h13v-4h13v1h33"/></svg></button>
+      </div>
+    </section>
+
+    <section class="phrase-section panel" aria-labelledby="phraseTitle">
+      <div class="section-heading"><h2 id="phraseTitle"><span class="section-number">02</span> Words into melody</h2><span id="phraseSummary" class="small-mono">4 WORDS / 2 BARS</span></div>
+      <div class="phrase-entry"><label for="phraseInput">YOUR PHRASE<input id="phraseInput" type="text" maxlength="512" value="hello from the kitchen" placeholder="Give the kitchen something to say" spellcheck="false"></label><button id="distributeWords" class="cream-button">Distribute words <span aria-hidden="true"><svg class="inline-icon" viewBox="0 0 16 16"><path d="m3 3 9 9M5 12h7V5"/></svg></span></button></div>
+      <div class="phrase-toolbar"><p>Each word gets a note. Select a step to change its word, pitch or voice.</p><div><label for="sequenceLength">STEPS <select id="sequenceLength"><option value="16">16</option><option value="32">32</option></select></label><label for="division">PACE <select id="division"><option value="0.25">1/16</option><option value="0.5" selected>1/8</option><option value="1">1/4</option></select></label><label for="swing">SWING <input id="swing" type="number" min="0" max="75" step="1" value="0"><span>%</span></label></div></div>
+      <div id="importedNotice" class="imported-notice" hidden><span>Playing an imported pattern. Your original phrase is kept.</span><button id="useNativeSequence">Use this phrase</button></div>
+      <div id="steps" class="steps" aria-label="Word sequencer"></div>
+      <div class="step-editor" aria-labelledby="stepEditorTitle">
+        <div class="step-editor-heading"><h3 id="stepEditorTitle">STEP <span id="selectedStepNumber">01</span></h3><label class="step-on"><input id="stepOn" type="checkbox" checked> On</label><button id="auditionStep" title="Hear this step"><svg class="play-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1.5 10 6 2 10.5Z"/></svg> Hear note</button></div>
+        <div class="step-editor-fields"><label class="word-field" for="stepLyric">WORD / SOUND<input id="stepLyric" type="text" maxlength="160" value="hello" placeholder="A word, ah, ee, mm…" spellcheck="false"></label><label for="stepPitch">NOTE<select id="stepPitch"></select></label><label for="stepVoice">VOICE<select id="stepVoice"><option value="inherit">Phrase voice</option><option value="alto">Alto</option><option value="tenor">Tenor</option><option value="bass">Bass</option><option value="robot">Robot</option></select></label><label for="stepVelocity">VELOCITY <output id="stepVelocityValue">80%</output><input id="stepVelocity" type="range" min="0" max="1" step="0.01" value="0.8"></label><label for="stepGate">LENGTH <output id="stepGateValue">90%</output><input id="stepGate" type="range" min="0.1" max="1" step="0.01" value="0.9"></label></div>
+      </div>
+    </section>
+
+    <section class="performance-section" aria-label="Voice controls and keyboard">
+      <div class="sound-panel panel"><div class="section-heading"><h2><span class="section-number">03</span> Season to taste</h2><p>A little goes a long way.</p></div><div id="knobs" class="knobs"></div></div>
+      <div class="play-panel panel"><div class="section-heading"><h2><span class="section-number">04</span> Take a bite</h2><div class="octave-controls"><button id="octaveDown" aria-label="Keyboard down one octave">−</button><output id="keyboardOctave">C3 — B4</output><button id="octaveUp" aria-label="Keyboard up one octave">+</button></div></div>
+        <div class="play-word"><label for="playLyric">WORD TO PLAY<input id="playLyric" type="text" maxlength="160" value="ah" placeholder="Try hello, ah or mm" spellcheck="false"></label><button id="previewButton"><svg class="play-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1.5 10 6 2 10.5Z"/></svg> Hear word</button></div>
+        <div class="sound-shortcuts" aria-label="Quick vocal sounds"><span>TRY A SOUND</span><button data-sound="ah">ah</button><button data-sound="ee">ee</button><button data-sound="oo">oo</button><button data-sound="oh">oh</button><button data-sound="mm">mm</button><button data-sound="sh">sh</button></div>
+        <div class="keyboard-scroll"><div id="keyboard" class="keyboard" aria-label="Playable keyboard"></div></div><p class="keyboard-hint">Play the keys or use A–K on your computer keyboard. Every key speaks the word above.</p>
+      </div>
+    </section>
+
+    <section class="export-strip" aria-label="Audio exports"><div><span class="eyebrow">TAKE SOMETHING HOME</span><p>Save the whole phrase, or just the selected word.</p></div><div class="export-actions"><button id="exportNote">↓ Selected word WAV</button><button id="exportPhrase">↓ Phrase WAV</button><button id="cancelExport" hidden>Cancel export</button></div></section>
+  </main>
+
+  <footer class="instrument-footer"><div><span class="footer-mark">MORSEL / 1.0.0</span><span>WORDS ARE INGREDIENTS.</span></div><p id="status" role="status" aria-live="polite">Choose a voice, type a phrase, and press Play.</p><button id="helpButton" class="text-button">A little help <svg class="inline-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 12 8-8M4 4h8v8"/></svg></button></footer>
+</div>
+<input id="openProjectFile" type="file" accept=".json,.morsel.json,application/json" hidden>
+<dialog id="helpDialog" aria-labelledby="helpTitle"><div class="dialog-heading"><span class="eyebrow">KITCHEN / OPERATING NOTES</span><button id="closeHelp" aria-label="Close help">×</button></div><h2 id="helpTitle">Give every note<br><em>something to say.</em></h2><p>Choose <strong>Alto, Tenor, Bass or Robot</strong>. Type a short English phrase and press <strong>Distribute words</strong>. The words spread across your melody. Press <strong>Play phrase</strong> to hear them.</p><p>Select a numbered step to edit its word, note, voice, velocity and length. Its small switch turns that step on or off. Empty steps leave room for the previous word. Longer words sound clearest with more room between notes.</p><p><strong>Word to play</strong> is for the keyboard. Try a word, a short phrase, or a sound such as <strong>ah, ee, oo or mm</strong>. Click the keys or use A–K. The first new word may need a moment to prepare.</p><p>The five knobs shape Tone, Air, Vibrato, Space and Volume. Drag a knob up or down; use the arrow keys for small changes. Double-click restores its starting value.</p><p><strong>Save recipe</strong> keeps the complete voice, phrase and melody. WAV exports can be used in any sampler. The shared <strong>Samples</strong> and <strong>Patterns</strong> panels move sounds and editable phrases between Kitchen instruments.</p><p>This is a synthetic English voice instrument. Everything runs in your browser, including saved audio. No account or microphone is needed.</p><p class="license-note">MORSEL includes the meSpeak / eSpeak speech engine. Source code and license notices are included in the <a href="https://calebhaines.github.io/sidequest-prototypes/music/morsel/MORSEL-source.zip" download>editable source download</a>.</p></dialog>
+<!-- SCRIPTS -->
+<script src="../shared/pattern-schema.js"></script>
+<script src="schema.js"></script>
+<script src="sequence.js"></script>
+<script src="vendor/speech-assets.js"></script>
+<script src="speech-source.js"></script>
+<script src="audio-engine.js"></script>
+<script src="presets.js"></script>
+<script src="app.js"></script>
+<script src="adapters.js"></script>
+</body>
+</html>

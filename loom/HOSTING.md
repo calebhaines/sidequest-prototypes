@@ -11,7 +11,7 @@ keeps its native behavior for an app’s own exports.
 Choose a Kitchen instrument, refresh the hosted Kitchen list, load a
 same-site app URL, or upload a self-contained HTML file. Uploaded HTML travels
 inside saved GALLEY projects. SIZZLE, HOTPLATE, CLATTER, REDUCE, ROTISSERIE, STEAM,
-SKEWER, DICER, STOCK, ROUX, BATTER, and LEAVEN are bundled into GALLEY’s standalone download.
+SKEWER, DICER, STOCK, ROUX, BATTER, LEAVEN, MARINADE, PICNIC, and MORSEL are bundled into GALLEY’s standalone download.
 
 An ordinary Web Audio app can use `new AudioContext()` and connect nodes to
 `context.destination`. The bridge supplies track routing automatically.
@@ -84,6 +84,13 @@ and `renderPattern`. The host discovers these capabilities automatically. Use
 
 `scheduleNote` is synchronous after preparation and receives an absolute shared
 AudioContext `when`, pitch, velocity, voice ID, duration in seconds, and source ID.
+Lyric-aware instruments may declare `notes.lyrics: true`. Portable notes may
+include `lyric`, a string of up to 160 characters, which GALLEY preserves and
+forwards only when supplied. Existing notes omit this field. An optional
+asynchronous `preparePattern({pattern, voiceMap, tempo, signal})` hook can prepare
+speech or other assets before synchronous note scheduling. It must respect
+cancellation; late preparation must not restart a stopped performance. MORSEL
+uses this hook to prepare local speech without delaying its scheduled notes.
 Cancel only notes belonging to the requested source. Honor a supplied cancellation
 `when` at that context timestamp and declare `notes.scheduledCancel: true` to enable
 precise bar changes. Other adapters switch at the boundary through the safe fallback.

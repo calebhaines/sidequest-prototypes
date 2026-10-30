@@ -45,7 +45,7 @@ function richState() {
 }
 
 check('Defaults add two wet returns and a four-slot master without adding instrument tracks', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.19.0'); assert.equal(state.version, 1);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.20.0'); assert.equal(state.version, 1);
   assert.equal(state.tracks.length, 8); assert.equal(S.LIMITS.tracks, 8); assert.equal(S.LIMITS.returns, 2);
   assert.deepEqual(state.master, { id: 'master', name: 'Master', level: .8, metronome: false, mute: false, effects: [null, null, null, null], automation: [] });
   for (const track of state.tracks) { assert.equal(track.effects.length, 4); assert.deepEqual(track.sends, [0, 0]); assert.deepEqual(track.sendPre, [false, false]); }

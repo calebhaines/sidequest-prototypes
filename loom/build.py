@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel']
 SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'app.js']
 
 bundled = {}
@@ -69,6 +69,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['preamp.css', 'SAUTE-MODELS.md', 'preamp-checks.cjs', 'preamp-project-checks.cjs', 'preamp-review-checks.cjs', 'preamp-browser-checks.cjs']
     sources += ['track-eq.css', 'track-eq-checks.cjs', 'track-eq-project-checks.cjs', 'track-eq-review-checks.cjs', 'track-eq-browser-checks.cjs']
     sources += ['voice-effect-clock-checks.cjs']
+    sources += ['lyric-note-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.
@@ -81,6 +82,10 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     files += [('shared/percussion-browser-checks.cjs', (exchange_dir / 'percussion-browser-checks.cjs').read_bytes())]
     files += [(str(p.relative_to(ROOT)), p.read_bytes()) for p in sorted((ROOT / 'fonts').glob('*'))]
     files += [('instruments/' + name + '.html', data) for name, data in instrument_files.items()]
+    # MORSEL is a separately licensed GPL speech instrument. Keep its complete
+    # editable/corresponding-source distribution beside the hosted HTML.
+    morsel_source = ROOT.parent / 'music' / 'morsel' / 'MORSEL-source.zip'
+    files += [('MORSEL-source.zip', morsel_source.read_bytes())]
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in files:
             info = zipfile.ZipInfo('LOOM-source/' + name, (2026, 10, 5, 0, 0, 0))

@@ -124,6 +124,17 @@ async function check(name, run) { await run(); assert.equal(frames.size, 0, name
     for (const key of ['id', 'name', 'start', 'length', 'sourceStart', 'sourceEnd', 'sourceOffset', 'rate', 'reverse', 'loop', 'gain', 'fadeIn', 'fadeOut']) assert.equal(result.clip[key], old[key], key);
     assert(result.asset.duration >= 1.9); assert.notEqual(result.asset.id, old.assetId); assert.equal(result.origin.pattern.lengthBeats, 2); assert.equal(JSON.stringify(state), original); await r.dispose();
   });
+  await check('Per-note words remain with native PCM, printed source recipes, project recovery and source revisions', async () => {
+    const state = session(), clip = state.tracks[0].clips[0], r = renderer(); clip.pattern.notes[0].lyric = 'hello kitchen';
+    const before = JSON.stringify(state), first = await r.print(state, 'track-1', clip.id);
+    assert.equal(calls.at(-1).request.pattern.notes[0].lyric, 'hello kitchen'); assert.equal(first.origin.pattern.notes[0].lyric, 'hello kitchen');
+    assert.equal(first.origin.sourceClip.pattern.notes[0].lyric, 'hello kitchen'); assert.equal(JSON.stringify(state), before);
+    const saved = S.copy(state); saved.assets = [first.asset]; saved.tracks[0].clips = [first.clip];
+    const reopened = S.parseProject(S.serializeProject(saved)); assert.equal(reopened.tracks[0].clips[0].origin.pattern.notes[0].lyric, 'hello kitchen');
+    const previous = calls.length; clip.pattern.notes[0].lyric = 'good morning'; const second = await r.print(state, 'track-1', clip.id);
+    assert.equal(calls.length, previous + 1, 'A word edit invalidates the native source cache');
+    assert.equal(second.origin.pattern.notes[0].lyric, 'good morning'); assert.equal(first.origin.pattern.notes[0].lyric, 'hello kitchen'); await r.dispose();
+  });
   await check('Already cancelled and mid-render requests leave no frame or source cache', async () => {
     const state = session(), r = renderer(), first = new AbortController(); first.abort(); await assert.rejects(r.print(state, 'track-1', 'notes', { signal: first.signal }), { name: 'AbortError' });
     const controller = new AbortController(); deferredRender = async () => { controller.abort(); await new Promise(resolve => setTimeout(resolve, 0)); }; await assert.rejects(r.print(state, 'track-1', 'notes', { signal: controller.signal }), { name: 'AbortError' }); deferredRender = null; assert.equal(r.cache.size, 0); assert.equal(r.operations.size, 0); await r.dispose();
