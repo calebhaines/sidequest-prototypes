@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { performance } = require('node:perf_hooks');
-const files = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'audio-engine.js'];
+const files = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'audio-engine.js'];
 function load(read = file => fs.readFileSync(path.join(__dirname, file), 'utf8')) {
   const scope = { Math, Number, Object, Map, Set, Promise, Float32Array, Float64Array, Int32Array, Uint8Array, Blob, DOMException, TextEncoder, setTimeout, navigator: {} };
   scope.window = scope; vm.createContext(scope);
@@ -168,7 +168,7 @@ function main() {
   });
   check('Actual off-grid SERVICE EQ moves and initial overrides reproduce the captured take audio', () => {
     Object.assign(scope, { crypto: crypto.webcrypto, btoa: value => Buffer.from(value, 'binary').toString('base64'), atob: value => Buffer.from(value, 'base64').toString('binary') });
-    for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+    for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
     const S = scope.LoomSchema, C = scope.LoomServiceCapture, original = S.defaultState(), rate = 8000, frames = 8000;
     original.tempo = 120; original.lengthBars = 4; original.loopEnabled = false; original.master.level = .7;
     original.tracks.forEach(track => { track.effects = [null, null, null, null]; track.clips = []; track.instrumentLive = false; }); original.returns.forEach(bus => { bus.effects = [null, null, null, null]; });

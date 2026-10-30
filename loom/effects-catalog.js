@@ -207,6 +207,7 @@
   if (scope.LoomFilterCatalog) catalog.push(...scope.LoomFilterCatalog);
   if (scope.LoomCreativeCatalog) catalog.push(...scope.LoomCreativeCatalog);
   if (scope.LoomPreampCatalog) catalog.push(...scope.LoomPreampCatalog);
-  catalog.forEach(effect => { effect.params.push(range('mix', 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
+  if (scope.LoomTapeCatalog) catalog.push(...scope.LoomTapeCatalog);
+  catalog.forEach(effect => { effect.params.push(range('mix', effect.mixLabel || 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);

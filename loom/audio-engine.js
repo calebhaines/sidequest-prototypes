@@ -263,7 +263,7 @@
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus));
         this.masterAutomation = this._compileAutomation(this.master);
         for (let t = 0; t < 8; t++) {
-          this._updateRack(this.tracks[t], this.slots[t]);
+          this._updateRack(this.tracks[t], this.slots[t], this.automation[t]);
           const params = {};
           for (const key of trackEqKeys) params[key] = this.automation[t].eq[key] && this.eqAutomationValues[t]?.[key] !== undefined ? this.eqAutomationValues[t][key] : clamp(this.tracks[t].eq?.[key], -12, 12, 0);
           // Performance macros and a compiled take share the absolute control
@@ -1064,9 +1064,10 @@
               const createBroilerPedals=${window.createLoomBroilerPedalsDSP ? window.createLoomBroilerPedalsDSP.toString() : 'null'};
               const createCompressor=${window.createLoomCompressorDSP ? window.createLoomCompressorDSP.toString() : 'null'};
               const createPreamp=${window.createLoomPreampDSP ? window.createLoomPreampDSP.toString() : 'null'};
+              const createTape=${window.createLoomTapeDSP ? window.createLoomTapeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape));
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;

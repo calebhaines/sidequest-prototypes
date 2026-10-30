@@ -36,7 +36,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -52,7 +52,8 @@
         if (entry.signature === signature) continue;
         const prior = entry.spec;
         if (prior?.type === spec?.type && spec) {
-          if (swapped || !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
+          // Tape owns a continuous transport/blend fade through bypass.
+          if (swapped || spec.type !== 'preserve' && !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
           entry.dsp.setParams(spec.params);
         } else {
           entry.dsp?.reset(); entry.dsp = spec ? effects.create(spec.type, sr, spec.params) : null;
@@ -69,7 +70,7 @@
         if (!left || !right || left.length !== right.length) throw new Error('Voice effects need equal stereo blocks.');
         for (const entry of entries) {
           if (!entry.spec && !entry.pending && !entry.remaining) { if (left.length) { entry.last[0] = left[left.length - 1]; entry.last[1] = right[right.length - 1]; } continue; }
-          if (entry.dsp && !entry.spec.params.bypass) entry.dsp.process(left, right, clock || null);
+          if (entry.dsp && (!entry.spec.params.bypass || entry.spec.type === 'preserve')) entry.dsp.process(left, right, clock || null);
           if (entry.pending && left.length) {
             entry.offset[0] = entry.last[0] - left[0]; entry.offset[1] = entry.last[1] - right[0]; entry.remaining = ramp; entry.pending = false;
           }
@@ -82,7 +83,7 @@
       },
       reset() { for (const entry of entries) { entry.dsp?.reset(); entry.last[0] = entry.last[1] = entry.offset[0] = entry.offset[1] = 0; entry.pending = false; entry.remaining = 0; } },
       getMeters() { return entries.map(entry => entry.spec ? { type: entry.spec.type, bypass: entry.spec.params.bypass, ...(entry.dsp.getMeters?.() || {}) } : null); },
-      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.params.bypass || entry.spec.params.mix === 0 ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
+      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.type !== 'preserve' && (entry.spec.params.bypass || entry.spec.params.mix === 0) ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
     };
   }
   function createProcessor(sampleRate, slots = empty(), clock = {}) {
@@ -109,7 +110,7 @@
   let bankOrdinal = 0;
   const offline = context => typeof context?.startRendering === 'function';
   function workletSource() {
-    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP'];
+    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP'];
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
     return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
@@ -300,7 +301,9 @@
     function updateModelNote() {
       const slots = get(), spec = slots[selected], def = spec && definition(spec.type), note = dialog.querySelector('[data-voice-fx-model-note]');
       syncRecipe(); if (!note) return; const models = def.models || def.ampModels || [], model = models.find(model => model.id === spec.params.model);
-      note.textContent = model ? [model.inspiration, model.description].filter(Boolean).join(' · ') : '';
+      const notes = model ? [model.inspiration, model.description].filter(Boolean) : [];
+      if (spec.type === 'preserve' && (spec.params.wow > 0 || spec.params.flutter > 0)) notes.push('Wow/flutter move the whole blend; zero motion keeps timing unchanged.');
+      note.textContent = notes.join(' · ');
       for (const input of dialog.querySelectorAll('[data-voice-fx-param],[data-voice-fx-number]')) { const key = input.dataset.voiceFxParam || input.dataset.voiceFxNumber; const p = spec.params;
         input.disabled = spec.type === 'saute' && (p.model === 'clean' && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(key) || model?.inactiveControls?.includes(key)) || spec.type === 'velvet' && (p.model === 'clean' && ['colour', 'timing', 'fetMode', 'thrust'].includes(key) || p.model !== 'clean' && p.timing === 'classic' && ['attack', 'release'].includes(key) || key === 'fetMode' && p.model !== 'fet-76' || key === 'thrust' && p.model !== 'bus-2500') || spec.type === 'parallax' && (key === 'time' && p.clock === 'sync' || key === 'division' && p.clock === 'free') || ['strainer', 'swirl'].includes(spec.type) && (['rate', 'lfoRate'].includes(key) && (p.clock || p.lfoClock) === 'sync' || ['division', 'lfoDivision'].includes(key) && (p.clock || p.lfoClock) === 'free'); }
     }
@@ -310,6 +313,11 @@
           const hz = meter.detectedHz, p = get()[selected]?.params || {}, ready = Number.isFinite(hz) && hz > 0 && meter.confidence >= .5;
           if (ready) { const pitch = 69 + 12 * Math.log2(hz / (meter.reference || 440)), guide = definition('scales')?.tunings?.[p.tuning] || []; let note = p.target === 'manual' ? p.targetNote : Math.round(pitch); if (p.target !== 'manual' && guide.length) note = guide.reduce((best, item) => Math.abs(item - pitch) < Math.abs(best - pitch) ? item : best, guide[0]); const names = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B']; target.textContent = names[((note % 12) + 12) % 12] + (Math.floor(note / 12) - 1) + ' · ' + hz.toFixed(2) + ' Hz · ' + ((pitch - note) * 100).toFixed(1) + ' cents · Output ' + finite(meter.outputDb, -120).toFixed(1) + ' dB'; }
           else target.textContent = 'Tuner: play one clear, sustained pitch. Output ' + finite(meter.outputDb, -120).toFixed(1) + ' dB';
+          return;
+        }
+        if (meter.type === 'preserve') {
+          const values = [['Input', meter.inputDb], ['Tape', meter.tapeDb], ['Output', meter.outputDb], ['Compression', meter.compressionDb]];
+          target.textContent = values.filter(([, value]) => Number.isFinite(value)).map(([name, value]) => name + ' ' + value.toFixed(1) + ' dB').join(' · ') + (meter.transportMs > 0 ? ' · Motion ' + meter.transportMs.toFixed(2) + ' ms' : '');
           return;
         }
         const preferred = ['inputDb',...(['velvet','glaze'].includes(meter.type)?['reductionDb']:[]),'stageDb','outputDb','cutoffLHz','cutoffRHz','envelopeDb','correlation'], values = preferred.filter(k => typeof meter[k] === 'number' && Number.isFinite(meter[k])).slice(0, 4).map(k => [k,meter[k]]); if (values.length) target.textContent = values.map(([k, value]) => k.replace(/Db$/, '').replace(/([A-Z])/g, ' $1') + ' ' + value.toFixed(1) + (/Db$/.test(k) ? ' dB' : '')).join(' · '); }, 100);
@@ -330,7 +338,7 @@
       const slots = get(); if (!slots[selected]) return; const value = Number(input.value); if (value === slots[selected].params[key]) return;
       if (!activeGesture || activeGesture.key !== key) activeGesture = { token: 'voice-fx-' + ++gestureOrdinal, started: false, key };
       const gesture = activeGesture; slots[selected].params[key] = value; commit(slots, { gesture: gesture.token, phase: gesture.started ? 'change' : 'start' }); if (activeGesture === gesture) gesture.started = true;
-      const number = dialog.querySelector('[data-voice-fx-number="' + key + '"]'), output = dialog.querySelector('[data-voice-fx-output="' + key + '"]'), param = definition(slots[selected].type).params.find(p => p.key === key); if (number && document.activeElement !== number) number.value = value; if (output) output.textContent = value + ' ' + (param.unit || ''); syncRecipe();
+      const number = dialog.querySelector('[data-voice-fx-number="' + key + '"]'), output = dialog.querySelector('[data-voice-fx-output="' + key + '"]'), param = definition(slots[selected].type).params.find(p => p.key === key); if (number && document.activeElement !== number) number.value = value; if (output) output.textContent = value + ' ' + (param.unit || ''); if (slots[selected].type === 'preserve' && ['wow', 'flutter'].includes(key)) updateModelNote(); else syncRecipe();
     });
     dialog.addEventListener('change', event => {
       const input = event.target, slots = get();

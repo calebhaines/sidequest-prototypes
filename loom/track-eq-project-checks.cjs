@@ -11,7 +11,7 @@ globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInThisContext(fs.readFileSync(shared, 'utf8'), { filename: 'pattern-schema.js' });
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 const S = LoomSchema, P = LoomServiceSchema, C = LoomServiceCapture, passed = [];
 const clone = value => JSON.parse(JSON.stringify(value));
 const keys = ['low', 'lowMid', 'highMid', 'high'];
@@ -22,7 +22,7 @@ const lane = (key, index = 0) => ({ target: 'eq:' + key, enabled: true, interpol
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
 
 check('Eight independent flat EQs retain four insert slots, fixed bands and track-only ownership', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.21.0'); assert.equal(state.tracks.length, 8);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.22.0'); assert.equal(state.tracks.length, 8);
   assert.deepEqual(S.defaultTrackEq(), flat());
   assert.deepEqual(S.TRACK_EQ_BANDS.map(band => [band.key, band.frequency, band.type, band.q]), [['low', 100, 'lowshelf', .707], ['lowMid', 400, 'peaking', .707], ['highMid', 2500, 'peaking', .707], ['high', 10000, 'highshelf', .707]]);
   assert(Object.isFrozen(S.TRACK_EQ_BANDS) && S.TRACK_EQ_BANDS.every(Object.isFrozen));

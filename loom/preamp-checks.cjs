@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-for (const name of ['preamp-catalog.js', 'preamp-dsp.js', 'effects.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
+for (const name of ['preamp-catalog.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 const factory = createLoomPreampDSP(), models = factory.specifications.model, passed = [];
 function check(name, fn) { fn(); passed.push(name); console.log('PASS ' + name); }
 function feed(effect, input, block = 137) {

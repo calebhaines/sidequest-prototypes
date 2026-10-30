@@ -2,6 +2,11 @@
 
 Kitchen’s central production station.
 
+**PRESERVE** adds four tape-machine characters, five speeds and three tape stocks.
+Start with five face knobs or a house recipe; folded panels expose calibration,
+head response, wow/flutter, dropouts, hiss and stereo alignment. The defaults
+keep a steady transport and leave noise off. See [the tape guide](PRESERVE-MODELS.md).
+
 **MORSEL** adds pitched words and vocal sounds with Alto, Tenor, Bass and Soprano
 voices. Its 16/32-step phrases retain a separate lyric and voice on every note.
 Type a phrase in its editor, distribute the words, and adjust the melody; the
@@ -97,7 +102,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.21.0.
+SERVICE is version 1.0.0; GALLEY is version 1.22.0.
 
 ## Making a piece
 
@@ -344,11 +349,12 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Fifteen effects
+## Sixteen effects
 
 | Effect | Processing |
 | --- | --- |
 | MANDOLINE | Three EQ bands and a resonant filter |
+| PRESERVE | Four tape-machine characters, five speeds, three stocks, magnetic softening, head response, bias/calibration, wow/flutter, wear, hiss, dropouts and stereo alignment |
 | SAUTÉ | Twelve classic microphone preamp families plus transparent gain, transformer memory, drive, bias, feedback, slew, virtual loading and tone shaping |
 | BUTTER | Eight classic analog compressor families, the original Clean model, program-dependent timing, colour and stereo linking |
 | CHAR | Saturation, diode distortion, or wavefolding |
@@ -368,7 +374,7 @@ is unavailable, keep a WAV or packet for the next session.
 
 SIZZLE, CLATTER and HOTPLATE each have eight voices; BATTER has twelve. Every
 voice has two independent serial inserts, available through two compact slot
-buttons in its existing voice editor. All fifteen GALLEY effects use the same
+buttons in its existing voice editor. All sixteen GALLEY effects use the same
 canonical catalog, parameter definitions, recipes and DSP, including complete
 BROILER, BUTTER, SAUTÉ, GLAZE and SCALES processing. They do not consume GALLEY's
 four track insert slots.
@@ -439,7 +445,7 @@ sources use `node track-eq-checks.cjs`, `node track-eq-project-checks.cjs`,
 
 GALLEY retains eight instrument/audio tracks with four inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
-channels each have four inserts. All fifteen effects work in these racks.
+channels each have four inserts. All sixteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
 LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
 their original sound. Change either return's effects to build another shared
@@ -780,7 +786,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.21.0.
+font license notices. Version 1.22.0.
 
 ## Compatibility
 
