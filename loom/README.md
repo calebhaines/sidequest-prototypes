@@ -2,11 +2,19 @@
 
 Kitchen’s central production station.
 
+**MORSEL** adds pitched words and vocal sounds with Alto, Tenor, Bass and Robot
+voices. Its 16/32-step phrases retain a separate lyric and voice on every note.
+Type a phrase in its editor, distribute the words, and adjust the melody; the
+keyboard plays its current word. Piano-roll notes expose Words for MORSEL and
+retain those lyrics through shared Patterns, portable projects and revisable
+Prints. English pronunciation is synthesized offline. Words are prepared before
+playback; the shared audio clock controls actual note starts.
+
 An eight-track browser studio for Kitchen. Eight tracks. One increasingly specific order.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all fourteen Kitchen instruments,
+The standalone `index.html` bundles all fifteen Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -14,7 +22,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other thirteen instruments.
+are available inside GALLEY alongside the other fourteen instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -89,7 +97,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.19.0.
+SERVICE is version 1.0.0; GALLEY is version 1.20.0.
 
 ## Making a piece
 
@@ -763,7 +771,7 @@ through GALLEY's actual host, once-mode scheduling, private printing, saved
 origins, and arrangement WAV export with per-step sound overrides.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all fourteen standalone instrument pages in
+archive includes all fifteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 The extracted percussion checks are `node percussion-integration-checks.cjs`
@@ -772,7 +780,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.19.0.
+font license notices. Version 1.20.0.
 
 ## Compatibility
 

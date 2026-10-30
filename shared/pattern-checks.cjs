@@ -79,6 +79,19 @@ function reject(edit, expression) { const pattern = fresh(); edit(pattern); asse
     const portable = S.parse(S.serialize(await P.get(item.id))); assert.equal(portable.notes[0].locks.cutoff, 740); assert.equal(portable.notes[1].locks, undefined);
     await P.remove(item.id); assert.equal((await P.list()).length, 0);
   });
+  await check('Optional per-note words survive portable JSON and the shared library without changing legacy notes', async () => {
+    const raw = fresh(), legacy = S.serialize(raw), legacyFingerprint = S.fingerprint(raw);
+    raw.notes[0].lyric = 'hello, Kitchen'; raw.notes[1].lyric = 'ah';
+    const saved = await P.save(raw), restored = await P.get(saved.id);
+    assert.equal(restored.notes[0].lyric, 'hello, Kitchen'); assert.equal(S.parse(S.serialize(restored)).notes[1].lyric, 'ah');
+    raw.notes[0].lyric = 'changed'; restored.notes[0].lyric = 'edited';
+    assert.equal((await P.get(saved.id)).notes[0].lyric, 'hello, Kitchen');
+    assert.equal(S.serialize(fresh()), legacy); assert.equal(S.fingerprint(fresh()), legacyFingerprint);
+    assert(!Object.prototype.hasOwnProperty.call(S.normalize(fresh()).notes[0], 'lyric'));
+    for (const lyric of [null, 12, {}, [], 'x'.repeat(161), 'hello\nworld', 'word\u0000', 'word\u007f']) reject(p => { p.notes[0].lyric = lyric; }, /lyric/);
+    for (const lyric of ['', 'x'.repeat(160), '  crème & tea  ']) { const p = fresh(); p.notes[0].lyric = lyric; assert.equal(S.normalize(p).notes[0].lyric, lyric); }
+    await P.remove(saved.id);
+  });
   await check('Fallback count quota is atomic and deletion frees capacity without evicting parts', async () => {
     const ids = []; for (let i = 0; i < 128; i++) ids.push((await P.save({ ...fresh(), name: 'Part ' + i })).id);
     await assert.rejects(P.save(fresh()), /full/); assert.equal((await P.list()).length, 128);

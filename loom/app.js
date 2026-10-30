@@ -69,7 +69,14 @@
   }
   async function auditionNote(event) {
     const editable = noteWorkflow?.getEditableClip(), t = state.tracks[editable?.trackIndex ?? state.selectedTrack]; if (!t?.instrument) return;
-    await ensureInstrument(t); const adapter = host.getPatternAdapter(t.id); await adapter?.prepare?.(); engine.resumeAudition(t.id);
+    const generation = lifecycle, operation = transportOperation, instrumentId = t.instrument.id, revision = engine.getTransport().revision;
+    await ensureInstrument(t); const adapter = host.getPatternAdapter(t.id); await adapter?.prepare?.();
+    if (adapter?.preparePattern) {
+      const tempo = state.tempo, duration = Math.min(256, Math.max(.001, (event.durationSeconds || .3) * tempo / 60)), voice = event.voice || adapter.notes?.voices?.[0]?.id;
+      await adapter.preparePattern({ tempo, voiceMap: { [voice]: voice }, pattern: { format: 'musiclab-pattern', version: 1, name: 'Note audition', sourceApp: t.instrument.id.toUpperCase(), kind: 'notes', tempo, lengthBeats: Math.max(.25, duration), voices: [{ id: voice, name: voice }], notes: [{ id: 'audition', pitch: event.pitch, velocity: event.velocity ?? .8, beat: 0, duration, voice, ...(event.lyric !== undefined ? { lyric: event.lyric } : {}) }] } });
+    }
+    if (generation !== lifecycle || operation !== transportOperation || revision !== engine.getTransport().revision || host.getPatternAdapter(t.id) !== adapter || state.tracks.find(item => item.id === t.id)?.instrument?.id !== instrumentId) return;
+    engine.resumeAudition(t.id);
     const target = event.voice;
     host.scheduleNote(t.id, { ...event, voice: target, id: S.uid('audition'), when: engine.context.currentTime + .015, source: 'loom-audition' });
     setTimeout(() => { if (!engine.getMeters().playing && frameTrack !== t.id) engine.clearAudition(t.id); }, Math.min(10000, ((event.durationSeconds || .3) + 3) * 1000));

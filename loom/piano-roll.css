@@ -7,3 +7,4 @@
 @media(prefers-reduced-motion:reduce){.piano-note-body{filter:none!important}}
 
 .piano-canvas.piano-pan{cursor:grab}.is-panning .piano-canvas{cursor:grabbing}.piano-canvas.piano-pan .piano-note,.piano-canvas.piano-pan .piano-note-edge,.piano-canvas.piano-pan .piano-key{cursor:grab}
+.piano-note-editor .piano-lyric-label{flex:1 1 220px;min-width:0}.piano-note-editor .piano-lyric-label input{width:100%;min-width:100px;max-width:320px;flex:1}.piano-note-editor .piano-lyric-label+button{margin-left:auto}
