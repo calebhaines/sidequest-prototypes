@@ -20,6 +20,7 @@ APPS = {
     'picnic': ('PicnicApp', '#7eae83', '.masthead-actions'),
     'morsel': ('MorselApp', '#ed8b59', '.masthead-actions'),
     'heirloom': ('HeirloomApp', '#d5b677', '.masthead-actions'),
+    'brine': ('BrineApp', '#e0a16e', '.masthead-actions'),
     'loom': ('LoomApp', '#dcc85e', '.topline'),
 }
 
@@ -27,7 +28,7 @@ APPS = {
 APP_NAMES = {
     'grain': 'SIZZLE', 'tine': 'CLATTER', 'form': 'HOTPLATE', 'mire': 'REDUCE',
     'spool': 'ROTISSERIE', 'haze': 'STEAM', 'bower': 'SKEWER', 'ravel': 'DICER',
-    'fable': 'STOCK', 'roux': 'ROUX', 'batter': 'BATTER', 'proof': 'LEAVEN', 'marinade': 'MARINADE', 'picnic': 'PICNIC', 'morsel': 'MORSEL', 'heirloom': 'HEIRLOOM', 'loom': 'GALLEY',
+    'fable': 'STOCK', 'roux': 'ROUX', 'batter': 'BATTER', 'proof': 'LEAVEN', 'marinade': 'MARINADE', 'picnic': 'PICNIC', 'morsel': 'MORSEL', 'heirloom': 'HEIRLOOM', 'brine': 'BRINE', 'loom': 'GALLEY',
 }
 
 EXCHANGE_FILES = [
