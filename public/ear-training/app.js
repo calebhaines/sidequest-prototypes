@@ -1,8 +1,11 @@
-import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, thirdComparisonEvents, isCorrect, noteName } from './music.js?v=4';
-import { AudioEngine } from './audio.js?v=4';
-import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=4';
-import { gradeEnsemble, ensembleResponseEvents } from './ensemble.js?v=4';
-import { ENSEMBLE_SHORTCUTS, createEnsembleEditor, ensembleResponse, setEnsembleNote, undoEnsembleNote, renderEnsembleEditor, renderEnsembleFeedback } from './ensemble-ui.js?v=4';
+import { MODES, LEVELS, LEGACY_LEVELS, LEVEL_MIGRATION, getLevelDescription, generateQuestion, generatePitchQuestion, thirdComparisonEvents, isCorrect, noteName } from './music.js?v=5';
+import { AudioEngine } from './audio.js?v=5';
+import { createPitchTest, answerPitchTest, summarizePitchTest } from './pitch-test.js?v=5';
+import { gradeEnsemble, ensembleResponseEvents } from './ensemble.js?v=5';
+import { ENSEMBLE_SHORTCUTS, createEnsembleEditor, ensembleResponse, setEnsembleNote, undoEnsembleNote, renderEnsembleEditor, renderEnsembleFeedback } from './ensemble-ui.js?v=5';
+import { TUNINGS, getTuning, applyTuning, generateTemperamentQuestion } from './temperaments.js?v=5';
+import { createTemperamentTest, answerTemperamentTest, summarizeTemperamentTest } from './temperament-test.js?v=5';
+import { tuningOptions, temperamentReferenceScore, renderTemperamentGuide, renderTemperamentResult, renderTemperamentHistory } from './temperament-ui.js?v=5';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -12,19 +15,22 @@ const modeIds = MODES.map(m => m.id);
 const historyLevels = [...LEVELS, ...LEGACY_LEVELS.map(l => ({...l, title:`Legacy · ${l.title}`}))];
 const levelIds = historyLevels.map(l => l.id);
 const currentLevelIds = LEVELS.map(l => l.id);
+const tuningIds = TUNINGS.map(t => t.id);
 const levelTitle = id => historyLevels.find(l => l.id === id)?.title || id;
 const audio = new AudioEngine();
 let storageAvailable = true;
 let toastTimer;
 let playbackId = 0;
-const defaults = {mode:'intervals', level:'level-1', timbre:'warm', volume:0.65};
-let saved = {version:1, settings:{...defaults}, attempts:[], pitchTests:[]};
+const defaults = {mode:'intervals', level:'level-1', timbre:'warm', volume:0.65,temperamentTask:'abx',temperamentA:'12edo',temperamentB:'meantone-quarter'};
+let saved = {version:1, settings:{...defaults}, attempts:[], pitchTests:[],temperamentTests:[]};
 
 function validAttempt(a) {
   return a && modeIds.includes(a.mode) && levelIds.includes(a.level)
     && ['correct','incorrect','revealed'].includes(a.outcome)
     && typeof a.timestamp === 'string' && Number.isFinite(Date.parse(a.timestamp))
-    && (a.parts === undefined || a.mode === 'ensemble' && a.outcome !== 'revealed' && validParts(a.parts));
+    && (a.parts === undefined || a.mode === 'ensemble' && a.outcome !== 'revealed' && validParts(a.parts))
+    && (a.mode !== 'temperaments' || a.task === 'abx' && tuningIds.includes(a.tuningA) && tuningIds.includes(a.tuningB) && a.tuningA !== a.tuningB
+      || a.mode === 'temperaments' && a.task === 'identify' && Number.isInteger(a.alternatives) && a.alternatives >= 2 && a.alternatives <= TUNINGS.length);
 }
 function validParts(parts) {
   return parts && parts.chordTotal === 4 && [4,8,12,16].includes(parts.melodyTotal)
@@ -51,6 +57,22 @@ function cleanPitchTest(record) {
   return {protocol:'2d1u-v1', timestamp:new Date(record.timestamp).toISOString(),
     trials:record.trials.map(t => ({cents:t.cents,correct:t.correct}))};
 }
+function temperamentTestState(record) {
+  let result = createTemperamentTest(record);
+  for (const trial of record.trials) result = answerTemperamentTest(result,trial);
+  return result;
+}
+function validTemperamentTest(record) {
+  if (!record || record.protocol !== 'temperament-abx-v1' || typeof record.timestamp !== 'string' || !Number.isFinite(Date.parse(record.timestamp))
+    || !tuningIds.includes(record.tuningA) || !tuningIds.includes(record.tuningB) || record.tuningA === record.tuningB
+    || !currentLevelIds.includes(record.level) || !['warm','sine','piano'].includes(record.timbre)
+    || !Array.isArray(record.trials) || record.trials.length !== 20) return false;
+  try { return temperamentTestState(record).complete; } catch { return false; }
+}
+function cleanTemperamentTest(record) {
+  return {protocol:'temperament-abx-v1',timestamp:new Date(record.timestamp).toISOString(),tuningA:record.tuningA,tuningB:record.tuningB,
+    level:record.level,timbre:record.timbre,trials:record.trials.map(t => ({answer:t.answer,response:t.response}))};
+}
 try {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
@@ -61,6 +83,11 @@ try {
       if (currentLevelIds.includes(data.settings?.level)) saved.settings.level = data.settings.level;
       else if (LEVEL_MIGRATION[data.settings?.level]) saved.settings.level = LEVEL_MIGRATION[data.settings.level];
       if (Array.isArray(data.pitchTests)) saved.pitchTests = data.pitchTests.filter(validPitchTest).slice(-50).map(cleanPitchTest);
+      if (Array.isArray(data.temperamentTests)) saved.temperamentTests = data.temperamentTests.filter(validTemperamentTest).slice(-50).map(cleanTemperamentTest);
+      if (['abx','identify'].includes(data.settings?.temperamentTask)) saved.settings.temperamentTask = data.settings.temperamentTask;
+      if (tuningIds.includes(data.settings?.temperamentA)) saved.settings.temperamentA = data.settings.temperamentA;
+      if (tuningIds.includes(data.settings?.temperamentB) && data.settings.temperamentB !== saved.settings.temperamentA) saved.settings.temperamentB = data.settings.temperamentB;
+      if (saved.settings.temperamentA === saved.settings.temperamentB) saved.settings.temperamentB = tuningIds.find(id => id !== saved.settings.temperamentA);
       if (['warm','piano','sine'].includes(data.settings?.timbre)) saved.settings.timbre = data.settings.timbre;
       if (Number.isFinite(data.settings?.volume)) saved.settings.volume = Math.max(0, Math.min(1, data.settings.volume));
     }
@@ -70,6 +97,11 @@ try {
 function cleanAttempt(a) {
   const result = {mode:a.mode, level:a.level, outcome:a.outcome, timestamp:new Date(a.timestamp).toISOString()};
   if (a.mode === 'ensemble' && a.parts) result.parts = {chordsCorrect:a.parts.chordsCorrect,chordTotal:4,melodyCorrect:a.parts.melodyCorrect,melodyTotal:a.parts.melodyTotal};
+  if (a.mode === 'temperaments') {
+    result.task = a.task;
+    if (a.task === 'abx') { result.tuningA = a.tuningA; result.tuningB = a.tuningB; }
+    else result.alternatives = a.alternatives;
+  }
   return result;
 }
 function save() {
@@ -85,18 +117,23 @@ function notify(message) {
 }
 const newSession = () => ({round:0, correct:0, answered:0, skipped:0, streak:0, results:[]});
 const state = {mode:saved.settings.mode, level:saved.settings.level, page:'practice', question:null,
-  heard:false, answered:false, busy:false, response:null, input:[], rhythm:[], replays:0, session:newSession(), test:null, ensemble:null};
+  heard:false, answered:false, busy:false, response:null, input:[], rhythm:[], replays:0, session:newSession(), test:null, ensemble:null,
+  temperamentTest:null,temperamentHeard:{A:false,B:false,X:false},temperamentPlays:{A:0,B:0,X:0}};
 audio.volume = saved.settings.volume;
 audio.timbre = saved.settings.timbre;
 $('#volume').value = Math.round(audio.volume * 100);
 $('#timbre').value = audio.timbre;
 $('#level').innerHTML = LEVELS.map(l => `<option value="${l.id}">${escape(l.title)}</option>`).join('');
 $('#level').value = state.level;
+$('#temperament-task').value = saved.settings.temperamentTask;
+$('#temperament-a').innerHTML = $('#temperament-b').innerHTML = tuningOptions(TUNINGS);
+$('#temperament-a').value = saved.settings.temperamentA;
+$('#temperament-b').value = saved.settings.temperamentB;
 $('#progress-level').innerHTML += `<optgroup label="Eight-level practice">${LEVELS.map(l => `<option value="${l.id}">${escape(l.title)}</option>`).join('')}</optgroup><optgroup label="Earlier scores — original settings">${historyLevels.filter(l => !currentLevelIds.includes(l.id)).map(l => `<option value="${l.id}">${escape(l.title)}</option>`).join('')}</optgroup>`;
 $('#storage-status').textContent = storageAvailable ? 'LOCAL / PRIVATE' : 'SESSION ONLY';
 
-const lessonTitles = {intervals:'Hear the space.', chords:'Hear the color.', progressions:'Hear the journey.', melody:'Hold the phrase.', scales:'Hear the landscape.', rhythm:'Find the pocket.',pitch:'Hear the smallest shift.',ensemble:'Follow both layers.'};
-const symbols = {intervals:'↗', chords:'≋', progressions:'→', melody:'⌁', scales:'⋰', rhythm:'▥',pitch:'↕',ensemble:'⋈'};
+const lessonTitles = {intervals:'Hear the space.', chords:'Hear the color.', progressions:'Hear the journey.', melody:'Hold the phrase.', scales:'Hear the landscape.', rhythm:'Find the pocket.',pitch:'Hear the smallest shift.',ensemble:'Follow both layers.',temperaments:'Hear how notes agree.'};
+const symbols = {intervals:'↗', chords:'≋', progressions:'→', melody:'⌁', scales:'⋰', rhythm:'▥',pitch:'↕',ensemble:'⋈',temperaments:'≠'};
 const lessonCopy = {
   intervals:'An interval is the distance between two notes. Sing the lower note, then reach for the other. Does it feel close, open, or tense?',
   chords:'A chord has a character, even when its root changes. Listen to the whole color before trying to pick out individual notes.',
@@ -105,7 +142,8 @@ const lessonCopy = {
   scales:'Every scale has a pattern of steps. Listen for the notes that give it a distinctive shade, especially the third, sixth, and seventh.',
   rhythm:'The count-in sets the beat. Each grid cell is one subdivision. Listen for where the sound lands and where the silence lives.',
   pitch:'Compare two tones. Is the second a little higher or a little lower? One semitone is 100 cents. At the smallest gaps, listen for a subtle change rather than a new note name.',
-  ensemble:'Hear the bass and chord color, then follow the melody above them. Build each chord with a root and type, and place every melody pitch. The lead spans C5–B5; all twelve notes are always available. Chords use a warm voice, while the voice setting changes the lead.'
+  ensemble:'Hear the bass and chord color, then follow the melody above them. Build each chord with a root and type, and place every melody pitch. The lead spans C5–B5; all twelve notes are always available. Chords use a warm voice, while the voice setting changes the lead.',
+  temperaments:'Listen to beating within thirds and fifths. A and B use the same score with different tunings; X exactly repeats one of them. Every preset shares A4 = 440 Hz. The pitch layout stays fixed as the musical key changes.'
 };
 
 $('#mode-nav').innerHTML = MODES.map((m,i) => `<button class="mode-button" data-mode="${m.id}" aria-pressed="false"><span class="mode-index">${String(i+1).padStart(2,'0')}</span><span class="mode-copy"><strong>${escape(m.short || m.title)}</strong><small>${escape(m.tag || m.description)}</small></span><span class="mode-arrow" aria-hidden="true">↗</span></button>`).join('');
@@ -143,7 +181,7 @@ function melodyLabel(midi) {
   return state.question?.keyboard?.find(k => k.midi === midi)?.label || noteName(midi);
 }
 
-async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL',duration=0} = {}) {
+async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL',duration=0,temperamentSample=null} = {}) {
   const question = state.question;
   const token = ++playbackId;
   state.busy = true;
@@ -154,7 +192,14 @@ async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL',d
     const result = await audio.play(events,{duration});
     if (token !== playbackId || question !== state.question) return;
     state.busy = false;
-    if (!result.cancelled && markHeard) { state.heard = true; state.replays++; }
+    if (!result.cancelled && markHeard) {
+      if (question?.mode === 'temperaments' && temperamentSample) {
+        state.temperamentHeard[temperamentSample] = true;
+        state.temperamentPlays[temperamentSample]++;
+        state.heard = question.task === 'abx' ? ['A','B','X'].every(key => state.temperamentHeard[key]) : state.temperamentHeard.X;
+        if (temperamentSample === 'X') state.replays++;
+      } else { state.heard = true; state.replays++; }
+    }
     updatePlayback();
     renderAnswer();
   } catch (error) {
@@ -169,31 +214,61 @@ async function performAudio(events, {markHeard=false, message='PLAYING SIGNAL',d
 function playSignal() {
   if (!state.question || state.busy || (state.test && state.heard)) return;
   const q = state.question;
+  if (q.mode === 'temperaments') {
+    performAudio(q.events,{markHeard:true,temperamentSample:'X',duration:q.totalDuration,message:q.task === 'abx' ? 'PLAYING X' : 'PLAYING TUNING'});
+    return;
+  }
   const referenceLength = q.reference?.length ? Math.max(...q.reference.map(e => e.at+e.duration))+.45 : 0;
   performAudio(combinedEvents(q.reference, fullBar(q.events, q), q.mode === 'rhythm' ? 0 : 0.45), {markHeard:true,duration:q.mode === 'ensemble' ? referenceLength+q.totalDuration : 0});
+}
+
+function playTemperamentReference(sample) {
+  const q = state.question;
+  if (state.busy || q?.mode !== 'temperaments' || q.task !== 'abx' || !['A','B'].includes(sample)) return;
+  performAudio(sample === 'A' ? q.referenceA : q.referenceB,{markHeard:true,temperamentSample:sample,duration:q.totalDuration,message:`PLAYING ${sample}`});
 }
 
 function updatePlayback() {
   $('#play').disabled = state.busy || Boolean(state.test && state.heard);
   $('#stop').disabled = !state.busy;
   $('#reference').disabled = state.busy;
+  const isTemperament = state.question?.mode === 'temperaments';
+  const isABX = isTemperament && state.question.task === 'abx';
+  $('#temperament-play-a').hidden = $('#temperament-play-b').hidden = !isABX;
+  $('#temperament-play-a').disabled = $('#temperament-play-b').disabled = state.busy;
+  $('#temperament-listen-status').hidden = !isABX;
+  if (isABX) ['A','B','X'].forEach(key => {
+    const label = $(`#temperament-heard-${key.toLowerCase()}`);
+    label.textContent = `${key} ${state.temperamentHeard[key] ? 'heard' : 'pending'}`;
+    label.classList.toggle('heard',state.temperamentHeard[key]);
+  });
   $$('.interval-comparison button').forEach(button => { button.disabled = state.busy; });
   $$('#ensemble-feedback button').forEach(button => { button.disabled = state.busy; });
   if (!state.busy) {
     $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.heard ? 'READY FOR YOUR ANSWER' : 'AWAITING PLAYBACK'}`;
-    if (state.answered) $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.test ? 'RESPONSE RECORDED' : 'SIGNAL DECODED'}`;
+    if (isABX && !state.heard) $('#audio-status').innerHTML = '<span class="status-dot"></span> LISTEN TO A, B, AND X';
+    if (state.answered) $('#audio-status').innerHTML = `<span class="status-dot"></span> ${state.test || state.temperamentTest ? 'RESPONSE RECORDED' : 'SIGNAL DECODED'}`;
   }
   $('#play').innerHTML = `<span aria-hidden="true">▶</span> ${state.test && state.heard ? 'Pair played' : state.replays ? 'Replay signal' : 'Play signal'} <kbd>SPACE</kbd>`;
   $('#play-hint').textContent = state.test ? state.busy ? 'Compare the second tone with the first.' : state.heard ? 'Choose higher or lower. Results come at the end.' : 'One complete listen per trial. Press play when ready.' : state.busy ? 'Listen to the whole phrase. Take your time.' : state.heard ? 'Sing it back. Trust your ear. Replay whenever you like.' : 'Press play to begin. Replays are always free.';
   $('#replay-count').textContent = state.test ? 'ONE LISTEN / RESULTS AT THE END' : state.replays > 1 ? `${state.replays - 1} REPLAY${state.replays === 2 ? '' : 'S'} / NO PENALTY` : 'UNLIMITED REPLAYS';
+  if (isTemperament) {
+    $('#play').innerHTML = `<span aria-hidden="true">▶</span> ${state.replays ? 'Replay' : 'Play'} ${isABX ? 'X' : 'tuning'} <kbd>SPACE</kbd>`;
+    $('#play-hint').textContent = state.busy ? 'The notes, timing, and sound are matched. Listen to the tuning.' : isABX ? 'Hear all three samples before choosing. Replays are unlimited.' : 'Name the tuning. Explore the reference desk in the field guide to learn its sound.';
+    if (isABX) {
+      $('#temperament-play-a').textContent = `${state.temperamentPlays.A ? 'Replay' : '▶ Play'} A`;
+      $('#temperament-play-b').textContent = `${state.temperamentPlays.B ? 'Replay' : '▶ Play'} B`;
+      $('#replay-count').textContent = `A × ${state.temperamentPlays.A} / B × ${state.temperamentPlays.B} / X × ${state.temperamentPlays.X}`;
+    }
+  }
 }
 
 function updateTestControls() {
   $('#pitch-test-panel').hidden = state.mode !== 'pitch';
   $('#pitch-test-intro').hidden = Boolean(state.test);
   $('#pitch-test-status').hidden = !state.test;
-  $('#level').disabled = Boolean(state.test);
-  $('#timbre').disabled = Boolean(state.test);
+  $('#level').disabled = Boolean(state.test || state.temperamentTest);
+  $('#timbre').disabled = Boolean(state.test || state.temperamentTest);
   $('#timbre').value = audio.timbre;
   $('#voice-label').textContent = state.mode === 'ensemble' ? 'LEAD VOICE' : 'VOICE';
   $('#practice-mantra').innerHTML = state.test ? 'One complete listen per trial.<br>Take your time to choose.' : 'Listen as often as you need.<br>Curiosity beats a perfect score.';
@@ -203,6 +278,66 @@ function updateTestControls() {
     $('#pitch-test-progress').textContent = state.test.complete ? '24 of 24 complete. Your result has been saved.' : state.answered ? `${state.test.trialCount} of 24 recorded. Continue when ready.` : `Trial ${state.test.trialCount + 1} of 24. One listen, then choose.`;
     $('#end-pitch-test').textContent = state.test.complete ? 'Return to fixed practice' : 'End test';
   }
+  const tuningMode = state.mode === 'temperaments';
+  const tuningTask = state.temperamentTest ? 'abx' : saved.settings.temperamentTask;
+  $('#temperament-controls').hidden = !tuningMode;
+  $('#temperament-pair-controls').hidden = tuningTask !== 'abx';
+  $('#temperament-test-panel').hidden = tuningTask !== 'abx';
+  $('#temperament-task').value = tuningTask;
+  $('#temperament-a').value = state.temperamentTest?.tuningA || saved.settings.temperamentA;
+  $('#temperament-b').value = state.temperamentTest?.tuningB || saved.settings.temperamentB;
+  ['#temperament-task','#temperament-a','#temperament-b'].forEach(id => { $(id).disabled = Boolean(state.temperamentTest); });
+  $('#temperament-test-intro').hidden = Boolean(state.temperamentTest);
+  $('#temperament-test-status').hidden = !state.temperamentTest;
+  $('#start-temperament-test').disabled = state.busy;
+  if (tuningMode && tuningTask === 'abx') {
+    const config = state.question?.levelConfig;
+    $('#level-description').textContent = `${getLevelDescription('temperaments',state.level).split(' · ')[0]} · ${config?.hold ?? ''}s notes · selected A/B pair. The key may change to keep the two samples distinct.`;
+    $('#space-shortcut-label').textContent = 'play / replay X';
+  }
+  if (state.temperamentTest) {
+    const test = state.temperamentTest;
+    $('#temperament-test-progress').textContent = test.complete ? '20 of 20 complete. Your result has been saved.' : state.answered ? `${test.trialCount} of 20 recorded. Continue when ready.` : `Trial ${test.trialCount+1} of 20. Compare A, B, and X.`;
+    $('#end-temperament-test').textContent = test.complete ? 'Return to practice' : 'End test';
+    $('#practice-mantra').innerHTML = 'Listen as often as you need.<br>Results after 20 trials.';
+  }
+}
+
+function startTemperamentTest() {
+  if (state.mode !== 'temperaments') return;
+  stopPlayback();
+  state.temperamentTest = createTemperamentTest({tuningA:saved.settings.temperamentA,tuningB:saved.settings.temperamentB,level:state.level,timbre:audio.timbre});
+  state.session = newSession();
+  newQuestion();
+  $('#temperament-play-a').focus();
+}
+
+function endTemperamentTest(showNotice=true) {
+  const unfinished = state.temperamentTest && !state.temperamentTest.complete;
+  stopPlayback(); state.temperamentTest = null; state.session = newSession(); updateTestControls();
+  if (unfinished && showNotice) notify('Test ended. Unfinished tests are not saved.');
+}
+
+function recordTemperamentTestAnswer(response) {
+  state.temperamentTest = answerTemperamentTest(state.temperamentTest,{answer:state.question.answer,response});
+  if (state.temperamentTest.complete) {
+    saved.temperamentTests.push(cleanTemperamentTest({...state.temperamentTest,timestamp:new Date().toISOString()}));
+    saved.temperamentTests = saved.temperamentTests.slice(-50); save();
+  }
+  $('#feedback').className = 'feedback recorded';
+  $('#feedback').innerHTML = '<h4>✓ Response recorded.</h4><p>Feedback and the chance comparison appear after trial 20. You may replay these samples before continuing.</p>';
+  $('#feedback').hidden = false; $('#reveal').hidden = true; $('#next').hidden = false;
+  $('#next').textContent = state.temperamentTest.complete ? 'View result →' : 'Next comparison →';
+  renderAnswer(); renderSession(); updatePlayback(); updateTestControls();
+  $('#next').focus({preventScroll:true});
+}
+
+function finishTemperamentTest() {
+  stopPlayback();
+  const test = state.temperamentTest;
+  $('#question-area').hidden = true; $('#set-summary').hidden = false;
+  $('#set-summary').innerHTML = renderTemperamentResult(test,summarizeTemperamentTest(test),TUNINGS);
+  $('#retake-temperament-test').focus({preventScroll:true});
 }
 
 function startPitchTest() {
@@ -265,6 +400,7 @@ function finishPitchTest() {
 function setMode(mode) {
   if (!modeIds.includes(mode)) return;
   if (state.test) endPitchTest();
+  if (state.temperamentTest) endTemperamentTest();
   stopPlayback();
   state.mode = mode;
   saved.settings.mode = mode;
@@ -276,7 +412,10 @@ function setMode(mode) {
 
 function newQuestion() {
   stopPlayback();
-  state.question = state.test ? generatePitchQuestion(state.test.cents) : generateQuestion(state.mode, state.level);
+  state.question = state.test ? generatePitchQuestion(state.test.cents)
+    : state.mode === 'temperaments' ? generateTemperamentQuestion(state.level,Math.random,{task:state.temperamentTest ? 'abx' : saved.settings.temperamentTask,
+      tuningA:state.temperamentTest?.tuningA || saved.settings.temperamentA,tuningB:state.temperamentTest?.tuningB || saved.settings.temperamentB})
+    : generateQuestion(state.mode, state.level);
   state.heard = false;
   state.answered = false;
   state.response = null;
@@ -284,6 +423,7 @@ function newQuestion() {
   state.rhythm = Array(state.question.rhythmSteps || 0).fill(false);
   state.ensemble = state.mode === 'ensemble' ? createEnsembleEditor(state.question) : null;
   state.replays = 0;
+  state.temperamentHeard = {A:false,B:false,X:false}; state.temperamentPlays = {A:0,B:0,X:0};
   const m = MODES.find(m => m.id === state.mode);
   const i = modeIds.indexOf(state.mode);
   $$('#mode-nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mode));
@@ -292,7 +432,7 @@ function newQuestion() {
   $('#module-number').textContent = String(i + 1).padStart(2,'0');
   $('#question-prompt').textContent = state.question.prompt;
   $('#question-context').textContent = state.question.context;
-  $('#question-counter').textContent = state.test ? `TEST ${String(state.test.trialCount + 1).padStart(2,'0')} / 24` : `QUESTION ${String(state.session.round + 1).padStart(2,'0')} / 10`;
+  $('#question-counter').textContent = state.test ? `TEST ${String(state.test.trialCount + 1).padStart(2,'0')} / 24` : state.temperamentTest ? `ABX ${String(state.temperamentTest.trialCount+1).padStart(2,'0')} / 20` : `QUESTION ${String(state.session.round + 1).padStart(2,'0')} / 10`;
   $('#reference').hidden = !state.question.reference?.length;
   $('#reference').textContent = state.mode === 'rhythm' ? 'Play count-in' : 'Play tonic';
   $('#lesson-title').textContent = lessonTitles[state.mode];
@@ -303,7 +443,7 @@ function newQuestion() {
   $('#feedback').hidden = true;
   $('#feedback').replaceChildren();
   $('#next').hidden = true;
-  $('#reveal').hidden = Boolean(state.test);
+  $('#reveal').hidden = Boolean(state.test || state.temperamentTest);
   updateTestControls();
   renderAnswer();
   renderSession();
@@ -320,8 +460,8 @@ function renderAnswer() {
     $('#answer-area').innerHTML = renderEnsembleEditor(q,state.ensemble,{disabled,busy:state.busy,answered:state.answered,revealed:state.answered && state.response === null});
     return;
   }
-  $('#answer-hint').textContent = state.answered ? state.test ? 'Response stored. Continue when ready.' : 'Compare what you heard.' : state.busy ? 'Listening…' : !state.heard ? 'Listen first, then choose.' : q.mode === 'melody' ? `${state.input.length} / ${q.inputLength} notes placed` : q.mode === 'rhythm' ? 'Light the cells where a sound lands.' : 'Use the buttons or number keys.';
-  $('#response-label').textContent = q.mode === 'melody' ? '02 / REBUILD THE PHRASE' : q.mode === 'rhythm' ? '02 / REBUILD THE RHYTHM' : q.mode === 'pitch' ? '02 / WHICH WAY DID IT MOVE?' : '02 / IDENTIFY THE SOUND';
+  $('#answer-hint').textContent = state.answered ? state.test || state.temperamentTest ? 'Response stored. Continue when ready.' : 'Compare what you heard.' : state.busy ? 'Listening…' : !state.heard ? q.mode === 'temperaments' && q.task === 'abx' ? 'Listen to A, B, and X first.' : 'Listen first, then choose.' : q.mode === 'melody' ? `${state.input.length} / ${q.inputLength} notes placed` : q.mode === 'rhythm' ? 'Light the cells where a sound lands.' : 'Use the buttons or number keys.';
+  $('#response-label').textContent = q.mode === 'melody' ? '02 / REBUILD THE PHRASE' : q.mode === 'rhythm' ? '02 / REBUILD THE RHYTHM' : q.mode === 'pitch' ? '02 / WHICH WAY DID IT MOVE?' : q.mode === 'temperaments' && q.task === 'abx' ? '02 / WHICH REFERENCE MATCHES X?' : '02 / IDENTIFY THE SOUND';
   if (q.mode === 'melody') {
     const shortcuts = 'ASDFGHJKL';
     $('#answer-area').innerHTML = `<div class="melody-slots">${Array.from({length:q.inputLength},(_,i) => `<button class="note-slot ${state.input[i] !== undefined ? 'is-filled' : ''}" data-slot="${i}" ${disabled || state.input[i] === undefined ? 'disabled' : ''} aria-label="${state.input[i] !== undefined ? `Remove note ${i+1}: ${escape(melodyLabel(state.input[i]))}` : `Note ${i+1}, empty`}"><small>${String(i+1).padStart(2,'0')}</small><span>${state.input[i] !== undefined ? escape(melodyLabel(state.input[i])) : '·'}</span></button>`).join('')}</div><div class="piano-keys">${q.keyboard.map((k,i) => `<button class="piano-key ${[1,3,6,8,10].includes(k.midi%12) ? 'black' : 'white'}" data-midi="${k.midi}" ${disabled || state.input.length >= q.inputLength ? 'disabled' : ''} aria-label="Add ${escape(k.label)}"><span class="key-degree">${escape(k.degree ?? '')}</span><span class="key-label">${escape(k.label)}</span>${shortcuts[i] ? `<kbd>${shortcuts[i]}</kbd>` : ''}</button>`).join('')}</div><div class="input-actions"><button class="secondary" data-action="undo" ${disabled || !state.input.length ? 'disabled' : ''}>Undo</button><button class="quiet" data-action="clear" ${disabled || !state.input.length ? 'disabled' : ''}>Clear</button><button class="secondary" data-action="play-mine" ${state.busy || !state.input.length ? 'disabled' : ''}>▶ My phrase</button><button class="primary" data-action="check" ${disabled || state.input.length !== q.inputLength ? 'disabled' : ''}>Check phrase →</button></div>`;
@@ -329,7 +469,7 @@ function renderAnswer() {
     const stepsPerBeat = q.rhythmSteps / 4;
     $('#answer-area').innerHTML = `<div class="rhythm-grid" style="--steps:${q.rhythmSteps}">${state.rhythm.map((hit,i) => `<button class="step ${i%stepsPerBeat === 0 ? 'downbeat' : ''} ${state.answered && q.answer[i] !== hit ? 'step-mismatch' : ''}" data-step="${i}" aria-pressed="${hit}" aria-label="${i%stepsPerBeat === 0 ? `Beat ${i/stepsPerBeat+1}` : `Subdivision ${i+1}`}: ${hit ? 'sound' : 'rest'}" ${disabled ? 'disabled' : ''}><span>${hit ? '●' : '·'}</span><small class="beat-label">${i%stepsPerBeat === 0 ? i/stepsPerBeat+1 : q.rhythmSteps === 8 ? '&' : ['','e','&','a'][i%4]}</small></button>`).join('')}</div><div class="input-actions"><button class="quiet" data-action="clear" ${disabled ? 'disabled' : ''}>Clear grid</button><button class="secondary" data-action="play-mine" ${state.busy || !state.heard ? 'disabled' : ''}>▶ My rhythm</button><button class="primary" data-action="check" ${disabled ? 'disabled' : ''}>Check rhythm →</button></div>`;
   } else {
-    $('#answer-area').innerHTML = `<div class="answer-grid ${q.choices.length > 6 ? 'many-choices' : ''}">${q.choices.map((c,i) => `<button class="answer-choice ${state.answered && !state.test && c.value === q.answer ? 'correct' : ''} ${state.answered && !state.test && c.value === state.response && c.value !== q.answer ? 'incorrect' : ''}" data-answer="${escape(c.value)}" ${disabled ? 'disabled' : ''}><kbd>${i < 9 ? i+1 : '·'}</kbd><span><span class="label">${escape(c.label)}</span>${c.sub ? `<small>${escape(c.sub)}</small>` : ''}</span>${state.answered && !state.test && c.value === q.answer ? '<span class="choice-mark" aria-label="Correct answer">✓</span>' : ''}</button>`).join('')}</div>`;
+    $('#answer-area').innerHTML = `<div class="answer-grid ${q.choices.length > 6 ? 'many-choices' : ''}">${q.choices.map((c,i) => `<button class="answer-choice ${state.answered && !state.test && !state.temperamentTest && c.value === q.answer ? 'correct' : ''} ${state.answered && !state.test && !state.temperamentTest && c.value === state.response && c.value !== q.answer ? 'incorrect' : ''}" data-answer="${escape(c.value)}" ${disabled ? 'disabled' : ''}><kbd>${i < 9 ? i+1 : '·'}</kbd><span><span class="label">${escape(c.label)}</span>${c.sub ? `<small>${escape(c.sub)}</small>` : ''}</span>${state.answered && !state.test && !state.temperamentTest && c.value === q.answer ? '<span class="choice-mark" aria-label="Correct answer">✓</span>' : ''}</button>`).join('')}</div>`;
   }
 }
 
@@ -356,13 +496,14 @@ function previewEnsemble(part='both', original=false) {
 }
 
 function submit(response, revealed=false) {
-  if (state.answered || (revealed && state.test) || (!revealed && (!state.heard || state.busy))) return;
+  if (state.answered || (revealed && (state.test || state.temperamentTest)) || (!revealed && (!state.heard || state.busy))) return;
   if (!revealed && state.mode === 'ensemble' && (!Array.isArray(response?.chords) || response.chords.length !== 4 || !response.chords.every(Boolean)
     || !Array.isArray(response?.melody) || response.melody.length !== state.question.inputLength || !response.melody.every(Number.isFinite))) return;
   stopPlayback();
   state.answered = true;
   state.response = response;
   if (state.test) { recordTestAnswer(response); return; }
+  if (state.temperamentTest) { recordTemperamentTestAnswer(response); return; }
   const q = state.question;
   const correct = !revealed && isCorrect(q, response);
   const outcome = revealed ? 'revealed' : correct ? 'correct' : 'incorrect';
@@ -375,6 +516,11 @@ function submit(response, revealed=false) {
   }
   state.session.results.push(outcome);
   const attempt = {mode:state.mode, level:state.level, outcome, timestamp:new Date().toISOString()};
+  if (q.mode === 'temperaments') {
+    attempt.task = q.task;
+    if (q.task === 'abx') { attempt.tuningA = q.tuningA; attempt.tuningB = q.tuningB; }
+    else attempt.alternatives = q.choices.length;
+  }
   const parts = q.mode === 'ensemble' && !revealed ? gradeEnsemble(q,response) : null;
   if (parts) attempt.parts = {chordsCorrect:parts.chordsCorrect,chordTotal:4,melodyCorrect:parts.melodyCorrect,melodyTotal:parts.melodyTotal};
   saved.attempts.push(attempt);
@@ -401,12 +547,22 @@ function submit(response, revealed=false) {
 
 function renderSession() {
   const s = state.session;
-  $('#score-title').textContent = state.test ? 'THIS TEST' : 'THIS SET';
-  $('#score-caption').textContent = state.test ? 'trials recorded' : 'correct / answered';
-  $('#accuracy-caption').textContent = state.test ? 'shown at the end' : 'first attempts only';
-  $('#streak-title').textContent = state.test ? 'VOICE' : 'STREAK';
-  $('#streak-caption').textContent = state.test ? 'constant during the test' : 'consecutive correct';
-  $('#goal-title').textContent = state.test ? 'ONE LISTEN PER TRIAL' : 'A LITTLE, OFTEN';
+  const testing = Boolean(state.test || state.temperamentTest);
+  $('#score-title').textContent = testing ? 'THIS TEST' : 'THIS SET';
+  $('#score-caption').textContent = testing ? 'trials recorded' : 'correct / answered';
+  $('#accuracy-caption').textContent = testing ? 'shown at the end' : 'first attempts only';
+  $('#streak-title').textContent = testing ? 'VOICE' : 'STREAK';
+  $('#streak-caption').textContent = testing ? 'constant during the test' : 'consecutive correct';
+  $('#goal-title').textContent = state.temperamentTest ? 'UNLIMITED SAMPLE REPLAYS' : state.test ? 'ONE LISTEN PER TRIAL' : 'A LITTLE, OFTEN';
+  if (state.temperamentTest) {
+    const test = state.temperamentTest;
+    $('#session-score').innerHTML = `${test.trialCount}<span> / 20</span>`;
+    $('#session-accuracy').textContent = '—'; $('#session-streak').textContent = test.timbre.toUpperCase();
+    $('#goal-dots').innerHTML = Array.from({length:20},(_,i) => `<span class="${i < test.trialCount ? 'done' : ''}" aria-hidden="true"></span>`).join('');
+    $('#goal-dots').setAttribute('aria-label',`${test.trialCount} of 20 trials completed`);
+    $('#goal-label').textContent = `${test.trialCount} / 20 recorded · results at the end`;
+    return;
+  }
   if (state.test) {
     $('#session-score').innerHTML = `${state.test.trialCount}<span> / 24</span>`;
     $('#session-accuracy').textContent = '—';
@@ -436,6 +592,7 @@ function finishSet() {
 function showPage(page) {
   if (!['practice','progress','guide'].includes(page)) page = 'practice';
   if (page !== 'practice' && state.test) { endPitchTest(); newQuestion(); }
+  if (page !== 'practice' && state.temperamentTest) { endTemperamentTest(); newQuestion(); }
   if (page !== state.page) { stopPlayback(); renderAnswer(); }
   state.page = page;
   ['practice','progress','guide'].forEach(p => { $(`#page-${p}`).hidden = p !== page; });
@@ -463,8 +620,13 @@ function ensembleProgress(attempts) {
 function renderProgress() {
   const mode = $('#progress-mode').value;
   const level = $('#progress-level').value;
+  const task = $('#progress-task').value;
+  $('#progress-task-label').hidden = mode !== 'temperaments';
   renderPitchHistory(mode);
-  const attempts = saved.attempts.filter(a => (mode === 'all' || a.mode === mode) && (level === 'all' || a.level === level));
+  $('#temperament-test-history').hidden = !['all','temperaments'].includes(mode);
+  $('#temperament-test-history').innerHTML = renderTemperamentHistory(saved.temperamentTests,TUNINGS,record => summarizeTemperamentTest(temperamentTestState(record)),levelTitle);
+  const attempts = saved.attempts.filter(a => (mode === 'all' || a.mode === mode) && (level === 'all' || a.level === level)
+    && (mode !== 'temperaments' || task === 'all' || a.task === task));
   const stats = metrics(attempts);
   const activeDays = new Set(attempts.map(a => new Date(a.timestamp).toLocaleDateString())).size;
   $('#progress-summary').innerHTML = [
@@ -484,7 +646,7 @@ function renderProgress() {
     const s = metrics(attempts.filter(a => a.mode === m.id));
     return `<tr><th scope="row">${escape(m.short || m.title)}</th><td>${s.answered}</td><td>${s.accuracy}</td><td>${s.revealed}</td></tr>`;
   }).join('');
-  const recent = attempts.slice(-20).reverse().map(a => `<tr><td>${escape(new Date(a.timestamp).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}<small>${escape(new Date(a.timestamp).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</small></td><td>${escape(MODES.find(m => m.id === a.mode).short || a.mode)}<small>${escape(levelTitle(a.level))}</small></td><td><span class="outcome ${a.outcome}">${a.outcome === 'correct' ? '✓ Correct' : a.outcome === 'revealed' ? '↗ Revealed' : '↳ Practice again'}</span></td></tr>`).join('');
+  const recent = attempts.slice(-20).reverse().map(a => `<tr><td>${escape(new Date(a.timestamp).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}<small>${escape(new Date(a.timestamp).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))}</small></td><td>${escape(MODES.find(m => m.id === a.mode).short || a.mode)}<small>${escape(levelTitle(a.level)+(a.mode === 'temperaments' ? a.task === 'abx' ? ' · ABX' : ' · Named tuning' : ''))}</small></td><td><span class="outcome ${a.outcome}">${a.outcome === 'correct' ? '✓ Correct' : a.outcome === 'revealed' ? '↗ Revealed' : '↳ Practice again'}</span></td></tr>`).join('');
   $('#progress-content').innerHTML = `<section class="progress-panel"><div class="section-heading"><h2>A rhythm of practice.</h2><span class="eyebrow">LAST 28 DAYS / QUESTIONS EXPLORED</span></div><div class="activity-chart">${days.map(d => `<div class="day-column"><div class="day-bar" style="--height:${Math.max(3, d.count/max*100)}%" title="${d.label}: ${d.count} questions" role="img" aria-label="${d.label}: ${d.count} questions"></div></div>`).join('')}</div><div class="chart-labels"><span>${days[0].label}</span><span>Today</span></div></section><div class="progress-tables"><section class="progress-panel"><h2>By module</h2><div class="table-scroll" tabindex="0" role="region" aria-label="Practice statistics by module"><table class="log-table"><thead><tr><th>Module</th><th>Answered</th><th>Accuracy</th><th>Revealed</th></tr></thead><tbody>${rows}</tbody></table></div></section><section class="progress-panel"><h2>Recent signals</h2><div class="table-scroll" tabindex="0" role="region" aria-label="Recent practice questions"><table class="log-table"><thead><tr><th>When</th><th>Exercise / level</th><th>Result</th></tr></thead><tbody>${recent}</tbody></table></div></section></div>`;
   $('#progress-content').insertAdjacentHTML('beforeend',ensembleProgress(attempts));
 }
@@ -510,10 +672,12 @@ const guideExamples = {
   scales:['A family of steps.','Major and natural minor are starting landmarks. Pentatonic scales use five notes. Modes such as Dorian and Mixolydian change the color of familiar step patterns. Later levels add more scales and shorter, ascending-only examples.','MAJOR: W W H W W W H'],
   rhythm:['Silence has a place.','After a four-beat count-in, hear one bar. Levels 1–5 use eight eighth-note cells: 1 & 2 & 3 & 4 &. Levels 6–8 use sixteen sixteenth-note cells: 1 e & a. Later patterns include syncopation and opening rests. Light each cell that has a hit.','● = SOUND · = REST'],
   pitch:['Notice a smaller shift.','Hear two tones and identify whether the second is higher or lower. One semitone is 100 cents. Fixed practice narrows the gap from 200 to 2 cents. The 24-trial adaptive test uses pure sine tones and one listen per trial. Two consecutive correct answers narrow its gap; a miss widens it. Its result is a practice estimate, with bounds when the test range is reached.','100 CENTS = 1 SEMITONE'],
-  ensemble:['Two parts. One picture.','After the tonic reference, hear four chords with a melody playing above them. Choose a root and type for each chord, then rebuild every melody note using the full chromatic octave C5–B5. Timing is given by the slots. Audition your arrangement or either of your parts; after checking, hear the original parts separately. Chords and melody get separate feedback, and the combined answer must match both exactly.','4 CHORDS + MELODY / ALL 12 NOTES']
+  ensemble:['Two parts. One picture.','After the tonic reference, hear four chords with a melody playing above them. Choose a root and type for each chord, then rebuild every melody note using the full chromatic octave C5–B5. Timing is given by the slots. Audition your arrangement or either of your parts; after checking, hear the original parts separately. Chords and melody get separate feedback, and the combined answer must match both exactly.','4 CHORDS + MELODY / ALL 12 NOTES'],
+  temperaments:['Same notes. Different agreements.','A temperament changes how the twelve notes divide the octave. In ABX, references A and B use different tunings; X exactly matches one. Hear all three before answering, and replay freely. For named practice, identify the unknown tuning. The 20-trial test fixes one pair, holds feedback until the end, and compares the score with 50% guessing. The eight reference presets below use precise, fixed pitch layouts with A4 = 440 Hz.','COMPARE A + B → MATCH X']
 };
 $('#guide-grid').innerHTML = MODES.map((m,i) => `<article class="guide-card"><span class="guide-number">${String(i+1).padStart(2,'0')} / ${escape(m.short || m.title)}</span><h3>${guideExamples[m.id][0]}</h3><p>${guideExamples[m.id][1]}</p><div class="guide-example">${guideExamples[m.id][2]}</div><details class="level-ladder"><summary>Explore the eight levels</summary>${LEVELS.map(l => `<div class="level-row"><span class="level-badge">${String(l.number).padStart(2,'0')}</span><span>${escape(getLevelDescription(m.id,l.id))}</span></div>`).join('')}</details><button class="text-button" data-mode="${m.id}">Practice this →</button></article>`).join('');
 $('#free-keyboard').innerHTML = `<div class="piano-keys">${Array.from({length:13},(_,i) => `<button class="piano-key ${[1,3,6,8,10].includes(i%12) ? 'black' : 'white'}" data-preview="${60+i}" aria-label="Play ${escape(noteName(60+i))}"><span class="key-label">${escape(noteName(60+i))}</span></button>`).join('')}</div>`;
+$('#temperament-guide-container').innerHTML = renderTemperamentGuide(TUNINGS);
 
 document.addEventListener('click', e => {
   const button = e.target.closest('button');
@@ -544,6 +708,13 @@ document.addEventListener('click', e => {
     if (!events.length) { notify('This grid is all rests. Add a hit to hear your rhythm.'); return; }
     performAudio(combinedEvents(q.reference, fullBar(events, q), q.mode === 'rhythm' ? 0 : 0.45), {message:'PLAYING YOUR ANSWER'});
   } else if (button.id === 'play') playSignal();
+  else if (button.id === 'temperament-play-a') playTemperamentReference('A');
+  else if (button.id === 'temperament-play-b') playTemperamentReference('B');
+  else if (button.id === 'start-temperament-test' || button.id === 'retake-temperament-test') startTemperamentTest();
+  else if (button.id === 'end-temperament-test' || button.id === 'temperament-return-practice') { endTemperamentTest(); newQuestion(); $('#temperament-play-a').focus(); }
+  else if (button.id === 'temperament-reference-play') {
+    performAudio(applyTuning(temperamentReferenceScore(),$('#temperament-reference-tuning').value),{message:'TUNING REFERENCE'});
+  }
   else if (button.id === 'ensemble-check') submit(ensembleResponse(state.question,state.ensemble));
   else if (button.id === 'ensemble-undo-note') { undoEnsembleNote(state.ensemble); renderAnswer(); }
   else if (button.id === 'ensemble-clear-notes') { state.ensemble.melody.fill(null); state.ensemble.noteHistory = []; state.ensemble.activeNote = 0; renderAnswer(); }
@@ -566,7 +737,8 @@ document.addEventListener('click', e => {
   else if (button.id === 'reveal') submit(null,true);
   else if (button.id === 'next') {
     if (state.test?.complete) finishPitchTest();
-    else if (!state.test && state.session.round >= 10) finishSet();
+    else if (state.temperamentTest?.complete) finishTemperamentTest();
+    else if (!state.test && !state.temperamentTest && state.session.round >= 10) finishSet();
     else { newQuestion(); $('#play').focus(); }
   } else if (button.id === 'another-set') { state.session = newSession(); newQuestion(); $('#play').focus(); }
   else if (button.id === 'export-progress') {
@@ -587,6 +759,7 @@ document.addEventListener('change',e => {
 });
 
 $('#level').addEventListener('change', () => {
+  if (state.temperamentTest) { $('#level').value = state.level; return; }
   if (state.test) endPitchTest();
   state.level = $('#level').value;
   saved.settings.level = state.level;
@@ -594,24 +767,43 @@ $('#level').addEventListener('change', () => {
   save(); newQuestion();
 });
 $('#timbre').addEventListener('change', () => {
+  if (state.temperamentTest) { $('#timbre').value = audio.timbre; return; }
   stopPlayback(); audio.timbre = $('#timbre').value;
-  saved.settings.timbre = audio.timbre; save(); renderAnswer();
+  if (state.mode === 'temperaments') {
+    state.temperamentHeard = {A:false,B:false,X:false}; state.temperamentPlays = {A:0,B:0,X:0}; state.heard = false; state.replays = 0;
+  }
+  saved.settings.timbre = audio.timbre; save(); updatePlayback(); renderAnswer();
 });
+['#temperament-task','#temperament-a','#temperament-b'].forEach(id => $(id).addEventListener('change',e => {
+  if (state.temperamentTest) { updateTestControls(); return; }
+  const a = $('#temperament-a').value, b = $('#temperament-b').value;
+  if (a === b) {
+    e.target.value = e.target.id === 'temperament-a' ? saved.settings.temperamentA : saved.settings.temperamentB;
+    notify('Choose two different tunings for A and B.'); return;
+  }
+  stopPlayback(); saved.settings.temperamentTask = $('#temperament-task').value;
+  saved.settings.temperamentA = a; saved.settings.temperamentB = b;
+  state.session = newSession(); save(); newQuestion();
+}));
 $('#volume').addEventListener('input', () => { audio.volume = Number($('#volume').value)/100; saved.settings.volume = audio.volume; save(); });
 $('#progress-mode').addEventListener('change', renderProgress);
 $('#progress-level').addEventListener('change', renderProgress);
+$('#progress-task').addEventListener('change',renderProgress);
 $('#import-progress').addEventListener('change', async e => {
   const file = e.target.files[0]; if (!file) return;
   try {
     if (file.size > 1_500_000) throw new Error('This file is too large.');
     const data = JSON.parse(await file.text());
     if (data.version !== 1 || !Array.isArray(data.attempts) || data.attempts.length > 2000 || !data.attempts.every(validAttempt)
-      || (data.pitchTests !== undefined && (!Array.isArray(data.pitchTests) || data.pitchTests.length > 50 || !data.pitchTests.every(validPitchTest)))) throw new Error('Choose an Overtone version 1 progress backup.');
+      || (data.pitchTests !== undefined && (!Array.isArray(data.pitchTests) || data.pitchTests.length > 50 || !data.pitchTests.every(validPitchTest)))
+      || (data.temperamentTests !== undefined && (!Array.isArray(data.temperamentTests) || data.temperamentTests.length > 50 || !data.temperamentTests.every(validTemperamentTest)))) throw new Error('Choose an Overtone version 1 progress backup.');
     // Merge by exact record identity so importing the same backup twice is harmless.
     const map = new Map([...saved.attempts,...data.attempts.map(cleanAttempt)].map(a => [JSON.stringify(a),a]));
     saved.attempts = [...map.values()].sort((a,b) => Date.parse(a.timestamp)-Date.parse(b.timestamp)).slice(-2000);
     const tests = new Map([...saved.pitchTests,...(data.pitchTests || []).map(cleanPitchTest)].map(t => [JSON.stringify(t),t]));
     saved.pitchTests = [...tests.values()].sort((a,b) => Date.parse(a.timestamp)-Date.parse(b.timestamp)).slice(-50);
+    const temperamentTests = new Map([...saved.temperamentTests,...(data.temperamentTests || []).map(cleanTemperamentTest)].map(t => [JSON.stringify(t),t]));
+    saved.temperamentTests = [...temperamentTests.values()].sort((a,b) => Date.parse(a.timestamp)-Date.parse(b.timestamp)).slice(-50);
     save(); renderProgress(); notify('Backup imported. Existing practice has been kept.');
   } catch (error) { notify(`Import failed. ${error.message}`); }
   e.target.value = '';

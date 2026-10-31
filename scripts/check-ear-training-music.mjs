@@ -20,14 +20,14 @@ assert.throws(() => generateQuestion('intervals', 'missing'), RangeError);
 assert.deepEqual(LEVELS.map(l => l.id), ['level-1', 'level-2', 'level-3', 'level-4', 'level-5', 'level-6', 'level-7', 'level-8']);
 assert.deepEqual(LEVELS.map(l => l.number), [1, 2, 3, 4, 5, 6, 7, 8]);
 assert.deepEqual(LEVEL_MIGRATION, { beginner: 'level-3', intermediate: 'level-5', advanced: 'level-7' });
-assert.deepEqual(MODES.map(m => m.id), ['intervals', 'chords', 'progressions', 'melody', 'scales', 'rhythm', 'pitch', 'ensemble']);
+assert.deepEqual(MODES.map(m => m.id), ['intervals', 'chords', 'progressions', 'melody', 'scales', 'rhythm', 'pitch', 'ensemble', 'temperaments']);
 
 // The full content fingerprint intentionally changes for correct interval note
 // spellings. The independent sound/answer baseline was captured from git HEAD
 // e17e782 before this change and must remain identical, including RNG behavior.
 const legacyQuestions = [];
 const legacyRng = seeded(94571);
-for (const mode of MODES.filter(m => !['pitch','ensemble'].includes(m.id))) {
+for (const mode of MODES.filter(m => !['pitch','ensemble','temperaments'].includes(m.id))) {
   for (const level of LEGACY_LEVELS) {
     for (let i = 0; i < 40; i++) legacyQuestions.push(generateQuestion(mode.id, level.id, legacyRng));
   }
@@ -98,13 +98,13 @@ const coverage = Object.fromEntries(MODES.map(m => [m.id, new Set()]));
 const expectedChoices = {
   intervals: [2, 3, 5, 7, 12, 12, 12, 12], chords: [2, 3, 4, 6, 8, 10, 10, 10],
   progressions: [2, 3, 4, 5, 6, 7, 8, 8], scales: [2, 3, 4, 5, 6, 7, 8, 9],
-  pitch: [2, 2, 2, 2, 2, 2, 2, 2]
+  pitch: [2, 2, 2, 2, 2, 2, 2, 2], temperaments:[2,2,2,2,2,2,2,2]
 };
 const pitchDifferences = [200, 100, 50, 25, 15, 10, 5, 2];
 const directionCoverage = new Map();
 let checked = 0;
 for (const { id: mode } of MODES) {
-  const levels = ['pitch','ensemble'].includes(mode) ? LEVELS : [...LEGACY_LEVELS, ...LEVELS];
+  const levels = ['pitch','ensemble','temperaments'].includes(mode) ? LEVELS : [...LEGACY_LEVELS, ...LEVELS];
   for (const { id: level } of levels) {
     const rng = seeded(1);
     const levelIndex = LEVELS.findIndex(l => l.id === level);
@@ -122,8 +122,8 @@ for (const { id: mode } of MODES) {
         assert.ok(Number.isFinite(e.at) && e.at >= 0);
         assert.ok(Number.isFinite(e.duration) && e.duration > 0);
         assert.ok(e.notes.length > 0);
-        assert.ok(e.notes.every(n => Number.isFinite(n) && n >= 36 && n <= 96));
-        if (mode !== 'pitch') assert.ok(e.notes.every(Number.isInteger));
+        assert.ok(e.notes.every(n => Number.isFinite(n) && (mode === 'temperaments' ? Math.round(n) : n) >= 36 && (mode === 'temperaments' ? Math.round(n) : n) <= 96));
+        if (!['pitch','temperaments'].includes(mode)) assert.ok(e.notes.every(Number.isInteger));
       }
       if (q.choices.length) {
         assert.equal(new Set(q.choices.map(c => c.value)).size, q.choices.length);
@@ -243,4 +243,4 @@ for (const cents of [-10, 0, 1, 2, 2.5, 5, 25, 200, 999, undefined, Infinity, 'b
     assert.ok(Math.abs(Math.abs(q.events[1].notes[0] - q.events[0].notes[0]) * 100 - q.pitchCents) < 1e-9);
   }
 }
-console.log(`PASS: ${checked} seeded questions across 64 graduated configurations and 18 legacy configurations; ${spellingCases} exhaustive interval spellings, same-root third comparisons, unchanged legacy sound/answer fingerprint, independent musical signatures, fractional-cent pitch accuracy, ranges, answer pools, rhythm timing, and exact reconstruction.`);
+console.log(`PASS: ${checked} seeded questions across 72 graduated configurations and 18 legacy configurations; ${spellingCases} exhaustive interval spellings, same-root third comparisons, unchanged legacy sound/answer fingerprint, independent musical signatures, fractional-cent pitch accuracy, ranges, answer pools, rhythm timing, and exact reconstruction.`);
