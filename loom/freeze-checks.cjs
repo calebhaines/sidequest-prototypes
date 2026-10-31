@@ -30,7 +30,10 @@ function load(ref = 'working', instrument = false) {
     const local = path.join(directory, file.startsWith('loom/') ? file.slice(5) : file);
     return fs.readFileSync(fs.existsSync(local) ? local : path.join(root, file), 'utf8');
   };
-  for (const file of modules) {
+  // The working release has an additional effect; historical comparisons keep
+  // their own dependency graph and must never read files absent at that commit.
+  const loadedModules = ref === 'working' ? modules.flatMap(file => file === 'loom/effects-catalog.js' ? ['loom/lofi-catalog.js', file] : file === 'loom/effects.js' ? ['loom/lofi-dsp.js', file] : [file]) : modules;
+  for (const file of loadedModules) {
     Function('window', 'globalThis', 'crypto', 'atob', 'btoa', source(file) + '\n//# sourceURL=freeze-checks-' + path.basename(file))(scope, scope, scope.crypto, scope.atob, scope.btoa);
     if (instrument && file === 'loom/effects.js') {
       const factory = scope.createLoomEffectsDSP;
@@ -374,9 +377,9 @@ async function run() {
     }
     evidence.wavLsbErrors = errors; await engine.dispose();
   });
-  if (process.argv.includes('--matrix')) await check('Every effect family and every analog amp/compressor/preamp/tape/distortion model survives freezing', () => {
+  if (process.argv.includes('--matrix')) await check('Every effect family and every amp/compressor/preamp/tape/distortion/microphone model survives freezing', () => {
     const cases = release.scope.LoomEffectsCatalog.map(definition => ({ type: definition.id, params: {} }));
-    for (const type of ['velvet', 'broiler', 'saute', 'preserve', 'cinder']) {
+    for (const type of ['velvet', 'broiler', 'saute', 'preserve', 'cinder', 'tinpan']) {
       const definition = release.scope.LoomEffectsCatalog.find(item => item.id === type), parameter = definition.params.find(item => item.key === (type === 'cinder' ? 'shape' : 'model'));
       if (parameter?.options) for (const option of parameter.options) cases.push({ type, params: { [parameter.key]: option.value } });
     }

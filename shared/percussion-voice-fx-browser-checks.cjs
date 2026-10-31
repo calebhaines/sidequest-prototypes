@@ -15,7 +15,7 @@ const root = path.resolve(__dirname, '..');
 const artifacts = process.env.PERCUSSION_VOICE_FX_QA_DIR || '/tmp/percussion-voice-fx-qa';
 const apps = (process.env.PERCUSSION_VOICE_FX_APPS || 'grain,tine,form,batter').split(',');
 const facades = { grain: 'GrainApp', tine: 'TineApp', form: 'FormApp', batter: 'BatterApp' };
-const effectFiles = ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js'];
+const effectFiles = ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','lofi-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','lofi-dsp.js','effects.js'];
 const engineFiles = ['service-schema.js','schema.js','audio-engine.js','host-bridge.js','instrument-host.js','note-renderer.js','note-playback.js'];
 const passed = [];
 function check(condition, message) { assert(condition, message); }
@@ -86,10 +86,10 @@ async function bridgeChecks(browser,url) {
       const delay=q.fx('parallax',{clock:'free',time:120,feedback:.6,damping:18000,spread:0,mix:1}),impulse={left:new Float32Array(48000),right:new Float32Array(48000)};impulse.left[2400]=.2;impulse.left[7200]=.1;impulse.right.set(impulse.left);const echoes=await q.renderBank([[delay,null]],[impulse]);result.delay={early:q.stats(echoes.left,0,8150),first:q.stats(echoes.left,8150,8250),later:q.stats(echoes.left,14000,30000),all:q.stats(echoes.left)};
       return result;
     });
-    assert.equal(report.empty.max,0,'No-FX bank returns exact native input');assert.equal(report.effects.length,16);
+    assert.equal(report.empty.max,0,'No-FX bank returns exact native input');assert.equal(report.effects.length,17);
     for(const effect of report.effects){assert(effect.stats.peak>1e-5,effect.id+' must render');assert(effect.changed>1e-6,effect.id+' fixture must audibly process');assert(effect.parity.max<2e-6&&effect.right.max<2e-6,effect.id+' Worklet must match canonical DSP '+JSON.stringify(effect));}
     assert(report.order.rms>1e-4,'Serial effect order changes actual audio');assert(report.isolation.max<2e-6,'One muted voice cannot affect another');assert(report.delay.early.peak<1e-6,'Delay cannot print audio before its due time');assert(report.delay.first.peak>.05&&report.delay.later.peak>.01,'Persistent rack retains both delayed hits and feedback tails');assert.deepEqual(errors,[]);
-    passed.push('Shared OfflineAudioWorklet: all16canonical effects, serial order, stereo parity, zero-latency empty path, independent voices and persistent tails');console.log('PASS bridge '+JSON.stringify(report));
+    passed.push('Shared OfflineAudioWorklet: all17canonical effects, serial order, stereo parity, zero-latency empty path, independent voices and persistent tails');console.log('PASS bridge '+JSON.stringify(report));
   }finally{await page.close();}
 }
 async function lifecycleChecks(browser,url){

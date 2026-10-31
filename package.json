@@ -108,7 +108,9 @@
     "check:brine": "node brine/checks.cjs",
     "check:brine-browser": "node brine/browser-checks.cjs",
     "check:freeze": "node loom/freeze-checks.cjs",
-    "check:freeze-browser": "node loom/freeze-browser-checks.cjs"
+    "check:freeze-browser": "node loom/freeze-browser-checks.cjs",
+    "check:lofi": "node loom/lofi-checks.cjs && node loom/lofi-project-checks.cjs",
+    "check:lofi-browser": "node loom/lofi-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
