@@ -106,7 +106,9 @@
     "check:heirloom-browser": "node heirloom/browser-checks.cjs",
     "brine:build": "python3 brine/build.py",
     "check:brine": "node brine/checks.cjs",
-    "check:brine-browser": "node brine/browser-checks.cjs"
+    "check:brine-browser": "node brine/browser-checks.cjs",
+    "check:freeze": "node loom/freeze-checks.cjs",
+    "check:freeze-browser": "node loom/freeze-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

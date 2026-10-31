@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
 INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine']
-SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'service-schema.js', 'lfo.js', 'schema.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'lfo-ui.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'cpu-ui.js', 'multiband-ui.js', 'app.js']
+SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'service-schema.js', 'lfo.js', 'schema.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'lfo-ui.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'cpu-ui.js', 'multiband-ui.js', 'freeze.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -39,7 +39,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'lfo.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text() + '\n' + (ROOT / 'broiler.css').read_text() + '\n' + (ROOT / 'compressor.css').read_text() + '\n' + (ROOT / 'buses.css').read_text() + '\n' + (ROOT / 'preamp.css').read_text() + '\n' + (ROOT / 'track-eq.css').read_text() + '\n' + (ROOT / 'tape.css').read_text() + '\n' + (ROOT / 'cpu.css').read_text() + '\n' + (ROOT / 'multiband.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'lfo.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text() + '\n' + (ROOT / 'broiler.css').read_text() + '\n' + (ROOT / 'compressor.css').read_text() + '\n' + (ROOT / 'buses.css').read_text() + '\n' + (ROOT / 'preamp.css').read_text() + '\n' + (ROOT / 'track-eq.css').read_text() + '\n' + (ROOT / 'tape.css').read_text() + '\n' + (ROOT / 'cpu.css').read_text() + '\n' + (ROOT / 'multiband.css').read_text() + '\n' + (ROOT / 'freeze.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -77,6 +77,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['cpu.css', 'CPU-GUIDE.md', 'cpu-checks.cjs', 'cpu-browser-checks.cjs']
     sources += ['multiband.css', 'CHAR-GUIDE.md', 'MIX-UPGRADE-GUIDE.md', 'char-checks.cjs', 'track-eq-sweep-checks.cjs', 'multiband-checks.cjs', 'mix-upgrade-checks.cjs', 'mix-upgrade-browser-checks.cjs']
     sources += ['PERFORMANCE-GUIDE.md', 'performance-regression-checks.cjs', 'performance-legacy-fixtures.json', 'effects-performance-checks.cjs', 'effects-performance-fixtures.json', 'ui-performance-checks.cjs']
+    sources += ['freeze.css', 'FREEZE-GUIDE.md', 'freeze-checks.cjs', 'freeze-browser-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.
