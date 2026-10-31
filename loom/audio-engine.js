@@ -2,9 +2,11 @@
 (() => {
   'use strict';
 
-  function createLoomEngineDSP(effectsFactory, lfoFactory) {
+  function createLoomEngineDSP(effectsFactory, lfoFactory, cpuFactory) {
     const clamp = (v, lo, hi, fallback = lo) => Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
     const effects = effectsFactory();
+    const makeCPU = typeof cpuFactory === 'function' ? cpuFactory : typeof globalThis.createLoomCPUProfiler === 'function' ? globalThis.createLoomCPUProfiler : null;
+    const cpuDSP = makeCPU ? makeCPU() : null;
     const makeLFO = typeof lfoFactory === 'function' ? lfoFactory : typeof globalThis.createLoomLFODSP === 'function' ? globalThis.createLoomLFODSP : null;
     const lfoDSP = makeLFO ? makeLFO() : null;
     const serviceGeometry = (options, beat) => {
@@ -183,6 +185,8 @@
       constructor(state, assets, sampleRate = 48000, options = {}) {
         this.sampleRate = clamp(sampleRate, 8000, 192000, 48000);
         this.options = options;
+        this.cpuProfiler = null; this._cpuExternal = false; this._cpuSampled = false; this._cpuKeys = null;
+        this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 };
         this.beat = 0;
         this.playing = false;
         this.ended = false;
@@ -233,6 +237,56 @@
         this.setState(state);
         this.meters = { beat: 0, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() };
       }
+      setDiagnostics(value = {}) {
+        this._diagnosticsConfig = cpuDSP ? cpuDSP.normalizeConfig(value, this._diagnosticsConfig) : { ...this._diagnosticsConfig, ...value, enabled: value.enabled === true };
+        if (cpuDSP && this._diagnosticsConfig.enabled && !this.cpuProfiler) this.cpuProfiler = new cpuDSP.Runtime(this.sampleRate, { clock: this.options.diagnosticsClock });
+        if (this.cpuProfiler) {
+          this.cpuProfiler.configure(this._diagnosticsConfig);
+          if (this._diagnosticsConfig.enabled) this._syncDiagnosticsTopology();
+        }
+        return this.getDiagnostics();
+      }
+      resetDiagnostics(revision = this._diagnosticsConfig.revision) {
+        this._diagnosticsConfig.revision = revision;
+        if (this.cpuProfiler) { this.cpuProfiler.reset(); this.cpuProfiler.configure(this._diagnosticsConfig); }
+        return this.getDiagnostics();
+      }
+      getDiagnostics() {
+        if (this.cpuProfiler) return this.cpuProfiler.getSnapshot();
+        return { ...this._diagnosticsConfig, status: this._diagnosticsConfig.enabled ? 'unsupported' : 'idle', available: false, clock: { name: 'unavailable', resolutionMs: null, coarse: false }, sampleRate: this.sampleRate, blockFrames: 0, budgetMs: 0, processedBlocks: 0, sampledBlocks: 0, sampledFrames: 0, coverage: 0, elapsedSeconds: 0, total: { samples: 0, meanMs: null, p95Ms: null, maxMs: null, meanPercent: null, p95Percent: null, maxPercent: null, overBudget: 0, zeroSamples: 0 }, rows: [], timerReads: 0, invalidTimings: 0 };
+      }
+      _syncDiagnosticsTopology() {
+        if (!this.cpuProfiler?.enabled) return;
+        const owners = [...this.tracks, ...this.returns, this.master], racks = [...this.slots, ...this.returnSlots, this.masterSlots], rows = [];
+        this._cpuKeys = owners.map((owner, index) => {
+          const ownerId = index < 8 ? 'track-' + (index + 1) : index < 10 ? 'return-' + (index - 7) : 'master';
+          const label = owner.name || (index < 8 ? 'Track ' + (index + 1) : index < 10 ? 'Return ' + (index === 8 ? 'A' : 'B') : 'Master');
+          const identity = JSON.stringify([owner.effects, owner.eq]);
+          rows.push({ id: ownerId, kind: 'owner', ownerId, label, identity, active: true });
+          for (let slot = 0; slot < 4; slot++) {
+            const effect = owner.effects?.[slot], dsp = racks[index][slot], id = ownerId + ':fx:' + slot;
+            if (dsp) dsp.diagnosticsId = id;
+            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify(effect || null), active: !!effect, bypassed: effect?.params?.bypass === true || dsp?.bypass === true });
+          }
+          const mix = ownerId + ':mix', eq = ownerId + ':eq';
+          rows.push({ id: mix, kind: 'mix', ownerId, label: index === 10 ? 'Output, metronome and limiter' : 'Pan, level, sends and metering', active: true });
+          if (index < 8) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: JSON.stringify(owner.eq), active: true });
+          return { owner: ownerId, mix, eq };
+        });
+        rows.push(...[
+          ['engine', 'GALLEY engine including inserts'], ['clips', 'Clip, input and timeline preparation'], ['modulation', 'LFO modulation'], ['recorder', 'Recording and input history'], ['events', 'Transport and SERVICE events'], ['meters', 'Live meter reports'], ['report', 'Diagnostics report preparation']
+        ].map(([id, label]) => ({ id, kind: 'stage', label, active: true })));
+        this.cpuProfiler.setTopology(rows);
+      }
+      beginDiagnostics(frames) {
+        const profiler = this.cpuProfiler;
+        if (!profiler?.enabled) return false;
+        this._cpuExternal = true; this._cpuSampled = profiler.begin(frames); return true;
+      }
+      endDiagnostics() { if (this.cpuProfiler?.enabled) this.cpuProfiler.finish(); this._cpuExternal = this._cpuSampled = false; }
+      diagnosticsStart(id) { return this._cpuSampled ? this.cpuProfiler.start(id) : NaN; }
+      diagnosticsEnd(id, stamp) { if (this._cpuSampled) this.cpuProfiler.endStage(id, stamp); }
+      diagnosticsReportDue() { return this.cpuProfiler?.enabled && this.cpuProfiler.consumeReportDue(); }
       setAssets(assets) {
         this.assets = assets instanceof Map ? assets : new Map(Object.entries(assets || {}));
         if (this.tracks) this._compileClips();
@@ -284,6 +338,7 @@
           this.dryGain = this.options.returnId != null || this.returns.some(bus => bus.solo === true) ? 0 : 1;
           this.routingInitialized = true;
         }
+        if (this.cpuProfiler?.enabled) this._syncDiagnosticsTopology();
       }
       _compileAutomation(owner) {
         const result = { level: null, pan: null, sends: [null, null], eq: { low: null, lowMid: null, highMid: null, high: null }, effects: Array.from({ length: 4 }, () => []) };
@@ -318,6 +373,7 @@
         for (let slotIndex = 0; slotIndex < 4; slotIndex++) {
           const slot = row[slotIndex];
           if (!slot || slot.bypass) continue;
+          const cpu = this._cpuSampled ? this.cpuProfiler : null, cpuStart = cpu ? cpu.start(slot.diagnosticsId) : NaN;
           const lanes = automation.effects[slotIndex], modulated = this.modulation?.effectKeys(owner.id, slotIndex) || [];
           if (!lanes.length && !modulated.length) slot.dsp.process(left, right, { tempo: this.tempo, beat: blockBeat, playing: blockPlaying });
           else for (let start = 0; start < n;) {
@@ -333,6 +389,7 @@
             slot.dsp.process(left.subarray(start, start + length), right.subarray(start, start + length), { tempo: this.tempo, beat, playing: this.timelinePlaying[start] === 1 && this.timelineCountIn[start] === 0 });
             start += length;
           }
+          if (cpu) cpu.endStage(slot.diagnosticsId, cpuStart);
         }
       }
       _processTrackEq(index, left, right) {
@@ -545,6 +602,15 @@
         });
       }
       processBlock(left, right, inputs = []) {
+        const profiler = this.cpuProfiler;
+        if (!profiler?.enabled) return this._renderBlock(left, right, inputs);
+        const own = !this._cpuExternal;
+        if (own) this.beginDiagnostics(Math.min(left.length, right.length));
+        const stamp = this._cpuSampled ? profiler.start('engine') : NaN;
+        try { return this._renderBlock(left, right, inputs); }
+        finally { if (this._cpuSampled) profiler.endStage('engine', stamp); if (own) this.endDiagnostics(); }
+      }
+      _renderBlock(left, right, inputs = []) {
         if (!this.service) return this._processBlock(left, right, inputs);
         const n = Math.min(left.length, right.length), advance = this.tempo / (60 * this.sampleRate);
         let at = 0, meters;
@@ -559,10 +625,11 @@
       }
       _processBlock(left, right, inputs = []) {
         const n = Math.min(left.length, right.length), sr = this.sampleRate;
+        const cpu = this._cpuSampled ? this.cpuProfiler : null, clipsStart = cpu ? cpu.start('clips') : NaN;
         left.fill(0); right.fill(0);
         const microphone = inputs[8]; this.microphonePeak = 0;
         if (microphone?.[0]) for (let f = 0; f < n; f++) this.microphonePeak = Math.max(this.microphonePeak, Math.abs(microphone[0][f] || 0), Math.abs((microphone[1] || microphone[0])[f] || 0));
-        if (this.silent) { this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: 8 }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() }; return this.meters; }
+        if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: 8 }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() }; return this.meters; }
         if (!this.buffers.length || this.buffers[0][0].length !== n) this.buffers = Array.from({ length: 8 }, () => [new Float32Array(n), new Float32Array(n)]);
         if (!this.returnBuffers.length || this.returnBuffers[0][0].length !== n) this.returnBuffers = Array.from({ length: 2 }, () => [new Float32Array(n), new Float32Array(n)]);
         else for (const pair of this.returnBuffers) { pair[0].fill(0); pair[1].fill(0); }
@@ -657,10 +724,13 @@
           const pair = this.buffers[this.microphoneMonitor.track];
           if (pair) for (let f = 0; f < n; f++) { pair[0][f] += Number.isFinite(microphone[0][f]) ? microphone[0][f] : 0; const v = (microphone[1] || microphone[0])[f]; pair[1][f] += Number.isFinite(v) ? v : 0; }
         }
+        if (cpu) cpu.endStage('clips', clipsStart);
+        const modulationStart = cpu ? cpu.start('modulation') : NaN;
         if (this.modulation?.active) this.modulation.render(this.timelineBeats, this.timelinePlaying, this.timelineCountIn, this.sampleClock, this.tempo, this.service ? (ownerId, target) => {
           const index = indexFor(ownerId, this.tracks); if (index < 0 || !this.service.performance.drops[index]) return 1;
           return target === 'level' || /^send:[01]$/.test(target) && this.tracks[index].sendPre?.[Number(target.slice(5))] === true ? 0 : 1;
         } : null);
+        if (cpu) cpu.endStage('modulation', modulationStart);
         const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
         if (!this.dryMixGains || this.dryMixGains.length !== n) this.dryMixGains = new Float64Array(n);
         const dryGoal = dryAudible ? 1 : 0;
@@ -670,9 +740,12 @@
           this.dryMixGains[frame] = this.dryGain;
         }
         for (let t = 0; t < 8; t++) {
-          const [l, r] = this.buffers[t], track = this.tracks[t];
+          const [l, r] = this.buffers[t], track = this.tracks[t], keys = cpu ? this._cpuKeys[t] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
           this._processRack(track, this.slots[t], this.automation[t], l, r, blockBeat, blockPlaying);
+          const eqStart = cpu ? cpu.start(keys.eq) : NaN;
           this._processTrackEq(t, l, r);
+          if (cpu) cpu.endStage(keys.eq, eqStart);
+          const mixStart = cpu ? cpu.start(keys.mix) : NaN;
           const gain = this.gains[t]; let peak = 0, powerL = 0, powerR = 0;
           for (let f = 0; f < n; f++) {
             const beat = this.timelineBeats[f], pan = clamp(this._lfoValue(track.id, 'pan', f, automationValue(this.automation[t].pan, beat, track.pan)), -1, 1, 0), level = audible[t] ? clamp(this._lfoValue(track.id, 'level', f, automationValue(this.automation[t].level, beat, track.level)), 0, 1.5, .8) : 0;
@@ -697,11 +770,13 @@
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
           }
           trackMeters.push({ peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) });
+          if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         const returnMeters = [];
         for (let bus = 0; bus < 2; bus++) {
-          const owner = this.returns[bus], [l, r] = this.returnBuffers[bus], gain = this.returnGains[bus];
+          const owner = this.returns[bus], [l, r] = this.returnBuffers[bus], gain = this.returnGains[bus], keys = cpu ? this._cpuKeys[8 + bus] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
           if (!trackStem) this._processRack(owner, this.returnSlots[bus], this.returnAutomation[bus], l, r, blockBeat, blockPlaying);
+          const mixStart = cpu ? cpu.start(keys.mix) : NaN;
           const audibleReturn = !trackStem && owner.mute !== true && (!anyReturnSolo || owner.solo === true) && (!returnStem || selectedReturn === bus);
           let peak = 0, powerL = 0, powerR = 0;
           for (let frame = 0; frame < n; frame++) {
@@ -714,8 +789,11 @@
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a*a; powerR += b*b;
           }
           returnMeters.push({ peak, rms: Math.sqrt((powerL + powerR)/(2*n)), rmsLeft: Math.sqrt(powerL/n), rmsRight: Math.sqrt(powerR/n) });
+          if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
+        const masterKeys = cpu ? this._cpuKeys[10] : null, masterStart = cpu ? cpu.start(masterKeys.owner) : NaN;
         if (!trackStem && !returnStem) this._processRack(this.master, this.masterSlots, this.masterAutomation, left, right, blockBeat, blockPlaying);
+        const masterMixStart = cpu ? cpu.start(masterKeys.mix) : NaN;
         const masterLevel = clamp(this.state.master?.level, 0, 1.5, .8), metronome = this.options.includeMetronome && this.state.master?.metronome && blockPlaying;
         let peak = 0, powerL = 0, powerR = 0;
         for (let f = 0; f < n; f++) {
@@ -742,6 +820,7 @@
           this.lastOutput[0] = a; this.lastOutput[1] = b;
           left[f] = a; right[f] = b; peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
+        if (cpu) { cpu.endStage(masterKeys.mix, masterMixStart); cpu.endStage(masterKeys.owner, masterStart); }
         this.sampleClock += n;
         this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, returns: returnMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
         return this.meters;
@@ -958,8 +1037,27 @@
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
       this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
       this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
+      this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 }; this._diagnosticsGeneration = 0; this._diagnosticsSnapshot = null;
       this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
       if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
+    }
+    setDiagnostics(value = {}) {
+      const previous = this._diagnosticsConfig, mode = ['light', 'balanced', 'deep'].includes(value.mode) ? value.mode : previous.mode;
+      const enabled = typeof value.enabled === 'boolean' ? value.enabled : previous.enabled;
+      if (enabled === previous.enabled && mode === previous.mode) return this.getDiagnostics();
+      this._diagnosticsConfig = { enabled, mode, revision: previous.revision + 1 };
+      this._send({ type: 'diagnosticsConfig', config: this._diagnosticsConfig });
+      return this.getDiagnostics();
+    }
+    resetDiagnostics() {
+      this._diagnosticsConfig = { ...this._diagnosticsConfig, revision: this._diagnosticsConfig.revision + 1 }; this._diagnosticsSnapshot = null;
+      this._send({ type: 'diagnosticsReset', revision: this._diagnosticsConfig.revision });
+      return this.getDiagnostics();
+    }
+    getDiagnostics() {
+      const config = this._diagnosticsConfig, snapshot = this._diagnosticsSnapshot;
+      if (snapshot) return { ...snapshot, ...config, reportRevision: snapshot.revision, status: !config.enabled ? 'paused' : this.context?.state === 'suspended' ? 'suspended' : snapshot.status, contextState: this.context?.state || 'idle', engineMode: this.mode };
+      return { ...config, reportRevision: null, status: !config.enabled ? 'idle' : !this.context ? 'waiting' : this.context.state === 'suspended' ? 'suspended' : 'collecting', contextState: this.context?.state || 'idle', engineMode: this.mode, available: false, clock: { name: 'unavailable', resolutionMs: null, coarse: false }, sampleRate: this.context?.sampleRate || 0, blockFrames: this._processingFrames || 0, budgetMs: this.context && this._processingFrames ? this._processingFrames * 1000 / this.context.sampleRate : 0, processedBlocks: 0, sampledBlocks: 0, sampledFrames: 0, coverage: 0, elapsedSeconds: 0, total: { samples: 0, meanMs: null, p95Ms: null, maxMs: null, meanPercent: null, p95Percent: null, maxPercent: null, overBudget: 0, zeroSamples: 0 }, rows: [], timerReads: 0, invalidTimings: 0 };
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i > 7) throw Error('Choose one of the eight tracks.'); return i; }
     get audioSettings() { return this.getAudioSettings(); }
@@ -1068,9 +1166,10 @@
         this._sampleRateFallback = this._audioSettings.sampleRate !== 'auto' && this.context.sampleRate !== this._audioSettings.sampleRate;
         this._sinkFallback = prepared ? false : await this._setAudioSink(this.context, this._audioSettings.outputDeviceId);
         this.node = null; this.core = null; this._sentAssets = new Map();
+        this._diagnosticsGeneration++; this._diagnosticsSnapshot = null;
         this.inputs = Array.from({ length: 8 }, () => { const node = this.context.createGain(); node.channelCount = 2; node.channelCountMode = 'explicit'; node.channelInterpretation = 'speakers'; return node; });
         this.microphoneInput = this.context.createGain(); this.microphoneInput.channelCount = 2; this.microphoneInput.channelCountMode = 'explicit'; this.microphoneInput.channelInterpretation = 'speakers';
-        const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP);
+        const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler);
         if (this.context.audioWorklet && window.AudioWorkletNode) {
           let url;
           try {
@@ -1085,15 +1184,19 @@
               const createTape=${window.createLoomTapeDSP ? window.createLoomTapeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
+              const createCPU=${window.createLoomCPUProfiler ? window.createLoomCPUProfiler.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape),createLFO);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape),createLFO,createCPU);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
+                  this.diagnosticsGeneration=options.processorOptions.diagnosticsGeneration||0;this.core.setDiagnostics(options.processorOptions.diagnostics||{enabled:false});
                   this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
                     const m=e.data,serviceFrame=m.type==='serviceStart'?0:this.core.sampleClock;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
-                    if(m.type==='state')this.core.setState(m.state);
+                    if(m.type==='diagnosticsConfig')this.core.setDiagnostics(m.config);
+                    else if(m.type==='diagnosticsReset')this.core.resetDiagnostics(m.revision);
+                    else if(m.type==='state')this.core.setState(m.state);
                     else if(m.type==='assets')this.core.setAssets(m.assets);
                     else if(m.type==='assetDelta')this.core.updateAssets(m.additions,m.removals);
                     else if(m.type==='play')this.core.start(m.beat);
@@ -1125,19 +1228,29 @@
                 }
                 process(inputs,outputs) {
                   const out=outputs[0];if(!out||!out[0])return true;const n=out[0].length;
+                  const profiling=this.core.beginDiagnostics(n);
+                  try {
                   const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  const eventsStamp=this.core.diagnosticsStart('events');
                   if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                   if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
-                  this.recorder.capture(inputs,n,this.core);
+                  this.core.diagnosticsEnd('events',eventsStamp);
+                  const recorderStamp=this.core.diagnosticsStart('recorder');this.recorder.capture(inputs,n,this.core);this.core.diagnosticsEnd('recorder',recorderStamp);
+                  const endedStamp=this.core.diagnosticsStart('events');
                   if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters()});}
                   else if(!this.core.ended)this.endedSent=false;
+                  this.core.diagnosticsEnd('events',endedStamp);
+                  const metersStamp=this.core.diagnosticsStart('meters');
                   if(++this.count%8===0)this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters(),recordFrames:this.recorder.frames,recordId:this.recorder.id,recording:this.recorder.active,recordStage:this.recorder.stage});
+                  this.core.diagnosticsEnd('meters',metersStamp);
+                  if(profiling&&this.core.diagnosticsReportDue()){const stamp=this.core.diagnosticsStart('report');this.port.postMessage({type:'diagnostics',generation:this.diagnosticsGeneration,report:this.core.getDiagnostics()});this.core.diagnosticsEnd('report',stamp);}
+                  } finally {if(profiling)this.core.endDiagnostics();}
                   return true;
                 }
               }
               registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
-            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 9, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch } });
+            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: 9, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch, diagnostics: this._diagnosticsConfig, diagnosticsGeneration: this._diagnosticsGeneration } });
             this.node.port.onmessage = e => this._message(e.data);
             for (let i = 0; i < 8; i++) this.inputs[i].connect(this.node, 0, i);
             this.microphoneInput.connect(this.node, 0, 8);
@@ -1148,6 +1261,7 @@
         }
         if (!this.node) {
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
+          this.core.setDiagnostics(this._diagnosticsConfig);
           this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
           this.node = this.context.createScriptProcessor(AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames, 18, 2);
           this._processingFrames = this.node.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames;
@@ -1155,14 +1269,24 @@
           for (let i = 0; i < 9; i++) { const splitter = this.context.createChannelSplitter(2); (i < 8 ? this.inputs[i] : this.microphoneInput).connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
           this.merger.connect(this.node);
           this.node.onaudioprocess = e => {
+            const profiling = this.core.beginDiagnostics(e.outputBuffer.length);
+            try {
             const inputs = Array.from({ length: 9 }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
             const serviceFrame = this.core.sampleClock;
             this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            const eventsStamp = this.core.diagnosticsStart('events');
             if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
+            this.core.diagnosticsEnd('events', eventsStamp);
+            const recorderStamp = this.core.diagnosticsStart('recorder');
             this.recorder.capture(inputs, e.outputBuffer.length, this.core);
+            this.core.diagnosticsEnd('recorder', recorderStamp);
             this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
+            const metersStamp = this.core.diagnosticsStart('meters');
             this._acceptMeters(this.core.getMeters(), this._transportEpoch, Number.isFinite(e.playbackTime) ? e.playbackTime + e.outputBuffer.length / this.context.sampleRate : this.context.currentTime);
+            this.core.diagnosticsEnd('meters', metersStamp);
+            if (profiling && this.core.diagnosticsReportDue()) { const stamp = this.core.diagnosticsStart('report'); this._message({ type: 'diagnostics', generation: this._diagnosticsGeneration, report: this.core.getDiagnostics() }); this.core.diagnosticsEnd('report', stamp); }
+            } finally { if (profiling) this.core.endDiagnostics(); }
           };
           this.mode = 'fallback';
         }
@@ -1185,7 +1309,9 @@
       if (this.mode === 'worklet') { this.node.port.postMessage(m); return; }
       if (!this.core) return;
       const serviceFrame = m.type === 'serviceStart' ? 0 : this.core.sampleClock;
-      if (m.type === 'state') this.core.setState(m.state);
+      if (m.type === 'diagnosticsConfig') this.core.setDiagnostics(m.config);
+      else if (m.type === 'diagnosticsReset') this.core.resetDiagnostics(m.revision);
+      else if (m.type === 'state') this.core.setState(m.state);
       else if (m.type === 'assets') this.core.setAssets(m.assets);
       else if (m.type === 'assetDelta') this.core.updateAssets(m.additions, m.removals);
       else if (m.type === 'play') this.core.start(m.beat);
@@ -1211,6 +1337,7 @@
       if (Number.isInteger(m.epoch)) this._acceptMeters(this.core.getMeters(), m.epoch, this.context?.currentTime || 0);
     }
     _message(m) {
+      if (m.type === 'diagnostics') { if (this._diagnosticsConfig.enabled && m.generation === this._diagnosticsGeneration && m.report?.revision === this._diagnosticsConfig.revision) this._diagnosticsSnapshot = m.report; return; }
       if (m.type === 'serviceEvent') {
         const event = m.event;
         if (event.type === 'stop') { this._serviceRuntime = { ...event, active: false }; this._serviceArrangementBeat = event.arrangementBeat ?? this._serviceArrangementBeat; this._meters = { ...this._meters, beat: this._serviceArrangementBeat, cycle: 0, playing: false, ended: false }; this._serviceStops.get(event.seq)?.(event); this._serviceStops.delete(event.seq); }
@@ -1561,7 +1688,7 @@
       const sr = 48000, start = Math.max(0, Math.min(255.999, Number(options.startBeat) || 0)), end = Math.max(start + .0001, Math.min(256, Number(options.endBeat) || (state.lengthBars || 4) * 4));
       const tempo = Math.max(40, Math.min(240, state.tempo || 120)), main = Math.round((end - start) * 60 / tempo * sr), tail = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds) || 0)) * sr), total = main + tail;
       if (options.signal?.aborted) throw abortError();
-      const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP), core = new DSP.Core(dspState(state), assets, sr, { linear: true, includeMetronome: options.includeMetronome === true, trackId: options.trackId, returnId: options.returnId });
+      const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler), core = new DSP.Core(dspState(state), assets, sr, { linear: true, includeMetronome: options.includeMetronome === true, trackId: options.trackId, returnId: options.returnId });
       core.start(start); const { buffer, view } = makeWavBuffer(total, sr); let at = 0, blocks = 0;
       options.onProgress?.(0);
       while (at < total) {
@@ -1576,6 +1703,7 @@
     async _closeAudioGraph() {
       if (this._closingAudioGraph) return this._closingAudioGraph;
       this._closingAudioGraph = (async () => {
+        this._diagnosticsGeneration++; this._diagnosticsSnapshot = null;
         if (this.node?.port) { this.node.port.onmessage = null; this.node.port.close?.(); }
         if (this.node) this.node.onaudioprocess = null;
         for (const node of [this.node, this.merger, ...(this.splitters || []), ...this.inputs, this.microphoneInput].filter(Boolean)) try { node.disconnect(); } catch {}
@@ -1584,10 +1712,10 @@
       })().finally(() => { this._closingAudioGraph = null; });
       return this._closingAudioGraph;
     }
-    async dispose() { this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
+    async dispose() { this.setDiagnostics({ enabled: false }); this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
-  const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP);
+  const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler);
   window.LoomServiceTiming = sharedPlayback.ServiceTiming;
   window.LoomClipPlayback = sharedPlayback.ClipPlayback;
   window.LoomAudio = LoomAudio;
