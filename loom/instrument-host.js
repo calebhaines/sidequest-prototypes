@@ -17,7 +17,8 @@
     { id: 'marinade', name: 'MARINADE', description: 'Two-source spectral morphing instrument', facade: 'MarinadeApp', storageKey: 'marinade-project-v1', color: '#dda775' },
     { id: 'picnic', name: 'PICNIC', description: 'Six-part sampled village ensemble', facade: 'PicnicApp', storageKey: 'picnic-project-v1', color: '#7eae83' },
     { id: 'morsel', name: 'MORSEL', description: 'Four-voice word and melody synthesizer', facade: 'MorselApp', storageKey: 'morsel-project-v1', color: '#ed8b59' },
-    { id: 'heirloom', name: 'HEIRLOOM', description: 'Five-voice Prophet-5 inspired analog architecture', facade: 'HeirloomApp', storageKey: 'heirloom-project-v1', color: '#d5b677' }
+    { id: 'heirloom', name: 'HEIRLOOM', description: 'Five-voice Prophet-5 inspired analog architecture', facade: 'HeirloomApp', storageKey: 'heirloom-project-v1', color: '#d5b677' },
+    { id: 'brine', name: 'BRINE', description: 'Six-voice Juno-inspired DCO synth and stereo BBD chorus', facade: 'BrineApp', storageKey: 'brine-project-v1', color: '#e0a16e' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));

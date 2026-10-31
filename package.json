@@ -103,7 +103,10 @@
     "check:ear-training-temperaments": "node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-temperaments.cjs",
     "heirloom:build": "python3 heirloom/build.py",
     "check:heirloom": "node heirloom/dsp-checks.cjs && node heirloom/checks.cjs",
-    "check:heirloom-browser": "node heirloom/browser-checks.cjs"
+    "check:heirloom-browser": "node heirloom/browser-checks.cjs",
+    "brine:build": "python3 brine/build.py",
+    "check:brine": "node brine/checks.cjs",
+    "check:brine-browser": "node brine/browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
