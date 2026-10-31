@@ -44,8 +44,22 @@
       return true;
     }
     targets() { const owner = this.track(); return owner ? window.LoomSchema.automationTargets(owner) : []; }
+    targetDefinitions() {
+      const owner = this.track(); if (!owner) return [];
+      const topology = owner.id + '|' + owner.name + '|' + owner.effects.map(effect => effect?.type || '').join(',');
+      if (owner !== this.targetOwner || topology !== this.targetTopology || !this.targetMetadata) {
+        this.targetOwner = owner; this.targetTopology = topology; this.targetMetadata = window.LoomSchema.automationTargets(owner);
+      }
+      return this.targetMetadata;
+    }
     lanes() { const owner = this.track(); return owner ? owner.automation ||= [] : []; }
-    definition(target = this.target) { return this.targets().find(d => d.target === target); }
+    definition(target = this.target) {
+      const descriptor = this.targetDefinitions().find(d => d.target === target); if (!descriptor) return descriptor;
+      const owner = this.track(), parts = target.split(':');
+      const value = parts[0] === 'fx' ? owner.effects?.[Number(parts[1])]?.params?.[parts[2]] : parts[0] === 'eq' ? owner.eq?.[parts[1]] : parts[0] === 'send' ? owner.sends?.[Number(parts[1])] : owner[target];
+      descriptor.value = Number.isFinite(value) ? clamp(value, descriptor.min, descriptor.max) : descriptor.default;
+      return descriptor;
+    }
     lane(target = this.target) { const d = this.definition(target); return this.lanes().find(l => l.target === target && (!d?.effectType || l.effectType === d.effectType)); }
     beats() { return this.getState().lengthBars * 4; }
     value(d) { return Number.isFinite(d?.value) ? d.value : d?.default ?? 0; }
@@ -82,6 +96,7 @@
     }
     notify() { this.onChange({ automation: true }); }
     render() {
+      this.targetMetadata = null;
       const state = this.getState(), track = this.track(); this.syncOwner(track); if (!track) { this.element.innerHTML = ''; return; }
       if (this.drag) return;
       const targets = this.targets(), lanes = this.lanes();
@@ -110,6 +125,7 @@
     draw() {
       const svg = this.element.querySelector('.auto-canvas'); if (!svg) return;
       const m = this.metrics(), d = this.definition(), lane = this.lane(); if (!d) return;
+      this.drawMetrics = m;
       const x = beat => m.left + beat * m.ppb, y = value => m.bottom - (value - d.min) / (d.max - d.min || 1) * (m.bottom - m.top);
       const total = this.beats(), stride = m.ppb < 2 ? 64 : m.ppb < 4 ? 32 : m.ppb < 8 ? 16 : m.ppb < 16 ? 8 : 4, grid = [];
       for (let beat = 0; beat <= total; beat += stride) grid.push(`<line class="auto-bar-line" x1="${x(beat)}" x2="${x(beat)}" y1="25" y2="${m.bottom}"/><text class="auto-bar-label" x="${x(beat) + 5}" y="17">${String(Math.floor(beat / 4) + 1).padStart(2, '0')}</text>`);
@@ -135,15 +151,20 @@
       }
       holder.innerHTML = point ? `<span class="auto-point-caption">POINT ${String(this.point+1).padStart(2,'0')}</span><label>BEAT<input type="number" data-auto-field="point-beat" min="1" max="${this.beats()+1}" step=".001" value="${round(point.beat+1)}" aria-label="Selected automation point beat"></label><label>VALUE${d.unit ? ' ('+escape(d.unit)+')' : ''}<input type="number" data-auto-field="point-value" min="${d.min}" max="${d.max}" step="${d.step || .001}" value="${point.value}" aria-label="Selected automation point value"></label><output>${this.label(d,point.value)}</output><button type="button" data-auto-action="delete-point">Delete point</button>` : '<span class="auto-point-caption">POINT EDITOR</span><p>Select a point to enter its exact beat and value.</p>';
     }
-    tick() {
+    tick(paint = true) {
       if (!this.element.isConnected) return;
-      this.lfoEditor?.tick();
       if (this.syncOwner()) { this.render(); return; }
-      const beat = clamp(this.getBeat() || 0, 0, this.beats()), m = this.metrics(), line = this.element.querySelector('[data-auto-playhead]');
+      // Write gesture boundaries are maintained even while its window is out
+      // of view. Only drawing and live DOM readings are suspended.
+      const playing = !!this.getPlaying();
+      if (playing !== this.lastPlaying) { this.lastPlaying = playing; if (!playing) this.captures.clear(); }
+      if (!paint) return;
+      const beat = clamp(this.getBeat() || 0, 0, this.beats()), m = this.drawMetrics || this.metrics(), line = this.element.querySelector('[data-auto-playhead]');
+      this.lfoEditor?.tick();
       if (line) { const x = String(m.left + beat*m.ppb); if (line.getAttribute('x1') !== x) line.setAttribute('x1', x); if (line.getAttribute('x2') !== x) line.setAttribute('x2', x); }
-      const d = this.definition(), out = this.element.querySelector('[data-auto-live-value]'); if (out && d) { const value = this.label(d, window.LoomSchema.automationValue(this.lane(), beat, this.value(d))); if (out.textContent !== value) out.textContent = value; }
-      const playing = !!this.getPlaying(), writing = this.write && playing; if (this.element.classList.contains('is-writing') !== writing) this.element.classList.toggle('is-writing', writing);
-      if (playing !== this.lastPlaying) { this.lastPlaying = playing; if (!playing) this.captures.clear(); const hint = this.element.querySelector('[data-auto-write-hint]'); if (hint) hint.textContent = this.write ? playing ? 'Writing mixer and effect movements during playback.' : 'Write armed. Press Play, then move a mixer or effect control.' : 'Draw points, or arm Write and move controls during playback.'; }
+      const d = this.definition(), out = this.element.querySelector('[data-auto-live-value]'); if (out && d) { const lane = this.lanes().find(lane => lane.target === this.target && (!d.effectType || lane.effectType === d.effectType)), value = this.label(d, window.LoomSchema.automationValue(lane, beat, this.value(d))); if (out.textContent !== value) out.textContent = value; }
+      const writing = this.write && playing; if (this.element.classList.contains('is-writing') !== writing) this.element.classList.toggle('is-writing', writing);
+      if (playing !== this.lastPaintPlaying) { this.lastPaintPlaying = playing; const hint = this.element.querySelector('[data-auto-write-hint]'); if (hint) hint.textContent = this.write ? playing ? 'Writing mixer and effect movements during playback.' : 'Write armed. Press Play, then move a mixer or effect control.' : 'Draw points, or arm Write and move controls during playback.'; }
     }
     click(e) {
       if (this.syncOwner()) { this.render(); return; }

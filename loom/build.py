@@ -76,6 +76,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['lfo.css', 'LFO-GUIDE.md', 'lfo-checks.cjs', 'lfo-service-checks.cjs', 'lfo-browser-checks.cjs']
     sources += ['cpu.css', 'CPU-GUIDE.md', 'cpu-checks.cjs', 'cpu-browser-checks.cjs']
     sources += ['multiband.css', 'CHAR-GUIDE.md', 'MIX-UPGRADE-GUIDE.md', 'char-checks.cjs', 'track-eq-sweep-checks.cjs', 'multiband-checks.cjs', 'mix-upgrade-checks.cjs', 'mix-upgrade-browser-checks.cjs']
+    sources += ['PERFORMANCE-GUIDE.md', 'performance-regression-checks.cjs', 'performance-legacy-fixtures.json', 'effects-performance-checks.cjs', 'effects-performance-fixtures.json', 'ui-performance-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.

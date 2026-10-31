@@ -115,7 +115,7 @@ def exchange_sources(root):
 def voice_effect_sources(root):
     directory = exchange_directory(root)
     effects = voice_effect_directory(root)
-    names = ['voice-effects.js', 'voice-effects.css', 'voice-effects-checks.cjs', 'VOICE-EFFECTS.md', 'percussion-voice-fx-browser-checks.cjs']
+    names = ['voice-effects.js', 'voice-effects.css', 'voice-effects-checks.cjs', 'voice-effects-performance-checks.cjs', 'VOICE-EFFECTS.md', 'percussion-voice-fx-browser-checks.cjs']
     files = [('shared/' + name, (directory / name).read_bytes()) for name in names]
     files += [('shared/galley-effects/' + name, (effects / name).read_bytes()) for name in VOICE_EFFECT_FILES]
     return files

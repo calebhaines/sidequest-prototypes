@@ -94,3 +94,11 @@ The downloaded JSON contains timing and engine metadata. Audio, note contents,
 instrument patches, session/track names and device identifiers are excluded.
 Diagnostics are not saved in projects and do not alter Undo, recordings or WAV
 exports.
+
+## Performance maintenance in 1.25.1
+
+Closed, hidden and offscreen inspection still disables timing. The audio callback
+now bypasses timing helpers entirely while off; normal mixer and display work
+has also been reduced without changing the audio. See
+[PERFORMANCE-GUIDE.md](PERFORMANCE-GUIDE.md) for measured results and the frozen
+release audio comparisons. Light remains the default sampling setting.

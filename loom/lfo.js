@@ -145,6 +145,11 @@
       }
       has(ownerId, target) { return this.entries.has(ownerId + '|' + target); }
       effectKeys(ownerId, slot) { return this.effectTargetKeys.get(ownerId + '|' + slot) || []; }
+      // Resolve targets when the project changes, rather than constructing and
+      // looking up the same route key for every audio sample. Entries retain
+      // their identity while render() replaces their per-frame value buffers.
+      target(ownerId, target) { return this.entries.get(ownerId + '|' + target) || null; }
+      applyTarget(entry, frame, base) { return entry ? mapValue(base, entry.values?.[frame] || 0, entry.descriptor) : base; }
       apply(ownerId, target, frame, base) { const entry = this.entries.get(ownerId + '|' + target); return entry ? mapValue(base, entry.values?.[frame] || 0, entry.descriptor) : base; }
       _tick(tempo, beat, running) {
         this.previous.set(this.output);

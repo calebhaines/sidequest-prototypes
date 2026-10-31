@@ -27,7 +27,7 @@
 .bus-effect-rack+.bus-route-note{margin-top:13px;min-height:36px}
 .bus-live-meter{display:flex;align-items:center;gap:10px;margin:0 0 17px}
 .bus-live-meter>div{height:5px;flex:1;min-width:0;background:#14251b;border:1px solid #6c795144;overflow:hidden;border-radius:2px}
-.bus-live-meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#879a6f,#d4c885);transition:width .07s linear}
+.bus-live-meter i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:linear-gradient(90deg,#879a6f,#d4c885);transition:transform .07s linear}
 .bus-live-meter output{width:61px;flex-shrink:0;text-align:right;font:9px var(--kk-mono,monospace);color:#bac7a8;white-space:nowrap}
 .master-bus .bus-live-meter output{color:#d1c28f}
 .bus-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin-bottom:19px}

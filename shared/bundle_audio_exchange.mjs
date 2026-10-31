@@ -29,7 +29,7 @@ export function voiceEffectDirectory(root) {
 }
 export async function voiceEffectSources(root) {
   const directory = exchangeDirectory(root), effects = voiceEffectDirectory(root);
-  const names = ['voice-effects.js', 'voice-effects.css', 'voice-effects-checks.cjs', 'VOICE-EFFECTS.md', 'percussion-voice-fx-browser-checks.cjs'];
+  const names = ['voice-effects.js', 'voice-effects.css', 'voice-effects-checks.cjs', 'voice-effects-performance-checks.cjs', 'VOICE-EFFECTS.md', 'percussion-voice-fx-browser-checks.cjs'];
   return await Promise.all([
     ...names.map(async name => ({ name: 'shared/' + name, data: await readFile(resolve(directory, name)) })),
     ...voiceEffectFiles.map(async name => ({ name: 'shared/galley-effects/' + name, data: await readFile(resolve(effects, name)) })),

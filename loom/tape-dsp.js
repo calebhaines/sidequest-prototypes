@@ -58,7 +58,7 @@
     }
     function create(sampleRate, source) {
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr * 4;
-      let p = normalize(source), dirty = true, first = true, tick = 0;
+      let p = normalize(source), dirty = true, first = true, tick = 0, controlsMoving = false;
       // Numeric derived controls: gain staging is smoothed jointly, so opposing
       // Drive and compensation gains cannot cause an automation level surge.
       const V = { pre: 0, net: 1, warmth: 2, wear: 3, headroom: 4, asymmetry: 5, memory: 6, emphasis: 7, lowGain: 8, highGain: 9, lowCut: 10, headL: 11, headR: 12,
@@ -78,8 +78,12 @@
       const meter = { inputDb: -120, tapeDb: -120, outputDb: -120, compressionDb: 0, transportMs: 0 };
       const history = [previous, recordLow, magnet, nonlinearFilters, deEmphasis, dcPrevious, dcState, bumpState, cutState, head1, head2, lowTone, highTone, hissLow, hissHigh];
       function random() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+      let clockWowRate = NaN, clockFlutterRate = NaN, clockWowStep = 0, clockFlutterStep = 0;
+      let cachedEmphasis = NaN, inverseEmphasis = 1;
       function clock() {
-        wowPhase += TAU * values[V.wowRate] / sr; flutterPhase += TAU * values[V.flutterRate] / sr; wearPhase += TAU * .41 / sr;
+        if (values[V.wowRate] !== clockWowRate) { clockWowRate = values[V.wowRate]; clockWowStep = TAU * values[V.wowRate] / sr; }
+        if (values[V.flutterRate] !== clockFlutterRate) { clockFlutterRate = values[V.flutterRate]; clockFlutterStep = TAU * values[V.flutterRate] / sr; }
+        wowPhase += clockWowStep; flutterPhase += clockFlutterStep; wearPhase += TAU * .41 / sr;
         if (wowPhase > TAU * 10000) wowPhase -= TAU * 10000;
         if (flutterPhase > TAU * 10000) flutterPhase -= TAU * 10000;
         if (wearPhase > TAU) wearPhase -= TAU;
@@ -113,8 +117,23 @@
         targets[V.mix] = p.mix > 0 ? p.mix : first ? 0 : values[V.mix];
         targets[V.active] = p.bypass || p.mix === 0 ? 0 : 1;
         peakCoefficients(machine[3] * speed / 15, p.headBump * (p.model === 'studio' ? 5 : 7), sr, bumpTarget);
-        if (first) { values.set(targets); bump.set(bumpTarget); first = false; }
+        controlsMoving = true;
+        if (first) { values.set(targets); bump.set(bumpTarget); first = false; controlsMoving = false; }
         dirty = false;
+      }
+      function advanceControls() {
+        if (!controlsMoving) return;
+        if (tick & 255) {
+          for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+          for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+          return;
+        }
+        // Only skip additions after they stop changing the actual IEEE values.
+        // Do not snap to targets or alter any transition, random or tape clock.
+        let moving = false;
+        for (let key = 0; key < values.length; key++) { const before = values[key]; values[key] += smooth * (targets[key] - values[key]); if (values[key] !== before) moving = true; }
+        for (let key = 0; key < 5; key++) { const before = bump[key]; bump[key] += smooth * (bumpTarget[key] - bump[key]); if (bump[key] !== before) moving = true; }
+        controlsMoving = moving;
       }
       // Causal cubic Lagrange interpolation uses the current and three older
       // samples; it never requests an as-yet-unwritten sample at tiny delays.
@@ -145,7 +164,8 @@
         previous[channel] = x;
         // Apply the inverse record emphasis to the nonlinear delta only. The
         // undelayed linear path remains intact when Warmth is zero.
-        const inverse = 1 / values[V.emphasis];
+        if (values[V.emphasis] !== cachedEmphasis) { cachedEmphasis = values[V.emphasis]; inverseEmphasis = 1 / values[V.emphasis]; }
+        const inverse = inverseEmphasis;
         deEmphasis[channel] += values[V.inverseCoefficient] * (delta - deEmphasis[channel]);
         delta = inverse * delta + (1 - inverse) * deEmphasis[channel];
         const cleaned = delta - dcPrevious[channel] + dcDecay * dcState[channel];
@@ -170,8 +190,7 @@
           // memory before a later fade-in can reveal it.
           dormant = true;
           for (let frame = 0; frame < left.length; frame++) {
-            for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
-            for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+            advanceControls();
             const l = safe(left[frame]), r = safe(right[frame]); left[frame] = l; right[frame] = r;
             inputPower += l * l + r * r;
             random(); random(); random(); random(); clock(); tick++;
@@ -184,12 +203,11 @@
         for (let frame = 0; frame < left.length; frame++) {
           if (tick++ % 32 === 0 && dirty) update();
           if (dormant && targets[V.active] > 0) { clearSignal(); dormant = false; }
-          for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+          advanceControls();
           if (targets[V.active] === 0 && values[V.active] < 1e-7) {
             values[V.active] = 0; dormant = true;
             if (p.mix === 0) values[V.mix] = targets[V.mix] = 0;
           }
-          for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
           if (--scrub === 0) { for (const state of history) for (let cell = 0; cell < state.length; cell++) if (Math.abs(state[cell]) < 1e-28) state[cell] = 0; scrub = 1024; }
           const dryL = safe(left[frame]), dryR = safe(right[frame]), maximum = Math.max(Math.abs(dryL), Math.abs(dryR));
           gate += (maximum > gate ? gateAttack : gateRelease) * (maximum - gate);

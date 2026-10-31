@@ -209,14 +209,16 @@
             gateEnvelope = smoothing * gateEnvelope + (1 - smoothing) * peak;
             const open = clamp((gateEnvelope - threshold * 0.45) / (threshold * 0.55 + 1e-15), 0, 1), gain = gateFloor + (1 - gateFloor) * open * open;
             gateGain += gateSmooth * (gain - gateGain); wetL *= gateGain; wetR *= gateGain;
-            meter.gateReductionDb = -20 * Math.log10(Math.max(gateGain, 1e-6));
-          } else meter.gateReductionDb = 0;
+          }
           if (p.deess === 'on' && p.deessAmount > 0) {
             const sL = filter(wetL, deessCoefficient, deessState, 0), sR = filter(wetR, deessCoefficient, deessState, 2), peak = Math.max(Math.abs(sL), Math.abs(sR));
             const smoothing = peak > deessEnvelope ? deessAttack : deessRelease; deessEnvelope = smoothing * deessEnvelope + (1 - smoothing) * peak;
             const excess = Math.max(0, 1 - deessThreshold / Math.max(deessEnvelope, 1e-12)), attenuation = clamp(excess * p.deessAmount, 0, 0.96);
-            meter.deessDb = -20 * Math.log10(Math.max(1 - attenuation, 0.001));
-            if (++deessCounter >= 32) {
+            const updateShelf = ++deessCounter >= 32;
+            // The shelf reads this value only at its original control tick;
+            // also retain the exact final sample for the returned meter.
+            if (updateShelf || i === left.length - 1) meter.deessDb = -20 * Math.log10(Math.max(1 - attenuation, 0.001));
+            if (updateShelf) {
               deessCounter = 0;
               if (Math.abs(deessShelfDb + meter.deessDb) > 0.1) { deessShelfDb = -meter.deessDb; biquad('high', p.deessFreq, 0.707, deessShelfDb, sr, deessShelf); }
             }
@@ -320,6 +322,7 @@
           meter.limiterReductionDb = p.guard === 'on' ? Math.max(guardReduction, meter.limiterReductionDb * 0.9998) : 0;
           left[i] = bounded(resultL); right[i] = bounded(resultR); outputPeak = Math.max(Math.abs(left[i]), Math.abs(right[i]), outputPeak * 0.9995);
         }
+        if (left.length) meter.gateReductionDb = p.clean === 'on' ? -20 * Math.log10(Math.max(gateGain, 1e-6)) : 0;
         meter.inputDb = Math.max(-120, 20 * Math.log10(Math.max(inputPeak, 1e-6))); meter.outputDb = Math.max(-120, 20 * Math.log10(Math.max(outputPeak, 1e-6))); updateLatency();
       }
       function reset() {

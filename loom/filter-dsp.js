@@ -47,11 +47,13 @@
       let env = 0, detectorL = 0, detectorR = 0, detectorPreviousL = 0, detectorPreviousR = 0, lfoPhase = 0, controlFrame = 0, expectedBeat = NaN;
       let cutoffLog = Math.log(p.cutoff), res = p.resonance, gain = db(p.drive), level = db(p.output), mix = p.mix, sweep = p.envAmount, lfoDepth = p.lfoAmount, stereo = p.stereo;
       let attack = 0, release = 0, detectorCoefficient = 0, sensitivity = 1;
+      let targetLog = Math.log(p.cutoff), targetGain = db(p.drive), targetLevel = db(p.output), controlLogL = NaN, controlLogR = NaN;
       const slew = 1 - Math.exp(-1 / (sr * .008)), frequencySlew = 1 - Math.exp(-1 / (sr * .012)), peakDecay = Math.exp(-1 / (sr * .15));
       let gL = Math.tan(PI * p.cutoff / sr), gR = gL, targetGL = gL, targetGR = gR, hzL = p.cutoff, hzR = p.cutoff;
       let inputPeak = 0, outputPeak = 0, envelopeResponse = 0, modulation = 0, dcInputL = 0, dcInputR = 0, dcOutputL = 0, dcOutputR = 0;
       const dcCoefficient = Math.exp(-TAU * 8 / sr);
       function update() {
+        targetLog = Math.log(p.cutoff); targetGain = db(p.drive); targetLevel = db(p.output);
         // RMS follows power internally; twice the coefficient rate gives its
         // amplitude release the same millisecond meaning as the peak follower.
         const scale = p.envMode === 'rms' ? 2 : 1;
@@ -62,7 +64,7 @@
         sv.fill(0); ladder.fill(0); previousInput.fill(0); combL.fill(0); combR.fill(0);
         combAt = combToneL = combToneR = env = detectorL = detectorR = detectorPreviousL = detectorPreviousR = lfoPhase = controlFrame = inputPeak = outputPeak = envelopeResponse = modulation = 0;
         dcInputL = dcInputR = dcOutputL = dcOutputR = 0;
-        expectedBeat = NaN;
+        expectedBeat = NaN; controlLogL = controlLogR = NaN;
         cutoffLog = Math.log(p.cutoff); res = p.resonance; gain = db(p.drive); level = db(p.output); mix = p.mix; sweep = p.envAmount; lfoDepth = p.lfoAmount; stereo = p.stereo;
         hzL = hzR = Math.min(p.cutoff, maxHz); gL = gR = targetGL = targetGR = Math.tan(PI * hzL / sr);
       }
@@ -131,7 +133,6 @@
           }
           lfoPhase += left.length * increment; return;
         }
-        const targetLog = Math.log(p.cutoff), targetGain = db(p.drive), targetLevel = db(p.output);
         for (let i = 0; i < left.length; i++) {
           const dryL = safe(left[i]), dryR = safe(right[i]);
           inputPeak = Math.max(Math.abs(dryL), Math.abs(dryR), inputPeak * peakDecay);
@@ -145,8 +146,10 @@
           if (controlFrame === 0) {
             const base = cutoffLog + sweep * envelopeResponse * Math.LN2 / 12, offset = p.phase / 360;
             const movementL = lfoDepth * wave(lfoPhase + offset, p.shape), movementR = lfoDepth * wave(lfoPhase + offset + stereo * .5, p.shape);
-            hzL = clamp(Math.exp(base + movementL * Math.LN2 / 12), 20, maxHz); hzR = clamp(Math.exp(base + movementR * Math.LN2 / 12), 20, maxHz);
-            targetGL = Math.tan(PI * hzL / sr); targetGR = Math.tan(PI * hzR / sr); modulation = sweep * envelopeResponse + movementL;
+            const nextLogL = base + movementL * Math.LN2 / 12, nextLogR = base + movementR * Math.LN2 / 12;
+            if (nextLogL !== controlLogL) { controlLogL = nextLogL; hzL = clamp(Math.exp(nextLogL), 20, maxHz); targetGL = Math.tan(PI * hzL / sr); }
+            if (nextLogR !== controlLogR) { controlLogR = nextLogR; hzR = clamp(Math.exp(nextLogR), 20, maxHz); targetGR = Math.tan(PI * hzR / sr); }
+            modulation = sweep * envelopeResponse + movementL;
           }
           // Continuous coefficient interpolation avoids steps from control-rate
           // updates. Its phase is kept across blocks, including offline chunks.

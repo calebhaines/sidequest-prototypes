@@ -4,6 +4,9 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rounded = value => Math.round(value * 1e6) / 1e6;
+  const paintAttribute = (element, name, value) => { value = String(value); if (element.getAttribute(name) !== value) element.setAttribute(name, value); };
+  const paintText = (element, value) => { if (element.textContent !== value) element.textContent = value; };
+  const paintOpacity = (element, value) => { if (element.style.opacity !== value) element.style.opacity = value; };
   const waves = [['sine', 'Sine'], ['triangle', 'Triangle'], ['saw', 'Saw down'], ['ramp', 'Saw up'], ['square', 'Pulse'], ['hold', 'Sample & hold'], ['random', 'Smooth random']];
   const divisions = [[.0625, '1/64'], [.125, '1/32'], [.25, '1/16'], [1 / 3, '1/8 triplet'], [.5, '1/8'], [.75, '1/8 dotted'], [1, '1/4'], [1.5, '1/4 dotted'], [2, '1/2'], [3, '1/2 dotted'], [4, '1 bar'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars'], [64, '16 bars'], [128, '32 bars']];
   const definitions = {
@@ -239,18 +242,18 @@
       const meters = this.getMeters()?.lfos, playing = !!this.getPlaying(), lfo = this.lfo(); if (!lfo) return;
       this.lfos().forEach((item, index) => {
         const phase = Number.isFinite(meters?.phases?.[index]) ? meters.phases[index] : 0, output = Number.isFinite(meters?.outputs?.[index]) ? meters.outputs[index] : 0;
-        const dot = this.element.querySelector(`[data-lfo-mini-dot="${index}"]`); if (dot) { dot.setAttribute('cx', clamp(phase, 0, 1) * 140); dot.setAttribute('cy', 3 + (1 - clamp(output, -1, 1)) * 14); dot.style.opacity = item.enabled && playing && !['hold', 'random'].includes(item.wave) ? '1' : '0'; }
+        const dot = this.element.querySelector(`[data-lfo-mini-dot="${index}"]`); if (dot) { paintAttribute(dot, 'cx', clamp(phase, 0, 1) * 140); paintAttribute(dot, 'cy', 3 + (1 - clamp(output, -1, 1)) * 14); paintOpacity(dot, item.enabled && playing && !['hold', 'random'].includes(item.wave) ? '1' : '0'); }
       });
       const output = lfo.enabled && Number.isFinite(meters?.outputs?.[this.selected]) ? meters.outputs[this.selected] : 0, phase = Number.isFinite(meters?.phases?.[this.selected]) ? meters.phases[this.selected] : 0;
-      const reading = this.element.querySelector('[data-lfo-output]'); if (reading) reading.textContent = (output >= 0 ? '+' : '') + output.toFixed(3);
-      const needle = this.element.querySelector('[data-lfo-scope-phase]'); if (needle) { needle.setAttribute('x1', clamp(phase, 0, 1) * 420); needle.setAttribute('x2', clamp(phase, 0, 1) * 420); needle.style.opacity = lfo.enabled && playing && !['hold', 'random'].includes(lfo.wave) ? '1' : '0'; }
-      const running = this.element.querySelector('[data-lfo-running]'); if (running) running.textContent = !lfo.enabled ? 'Off · settings retained' : playing ? meters ? 'Live · sample clock' : 'Running' : 'Press Play to move';
+      const reading = this.element.querySelector('[data-lfo-output]'); if (reading) paintText(reading, (output >= 0 ? '+' : '') + output.toFixed(3));
+      const needle = this.element.querySelector('[data-lfo-scope-phase]'); if (needle) { paintAttribute(needle, 'x1', clamp(phase, 0, 1) * 420); paintAttribute(needle, 'x2', clamp(phase, 0, 1) * 420); paintOpacity(needle, lfo.enabled && playing && !['hold', 'random'].includes(lfo.wave) ? '1' : '0'); }
+      const running = this.element.querySelector('[data-lfo-running]'); if (running) paintText(running, !lfo.enabled ? 'Off · settings retained' : playing ? meters ? 'Live · sample clock' : 'Running' : 'Press Play to move');
       for (const row of this.element.querySelectorAll('[data-lfo-route]')) {
         const route = lfo.routes.find(item => item.id === row.dataset.lfoRoute), definition = route && this.routeDefinition(route), value = route && meters?.values?.[this.targetKey(route)], field = row.querySelector('[data-lfo-route-value]');
         if (!definition || !field) continue;
         const text = route.enabled === false ? 'Off' : Number.isFinite(value) && playing && lfo.enabled ? numberText(value) + (definition.unit ? ' ' + definition.unit : '') : 'Ready';
         if (field.textContent !== text) field.textContent = text;
-        field.title = definition.label + ' · ' + (Number.isFinite(value) && playing ? 'Current combined value' : 'Signed amount: ' + numberText(route.amount * 100) + '% of range');
+        paintAttribute(field, 'title', definition.label + ' · ' + (Number.isFinite(value) && playing ? 'Current combined value' : 'Signed amount: ' + numberText(route.amount * 100) + '% of range'));
       }
     }
   }
