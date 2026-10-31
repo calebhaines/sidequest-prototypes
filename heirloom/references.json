@@ -1,0 +1,322 @@
+{
+  "format": "heirloom-hardware-references",
+  "version": 1,
+  "accessedDate": "2026-10-31",
+  "scope": "Factual architecture research only. No hardware measurements, software/ROM extraction, samples or permission to redistribute third-party publications are implied.",
+  "mediaPolicy": "Only this metadata and factual prose are retained in the project; all downloaded source media remains outside the repository.",
+  "references": [
+    {
+      "id": "O3",
+      "title": "SCI Prophet-5 Operation Manual CM1000D, Rev3.3",
+      "publisher": "Sequential Circuits, Inc.",
+      "publicationDate": "February 1982",
+      "url": "https://www.synthxl.com/wp-content/uploads/2018/05/sequential-circuits-prophet-5-owner-manual.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 3949000,
+      "sha256": "7ac6d004a22d102ec99e06be9ec6caedb645b8dcfb872fffd8964b6ddb38418c",
+      "pages": 94,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false,
+      "provenance": "Manufacturer document scan hosted by a third-party archive; publication rights remain with original rightsholders."
+    },
+    {
+      "id": "T3",
+      "title": "SCI Prophet-5 Technical Manual TM1000D.2, second edition",
+      "publisher": "Sequential Circuits, Inc.",
+      "publicationDate": "October 1981",
+      "url": "https://www.synthxl.com/wp-content/uploads/2018/05/Prophet-5-Rev-3x-Service-Manual.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 19748761,
+      "sha256": "f947fb5ef6d67bca08dc85a0a9462e3dc7557e55c34a94faaba14fd123531c3f",
+      "pages": 134,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false,
+      "provenance": "Manufacturer document scan hosted by a third-party archive; publication rights remain with original rightsholders."
+    },
+    {
+      "id": "T2",
+      "title": "SCI Prophet-5 Rev2 Technical Manual",
+      "publisher": "Sequential Circuits, Inc.",
+      "publicationDate": null,
+      "url": "https://www.synthxl.com/wp-content/uploads/2018/05/Prophet-5-Rev-2-Service-Manual.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 21648968,
+      "sha256": "1dca268c965de0980029bc9b553894e56d13f5ca84d7dd53836e784548a50de6",
+      "pages": 141,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false,
+      "provenance": "Manufacturer document scan hosted by a third-party archive; publication rights remain with original rightsholders."
+    },
+    {
+      "id": "T1",
+      "title": "SCI Prophet-5 Rev1 service documentation",
+      "publisher": "Sequential Circuits, Inc.",
+      "publicationDate": null,
+      "url": "https://www.synthxl.com/wp-content/uploads/2018/05/Sequential-Prophet-5-Rev-1-Service-Manual.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 8295854,
+      "sha256": "035127236949c1ecf87a0454aec579ca906cc86264ae19370a31666d593e6900",
+      "pages": 23,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false,
+      "provenance": "Manufacturer document scan hosted by a third-party archive; publication rights remain with original rightsholders."
+    },
+    {
+      "id": "R4",
+      "title": "Prophet-5 User Guide1.3",
+      "publisher": "Sequential",
+      "publicationDate": null,
+      "url": "https://sequential.com/wp-content/uploads/2021/02/Prophet-5-Users-Guide-1.3.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 3204448,
+      "sha256": "98868eee47d805d60eadb006cbc7ec58eec5a5d4736e86e30958182230cd4215",
+      "pages": 80,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false
+    },
+    {
+      "id": "R4M",
+      "title": "Prophet-5 MIDI Implementation1.4",
+      "publisher": "Sequential",
+      "publicationDate": null,
+      "url": "https://sequential.com/wp-content/uploads/2021/03/Prophet-5-MIDI-Implementation-1.4.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 575000,
+      "sha256": "5b86f304689a958a3cdd7f2e53a7c4c12be05da6edf09fb7597a794630dd219a",
+      "pages": 13,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false
+    },
+    {
+      "id": "R4A",
+      "title": "Prophet-5/10 OS2.0 Addendum",
+      "publisher": "Sequential",
+      "publicationDate": null,
+      "url": "https://sequential.com/wp-content/uploads/2021/09/Prophet-OS-2.0-Addendum.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 288206,
+      "sha256": "ca6316c065d81b3eea5bf22fc1f3f9450c05af8ab65d5fcc5a6f6e70909bccff",
+      "pages": 9,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false
+    },
+    {
+      "id": "C3340",
+      "title": "CEM3340/3345 Voltage Controlled Oscillator datasheet",
+      "publisher": "Curtis Electromusic Specialties",
+      "publicationDate": null,
+      "url": "https://electricdruid.net/wp-content/uploads/2020/02/CEM33403345-VCO.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 3767575,
+      "sha256": "9d23f54fe97114c45bce7b1b74babe7ff4ec05aff6cf5d17206c1ee6649ec82a",
+      "pages": 6,
+      "kind": "manufacturer primary document",
+      "retainedInRepository": false,
+      "provenance": "Manufacturer document scan hosted by a third-party archive; publication rights remain with original rightsholders."
+    },
+    {
+      "id": "SSI",
+      "title": "SSI2140 FATKEYS Voltage Controlled Multi-Mode Filter datasheet",
+      "publisher": "Sound Semiconductor",
+      "publicationDate": null,
+      "url": "https://www.soundsemiconductor.com/downloads/ssi2140datasheet.pdf",
+      "mediaType": "application/pdf",
+      "bytes": 2133592,
+      "sha256": "6b31eac43aed8cb5997e8ec5f73e04b5bc7fae6c7430db285f40a80d3082ad11",
+      "pages": 20,
+      "kind": "manufacturer primary datasheet",
+      "retainedInRepository": false
+    },
+    {
+      "id": "S2030",
+      "title": "SSM2030 Voltage Controlled Oscillator datasheet",
+      "publisher": "Solid State Music / SSM",
+      "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/",
+      "kind": "manufacturer datasheet scan",
+      "pages": [
+        {
+          "page": 1,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2030.gif",
+          "bytes": 88546,
+          "sha256": "0f32db5819c60a8f874b981b3f528efb866acabe7b02ab88ad607701181d62b6"
+        },
+        {
+          "page": 2,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2030d.gif",
+          "bytes": 94744,
+          "sha256": "bea69457480f1931efc6539079d633d3cef8909431f8298b482a8c788f40e183"
+        }
+      ],
+      "retainedInRepository": false,
+      "provenance": "Original manufacturer pages hosted by Synthfool; not a license to redistribute scans."
+    },
+    {
+      "id": "S2040",
+      "title": "SSM2040 Voltage Controlled Filter Circuit datasheet",
+      "publisher": "Solid State Music / SSM",
+      "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/",
+      "kind": "manufacturer datasheet scan",
+      "pages": [
+        {
+          "page": 1,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2040.gif",
+          "bytes": 83021,
+          "sha256": "905af075f9870ef0528e0df8a52cfc8b9876b02088601ed93129ca7d855a268c"
+        },
+        {
+          "page": 2,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2040d2.gif",
+          "bytes": 102952,
+          "sha256": "ae27dc54e18dfb6b1c53626a28a36b7b9dc434f2c4f240a401adb197f131cf89"
+        },
+        {
+          "page": 3,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2040d3.gif",
+          "bytes": 63703,
+          "sha256": "936dd6ea90113afe3da2481bc8994e391ac3212e7aab4d7b731b8d0380acf347"
+        },
+        {
+          "page": 4,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2040d4.gif",
+          "bytes": 99347,
+          "sha256": "5f691aa45bcc932be26ad5aaa4ca71e35a67a30db1990aa93a4bb0ae5f9fac17"
+        }
+      ],
+      "retainedInRepository": false,
+      "provenance": "Original manufacturer pages hosted by Synthfool; not a license to redistribute scans."
+    },
+    {
+      "id": "S2050",
+      "title": "SSM2050 Voltage Controlled Transient Generator datasheet",
+      "publisher": "Solid State Music / SSM",
+      "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/",
+      "kind": "manufacturer datasheet scan",
+      "pages": [
+        {
+          "page": 1,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2050.gif",
+          "bytes": 66458,
+          "sha256": "eae67ec60adc411be9677221c59d707ad9ad5a8c2f87ac4aceb73b677e64bd08"
+        },
+        {
+          "page": 2,
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2050d.gif",
+          "bytes": 86328,
+          "sha256": "8b8c40c5d5cccf7433081071c0723a95f972caf11310c37b421a4122b31ec8a4"
+        }
+      ],
+      "retainedInRepository": false,
+      "provenance": "Original manufacturer pages hosted by Synthfool; not a license to redistribute scans."
+    },
+    {
+      "id": "C3310-C3320",
+      "title": "CEM3310 and CEM3320 original manufacturer datasheet pages",
+      "publisher": "Curtis Electromusic Specialties",
+      "url": "https://www.synthfool.com/docs/Other_Misc/CEM_chips.zip",
+      "mediaType": "application/zip",
+      "bytes": 2343602,
+      "sha256": "9a1cbc927f86509f347da6dda5c9c07953624e01b4303dcd1073a6aeaa4550ad",
+      "membersReferenced": [
+        {
+          "path": "CEM_chips/CEM_3310_DataSheet/cem3310_1.gif",
+          "bytes": 127518,
+          "sha256": "5f75fe0e831b3c22553b8ff191639d101880dbadb2b8768e238e415b9323f94f"
+        },
+        {
+          "path": "CEM_chips/CEM_3310_DataSheet/cem3310_2.gif",
+          "bytes": 140919,
+          "sha256": "cf7af11666231af8b264de9498a50e9abba603b6cb169191d279e59dbdfbad0e"
+        },
+        {
+          "path": "CEM_chips/CEM_3310_DataSheet/cem3310_3.gif",
+          "bytes": 154029,
+          "sha256": "5097182aab895dbaeecd219a0455bae6315bd16138f1a30d48839ac46f0013f8"
+        },
+        {
+          "path": "CEM_chips/CEM_3310_DataSheet/cem3310_4.gif",
+          "bytes": 148288,
+          "sha256": "62491fde111f5a4bdcd7abd220fa96fded733745a3ef17195055865534c9498d"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_1.gif",
+          "bytes": 129173,
+          "sha256": "cf41f6c5ae84dd10efbe37a2fdc3c0e79d78a602be1ea21ee2dcf019d0b52d90"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_2.gif",
+          "bytes": 136412,
+          "sha256": "a733585d4ce1def87b3356167f618de84fef3d461933da481f02b4415ed0016d"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_3.gif",
+          "bytes": 131818,
+          "sha256": "4d0b2afd46b38bdae10f8685a1cbf756b490f28be0ded7e5a2341ce6484e56c6"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_4.gif",
+          "bytes": 167178,
+          "sha256": "f2c82c562889b65594180e855d6665c77cd6ad79f1383aef5a0dae92f2562ff6"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_5.gif",
+          "bytes": 161870,
+          "sha256": "13db15c25e6a9db4472d767328f75664105e4bb4a2d309c9b1dfd9134af27e33"
+        },
+        {
+          "path": "CEM_chips/CEM_3320_DataSheet/cem3320_6.gif",
+          "bytes": 116744,
+          "sha256": "510773a80a73cb4927e230a039426e6bdc1a184a86a1a19fdc2db58325941cf5"
+        }
+      ],
+      "retainedInRepository": false,
+      "provenance": "Manufacturer scans in a third-party archive, not software or permission to redistribute documents."
+    },
+    {
+      "id": "D3340",
+      "title": "CEM3340 VCO designs \u2014 Prophet5 Rev3 analysis",
+      "publisher": "Electric Druid / Tom Wiltshire",
+      "url": "https://electricdruid.net/cem3340-vco-voltage-controlled-oscillator-designs/#Sequential_Prophet_5_Rev3",
+      "kind": "secondary circuit analysis; original SCI service manual takes precedence",
+      "retainedInRepository": false
+    },
+    {
+      "id": "R4S",
+      "title": "Sequential Prophet5 current product specifications",
+      "publisher": "Sequential",
+      "url": "https://sequential.com/product/prophet-5/",
+      "kind": "manufacturer product description",
+      "retainedInRepository": false
+    },
+    {
+      "id": "PK3",
+      "title": "DSP generation of Pink / 1/f noise \u2014 Paul Kellet refined filter",
+      "publisher": "Robin Whittle / First Principles, music-dsp contributors",
+      "url": "https://www.firstpr.com.au/dsp/pink-noise/",
+      "kind": "published numerical algorithm and contributor attribution; not a Prophet hardware reference",
+      "bytes": 69161,
+      "sha256": "5c971ce0cb58dc5acc330a75c93f410a7817573b6b245859936092377e314a30",
+      "retainedInRepository": false,
+      "provenance": "Credits Paul Kellet for refined/pk3 coefficients. Host notes most/all contributed work was placed in public domain and requests no page mirrors; HEIRLOOM cites the algorithm without reproducing the web page."
+    },
+    {
+      "id": "S2020",
+      "title": "SSM2020 Dual Linear-Antilog Voltage Controlled Amplifier manufacturer datasheet",
+      "publisher": "Solid State Microtechnology for Music",
+      "kind": "manufacturer primary document, hosted scan",
+      "pages": [
+        {
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2020.gif",
+          "bytes": 104191,
+          "sha256": "2946eb7533dd17879cffb0c1648af79d9c9e53861177caee4bd780b547d20a32"
+        },
+        {
+          "url": "https://www.synthfool.com/docs/Other_Misc/SSM_Chips/ssm2020d.gif",
+          "bytes": 104674,
+          "sha256": "83f8e0009013c3fc2681a7e8b00acafa2666dba2670ef9ee0fefa61e4bf5724a"
+        }
+      ],
+      "retainedInRepository": false,
+      "provenance": "Original manufacturer scan. Describes linear and exponential control facilities, not which is wired in any particular Prophet revision."
+    }
+  ]
+}

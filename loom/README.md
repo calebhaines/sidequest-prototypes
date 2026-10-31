@@ -2,6 +2,14 @@
 
 Kitchen’s central production station.
 
+**HEIRLOOM (1.26.0)** adds a five-voice Prophet-5 inspired instrument with two
+independent oscillators per voice, exponential Poly-Mod, hard sync, SSM/CEM-family
+filter models and the same synthesis for live notes and revisable prints. Its
+original recipes, MIDI keyboard and variable-length polyphonic phrases are
+available inside the studio and offline. See [its operating notes](../heirloom/README.md)
+and [research and modeling limits](../heirloom/RESEARCH.md). The GALLEY source
+archive also carries `HEIRLOOM-source.zip` with its complete editable source.
+
 **Performance maintenance (1.25.1)** removes redundant mixer and effect work,
 reduces display invalidation and meters percussion voice effects only on demand.
 Audio, modulation clocks, oversampling and effect histories retain their released
@@ -43,7 +51,7 @@ An eight-track browser studio for Kitchen. Eight tracks. One increasingly specif
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all fifteen Kitchen instruments,
+The standalone `index.html` bundles all sixteen Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -51,7 +59,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other fourteen instruments.
+are available inside GALLEY alongside the other fifteen instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -126,7 +134,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.25.1.
+SERVICE is version 1.0.0; GALLEY is version 1.26.0.
 
 ## Making a piece
 
@@ -799,7 +807,7 @@ through GALLEY's actual host, once-mode scheduling, private printing, saved
 origins, and arrangement WAV export with per-step sound overrides.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all fifteen standalone instrument pages in
+archive includes all sixteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 The extracted percussion checks are `node percussion-integration-checks.cjs`
@@ -808,7 +816,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.25.1.
+font license notices. Version 1.26.0.
 
 ## Compatibility
 

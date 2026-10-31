@@ -133,7 +133,7 @@ The rendering/conversion functions in this example belong to the new app. The sh
 - `{ blob: wavBlob, name, sourceApp, tempo, bars }`.
 - A WAV `Blob` directly, with generic metadata.
 
-Interleaved PCM defaults to two channels unless `channels` or `channelCount` explicitly says `1`. `audioExport.scopes` lists stable scope IDs and readable labels. Set `usesBars: false` for sources whose duration is intrinsic, such as a single hit or complete deck loop; the dialog hides bar count for those scopes. `maxBars` bounds the input, up to the shared UI maximum of 16. Export-only apps omit `importAudio` and `audioImport`.
+Interleaved PCM defaults to two channels unless `channels` or `channelCount` explicitly says `1`. `audioExport.scopes` lists stable scope IDs and readable labels. Set `usesBars: false` for sources whose duration is intrinsic, such as a single hit or complete deck loop; the dialog hides bar count for those scopes. `maxBars` bounds the input, up to the shared UI maximum of 64 (default 16). Optional `maxTailSeconds` sets the tail input ceiling, up to 30 seconds (default 8); `defaultTailSeconds` supplies a patch-aware starting value. Explicit user choices, including zero tail, are forwarded unchanged within those bounds. All renders still obey the shared 120-second limit. Export-only apps omit `importAudio` and `audioImport`.
 
 Rendering should use a snapshot, preserve the live patch/transport, and honor cancellation before returning. The dialog discards a render that finishes after it closes. It does not automatically publish rendered audio; the user chooses Save or Download.
 

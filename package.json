@@ -100,7 +100,10 @@
     "check:mix-upgrades": "node loom/track-eq-sweep-checks.cjs && node loom/multiband-checks.cjs && node loom/char-checks.cjs && node loom/mix-upgrade-checks.cjs",
     "check:mix-upgrades-browser": "node loom/mix-upgrade-browser-checks.cjs",
     "check:galley-performance": "node loom/performance-regression-checks.cjs && node loom/effects-performance-checks.cjs && node shared/voice-effects-performance-checks.cjs",
-    "check:ear-training-temperaments": "node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-temperaments.cjs"
+    "check:ear-training-temperaments": "node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-temperaments.cjs",
+    "heirloom:build": "python3 heirloom/build.py",
+    "check:heirloom": "node heirloom/dsp-checks.cjs && node heirloom/checks.cjs",
+    "check:heirloom-browser": "node heirloom/browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
