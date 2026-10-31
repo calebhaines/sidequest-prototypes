@@ -10,7 +10,7 @@ globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
 const shared = fs.existsSync(path.join(__dirname, 'shared/pattern-schema.js')) ? path.join(__dirname, 'shared') : path.resolve(__dirname, '../shared');
 vm.runInThisContext(fs.readFileSync(path.join(shared, 'pattern-schema.js'), 'utf8'), { filename: 'pattern-schema.js' });
-const sources = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'audio-engine.js'];
+const sources = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js'];
 for (const file of sources) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
 const S = LoomSchema, L = createLoomLFODSP(), E = createLoomEffectsDSP(), { Core } = createLoomEngineDSP(createLoomEffectsDSP, createLoomLFODSP);
 const copy = value => JSON.parse(JSON.stringify(value)), owners = state => [...state.tracks, ...state.returns, state.master];
@@ -139,8 +139,8 @@ function moving() {
   });
   await check('The complete LFO factory runs in an isolated serialized audio realm without browser globals', () => {
     const sandbox = { Math, Number, Object, Array, String, Boolean, Map, Set, Float32Array, Float64Array, Int32Array, Uint8Array, Uint32Array, JSON };
-    const makeEngine = vm.runInNewContext('(' + createLoomEngineDSP.toString() + ')', sandbox), makeLFO = vm.runInNewContext('(' + createLoomLFODSP.toString() + ')', sandbox);
-    const state = moving(), isolated = new (makeEngine(createLoomEffectsDSP, makeLFO).Core)(copy(state), {}, 8000, { linear: true }); isolated.start(0); const expected = render(state, 8192), actual = feed(isolated, signal(8192, 8000), 8192, 137);
+    const makeEngine = vm.runInNewContext('(' + createLoomEngineDSP.toString() + ')', sandbox), makeLFO = vm.runInNewContext('(' + createLoomLFODSP.toString() + ')', sandbox), makeEQ = vm.runInNewContext('(' + createLoomTrackEQDSP.toString() + ')', sandbox);
+    const state = moving(), isolated = new (makeEngine(createLoomEffectsDSP, makeLFO, null, makeEQ).Core)(copy(state), {}, 8000, { linear: true }); isolated.start(0); const expected = render(state, 8192), actual = feed(isolated, signal(8192, 8000), 8192, 137);
     assert.deepEqual(actual.left, expected.left); assert.deepEqual(actual.right, expected.right);
   });
   await check('Real WAV master and stem exports include the saved modulation and match odd-block Core PCM', async () => {

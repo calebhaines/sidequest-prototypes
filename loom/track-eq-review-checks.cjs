@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { performance } = require('node:perf_hooks');
-const files = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'audio-engine.js'];
+const files = ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'track-eq-dsp.js', 'audio-engine.js'];
 function load(read = file => fs.readFileSync(path.join(__dirname, file), 'utf8')) {
   const scope = { Math, Number, Object, Map, Set, Promise, Float32Array, Float64Array, Int32Array, Uint8Array, Blob, DOMException, TextEncoder, setTimeout, navigator: {} };
   scope.window = scope; vm.createContext(scope);
@@ -168,11 +168,11 @@ function main() {
   });
   check('Actual off-grid SERVICE EQ moves and initial overrides reproduce the captured take audio', () => {
     Object.assign(scope, { crypto: crypto.webcrypto, btoa: value => Buffer.from(value, 'binary').toString('base64'), atob: value => Buffer.from(value, 'base64').toString('binary') });
-    for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+    for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
     const S = scope.LoomSchema, C = scope.LoomServiceCapture, original = S.defaultState(), rate = 8000, frames = 8000;
     original.tempo = 120; original.lengthBars = 4; original.loopEnabled = false; original.master.level = .7;
-    original.tracks.forEach(track => { track.effects = [null, null, null, null]; track.clips = []; track.instrumentLive = false; }); original.returns.forEach(bus => { bus.effects = [null, null, null, null]; });
-    original.tracks[0].eq = { low: 3, lowMid: -2, highMid: 1, high: -1 };
+    original.tracks.forEach(track => { track.effects.fill(null); track.clips = []; track.instrumentLive = false; }); original.returns.forEach(bus => { bus.effects = [null, null, null, null]; });
+    original.tracks[0].eq = { ...S.defaultTrackEq(), low: 3, lowMid: -2, highMid: 1, high: -1 };
     const left = Float32Array.from({ length: 16000 }, (_, i) => .09 * Math.sin(2 * Math.PI * 91 * i / rate) + .03 * Math.sin(2 * Math.PI * 1711 * i / rate)), right = Float32Array.from(left, (v, i) => v * .7 + .01 * Math.sin(2 * Math.PI * 431 * i / rate)), asset = S.encodeAsset({ id: 'eq-service-source', name: 'EQ performance ingredient', sampleRate: rate, left, right });
     original.assets = [asset]; original.tracks[0].clips = [{ id: 'eq-source', name: 'Source', type: 'audio', assetId: asset.id, start: 0, length: 4, sourceStart: 0, sourceEnd: 2, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: 1, fadeIn: .01, fadeOut: .01 }];
     const s = S.normalize(original), before = JSON.stringify(s), live = new DSP.Core(s, S.decodeAssets(s.assets), rate, { linear: true }), blank = overrides => ({ drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides });
@@ -204,7 +204,8 @@ function main() {
   // Node's isolated vm realm intercepts native Math calls and is unsuitable
   // for a real-time CPU estimate. Compile the identical serialized factory
   // into the host realm, as the browser compiles its Worklet source.
-  const nativeDSP = (new Function('effectsFactory', 'return (' + scope.createLoomEngineDSP.toString() + ')(effectsFactory);'))(scope.createLoomEffectsDSP);
+  const nativeEQ = new Function('return (' + scope.createLoomTrackEQDSP.toString() + ');')();
+  const nativeDSP = (new Function('effectsFactory', 'eqFactory', 'return (' + scope.createLoomEngineDSP.toString() + ')(effectsFactory, null, null, eqFactory);'))(scope.createLoomEffectsDSP, nativeEQ);
   const timings = [];
   for (const active of [false, true]) {
     const e = new nativeDSP.TrackEQ(48000, active ? { low: 3, lowMid: -4, highMid: 2, high: 1 } : flat()), l = new Float32Array(128), r = l.slice();

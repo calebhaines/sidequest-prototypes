@@ -9,7 +9,7 @@ const form = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const shared = existsSync(resolve(form, "shared/voice-effects.js")) ? resolve(form, "shared") : resolve(form, "../shared");
 const galley = existsSync(resolve(shared, "galley-effects/effects.js")) ? resolve(shared, "galley-effects") : resolve(form, "../loom");
 globalThis.window = globalThis;
-for (const name of ["vocal-catalog.js", "utility-catalog.js", "filter-catalog.js", "creative-catalog.js", "preamp-catalog.js", "tape-catalog.js", "effects-catalog.js", "vocal-dsp.js", "utility-dsp.js", "filter-dsp.js", "creative-dsp.js", "broiler-pedals.js", "compressor-dsp.js", "preamp-dsp.js", "tape-dsp.js", "effects.js"]) vm.runInThisContext(readFileSync(resolve(galley, name), "utf8"), { filename: name });
+for (const name of ["vocal-catalog.js", "utility-catalog.js", "filter-catalog.js", "creative-catalog.js", "preamp-catalog.js", "tape-catalog.js", "char-catalog.js", "effects-catalog.js", "vocal-dsp.js", "utility-dsp.js", "filter-dsp.js", "creative-dsp.js", "broiler-pedals.js", "compressor-dsp.js", "preamp-dsp.js", "tape-dsp.js", "char-dsp.js", "effects.js"]) vm.runInThisContext(readFileSync(resolve(galley, name), "utf8"), { filename: name });
 vm.runInThisContext(readFileSync(resolve(shared, "voice-effects.js"), "utf8"), { filename: "voice-effects.js" });
 const { audio, "voice-effects": helpers, cleanup } = await loadDsp(["audio", "voice-effects"]);
 after(cleanup);

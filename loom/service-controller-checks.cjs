@@ -33,7 +33,7 @@ function fixture(options = {}) {
   scope.window = scope; vm.createContext(scope);
   const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
   vm.runInContext(fs.readFileSync(shared, 'utf8'), scope, { filename: 'pattern-schema.js' });
-  for (const filename of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'service-schema.js', 'service-midi.js', 'service-capture.js']) {
+  for (const filename of ['vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-schema.js', 'service-midi.js', 'service-capture.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
   }
   const S = scope.LoomSchema;
@@ -137,7 +137,7 @@ async function check(name, run) {
   await check('Opening and closing preserves every arrangement field, eight tracks, four slots and the original needle', async () => {
     const f = fixture(); const before = JSON.stringify(f.state()); await f.open();
     const snapshot = f.controller.getSnapshot(); assert.equal(snapshot.tracks.length, 8); assert(snapshot.service.scenes.every(scene => scene.slots.length === 8));
-    assert.equal(f.state().tracks.length, 8); assert(f.state().tracks.every(track => track.effects.length === 4)); assert.equal(f.persist.length, 0); assert.equal(f.requests(), 0);
+    assert.equal(f.state().tracks.length, 8); assert(f.state().tracks.every(track => track.effects.length === 5)); assert.equal(f.persist.length, 0); assert.equal(f.requests(), 0);
     await f.controller.close(); assert.equal(JSON.stringify(f.state()), before); assert.deepEqual(f.restores, [7.25]); assert.equal(f.intervals.size, 0); assert.equal(f.ui().opens, 1); assert.equal(f.ui().closes, 1);
   });
   await check('A blocked recording/operation never suspends Arrange, mounts the desk or requests MIDI', async () => {
@@ -248,7 +248,7 @@ async function check(name, run) {
   });
   await check('Create arrangement is one explicit commit through the real compiler and preserves all eight tracks/four slots', async () => {
     const f = fixture(); await f.capture(); const before = clone(f.state()); await f.controller.perform('capture-apply'); assert.equal(f.commits.length, 1);
-    const applied = f.commits[0]; assert.equal(applied.tracks.length, 8); assert(applied.tracks.every(track => track.effects.length === 4)); assert.equal(applied.lengthBars, 2); assert(applied.tracks.every(track => track.clips.length > 0)); assert.equal(applied.service, undefined); assert.equal(f.controller.isOpen, false);
+    const applied = f.commits[0]; assert.equal(applied.tracks.length, 8); assert(applied.tracks.every(track => track.effects.length === 5)); assert.equal(applied.lengthBars, 2); assert(applied.tracks.every(track => track.clips.length > 0)); assert.equal(applied.service, undefined); assert.equal(f.controller.isOpen, false);
     assert.deepEqual(applied.tracks.map(track => track.effects), before.tracks.map(track => track.effects)); assert.deepEqual(applied.assets, before.assets); assert(applied.tracks.some(track => track.automation.some(lane => lane.target === 'level')));
   });
   await check('Concurrent Create arrangement clicks cannot commit the same take twice while close awaits the audio engine', async () => {

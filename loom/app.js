@@ -35,6 +35,12 @@
     { key: 'highMid', label: 'HI MID', frequency: '2.5 kHz', shape: 'bell' },
     { key: 'high', label: 'HIGH', frequency: '10 kHz', shape: 'high shelf' }
   ];
+  const trackEqSweeps = [
+    { key: 'lowMidFreq', band: 'lowMid', label: 'LO MID SWEEP', min: 80, max: 2000, default: 400, step: 1, sweep: true },
+    { key: 'highMidFreq', band: 'highMid', label: 'HI MID SWEEP', min: 400, max: 10000, default: 2500, step: 1, sweep: true }
+  ];
+  const trackEqControls = [...trackEqBands.map(band => ({ ...band, min: -12, max: 12, default: 0, step: .1 })), ...trackEqSweeps];
+  const trackEqDefinition = key => trackEqControls.find(control => control.key === key);
   const instrumentHistory=new WeakSet();
   const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
@@ -164,29 +170,50 @@
   function drawWaveforms() { for (const el of $('trackLanes').querySelectorAll('.clip')) { const found = state.tracks[Number(el.dataset.track)].clips.find(c=>c.id===el.dataset.clip), pcm = found && assetMap[found.assetId]; if (found?.type === 'notes') { drawNotePreview(el, found); continue; } if (!found || !pcm) continue; const canvas = el.querySelector('canvas'), width = Math.max(1,Math.min(2400,Math.floor(el.clientWidth))), height = 32, dpr = Math.min(2,devicePixelRatio || 1); canvas.width = Math.min(8192,width*dpr); canvas.height = height*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.strokeStyle = state.tracks[Number(el.dataset.track)].color; ctx.lineWidth = 1; const duration = pcm.left.length / pcm.sampleRate, sourceSpan = Math.max(.0001,found.sourceEnd-found.sourceStart), secondsPerBeat = 60/state.tempo; ctx.beginPath(); const step = Math.max(1,Math.ceil(width/1200)); for (let x=0;x<width;x+=step) { let seconds = x/width * found.length * secondsPerBeat * found.rate; seconds += found.sourceOffset || 0; if (!found.loop && seconds >= sourceSpan) continue; seconds = found.loop ? seconds % sourceSpan : seconds; const position = found.reverse ? found.sourceEnd-seconds : found.sourceStart+seconds; const index = Math.max(0,Math.min(pcm.left.length-1,Math.floor(position*pcm.sampleRate))); const samples = Math.max(1,Math.ceil(pcm.sampleRate*found.length*secondsPerBeat*found.rate/width)); let peak = 0; for (let k=0;k<Math.min(96,samples);k++) { const n = Math.min(pcm.left.length-1,index+Math.floor(k*samples/Math.min(96,samples))); peak = Math.max(peak,Math.abs(pcm.left[n]),Math.abs(pcm.right[n])); } const fade = Math.min(1,(x/width*found.length)/Math.max(.0001,found.fadeIn),((1-x/width)*found.length)/Math.max(.0001,found.fadeOut)), amp = Math.min(1,peak*found.gain)*13*fade; ctx.moveTo(x,16-amp); ctx.lineTo(x,16+amp); } ctx.stroke(); } }
   const trackEqGain = value => Math.round(num(value, -12, 12) * 10) / 10 || 0;
   const trackEqLabel = value => (value > 0 ? '+' : value < 0 ? '−' : '') + Math.abs(value).toFixed(1);
-  function trackEqKnobs(t, index) {
-    return `<section class="track-eq" data-track-eq="${index}" aria-label="Track ${index + 1} four-band equalizer"><div class="track-eq-heading"><span>EQ</span><button type="button" data-eq-flat="${index}" aria-label="Reset all four EQ bands on track ${index + 1}" title="Reset the four manual EQ gains to 0 dB. Enabled automation continues to control the sound.">Flat</button></div><div class="track-eq-knobs">${trackEqBands.map(band => {
-      const value = trackEqGain(t.eq?.[band.key]), id = `eq-${index}-${band.key}`;
-      return `<div class="track-eq-control"><span id="${id}-label" class="track-eq-band">${band.label}</span><button type="button" id="${id}" class="track-eq-knob" role="slider" tabindex="0" data-eq-band="${band.key}" data-track="${index}" aria-label="Track ${index + 1} ${band.label.toLowerCase()} EQ, ${band.frequency} ${band.shape}" aria-valuemin="-12" aria-valuemax="12" aria-valuenow="${value}" aria-valuetext="${trackEqLabel(value)} dB, ${band.frequency} ${band.shape}" aria-orientation="vertical" title="${band.frequency} ${band.shape} · drag up/down; Shift for fine control. Arrows: 0.1 dB; Shift + arrows or Page: 1 dB. Home/End: −12/+12 dB. Double-click, Enter or Space: 0 dB."><svg class="track-eq-dial" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="track-eq-ring" d="M14.32 49.68A25 25 0 1 1 49.68 49.68"/><path class="track-eq-arc" data-eq-arc d="M32 7"/><path class="track-eq-centre-mark" d="M32 2v3"/><circle class="track-eq-cap-shadow" cx="32" cy="34" r="19"/><circle class="track-eq-cap" cx="32" cy="32" r="18"/><circle class="track-eq-cap-inner" cx="32" cy="32" r="14.5"/><path class="track-eq-pointer" data-eq-pointer d="M32 30V18"/></svg></button><output class="track-eq-value" data-eq-value="${band.key}" data-track="${index}" for="${id}">${trackEqLabel(value)}</output><span class="track-eq-frequency">${band.frequency}</span></div>`;
-    }).join('')}</div></section>`;
+  const trackEqFrequency = value => value >= 1000 ? Number((value / 1000).toFixed(2)) + ' kHz' : Math.round(value) + ' Hz';
+  function trackEqValue(key, value) {
+    const control = trackEqDefinition(key); if (!control) return 0;
+    value = Number.isFinite(value) ? value : control.default;
+    return control.sweep ? Math.round(num(value, control.min, control.max)) : trackEqGain(value);
   }
-  function paintTrackEqKnob(button, value, automated = false) {
+  function trackEqRead(owner, key, beat = engine.getMeters().beat || 0) {
+    const lane = owner.automation?.find(lane => lane.target === 'eq:' + key && lane.enabled !== false && lane.points?.length), manual = trackEqValue(key, owner.eq?.[key]);
+    return { value: lane ? trackEqValue(key, S.automationValue(lane, beat, manual)) : manual, automated: !!lane };
+  }
+  function trackEqKnob(control, owner, index) {
+    const value = trackEqValue(control.key, owner.eq?.[control.key]), id = `eq-${index}-${control.key}`, sweep = control.sweep;
+    const center = sweep ? null : trackEqSweeps.find(definition => definition.band === control.key), frequency = center ? trackEqFrequency(trackEqValue(center.key, owner.eq?.[center.key])) : control.frequency;
+    const label = sweep ? control.band === 'lowMid' ? 'low mid sweep frequency' : 'high mid sweep frequency' : control.label.toLowerCase() + ' EQ';
+    const displayed = sweep ? trackEqFrequency(value) : trackEqLabel(value), units = sweep ? '' : ' dB';
+    const hint = sweep ? `${control.min}–${control.max} Hz · logarithmic sweep. Drag up/down; Shift for fine adjustment. Arrows: 1 Hz; Shift or Page: 10 Hz. Home/End: limits. Double-click, Enter or Space: ${control.default} Hz.` : `${frequency} ${control.shape} · drag up/down; Shift for fine control. Arrows: 0.1 dB; Shift + arrows or Page: 1 dB. Home/End: −12/+12 dB. Double-click, Enter or Space: 0 dB.`;
+    return `<div class="track-eq-control ${sweep ? 'track-eq-sweep' : ''}"><span id="${id}-label" class="track-eq-band">${sweep ? 'SWEEP' : control.label}</span><button type="button" id="${id}" class="track-eq-knob" role="slider" tabindex="0" data-eq-band="${control.key}" data-track="${index}" aria-label="Track ${index + 1} ${label}${sweep ? '' : ', ' + frequency + ' ' + control.shape}" aria-valuemin="${control.min}" aria-valuemax="${control.max}" aria-valuenow="${value}" aria-valuetext="${displayed}${units}${sweep ? '' : ', ' + frequency + ' ' + control.shape}" aria-orientation="vertical" title="${hint}"><svg class="track-eq-dial" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="track-eq-ring" d="M14.32 49.68A25 25 0 1 1 49.68 49.68"/><path class="track-eq-arc" data-eq-arc d="M32 7"/><path class="track-eq-centre-mark" d="M32 2v3"/><circle class="track-eq-cap-shadow" cx="32" cy="34" r="19"/><circle class="track-eq-cap" cx="32" cy="32" r="18"/><circle class="track-eq-cap-inner" cx="32" cy="32" r="14.5"/><path class="track-eq-pointer" data-eq-pointer d="M32 30V18"/></svg></button>${sweep ? `<label class="track-eq-exact"><input type="number" data-eq-number="${control.key}" data-track="${index}" aria-label="Track ${index + 1} exact ${label} in Hz" min="${control.min}" max="${control.max}" step="1" value="${value}"><span>Hz</span></label>` : `<output class="track-eq-value" data-eq-value="${control.key}" data-track="${index}" for="${id}">${displayed}</output><span class="track-eq-frequency" data-eq-center>${frequency}</span>`}</div>`;
+  }
+  function trackEqKnobs(owner, index) {
+    const control = key => trackEqDefinition(key);
+    return `<section class="track-eq" data-track-eq="${index}" aria-label="Track ${index + 1} four-band equalizer with sweepable mids"><div class="track-eq-heading"><span>EQ</span><button type="button" data-eq-flat="${index}" aria-label="Reset all four EQ gains on track ${index + 1}" title="Reset the four manual EQ gains to 0 dB; keep the sweep frequencies. Enabled automation continues to control the sound.">Flat</button></div><div class="track-eq-knobs">${trackEqKnob(control('low'), owner, index)}${trackEqKnob(control('high'), owner, index)}${['lowMid', 'highMid'].map(key => `<div class="track-eq-mid-pair">${trackEqKnob(control(key), owner, index)}${trackEqKnob(control(key + 'Freq'), owner, index)}</div>`).join('')}</div></section>`;
+  }
+  function paintTrackEqKnob(button, value, automated = false, centerFrequency) {
     if (!button) return;
-    value = trackEqGain(value);
-    const band = trackEqBands.find(band => band.key === button.dataset.eqBand), angle = value * 11.25, radians = angle * Math.PI / 180;
+    const control = trackEqDefinition(button.dataset.eqBand); if (!control) return;
+    value = trackEqValue(control.key, value);
+    const angle = control.sweep ? -135 + 270 * Math.log(value / control.min) / Math.log(control.max / control.min) : value * 11.25, radians = angle * Math.PI / 180;
+    const sweep = trackEqSweeps.find(definition => definition.band === control.key), owner = state.tracks[Number(button.dataset.track)];
+    const frequency = centerFrequency !== undefined ? trackEqFrequency(centerFrequency) : sweep && owner ? trackEqFrequency(trackEqRead(owner, sweep.key).value) : control.frequency;
     updateAttribute(button, 'aria-valuenow', value);
-    updateAttribute(button, 'aria-valuetext', trackEqLabel(value) + ' dB, ' + band.frequency + ' ' + band.shape + (automated ? ', automation read' : ''));
+    updateAttribute(button, 'aria-valuetext', (control.sweep ? trackEqFrequency(value) : trackEqLabel(value) + ' dB, ' + frequency + ' ' + control.shape) + (automated ? ', automation read' : ''));
     updateAttribute(button.querySelector('[data-eq-pointer]'), 'transform', `rotate(${angle} 32 32)`);
-    updateAttribute(button.querySelector('[data-eq-arc]'), 'd', value === 0 ? 'M32 7' : `M32 7A25 25 0 0 ${value > 0 ? 1 : 0} ${(32 + 25 * Math.sin(radians)).toFixed(3)} ${(32 - 25 * Math.cos(radians)).toFixed(3)}`);
-    updateText(button.parentElement.querySelector('[data-eq-value]'), trackEqLabel(value));
-    updateClass(button, 'is-flat', value === 0); updateClass(button, 'is-cut', value < 0); updateClass(button, 'is-automated', automated);
+    const arc = control.sweep ? `M14.322,49.678A25 25 0 ${angle + 135 > 180 ? 1 : 0} 1 ${(32 + 25 * Math.sin(radians)).toFixed(3)} ${(32 - 25 * Math.cos(radians)).toFixed(3)}` : value === 0 ? 'M32 7' : `M32 7A25 25 0 0 ${value > 0 ? 1 : 0} ${(32 + 25 * Math.sin(radians)).toFixed(3)} ${(32 - 25 * Math.cos(radians)).toFixed(3)}`;
+    updateAttribute(button.querySelector('[data-eq-arc]'), 'd', arc);
+    if (control.sweep) { const number = button.parentElement.querySelector('[data-eq-number]'); if (number && document.activeElement !== number) updateProperty(number, 'value', value); }
+    else { updateText(button.parentElement.querySelector('[data-eq-value]'), trackEqLabel(value)); if (frequency) updateText(button.parentElement.querySelector('[data-eq-center]'), frequency); }
+    updateClass(button, 'is-flat', value === control.default); updateClass(button, 'is-cut', !control.sweep && value < 0); updateClass(button, 'is-automated', automated);
   }
   function renderTrackEqState(meters = engine.getMeters()) {
     for (const button of $('mixer').querySelectorAll('[data-eq-band]')) {
       const owner = state.tracks[Number(button.dataset.track)], key = button.dataset.eqBand;
       if (!owner || trackEqDrag?.element === button || trackEqKeyboard?.element === button) continue;
-      const lane = owner.automation?.find(lane => lane.target === 'eq:' + key && lane.enabled !== false && lane.points?.length), manual = trackEqGain(owner.eq?.[key]);
-      paintTrackEqKnob(button, lane ? S.automationValue(lane, meters.beat || 0, manual) : manual, !!lane);
+      const reading = trackEqRead(owner, key, meters.beat || 0), sweep = trackEqSweeps.find(control => control.band === key);
+      paintTrackEqKnob(button, reading.value, reading.automated, sweep ? trackEqRead(owner, sweep.key, meters.beat || 0).value : undefined);
     }
   }
   function finishTrackEqDrag(event) {
@@ -200,12 +227,12 @@
     trackEqKeyboard = null; gesture.element.classList.remove('is-adjusting'); renderTrackEqState();
   }
   function setTrackEqGain(owner, key, next, gesture, element, forceWrite = false) {
-    if (!owner || !trackEqBands.some(band => band.key === key) || !state.tracks.includes(owner)) return false;
-    next = trackEqGain(next);
+    if (!owner || !trackEqControls.some(control => control.key === key) || !state.tracks.includes(owner)) return false;
+    next = trackEqValue(key, next);
     const writing = forceWrite && automationEditor?.write && automationEditor.trackId === owner.id && rackTarget === 'track' && track().id === owner.id && engine.getMeters().playing;
-    if (trackEqGain(owner.eq?.[key]) === next && !writing) return false;
+    if (trackEqValue(key, owner.eq?.[key]) === next && !writing) return false;
     if (!gesture.remembered) { remember(); gesture.remembered = true; }
-    owner.eq ||= { low: 0, lowMid: 0, highMid: 0, high: 0 }; owner.eq[key] = next;
+    owner.eq ||= S.defaultTrackEq(); owner.eq[key] = next;
     automationEditor?.capture('eq:' + key, next, { remembered: true, ownerId: owner.id });
     changed(); paintTrackEqKnob(element, next); return true;
   }
@@ -281,14 +308,15 @@
     const descriptors = new Map(effectParams(def).map(param => [param.key, param]));
     const controls = keys => keys.map(key => compressorControl(descriptors.get(key), params)).join('');
     const core = ['model', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'];
-    const advanced = effectParams(def).filter(param => !core.includes(param.key)).map(param => param.key);
+    const multibandKeys = window.LoomButterMultibandUI?.keys || [];
+    const advanced = effectParams(def).filter(param => !core.includes(param.key) && !multibandKeys.includes(param.key)).map(param => param.key);
     return `<div class="compressor-console"><div class="compressor-recipe-bar"><label for="compressorPreset"><span class="eyebrow">COMPRESSOR RECIPE</span><select id="compressorPreset"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="compressorPresetDescription">A recipe replaces every compressor setting. Changing the model keeps your adjustments.</p></div>
       <section class="compressor-face" aria-labelledby="compressorFaceTitle"><div class="compressor-face-heading"><div><span id="compressorFaceTitle" class="compressor-face-brand">Butter</span><span class="compressor-face-edition">STEREO DYNAMICS</span></div><span class="compressor-signal-light"><i aria-hidden="true"></i><span id="compressorSignalStatus">Signal ready</span></span></div>
       <div class="compressor-model-row">${controls(['model'])}<div class="compressor-model-note"><strong id="compressorModelInspiration"></strong><p id="compressorModelDescription"></p></div></div>
       <div class="compressor-classic-row"><button id="compressorClassicSettings" type="button">Use classic settings</button><p>Set this model’s suggested ratio, timing and character. Keep your threshold and gain staging.</p></div>
       <div class="compressor-readings" aria-label="Live compressor readings">${[['inputDb', 'Input'], ['reductionDb', 'Gain reduction'], ['outputDb', 'Output']].map(([key, label]) => `<div class="compressor-meter ${key === 'reductionDb' ? 'compressor-gr' : ''}"><span>${label}</span><output data-compressor-meter="${key}">—</output><div class="compressor-meter-track" aria-hidden="true"><i data-compressor-meter-bar="${key}"></i></div>${key === 'reductionDb' ? '<small>0 <span>12</span> 24 dB</small>' : '<small>−60 <span>−30</span> 0 dB</small>'}</div>`).join('')}</div>
       <div class="compressor-core-controls">${controls(core.filter(key => key !== 'model'))}</div><p id="compressorTimingHint" class="compressor-timing-hint"></p></section>
-      <details id="compressorAdvanced" class="compressor-advanced" ${compressorAdvancedOpen ? 'open' : ''}><summary><span><strong>Advanced</strong><small>Detector, timing, colour & stereo behaviour</small></span><span aria-hidden="true">＋</span></summary><div class="compressor-advanced-content"><div class="compressor-advanced-controls">${controls(advanced)}</div><p id="compressorSpecialHint"></p><p class="compressor-model-disclosure">Musical models inspired by classic circuit families. These are reduced-order interpretations, not measured replicas of individual units.</p></div></details></div>`;
+      ${window.LoomButterMultibandUI?.render(def, params) || ''}<details id="compressorAdvanced" class="compressor-advanced" ${compressorAdvancedOpen ? 'open' : ''}><summary><span><strong>Advanced</strong><small>Detector, timing, colour & stereo behaviour</small></span><span aria-hidden="true">＋</span></summary><div class="compressor-advanced-content"><div class="compressor-advanced-controls">${controls(advanced)}</div><p id="compressorSpecialHint"></p><p class="compressor-model-disclosure">Musical models inspired by classic circuit families. These are reduced-order interpretations, not measured replicas of individual units.</p></div></details></div>`;
   }
   function renderCompressorState() {
     const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
@@ -331,6 +359,7 @@
       const fraction = !available ? 0 : reduction ? Math.min(1, Math.max(0, value) / 24) : Math.min(1, Math.max(0, (value + 60) / 60));
       const bar = $('effectEditor').querySelector('[data-compressor-meter-bar="' + key + '"]'); if (bar) updateStyle(bar, 'width', (fraction * 100).toFixed(2) + '%');
     }
+    window.LoomButterMultibandUI?.update($('effectEditor'), slot.params, valid ? reading : null);
   }
   function preampValue(param, value) {
     if (param.key === 'lowCut' && value === 0 || param.key === 'highCut' && value === 22000) return 'Off';
@@ -704,10 +733,16 @@
     finishTapeDrag(); finishTapeKeyboard();
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
     const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',tape=def.id==='preserve',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('tape-editor',tape);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}</div>`;
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}${def.id==='cinder'?'<p id="charCircuitHint" class="fineprint char-circuit-note"></p>':''}</div>`;
     const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
-    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===3?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
+  }
+  function renderCharState() {
+    const slot = effectOwner().effects[selectedSlot], note = $('charCircuitHint');
+    if (slot?.type !== 'cinder' || !note) return;
+    const model = effectById('cinder').models?.find(model => model.id === slot.params.shape);
+    updateText(note, model?.description || 'Choose a distortion circuit, then set Drive, Bias, Tone and Output.');
   }
   function renderVocalState() {
     const slot=effectOwner().effects[selectedSlot],def=slot&&effectById(slot.type);if(def?.id!=='glaze')return;
@@ -1029,6 +1064,7 @@
     automationEditor?.render(); $('effectDialog').showModal();
   }
   function selectEffect(slot, index = state.selectedTrack) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= (state.tracks[index]?.effects.length || 0)) return false;
     selectedTrack(index, { keepClip: true }); selectedSlot = slot;
     if (!effectOwner().effects[slot]) { openEffects(slot); return; }
     renderRack(); renderEffectEditor(); revealEffectEditor();
@@ -1046,7 +1082,7 @@
     renderRack(); renderEffectEditor(); automationEditor?.render();
     return true;
   }
-  function changeEffect(action) { const t=effectOwner(),slot=t.effects[selectedSlot];if(!slot)return;remember();if(action==='bypass')slot.params.bypass=!slot.params.bypass;if(action==='reset'){slot.params=clone(effectById(slot.type).defaults);if(rackTarget.startsWith('return-'))slot.params.mix=1;}if(action==='remove'){clearEffectAutomation(t,selectedSlot);t.effects[selectedSlot]=null;selectedSlot=null;}if(action==='up'&&selectedSlot>0){swapEffectAutomation(t,selectedSlot,selectedSlot-1);[t.effects[selectedSlot-1],t.effects[selectedSlot]]=[slot,t.effects[selectedSlot-1]];selectedSlot--;}if(action==='down'&&selectedSlot<3){swapEffectAutomation(t,selectedSlot,selectedSlot+1);[t.effects[selectedSlot+1],t.effects[selectedSlot]]=[slot,t.effects[selectedSlot+1]];selectedSlot++;}changed({arrangement:true,mixer:true,rack:true,automation:true});renderEffectEditor(); }
+  function changeEffect(action) { const t=effectOwner(),slot=t.effects[selectedSlot];if(!slot)return;remember();if(action==='bypass')slot.params.bypass=!slot.params.bypass;if(action==='reset'){slot.params=clone(effectById(slot.type).defaults);if(rackTarget.startsWith('return-'))slot.params.mix=1;}if(action==='remove'){clearEffectAutomation(t,selectedSlot);t.effects[selectedSlot]=null;selectedSlot=null;}if(action==='up'&&selectedSlot>0){swapEffectAutomation(t,selectedSlot,selectedSlot-1);[t.effects[selectedSlot-1],t.effects[selectedSlot]]=[slot,t.effects[selectedSlot-1]];selectedSlot--;}if(action==='down'&&selectedSlot<t.effects.length-1){swapEffectAutomation(t,selectedSlot,selectedSlot+1);[t.effects[selectedSlot+1],t.effects[selectedSlot]]=[slot,t.effects[selectedSlot+1]];selectedSlot++;}changed({arrangement:true,mixer:true,rack:true,automation:true});renderEffectEditor(); }
   const crcTable=Uint32Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c>>>1)^(0xedb88320&-(c&1));return c>>>0;});
   function canceledError(){const error=new Error('Render canceled.');error.name='AbortError';return error;}
   async function crc32(bytes,signal){let c=0xffffffff;for(let start=0;start<bytes.length;start+=262144){if(signal?.aborted)throw canceledError();const end=Math.min(bytes.length,start+262144);for(let i=start;i<end;i++)c=crcTable[(c^bytes[i])&255]^(c>>>8);await new Promise(resolve=>setTimeout(resolve,0));}return(c^0xffffffff)>>>0;}
@@ -1093,7 +1129,7 @@
     endTrackEqKeyboard();
     const owner = state.tracks[Number(element.dataset.track)], key = element.dataset.eqBand;
     element.focus({ preventScroll: true });
-    trackEqDrag = { pointer: e.pointerId, element, owner, key, lastY: e.clientY, value: trackEqGain(Number(element.getAttribute('aria-valuenow'))), remembered: false, lifecycle };
+    trackEqDrag = { pointer: e.pointerId, element, owner, key, lastY: e.clientY, value: trackEqValue(key, Number(element.getAttribute('aria-valuenow'))), remembered: false, lifecycle };
     element.classList.add('is-adjusting');
     try { element.setPointerCapture(e.pointerId); } catch (_) { /* Synthetic pointer events have no active capture. */ }
   });
@@ -1102,14 +1138,15 @@
     if (!gesture.element.isConnected || gesture.lifecycle !== lifecycle || state.tracks[Number(gesture.element.dataset.track)] !== gesture.owner) { finishTrackEqDrag(); return; }
     e.preventDefault(); e.stopPropagation();
     const movement = gesture.lastY - e.clientY; if (movement === 0) return;
-    gesture.value = num(gesture.value + movement * (e.shiftKey ? .025 : .15), -12, 12); gesture.lastY = e.clientY;
+    const control = trackEqDefinition(gesture.key);
+    gesture.value = control.sweep ? num(gesture.value * Math.exp(movement * (e.shiftKey ? .0015 : .009) * Math.log(control.max / control.min)), control.min, control.max) : num(gesture.value + movement * (e.shiftKey ? .025 : .15), -12, 12); gesture.lastY = e.clientY;
     setTrackEqGain(gesture.owner, gesture.key, gesture.value, gesture, gesture.element);
   });
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) $('mixer').addEventListener(name, e => { if (trackEqDrag?.pointer === e.pointerId) { e.stopPropagation(); finishTrackEqDrag(e); } });
   $('mixer').addEventListener('dblclick', e => {
     const element = e.target.closest('[data-eq-band]'); if (!element) return;
     e.preventDefault(); e.stopPropagation(); finishTrackEqDrag(); endTrackEqKeyboard();
-    setTrackEqGain(state.tracks[Number(element.dataset.track)], element.dataset.eqBand, 0, { remembered: false }, element, true); renderTrackEqState();
+    setTrackEqGain(state.tracks[Number(element.dataset.track)], element.dataset.eqBand, trackEqDefinition(element.dataset.eqBand).default, { remembered: false }, element, true); renderTrackEqState();
   });
   $('mixer').addEventListener('click', e => {
     const element = e.target.closest('[data-eq-band]'), reset = e.target.closest('[data-eq-flat]'); if (!element && !reset) return;
@@ -1130,9 +1167,16 @@
     const owner = state.tracks[Number(element.dataset.track)], key = element.dataset.eqBand;
     if (trackEqKeyboard?.element !== element || trackEqKeyboard.owner !== owner) { endTrackEqKeyboard(); trackEqKeyboard = { element, owner, remembered: false }; }
     element.classList.add('is-adjusting');
-    const current = trackEqGain(Number(element.getAttribute('aria-valuenow'))), amount = e.shiftKey || e.key.startsWith('Page') ? 1 : .1;
-    const next = e.key === 'Home' ? -12 : e.key === 'End' ? 12 : ['Enter', ' '].includes(e.key) ? 0 : current + (['ArrowUp', 'ArrowRight', 'PageUp'].includes(e.key) ? amount : -amount);
+    const control = trackEqDefinition(key), current = trackEqValue(key, Number(element.getAttribute('aria-valuenow'))), amount = control.step * (e.shiftKey || e.key.startsWith('Page') ? 10 : 1);
+    const next = e.key === 'Home' ? control.min : e.key === 'End' ? control.max : ['Enter', ' '].includes(e.key) ? control.default : current + (['ArrowUp', 'ArrowRight', 'PageUp'].includes(e.key) ? amount : -amount);
     setTrackEqGain(owner, key, next, trackEqKeyboard, element, ['Enter', ' '].includes(e.key));
+  });
+  $('mixer').addEventListener('change', e => {
+    const key = e.target.dataset.eqNumber; if (!key) return;
+    const owner = state.tracks[Number(e.target.dataset.track)], value = e.target.valueAsNumber;
+    if (owner && Number.isFinite(value)) setTrackEqGain(owner, key, value, { remembered: false }, $('eq-' + Number(e.target.dataset.track) + '-' + key));
+    if (owner) e.target.value = trackEqValue(key, owner.eq?.[key]);
+    renderTrackEqState();
   });
   $('mixer').addEventListener('keyup', e => { if (e.target.closest('[data-eq-band]')) endTrackEqKeyboard(); });
   $('mixer').addEventListener('focusout', e => { if (trackEqDrag?.element === e.target) finishTrackEqDrag(); if (trackEqKeyboard?.element === e.target) endTrackEqKeyboard(); });
@@ -1270,7 +1314,7 @@
       if(owner.name!==name){remember();owner.name=name;changed();renderSendControls();automationEditor?.render();if(rackTarget===owner.id&&selectedSlot!==null)renderEffectEditor();}return;
     }
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=effectOwner().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -1285,7 +1329,7 @@
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();}
+    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -1518,8 +1562,8 @@
     if(d.actualInputChannel==='1'&&d.settings.inputChannel==='stereo'&&d.inputChannels===1)notes.push('This input is mono; Input 1 is feeding both sides.');
     if(d.echoCancellation||d.noiseSuppression||d.autoGainControl)notes.push('The input reports browser voice processing. Your device may be ignoring the unprocessed-audio request.');
     $('audioDiagnosticNotes').textContent=notes.join(' ');
-    const t=track(),slot=t.effects.findIndex(f=>f?.type==='broiler'),vocalSlot=t.effects.findIndex(f=>f?.type==='glaze');$('vocalPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(vocalSlot>=0?'existing GLAZE / insert '+(vocalSlot+1):t.effects.some(f=>!f)?'empty insert ready':'four inserts occupied');$('ampPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(slot>=0?'existing BROILER / insert '+(slot+1):t.effects.some(f=>!f)?'empty insert ready':'four inserts occupied');
-    const utilitySlot=t.effects.findIndex(f=>f?.type==='scales');$('utilityPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(utilitySlot>=0?'existing SCALES / insert '+(utilitySlot+1):t.effects.some(f=>!f)?'empty insert ready':'four inserts occupied');
+    const t=track(),slot=t.effects.findIndex(f=>f?.type==='broiler'),vocalSlot=t.effects.findIndex(f=>f?.type==='glaze');$('vocalPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(vocalSlot>=0?'existing GLAZE / insert '+(vocalSlot+1):t.effects.some(f=>!f)?'empty insert ready':'five inserts occupied');$('ampPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(slot>=0?'existing BROILER / insert '+(slot+1):t.effects.some(f=>!f)?'empty insert ready':'five inserts occupied');
+    const utilitySlot=t.effects.findIndex(f=>f?.type==='scales');$('utilityPracticeTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0')+' · '+t.name+' · '+(utilitySlot>=0?'existing SCALES / insert '+(utilitySlot+1):t.effects.some(f=>!f)?'empty insert ready':'five inserts occupied');
     for(const id of ['applyAudioSettings','guitarPracticeButton','bassPracticeButton','vocalPracticeButton','utilityPracticeButton'])$(id).disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||!!blocked;
     $('applyAudioSettings').textContent=audioSettingsBusy?'Applying…':'Apply settings';
     $('refreshAudioDevices').disabled=audioSettingsBusy||audioDeviceBusy||ampPracticeBusy||recordPending||recordFinishing||engine.recordingBusy;
@@ -1554,7 +1598,7 @@
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Guitar or Bass.',true);return;}
     const t=track(),generation=lifecycle,existing=t.effects.findIndex(f=>f?.type==='broiler'),slot=existing>=0?existing:t.effects.findIndex(f=>!f);
-    if(slot<0){interfaceMessage('This track has four effects already. Choose another track or free an insert before adding BROILER.',true);return;}
+    if(slot<0){interfaceMessage('This track has five effects already. Choose another track or free an insert before adding BROILER.',true);return;}
     if(existing<0){const def=effectById('broiler'),preset=def.presets.find(p=>p.id===(kind==='bass'?'house-bass':'glassware'));remember();t.effects[slot]={type:'broiler',params:{...clone(preset.params),stereo:'mono'}};changed({arrangement:true,mixer:true,rack:true,automation:true});}
     rackTarget='track';selectedSlot=slot;renderRack();renderEffectEditor();automationEditor?.render();$('recordSource').value='microphone';$('micInputPanel').open=true;
     const operation=++microphoneOperation;ampPracticeBusy=true;renderAudioDiagnostics();interfaceMessage('Connecting the selected interface to '+t.name+' and BROILER…');
@@ -1568,7 +1612,7 @@
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Voice → GLAZE.',true);return;}
     const t=track(),generation=lifecycle,existing=t.effects.findIndex(f=>f?.type==='glaze'),slot=existing>=0?existing:t.effects.findIndex(f=>!f);
-    if(slot<0){interfaceMessage('This track has four effects already. Choose another track or free an insert before adding GLAZE.',true);return;}
+    if(slot<0){interfaceMessage('This track has five effects already. Choose another track or free an insert before adding GLAZE.',true);return;}
     if(existing<0){const def=effectById('glaze'),preset=def.presets.find(p=>p.id==='first-service');remember();t.effects[slot]={type:'glaze',params:clone(preset.params)};changed({arrangement:true,mixer:true,rack:true,automation:true});}
     rackTarget='track';selectedSlot=slot;renderRack();renderEffectEditor();automationEditor?.render();$('recordSource').value='microphone';$('micInputPanel').open=true;
     const operation=++microphoneOperation;ampPracticeBusy=true;renderAudioDiagnostics();interfaceMessage('Connecting the selected microphone to '+t.name+' and GLAZE…');
@@ -1582,7 +1626,7 @@
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Input → SCALES.',true);return;}
     const t=track(),generation=lifecycle,existing=t.effects.findIndex(f=>f?.type==='scales'),slot=existing>=0?existing:t.effects.findIndex(f=>!f);
-    if(slot<0){interfaceMessage('This track has four effects already. Choose another track or free an insert before adding SCALES.',true);return;}
+    if(slot<0){interfaceMessage('This track has five effects already. Choose another track or free an insert before adding SCALES.',true);return;}
     if(existing<0){remember();t.effects[slot]={type:'scales',params:clone(effectById('scales').defaults)};changed({arrangement:true,mixer:true,rack:true,automation:true});}
     rackTarget='track';selectedSlot=slot;renderRack();renderEffectEditor();automationEditor?.render();$('recordSource').value='microphone';$('micInputPanel').open=true;
     const operation=++microphoneOperation;ampPracticeBusy=true;renderAudioDiagnostics();interfaceMessage('Connecting the selected interface to '+t.name+' and SCALES…');
@@ -1601,7 +1645,7 @@
       if(operation!==microphoneOperation||generation!==lifecycle)return;
       renderMicrophone();if(!connected)return;
       const t=state.tracks.find(t=>t.id===target);
-      status(enabled?'Microphone monitoring → '+t.name+' → four effects → mixer. Use headphones.':'Microphone monitoring is off.'+(engine.getMicrophoneStatus().recording?' The dry take continues recording.':''));
+      status(enabled?'Microphone monitoring → '+t.name+' → five effects → mixer. Use headphones.':'Microphone monitoring is off.'+(engine.getMicrophoneStatus().recording?' The dry take continues recording.':''));
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
   }
   engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='audio-settings-changed'){renderMicrophone();if($('audioSettingsDialog').open)renderAudioDiagnostics();}else if(event.type==='audio-device-change'){if($('audioSettingsDialog').open)refreshAudioDevices();renderMicrophone();}else if(event.type==='error'||event.type==='microphone-disconnected'){status(event.message);if($('audioSettingsDialog').open)interfaceMessage(event.message,true);}};
@@ -1735,5 +1779,5 @@
   document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
   window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
   const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
-  window.LoomApp=Object.freeze({get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>3)return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{serviceController.reset();return replaceState(next,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  window.LoomApp=Object.freeze({get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{serviceController.reset();return replaceState(next,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

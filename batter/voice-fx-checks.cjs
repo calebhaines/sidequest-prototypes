@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 globalThis.window=globalThis;
 const localShared=path.join(__dirname,'shared'),shared=fs.existsSync(path.join(localShared,'voice-effects.js'))?localShared:path.join(__dirname,'..','shared');
 const vendor=fs.existsSync(path.join(shared,'galley-effects','effects.js'))?path.join(shared,'galley-effects'):path.join(__dirname,'..','loom');
-for(const name of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','effects.js'])require(path.join(vendor,name));
+for(const name of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js'])require(path.join(vendor,name));
 require(path.join(shared,'voice-effects.js'));require(path.join(shared,'pattern-schema.js'));require('./engine.js');
 const S=BatterSchema,E=BatterEngine,bridge=KitchenVoiceEffects,passed=[];
 const clone=value=>JSON.parse(JSON.stringify(value));

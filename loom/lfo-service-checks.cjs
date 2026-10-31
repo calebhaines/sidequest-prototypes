@@ -10,7 +10,7 @@ globalThis.window = globalThis;
 globalThis.crypto ||= webcrypto;
 globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
-for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'audio-engine.js', 'service-capture.js']) {
+for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-capture.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
 }
 const S = LoomSchema, C = LoomServiceCapture, { Core } = createLoomEngineDSP(createLoomEffectsDSP, createLoomLFODSP);
@@ -23,7 +23,7 @@ function fixture() {
   const state = S.defaultState();
   Object.assign(state, { tempo: 120, lengthBars: 4, loopEnabled: false, loopStart: 0, loopEnd: 16 });
   state.master.level = .7;
-  state.tracks.forEach(track => { track.effects = [null, null, null, null]; track.clips = []; track.instrumentLive = false; });
+  state.tracks.forEach(track => { track.effects.fill(null); track.clips = []; track.instrumentLive = false; });
   state.returns.forEach(bus => { bus.effects = [null, null, null, null]; bus.level = .4; });
   const left = Float32Array.from({ length: 16000 }, (_, i) => .1 * Math.sin(2 * Math.PI * 91 * i / rate) + .025 * Math.sin(2 * Math.PI * 1711 * i / rate));
   const right = Float32Array.from(left, (value, i) => value * .7 + .01 * Math.sin(2 * Math.PI * 431 * i / rate));

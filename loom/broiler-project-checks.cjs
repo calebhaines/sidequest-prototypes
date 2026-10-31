@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const legacy = JSON.parse(fs.readFileSync(path.join(__dirname, 'broiler-legacy-fixtures.json'), 'utf8'));
@@ -56,7 +56,7 @@ check('Complete modern rigs, workshop values and numeric automation survive proj
   for (const param of definition.params.filter(param => param.type === 'range')) {
     assert(LoomSchema.automationTargets(restored.tracks[0]).some(target => target.target === 'fx:0:' + param.key && target.min === param.min && target.max === param.max), param.key);
   }
-  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 4));
+  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
 });
 
 function fingerprint(params) {

@@ -23,7 +23,7 @@ function load() {
   scope.window = scope; vm.createContext(scope);
   const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
   vm.runInContext(fs.readFileSync(shared, 'utf8'), scope, { filename: 'pattern-schema.js' });
-  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) {
+  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
   }
   return scope;
@@ -109,7 +109,7 @@ function workletHarness(scope) {
         const saved = S.serializeProject(state), restored = S.parseProject(saved);
         assert.equal(S.serializeProject(restored), saved); assert.deepEqual(plain(restored.tracks[0].effects[0].params), plain(preset.params));
         assert(S.automationTargets(restored.tracks[0]).some(item => item.effectType === id && item.target === 'fx:0:' + target.key));
-        assert.equal(restored.tracks[0].automation[0].effectType, id); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 4));
+        assert.equal(restored.tracks[0].automation[0].effectType, id); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
       }
     }
   });

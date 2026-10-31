@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {}, performance: { now: () => 10000 } };
 scope.window = scope;
 vm.createContext(scope);
-for (const filename of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
+for (const filename of ['vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'char-dsp.js', 'effects.js', 'track-eq-dsp.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
 const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP);
 const rate = 8000;
 const passed = [];
@@ -110,7 +110,7 @@ check('Stopped monitoring traverses the actual track rack once and excludes its 
   const referenceInputs = Array.from({ length: 9 }, () => [new Float32Array(128), new Float32Array(128)]); referenceInputs[3] = source[8];
   const actual = renderCore(monitored, source), expected = renderCore(reference, referenceInputs);
   assert.deepEqual(actual, expected); assert(actual[0].some(sample => Math.abs(sample) > .01));
-  assert.equal(monitored.tracks.length, 8); assert(monitored.slots.every(row => row.length === 4));
+  assert.equal(monitored.tracks.length, 8); assert(monitored.slots.every(row => row.length === 5));
 });
 
 check('Count-in keeps live microphone effects audible, and mixer mute/solo remain authoritative', () => {

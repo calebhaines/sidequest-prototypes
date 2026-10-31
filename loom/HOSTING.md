@@ -3,7 +3,7 @@
 GALLEY hosts the full, original interface and audio engine of an instrument.
 Its injected bridge gives the instrument a context facade over GALLEY’s shared
 AudioContext, with a destination that feeds only its assigned stereo track.
-The track’s four inserts and mixer follow that destination. OfflineAudioContext
+The track’s five inserts and mixer follow that destination. OfflineAudioContext
 keeps its native behavior for an app’s own exports.
 
 ## Adding an app

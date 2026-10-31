@@ -11,7 +11,7 @@
   const number = (v, lo, hi, fallback) => finite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
   const label = (v, fallback, max = 60) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) || fallback : fallback;
   const identifier = v => typeof v === 'string' && /^[a-z0-9_-]{1,100}$/i.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
-  const targetName = v => v === 'level' || v === 'pan' || v === 'send:0' || v === 'send:1' || typeof v === 'string' && /^eq:(low|lowMid|highMid|high)$/.test(v) || typeof v === 'string' && /^fx:[0-3]:[a-z][a-z0-9_]{0,59}$/i.test(v);
+  const targetName = v => v === 'level' || v === 'pan' || v === 'send:0' || v === 'send:1' || typeof v === 'string' && /^eq:(low|lowMid|highMid|high|lowMidFreq|highMidFreq)$/.test(v) || typeof v === 'string' && /^fx:[0-4]:[a-z][a-z0-9_]{0,59}$/i.test(v);
   const trackId = v => typeof v === 'string' && /^track-[1-8]$/.test(v);
   const macroId = v => typeof v === 'string' && /^macro-[1-4]$/.test(v);
   const fail = message => { throw Error('SERVICE ' + message); };
@@ -24,7 +24,7 @@
   }
   function targets(track) {
     const result = (window.LoomSchema?.automationTargets(track) || []).map(p => ({ ...p }));
-    for (let slot = 0; slot < 4; slot++) {
+    for (let slot = 0; slot < (window.LoomSchema?.effectSlotCount?.(track) || 5); slot++) {
       const effect = track?.effects?.[slot], definition = (window.LoomEffectsCatalog || []).find(p => p.id === effect?.type);
       const target = 'fx:' + slot + ':mix';
       if (definition && !result.some(p => p.target === target)) result.push({ target, label: (slot + 1) + ' · ' + definition.name + ' · Mix', min: 0, max: 1, step: .01, default: definition.defaults.mix ?? 1, value: number(effect.params?.mix, 0, 1, definition.defaults.mix ?? 1), unit: '', effectType: definition.id });

@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const scope = { Math, Number, Object, Map, Set, Float32Array, Float64Array, Uint8Array, Uint32Array, Promise, createLoomEffectsDSP: () => ({}) };
 scope.window = scope; vm.createContext(scope);
-vm.runInContext(fs.readFileSync(path.join(__dirname, 'audio-engine.js'), 'utf8'), scope, { filename: 'audio-engine.js' });
+for (const file of ['track-eq-dsp.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
 function fixture() {
   const state = { tempo: 120, lengthBars: 4, loopEnabled: false, loopStart: 0, loopEnd: 8, tracks: [] };
   const audio = new scope.LoomAudio(state);

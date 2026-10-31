@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 globalThis.window=globalThis;
 const directory=fs.existsSync(path.join(__dirname,'galley-effects','effects.js'))?path.join(__dirname,'galley-effects'):path.join(__dirname,'..','loom');
-for(const file of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','effects.js'])vm.runInThisContext(fs.readFileSync(path.join(directory,file),'utf8'),{filename:file});
+for(const file of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js'])vm.runInThisContext(fs.readFileSync(path.join(directory,file),'utf8'),{filename:file});
 vm.runInThisContext(fs.readFileSync(path.join(__dirname,'voice-effects.js'),'utf8'),{filename:'voice-effects.js'});
 const fx=KitchenVoiceEffects,dsp=createLoomEffectsDSP(),passed=[];
 const effect=(type,patch={})=>({type,params:{...fx.defaults(type),...patch}}),clone=value=>JSON.parse(JSON.stringify(value));

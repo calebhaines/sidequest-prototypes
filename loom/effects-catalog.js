@@ -4,6 +4,18 @@
   const range = (key, label, min, max, step, value, unit) => ({ key, label, type: 'range', min, max, step, default: value, unit: unit || '' });
   const select = (key, label, value, options) => ({ key, label, type: 'select', default: value, options: options.map(([value, label]) => ({ value, label })) });
   const rhythmic = [['1/32', '1/32 note'], ['1/16', '1/16 note'], ['1/8', '1/8 note'], ['1/8.', 'Dotted eighth'], ['1/4', 'Quarter note'], ['1/4.', 'Dotted quarter'], ['1/2', 'Half note'], ['1', 'One bar'], ['2', 'Two bars']];
+  const multibandParams = [
+    select('bandMode', 'Compression mode', 'full', [['full', 'Full band · original BUTTER'], ['multiband', 'Three bands · independent dynamics']]),
+    range('crossoverLow', 'Low / mid crossover', 50, 800, 1, 200, 'Hz'), range('crossoverHigh', 'Mid / high crossover', 1200, 12000, 1, 2500, 'Hz'),
+    ...['low', 'mid', 'high'].flatMap((band, index) => {
+      const name = ['Low', 'Mid', 'High'][index];
+      return [range(band + 'Threshold', name + ' threshold', -60, 0, .1, -18, 'dB'), range(band + 'Ratio', name + ' ratio', 1, 40, .1, 4, ':1'),
+        range(band + 'Attack', name + ' attack', .02, 100, .01, [25, 12, 3][index], 'ms'), range(band + 'Release', name + ' release', 20, 5000, 1, [220, 160, 90][index], 'ms'),
+        range(band + 'Gain', name + ' output trim', -12, 12, .1, 0, 'dB'), select(band + 'Enabled', name + ' compression', 'on', [['on', 'On'], ['off', 'Off · retain band level']]),
+        select(band + 'Solo', name + ' solo', 'off', [['off', 'Off'], ['on', 'Solo this band']])];
+    })
+  ];
+  const multibandKeys = multibandParams.map(param => param.key), multibandDefaults = Object.fromEntries(multibandParams.map(param => [param.key, param.default]));
   const catalog = [
     {
       id: 'prism', name: 'MANDOLINE', subtitle: 'Slice the spectrum. Mind the corners.', color: '#dfcba4', accent: '#f2e8d2', visual: 'facets',
@@ -13,17 +25,20 @@
     },
     {
       id: 'velvet', name: 'BUTTER', subtitle: 'Smooth the peaks. Chef asked for more.', color: '#e4c365', accent: '#f6e1a0', visual: 'ribbons', panel: 'compressor',
-      description: 'The original clean compressor plus eight classic analog-inspired characters: FET, tube and solid-state optical, variable-mu, VCA, and diode bridge. Distinct detector, timing, memory, and colour responses use reduced-order models rather than measured, circuit-exact hardware recreations.',
+      description: 'The original clean compressor plus eight classic analog-inspired characters, with optional three-band compression. Independently control lows, mids and highs through phase-matched crossovers. The FET, optical, variable-mu, VCA and diode-bridge families retain their distinct detector, memory and colour responses; these are reduced-order models rather than circuit-exact hardware recreations.',
+      multibandKeys,
       params: [
         select('model', 'Compressor model', 'clean', [['clean', 'Clean · original BUTTER'], ['fet-76', 'Seventy-six · FET'], ['opto-2a', 'Optical 2A · tube opto'], ['opto-3a', 'Optical 3A · solid-state opto'], ['vari-670', 'Vari 670 · variable-mu'], ['bus-4k', 'Bus 4K · console VCA'], ['vca-160', 'VCA 160 · RMS'], ['bus-2500', 'Bus 2500 · Thrust VCA'], ['diode-609', 'Diode 609 · diode bridge']]),
         range('input', 'Input gain', -24, 24, 0.1, 0, 'dB'),
         range('threshold', 'Threshold', -48, 0, 0.1, -18, 'dB'), range('ratio', 'Ratio', 1, 40, 0.1, 4, ':1'), range('attack', 'Attack', 0.02, 100, 0.01, 12, 'ms'), range('release', 'Release', 20, 5000, 1, 180, 'ms'), range('knee', 'Soft knee', 0, 18, 0.1, 6, 'dB'), range('makeup', 'Makeup gain', -12, 24, 0.1, 3, 'dB'), range('sidechain', 'Detector high-pass', 20, 500, 1, 30, 'Hz'),
         range('colour', 'Analog colour', 0, 1, 0.01, 0.35, ''), select('timing', 'Timing', 'manual', [['manual', 'Manual attack / release'], ['classic', 'Classic program timing']]), range('link', 'Stereo link', 0, 1, 0.01, 1, ''),
-        select('fetMode', 'FET mode', 'normal', [['normal', 'Normal'], ['all-buttons', 'All buttons']]), select('thrust', 'Thrust detector', 'off', [['off', 'Off'], ['medium', 'Medium'], ['loud', 'Loud']])
+        select('fetMode', 'FET mode', 'normal', [['normal', 'Normal'], ['all-buttons', 'All buttons']]), select('thrust', 'Thrust detector', 'off', [['off', 'Off'], ['medium', 'Medium'], ['loud', 'Loud']]),
+        ...multibandParams
       ],
       groups: [
-        { id: 'main', section: 'main', label: 'Compressor face', help: 'Choosing a model preserves the knobs. Use classic settings loads that model’s suggested timing and curve; a complete recipe replaces every compressor setting.', keys: ['model', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'] },
-        { id: 'advanced', section: 'advanced', label: 'Detector, timing & colour', help: 'Classic timing uses the selected family’s program response. Manual timing keeps that character with your attack and release values. Stereo link at 1 shares the stronger gain reduction; 0 is dual mono. All buttons is FET-only; Thrust is Bus 2500-only.', keys: ['knee', 'sidechain', 'colour', 'timing', 'link', 'fetMode', 'thrust'] }
+        { id: 'main', section: 'main', label: 'Compressor face', help: 'Choosing a model preserves the knobs. Full band retains the original sound. Three-band mode uses its own dynamics controls; shared input and makeup apply once.', keys: ['model', 'bandMode', 'input', 'threshold', 'ratio', 'attack', 'release', 'makeup', 'mix'] },
+        { id: 'advanced', section: 'advanced', label: 'Detector, timing & colour', help: 'Classic timing uses the selected family’s program response in full-band mode. Three-band mode uses the independent band attack/release while retaining each model’s detector and program memory. Stereo link at 1 shares the stronger gain reduction; 0 is dual mono. All buttons is FET-only; Thrust is Bus 2500-only.', keys: ['knee', 'sidechain', 'colour', 'timing', 'link', 'fetMode', 'thrust'] },
+        { id: 'multiband', section: 'multiband', label: 'Three-band dynamics', help: 'Set two crossovers and independent threshold, ratio, attack, release and output trim for each band. Compression Off retains the band’s input/output trim. Solo is a monitoring selection and can combine bands. Crossovers and parallel dry reference share the same phase; global makeup is applied once after the bands.', keys: multibandKeys.filter(key => key !== 'bandMode') }
       ],
       models: [
         { id: 'clean', name: 'Clean', inspiration: 'Original GALLEY BUTTER compressor', description: 'The original clean, filtered-peak compressor with a soft knee. Analog colour, classic timing, All buttons, and Thrust are inactive; input gain and stereo link remain available.', timingDescription: 'Manual Attack and Release use the displayed millisecond values. Classic timing does not change Clean.', defaults: { ratio: 4, attack: 12, release: 180, knee: 6, colour: 0.35, timing: 'manual', fetMode: 'normal', thrust: 'off' } },
@@ -36,7 +51,7 @@
         { id: 'bus-2500', name: 'Bus 2500', inspiration: 'API 2500 stereo bus compressor family', description: 'A forward VCA bus character with selectable Thrust detector weighting. Medium and Loud reduce low-frequency dominance in the detector; they do not EQ the audible signal directly.', timingDescription: 'Classic: 3 ms attack and 100 ms base release with program recovery. Manual provides your own base times; Thrust remains an independent detector choice.', defaults: { ratio: 4, attack: 3, release: 100, knee: 4, colour: 0.3, timing: 'classic', fetMode: 'normal', thrust: 'medium' } },
         { id: 'diode-609', name: 'Diode 609', inspiration: 'Neve 33609 diode-bridge compressor family', description: 'A weighty diode-bridge character with a feedback-style response and restrained analog colour. It evokes the compressor section; there is no separate hidden limiter.', timingDescription: 'Classic: 3 ms attack, 100 ms fast release, and about 1 s slow recovery. Manual adjusts the base timing while preserving the detector and colour character.', defaults: { ratio: 3, attack: 3, release: 100, knee: 8, colour: 0.35, timing: 'classic', fetMode: 'normal', thrust: 'off' } }
       ],
-      defaults: { threshold: -18, ratio: 4, attack: 12, release: 180, knee: 6, makeup: 3, sidechain: 30, mix: 1, bypass: false, model: 'clean', input: 0, colour: 0.35, timing: 'manual', link: 1, fetMode: 'normal', thrust: 'off' },
+      defaults: { threshold: -18, ratio: 4, attack: 12, release: 180, knee: 6, makeup: 3, sidechain: 30, mix: 1, bypass: false, model: 'clean', input: 0, colour: 0.35, timing: 'manual', link: 1, fetMode: 'normal', thrust: 'off', ...multibandDefaults },
       presets: [
         { id: 'house-smooth', name: 'House smooth', description: 'Original BUTTER at its original settings. Clean, linked, and familiar.', params: {} },
         { id: 'seventy-six-vocal', name: 'Fast service vocal', description: 'Seventy-six catches peaks with a firm FET attack and a little colour.', params: { model: 'fet-76', threshold: -21, ratio: 4, attack: 0.08, release: 80, knee: 3, makeup: 3, sidechain: 80, colour: 0.32, timing: 'classic' } },
@@ -49,7 +64,11 @@
         { id: 'thrust-drums', name: 'Thrust the pan', description: 'Bus 2500 with Medium Thrust and manual timing. Keep low hits from steering the whole drum bus.', params: { model: 'bus-2500', threshold: -20, ratio: 3, attack: 10, release: 150, knee: 4, makeup: 2, sidechain: 60, colour: 0.3, timing: 'manual', thrust: 'medium' } },
         { id: 'diode-room', name: 'Diode room', description: 'Diode 609 brings rounded recovery and a little weight to room mics or a roomy bus.', params: { model: 'diode-609', threshold: -24, ratio: 3, attack: 3, release: 100, knee: 6, makeup: 3, sidechain: 80, colour: 0.4, timing: 'classic' } },
         { id: 'optical-level', name: 'Gentle night shift', description: 'A lower-ratio Optical 2A leveller with a soft knee and a little dry signal.', params: { model: 'opto-2a', threshold: -19, ratio: 1.8, attack: 10, release: 60, knee: 12, makeup: 1.5, sidechain: 80, colour: 0.2, timing: 'classic', mix: 0.8 } },
-        { id: 'clean-transients', name: 'Clean transient trim', description: 'Original Clean with a short manual attack, filtered detector, and a partial blend.', params: { threshold: -15, ratio: 2.5, attack: 3, release: 90, knee: 5, makeup: 1.5, sidechain: 100, mix: 0.7 } }
+        { id: 'clean-transients', name: 'Clean transient trim', description: 'Original Clean with a short manual attack, filtered detector, and a partial blend.', params: { threshold: -15, ratio: 2.5, attack: 3, release: 90, knee: 5, makeup: 1.5, sidechain: 100, mix: 0.7 } },
+        { id: 'three-course-glue', name: 'Three-course glue', description: 'Three independently controlled VCA bands: firm lows, gentle mids and quick high-frequency peaks.', params: { bandMode: 'multiband', model: 'bus-4k', crossoverLow: 180, crossoverHigh: 2800, makeup: 1, colour: .18, lowThreshold: -24, lowRatio: 2.5, lowAttack: 30, lowRelease: 240, midThreshold: -22, midRatio: 1.8, midAttack: 15, midRelease: 180, highThreshold: -26, highRatio: 2.5, highAttack: 2, highRelease: 90 } },
+        { id: 'three-band-bass', name: 'Keep the low pan steady', description: 'RMS low-band control with a relaxed mid band and a lightly trimmed top.', params: { bandMode: 'multiband', model: 'vca-160', crossoverLow: 160, crossoverHigh: 2200, makeup: 0, colour: .22, lowThreshold: -25, lowRatio: 4, lowAttack: 20, lowRelease: 220, midThreshold: -19, midRatio: 1.5, midAttack: 25, midRelease: 180, highThreshold: -22, highRatio: 2, highAttack: 3, highRelease: 80, highGain: -1 } },
+        { id: 'three-band-vocal', name: 'A voice in three courses', description: 'Optical character across three bands, with quicker upper-band control for bright consonants.', params: { bandMode: 'multiband', model: 'opto-3a', crossoverLow: 220, crossoverHigh: 4200, makeup: 1.5, colour: .2, lowThreshold: -23, lowRatio: 2, lowAttack: 30, lowRelease: 250, midThreshold: -25, midRatio: 2.5, midAttack: 8, midRelease: 140, highThreshold: -31, highRatio: 4, highAttack: 1, highRelease: 70 } },
+        { id: 'three-band-neutral', name: 'Three empty plates', description: 'Unity-ratio, zero-colour starting point. Hear the phase-matched crossover reference, then add compression one band at a time.', params: { bandMode: 'multiband', model: 'clean', input: 0, makeup: 0, colour: 0, lowRatio: 1, midRatio: 1, highRatio: 1, lowGain: 0, midGain: 0, highGain: 0 } }
       ]
     },
     {
@@ -208,6 +227,8 @@
   if (scope.LoomCreativeCatalog) catalog.push(...scope.LoomCreativeCatalog);
   if (scope.LoomPreampCatalog) catalog.push(...scope.LoomPreampCatalog);
   if (scope.LoomTapeCatalog) catalog.push(...scope.LoomTapeCatalog);
+  const charIndex = catalog.findIndex(effect => effect.id === 'cinder');
+  if (scope.LoomCharCatalog && charIndex >= 0) catalog[charIndex] = scope.LoomCharCatalog;
   catalog.forEach(effect => { effect.params.push(range('mix', effect.mixLabel || 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
   scope.LoomEffectsCatalog = catalog;
 })(typeof window === 'undefined' ? globalThis : window);

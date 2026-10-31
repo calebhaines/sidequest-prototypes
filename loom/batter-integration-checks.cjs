@@ -86,11 +86,11 @@ async function nativeAndClock(page) {
   for (const id of [...legacy, 'batter', 'proof', 'marinade', 'picnic']) assert(inventory.manifest.includes(id), 'Native catalog retains ' + id);
   assert.deepEqual(inventory.lanes, voices); assert.deepEqual(inventory.caps.notes.voices.map(voice => voice.id), voices); assert(inventory.caps.renderPattern && inventory.caps.patternImport && inventory.caps.patternExport && inventory.caps.importAudio && inventory.caps.exportAudio);
   assert.notEqual(inventory.name, 'Standalone recovery must remain private', 'A hosted instance must not read standalone IndexedDB or local recovery.');
-  assert.equal(inventory.tracks.length, 8); assert(inventory.tracks.every(slots => slots === 4));
+  assert.equal(inventory.tracks.length, 8); assert(inventory.tracks.every(slots => slots === 5));
   await frame.locator('#auditionButton').click();
   let audible = 0; for (let i = 0; i < 12; i++) { audible = Math.max(audible, await page.evaluate(() => window.qaBatterRMS())); await wait(12); }
   assert(audible > .001, 'A real embedded drum audition reaches GALLEY’s actual output.');
-  passed.push('Real UI opens BATTER / native catalog, schema and embedded instruments agree, including PICNIC / twelve canonical voices / audible native audition / eight tracks × four inserts');
+  passed.push('Real UI opens BATTER / native catalog, schema and embedded instruments agree, including PICNIC / twelve canonical voices / audible native audition / eight tracks × five inserts');
 
   await page.evaluate(() => {
     const child = window.qaChild(0), engine = child.BatterUI.engine, state = engine.getState(), hit = state.patterns[0].lanes[3].steps[6];
@@ -166,8 +166,8 @@ async function notesAndRender(page) {
     const blob = await window.LoomApp.engine.renderWav(actual, window.LoomApp.assets, { snapshotReady: true, startBeat: 0, endBeat: 4, tailSeconds: .2 });
     return { source: actual.tracks[0].effects, parsed: roundtrip.tracks[0].effects, wav: await window.qaWav(blob), catalog: window.LoomEffectsCatalog.map(f => f.id) };
   });
-  assert.deepEqual(fx.source, fx.parsed); assert.equal(fx.source[0].type, 'glaze'); assert.equal(fx.source[1].type, 'broiler'); assert.equal(fx.source[1].params.model, 'svt-69'); assert.equal(fx.source[1].params.cabinet, 'sealed810'); assert.equal(fx.source.length, 4); assert.equal(fx.catalog.length, 10); assert.equal(fx.wav.channels, 2); assert.equal(fx.wav.rate, 48000); assert(fx.wav.rms > .0001 && fx.wav.peak > .005 && fx.wav.peak <= 1); observations.push({ drumTrackWav: fx.wav });
-  passed.push('GLAZE and BROILER remain ordinary drum-track inserts / ten effects / portable parameters / finite audible stereo PCM WAV');
+  assert.deepEqual(fx.source, fx.parsed); assert.equal(fx.source[0].type, 'glaze'); assert.equal(fx.source[1].type, 'broiler'); assert.equal(fx.source[1].params.model, 'svt-69'); assert.equal(fx.source[1].params.cabinet, 'sealed810'); assert.equal(fx.source.length, 5); assert.equal(fx.catalog.length, 16); assert.equal(fx.wav.channels, 2); assert.equal(fx.wav.rate, 48000); assert(fx.wav.rms > .0001 && fx.wav.peak > .005 && fx.wav.peak <= 1); observations.push({ drumTrackWav: fx.wav });
+  passed.push('GLAZE and BROILER remain ordinary drum-track inserts / sixteen effects / portable parameters / finite audible stereo PCM WAV');
 
   await openInstrument(page); await closeInstrument(page); await page.evaluate(() => { const e = window.LoomApp.engine; e.seek(0); window.LoomApp.notePlayback.setRecordingTracks(['track-1']); const original = e.stopRecording.bind(e); e.stopRecording = function () { const promise = original(); window.qaBatterTakePromise = promise; return promise; }; });
   await page.evaluate(async () => { await window.LoomApp.notePlayback.prepare(); await window.LoomApp.engine.startRecording(['track-1'], { startTransport: true, maxSeconds: .8 }); window.LoomApp.notePlayback.start(); });

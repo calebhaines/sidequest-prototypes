@@ -9,7 +9,7 @@ const http = require('node:http');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const sourceDownload = fs.existsSync(path.join(__dirname, 'instruments'));
 const root = sourceDownload ? __dirname : path.resolve(__dirname, '..');
-const scripts = ['shared/pattern-schema.js', 'loom/vocal-catalog.js', 'loom/utility-catalog.js', 'loom/filter-catalog.js', 'loom/creative-catalog.js', 'loom/effects-catalog.js', 'loom/vocal-dsp.js', 'loom/utility-dsp.js', 'loom/filter-dsp.js', 'loom/creative-dsp.js', 'loom/effects.js', 'loom/schema.js', 'loom/audio-engine.js', 'loom/host-bridge.js', 'loom/instrument-host.js', 'loom/note-playback.js']
+const scripts = ['shared/pattern-schema.js', 'loom/vocal-catalog.js', 'loom/utility-catalog.js', 'loom/filter-catalog.js', 'loom/creative-catalog.js', 'loom/char-catalog.js', 'loom/effects-catalog.js', 'loom/vocal-dsp.js', 'loom/utility-dsp.js', 'loom/filter-dsp.js', 'loom/creative-dsp.js', 'loom/char-dsp.js', 'loom/effects.js', 'loom/schema.js', 'loom/track-eq-dsp.js', 'loom/audio-engine.js', 'loom/host-bridge.js', 'loom/instrument-host.js', 'loom/note-playback.js']
   .map(file => sourceDownload ? file.replace(/^loom\//, '') : file).filter(file => fs.existsSync(path.join(root, file)));
 const html = '<!doctype html><meta charset="utf-8"><title>Tonal capture timing</title>' + scripts.map(file => '<script src="/' + file + '"></script>').join('');
 const apps = (process.env.TONAL_LIVE_APPS || 'bower,roux,proof,marinade,haze,fable,mire,picnic,spool,ravel').split(',');

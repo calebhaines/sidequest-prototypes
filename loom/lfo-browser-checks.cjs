@@ -10,7 +10,7 @@ const { execFileSync } = require('node:child_process');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const root = path.resolve(__dirname, '..'), shared = fs.existsSync(path.join(__dirname, 'shared/pattern-schema.js')) ? path.join(__dirname, 'shared') : path.join(root, 'shared');
 const artifacts = process.env.LOOM_LFO_QA_DIR || '/tmp/galley-lfo-browser-qa', evidence = {}, passed = [];
-const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'audio-engine.js'];
+const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'lfo.js', 'service-schema.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js'];
 function maintainedHTML() {
   if (process.env.LOOM_LFO_QA_BUILT) return fs.readFileSync(path.join(__dirname, 'index.html'));
   const python = `from pathlib import Path

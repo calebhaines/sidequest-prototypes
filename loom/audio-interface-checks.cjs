@@ -41,7 +41,7 @@ function fixture(options = {}) {
   const devices = [{ kind: 'audioinput', deviceId: 'default', label: 'Default input', groupId: 'default' }, { kind: 'audioinput', deviceId: 'interface-input', label: 'Test interface input', groupId: 'interface' }, { kind: 'audiooutput', deviceId: 'default', label: 'Default output', groupId: 'default' }, { kind: 'audiooutput', deviceId: 'interface-output', label: 'Test interface output', groupId: 'interface' }];
   const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, clearTimeout, performance: { now: () => 10000 }, URL, AudioContext: Context, localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) }, navigator: { mediaDevices: { getSupportedConstraints: () => ({ deviceId: true, channelCount: true, sampleRate: true, latency: true }), enumerateDevices: async () => devices, getUserMedia: async constraints => { requests.push(constraints); if (control.permissionError) throw control.permissionError; if (control.permissionDeferred) await new Promise(resolve => { control.permissionDeferred.resolve = resolve; }); return makeStream(); } } } };
   scope.window = scope; vm.createContext(scope);
-  for (const filename of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
+  for (const filename of ['vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, filename), 'utf8'), scope, { filename });
   const state = scope.LoomSchema.defaultState(); state.loopEnabled = false; const engine = new scope.LoomAudio(state);
   return { scope, state, engine, contexts, streams, requests, storage, control, makeStream };
 }
@@ -155,7 +155,7 @@ function plain(value) { return JSON.parse(JSON.stringify(value)); }
   await check('Device preferences persist locally while portable project data contains no hardware identities', async () => {
     const f = fixture(); await f.engine.applyAudioSettings({ inputDeviceId: 'interface-input', outputDeviceId: 'interface-output', inputChannel: '1', sampleRate: 48000, latencyProfile: 'balanced' });
     assert(f.storage.size > 0); const restored = new f.scope.LoomAudio(f.scope.LoomSchema.defaultState()); assert.equal(restored.getAudioSettings().inputDeviceId, 'interface-input'); assert.equal(restored.getAudioSettings().outputDeviceId, 'interface-output');
-    const serialized = f.scope.LoomSchema.serializeProject(f.state); assert(!serialized.includes('interface-input')); assert(!serialized.includes('interface-output')); assert.equal(f.state.tracks.length, 8); assert(f.state.tracks.every(t => t.effects.length === 4)); await f.engine.dispose();
+    const serialized = f.scope.LoomSchema.serializeProject(f.state); assert(!serialized.includes('interface-input')); assert(!serialized.includes('interface-output')); assert.equal(f.state.tracks.length, 8); assert(f.state.tracks.every(t => t.effects.length === 5)); await f.engine.dispose();
   });
   for (const name of passed) console.log('PASS', name);
   console.log(`${passed.length} audio interface checks passed.`);

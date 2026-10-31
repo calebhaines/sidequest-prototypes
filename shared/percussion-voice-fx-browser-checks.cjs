@@ -15,7 +15,7 @@ const root = path.resolve(__dirname, '..');
 const artifacts = process.env.PERCUSSION_VOICE_FX_QA_DIR || '/tmp/percussion-voice-fx-qa';
 const apps = (process.env.PERCUSSION_VOICE_FX_APPS || 'grain,tine,form,batter').split(',');
 const facades = { grain: 'GrainApp', tine: 'TineApp', form: 'FormApp', batter: 'BatterApp' };
-const effectFiles = ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','effects.js'];
+const effectFiles = ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js'];
 const engineFiles = ['service-schema.js','schema.js','audio-engine.js','host-bridge.js','instrument-host.js','note-renderer.js','note-playback.js'];
 const passed = [];
 function check(condition, message) { assert(condition, message); }
