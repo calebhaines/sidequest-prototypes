@@ -1364,12 +1364,13 @@
               const createPreamp=${window.createLoomPreampDSP ? window.createLoomPreampDSP.toString() : 'null'};
               const createTape=${window.createLoomTapeDSP ? window.createLoomTapeDSP.toString() : 'null'};
               const createChar=${window.createLoomCharDSP ? window.createLoomCharDSP.toString() : 'null'};
+              const createLoFi=${window.createLoomLoFiDSP ? window.createLoomLoFiDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
               const createCPU=${window.createLoomCPUProfiler ? window.createLoomCPUProfiler.toString() : 'null'};
               const createEQ=${window.createLoomTrackEQDSP ? window.createLoomTrackEQDSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar),createLFO,createCPU,createEQ);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi),createLFO,createCPU,createEQ);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;

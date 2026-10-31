@@ -6,7 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'/opt/codex/runtimes/cod
 const {legacyProject}=require('./mix-upgrade-checks.cjs');
 const root=path.resolve(__dirname,'..'),shared=fs.existsSync(path.join(__dirname,'shared/pattern-schema.js'))?path.join(__dirname,'shared'):path.join(root,'shared');
 const artifacts=process.env.MIX_QA_DIR||'/tmp/galley-mix-upgrade-qa',evidence={},passed=[];
-const files=['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js','lfo.js','track-eq-dsp.js','cpu-profiler.js','service-schema.js','schema.js','audio-engine.js'];
+const files=['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','lofi-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','lofi-dsp.js','effects.js','lfo.js','track-eq-dsp.js','cpu-profiler.js','service-schema.js','schema.js','audio-engine.js'];
 function maintainedHTML(){
  if(process.env.MIX_QA_BUILT)return fs.readFileSync(path.join(__dirname,'index.html'));
  const python=`from pathlib import Path

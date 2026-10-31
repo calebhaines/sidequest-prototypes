@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 globalThis.window=globalThis;
 const directory=fs.existsSync(path.join(__dirname,'galley-effects','effects.js'))?path.join(__dirname,'galley-effects'):path.join(__dirname,'..','loom');
-for(const file of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js'])vm.runInThisContext(fs.readFileSync(path.join(directory,file),'utf8'),{filename:file});
+for(const file of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','lofi-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','lofi-dsp.js','effects.js'])vm.runInThisContext(fs.readFileSync(path.join(directory,file),'utf8'),{filename:file});
 vm.runInThisContext(fs.readFileSync(path.join(__dirname,'voice-effects.js'),'utf8'),{filename:'voice-effects.js'});
 const fx=KitchenVoiceEffects,dsp=createLoomEffectsDSP(),passed=[];
 const effect=(type,patch={})=>({type,params:{...fx.defaults(type),...patch}}),clone=value=>JSON.parse(JSON.stringify(value));
@@ -12,8 +12,8 @@ function run(processor,a,b=a,block=128){const left=a.slice(),right=b.slice();for
 function peak(a){let value=0;for(const sample of a)value=Math.max(value,Math.abs(sample));return value;}
 async function check(name,fn){await fn();passed.push(name);console.log('PASS '+name);}
 (async()=>{
-await check('The two-slot project contract includes all sixteen complete GALLEY effects and rejects malformed supplied state',()=>{
- assert.equal(fx.catalog.length,16);assert.deepEqual(fx.normalizeSlots(undefined,{strict:true}),[null,null]);
+await check('The two-slot project contract includes all seventeen complete GALLEY effects and rejects malformed supplied state',()=>{
+ assert.equal(fx.catalog.length,17);assert.deepEqual(fx.normalizeSlots(undefined,{strict:true}),[null,null]);
  for(const def of fx.catalog){const slots=[effect(def.id),null];assert.deepEqual(fx.normalizeSlots(slots,{strict:true}),slots);for(const key of Object.keys(def.defaults)){const invalid=clone(slots);delete invalid[0].params[key];assert.throws(()=>fx.normalizeSlots(invalid,{strict:true}),/invalid/i,def.id+'.'+key);}}
  for(const bad of [null,[],[null],[null,null,null],[{},null],[{type:'missing',params:{}},null]])assert.throws(()=>fx.normalizeSlots(bad,{strict:true}));
  const original=[effect('saute'),effect('velvet')],normalized=fx.normalizeSlots(original);normalized[0].params.input=10;assert.equal(original[0].params.input,0);

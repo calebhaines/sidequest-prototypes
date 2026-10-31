@@ -2,6 +2,11 @@
 
 Kitchen’s central production station.
 
+**TIN CAN (1.29.0)** adds twelve lo-fi microphone and telephone characters, from
+carbon handsets and bullet mics to toy capsules, intercoms, megaphones and early
+digital voice. Five face knobs lead to folded bandwidth, transducer, dynamics,
+noise and codec controls. See [the operating and modeling guide](TIN-CAN-GUIDE.md).
+
 **Reversible track freeze (1.28.0)** prints a track’s effects, EQ, level, pan, sends
 and automation into lossless temporary audio, then releases its insert processors
 and native instrument. One click restores the editable originals. Shared returns
@@ -145,7 +150,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.28.0.
+SERVICE is version 1.0.0; GALLEY is version 1.29.0.
 
 ## Making a piece
 
@@ -392,7 +397,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Sixteen effects
+## Seventeen effects
 
 | Effect | Processing |
 | --- | --- |
@@ -412,6 +417,7 @@ is unavailable, keep a WAV or packet for the next session.
 | STRAINER | Multimode filtering with clean, ladder, diode, and comb resonance; input envelope following, synced modulation, and stereo motion |
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
+| TIN CAN | Twelve lo-fi microphones and telephones with transducer distortion, resonant bandwidth, dynamics, wear, noise and optional PCM, G.711 µ-law or IMA ADPCM texture |
 
 ### Two GALLEY inserts per percussion voice
 
@@ -486,7 +492,7 @@ checks. See [MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for BUTTER and CHAR.
 
 GALLEY retains eight instrument/audio tracks with five inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
-channels each have four inserts. All sixteen effects work in these racks.
+channels each have four inserts. All seventeen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
 LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
 their original sound. Change either return's effects to build another shared
@@ -827,7 +833,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.28.0.
+font license notices. Version 1.29.0.
 
 ## Compatibility
 

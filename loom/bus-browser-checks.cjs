@@ -13,7 +13,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
 const root = path.resolve(__dirname, '..');
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared') : path.join(root, 'shared');
 const artifacts = process.env.LOOM_BUS_QA_DIR || '/tmp/bus-browser-qa';
-const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js'];
+const scripts = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js'];
 const passed = [];
 
 function maintainedHTML() {
@@ -162,7 +162,7 @@ async function selectBusSlot(page, owner, slot = 0) { await page.locator('[data-
 async function rangeKey(page, selector, key) { const input = page.locator(selector).first(); await input.focus(); await input.press(key); await input.press('Tab'); }
 async function ownerParams(page, id, slot = 0) { return page.evaluate(({ id, slot }) => LoomSchema.automationOwner(LoomApp.getState(), id).effects[slot]?.params, { id, slot }); }
 async function matrixPanels(page) {
-  const ids = await page.evaluate(() => LoomEffectsCatalog.map(effect => effect.id)); assert.equal(ids.length, 16);
+  const ids = await page.evaluate(() => LoomEffectsCatalog.map(effect => effect.id)); assert.equal(ids.length, 17);
   for (const type of ids) for (const owner of ['master', 'return-1']) {
     await page.evaluate(async ({ type, owner }) => { const q = busQA, state = q.blank(); state.selectedTrack = 2; state.tracks[2].effects[0] = q.fx(type, { mix: .37 }); state.master.effects[0] = q.fx(type, { mix: owner === 'master' ? .71 : .23 }); state.returns[0].effects[0] = q.fx(type, { mix: owner === 'return-1' ? .71 : .23 }); await LoomApp.loadState(state); }, { type, owner });
     await selectBusSlot(page, owner); assert.equal(await page.evaluate(() => LoomApp.getState().selectedTrack), 2); assert.equal(await page.evaluate(() => LoomApp.selectedEffectOwner), owner); assert.match(await page.locator('#effectEditor .effect-hero .eyebrow').textContent(), owner === 'master' ? /MASTER/ : /RETURN A/);

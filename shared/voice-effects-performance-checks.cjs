@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const directory = fs.existsSync(path.join(__dirname, 'galley-effects', 'effects.js')) ? path.join(__dirname, 'galley-effects') : path.join(__dirname, '..', 'loom');
-const files = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js'];
+const files = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'effects.js'];
 const sources = files.map(file => [file, fs.readFileSync(path.join(directory, file), 'utf8')]);
 const current = fs.readFileSync(path.join(__dirname, 'voice-effects.js'), 'utf8');
 const originalMethod = `      setVoice(index, value) { check(index); const next = normalizeSlots(value), prior = hasEffects(slots[index]); slots[index] = next; const rack = racks[index] || (hasEffects(next) ? makeRack(index) : null); if (rack) { if (rack.mode === 'worklet') rack.node.port.postMessage({ type: 'slots', slots: next }); else rack.core.setSlots(next); if (prior !== hasEffects(next)) reroute(index); } },`;

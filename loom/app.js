@@ -51,7 +51,7 @@
   const broilerDetailsOpen = new Set();
   let compressorAdvancedOpen = false;
   const preampDetailsOpen = new Set();
-  const tapeDetailsOpen = new Set();
+  const tapeDetailsOpen = new Set(), lofiDetailsOpen = new Set();
   let tapeDrag = null, tapeKeyboard = null;
   let trackEqDrag = null, trackEqKeyboard = null;
   const trackEqBands = [
@@ -252,6 +252,7 @@
       swirl: `<path d="M33 48c0-20 33-34 78-34s78 14 78 34v24c0 22-34 38-78 38S33 94 33 72V48Zm0 0c0 22 34 38 78 38s78-16 78-38M189 50l37-12 3 9-40 15M22 111h178"/><path d="M67 49c0-14 88-14 88 2 0 18-65 19-65 5 0-9 42-10 42 0 0 6-19 8-22 1M171 45l8 9-12 4" stroke="${a}"/><path d="m51 103-4 12m128-13 5 13M61 26l-4-10m109 7 4-12" opacity=".45"/>`,
       crumble: `<path d="M39 18h112v21H39zM45 39v19l37 30v19h29V88l34-30V39M34 13h122v5H34zM81 107h32v11H81zM151 23h27v16h-27m27-8h20v44h-20M67 48l8 7 10-9 12 12 11-9 13 7"/><path d="m64 9 6-5 9 5m18 0 7-5 8 5M51 91h14v-9h13v13h13m41-3h14v10h14V86h14M49 120h117" stroke="${a}"/><path d="M196 76v32m-8-16h16m-16 9h16" opacity=".5"/>`,
       scales: `<path d="M25 77h200v34H25zM35 83h180v22H35zM54 77V61m142 16V61M49 48h152v13H49zM67 48l9-17h98l10 17M125 31V8m-9 0h18M78 118h94"/><path d="M125 78V44m-5-1h10M66 95h35m-35 5h35M164 92h35m-35 7h35" stroke="${a}"/><circle cx="125" cy="93" r="12"/><path d="m118 97 7-12 7 12M62 25l8-10m118 10-8-10M99 21h52" stroke="${a}"/>`,
+      tinpan: `<path d="M25 44q0-22 25-22h65q25 0 25 22v10h-24V43H49v11H25zM46 59l-14 48h116l-14-48M40 115h100"/><circle cx="89" cy="78" r="22"/><circle cx="89" cy="78" r="8"/><path d="M89 60v4m13 1-4 4m9 9h-5m0 13-4-4m-9 9v-5m-13 0 4-4m-9-9h5m0-13 4 4M160 36q0-17 17-17t17 17v28q0 17-17 17t-17-17zM152 59v8q0 26 25 26t25-26v-8m-25 35v18m-16 4h32M167 34h20m-20 9h20m-20 9h20m-20 9h20" stroke="${a}"/><path d="M17 122h199"/>`,
       glaze: `<path d="M25 13h202v92H25zM33 21h186v76H33zM37 105v10m178-10v10M20 117h211"/><path d="M48 31h37v56H48zM103 31h49v25h-49zM170 31h31v56h-31zM103 68h49v19h-49z" opacity=".5"/><path d="M61 38h11m-11 7h11m-11 7h11m-11 7h11M66 65v9m-9-7q0 14 9 14t9-14m-9 14v6M110 38h35m-35 7h35M110 76h35m-35 6h35" stroke="${a}"/><circle cx="185" cy="43" r="6"/><circle cx="185" cy="61" r="6"/><circle cx="185" cy="79" r="6"/><path d="M85 51h12m55 0h12M91 46l6 5-6 5M158 46l6 5-6 5M6 65h9l4-11 5 26 5-31 5 24 4-8M225 65h5l3-8 4 16 4-22 4 14h7" stroke="${a}"/><path d="M40 14q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0" opacity=".4"/>`
     };
     return `<svg viewBox="0 0 250 125" aria-hidden="true"><g fill="none" stroke="${c}" stroke-width="${compact ? 4 : 1.7}" stroke-linecap="round" stroke-linejoin="round">${drawings[def.id] || ''}</g></svg>`;
@@ -562,7 +563,7 @@
     if (tapePercentKeys.has(param.key)) return (value > 0 && ['bias', 'azimuth'].includes(param.key) ? '+' : '') + Number((value * 100).toFixed(param.key === 'crosstalk' ? 1 : 0)) + '%';
     return formatParam(param, value);
   }
-  function tapeNumberScale(param) { return tapePercentKeys.has(param.key) ? 100 : 1; }
+  function tapeNumberScale(param, effectId = 'preserve') { return effectId === 'tinpan' ? lofiNumberScale(param) : tapePercentKeys.has(param.key) ? 100 : 1; }
   function tapeControl(param, params, rotary = false) {
     if (!param) return '';
     const value = params[param.key] ?? param.default;
@@ -604,7 +605,7 @@
   }
   function paintTapeKnob(element, param, value) {
     if (!element || !Number.isFinite(value)) return;
-    updateAttribute(element, 'aria-valuenow', value); updateAttribute(element, 'aria-valuetext', tapeValue(param, value));
+    updateAttribute(element, 'aria-valuenow', value); updateAttribute(element, 'aria-valuetext', element.closest('.lofi-console') ? lofiValue(param, value) : tapeValue(param, value));
     updateAttribute(element.querySelector('[data-tape-pointer]'), 'transform', `rotate(${-135 + 270 * (value - param.min) / (param.max - param.min)} 38 38)`);
   }
   function renderTapeState() {
@@ -655,17 +656,95 @@
   }
   function finishTapeKeyboard() { if (tapeKeyboard) tapeKeyboard.element.classList.remove('is-adjusting'); tapeKeyboard = null; }
   function tapeGesture(element) {
-    const owner = effectOwner(), slot = owner.effects[selectedSlot], param = slot?.type === 'preserve' && effectParams(effectById(slot.type)).find(param => param.key === element.dataset.tapeKnob);
+    const owner = effectOwner(), slot = owner.effects[selectedSlot], param = ['preserve', 'tinpan'].includes(slot?.type) && effectParams(effectById(slot.type)).find(param => param.key === element.dataset.tapeKnob);
     return param ? { element, owner, slot, index: selectedSlot, param, remembered: false, lifecycle } : null;
   }
   function setTapeKnob(gesture, value) {
-    if (!gesture || gesture.lifecycle !== lifecycle || S.automationOwner(state, gesture.owner.id) !== gesture.owner || gesture.owner.effects[gesture.index] !== gesture.slot || gesture.slot.type !== 'preserve') return false;
+    if (!gesture || gesture.lifecycle !== lifecycle || S.automationOwner(state, gesture.owner.id) !== gesture.owner || gesture.owner.effects[gesture.index] !== gesture.slot || !['preserve', 'tinpan'].includes(gesture.slot.type)) return false;
     const param = gesture.param, next = Math.max(param.min, Math.min(param.max, Number((Math.round(value / param.step) * param.step).toFixed(6))));
     if (!Number.isFinite(next) || gesture.slot.params[param.key] === next) return false;
     if (!gesture.remembered) { remember(); gesture.remembered = true; }
     gesture.slot.params[param.key] = next;
     automationEditor?.capture('fx:' + gesture.index + ':' + param.key, next, { remembered: true, ownerId: gesture.owner.id });
-    changed(); renderTapeState(); return true;
+    changed(); renderTapeState();renderLoFiState(); return true;
+  }
+  const lofiPercentKeys = new Set(['tone', 'wear', 'resonance', 'compression', 'distance', 'noise', 'crackle', 'hum', 'jitter', 'mix']);
+  function lofiNumberScale(param) { return lofiPercentKeys.has(param.key) ? 100 : 1; }
+  function lofiValue(param, value) {
+    if (param.key === 'tone') return Math.abs(value) < .005 ? 'Centre' : Math.round(Math.abs(value) * 100) + '% ' + (value < 0 ? 'dark' : 'bright');
+    if (lofiPercentKeys.has(param.key)) return Math.round(value * 100) + '%';
+    return formatParam(param, value);
+  }
+  function lofiControl(param, params, rotary = false) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control lofi-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const scale = lofiNumberScale(param), unit = scale === 100 ? '%' : param.unit || '';
+    const exact = `<input id="fx-number-${param.key}" data-tape-number="${param.key}" data-tape-scale="${scale}" type="number" min="${Number((param.min * scale).toFixed(6))}" max="${Number((param.max * scale).toFixed(6))}" step="${Number((param.step * scale).toFixed(6))}" value="${Number((value * scale).toFixed(4))}" aria-label="${escape(param.label)} exact value${unit ? ' in ' + escape(unit) : ''}">`;
+    if (!rotary) return `<div class="control lofi-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${lofiValue(param, value)}</output></label><div class="lofi-value-row">${effectRange(param, value)}${exact}</div></div>`;
+    const angle = -135 + 270 * (value - param.min) / (param.max - param.min);
+    return `<div class="control lofi-control tape-knob-control"><label for="fx-${param.key}">${escape(param.label)}</label><button type="button" id="fx-${param.key}" class="tape-knob" role="slider" data-tape-knob="${param.key}" aria-label="${escape(param.label)}" aria-valuemin="${param.min}" aria-valuemax="${param.max}" aria-valuenow="${value}" aria-valuetext="${escape(lofiValue(param, value))}" aria-orientation="vertical" title="Drag up or down; hold Shift for fine control. Arrow keys adjust, Page keys make larger changes. Home/End select the limits. Double-click, Enter or Space restores the starting value."><svg viewBox="0 0 76 76" aria-hidden="true" focusable="false"><path class="tape-knob-track" d="M14.67 61.33A33 33 0 1 1 61.33 61.33"/><path class="tape-knob-zero" d="M38 1v3"/><circle class="tape-knob-shadow" cx="38" cy="40" r="26"/><circle class="tape-knob-cap" cx="38" cy="38" r="25"/><circle class="tape-knob-inner" cx="38" cy="38" r="20"/><path class="tape-knob-pointer" data-tape-pointer d="M38 34V20" transform="rotate(${angle} 38 38)"/></svg></button><output class="sr-only">${lofiValue(param, value)}</output><div class="tape-knob-number">${exact}<span aria-hidden="true">${escape(unit)}</span></div></div>`;
+  }
+  function lofiControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param])), core = ['drive', 'tone', 'wear', 'output', 'mix'];
+    const used = new Set(['model', ...core]), groups = [];
+    for (const group of def.groups || []) {
+      if (group.section === 'main') continue;
+      const keys = group.keys.filter(key => descriptors.has(key) && !used.has(key));
+      if (keys.length) { keys.forEach(key => used.add(key)); groups.push({ ...group, keys }); }
+    }
+    const remaining = effectParams(def).map(param => param.key).filter(key => !used.has(key));
+    if (remaining.length) groups.push({ id: 'additional', label: 'Fine adjustments', help: 'Finish the recording character.', keys: remaining });
+    const summaries = { acoustics: 'Bandwidth, resonance & distance', dynamics: 'How the capsule follows an attack', line: 'Noise, crackle & electrical hum', digital: 'Sample clock & voice encoding', stereo: 'Mono character or stereo texture' };
+    return `<div class="lofi-console"><div class="lofi-recipe-bar"><label for="lofiPreset"><span class="eyebrow">HOUSE RECIPES / COMPLETE RECORDING SETUP</span><select id="lofiPreset" aria-label="TIN CAN recipe"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="lofiPresetDescription"></p></div>
+      <section class="lofi-face" aria-labelledby="lofiFaceTitle"><div class="lofi-face-heading"><div><span id="lofiFaceTitle" class="lofi-face-brand">Tin Can</span><span class="lofi-face-edition">THE HOUSE LINE / MIC & TELEPHONE COLOURS</span></div><span class="lofi-signal-light"><i aria-hidden="true"></i><span id="lofiSignalStatus">Ready</span></span></div>
+      <div class="lofi-capsule-row"><div class="lofi-model-selector">${lofiControl(descriptors.get('model'), params)}<strong id="lofiModelName"></strong><p id="lofiModelDescription"></p></div><div class="lofi-line-stamp" aria-hidden="true"><svg viewBox="0 0 112 86" focusable="false"><path d="M16 30q0-16 18-16h44q18 0 18 16v8H80v-7H32v7H16zM29 41l-9 29h72l-9-29M25 76h62"/><circle cx="56" cy="53" r="17"/><circle cx="56" cy="53" r="7"/><path d="M56 38v4m10 1-3 3m8 7h-4m-1 10-3-3m-7 8v-4m-10-1 3-3m-8-7h4m1-10 3 3M8 80h96"/></svg><span>CALL THE KITCHEN</span></div></div>
+      <div class="lofi-core-controls">${core.map(key => lofiControl(descriptors.get(key), params, true)).join('')}</div>
+      <div class="lofi-readings" aria-label="Measured recording levels"><div><span>Input</span><output data-lofi-meter="inputDb" aria-label="Input level" aria-live="off">—</output><i aria-hidden="true"><b data-lofi-meter-bar="inputDb"></b></i></div><div><span>Capsule squeeze</span><output data-lofi-meter="compressionDb" aria-label="Capsule gain reduction" aria-live="off">—</output><i aria-hidden="true"><b data-lofi-meter-bar="compressionDb"></b></i></div><div><span>Output</span><output data-lofi-meter="outputDb" aria-label="Output level" aria-live="off">—</output><i aria-hidden="true"><b data-lofi-meter-bar="outputDb"></b></i></div></div>
+      <div class="lofi-status-strip"><span>Speech band <output id="lofiBandwidth" aria-label="Effective speech bandwidth" aria-live="off">—</output></span><span id="lofiStereoHint"></span></div><p class="lofi-face-note">Drive the capsule, tilt its tone, then age the connection. Added line noise starts off; Blend keeps the original alongside the recording.</p></section>
+      <div class="lofi-details-list">${groups.map(group => `<details id="lofi-${escape(group.id)}-details" class="lofi-details" data-lofi-details="${escape(group.id)}" ${lofiDetailsOpen.has(group.id) ? 'open' : ''}><summary><span><strong>${escape(group.label)}</strong><small>${escape(summaries[group.id] || 'Fine adjustments')}</small></span><span aria-hidden="true">+</span></summary><div class="lofi-details-content"><p id="lofi-${escape(group.id)}-hint">${escape(group.help || group.description || '')}</p><div class="lofi-detail-controls">${group.keys.map(key => lofiControl(descriptors.get(key), params)).join('')}</div>${group.id === 'digital' ? '<p id="lofiCodecHint" class="lofi-codec-hint"></p>' : ''}</div></details>`).join('')}</div>
+      <p class="lofi-disclosure">These are recording characters inspired by small capsules, handset circuits and narrow voice links. They colour the audio already on the track. Model changes keep your knobs; a house recipe replaces the complete setup.</p></div>`;
+  }
+  function renderLoFiState() {
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'tinpan' || !$('lofiFaceTitle')) return;
+    const params = slot.params, model = def.models?.find(model => model.id === params.model), codec = params.digital === 'model' ? model?.codec || 'off' : params.digital;
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === (preset.params[param.key] ?? def.defaults[param.key])) && params.bypass === (preset.params.bypass ?? false));
+    updateProperty($('lofiPreset'), 'value', recipe?.id || '');
+    updateText($('lofiPresetDescription'), recipe?.description || 'Custom recording character. Change the mic or telephone while keeping your knobs, or choose a complete house recipe.');
+    updateText($('lofiModelName'), model?.name || 'Microphone & telephone character');
+    updateText($('lofiModelDescription'), model?.description || 'A small capsule and its recording path, ready to be pushed.');
+    updateText($('lofiStereoHint'), params.stereo === 'mono' ? 'Mono wet path · stereo dry blend' : 'Stereo wet path · separate channel histories');
+    if ($('lofiCodecHint')) updateText($('lofiCodecHint'), codec === 'adpcm' ? 'IMA ADPCM uses four-bit difference codes. PCM word length does not change this codec.' : codec === 'mulaw' ? 'µ-law uses eight-bit voice codes. PCM word length does not change this codec.' : codec === 'pcm' ? 'PCM word length sets the quantizer depth. Lower the sample clock for an audible digital edge.' : 'The voice encoder is off. Choose PCM, µ-law or ADPCM to add a digital connection.');
+    updateClass($('lofiFaceTitle').closest('.lofi-face'), 'lofi-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-tape-number]');
+      if (input.hasAttribute('data-tape-knob')) paintTapeKnob(input, param, value);
+      else if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') { updateText(control.querySelector('output'), lofiValue(param, value)); if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number((value * lofiNumberScale(param)).toFixed(4))); }
+      if (param.key === 'model') updateAttribute(input, 'aria-describedby', 'lofiModelDescription');
+      const inactive = param.key === 'bits' && codec !== 'pcm' || ['clock', 'jitter'].includes(param.key) && codec === 'off';
+      input.disabled = inactive; if (exact) exact.disabled = inactive;
+      updateClass(control, 'lofi-control-inactive', inactive);
+      const group = def.groups?.find(group => group.section !== 'main' && group.keys.includes(param.key));
+      if (group) { updateAttribute(input, 'aria-describedby', 'lofi-' + group.id + '-hint'); if (exact) updateAttribute(exact, 'aria-describedby', 'lofi-' + group.id + '-hint'); }
+    }
+    renderLoFiMeters();
+  }
+  function renderLoFiMeters(meters = visualMeters()) {
+    const slot = effectOwner().effects[selectedSlot]; if (slot?.type !== 'tinpan' || $('effectEditor').hidden || !$('lofiFaceTitle')) return;
+    const reading = effectReading(meters), valid = reading?.type === 'tinpan' && !reading.bypass && !slot.params.bypass, signal = valid && Number.isFinite(reading.inputDb) && reading.inputDb > -85;
+    updateText($('lofiSignalStatus'), slot.params.bypass ? 'Bypassed' : signal ? 'On the line' : 'Ready');
+    updateClass($('lofiFaceTitle').closest('.lofi-face'), 'lofi-has-signal', signal);
+    for (const output of $('effectEditor').querySelectorAll('[data-lofi-meter]')) {
+      const key = output.dataset.lofiMeter, value = reading?.[key], available = valid && Number.isFinite(value), compression = key === 'compressionDb';
+      updateText(output, !available ? '—' : compression ? Math.max(0, value).toFixed(1) + ' dB' : value <= -90 ? '−∞ dB' : (value > 0 ? '+' : '') + value.toFixed(1) + ' dB');
+      const bar = $('effectEditor').querySelector('[data-lofi-meter-bar="' + key + '"]');
+      if (bar) updateMeterBar(bar, available ? Math.min(1, Math.max(0, compression ? value / 18 : (value + 60) / 60)) : 0);
+    }
+    updateText($('lofiBandwidth'), valid && Number.isFinite(reading.lowCutHz) && Number.isFinite(reading.highCutHz) ? Math.round(reading.lowCutHz).toLocaleString() + '–' + Math.round(reading.highCutHz).toLocaleString() + ' Hz' : '—');
   }
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
   function broilerValue(param, value) {
@@ -854,11 +933,11 @@
   function renderEffectEditorContents() {
     finishTapeDrag(); finishTapeKeyboard();
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',tape=def.id==='preserve',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('tape-editor',tape);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}${def.id==='cinder'?'<p id="charCircuitHint" class="fineprint char-circuit-note"></p>':''}</div>`;
-    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
-    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',tape=def.id==='preserve',lofi=def.id==='tinpan',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('tape-editor',tape);editor.classList.toggle('lofi-editor',lofi);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):lofi?lofiControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}${def.id==='cinder'?'<p id="charCircuitHint" class="fineprint char-circuit-note"></p>':''}</div>`;
+    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':lofi?'<div class="lofi-signal-route">CAPSULE → COLOUR → CASING<br>↓<br>LINE → VOICE ENCODER<br>↓<br>OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':lofi?'CAPSULE / LINE / LO-FI':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
   }
   function renderCharState() {
     const slot = effectOwner().effects[selectedSlot], note = $('charCircuitHint');
@@ -1344,26 +1423,34 @@
   });
   window.addEventListener('blur', () => { finishTapeDrag(); finishTapeKeyboard(); });
   document.addEventListener('change', e => {
+    if (e.target.id === 'lofiPreset') {
+      const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), preset = def?.presets?.find(preset => preset.id === e.target.value);
+      if (def?.id !== 'tinpan' || !preset) return;
+      finishTapeDrag(); finishTapeKeyboard(); remember(); slot.params = { ...clone(def.defaults), ...clone(preset.params) };
+      changed({ rack: true, mixer: true, automation: true }); renderLoFiState();
+      status(preset.name + ' loaded. ' + preset.description); return;
+    }
     if (e.target.id === 'tapePreset') {
       const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), preset = def?.presets?.find(preset => preset.id === e.target.value);
       if (def?.id !== 'preserve' || !preset) return;
       finishTapeDrag(); finishTapeKeyboard(); remember(); slot.params = { ...clone(def.defaults), ...clone(preset.params) };
-      changed({ rack: true, mixer: true, automation: true }); renderTapeState();
+      changed({ rack: true, mixer: true, automation: true }); renderTapeState();renderLoFiState();
       status(preset.name + ' loaded. ' + preset.description); return;
     }
     const input = e.target, key = input.dataset.tapeNumber; if (!key) return;
-    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), param = def?.id === 'preserve' && effectParams(def).find(param => param.key === key);
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), param = ['preserve', 'tinpan'].includes(def?.id) && effectParams(def).find(param => param.key === key);
     if (!param || input.disabled) return;
-    const scale = tapeNumberScale(param), value = input.valueAsNumber / scale;
+    const scale = tapeNumberScale(param, def.id), value = input.valueAsNumber / scale;
     if (!Number.isFinite(value) || value < param.min || value > param.max) {
       input.value = Number((slot.params[key] * scale).toFixed(4));
       status(param.label + ': use a value from ' + Number((param.min * scale).toFixed(4)) + ' to ' + Number((param.max * scale).toFixed(4)) + '.'); return;
     }
     finishTapeDrag(); finishTapeKeyboard();
     if (slot.params[key] !== value) { remember(); slot.params[key] = value; automationEditor?.capture('fx:' + selectedSlot + ':' + key, value, { remembered: true, ownerId: effectOwner().id }); changed(); }
-    renderTapeState();
+    renderTapeState();renderLoFiState();
   });
   document.addEventListener('toggle', e => { const detail = e.target; if (!detail.matches?.('[data-tape-details]')) return; if (detail.open) tapeDetailsOpen.add(detail.dataset.tapeDetails); else tapeDetailsOpen.delete(detail.dataset.tapeDetails); }, true);
+  document.addEventListener('toggle', e => { const detail = e.target; if (!detail.matches?.('[data-lofi-details]')) return; if (detail.open) lofiDetailsOpen.add(detail.dataset.lofiDetails); else lofiDetailsOpen.delete(detail.dataset.lofiDetails); }, true);
   document.addEventListener('pointerdown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'){remember();activeRanges.add(e.target);}});
   document.addEventListener('keydown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)&&!activeRanges.has(e.target)){remember();activeRanges.add(e.target);}});
   document.addEventListener('change',e=>{if(e.target.matches('input[type=range]'))activeRanges.delete(e.target);});
@@ -1438,7 +1525,7 @@
       if(owner.name!==name){remember();owner.name=name;changed();renderSendControls();automationEditor?.render();if(rackTarget===owner.id&&selectedSlot!==null)renderEffectEditor();}return;
     }
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=effectOwner().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -1453,7 +1540,7 @@
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();}
+    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -1574,7 +1661,7 @@
       renderPlayhead(m);
       if (panelVisible('mixer')) renderTrackEqState(m);
       if (panelVisible('micInputPanel') || $('audioSettingsDialog').open) renderMicrophone(m.microphone);
-      if (panelVisible('effectEditor') && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderUtilityMeters(m);renderCreativeMeters(m); }
+      if (panelVisible('effectEditor') && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderUtilityMeters(m);renderCreativeMeters(m); }
       if (panelVisible('busChannels')) renderBusMeters(m);
       automationEditor?.tick(panelVisible('automationEditor'));
       if (panelVisible('pianoRollEditor')) pianoRoll?.tick();
