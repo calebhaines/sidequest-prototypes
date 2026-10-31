@@ -9,7 +9,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom']
 SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'service-schema.js', 'lfo.js', 'schema.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'lfo-ui.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'cpu-ui.js', 'multiband-ui.js', 'app.js']
 
 bundled = {}
@@ -93,6 +93,9 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     # editable/corresponding-source distribution beside the hosted HTML.
     morsel_source = ROOT.parent / 'music' / 'morsel' / 'MORSEL-source.zip'
     files += [('MORSEL-source.zip', morsel_source.read_bytes())]
+    # Preserve the new instrument’s editable DSP, recipes and research alongside its HTML.
+    heirloom_source = ROOT.parent / 'music' / 'heirloom' / 'HEIRLOOM-source.zip'
+    files += [('HEIRLOOM-source.zip', heirloom_source.read_bytes())]
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in files:
             info = zipfile.ZipInfo('LOOM-source/' + name, (2026, 10, 5, 0, 0, 0))

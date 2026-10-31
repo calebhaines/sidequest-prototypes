@@ -288,9 +288,12 @@
     dialog.querySelectorAll('[data-action]').forEach(element => { element.disabled = false; });
     active.scopes = adapter.audioExport?.scopes || [{ id: 'pattern', label: 'Current pattern' }];
     dialog.querySelector('[name="scope"]').innerHTML = active.scopes.map(scope => '<option value="' + escape(scope.id) + '">' + escape(scope.label || scope.name || scope.id) + '</option>').join('');
-    const maximumBars = clamp(adapter.audioExport?.maxBars || 16, 1, 16);
+    const maximumBars = clamp(adapter.audioExport?.maxBars || 16, 1, 64);
     dialog.querySelector('[name="bars"]').max = maximumBars;
     dialog.querySelector('[name="bars"]').value = clamp(adapter.audioExport?.defaultBars || 4, 1, maximumBars);
+    const tailField = dialog.querySelector('[name="tail"]'), maximumTail = clamp(adapter.audioExport?.maxTailSeconds ?? 8, 0, 30);
+    tailField.max = maximumTail;
+    tailField.value = clamp(adapter.audioExport?.defaultTailSeconds ?? tailField.value, 0, maximumTail);
     dialog.querySelector('[data-tab="send"]').disabled = typeof adapter.exportAudio !== 'function';
     fillTargets(); scopeHint(); message('');
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
@@ -411,7 +414,7 @@
       }
       if (action === 'render') {
         active.rendering = true; element.disabled = true;
-        const scope = dialog.querySelector('[name="scope"]').value, bars = Math.round(clamp(dialog.querySelector('[name="bars"]').value, 1, dialog.querySelector('[name="bars"]').max)), tailSeconds = clamp(dialog.querySelector('[name="tail"]').value, 0, 8);
+        const scope = dialog.querySelector('[name="scope"]').value, bars = Math.round(clamp(dialog.querySelector('[name="bars"]').value, 1, dialog.querySelector('[name="bars"]').max)), tailSeconds = clamp(dialog.querySelector('[name="tail"]').value, 0, Number(dialog.querySelector('[name="tail"]').max));
         message('Rendering locally… You can close this window to cancel.');
         const value = await active.adapter.exportAudio({ scope, bars, tailSeconds, signal: active.controller.signal });
         if (!still(token)) throw abortError();
