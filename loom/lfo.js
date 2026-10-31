@@ -30,8 +30,9 @@
           if (track) {
             for (let index = 0; index < 2; index++) descriptors.push({ target: 'send:' + index, label: 'Send ' + (index ? 'B' : 'A'), min: 0, max: 1, step: .01, default: 0, value: owner.sends?.[index] });
             for (const key of ['low', 'lowMid', 'highMid', 'high']) descriptors.push({ target: 'eq:' + key, label: 'EQ ' + key, min: -12, max: 12, step: .1, default: 0, value: owner.eq?.[key], unit: 'dB' });
+            for (const [key, label, min, max, value] of [['lowMidFreq', 'Lo mid sweep', 80, 2000, 400], ['highMidFreq', 'Hi mid sweep', 400, 10000, 2500]]) descriptors.push({ target: 'eq:' + key, label: 'EQ ' + label, min, max, step: 1, default: value, value: owner.eq?.[key], unit: 'Hz', scale: 'log' });
           }
-          for (let slot = 0; slot < 4; slot++) {
+          for (let slot = 0; slot < (track ? 5 : 4); slot++) {
             const effect = owner.effects?.[slot], spec = specifications?.[effect?.type];
             if (!spec) continue;
             for (const [key, rule] of Object.entries(spec)) if (typeof rule[0] === 'number') descriptors.push({ target: 'fx:' + slot + ':' + key, label: (slot + 1) + ' · ' + effect.type + ' · ' + key, min: rule[0], max: rule[1], step: .001, default: rule[2], value: effect.params?.[key], effectType: effect.type });
@@ -132,7 +133,7 @@
         }
         this.effectTargetKeys = new Map();
         for (const entry of this.entries.values()) {
-          const match = /^fx:([0-3]):(.+)$/.exec(entry.descriptor.target); if (!match) continue;
+          const match = /^fx:([0-4]):(.+)$/.exec(entry.descriptor.target); if (!match) continue;
           const key = entry.descriptor.ownerId + '|' + match[1]; if (!this.effectTargetKeys.has(key)) this.effectTargetKeys.set(key, []); this.effectTargetKeys.get(key).push(match[2]);
         }
         this.active = this.entries.size > 0 || this.lfos.some(lfo => lfo.enabled);

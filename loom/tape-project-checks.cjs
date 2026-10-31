@@ -10,7 +10,7 @@ globalThis.window = globalThis;
 globalThis.crypto ||= webcrypto;
 globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const S = LoomSchema, definition = LoomEffectsCatalog.find(effect => effect.id === 'preserve');
@@ -86,23 +86,23 @@ check('Practical recipes are complete snapshots, remain in bounds and cover ever
     }
   }
 });
-check('All four insert positions, controls and numeric automation round-trip on eight tracks, two returns and master', () => {
+check('All owner-specific insert positions, controls and numeric automation round-trip on eight tracks, two returns and master', () => {
   for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) for (const selected of machine.options) {
     const state = S.defaultState(), owner = owners(state)[ownerIndex], params = unusual(selected.value);
-    owner.effects = Array.from({ length: 4 }, () => insert(params));
+    owner.effects = Array.from({ length: S.effectSlotCount(owner) }, () => insert(params));
     owner.automation = ranges.map((param, index) => lane(param, 2, index % 2 ? 'hold' : 'linear'));
     const snapshot = clone(state), restoredState = parse(state), restored = owners(restoredState)[ownerIndex];
     assert.deepEqual(restored.effects, owner.effects, owner.id + ' / ' + selected.value);
     assert.deepEqual(restored.automation, owner.automation, owner.id + ' / ' + selected.value);
     assert.deepEqual(state, snapshot, 'Loading does not mutate the supplied state.');
     for (let other = 0; other < 11; other++) if (other !== ownerIndex) assert.deepEqual(owners(restoredState)[other], owners(snapshot)[other], owner.id + ' changed another owner.');
-    for (const slot of [0, 1, 2, 3]) for (const param of ranges) {
+    for (const slot of restored.effects.keys()) for (const param of ranges) {
       const target = S.automationTargets(restored).find(item => item.target === 'fx:' + slot + ':' + param.key);
       assert(target && target.effectType === 'preserve', owner.id + ':' + slot + ':' + param.key);
       assert.equal(target.min, param.min); assert.equal(target.max, param.max); assert.equal(target.step, param.step);
     }
     assert.equal(restoredState.tracks.length, 8); assert.equal(restoredState.returns.length, 2);
-    assert(owners(restoredState).every(item => item.effects.length === 4));
+    assert(owners(restoredState).every(item => item.effects.length === S.effectSlotCount(item)));
   }
 });
 check('Missing fields, non-finite/wrong parameter types, unknown choices and malformed bypass reject atomically', () => {
@@ -143,12 +143,14 @@ check('Bus ranges and automation stay strict, while track loading retains its es
 check('Released 1.21 sessions retain their existing inserts, buses, EQ and timing without acquiring tape processing', () => {
   const state = S.defaultState(); state.name = 'Before the tape machine'; state.tempo = 137; state.lengthBars = 32; state.selectedTrack = 5;
   state.master.level = .67; state.tracks[3].sends = [.23, .49]; state.tracks[3].sendPre = [true, false];
-  state.tracks[3].eq = { low: 1.7, lowMid: -2.1, highMid: .8, high: -1.3 };
+  state.tracks[3].eq = { ...S.defaultTrackEq(), low: 1.7, lowMid: -2.1, highMid: .8, high: -1.3 };
   const oldEffect = LoomEffectsCatalog.find(effect => effect.id === 'cinder');
   state.tracks[3].effects[1] = { type: oldEffect.id, params: { ...oldEffect.defaults, drive: 17, mix: .43 } };
   state.tracks[3].automation = [{ target: 'fx:1:drive', effectType: 'cinder', enabled: true, interpolation: 'linear', points: [{ beat: 0, value: 4 }, { beat: 8, value: 21 }] }];
   const original = clone(state);
-  assert.deepEqual(S.parseProject(JSON.stringify(envelope(state, '1.21.0'))), original);
+  const released = clone(state);
+  released.tracks.forEach(track => { track.effects = track.effects.slice(0, 4); delete track.eq.lowMidFreq; delete track.eq.highMidFreq; });
+  assert.deepEqual(S.parseProject(JSON.stringify(envelope(released, '1.21.0'))), original);
   assert(owners(original).every(owner => owner.effects.every(slot => !slot || slot.type !== 'preserve')));
   const serialized = S.serializeProject(state); assert.equal(JSON.parse(serialized).appVersion, S.VERSION);
   assert.deepEqual(S.parseProject(serialized), original);

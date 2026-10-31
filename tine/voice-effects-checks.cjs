@@ -7,7 +7,7 @@ const vm = require('node:vm');
 globalThis.window = globalThis;
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'voice-effects.js')) ? path.join(__dirname, 'shared') : path.join(__dirname, '..', 'shared');
 const galley = fs.existsSync(path.join(shared, 'galley-effects', 'effects.js')) ? path.join(shared, 'galley-effects') : path.join(__dirname, '..', 'loom');
-for (const name of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','effects.js']) vm.runInThisContext(fs.readFileSync(path.join(galley, name), 'utf8'), { filename: name });
+for (const name of ['vocal-catalog.js','utility-catalog.js','filter-catalog.js','creative-catalog.js','preamp-catalog.js','tape-catalog.js','char-catalog.js','effects-catalog.js','vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js','effects.js']) vm.runInThisContext(fs.readFileSync(path.join(galley, name), 'utf8'), { filename: name });
 for (const file of [path.join(shared, 'pattern-schema.js'),path.join(shared, 'voice-effects.js'),path.join(__dirname, 'synth-schema.js'),path.join(__dirname, 'presets.js'),path.join(__dirname, 'audio-engine.js')]) vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: path.basename(file) });
 const M = TineModel, copy = value => JSON.parse(JSON.stringify(value)), passed = [];
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }

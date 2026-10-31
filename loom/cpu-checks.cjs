@@ -11,9 +11,9 @@ globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
 const shared = fs.existsSync(path.join(__dirname, 'shared/pattern-schema.js')) ? path.join(__dirname, 'shared') : path.resolve(__dirname, '../shared');
 vm.runInThisContext(fs.readFileSync(path.join(shared, 'pattern-schema.js'), 'utf8'), { filename: 'pattern-schema.js' });
-const sources = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'lfo.js', 'cpu-profiler.js', 'service-schema.js', 'schema.js', 'audio-engine.js'];
+const sources = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'lfo.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'service-schema.js', 'schema.js', 'audio-engine.js'];
 for (const file of sources) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
-const S = LoomSchema, CPU = createLoomCPUProfiler(), { Core } = createLoomEngineDSP(createLoomEffectsDSP, createLoomLFODSP, createLoomCPUProfiler);
+const S = LoomSchema, CPU = createLoomCPUProfiler(), { Core } = createLoomEngineDSP(createLoomEffectsDSP, createLoomLFODSP, createLoomCPUProfiler, globalThis.createLoomTrackEQDSP);
 const copy = value => JSON.parse(JSON.stringify(value));
 let passed = 0;
 function check(name, run) { run(); passed++; console.log('PASS ' + name); }
@@ -25,8 +25,9 @@ function fixture() {
   const state = blank(); state.name = 'CPU_QA_PRIVATE_PROJECT';
   const insert = (type, params) => S.effect({ type, params });
   state.tracks[0].effects[0] = insert('prism', { filter: 'lowpass', cutoff: 1700, resonance: 1.2, mix: .8 });
+  state.tracks[0].effects[4] = insert('cinder', { drive: 5, output: -5, mix: .2 });
   state.tracks[1].effects[2] = insert('cinder', { drive: 12, output: -6, mix: .4 });
-  state.tracks[0].eq = { low: 2, lowMid: -1, highMid: 1, high: -.5 };
+  state.tracks[0].eq = { ...S.defaultTrackEq(), low: 2, lowMid: -1, highMid: 1, high: -.5, lowMidFreq: 650, highMidFreq: 4100 };
   state.tracks[0].sends = [.3, .2];
   state.returns[0].effects[1] = insert('cinder', { drive: 9, mix: .6 });
   state.returns[1].effects[0] = insert('prism', { filter: 'highpass', cutoff: 700, mix: 1 });
@@ -91,9 +92,23 @@ check('Profiled and unprofiled track, return, master, automation and LFO audio s
   const state = fixture(), before = JSON.stringify(state), input = source(8192);
   for (const block of [128, 137, 251]) for (const mode of ['light', 'balanced', 'deep']) {
     const plain = new Core(state, {}, 48000, { linear: true }), profiled = new Core(copy(state), {}, 48000, { linear: true }); plain.start(0); profiled.start(0); profiled.setDiagnostics({ enabled: true, mode }); assert.deepEqual(feed(profiled, input, input[0].length, block), feed(plain, input, input[0].length, block), mode + ' / ' + block);
-    const report = profiled.getDiagnostics(); assert(report.sampledBlocks > 0); for (const [ownerId, slot, effectType] of [['track-1', 0, 'prism'], ['track-2', 2, 'cinder'], ['return-1', 1, 'cinder'], ['return-2', 0, 'prism'], ['master', 3, 'cinder']]) { const row = report.rows.find(row => row.ownerId === ownerId && row.slot === slot && row.effectType === effectType); assert(row, ownerId + ' insert ' + slot); assert(row.samples > 0, ownerId + ' records actual callbacks'); }
+    const report = profiled.getDiagnostics(); assert(report.sampledBlocks > 0); for (const [ownerId, slot, effectType] of [['track-1', 0, 'prism'], ['track-1', 4, 'cinder'], ['track-2', 2, 'cinder'], ['return-1', 1, 'cinder'], ['return-2', 0, 'prism'], ['master', 3, 'cinder']]) { const row = report.rows.find(row => row.ownerId === ownerId && row.slot === slot && row.effectType === effectType); assert(row, ownerId + ' insert ' + slot); assert(row.samples > 0, ownerId + ' records actual callbacks'); }
   }
   assert.equal(JSON.stringify(state), before);
+});
+check('All five track inserts are profiled while master and returns keep four slots', () => {
+  const state = fixture(), core = new Core(state, {}, 48000, { linear: true }); core.start(0); core.setDiagnostics({ enabled: true, mode: 'deep' }); feed(core, source(512));
+  const rows = core.getDiagnostics().rows;
+  assert.equal(rows.length, 89, 'Eight added track slots extend the original 81-row topology.');
+  assert.equal(rows.filter(row => row.kind === 'effect').length, 52);
+  for (const owner of [...state.tracks, ...state.returns, state.master]) {
+    const effects = rows.filter(row => row.kind === 'effect' && row.ownerId === owner.id);
+    assert.equal(effects.length, owner.id.startsWith('track-') ? 5 : 4);
+    assert.deepEqual(effects.map(row => row.slot), owner.id.startsWith('track-') ? [0, 1, 2, 3, 4] : [0, 1, 2, 3]);
+  }
+  const fifth = rows.find(row => row.ownerId === 'track-1' && row.slot === 4 && row.kind === 'effect');
+  assert.equal(fifth.effectType, 'cinder'); assert(fifth.samples > 0 && fifth.calls > 0, 'The fifth slot contributes measured executions.');
+  assert(!rows.some(row => row.kind === 'effect' && row.ownerId !== 'track-1' && !row.ownerId.startsWith('track-') && row.slot === 4));
 });
 check('Changing a slot resets its identity without attributing the former effect to its replacement', () => {
   const state = fixture(), core = new Core(state, {}, 48000, { linear: true }); core.start(0); core.setDiagnostics({ enabled: true, mode: 'deep' }); feed(core, source(1024)); const next = copy(state); next.tracks[0].effects[0] = S.effect({ type: 'cinder', params: { drive: 6 } }); core.setState(next); feed(core, source(1024)); const rows = core.getDiagnostics().rows.filter(row => row.ownerId === 'track-1' && row.slot === 0); assert.equal(rows.length, 1); assert.equal(rows[0].effectType, 'cinder'); assert(rows[0].samples > 0); next.tracks[0].effects[0] = null; core.setState(next); const removed = core.getDiagnostics().rows.filter(row => row.ownerId === 'track-1' && row.slot === 0); assert(!removed.some(row => row.effectType === 'cinder' && row.active), 'An empty slot is not a running former effect.');
@@ -107,6 +122,9 @@ check('Main API rejects stale diagnostic reports and never serializes profiling 
 });
 if (process.env.CPU_QA_BENCH) {
   const state = fixture(), input = source(128), iterations = 1200, trials = 5, baselineRef = process.env.CPU_QA_BASELINE || '5cfe63459825a04ddffb6f0c0b6868abf8ab53aa';
+  // Keep added controls neutral for the optional historical gain-only,
+  // four-insert benchmark. Functional checks above exercise the fifth insert.
+  state.tracks[0].effects[4] = null; state.tracks[0].eq.lowMidFreq = 400; state.tracks[0].eq.highMidFreq = 2500;
   let OldCore = null;
   try {
     const { execFileSync } = require('node:child_process'), oldScope = { createLoomEffectsDSP, createLoomLFODSP }; oldScope.window = oldScope;

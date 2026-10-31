@@ -12,7 +12,7 @@ globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared') : path.join(__dirname, '..', 'shared');
 vm.runInThisContext(fs.readFileSync(path.join(shared, 'pattern-schema.js'), 'utf8'), { filename: 'pattern-schema.js' });
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'schema.js', 'service-schema.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'schema.js', 'service-schema.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 const S = LoomSchema, passed = [];
 const check = (name, run) => { run(); passed.push(name); };
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -45,10 +45,10 @@ function richState() {
 }
 
 check('Defaults add two wet returns and a four-slot master without adding instrument tracks', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.24.0'); assert.equal(state.version, 1);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.25.0'); assert.equal(state.version, 1);
   assert.equal(state.tracks.length, 8); assert.equal(S.LIMITS.tracks, 8); assert.equal(S.LIMITS.returns, 2);
   assert.deepEqual(state.master, { id: 'master', name: 'Master', level: .8, metronome: false, mute: false, effects: [null, null, null, null], automation: [] });
-  for (const track of state.tracks) { assert.equal(track.effects.length, 4); assert.deepEqual(track.sends, [0, 0]); assert.deepEqual(track.sendPre, [false, false]); }
+  for (const track of state.tracks) { assert.equal(track.effects.length, 5); assert.deepEqual(track.sends, [0, 0]); assert.deepEqual(track.sendPre, [false, false]); }
   for (const [index, bus] of state.returns.entries()) {
     assert.equal(bus.id, 'return-' + (index + 1)); assert.equal(bus.name, index ? 'Return B' : 'Return A');
     assert.equal(bus.level, 1); assert.equal(bus.pan, 0); assert.equal(bus.mute, false); assert.equal(bus.solo, false);

@@ -19,7 +19,7 @@ function dspChecks() {
   const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise, setTimeout, navigator: {} };
   scope.window = scope;
   vm.createContext(scope);
-  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'effects.js', 'schema.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+  for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP), rate = 8000;
   const legacy = scope.LoomSchema.defaultState();
   delete legacy.recording.micCompensation; delete legacy.recording.micOffsetMs; delete legacy.recording.micInputGainDb;
@@ -95,7 +95,7 @@ async function serve() {
     const name = new URL(request.url, 'http://localhost').pathname;
     if (name === '/engine.html') {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'utility-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'effects.js', 'schema.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
+      response.end('<!doctype html><html><body><script src="/shared/pattern-schema.js"></script>' + ['vocal-catalog.js', 'utility-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'broiler-pedals.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js'].map(file => '<script src="/loom/' + file + '"></script>').join('') + '</body></html>');
       return;
     }
     // Both the repository and the extracted source archive expose identical
@@ -372,7 +372,7 @@ async function uiChecks(browser, url) {
     await page.locator('#microphoneRouteButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().trackId === 'track-2');
     assert(await page.locator('#microphoneRouteLabel').textContent());
     const layout = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, tracks: window.LoomApp.getState().tracks.length, slots: window.LoomApp.getState().tracks.map(t => t.effects.length), effects: window.LoomEffectsCatalog.length, targets: ['microphoneMonitorButton', 'microphoneLaterButton', 'microphoneEarlierButton'].map(id => document.getElementById(id).getBoundingClientRect().toJSON()) }));
-    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 4)); assert.equal(layout.effects, 11); assert(layout.targets.every(box => box.width >= 35 && box.height >= 35), 'Monitoring and timing nudges have usable touch targets.');
+    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 5)); assert.equal(layout.effects, 11); assert(layout.targets.every(box => box.width >= 35 && box.height >= 35), 'Monitoring and timing nudges have usable touch targets.');
     if (process.env.LOOM_MIC_QA_SCREENSHOTS && [390, 1440].includes(width)) {
       fs.mkdirSync(process.env.LOOM_MIC_QA_SCREENSHOTS, { recursive: true });
       await page.locator('#micInputPanel').screenshot({ path: path.join(process.env.LOOM_MIC_QA_SCREENSHOTS, 'microphone-timing-' + width + '.png') });
@@ -401,7 +401,7 @@ async function uiChecks(browser, url) {
     await page.evaluate(() => window.LoomApp.loadState(window.LoomSchema.defaultState()));
     const release = await page.evaluate(() => ({ status: window.LoomApp.engine.getMicrophoneStatus(), tracks: window.qaMic.streams.flatMap(s => s.getTracks().map(t => t.readyState)) }));
     assert.equal(release.status.active, false); assert(release.tracks.every(state => state === 'ended'), 'Opening a new project releases all microphone tracks.'); assert.deepEqual(errors, []);
-    results.push(width + 'px GALLEY input controls / persisted timing / explicit routing / Panic / project-load cleanup / 8 × 4 capacity');
+    results.push(width + 'px GALLEY input controls / persisted timing / explicit routing / Panic / project-load cleanup / 8 × 5 capacity');
     await page.evaluate(() => window.LoomApp.engine.dispose()); await page.close();
   }
 }

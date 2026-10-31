@@ -4,7 +4,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {performance}=require('node:perf_hooks');
 globalThis.window=globalThis;
-for(const file of ['vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','effects.js','audio-engine.js'])vm.runInThisContext(fs.readFileSync(path.join(__dirname,file),'utf8'),{filename:file});
+for(const file of ['vocal-dsp.js','utility-dsp.js','filter-dsp.js','creative-dsp.js','broiler-pedals.js','compressor-dsp.js','preamp-dsp.js','tape-dsp.js','char-dsp.js', 'effects.js','track-eq-dsp.js', 'audio-engine.js'])vm.runInThisContext(fs.readFileSync(path.join(__dirname,file),'utf8'),{filename:file});
 const DSP=createLoomEngineDSP(createLoomEffectsDSP),effects=createLoomEffectsDSP(),RATE=48000,passed=[];
 const clone=x=>JSON.parse(JSON.stringify(x));
 function state(){return {tempo:120,lengthBars:4,loopEnabled:false,loopStart:0,loopEnd:16,master:{id:'master',name:'Master',level:1,mute:false,metronome:false,effects:[null,null,null,null],automation:[]},returns:[0,1].map(i=>({id:'return-'+(i+1),name:'Return '+(i?'B':'A'),level:1,pan:0,mute:false,solo:false,effects:[null,null,null,null],automation:[]})),tracks:Array.from({length:8},(_,i)=>({id:'track-'+(i+1),level:1,pan:0,mute:false,solo:false,instrumentLive:true,effects:[null,null,null,null],automation:[],sends:[0,0],sendPre:[false,false],clips:[]}))};}

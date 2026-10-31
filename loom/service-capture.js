@@ -17,7 +17,7 @@
   function sourceIndex(state) {
     if (!plain(state) || !Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.isArray(state.assets)) fail('choose an eight-track GALLEY project.');
     const sources = state.tracks.map(track => {
-      if (!plain(track) || !Array.isArray(track.effects) || track.effects.length !== 4 || !Array.isArray(track.clips) || track.clips.length > 128) fail('every track needs four effects slots and up to 128 source clips.');
+      if (!plain(track) || !Array.isArray(track.effects) || track.effects.length !== (schema().LIMITS.trackSlots || 5) || !Array.isArray(track.clips) || track.clips.length > 128) fail('every track needs five effects slots and up to 128 source clips.');
       return new Map(track.clips.map(clip => [clip.id, clip]));
     });
     return sources;

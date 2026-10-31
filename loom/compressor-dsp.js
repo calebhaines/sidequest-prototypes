@@ -9,6 +9,13 @@
       threshold: [-48, 0, -18], ratio: [1, 40, 4], attack: [.02, 100, 12], release: [20, 5000, 180], knee: [0, 18, 6], makeup: [-12, 24, 3], sidechain: [20, 500, 30], mix: [0, 1, 1],
       model: ['clean', 'fet-76', 'opto-2a', 'opto-3a', 'vari-670', 'bus-4k', 'vca-160', 'bus-2500', 'diode-609'], input: [-24, 24, 0], colour: [0, 1, .35], timing: ['manual', 'classic'], link: [0, 1, 1], fetMode: ['normal', 'all-buttons'], thrust: ['off', 'medium', 'loud']
     };
+    const fullKeys = Object.keys(specifications);
+    Object.assign(specifications, { bandMode: ['full', 'multiband'], crossoverLow: [50, 800, 200], crossoverHigh: [1200, 12000, 2500] });
+    for (const [index, band] of ['low', 'mid', 'high'].entries()) Object.assign(specifications, {
+      [band + 'Threshold']: [-60, 0, -18], [band + 'Ratio']: [1, 40, 4],
+      [band + 'Attack']: [.02, 100, [25, 12, 3][index]], [band + 'Release']: [20, 5000, [220, 160, 90][index]],
+      [band + 'Gain']: [-12, 12, 0], [band + 'Enabled']: ['on', 'off'], [band + 'Solo']: ['off', 'on']
+    });
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bound = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -32,8 +39,9 @@
       const y = bound(c[0]*x+state[offset]);
       state[offset] = bound(c[1]*x-c[3]*y+state[offset+1]); state[offset+1] = bound(c[2]*x-c[4]*y); return y;
     }
-    function create(sampleRate, params) {
+    function createFull(sampleRate, params, bandDynamics = false) {
       let p = normalize(params);
+      if(bandDynamics)p.threshold=clamp(finite(params?.threshold,-18),-60,0);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr*4;
       const meters = {reductionDb:0, reductionLeftDb:0, reductionRightDb:0, inputDb:-120, outputDb:-120, detectorDb:-120};
       // Clean retains the original arithmetic and coefficients. Independent
@@ -245,6 +253,30 @@
         meters.reductionLeftDb=applied[0];meters.reductionRightDb=applied[1];meters.reductionDb=Math.max(applied[0],applied[1]);
         meters.inputDb=10*Math.log10(Math.max(1e-12,inEnergy/Math.max(1,frames*2)));meters.outputDb=10*Math.log10(Math.max(1e-12,outEnergy/Math.max(1,frames*2)));meters.detectorDb=Math.max(-120,detectorLevel);
       }
+      // The released full-band Clean path above stays literal. New band
+      // controls smooth their curve and makeup as well, so a written or LFO
+      // threshold change cannot step a steady waveform's gain in one sample.
+      function cleanBandRun(left,right){
+        let inEnergy=0,outEnergy=0,lastGRL=0,lastGRR=0;
+        for(let i=0;i<left.length;i++){
+          for(let key=0;key<smooth.length;key++){smooth[key]+=slew*(target[key]-smooth[key]);if(Math.abs(target[key]-smooth[key])<1e-10)smooth[key]=target[key];}
+          const dryL=bound(left[i]),dryR=bound(right[i]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],makeupGain=db(smooth[4]);
+          cleanInput+=slew*(cleanInputTarget-cleanInput);cleanLink+=slew*(cleanLinkTarget-cleanLink);
+          const drivenL=bound(dryL*cleanInput),drivenR=bound(dryR*cleanInput);
+          hpL=drivenL-previousL+hp*hpL;hpR=drivenR-previousR+hp*hpR;previousL=drivenL;previousR=drivenR;
+          const peak=Math.max(Math.abs(hpL),Math.abs(hpR)),coefficient=peak>envelope?attack:release;
+          envelope=coefficient*envelope+(1-coefficient)*peak;
+          const sharedReduction=curve(levelDb(envelope)-threshold,ratio,knee);
+          let grL=sharedReduction,grR=sharedReduction;
+          for(let channel=0;channel<2;channel++){const magnitude=Math.abs(channel?hpR:hpL),c=magnitude>cleanMono[channel]?attack:release;cleanMono[channel]=c*cleanMono[channel]+(1-c)*magnitude;}
+          if(cleanLink!==1){grL=curve(levelDb(cleanMono[0])-threshold,ratio,knee);grR=curve(levelDb(cleanMono[1])-threshold,ratio,knee);grL+=(sharedReduction-grL)*cleanLink;grR+=(sharedReduction-grR)*cleanLink;}
+          let wetL=drivenL*db(-grL)*makeupGain,wetR=drivenR*db(-grR)*makeupGain;
+          if(declickPending[0]||declickPending[1]||declickLeft[0]||declickLeft[1]){wetL=finish(wetL,0);wetR=finish(wetR,1);}else{lastWet[0]=wetL;lastWet[1]=wetR;}
+          left[i]=mixSample(dryL,wetL,p.mix);right[i]=mixSample(dryR,wetR,p.mix);
+          lastGRL=grL;lastGRR=grR;inEnergy+=dryL*dryL+dryR*dryR;outEnergy+=left[i]*left[i]+right[i]*right[i];
+        }
+        applied[0]=lastGRL;applied[1]=lastGRR;setMeters(left.length,inEnergy,outEnergy,levelDb(envelope));
+      }
       function analogRun(left,right){
         let inEnergy=0,outEnergy=0,detectorLevel=-120;
         for(let i=0;i<left.length;i++){
@@ -272,11 +304,160 @@
       }
       update();
       return {
-        setParams(next){if(!next||typeof next!=='object')return;let changed=false;for(const key of Object.keys(next)){if(key!=='bypass'&&!Object.prototype.hasOwnProperty.call(specifications,key))continue;const rule=specifications[key],value=key==='bypass'?next[key]===true:typeof rule[0]==='number'?clamp(finite(next[key],rule[2]),rule[0],rule[1]):rule.includes(next[key])?next[key]:rule[0];if(p[key]!==value){p[key]=value;changed=true;}}if(changed)update();},
-        process(left,right){if(!left||!right||left.length!==right.length)throw new Error('BUTTER requires equal stereo blocks.');if(p.bypass){for(let i=0;i<left.length;i++){left[i]=bound(left[i]);right[i]=bound(right[i]);}meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;return;}if(model===0)cleanRun(left,right);else analogRun(left,right);},
+        setParams(next){if(!next||typeof next!=='object')return;let changed=false;for(const key of Object.keys(next)){if(key!=='bypass'&&!Object.prototype.hasOwnProperty.call(specifications,key))continue;const rule=bandDynamics&&key==='threshold'?[-60,0,-18]:specifications[key],value=key==='bypass'?next[key]===true:typeof rule[0]==='number'?clamp(finite(next[key],rule[2]),rule[0],rule[1]):rule.includes(next[key])?next[key]:rule[0];if(p[key]!==value){p[key]=value;changed=true;}}if(changed)update();},
+        process(left,right){if(!left||!right||left.length!==right.length)throw new Error('BUTTER requires equal stereo blocks.');if(p.bypass){for(let i=0;i<left.length;i++){left[i]=bound(left[i]);right[i]=bound(right[i]);}meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;return;}if(model===0){if(bandDynamics)cleanBandRun(left,right);else cleanRun(left,right);}else analogRun(left,right);},
         reset(){envelope=previousL=previousR=hpL=hpR=0;for(const state of [cleanMono,detector,detectorPrevious,detectorHP,thrustLow,thrustHigh,reduction,slowCell,exposure,hold,applied,colourPrevious,colourDCPrevious,colourDC,core,colourState,colourActive,lastWet,offset,declickLeft,declickPending])state.fill(0);smooth.set(target);cleanInput=cleanInputTarget;cleanLink=cleanLinkTarget;meters.reductionDb=meters.reductionLeftDb=meters.reductionRightDb=0;meters.inputDb=meters.outputDb=meters.detectorDb=-120;},
         getTailTime(){return model===0?0:.25;},
+        _readMeters(){return meters;},
         getMeters(){return Object.assign({},meters);}
+      };
+    }
+    function create(sampleRate, params) {
+      const sr = clamp(finite(sampleRate,48000),8000,192000), bands = ['low','mid','high'];
+      let p = normalize(params), mb = null;
+      const pickFull = () => { const values={bypass:p.bypass}; for(const key of fullKeys)values[key]=p[key];return values; };
+      const full = createFull(sr,pickFull()), fadeFrames=Math.max(1,Math.round(sr*.012)), slew=1-Math.exp(-1/(sr*.004));
+      let modeMix=p.bandMode==='multiband'?1:0, modeTarget=modeMix, modeStep=0, modeRemaining=0;
+      const sharedBandKeys=['model','input','knee','sidechain','colour','link','fetMode','thrust'];
+      function bandParams(index) {
+        const prefix=bands[index], values={mix:1,makeup:0,bypass:false,timing:'manual'};
+        for(const key of sharedBandKeys)values[key]=p[key];
+        for(const key of ['threshold','ratio','attack','release'])values[key]=p[prefix+key[0].toUpperCase()+key.slice(1)];
+        return values;
+      }
+      function crossover(frequency) {
+        const result={lp:new Float64Array(5),hp:new Float64Array(5),ap:new Float64Array(5),target:new Float64Array(15),step:new Float64Array(15),remaining:0,hz:0};
+        tune(result,frequency,true);return result;
+      }
+      function tune(cross,frequency,immediate=false) {
+        const hz=Math.min(frequency,sr*.4);if(hz===cross.hz&&!immediate)return;
+        cross.hz=hz;
+        const angle=TAU*hz/sr, cosine=Math.cos(angle),alpha=Math.sin(angle)/(2*Math.SQRT1_2),a0=1+alpha,a1=-2*cosine/a0,a2=(1-alpha)/a0;
+        cross.target.set([(1-cosine)*.5/a0,(1-cosine)/a0,(1-cosine)*.5/a0,a1,a2,
+          (1+cosine)*.5/a0,-(1+cosine)/a0,(1+cosine)*.5/a0,a1,a2,a2,a1,1,a1,a2]);
+        const arrays=[cross.lp,cross.hp,cross.ap];
+        if(immediate){for(let part=0;part<3;part++)arrays[part].set(cross.target.subarray(part*5,part*5+5));cross.remaining=0;}
+        else {cross.remaining=Math.max(1,Math.round(sr*.016));for(let part=0;part<3;part++)for(let key=0;key<5;key++)cross.step[part*5+key]=(cross.target[part*5+key]-arrays[part][key])/cross.remaining;}
+      }
+      function advance(cross) {
+        if(!cross.remaining)return;
+        if(--cross.remaining===0){cross.lp.set(cross.target.subarray(0,5));cross.hp.set(cross.target.subarray(5,10));cross.ap.set(cross.target.subarray(10,15));}
+        else for(let key=0;key<5;key++){cross.lp[key]+=cross.step[key];cross.hp[key]+=cross.step[key+5];cross.ap[key]+=cross.step[key+10];}
+      }
+      function ensureMultiband() {
+        if(mb)return mb;
+        mb={processors:bands.map((_,index)=>createFull(sr,bandParams(index),true)),cross:[crossover(p.crossoverLow),crossover(p.crossoverHigh)],
+          state:new Float64Array(36),capacity:0,length:0,raw:null,wet:null,full:null,activity:0,activityTarget:0,activityStep:0,activityRemaining:0,mix:p.mix,input:db(p.input),makeup:db(p.makeup),inputTarget:db(p.input),makeupTarget:db(p.makeup),
+          enabled:new Float64Array(3),solo:new Float64Array(3),gain:new Float64Array(3),enabledTarget:new Float64Array(3),soloTarget:new Float64Array(3),gainTarget:new Float64Array(3),inEnergy:new Float64Array(3),outEnergy:new Float64Array(3),sleeping:false,
+          meters:{reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:-120,outputDb:-120,detectorDb:-120},bandReadings:bands.map(()=>({reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:-120,outputDb:-120,enabled:true,solo:false}))};
+        resetMultiband();return mb;
+      }
+      function resetMultiband() {
+        if(!mb)return;
+        mb.state.fill(0);mb.inEnergy.fill(0);mb.outEnergy.fill(0);mb.mix=p.mix;mb.input=db(p.input);mb.makeup=db(p.makeup);
+        tune(mb.cross[0],p.crossoverLow,true);tune(mb.cross[1],p.crossoverHigh,true);
+        updateMultibandTargets();
+        for(let index=0;index<3;index++){
+          mb.processors[index].setParams(bandParams(index));mb.processors[index].reset();
+          mb.enabled[index]=mb.enabledTarget[index];mb.solo[index]=mb.soloTarget[index];mb.gain[index]=mb.gainTarget[index];
+          Object.assign(mb.bandReadings[index],{reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:-120,outputDb:-120,enabled:p[bands[index]+'Enabled']==='on',solo:p[bands[index]+'Solo']==='on'});
+        }
+        mb.activity=mb.activityTarget=p.bypass||p.mix===0?0:1;mb.activityStep=mb.activityRemaining=0;mb.sleeping=mb.activity===0;
+        Object.assign(mb.meters,{reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:-120,outputDb:-120,detectorDb:-120});
+      }
+      function updateMultibandTargets() {
+        if(!mb)return;
+        const anySolo=bands.some(band=>p[band+'Solo']==='on');
+        mb.inputTarget=db(p.input);mb.makeupTarget=db(p.makeup);
+        for(let index=0;index<3;index++){mb.enabledTarget[index]=p[bands[index]+'Enabled']==='on'?1:0;mb.soloTarget[index]=!anySolo||p[bands[index]+'Solo']==='on'?1:0;mb.gainTarget[index]=db(p[bands[index]+'Gain']);}
+      }
+      function buffers(frames) {
+        if(mb.capacity<frames){let capacity=Math.max(128,mb.capacity);while(capacity<frames)capacity*=2;mb.capacity=capacity;mb.rawData=Array.from({length:3},()=>[new Float32Array(capacity),new Float32Array(capacity)]);mb.wetData=Array.from({length:3},()=>[new Float32Array(capacity),new Float32Array(capacity)]);mb.fullData=[new Float32Array(capacity),new Float32Array(capacity)];mb.length=0;}
+        if(mb.length!==frames){mb.length=frames;mb.raw=mb.rawData.map(pair=>pair.map(data=>data.subarray(0,frames)));mb.wet=mb.wetData.map(pair=>pair.map(data=>data.subarray(0,frames)));mb.full=mb.fullData.map(data=>data.subarray(0,frames));}
+      }
+      function prepareActivity() {
+        const goal=p.bypass||p.mix===0?0:1;
+        if(goal!==mb.activityTarget){mb.activityTarget=goal;mb.activityRemaining=fadeFrames;mb.activityStep=(goal-mb.activity)/fadeFrames;}
+        if(goal&&mb.sleeping){resetMultiband();mb.activity=0;mb.activityTarget=1;mb.activityStep=1/fadeFrames;mb.activityRemaining=fadeFrames;mb.sleeping=false;}
+      }
+      function multibandRun(left,right) {
+        ensureMultiband();prepareActivity();const n=left.length;
+        if(!n)return;
+        if(mb.activity===0&&mb.activityTarget===0){let energy=0;for(let frame=0;frame<n;frame++){left[frame]=bound(left[frame]);right[frame]=bound(right[frame]);energy+=left[frame]*left[frame]+right[frame]*right[frame];}const level=10*Math.log10(Math.max(1e-12,energy/(n*2)));Object.assign(mb.meters,{reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:level,outputDb:level,detectorDb:-120});for(let band=0;band<3;band++)Object.assign(mb.bandReadings[band],{reductionDb:0,reductionLeftDb:0,reductionRightDb:0,inputDb:-120,outputDb:-120,enabled:p[bands[band]+'Enabled']==='on',solo:p[bands[band]+'Solo']==='on'});mb.sleeping=true;return;}
+        buffers(n);mb.inEnergy.fill(0);mb.outEnergy.fill(0);
+        let inputEnergy=0;
+        for(let frame=0;frame<n;frame++){
+          advance(mb.cross[0]);advance(mb.cross[1]);
+          for(let channel=0;channel<2;channel++){
+            const x=bound(channel?right[frame]:left[frame]),state=mb.state,at=channel*18,low=mb.cross[0],high=mb.cross[1];inputEnergy+=x*x;
+            const lowBand=filter(filter(x,low.lp,state,at),low.lp,state,at+2),upper=filter(filter(x,low.hp,state,at+4),low.hp,state,at+6);
+            const lo=filter(lowBand,high.ap,state,at+8),mid=filter(filter(upper,high.lp,state,at+10),high.lp,state,at+12),hi=filter(filter(upper,high.hp,state,at+14),high.hp,state,at+16);
+            mb.raw[0][channel][frame]=mb.wet[0][channel][frame]=lo;mb.raw[1][channel][frame]=mb.wet[1][channel][frame]=mid;mb.raw[2][channel][frame]=mb.wet[2][channel][frame]=hi;
+            mb.inEnergy[0]+=lo*lo;mb.inEnergy[1]+=mid*mid;mb.inEnergy[2]+=hi*hi;
+          }
+        }
+        for(let index=0;index<3;index++)if(mb.enabledTarget[index]||mb.enabled[index]>1e-10)mb.processors[index].process(mb.wet[index][0],mb.wet[index][1]);
+        const anySolo=bands.some(band=>p[band+'Solo']==='on');let outputEnergy=0;
+        for(let frame=0;frame<n;frame++){
+          mb.mix+=slew*(p.mix-mb.mix);mb.input+=slew*(mb.inputTarget-mb.input);mb.makeup+=slew*(mb.makeupTarget-mb.makeup);
+          for(let band=0;band<3;band++){
+            const enabled=mb.enabledTarget[band],solo=mb.soloTarget[band];
+            mb.enabled[band]+=slew*(enabled-mb.enabled[band]);mb.solo[band]+=slew*(solo-mb.solo[band]);mb.gain[band]+=slew*(mb.gainTarget[band]-mb.gain[band]);
+            if(Math.abs(enabled-mb.enabled[band])<1e-10)mb.enabled[band]=enabled;if(Math.abs(solo-mb.solo[band])<1e-10)mb.solo[band]=solo;
+          }
+          const directL=bound(left[frame]),directR=bound(right[frame]);
+          for(let channel=0;channel<2;channel++){
+            let reference=0,processed=0;
+            for(let band=0;band<3;band++){
+              const raw=mb.raw[band][channel][frame],linear=raw*mb.input,wet=(linear+(mb.wet[band][channel][frame]-linear)*mb.enabled[band])*mb.gain[band]*mb.solo[band];
+              reference+=raw*mb.solo[band];processed+=wet;mb.outEnergy[band]+=wet*wet;
+            }
+            const direct=channel?directR:directL,aligned=reference+(bound(processed*mb.makeup)-reference)*mb.mix,value=bound(direct+(aligned-direct)*mb.activity);
+            if(channel)right[frame]=value;else left[frame]=value;outputEnergy+=value*value;
+          }
+          if(mb.activityRemaining&&--mb.activityRemaining===0)mb.activity=mb.activityTarget;else if(mb.activityRemaining)mb.activity+=mb.activityStep;
+        }
+        let reductionLeft=0,reductionRight=0,detectorLevel=-120;
+        for(let band=0;band<3;band++){
+          const reading=mb.processors[band]._readMeters(),enabled=p[bands[band]+'Enabled']==='on',selected=!anySolo||p[bands[band]+'Solo']==='on';
+          Object.assign(mb.bandReadings[band],{reductionDb:enabled?reading.reductionDb:0,reductionLeftDb:enabled?reading.reductionLeftDb:0,reductionRightDb:enabled?reading.reductionRightDb:0,inputDb:10*Math.log10(Math.max(1e-12,mb.inEnergy[band]/(n*2))),outputDb:10*Math.log10(Math.max(1e-12,mb.outEnergy[band]/(n*2))),enabled,solo:p[bands[band]+'Solo']==='on'});
+          if(enabled&&selected){reductionLeft=Math.max(reductionLeft,reading.reductionLeftDb);reductionRight=Math.max(reductionRight,reading.reductionRightDb);detectorLevel=Math.max(detectorLevel,reading.detectorDb);}
+        }
+        Object.assign(mb.meters,{reductionDb:Math.max(reductionLeft,reductionRight),reductionLeftDb:reductionLeft,reductionRightDb:reductionRight,inputDb:10*Math.log10(Math.max(1e-12,inputEnergy/(n*2))),outputDb:10*Math.log10(Math.max(1e-12,outputEnergy/(n*2))),detectorDb:detectorLevel});
+      }
+      if(p.bandMode==='multiband')ensureMultiband();
+      return {
+        setParams(next){
+          if(!next||typeof next!=='object')return;
+          const beforeMode=p.bandMode,fullNext={},reactivated=[];let changed=false,baseChanged=false;
+          for(const key of Object.keys(next)){
+            if(key!=='bypass'&&!Object.prototype.hasOwnProperty.call(specifications,key))continue;
+            const rule=specifications[key],value=key==='bypass'?next[key]===true:typeof rule[0]==='number'?clamp(finite(next[key],rule[2]),rule[0],rule[1]):rule.includes(next[key])?next[key]:rule[0];
+            if(p[key]===value)continue;if(mb&&key.endsWith('Enabled')&&value==='on'){const index=bands.indexOf(key.slice(0,-7));if(index>=0&&mb.enabled[index]===0)reactivated.push(index);}p[key]=value;changed=true;
+            if(key==='bypass'||fullKeys.includes(key)){fullNext[key]=value;baseChanged=true;}
+          }
+          if(!changed)return;if(baseChanged)full.setParams(fullNext);
+          if(mb){tune(mb.cross[0],p.crossoverLow);tune(mb.cross[1],p.crossoverHigh);for(let band=0;band<3;band++)mb.processors[band].setParams(bandParams(band));for(const index of reactivated)mb.processors[index].reset();updateMultibandTargets();}
+          if(beforeMode!==p.bandMode){
+            modeTarget=p.bandMode==='multiband'?1:0;
+            if(modeTarget){ensureMultiband();resetMultiband();}
+            else if(modeMix>0)full.reset();
+            modeRemaining=modeTarget===modeMix?0:fadeFrames;modeStep=modeRemaining?(modeTarget-modeMix)/modeRemaining:0;
+          }
+        },
+        process(left,right){
+          if(!left||!right||left.length!==right.length)throw new Error('BUTTER requires equal stereo blocks.');
+          if(modeMix===0&&modeTarget===0&&!modeRemaining){full.process(left,right);return;}
+          if(modeMix===1&&modeTarget===1&&!modeRemaining){multibandRun(left,right);return;}
+          ensureMultiband();buffers(left.length);mb.full[0].set(left);mb.full[1].set(right);full.process(mb.full[0],mb.full[1]);multibandRun(left,right);
+          for(let frame=0;frame<left.length;frame++){
+            left[frame]=bound(mb.full[0][frame]+(left[frame]-mb.full[0][frame])*modeMix);right[frame]=bound(mb.full[1][frame]+(right[frame]-mb.full[1][frame])*modeMix);
+            if(modeRemaining&&--modeRemaining===0)modeMix=modeTarget;else if(modeRemaining)modeMix+=modeStep;
+          }
+        },
+        reset(){full.reset();if(mb)resetMultiband();modeMix=modeTarget=p.bandMode==='multiband'?1:0;modeRemaining=0;modeStep=0;},
+        getTailTime(){return modeMix||modeTarget?Math.max(.5,full.getTailTime()):full.getTailTime();},
+        getMeters(){if(p.bandMode!=='multiband')return full.getMeters();ensureMultiband();return {...mb.meters,bandMode:'multiband',crossoverLowHz:mb.cross[0].hz,crossoverHighHz:mb.cross[1].hz,bands:Object.fromEntries(bands.map((band,index)=>[band,{...mb.bandReadings[index]}]))};}
       };
     }
     return {specifications,normalize,create};

@@ -8,7 +8,7 @@ const scope = { Blob, DOMException, Math, Number, Map, Set, Promise, setTimeout,
 scope.window = scope;
 scope.createLoomEffectsDSP = () => ({ create() { throw Error('Unexpected insert in loop fixture.'); } });
 vm.createContext(scope);
-for (const file of ['audio-engine.js', 'clip-transfer.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
+for (const file of ['track-eq-dsp.js', 'audio-engine.js', 'clip-transfer.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), scope, { filename: file });
 const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP);
 const sr = 48000, passed = [];
 const pass = name => { passed.push(name); console.log('PASS ' + name); };

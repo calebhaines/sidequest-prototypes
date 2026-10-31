@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
-for (const name of ['preamp-dsp.js', 'tape-dsp.js', 'effects.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
+for (const name of ['preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 const dsp = createLoomPreampDSP(), sr = 48000, models = dsp.specifications.model, passed = [], measurements = {};
 const safeContext = { Math, Number, Object, Float32Array, Float64Array, Int32Array, Uint8Array };
 const isolated = vm.runInNewContext('(' + createLoomPreampDSP.toString() + ')', safeContext)();

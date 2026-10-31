@@ -11,8 +11,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
 const portable = fs.existsSync(path.join(__dirname, 'instruments'));
 const root = portable ? __dirname : path.resolve(__dirname, '..');
 const ids = ['grain', 'tine', 'form', 'batter'];
-const scripts = ['shared/pattern-schema.js', 'loom/vocal-catalog.js', 'loom/utility-catalog.js', 'loom/filter-catalog.js', 'loom/creative-catalog.js', 'loom/effects-catalog.js',
-  'loom/vocal-dsp.js', 'loom/utility-dsp.js', 'loom/filter-dsp.js', 'loom/creative-dsp.js', 'loom/effects.js', 'loom/schema.js', 'loom/audio-engine.js',
+const scripts = ['shared/pattern-schema.js', 'loom/vocal-catalog.js', 'loom/utility-catalog.js', 'loom/filter-catalog.js', 'loom/creative-catalog.js', 'loom/char-catalog.js', 'loom/effects-catalog.js',
+  'loom/vocal-dsp.js', 'loom/utility-dsp.js', 'loom/filter-dsp.js', 'loom/creative-dsp.js', 'loom/char-dsp.js', 'loom/effects.js', 'loom/schema.js', 'loom/track-eq-dsp.js', 'loom/audio-engine.js',
   'loom/host-bridge.js', 'loom/instrument-host.js', 'loom/note-renderer.js', 'loom/note-playback.js'].map(file => portable ? file.replace(/^loom\//, '') : file);
 const embedded = Object.fromEntries(ids.map(id => [id, fs.readFileSync(path.join(root, portable ? 'instruments/' + id + '.html' : id === 'form' ? 'music/form/index.html' : id + '/index.html'), 'utf8')]));
 const html = '<!doctype html><meta charset="utf-8"><body><iframe id="editor"></iframe><script>window.LoomEmbeddedInstruments=' + JSON.stringify(embedded).replace(/</g, '\\u003c') + ';</script>' +

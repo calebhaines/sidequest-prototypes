@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['vocal-dsp.js', 'vocal-catalog.js', 'effects-catalog.js', 'effects.js', 'schema.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
+for (const name of ['vocal-dsp.js', 'vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'char-dsp.js', 'effects.js', 'schema.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 const dsp = createLoomVocalDSP(), effects = createLoomEffectsDSP(createLoomVocalDSP);
 const serializedFactory = vm.runInNewContext('(' + createLoomVocalDSP.toString() + ')', { Math, Number, Object, Float32Array, Float64Array, Int32Array });
 const isolated = serializedFactory();

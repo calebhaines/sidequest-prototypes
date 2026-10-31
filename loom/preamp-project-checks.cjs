@@ -10,7 +10,7 @@ globalThis.window = globalThis;
 globalThis.crypto ||= webcrypto;
 globalThis.btoa ||= value => Buffer.from(value, 'binary').toString('base64');
 globalThis.atob ||= value => Buffer.from(value, 'base64').toString('binary');
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const S = LoomSchema, definition = LoomEffectsCatalog.find(effect => effect.id === 'saute');
@@ -87,12 +87,12 @@ check('Every model, control and all seventeen numeric automation targets round-t
   assert.equal(ranges.length, 17);
   for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) for (const model of definition.models) {
     const state = S.defaultState(), owner = owners(state)[ownerIndex], params = unusual(model.id);
-    owner.effects = Array.from({ length: 4 }, () => insert(params));
+    owner.effects = Array.from({ length: S.effectSlotCount(owner) }, () => insert(params));
     owner.automation = ranges.map(param => automation(param, 2));
     const loaded = parse(state), restored = owners(loaded)[ownerIndex];
     assert.deepEqual(restored.effects, owner.effects, owner.id + ' / ' + model.id);
     assert.deepEqual(restored.automation, owner.automation, owner.id + ' / ' + model.id);
-    for (const slot of [0, 1, 2, 3]) for (const param of ranges) {
+    for (const slot of restored.effects.keys()) for (const param of ranges) {
       const target = S.automationTargets(restored).find(item => item.target === 'fx:' + slot + ':' + param.key);
       assert(target && target.effectType === 'saute', owner.id + ':' + slot + ':' + param.key);
       assert.equal(target.min, param.min); assert.equal(target.max, param.max); assert.equal(target.step, param.step);

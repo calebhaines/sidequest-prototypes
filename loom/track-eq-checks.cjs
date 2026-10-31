@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { performance } = require('node:perf_hooks');
 globalThis.window = globalThis;
-for (const file of ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'audio-engine.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
+for (const file of ['vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'track-eq-dsp.js', 'audio-engine.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), { filename: file });
 const DSP = createLoomEngineDSP(createLoomEffectsDSP), rate = 48000, keys = ['low', 'lowMid', 'highMid', 'high'], flat = Object.fromEntries(keys.map(key => [key, 0])), passed = [];
 const clone = value => JSON.parse(JSON.stringify(value));
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
@@ -21,14 +21,14 @@ function coreEqFeed(core, source, right = source, block = 128) { const left = ne
 function coreRender(s, source, right = source, block = 128, options = {}) { const core = new DSP.Core(s, {}, rate, { linear: true, ...options }); core.start(); return { ...coreFeed(core, source, right, block), core }; }
 function prime(core) { core.masterGain = 1; core.gains.forEach(pair => pair.fill(1)); core.preGains.forEach(pair => pair.fill(1)); core.returnGains.forEach(pair => pair.fill(1)); core.sendGains.forEach((pair, i) => (pair[0] = core.tracks[i].sends[0], pair[1] = core.tracks[i].sends[1])); }
 
-check('Missing and explicit flat EQ preserve exact stereo samples and leave existing insert capacity unchanged', () => {
+check('Missing and explicit flat EQ preserve exact stereo samples and leave five track insert positions intact', () => {
   const a = tone(), b = tone(719, a.length);
   assert.deepEqual(render({}, a, b), { left: a, right: b }); assert.deepEqual(render(flat, a, b), { left: a, right: b });
   const s = state(), noEq = clone(s); noEq.tracks.forEach(track => delete track.eq);
   const old = coreRender(noEq, a, b), current = coreRender(s, a, b); assert.deepEqual(current.left, old.left); assert.deepEqual(current.right, old.right);
-  assert.equal(current.core.slots.length, 8); assert(current.core.slots.every(row => row.length === 4)); assert(current.core.trackEq.every(eq => eq.mask === 0));
+  assert.equal(current.core.slots.length, 8); assert(current.core.slots.every(row => row.length === 5)); assert(current.core.trackEq.every(eq => eq.mask === 0));
 });
-check('The four fixed bands have the specified bell-center and shelf gains, with meaningful cuts and boosts', () => {
+check('The four bands at their default centers have the specified bell-center and shelf gains, with meaningful cuts and boosts', () => {
   for (const gain of [-12, 12]) for (const [key, hz, expected] of [['lowMid', 400, gain], ['highMid', 2500, gain], ['low', 100, gain / 2], ['high', 10000, gain / 2]]) {
     const a = tone(hz, rate / 2), output = render({ [key]: gain }, a).left, actual = 20 * Math.log10(rms(output, rate / 4) / rms(a, rate / 4)); assert(Math.abs(actual - expected) < .015, key + ' gain: ' + actual);
   }
@@ -38,7 +38,7 @@ check('The four fixed bands have the specified bell-center and shelf gains, with
 });
 check('Stereo histories, serialization, arbitrary block partitions and the first sample are independent and deterministic', () => {
   const params = { low: 5, lowMid: -7, highMid: 8, high: -4 }, a = tone(131, 4097), b = tone(1703, a.length), reference = render(params, a, b);
-  assert.deepEqual(render(params, a, b, rate, 37), reference); const isolatedFactory = vm.runInNewContext('(' + createLoomEngineDSP.toString() + ')', { Math, Number, Object, Array, Float32Array, Float64Array, Uint8Array, Map, Set }); const isolated = isolatedFactory(createLoomEffectsDSP);
+  assert.deepEqual(render(params, a, b, rate, 37), reference); const isolatedFactory = vm.runInNewContext('(' + createLoomEngineDSP.toString() + ')', { Math, Number, Object, Array, Float32Array, Float64Array, Uint8Array, Map, Set }); const isolatedEQ = vm.runInNewContext('(' + createLoomTrackEQDSP.toString() + ')', { Math, Number, Object, Array, Float32Array, Float64Array }); const isolated = isolatedFactory(createLoomEffectsDSP, null, null, isolatedEQ);
   assert.deepEqual(render(params, a, b, rate, 137, isolated), reference);
   const silence = new Float32Array(a.length); assert.equal(peak(render(params, a, silence).right), 0); assert.deepEqual(render(params, a, silence).left, reference.left);
   const impulse = new Float32Array(1024); impulse[0] = .1; assert(Math.abs(render(params, impulse).left[0]) > .001, 'EQ added a lookahead/sample delay');

@@ -10,7 +10,7 @@ const scope = { Blob, DOMException, TextEncoder, Math, Number, Map, Set, Promise
 scope.window = scope; vm.createContext(scope);
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared', 'pattern-schema.js') : path.join(__dirname, '..', 'shared', 'pattern-schema.js');
 vm.runInContext(fs.readFileSync(shared, 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const name of ['vocal-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'effects.js', 'schema.js', 'audio-engine.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
+for (const name of ['vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js', 'track-eq-dsp.js', 'audio-engine.js', 'service-capture.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 const S = scope.LoomSchema, C = scope.LoomServiceCapture, { Core } = scope.createLoomEngineDSP(scope.createLoomEffectsDSP);
 const passed = [], clone = value => JSON.parse(JSON.stringify(value));
 function check(name, run) { run(); passed.push(name); }
@@ -38,7 +38,7 @@ function render(state, beats, service) {
 check('Compilation is explicit and pure, preserving all eight tracks, four slots, assets and source controls', () => {
   const state = fixture(), before = JSON.stringify(state), compiled = C.compile({ state, take: take(12) });
   assert.equal(JSON.stringify(state), before); assert.notEqual(compiled, state);
-  assert.equal(compiled.tracks.length, 8); assert(compiled.tracks.every(track => track.effects.length === 4));
+  assert.equal(compiled.tracks.length, 8); assert(compiled.tracks.every(track => track.effects.length === 5));
   assert.equal(compiled.tracks[0].clips.length, 3); assert.equal(compiled.tracks[0].clips[0].start, 0);
   assert.deepEqual(clone(compiled.assets), clone(state.assets));
   for (const clip of compiled.tracks[0].clips) for (const key of ['assetId', 'sourceStart', 'sourceEnd', 'sourceOffset', 'rate', 'reverse', 'loop', 'gain', 'fadeIn', 'fadeOut']) assert.equal(clip[key], state.tracks[0].clips[0][key]);

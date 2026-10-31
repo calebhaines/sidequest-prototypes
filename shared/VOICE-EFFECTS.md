@@ -37,3 +37,8 @@ For engines with software rendering, `createProcessor(sampleRate, slots, {tempo,
 `onChange(fullSlots,{gesture,phase})` supplies a unique string per editing gesture. Remember one Undo snapshot on its first callback; `phase` is `start`, `change` or `end`. A pointer press without a value change produces no Undo callback. Discrete actions use a new token and `change`. `render()` updates the chips without rebuilding a focused editor input. Optional Undo/Redo callbacks support Ctrl/Cmd+Z while the editor is open. SCALES includes detected pitch, frequency and cents; BUTTER/SAUTÉ expose actual gain and circuit readings; PRESERVE reports input, tape, output, compression and active transport displacement. Close the editor before changing the selected voice or replacing a project; `getKey` additionally guards stale editing across voice identities.
 
 Effect patches remain with instrument project/source snapshots. Portable musical pattern packets continue to contain notes and per-step locks, not a second copy of instrument processing settings.
+
+CHAR offers fifteen distortion circuits, and BUTTER offers an optional three-band
+compressor with independent band controls. Voice inserts retain two slots.
+Legacy BUTTER patches without any multiband fields inherit the full-band defaults;
+partially specified or invalid new controls remain subject to strict validation.

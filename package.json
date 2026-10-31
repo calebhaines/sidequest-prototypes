@@ -97,6 +97,8 @@
     "check:lfos-browser": "node loom/lfo-browser-checks.cjs",
     "check:cpu": "node loom/cpu-checks.cjs",
     "check:cpu-browser": "node loom/cpu-browser-checks.cjs",
+    "check:mix-upgrades": "node loom/track-eq-sweep-checks.cjs && node loom/multiband-checks.cjs && node loom/char-checks.cjs && node loom/mix-upgrade-checks.cjs",
+    "check:mix-upgrades-browser": "node loom/mix-upgrade-browser-checks.cjs",
     "check:ear-training-temperaments": "node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-temperaments.cjs"
   },
   "devDependencies": {

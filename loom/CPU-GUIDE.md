@@ -7,7 +7,8 @@ Use the normal transport or microphone monitoring to hear and measure a session.
 ## A useful first look
 
 1. Keep **Light** sampling for a first pass and let readings warm up.
-2. Open a track, return or the master to inspect its four insert slots. Tracks
+2. Open a track to inspect its five insert slots, or a return or the master for
+   four slots. Tracks
    also expose their built-in EQ and channel mixing.
 3. Compare the **Insert hotspots** list and the recent callback-load history.
 4. Open **Other engine work** to see clip/timeline preparation, LFOs, recording,

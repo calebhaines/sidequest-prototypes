@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 globalThis.window = globalThis;
-for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'effects.js', 'schema.js']) {
+for (const name of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'effects.js', 'schema.js']) {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), { filename: name });
 }
 const legacy = JSON.parse(fs.readFileSync(path.join(__dirname, 'compressor-legacy-fixtures.json'), 'utf8'));
@@ -54,7 +54,7 @@ check('Every classic model, its analog controls and automation survive strict pr
     const restored = LoomSchema.parseProject(LoomSchema.serializeProject(state));
     assert.deepEqual(restored.tracks[0].effects[0].params, params); assert.deepEqual(restored.tracks[0].automation, state.tracks[0].automation);
     for (const param of definition.params.filter(param => param.type === 'range')) assert(LoomSchema.automationTargets(restored.tracks[0]).some(target => target.target === 'fx:0:' + param.key && target.min === param.min && target.max === param.max), param.key);
-    assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 4));
+    assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
   }
   assert.deepEqual(dsp.normalize('velvet', {}), definition.defaults);
   assert.equal(LoomEffectsCatalog.length, 16);

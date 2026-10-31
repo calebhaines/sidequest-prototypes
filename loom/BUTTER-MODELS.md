@@ -96,7 +96,7 @@ The explicit classic-settings action loads this subset. Analog entries select Cl
 
 ## Complete recipes
 
-Twelve complete recipes cover the original model, all eight analog families, parallel compression, manual bus timing, and lighter levelling. Threshold and makeup are starting points: use the actual gain-reduction and output meters with your source.
+The twelve full-band recipes cover the original model, all eight analog families, parallel compression, manual bus timing, and lighter levelling. Threshold and makeup are starting points: use the actual gain-reduction and output meters with your source.
 
 | Recipe / ID | Starting point |
 | --- | --- |
@@ -114,3 +114,13 @@ Twelve complete recipes cover the original model, all eight analog families, par
 | Clean transient trim / `clean-transients` | Original Clean, a shorter attack, filtered detector, and partial blend |
 
 The catalog supplies model descriptions, timing explanations, recommended subsets, and complete recipe snapshots independently of audio initialization. AudioWorklet, fallback playback, and offline rendering use the same compressor DSP factory.
+
+## Optional three-band mode
+
+GALLEY 1.25 adds independent Low, Mid and High compression using the selected
+model family, with two adjustable crossover frequencies. Each band has manual
+threshold, ratio, attack, release and trim, compression bypass, solo and meters.
+Full-band remains the default. Four additional recipes provide three-band glue,
+bass, vocal and neutral crossover starting points. See
+[MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for the signal flow, shared controls
+and phase-matched parallel blend.

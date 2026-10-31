@@ -10,7 +10,7 @@ scope.window = scope;
 vm.createContext(scope);
 const shared = fs.existsSync(path.join(__dirname, 'shared', 'pattern-schema.js')) ? path.join(__dirname, 'shared') : path.join(__dirname, '..', 'shared');
 vm.runInContext(fs.readFileSync(path.join(shared, 'pattern-schema.js'), 'utf8'), scope, { filename: 'pattern-schema.js' });
-for (const name of ['vocal-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
+for (const name of ['vocal-catalog.js', 'char-catalog.js', 'effects-catalog.js', 'service-schema.js', 'schema.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, name), 'utf8'), scope, { filename: name });
 const S = scope.LoomSchema, P = scope.LoomServiceSchema;
 const passed = [];
 const clone = v => JSON.parse(JSON.stringify(v));
@@ -66,7 +66,7 @@ check('SERVICE scenes, macros, MIDI and authoritative take phases round-trip in 
   assert.equal(envelope.formatVersion, 1); assert.equal(envelope.state.version, 1); assert.equal(restored.service.version, 1);
   assert.equal(S.serializeProject(restored), json);
   assert.deepEqual(clone(restored.service), service(s));
-  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(t => t.effects.length === 4));
+  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(t => t.effects.length === 5));
   assert.equal(restored.view.tab, 'arrange'); assert.equal(restored.assets[0].pcm, s.assets[0].pcm);
 });
 check('Four macros are neutral at their baselines, with explicit endpoints and polarity', () => {
@@ -117,7 +117,7 @@ check('Strict import rejects malformed settings, scenes, macro ranges and slot c
     p => p.version = 2, p => p.quantize = 3, p => p.selectedSceneId = {}, p => p.scenes[0].slots.pop(), p => p.scenes[0].slots[0].mode = 'launch',
     p => p.scenes[0].lengthBeats = Infinity, p => p.scenes[0].lengthBeats = 257, p => p.scenes.push(clone(p.scenes[0])), p => p.macros.pop(),
     p => p.macros[0].value = NaN, p => p.macros[0].id = 'macro-5', p => p.macros[0].mappings[0].max = 2,
-    p => p.macros[0].mappings[0].baseline = -.1, p => p.macros[0].mappings[1].target = 'fx:4:drive', p => delete p.macros[0].mappings[1].effectType
+    p => p.macros[0].mappings[0].baseline = -.1, p => p.macros[0].mappings[1].target = 'fx:5:drive', p => delete p.macros[0].mappings[1].effectType
   ]) invalid(mutate);
   const s = fixture(); s.service = service(s); s.service.scenes[0].slots.pop();
   assert.throws(() => S.parseProject(JSON.stringify({ format: 'loom-project', formatVersion: 1, state: s })), /SERVICE/);

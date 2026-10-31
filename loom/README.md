@@ -2,6 +2,12 @@
 
 Kitchen’s central production station.
 
+**The mixing desk** now has five insert slots on each instrument track,
+sweep knobs for both mid EQ bands, a three-band option in BUTTER and fifteen
+CHAR distortion circuits. The master and shared returns each have four slots.
+Existing projects retain their first four track inserts, original mid frequencies
+and full-band compression. See [the mix upgrade guide](MIX-UPGRADE-GUIDE.md).
+
 **CPU resources** folds open above the arrangement for sampled audio-processing
 budget diagnostics, down to each track, return, master and insert. Profiling is
 off while closed, out of view or hidden; Light sampling is the default. Reports
@@ -56,7 +62,7 @@ all sound controls stay visible. DCO, twin VCO, hard sync, four-operator FM and
 spectral vector synthesis are available in the same editor. LEAVEN shares realized
 notes through Patterns, plays incoming piano-roll notes directly through its synth,
 and uses that same engine for live audio and revisable prints. The complete app is
-embedded for offline use; the studio retains eight tracks and four inserts per track.
+embedded for offline use; the studio retains eight tracks and five inserts per track.
 
 **MARINADE** combines two recorded ingredients into a polyphonic spectral morphing instrument. Its full native editor, two sample-import bays, editable note patterns and isolated native renderer are available inside the studio. Printed parts retain the source audio, patch and original notes for Edit source, Update audio or Restore notes.
 
@@ -83,7 +89,7 @@ applies queued changes at its sample clock; selecting another scene replaces the
 pending launch. SERVICE does not automatically change tempo.
 
 Four assignable macros can control track volume, pan, and numeric controls in
-the existing four effects slots. Their center position is neutral. Range,
+the existing five effects slots. Their center position is neutral. Range,
 baseline, and direction are editable per mapping. The supplied Pressure, Heat,
 Space, and Spread mappings are starting points, using the effects already in
 the project. Hold the stutter, fill, or drop pads for momentary changes. Releasing
@@ -114,12 +120,12 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.24.0.
+SERVICE is version 1.0.0; GALLEY is version 1.25.0.
 
 ## Making a piece
 
 Select a track, choose an instrument, and open its editor. Its full original
-interface plays through that track’s mixer and four effects slots. Editor
+interface plays through that track’s mixer and five effects slots. Editor
 audition lets you try sounds; Live makes the app follow the studio transport.
 Arm tracks and record their actual output into audio clips. Preparation loads
 the instrument’s engine before recording starts.
@@ -147,7 +153,7 @@ full volume, and finished instrument nodes are released during long sessions.
 Choose **+ Note clip** to write a part directly in the piano roll. Click to add
 notes, drag to move, and drag their ends to resize. Select several notes to move
 or quantize them together; edit velocity, probability, and destination voices.
-Note clips play the actual instrument through the track’s mixer and four inserts,
+Note clips play the actual instrument through the track’s mixer and five inserts,
 including when Live is off. Their time rate changes timing without changing pitch;
 transpose changes pitch separately. Use note velocities and the track mixer for
 dynamics; printed audio adds clip level and fades. Drum and spectral parts retain
@@ -227,7 +233,7 @@ This shortcut works with the transport stopped, and recordings still stay dry.
 ### Monitoring and recording alignment
 
 Open **Microphone & interface · monitoring & timing** below the transport. Select a track
-and press **Monitor microphone** to hear the input through its four inserts,
+and press **Monitor microphone** to hear the input through its five inserts,
 level, pan, mute/solo, and master, including while playback is stopped. Input trim
 and the input meter help set the level. Use headphones to prevent speaker feedback.
 Monitoring starts off and is never saved as enabled in a project.
@@ -417,45 +423,43 @@ Run `npm run check:voice-fx` and `npm run check:voice-fx-browser` for the shared
 DSP, native projects, independent audio, samples, hosted prints and interface
 checks. See each instrument README for its native test commands.
 
-### Built-in four-knob track EQ
+### Sweepable four-band track EQ
 
-Each of the eight mixer strips has four rotary EQ controls, separate from its
-four insert slots: **Low** shelf at 100 Hz, **Low Mid** bell at 400 Hz,
-**High Mid** bell at 2.5 kHz, and **High** shelf at 10 kHz. All four offer
-−12 to +12 dB gain in 0.1 dB steps. The bells use Q = 0.707; corner frequencies
-are bounded below Nyquist at lower session sample rates.
+Each of the eight mixer strips has four gain knobs and two smaller mid sweep
+knobs, separate from its five insert slots. **Low** is a shelf at 100 Hz and
+**High** a shelf at 10 kHz. **Low Mid** sweeps from 80 Hz to 2 kHz (default
+400 Hz); **High Mid** sweeps from 400 Hz to 10 kHz (default 2.5 kHz). All four
+gains offer −12 to +12 dB in 0.1 dB steps. The bells use Q = 0.707; processing
+frequencies are bounded below Nyquist at lower session sample rates.
 
-Drag a knob vertically, holding Shift for fine adjustment. Arrow keys change
-0.1 dB, Shift + arrows and Page Up / Down change 1 dB, and Home / End select the
-range endpoints. Double-click restores one band to zero; **Flat** resets all
-four manual gains. Enabled EQ automation still controls the sound in Read mode;
-its knobs show the current playhead value while playing or paused. Disable a
-lane for manual adjustment, or enable Write during playback to record a move.
-Values and rotary indicators stay visible, with keyboard focus and
-screen-reader gain/frequency labels. The compact two-by-two layout adds no
-frequency knobs or hidden EQ windows.
+Drag a knob vertically, holding Shift for fine adjustment. Gain arrow keys
+change 0.1 dB, Shift + arrows and Page Up / Down change 1 dB. Sweep knobs drag
+logarithmically; arrows change 1 Hz and Shift/Page keys change 10 Hz. Home / End
+select the range endpoints. Type an exact frequency in the Hz field. Double-click
+restores a knob's default. **Flat** resets all four gains while retaining the
+sweep frequencies. Enabled EQ automation follows the playhead, playing or
+paused. Disable a lane for manual adjustment, or enable Write while playing.
 
-The source track's four inserts feed its EQ, then track pan, level and the
-pre/post sends. EQ is included exactly once in direct stems, shared wet returns
-and the master WAV. Raw microphone and hosted-instrument recordings stay dry.
-Each stereo channel keeps separate filter history; gain changes are smoothed
-and the EQ adds no buffer latency. Zero-gain defaults preserve legacy audio.
+The five track inserts feed channel EQ, then track pan, level and the pre/post
+sends. EQ is included exactly once in direct stems, shared wet returns and the
+master WAV. Microphone and hosted-instrument recordings stay dry. Both channels
+keep independent filter history, gain and sweep changes are smoothed, and EQ
+adds no buffer latency. Flat defaults preserve the original audio.
 
-Projects save `track.eq = { low: 0, lowMid: 0, highMid: 0, high: 0 }`.
-Projects before 1.18 inherit only missing flat EQ; supplied malformed settings
-are rejected. Numeric automation targets are `eq:low`, `eq:lowMid`,
-`eq:highMid`, and `eq:high`, available on source tracks. SERVICE macros and
-captured takes retain these controls. Existing effect IDs and slot counts stay
-the same.
+Projects save six fields in `track.eq`: `low`, `lowMid`, `highMid`, `high`,
+`lowMidFreq` and `highMidFreq`. Projects before 1.25 inherit only missing sweep
+frequencies and an empty fifth insert; existing EQ gains and insert order stay
+intact. Numeric automation, LFO routes, SERVICE macros and captured takes
+support all six EQ controls. Invalid supplied settings are rejected.
 
-Run `npm run check:track-eq` and `npm run check:track-eq-browser`. Extracted
-sources use `node track-eq-checks.cjs`, `node track-eq-project-checks.cjs`,
-`node track-eq-review-checks.cjs` and, after rebuilding,
-`LOOM_TRACK_EQ_QA_BUILT=1 node track-eq-browser-checks.cjs`.
+Run `npm run check:track-eq`, `npm run check:track-eq-browser` and
+`npm run check:mix-upgrades`. The editable source also includes
+`track-eq-sweep-checks.cjs` for frequency response, smoothing and legacy audio
+checks. See [MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for BUTTER and CHAR.
 
 ### Master and shared effect returns
 
-GALLEY retains eight instrument/audio tracks with four inserts each. The master
+GALLEY retains eight instrument/audio tracks with five inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
 channels each have four inserts. All sixteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
@@ -580,7 +584,7 @@ Input/output and gain-reduction readings come from the actual processing.
 Settings, numeric automation and Undo work through the same DSP in live
 monitoring, fallback and WAV export. Existing projects inherit Clean and retain
 every old setting and sample. The compressor remains one effect in the existing
-four-slot track rack. Run `npm run check:compressor` and
+five-slot track rack. Run `npm run check:compressor` and
 `npm run check:compressor-browser`; extracted sources use
 `node compressor-checks.cjs`, `node compressor-project-checks.cjs` and
 `LOOM_COMPRESSOR_QA_BUILT=1 node compressor-browser-checks.cjs` after rebuilding.
@@ -635,7 +639,7 @@ independent bypass, removal, ordering and routing before the amp or after its
 cabinet. Their detail panels contain pedal-specific amount, tone, level and blend
 controls. Seven overdrive, distortion, fuzz and boost characters join compression,
 wah, chorus, phaser, echo and spring. Switch the head off to keep just pedals and the selected cabinet; DI removes the cabinet too.
-All processing stays in the same four-slot GALLEY rack and the same track mixer.
+All processing stays in the same five-slot GALLEY track rack and the same track mixer.
 Save rig and Load rig in the Workshop transfer complete sound settings between
 sessions without changing other inserts, clips or track automation. Loading a
 rig supports Undo and validates the complete file before changing the insert.
@@ -690,7 +694,7 @@ Peak/RMS channel levels, held peaks, clipping indicators, correlation, DC and
 crest factor show what the signal is doing. Reset meters clears holds and clipping
 without changing sound or adding a project edit. Tuning analysis runs alongside
 the signal and adds no audio buffer delay; low bass needs a longer observation
-than high notes. These tools are available in every track's normal four-slot rack.
+than high notes. These tools are available in every track's normal five-slot rack.
 
 For live tuning, select a track, add SCALES, and choose **Input → SCALES**.
 The Audio settings panel uses your selected interface and input channel; its
@@ -713,7 +717,7 @@ keep rendering manageable. Native note synthesis is rendered first, then passes
 through the studio mixer, automation, and inserts. Live performances outside
 note clips should be recorded before exporting.
 
-GALLEY has eight fixed tracks, four slots each, up to 64 bars, and up to 128 clips
+GALLEY has eight fixed tracks, five slots each, up to 64 bars, and up to 128 clips
 per track. Each imported or recorded source holds up to 120 seconds. The source
 audio budget is 64 MB of PCM; native app snapshots and saved sources share a
 separate 96 MB budget. A pattern can hold 4,096 notes, 64 voices, and 256 beats.
@@ -798,8 +802,8 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.24.0.
+font license notices. Version 1.25.0.
 
 ## Compatibility
 
-The Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and four effects slots per track.
+The Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and five effects slots per track.

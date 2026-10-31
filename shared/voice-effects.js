@@ -13,8 +13,13 @@
     return Array.from({ length: 2 }, (_, slot) => {
       const value = raw[slot]; if (value === null) return null;
       if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !['type', 'params'].includes(key))) throw new Error('A voice effect slot is malformed.');
-      const def = definition(value.type), source = value.params;
+      const def = definition(value.type); let source = value.params;
       if (!def || !source || typeof source !== 'object' || Array.isArray(source)) throw new Error('A voice contains an unknown GALLEY effect or invalid settings.');
+      // Voice patches predate the three-band controls and have no app version.
+      // Only complete absence identifies that legacy shape; partial new data
+      // still passes the same strict validation as a current patch.
+      const introduced = def.id === 'velvet' && Array.isArray(def.multibandKeys) ? def.multibandKeys : [];
+      if (introduced.length && introduced.every(key => !Object.prototype.hasOwnProperty.call(source, key))) source = { ...Object.fromEntries(introduced.map(key => [key, def.defaults[key]])), ...source };
       const params = {};
       if (options.strict && Object.keys(source).some(key => !Object.prototype.hasOwnProperty.call(def.defaults, key))) throw new Error(def.name + ' contains an unknown control.');
       for (const param of def.params) {
@@ -36,7 +41,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -110,7 +115,7 @@
   let bankOrdinal = 0;
   const offline = context => typeof context?.startRendering === 'function';
   function workletSource() {
-    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP'];
+    const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP', 'createLoomCharDSP'];
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
     return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
@@ -300,12 +305,12 @@
     }
     function updateModelNote() {
       const slots = get(), spec = slots[selected], def = spec && definition(spec.type), note = dialog.querySelector('[data-voice-fx-model-note]');
-      syncRecipe(); if (!note) return; const models = def.models || def.ampModels || [], model = models.find(model => model.id === spec.params.model);
+      syncRecipe(); if (!note) return; const models = def.models || def.ampModels || [], model = models.find(model => model.id === (spec.type === 'cinder' ? spec.params.shape : spec.params.model));
       const notes = model ? [model.inspiration, model.description].filter(Boolean) : [];
       if (spec.type === 'preserve' && (spec.params.wow > 0 || spec.params.flutter > 0)) notes.push('Wow/flutter move the whole blend; zero motion keeps timing unchanged.');
       note.textContent = notes.join(' · ');
       for (const input of dialog.querySelectorAll('[data-voice-fx-param],[data-voice-fx-number]')) { const key = input.dataset.voiceFxParam || input.dataset.voiceFxNumber; const p = spec.params;
-        input.disabled = spec.type === 'saute' && (p.model === 'clean' && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(key) || model?.inactiveControls?.includes(key)) || spec.type === 'velvet' && (p.model === 'clean' && ['colour', 'timing', 'fetMode', 'thrust'].includes(key) || p.model !== 'clean' && p.timing === 'classic' && ['attack', 'release'].includes(key) || key === 'fetMode' && p.model !== 'fet-76' || key === 'thrust' && p.model !== 'bus-2500') || spec.type === 'parallax' && (key === 'time' && p.clock === 'sync' || key === 'division' && p.clock === 'free') || ['strainer', 'swirl'].includes(spec.type) && (['rate', 'lfoRate'].includes(key) && (p.clock || p.lfoClock) === 'sync' || ['division', 'lfoDivision'].includes(key) && (p.clock || p.lfoClock) === 'free'); }
+        input.disabled = spec.type === 'saute' && (p.model === 'clean' && ['colour', 'impedance', 'transformer', 'headroom', 'bias', 'feedback', 'slew'].includes(key) || model?.inactiveControls?.includes(key)) || spec.type === 'velvet' && (p.model === 'clean' && ['colour', 'timing', 'fetMode', 'thrust'].includes(key) || p.model !== 'clean' && p.timing === 'classic' && ['attack', 'release'].includes(key) || key === 'fetMode' && p.model !== 'fet-76' || key === 'thrust' && p.model !== 'bus-2500') || spec.type === 'parallax' && (key === 'time' && p.clock === 'sync' || key === 'division' && p.clock === 'free') || ['strainer', 'swirl'].includes(spec.type) && (['rate', 'lfoRate'].includes(key) && (p.clock || p.lfoClock) === 'sync' || ['division', 'lfoDivision'].includes(key) && (p.clock || p.lfoClock) === 'free'); if (spec.type === 'velvet') input.disabled ||= p.bandMode === 'multiband' ? ['threshold', 'ratio', 'attack', 'release', 'timing'].includes(key) : (def.multibandKeys || []).includes(key) && key !== 'bandMode'; }
     }
     element.addEventListener('click', event => {
       const button = event.target.closest('[data-voice-fx-slot]'); if (!button) return; event.preventDefault(); event.stopPropagation(); selected = Number(button.dataset.voiceFxSlot); sessionKey = key(); dialog.showModal(); renderDialog();
