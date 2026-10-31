@@ -1415,8 +1415,14 @@
     requestAnimationFrame(animate);
   }
 
-  function clearEffectAutomation(t,index){t.automation=t.automation.filter(lane=>!lane.target.startsWith('fx:'+index+':'));}
-  function swapEffectAutomation(t,a,b){if(automationEditor&&t===effectOwner()){const parts=automationEditor.target.split(':');if(parts[0]==='fx'&&[a,b].includes(Number(parts[1]))){parts[1]=String(Number(parts[1])===a?b:a);automationEditor.target=parts.join(':');}}for(const lane of t.automation){const parts=lane.target.split(':');if(parts[0]!=='fx')continue;const slot=Number(parts[1]);if(slot===a||slot===b){parts[1]=String(slot===a?b:a);lane.target=parts.join(':');}}}
+  function clearEffectAutomation(t,index){
+    const prefix='fx:'+index+':';
+    t.automation=t.automation.filter(lane=>!lane.target.startsWith(prefix));
+    for(const lfo of state.lfos||[])lfo.routes=lfo.routes.filter(route=>route.ownerId!==t.id||!route.target.startsWith(prefix));
+  }
+  function swapEffectAutomation(t,a,b){if(automationEditor&&t===effectOwner()){const parts=automationEditor.target.split(':');if(parts[0]==='fx'&&[a,b].includes(Number(parts[1]))){parts[1]=String(Number(parts[1])===a?b:a);automationEditor.target=parts.join(':');}}for(const lane of t.automation){const parts=lane.target.split(':');if(parts[0]!=='fx')continue;const slot=Number(parts[1]);if(slot===a||slot===b){parts[1]=String(slot===a?b:a);lane.target=parts.join(':');}}
+    for(const lfo of state.lfos||[])for(const route of lfo.routes){if(route.ownerId!==t.id)continue;const parts=route.target.split(':');if(parts[0]!=='fx')continue;const slot=Number(parts[1]);if(slot===a||slot===b){parts[1]=String(slot===a?b:a);route.target=parts.join(':');}}
+  }
   function renderRecordingSetup(){
     const r=state.recording,locked=transportLocked();
     $('countInBars').value=String(r.countInBars);$('punchButton').setAttribute('aria-pressed',String(r.punchEnabled));
@@ -1665,7 +1671,7 @@
     if(scope==='instrument'){const t=track();if(!t.instrument)throw Error('Load an instrument first.');await ensureInstrument(t);const caps=host.capabilities(t.id),nativeScope=caps.audioExport?.scopes?.[0]?.id||'pattern';return host.exportAudio(t.id,{scope:nativeScope,bars,tailSeconds,signal});}
     if(scope!=='mix')throw Error('Choose a clip, track instrument, or arrangement mix.');const renderState=clone(state),startBeat=state.loopEnabled?state.loopStart:0,endBeat=Math.min(state.lengthBars*4,startBeat+num(bars,1,16)*4),blob=await engine.renderWav(renderState,assetMap,{startBeat,endBeat,tailSeconds,signal});if(generation!==lifecycle)throw new DOMException('Session changed.','AbortError');return {blob,name:state.name+' · arrangement',tempo:renderState.tempo,sourceApp:'loom',bars:(endBeat-startBeat)/4};
   }
-  automationEditor=new window.LoomAutomationEditor({element:$('automationEditor'),getState:()=>state,getOwner:effectOwner,getBeat:()=>engine.getMeters().beat||0,getPlaying:()=>!!engine.getMeters().playing,remember,onChange:()=>changed(),status});
+  automationEditor=new window.LoomAutomationEditor({element:$('automationEditor'),getState:()=>state,getOwner:effectOwner,getBeat:()=>engine.getMeters().beat||0,getPlaying:()=>!!engine.getMeters().playing,getMeters:()=>engine.getMeters(),remember,onChange:()=>changed(),status});
   $('audioSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphoneSettingsButton').addEventListener('click',()=>openAudioSettings());$('microphonePracticeButton').addEventListener('click',()=>openAudioSettings({practice:true}));$('microphoneVocalPracticeButton').addEventListener('click',()=>openAudioSettings({practice:'vocal'}));
   $('closeAudioSettings').addEventListener('click',()=>{if(!audioSettingsBusy)$('audioSettingsDialog').close();});
   $('audioSettingsDialog').addEventListener('cancel',e=>{if(audioSettingsBusy)e.preventDefault();});

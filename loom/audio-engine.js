@@ -2,9 +2,11 @@
 (() => {
   'use strict';
 
-  function createLoomEngineDSP(effectsFactory) {
+  function createLoomEngineDSP(effectsFactory, lfoFactory) {
     const clamp = (v, lo, hi, fallback = lo) => Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : fallback;
     const effects = effectsFactory();
+    const makeLFO = typeof lfoFactory === 'function' ? lfoFactory : typeof globalThis.createLoomLFODSP === 'function' ? globalThis.createLoomLFODSP : null;
+    const lfoDSP = makeLFO ? makeLFO() : null;
     const serviceGeometry = (options, beat) => {
       const clip = options.clip, nativeRate = clamp(clip.rate, .125, 8, 1), nativeLength = clamp(clip.length, .0001, 256, 1), stutter = [.125, .25, .5].includes(options.stutterBeats) ? options.stutterBeats : 0;
       const rate = stutter ? nativeRate : options.fill ? Math.min(8, nativeRate * 2) : nativeRate, factor = rate / nativeRate, length = stutter || nativeLength / factor;
@@ -224,6 +226,7 @@
         this.clickPhase = 0;
         this.clickRemaining = 0;
         this.previousClickBeat = -1;
+        this.modulation = null;
         this.service = null;
         this.serviceEvents = [];
         this.setAssets(assets);
@@ -262,10 +265,11 @@
         this.automation = this.tracks.map(track => this._compileAutomation(track));
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus));
         this.masterAutomation = this._compileAutomation(this.master);
+        if (lfoDSP) { const definitions = lfoDSP.targets(this.state, null, effects.specifications); if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
         for (let t = 0; t < 8; t++) {
           this._updateRack(this.tracks[t], this.slots[t], this.automation[t]);
           const params = {};
-          for (const key of trackEqKeys) params[key] = this.automation[t].eq[key] && this.eqAutomationValues[t]?.[key] !== undefined ? this.eqAutomationValues[t][key] : clamp(this.tracks[t].eq?.[key], -12, 12, 0);
+          for (const key of trackEqKeys) params[key] = (this.automation[t].eq[key] || this.modulation?.has(this.tracks[t].id, 'eq:' + key)) && this.eqAutomationValues[t]?.[key] !== undefined ? this.eqAutomationValues[t][key] : clamp(this.tracks[t].eq?.[key], -12, 12, 0);
           // Performance macros and a compiled take share the absolute control
           // clock. An event between ticks must not start its live EQ ramp
           // earlier than the corresponding captured automation point.
@@ -303,7 +307,7 @@
           if (!spec || typeof spec.type !== 'string') { if (old) old.dsp.reset(); row[slot] = null; continue; }
           if (old && old.type === spec.type) {
             let retained = null;
-            if (automation && old.automationValues) for (const { key } of automation.effects[slot]) if (Object.prototype.hasOwnProperty.call(old.automationValues, key)) { if (!retained) retained = {}; retained[key] = old.automationValues[key]; }
+            if (automation && old.automationValues) for (const key of new Set([...automation.effects[slot].map(item => item.key), ...(this.modulation?.effectKeys(owner.id, slot) || [])])) if (Object.prototype.hasOwnProperty.call(old.automationValues, key)) { if (!retained) retained = {}; retained[key] = old.automationValues[key]; }
             old.dsp.setParams(retained ? { ...spec.params, ...retained } : spec.params || {}); old.bypass = spec.bypass === true; old.automationValues = retained;
           }
           else { if (old) old.dsp.reset(); const dsp = effects.create(spec.type, this.sampleRate, spec.params || {}); row[slot] = dsp ? { type: spec.type, dsp, bypass: spec.bypass === true } : null; }
@@ -314,14 +318,16 @@
         for (let slotIndex = 0; slotIndex < 4; slotIndex++) {
           const slot = row[slotIndex];
           if (!slot || slot.bypass) continue;
-          const lanes = automation.effects[slotIndex];
-          if (!lanes.length) slot.dsp.process(left, right, { tempo: this.tempo, beat: blockBeat, playing: blockPlaying });
+          const lanes = automation.effects[slotIndex], modulated = this.modulation?.effectKeys(owner.id, slotIndex) || [];
+          if (!lanes.length && !modulated.length) slot.dsp.process(left, right, { tempo: this.tempo, beat: blockBeat, playing: blockPlaying });
           else for (let start = 0; start < n;) {
             const length = Math.min(n - start, 32 - ((this.sampleClock + start) % 32)), beat = this.timelineBeats[start];
             if ((this.sampleClock + start) % 32 === 0) {
               let changed = !slot.automationValues;
               const values = {};
-              for (const { key, lane } of lanes) { values[key] = automationValue(lane, beat, owner.effects[slotIndex].params[key]); if (!slot.automationValues || values[key] !== slot.automationValues[key]) changed = true; }
+              for (const { key, lane } of lanes) values[key] = automationValue(lane, beat, owner.effects[slotIndex].params[key]);
+              for (const key of modulated) values[key] = this.modulation.apply(owner.id, 'fx:' + slotIndex + ':' + key, start, values[key] ?? owner.effects[slotIndex].params[key]);
+              for (const key of Object.keys(values)) if (!slot.automationValues || values[key] !== slot.automationValues[key]) changed = true;
               if (changed) { slot.dsp.setParams({ ...owner.effects[slotIndex].params, ...values }); slot.automationValues = values; }
             }
             slot.dsp.process(left.subarray(start, start + length), right.subarray(start, start + length), { tempo: this.tempo, beat, playing: this.timelinePlaying[start] === 1 && this.timelineCountIn[start] === 0 });
@@ -331,18 +337,19 @@
       }
       _processTrackEq(index, left, right) {
         const track = this.tracks[index], eq = this.trackEq[index], lanes = this.automation[index].eq;
-        if (!this.service && !trackEqKeys.some(key => lanes[key])) { eq.process(left, right); return; }
+        if (!this.service && !trackEqKeys.some(key => lanes[key] || this.modulation?.has(track.id, 'eq:' + key))) { eq.process(left, right); return; }
         for (let start = 0; start < left.length;) {
           const length = Math.min(left.length - start, 32 - ((this.sampleClock + start) % 32));
           if ((this.sampleClock + start) % 32 === 0) {
             const values = {};
-            for (const key of trackEqKeys) values[key] = clamp(automationValue(lanes[key], this.timelineBeats[start], track.eq?.[key]), -12, 12, 0);
+            for (const key of trackEqKeys) values[key] = clamp(this._lfoValue(track.id, 'eq:' + key, start, automationValue(lanes[key], this.timelineBeats[start], track.eq?.[key])), -12, 12, 0);
             eq.setParams(values); this.eqAutomationValues[index] = values;
           }
           eq.process(left.subarray(start, start + length), right.subarray(start, start + length));
           start += length;
         }
       }
+      _lfoValue(ownerId, target, frame, base) { return this.modulation?.has(ownerId, target) ? this.modulation.apply(ownerId, target, frame, base) : base; }
       _resetTrackEq() {
         for (let index = 0; index < 8; index++) {
           const values = {}, track = this.tracks[index], lanes = this.automation[index].eq;
@@ -376,6 +383,7 @@
           this.seekFadeRemaining = this.playing || Math.abs(this.lastOutput[0]) + Math.abs(this.lastOutput[1]) > 1e-8 ? this.seekFadeFrames : 0;
           for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         }
+        this.modulation?.reset(this.beat, this.tempo);
         this._resetTrackEq();
         this._resetBuses();
         this.meters = { ...this.meters, beat: this.beat, cycle: 0, playing: this.playing, ended: false };
@@ -405,13 +413,18 @@
         for (const pair of this.gains) pair.fill(0);
         for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
         for (const pair of this.buffers) for (const buffer of pair) buffer.fill(0);
+        this.modulation?.reset(this.beat, this.tempo);
         this._resetTrackEq();
         this._resetBuses();
         this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: 8 }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() };
       }
       getMeters() {
         const rackMeters = (owner, row) => row.map((slot, insert) => slot ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || owner.effects?.[insert]?.params?.bypass === true } : null);
-        return { ...this.meters, effects: this.slots.map((row, track) => rackMeters(this.tracks[track], row)), returnEffects: this.returnSlots.map((row, bus) => rackMeters(this.returns[bus], row)), masterEffects: rackMeters(this.master, this.masterSlots) };
+        return { ...this.meters, lfos: this.modulation?.getMeters((ownerId, target) => {
+          const index = /^track-/.test(ownerId) ? indexFor(ownerId, this.tracks) : -1, returnIndex = this.returns.findIndex(owner => owner.id === ownerId), owner = index >= 0 ? this.tracks[index] : returnIndex >= 0 ? this.returns[returnIndex] : this.master;
+          const lane = owner.automation?.find(lane => lane.target === target), parts = target.split(':'), base = target === 'level' || target === 'pan' ? owner[target] : parts[0] === 'send' ? owner.sends?.[Number(parts[1])] : parts[0] === 'eq' ? owner.eq?.[parts[1]] : parts[0] === 'fx' ? owner.effects?.[Number(parts[1])]?.params?.[parts[2]] : 0;
+          return automationValue(lane, this.beat, base);
+        }), effects: this.slots.map((row, track) => rackMeters(this.tracks[track], row)), returnEffects: this.returnSlots.map((row, bus) => rackMeters(this.returns[bus], row)), masterEffects: rackMeters(this.master, this.masterSlots) };
       }
       resetEffectMeters(ownerId, insert) {
         if (!Number.isInteger(insert) || insert < 0 || insert >= 4) return false;
@@ -644,6 +657,10 @@
           const pair = this.buffers[this.microphoneMonitor.track];
           if (pair) for (let f = 0; f < n; f++) { pair[0][f] += Number.isFinite(microphone[0][f]) ? microphone[0][f] : 0; const v = (microphone[1] || microphone[0])[f]; pair[1][f] += Number.isFinite(v) ? v : 0; }
         }
+        if (this.modulation?.active) this.modulation.render(this.timelineBeats, this.timelinePlaying, this.timelineCountIn, this.sampleClock, this.tempo, this.service ? (ownerId, target) => {
+          const index = indexFor(ownerId, this.tracks); if (index < 0 || !this.service.performance.drops[index]) return 1;
+          return target === 'level' || /^send:[01]$/.test(target) && this.tracks[index].sendPre?.[Number(target.slice(5))] === true ? 0 : 1;
+        } : null);
         const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
         if (!this.dryMixGains || this.dryMixGains.length !== n) this.dryMixGains = new Float64Array(n);
         const dryGoal = dryAudible ? 1 : 0;
@@ -658,7 +675,7 @@
           this._processTrackEq(t, l, r);
           const gain = this.gains[t]; let peak = 0, powerL = 0, powerR = 0;
           for (let f = 0; f < n; f++) {
-            const beat = this.timelineBeats[f], pan = clamp(automationValue(this.automation[t].pan, beat, track.pan), -1, 1, 0), level = audible[t] ? clamp(automationValue(this.automation[t].level, beat, track.level), 0, 1.5, .8) : 0;
+            const beat = this.timelineBeats[f], pan = clamp(this._lfoValue(track.id, 'pan', f, automationValue(this.automation[t].pan, beat, track.pan)), -1, 1, 0), level = audible[t] ? clamp(this._lfoValue(track.id, 'level', f, automationValue(this.automation[t].level, beat, track.level)), 0, 1.5, .8) : 0;
             const goalL = level * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, goalR = level * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
             gain[0] += (goalL - gain[0]) * slew; gain[1] += (goalR - gain[1]) * slew;
             let a = l[f] * gain[0], b = r[f] * gain[1];
@@ -671,7 +688,7 @@
               const pre = this.preGains[t]; pre[0] += (panL - pre[0]) * slew; pre[1] += (panR - pre[1]) * slew;
               const preL = Number.isFinite(l[f]) ? l[f] * pre[0] : 0, preR = Number.isFinite(r[f]) ? r[f] * pre[1] : 0;
               for (let bus = 0; bus < 2; bus++) {
-                const goal = clamp(automationValue(this.automation[t].sends[bus], beat, track.sends?.[bus]), 0, 1, 0), send = this.sendGains[t];
+                const goal = clamp(this._lfoValue(track.id, 'send:' + bus, f, automationValue(this.automation[t].sends[bus], beat, track.sends?.[bus])), 0, 1, 0), send = this.sendGains[t];
                 send[bus] += (goal - send[bus]) * slew;
                 const tap = this.sendPreMix[t]; tap[bus] += ((track.sendPre?.[bus] === true ? 1 : 0) - tap[bus]) * slew;
                 if (send[bus] !== 0) { this.returnBuffers[bus][0][f] += (a + (preL - a) * tap[bus]) * send[bus]; this.returnBuffers[bus][1][f] += (b + (preR - b) * tap[bus]) * send[bus]; }
@@ -688,7 +705,7 @@
           const audibleReturn = !trackStem && owner.mute !== true && (!anyReturnSolo || owner.solo === true) && (!returnStem || selectedReturn === bus);
           let peak = 0, powerL = 0, powerR = 0;
           for (let frame = 0; frame < n; frame++) {
-            const beat = this.timelineBeats[frame], level = audibleReturn ? clamp(automationValue(this.returnAutomation[bus].level, beat, owner.level), 0, 1.5, 1) : 0, pan = clamp(automationValue(this.returnAutomation[bus].pan, beat, owner.pan), -1, 1, 0);
+            const beat = this.timelineBeats[frame], level = audibleReturn ? clamp(this._lfoValue(owner.id, 'level', frame, automationValue(this.returnAutomation[bus].level, beat, owner.level)), 0, 1.5, 1) : 0, pan = clamp(this._lfoValue(owner.id, 'pan', frame, automationValue(this.returnAutomation[bus].pan, beat, owner.pan)), -1, 1, 0);
             const goalL = level * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, goalR = level * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
             gain[0] += (goalL - gain[0]) * slew; gain[1] += (goalR - gain[1]) * slew;
             let a = l[frame] * gain[0], b = r[frame] * gain[1]; if (!Number.isFinite(a)) a = 0; if (!Number.isFinite(b)) b = 0;
@@ -702,7 +719,7 @@
         const masterLevel = clamp(this.state.master?.level, 0, 1.5, .8), metronome = this.options.includeMetronome && this.state.master?.metronome && blockPlaying;
         let peak = 0, powerL = 0, powerR = 0;
         for (let f = 0; f < n; f++) {
-          const level = this.masterAutomation.level ? clamp(automationValue(this.masterAutomation.level, this.timelineBeats[f], masterLevel), 0, 1.5, .8) : masterLevel;
+          const baseLevel = this.masterAutomation.level ? clamp(automationValue(this.masterAutomation.level, this.timelineBeats[f], masterLevel), 0, 1.5, .8) : masterLevel, level = clamp(this._lfoValue('master', 'level', f, baseLevel), 0, 1.5, .8);
           this.masterGain += (level - this.masterGain) * slew;
           let a = left[f] * this.masterGain, b = right[f] * this.masterGain;
           if (this.timelineCountIn[f] || (metronome && this.timelinePlaying[f])) {
@@ -870,6 +887,7 @@
       automation: (owner?.automation || []).map(lane => ({ target: lane.target, effectType: lane.effectType, enabled: lane.enabled, interpolation: lane.interpolation, points: (lane.points || []).map(p => ({ beat: p.beat, value: p.value })) }))
     });
     return {
+      lfos: (state.lfos || []).map(lfo => ({ ...lfo, routes: (lfo.routes || []).map(route => ({ ...route, ...(route.gate ? { gate: route.gate.map(point => ({ ...point })) } : {}) })) })),
       tempo: state.tempo, lengthBars: state.lengthBars, loopEnabled: state.loopEnabled, loopStart: state.loopStart, loopEnd: state.loopEnd,
       master: { id: 'master', name: state.master?.name, level: state.master?.level, metronome: state.master?.metronome, mute: state.master?.mute, ...rack(state.master) },
       returns: state.returns ? Array.from({ length: 2 }, (_, index) => { const bus = state.returns[index] || {}; return { id: 'return-' + (index + 1), name: bus.name, level: bus.level, pan: bus.pan, mute: bus.mute, solo: bus.solo, ...rack(bus) }; }) : undefined,
@@ -1052,7 +1070,7 @@
         this.node = null; this.core = null; this._sentAssets = new Map();
         this.inputs = Array.from({ length: 8 }, () => { const node = this.context.createGain(); node.channelCount = 2; node.channelCountMode = 'explicit'; node.channelInterpretation = 'speakers'; return node; });
         this.microphoneInput = this.context.createGain(); this.microphoneInput.channelCount = 2; this.microphoneInput.channelCountMode = 'explicit'; this.microphoneInput.channelInterpretation = 'speakers';
-        const DSP = createLoomEngineDSP(window.createLoomEffectsDSP);
+        const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP);
         if (this.context.audioWorklet && window.AudioWorkletNode) {
           let url;
           try {
@@ -1066,8 +1084,9 @@
               const createPreamp=${window.createLoomPreampDSP ? window.createLoomPreampDSP.toString() : 'null'};
               const createTape=${window.createLoomTapeDSP ? window.createLoomTapeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
+              const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape));
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape),createLFO);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -1542,7 +1561,7 @@
       const sr = 48000, start = Math.max(0, Math.min(255.999, Number(options.startBeat) || 0)), end = Math.max(start + .0001, Math.min(256, Number(options.endBeat) || (state.lengthBars || 4) * 4));
       const tempo = Math.max(40, Math.min(240, state.tempo || 120)), main = Math.round((end - start) * 60 / tempo * sr), tail = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds) || 0)) * sr), total = main + tail;
       if (options.signal?.aborted) throw abortError();
-      const DSP = createLoomEngineDSP(window.createLoomEffectsDSP), core = new DSP.Core(dspState(state), assets, sr, { linear: true, includeMetronome: options.includeMetronome === true, trackId: options.trackId, returnId: options.returnId });
+      const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP), core = new DSP.Core(dspState(state), assets, sr, { linear: true, includeMetronome: options.includeMetronome === true, trackId: options.trackId, returnId: options.returnId });
       core.start(start); const { buffer, view } = makeWavBuffer(total, sr); let at = 0, blocks = 0;
       options.onProgress?.(0);
       while (at < total) {
@@ -1568,7 +1587,7 @@
     async dispose() { this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
-  const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP);
+  const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP);
   window.LoomServiceTiming = sharedPlayback.ServiceTiming;
   window.LoomClipPlayback = sharedPlayback.ClipPlayback;
   window.LoomAudio = LoomAudio;

@@ -7,9 +7,11 @@
   const stamp = () => globalThis.performance?.now?.() ?? Date.now();
 
   class LoomAutomationEditor {
-    constructor({ element, getState, getTrack, getOwner, getBeat, getPlaying = () => false, remember = () => {}, onChange = () => {}, status = () => {} }) {
+    constructor({ element, getState, getTrack, getOwner, getBeat, getPlaying = () => false, getMeters = () => null, remember = () => {}, onChange = () => {}, status = () => {} }) {
       this.element = element; this.getState = getState; this.getTrack = getOwner || getTrack || (() => getState().selectedTrack); this.getBeat = getBeat; this.getPlaying = getPlaying;
       this.remember = remember; this.onChange = onChange; this.status = status;
+      this.lfoElement = typeof window.LoomLFOEditor === 'function' ? document.createElement('section') : null;
+      this.lfoEditor = typeof window.LoomLFOEditor === 'function' ? new window.LoomLFOEditor({ element: this.lfoElement, getState, getBeat, getPlaying, getMeters, remember, onChange, status }) : null;
       this.target = 'level'; this.point = -1; this.write = false; this.zoom = 24; this.fitMode = true; this.snap = null; this.trackId = null;
       this.drag = null; this.captures = new Map(); this.writeBaselines = new Map(); this.drawFrame = 0; this.lastPlaying = null;
       element.classList.add('automation-editor', 'panel');
@@ -89,12 +91,15 @@
       const scroll = this.element.querySelector('.auto-canvas-scroll')?.scrollLeft || 0;
       const active = document.activeElement?.closest?.('[data-auto-field]');
       const focus = active && this.element.contains(active) ? active.dataset.autoField : null;
+      const lfoFocus = this.lfoElement?.contains(document.activeElement) ? document.activeElement.dataset.lfoControl : null;
       this.element.innerHTML = `<div class="panel-heading auto-heading"><div><h2><span class="section-number">↝</span>Automation</h2><p class="auto-subtitle">Timed instructions for equipment with opinions.</p></div><div class="auto-heading-right"><span class="auto-track">${escape(this.ownerLabel(track))}</span><button type="button" class="auto-write ${this.write ? 'armed' : ''}" data-auto-action="write" aria-pressed="${this.write}" title="Record this owner’s fader and effect movements while playback runs"><i></i>Write</button></div></div>
         <div class="auto-layout"><div class="auto-lane-panel"><label class="auto-target-label" for="loomAutoTarget">PARAMETER</label><div class="auto-target-row"><select id="loomAutoTarget" data-auto-field="target" aria-label="Automation parameter">${targets.map(t => `<option value="${escape(t.target)}" ${t.target === this.target ? 'selected' : ''}>${escape(t.label)}</option>`).join('')}</select><button type="button" data-auto-action="add" aria-label="Add automation lane" title="Add a lane for this parameter" ${lane ? 'disabled' : ''}>+</button></div><div class="auto-lane-list" role="group" aria-label="Automation lanes">${lanes.length ? lanes.map(l => { const ld = targets.find(t => t.target === l.target && (!t.effectType || t.effectType === l.effectType)); return `<button type="button" class="auto-lane ${l === lane ? 'selected' : ''} ${l.enabled ? '' : 'disabled-lane'}" data-auto-lane="${escape(l.target)}" ${ld ? '' : 'disabled'} aria-pressed="${l === lane}"><i></i><span>${escape(ld?.label || 'Unavailable parameter')}<small>${l.points.length} point${l.points.length === 1 ? '' : 's'} · ${l.enabled ? 'Read' : 'Off'}</small></span><span class="auto-lane-arrow">↗</span></button>`; }).join('') : '<div class="auto-no-lanes"><span>↝</span><p>Add a lane to draw how a sound changes through the piece.</p></div>'}</div><p class="auto-write-hint" data-auto-write-hint>${this.write ? playing ? 'Writing mixer and effect movements during playback.' : 'Write armed. Press Play, then move a mixer or effect control.' : 'Draw points, or arm Write and move controls during playback.'}</p></div>
         <div class="auto-curve-panel"><div class="auto-curve-tools"><div class="auto-lane-title"><strong>${escape(d?.label || 'Automation')}</strong><output data-auto-live-value>${this.label(d, window.LoomSchema.automationValue(lane, this.getBeat() || 0, this.value(d)))}</output></div><div class="auto-curve-options"><label class="auto-read"><input type="checkbox" data-auto-field="enabled" ${lane?.enabled ? 'checked' : ''} ${lane ? '' : 'disabled'}>Read</label><select data-auto-field="interpolation" aria-label="Automation interpolation" ${lane ? '' : 'disabled'}><option value="linear" ${lane?.interpolation !== 'hold' ? 'selected' : ''}>Linear</option><option value="hold" ${lane?.interpolation === 'hold' ? 'selected' : ''}>Hold</option></select><label>SNAP<select data-auto-field="snap" aria-label="Automation point snap">${[[0,'Off'],[.0625,'1/64'],[.125,'1/32'],[.25,'1/16'],[.5,'1/8'],[1,'Beat'],[4,'Bar']].map(([v,l]) => `<option value="${v}" ${v === (this.snap ?? state.view?.snap ?? .25) ? 'selected' : ''}>${l}</option>`).join('')}</select></label><button type="button" data-auto-action="fit" title="Fit the complete arrangement">Fit</button><button type="button" data-auto-action="zoom-out" aria-label="Zoom automation out">−</button><button type="button" data-auto-action="zoom-in" aria-label="Zoom automation in">+</button></div></div><div class="auto-canvas-scroll"><svg class="auto-canvas" tabindex="0" role="group" aria-label="${escape(d?.label)} automation. Click to add a point; drag points to edit. Press Enter to add at the playhead."></svg></div><div class="auto-point-editor"></div><div class="auto-curve-footer"><span>Click to add · drag to shape · arrows to adjust · Delete to remove</span><div><button type="button" data-auto-action="clear" ${lane?.points.length ? '' : 'disabled'}>Clear points</button><button type="button" data-auto-action="remove" ${lane ? '' : 'disabled'}>Remove lane</button></div></div></div></div>`;
+      if (this.lfoEditor) { this.element.querySelector('.auto-heading').after(this.lfoElement); this.lfoEditor.render(); }
       this.draw(); this.renderPoint(); this.tick();
       const scroller = this.element.querySelector('.auto-canvas-scroll'); if (scroller) scroller.scrollLeft = scroll;
       if (focus) this.element.querySelector(`[data-auto-field="${focus}"]`)?.focus({ preventScroll: true });
+      if (lfoFocus) [...this.lfoElement.querySelectorAll('[data-lfo-control]')].find(control => control.dataset.lfoControl === lfoFocus)?.focus({ preventScroll: true });
     }
     metrics() {
       const viewport = this.element.querySelector('.auto-canvas-scroll')?.clientWidth || 620;
@@ -132,6 +137,7 @@
     }
     tick() {
       if (!this.element.isConnected) return;
+      this.lfoEditor?.tick();
       if (this.syncOwner()) { this.render(); return; }
       const beat = clamp(this.getBeat() || 0, 0, this.beats()), m = this.metrics(), line = this.element.querySelector('[data-auto-playhead]');
       if (line) { const x = String(m.left + beat*m.ppb); if (line.getAttribute('x1') !== x) line.setAttribute('x1', x); if (line.getAttribute('x2') !== x) line.setAttribute('x2', x); }
