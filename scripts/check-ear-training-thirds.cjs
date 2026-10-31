@@ -34,7 +34,7 @@ const STORE = 'overtone.practice.v1';
     });
     const response = await page.goto(baseURL,{waitUntil:'domcontentloaded'});
     assert.equal(response.status(),200);
-    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 8);
+    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 9);
     await page.locator('#mode-nav [data-mode="intervals"]').click();
     const stored = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)),STORE);
     async function force(level,randoms) {

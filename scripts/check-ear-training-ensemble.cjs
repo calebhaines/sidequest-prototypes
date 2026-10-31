@@ -26,7 +26,7 @@ const STORE = 'overtone.practice.v1';
       };
     });
     await page.goto(baseURL);
-    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 8);
+    await page.waitForFunction(() => document.querySelectorAll('.mode-button').length === 9);
     const stored = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)),STORE);
     const count = async () => (await stored()).attempts.length;
     const root = i => page.locator(`[data-ensemble-root="${i}"]`);
@@ -237,7 +237,7 @@ const STORE = 'overtone.practice.v1';
     }
     const beforeReload = await stored();
     await page.reload();
-    await page.waitForFunction(()=>document.querySelectorAll('.mode-button').length===8);
+    await page.waitForFunction(()=>document.querySelectorAll('.mode-button').length===9);
     assert.deepEqual(await stored(),beforeReload,'Saved per-part metrics survive reload unchanged.');
     await page.locator('.top-nav [data-page="progress"]').click();
     await page.locator('#progress-mode').selectOption('ensemble');

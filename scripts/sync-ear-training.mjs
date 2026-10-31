@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 const source = new URL('../public/ear-training/', import.meta.url);
 const published = new URL('../docs/ear-training/', import.meta.url);
-const files = ['index.html', 'styles.css', 'app.js', 'music.js', 'audio.js', 'pitch-test.js', 'ensemble.js', 'ensemble-ui.js'];
+const files = ['index.html', 'styles.css', 'app.js', 'music.js', 'audio.js', 'pitch-test.js', 'ensemble.js', 'ensemble-ui.js', 'temperaments.js', 'temperament-test.js', 'temperament-ui.js'];
 if (process.argv.includes('--check')) {
   for (const file of files) {
     if (!readFileSync(new URL(file, source)).equals(readFileSync(new URL(file, published)))) {
