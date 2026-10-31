@@ -226,6 +226,34 @@
         if (!lane.points.some(point => point.beat === take.lengthBeats)) lane.points.push({beat:take.lengthBeats,value:endValue});
       }
     }
+    // Drop closes the channel and its pre-fader sends after modulation too.
+    // Retain that same gate on each affected LFO route in the editable take;
+    // a zero volume automation point alone could be reopened by an LFO.
+    // Existing captured gates are intersected rather than overwritten, so
+    // capturing a previously captured arrangement cannot reopen a silent part.
+    const dropGates = next.tracks.map(() => [{ beat: 0, value: 1 }]);
+    for (const event of take.events) if (event.kind === 'performance') event.drops.forEach((dropped, index) => {
+      const points = dropGates[index], value = dropped ? 0 : 1, previous = points[points.length - 1];
+      if (previous.beat === event.beat) previous.value = value;
+      else if (previous.value !== value) points.push({ beat: event.beat, value });
+    });
+    for (const lfo of next.lfos || []) for (const route of lfo.routes || []) {
+      const index = next.tracks.findIndex(track => track.id === route.ownerId), track = next.tracks[index];
+      const closesOnDrop = track && (route.target === 'level' || /^send:[01]$/.test(route.target) && track.sendPre?.[Number(route.target.slice(5))]);
+      const original = Array.isArray(route.gate) ? route.gate : [], drops = closesOnDrop ? dropGates[index] : [];
+      if (!original.length && !drops.some(point => point.value === 0)) continue;
+      const beats = [...new Set([0, ...original.map(point => point.beat), ...drops.map(point => point.beat)])].filter(beat => beat <= take.lengthBeats).sort((a, b) => a - b), points = [];
+      let originalIndex = 0, dropIndex = 0, originalValue = 1, dropValue = 1;
+      for (const beat of beats) {
+        while (originalIndex < original.length && original[originalIndex].beat <= beat) originalValue = original[originalIndex++].value;
+        while (dropIndex < drops.length && drops[dropIndex].beat <= beat) dropValue = drops[dropIndex++].value;
+        const value = originalValue * dropValue;
+        if (!points.length || points[points.length - 1].value !== value) points.push({ beat, value });
+      }
+      if (points.length > S.LIMITS.automationPoints) fail('this take exceeds 4,096 Drop changes on one LFO target. Apply a shorter take.');
+      if (points.some(point => point.value === 0)) route.gate = points;
+      else delete route.gate;
+    }
     if (next.recording) { next.recording.punchEnabled = false; next.recording.punchStart = 0; next.recording.punchEnd = Math.min(take.lengthBeats, next.lengthBars * 4); }
     delete next.service;
     const normalized = S.normalize(next);

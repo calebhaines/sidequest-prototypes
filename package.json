@@ -92,7 +92,9 @@
     "check:voice-fx": "node shared/voice-effects-checks.cjs && node grain/voice-effects-lifecycle-checks.cjs && node tine/voice-effects-checks.cjs && node batter/voice-fx-checks.cjs && node form/scripts/test-voice-effects.mjs && node loom/voice-effect-clock-checks.cjs",
     "check:voice-fx-browser": "node shared/percussion-voice-fx-browser-checks.cjs",
     "check:tape": "node loom/tape-checks.cjs && node loom/tape-project-checks.cjs && node loom/tape-integration-checks.cjs",
-    "check:tape-browser": "node loom/tape-browser-checks.cjs"
+    "check:tape-browser": "node loom/tape-browser-checks.cjs",
+    "check:lfos": "node loom/lfo-checks.cjs && node loom/lfo-service-checks.cjs",
+    "check:lfos-browser": "node loom/lfo-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
