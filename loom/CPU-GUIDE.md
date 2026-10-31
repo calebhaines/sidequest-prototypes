@@ -102,3 +102,11 @@ now bypasses timing helpers entirely while off; normal mixer and display work
 has also been reduced without changing the audio. See
 [PERFORMANCE-GUIDE.md](PERFORMANCE-GUIDE.md) for measured results and the frozen
 release audio comparisons. Light remains the default sampling setting.
+
+## Releasing a track’s processing
+
+Use **Freeze track** above the selected track’s inserts to bake its effects, EQ,
+sends and automation into temporary audio. Frozen tracks have no running insert
+or EQ processors, and their native instrument is unloaded. Shared returns and
+master processing remain live. **Unfreeze track** restores the original controls.
+See [the freeze guide](FREEZE-GUIDE.md) for portable projects, timing and limits.

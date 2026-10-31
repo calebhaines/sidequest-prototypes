@@ -2,6 +2,11 @@
 
 Kitchen’s central production station.
 
+**Reversible track freeze (1.28.0)** prints a track’s effects, EQ, level, pan, sends
+and automation into lossless temporary audio, then releases its insert processors
+and native instrument. One click restores the editable originals. Shared returns
+and master processing remain live. See [the freeze guide](FREEZE-GUIDE.md).
+
 **BRINE (1.27.0)** adds a six-voice Juno-inspired instrument with stable DCOs,
 sub oscillator, nonlinear OTA filter, shared envelope and stereo bucket-brigade
 chorus. Its sliders, original recipes, keyboard arpeggiator and editable phrases
@@ -140,7 +145,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.27.0.
+SERVICE is version 1.0.0; GALLEY is version 1.28.0.
 
 ## Making a piece
 
@@ -822,7 +827,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.27.0.
+font license notices. Version 1.28.0.
 
 ## Compatibility
 

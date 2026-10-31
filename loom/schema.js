@@ -1,7 +1,7 @@
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.27.0';
+  const VERSION = '1.28.0';
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BUTTER_MULTIBAND_KEYS = new Set(['bandMode', 'crossoverLow', 'crossoverHigh', ...['low', 'mid', 'high'].flatMap(band => ['Threshold', 'Ratio', 'Attack', 'Release', 'Gain', 'Enabled', 'Solo'].map(key => band + key))]);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
@@ -25,7 +25,7 @@
   const defaultLFOs = () => lfoModule ? lfoModule.defaultLFOs() : Array.from({ length: 4 }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, rate: 1, division: 4, depth: 1, offset: 0, phase: 0, symmetry: .5, smoothing: 10, retrigger: 'transport', routes: [] }));
   const lfoTargets = state => lfoModule ? lfoModule.targets(state, automationTargets) : [];
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
-  const LIMITS = Object.freeze({ tracks: 8, returns: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ tracks: 8, returns: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, freezePcmBytes: 192 * 1024 * 1024, freezeAssets: 2048, freezeChunkSeconds: 10, freezeSampleRate: 192000, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine'];
   // Display branding is independent of legacy IDs, project formats and storage.
   const INSTRUMENT_NAMES = Object.freeze({ grain: 'SIZZLE', form: 'HOTPLATE', tine: 'CLATTER', mire: 'REDUCE', spool: 'ROTISSERIE', haze: 'STEAM', bower: 'SKEWER', ravel: 'DICER', fable: 'STOCK', roux: 'ROUX', batter: 'BATTER', proof: 'LEAVEN', marinade: 'MARINADE', picnic: 'PICNIC', morsel: 'MORSEL', heirloom: 'HEIRLOOM', brine: 'BRINE' });
@@ -35,12 +35,16 @@
   const bool = (v, d = false) => typeof v === 'boolean' ? v : d;
   const text = (v, d = '', max = 100) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) || d : d;
   const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const immutableFreezeAssets = new WeakSet(), checkedFreezeAssets = new WeakMap(), sourceAssetHashes = new WeakMap(), structureHashes = new WeakMap();
   // PCM strings are immutable. Structural copies share their storage during Undo.
   function copy(v) {
-    if (Array.isArray(v)) return v.map(copy);
+    if (immutableFreezeAssets.has(v)) return v;
+    if (Array.isArray(v)) { const result = v.map(copy), cached = structureHashes.get(v); if (cached) structureHashes.set(result, cached); return result; }
     if (plain(v)) {
       const result = {};
       for (const key of Object.keys(v)) if (!['__proto__', 'constructor', 'prototype'].includes(key)) result[key] = copy(v[key]);
+      const cached = sourceAssetHashes.get(v); if (cached && cached.pcm === result.pcm) sourceAssetHashes.set(result, cached);
+      const structure = structureHashes.get(v); if (structure) structureHashes.set(result, structure);
       return result;
     }
     return v;
@@ -138,6 +142,94 @@
     if (a.duration !== undefined && (typeof a.duration !== 'number' || !Number.isFinite(a.duration) || Math.abs(a.duration - a.frames / a.sampleRate) > 1 / a.sampleRate)) throw Error('An audio asset has invalid duration metadata.');
     return bytes;
   }
+  const FREEZE_ASSET_KEYS = ['id', 'name', 'encoding', 'sampleRate', 'channels', 'frames', 'duration', 'pcm'];
+  const FREEZE_KEYS = ['version', 'sampleRate', 'tempo', 'lengthBeats', 'bodyFrames', 'totalFrames', 'tailFrames', 'fingerprint', 'chunks'];
+  const FREEZE_CHUNK_KEYS = ['startFrame', 'frames', 'main', 'sendA', 'sendB'];
+  const STRUCTURE_CHILD = Symbol('structure-child');
+  const exactKeys = (value, keys) => plain(value) && Object.keys(value).length === keys.length && keys.every(key => Object.prototype.hasOwnProperty.call(value, key));
+  function pcmBytes(a, bytesPerSample) {
+    if (typeof a.pcm !== 'string' || !a.pcm.length || a.pcm.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(a.pcm)) throw Error('A frozen audio asset contains invalid PCM data.');
+    const padding = a.pcm.endsWith('==') ? 2 : a.pcm.endsWith('=') ? 1 : 0, bytes = a.pcm.length / 4 * 3 - padding;
+    if (bytes !== a.frames * a.channels * bytesPerSample) throw Error('A frozen audio asset’s sample count does not match its PCM data.');
+    return bytes;
+  }
+  function pcmView(pcm) {
+    const binary = atob(pcm), bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new DataView(bytes.buffer);
+  }
+  function validateFreezeAsset(a) {
+    if (immutableFreezeAssets.has(a)) return a.frames * 8;
+    if (!exactKeys(a, FREEZE_ASSET_KEYS) || typeof a.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,99}$/i.test(a.id) || typeof a.name !== 'string' || !a.name.trim() || a.name.length > 100 || a.encoding !== 'float32le' || a.channels !== 2 || !Number.isInteger(a.sampleRate) || a.sampleRate < 8000 || a.sampleRate > LIMITS.freezeSampleRate || !Number.isInteger(a.frames) || a.frames < 1 || a.frames > LIMITS.assetSeconds * a.sampleRate || !Number.isFinite(a.duration) || Math.abs(a.duration - a.frames / a.sampleRate) > 1 / a.sampleRate) throw Error('A frozen audio asset has invalid metadata.');
+    const cached = checkedFreezeAssets.get(a);
+    if (cached && FREEZE_ASSET_KEYS.every(key => cached[key] === a[key])) return a.frames * 8;
+    const bytes = pcmBytes(a, 4), view = pcmView(a.pcm);
+    for (let at = 0; at < bytes; at += 4) if (!Number.isFinite(view.getFloat32(at, true))) throw Error('A frozen audio asset contains non-finite samples.');
+    checkedFreezeAssets.set(a, { ...a });
+    return bytes;
+  }
+  function canonicalFreezeAsset(a) {
+    validateFreezeAsset(a);
+    if (immutableFreezeAssets.has(a)) return a;
+    const result = Object.freeze({ id: a.id, name: text(a.name, 'Frozen track'), encoding: 'float32le', sampleRate: a.sampleRate, channels: 2, frames: a.frames, duration: a.frames / a.sampleRate, pcm: a.pcm });
+    immutableFreezeAssets.add(result); return result;
+  }
+  function stringHash(value) {
+    let a = 0x811c9dc5, b = 0x9e3779b9;
+    for (let i = 0; i < value.length; i++) { const code = value.charCodeAt(i); a = Math.imul(a ^ code, 0x01000193); b = Math.imul(b ^ code, 0x85ebca6b); }
+    return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
+  }
+  function sourceAssetHash(asset) {
+    let cached = sourceAssetHashes.get(asset);
+    if (!cached || cached.pcm !== asset.pcm) { cached = { pcm: asset.pcm, hash: stringHash(asset.pcm) }; sourceAssetHashes.set(asset, cached); }
+    return cached.hash;
+  }
+  function structureHash(value) {
+    if (!plain(value) && !Array.isArray(value)) return stringHash(JSON.stringify(value) ?? 'null');
+    const array = Array.isArray(value), keys = array ? Array.from({ length: value.length }, (_, index) => String(index)) : Object.keys(value).filter(key => !['undefined', 'function', 'symbol'].includes(typeof value[key])).sort();
+    const cached = structureHashes.get(value), values = [], hashes = []; let unchanged = cached?.array === array && cached.keys.length === keys.length;
+    for (let index = 0; index < keys.length; index++) {
+      const key = keys[index], item = value[key], child = plain(item) || Array.isArray(item), sameKey = cached?.keys[index] === key;
+      // Revisit child records so mutation at any depth is still detected.
+      // Large immutable PCM strings only need hashing the first time.
+      const hash = child ? structureHash(item) : sameKey && cached.values[index] === item ? cached.hashes[index] : structureHash(item);
+      values.push(child ? STRUCTURE_CHILD : item); hashes.push(hash);
+      if (!sameKey || cached.hashes[index] !== hash) unchanged = false;
+    }
+    if (unchanged) return cached.hash;
+    const hash = stringHash(JSON.stringify([array, keys.map((key, index) => [key, hashes[index]])]));
+    structureHashes.set(value, { array, keys, values, hashes, hash }); return hash;
+  }
+  function freezeFingerprint(state, trackId) {
+    const t = state?.tracks?.find(track => track.id === (typeof trackId === 'string' ? trackId : trackId?.id));
+    if (!t) throw Error('Choose a track to freeze.');
+    const assetIds = new Set((t.clips || []).filter(clip => clip.type !== 'notes').map(clip => clip.assetId));
+    const assets = (state.assets || []).filter(asset => assetIds.has(asset.id)).sort((a, b) => a.id.localeCompare(b.id)).map(asset => ({ id: asset.id, sampleRate: asset.sampleRate, channels: asset.channels, frames: asset.frames, hash: sourceAssetHash(asset) }));
+    // Other owners' leaf routes cannot feed this track or the LFO graph.
+    // Their effect edits may remove/remap routes while this cache stays valid.
+    const lfos = state.lfos?.map(lfo => ({ ...lfo, routes: (lfo.routes || []).filter(route => route.ownerId === t.id || /^lfo-[1-4]$/.test(route.ownerId)) }));
+    const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects: t.effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
+    if (state.service?.take !== undefined) recipe.take = state.service.take;
+    return 'freeze-1-' + structureHash(recipe);
+  }
+  function validateFreeze(state, trackId) {
+    const t = state?.tracks?.find(track => track.id === (typeof trackId === 'string' ? trackId : trackId?.id)), f = t?.freeze;
+    if (!exactKeys(f, FREEZE_KEYS) || f.version !== 1 || !Number.isInteger(f.sampleRate) || f.sampleRate < 8000 || f.sampleRate > LIMITS.freezeSampleRate || !Number.isFinite(f.tempo) || f.tempo !== state.tempo || f.lengthBeats !== state.lengthBars * 4 || !Number.isInteger(f.bodyFrames) || f.bodyFrames !== Math.round(f.lengthBeats * 60 / f.tempo * f.sampleRate) || !Number.isInteger(f.tailFrames) || f.tailFrames < 0 || f.tailFrames > 20 * f.sampleRate || !Number.isInteger(f.totalFrames) || f.totalFrames !== f.bodyFrames + f.tailFrames || typeof f.fingerprint !== 'string' || !/^freeze-1-[0-9a-f]{16}$/.test(f.fingerprint) || f.fingerprint !== freezeFingerprint(state, t.id) || !Array.isArray(f.chunks) || !f.chunks.length || f.chunks.length > LIMITS.freezeAssets) throw Error('A track contains an invalid or stale freeze. Unfreeze it and try again.');
+    const assets = new Map((state.freezeAssets || []).map(asset => [asset.id, asset])); let nextFrame = 0;
+    for (const chunk of f.chunks) {
+      if (!exactKeys(chunk, FREEZE_CHUNK_KEYS) || !Number.isInteger(chunk.startFrame) || chunk.startFrame !== nextFrame || !Number.isInteger(chunk.frames) || chunk.frames < 1 || chunk.frames > LIMITS.assetSeconds * f.sampleRate || chunk.startFrame + chunk.frames > f.totalFrames) throw Error('A frozen track contains invalid or overlapping audio chunks.');
+      for (const plane of ['main', 'sendA', 'sendB']) {
+        const id = chunk[plane]; if (id === null) continue;
+        const asset = typeof id === 'string' && assets.get(id);
+        if (!asset || asset.sampleRate !== f.sampleRate || asset.frames !== chunk.frames || asset.channels !== 2) throw Error('A frozen track contains a missing or incompatible audio reference.');
+        validateFreezeAsset(asset);
+      }
+      nextFrame += chunk.frames;
+    }
+    if (nextFrame !== f.totalFrames) throw Error('A frozen track does not cover its complete arrangement and tail.');
+    return true;
+  }
+  function freezeValid(state, trackId) { try { return validateFreeze(state, trackId); } catch { return false; } }
   function instrument(value) {
     if (value == null) return null;
     if (!plain(value) || typeof value.id !== 'string' || !/^[a-z0-9_-]{1,100}$/i.test(value.id)) throw Error('An instrument has an invalid ID.');
@@ -198,11 +290,23 @@
     for (const a of Array.isArray(raw.assets) ? raw.assets : []) {
       pcmBytes += validateAsset(a);
       if (ids.has(a.id)) throw Error('Audio asset IDs must be unique.');
-      ids.add(a.id); assets.push({ id: a.id, name: text(a.name, 'Audio'), sampleRate: a.sampleRate, channels: a.channels, frames: a.frames, duration: a.frames / a.sampleRate, pcm: a.pcm });
+      const normalized = { id: a.id, name: text(a.name, 'Audio'), sampleRate: a.sampleRate, channels: a.channels, frames: a.frames, duration: a.frames / a.sampleRate, pcm: a.pcm };
+      const cached = sourceAssetHashes.get(a); if (cached && cached.pcm === a.pcm) sourceAssetHashes.set(normalized, cached);
+      ids.add(a.id); assets.push(normalized);
     }
     if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds GALLEY’s 64 MB audio budget. Remove unused audio or shorten a take.');
+    if (raw.freezeAssets !== undefined && (!Array.isArray(raw.freezeAssets) || raw.freezeAssets.length > LIMITS.freezeAssets)) throw Error('This session contains too many or invalid frozen audio assets.');
+    const freezeAssets = []; let freezeBytes = 0;
+    for (const a of raw.freezeAssets || []) {
+      if (Number.isInteger(a?.frames) && a.frames * 8 > LIMITS.freezePcmBytes - freezeBytes) throw Error('Frozen tracks exceed GALLEY’s 192 MB freeze budget. Unfreeze a track or shorten the arrangement.');
+      freezeBytes += validateFreezeAsset(a);
+      if (freezeBytes > LIMITS.freezePcmBytes) throw Error('Frozen tracks exceed GALLEY’s 192 MB freeze budget. Unfreeze a track or shorten the arrangement.');
+      if (ids.has(a.id)) throw Error('Audio and freeze asset IDs must be unique.');
+      ids.add(a.id); freezeAssets.push(canonicalFreezeAsset(a));
+    }
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { id: 'master', name: text(raw.master?.name, 'Master'), level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome), mute: bool(raw.master?.mute), effects: Array.from({ length: 4 }, (_, slot) => effect(raw.master?.effects?.[slot])), automation: [] }, returns: [], selectedTrack: integer(raw.selectedTrack, 0, 7, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
+    if (freezeAssets.length) s.freezeAssets = freezeAssets;
     s.master.automation = automation(raw.master?.automation, s.master, totalBeats);
     s.returns = Array.from({ length: 2 }, (_, index) => {
       const base = d.returns[index], r = raw.returns?.[index] || {};
@@ -239,11 +343,13 @@
         if (c.origin != null) { normalized.origin = renderSource(c.origin); snapshotBytes += JSON.stringify(normalized.origin).length; }
         t.clips.push(normalized);
       }
+      if (r.freeze !== undefined) t.freeze = copy(r.freeze);
       s.tracks.push(t);
     }
     s.lfos = lfoModule ? lfoModule.normalize(raw.lfos, s, lfoTargets(s)) : defaultLFOs();
     if (snapshotBytes > LIMITS.snapshotBytes) throw Error('Instrument states, note patterns, and printed sources exceed the 96 MB budget. Remove unused parts or saved sources.');
     if (raw.service !== undefined) { if (!window.LoomServiceSchema) throw Error('The SERVICE project schema is unavailable.'); s.service = window.LoomServiceSchema.normalize(raw.service, s); }
+    for (const t of s.tracks) if (t.freeze !== undefined) validateFreeze(s, t.id);
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
@@ -363,7 +469,11 @@
   }
   function pruneAssets(state) {
     const s = copy(state), ids = new Set(s.tracks.flatMap(t => t.clips.map(c => c.assetId)));
-    s.assets = s.assets.filter(a => ids.has(a.id)); return s;
+    s.assets = s.assets.filter(a => ids.has(a.id));
+    const freezeIds = new Set(s.tracks.flatMap(t => (t.freeze?.chunks || []).flatMap(chunk => [chunk.main, chunk.sendA, chunk.sendB])).filter(id => typeof id === 'string'));
+    const frozen = (s.freezeAssets || []).filter(a => freezeIds.has(a.id));
+    if (frozen.length) s.freezeAssets = frozen; else delete s.freezeAssets;
+    return s;
   }
   function serializeProject(state) {
     const json = JSON.stringify({ format: 'loom-project', formatVersion: 1, appVersion: VERSION, state: normalize(pruneAssets(state)) });
@@ -394,7 +504,29 @@
     for (let i = 0; i < a.frames; i++) { left[i] = view.getInt16(i * a.channels * 2, true) / 32768; right[i] = view.getInt16((i * a.channels + a.channels - 1) * 2, true) / 32768; }
     return { left, right, sampleRate: a.sampleRate };
   }
-  function decodeAssets(assets) { return Object.fromEntries(assets.map(a => [a.id, decodeAsset(a)])); }
+  function encodeFreezeAsset({ left, right, sampleRate, name = 'Frozen track', id = uid('freeze') }) {
+    right ||= left;
+    if (!left || !right || !Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > LIMITS.freezeSampleRate || !Number.isInteger(left.length) || left.length < 1 || left.length !== right.length || left.length > LIMITS.assetSeconds * sampleRate) throw Error('A freeze chunk must contain equal stereo channels, up to 120 seconds, at 8–192 kHz.');
+    const frames = left.length, bytes = new Uint8Array(frames * 8), view = new DataView(bytes.buffer);
+    for (let i = 0; i < frames; i++) for (let channel = 0; channel < 2; channel++) {
+      const input = (channel ? right : left)[i], sample = Math.fround(input);
+      if (!Number.isFinite(input) || !Number.isFinite(sample)) throw Error('A freeze chunk contains non-finite samples.');
+      view.setFloat32(i * 8 + channel * 4, sample, true);
+    }
+    let binary = ''; for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+    return canonicalFreezeAsset({ id, name: text(name, 'Frozen track'), encoding: 'float32le', sampleRate, channels: 2, frames, duration: frames / sampleRate, pcm: btoa(binary) });
+  }
+  function decodeFreezeAsset(a) {
+    validateFreezeAsset(a);
+    const view = pcmView(a.pcm), left = new Float32Array(a.frames), right = new Float32Array(a.frames);
+    for (let i = 0; i < a.frames; i++) { left[i] = view.getFloat32(i * 8, true); right[i] = view.getFloat32(i * 8 + 4, true); }
+    return { left, right, sampleRate: a.sampleRate };
+  }
+  function decodeAssets(assets, freezeAssets = []) {
+    const result = Object.fromEntries(assets.map(a => [a.id, decodeAsset(a)]));
+    for (const a of freezeAssets) { if (Object.prototype.hasOwnProperty.call(result, a.id)) throw Error('Audio and freeze asset IDs must be unique.'); result[a.id] = decodeFreezeAsset(a); }
+    return result;
+  }
   function demoState() {
     const d = defaultState(), template = window.LoomDemoTemplate;
     if (!template || !window.LoomDemoAssets) return d;
@@ -402,5 +534,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

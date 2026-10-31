@@ -22,7 +22,7 @@ const lane = (key, index = 0) => ({ target: 'eq:' + key, enabled: true, interpol
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
 
 check('Eight independent flat EQs retain five insert slots, four bands with sweepable mids and track-only ownership', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.25.0'); assert.equal(state.tracks.length, 8);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.28.0'); assert.equal(state.tracks.length, 8);
   assert.deepEqual(S.defaultTrackEq(), flat());
   assert.deepEqual(S.TRACK_EQ_BANDS.map(band => [band.key, band.frequency, band.type, band.q]), [['low', 100, 'lowshelf', .707], ['lowMid', 400, 'peaking', .707], ['highMid', 2500, 'peaking', .707], ['high', 10000, 'highshelf', .707]]);
   assert(Object.isFrozen(S.TRACK_EQ_BANDS) && S.TRACK_EQ_BANDS.every(Object.isFrozen));

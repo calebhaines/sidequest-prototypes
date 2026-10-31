@@ -69,6 +69,43 @@
     });
     return pattern(result);
   }
+  function compileFreezeNotes(state, track, adapter, validateOnly = false) {
+    const lengthBeats = state.lengthBars * 4, voices = new Map(), notes = [], targets = adapter?.notes?.voices || adapter?.patternImport?.voices || [];
+    let candidates = 0;
+    const chance = (seed, key) => {
+      let hash = (seed >>> 0) || 2166136261;
+      for (let i = 0; i < key.length; i++) { hash ^= key.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+      hash ^= hash >>> 16; hash = Math.imul(hash, 0x7feb352d); hash ^= hash >>> 15;
+      return (hash >>> 0) / 4294967296;
+    };
+    for (const raw of track.clips || []) if (raw.type === 'notes') {
+      const clip = noteClip(raw), packet = clip.pattern, rate = clip.rate, end = Math.min(lengthBeats, clip.start + clip.length);
+      const repetitions = clip.loop ? Math.floor((clip.length * rate + clip.sourceOffset) / packet.lengthBeats) + 1 : 0;
+      for (let repetition = 0; repetition <= repetitions; repetition++) for (const note of packet.notes) {
+        if (!note.velocity || !clip.gain || (note.probability ?? 1) <= 0) continue;
+        const grid = note.beat * 4, swing = Math.abs(grid - Math.round(grid)) < 1e-7 && Math.round(grid) % 2 ? (packet.swing || 0) / 4 : 0;
+        const eventBeat = note.beat + swing, duration = Math.min(note.duration, packet.lengthBeats - eventBeat);
+        const beat = clip.start + (eventBeat + repetition * packet.lengthBeats - clip.sourceOffset) / rate;
+        const finish = Math.min(end, beat + duration / rate), audible = Math.max(clip.start, beat, 0);
+        if (beat >= end || finish <= audible + 1e-7 || finish <= 0) continue;
+        if (++candidates > 4096) throw Error('This track schedules more than 4,096 native notes. Print it to audio before freezing.');
+        const key = [0, track.id, clip.id, 'loom', repetition, note.id].join(':');
+        if (chance(packet.seed, key) >= (note.probability ?? 1)) continue;
+        const mapped = clip.voiceMap?.[note.voice], requested = mapped || note.voice;
+        const target = targets.find(voice => voice.id === requested) || (!mapped && adapter?.notes?.pitched && targets.length === 1 ? targets[0] : null);
+        if (targets.length && !target) throw Error('Map every source voice to this instrument before freezing.');
+        const id = target?.id || requested, sourceVoice = packet.voices.find(voice => voice.id === note.voice), pitch = note.pitch + clip.transpose;
+        if (pitch < 0 || pitch > 127) throw Error('A transposed note is outside MIDI 0–127.');
+        if (!voices.has(id)) voices.set(id, { id, name: target?.name || sourceVoice?.name || id, pitch: target?.pitch ?? sourceVoice?.pitch ?? 60 });
+        notes.push({ ...copy(note), id: 'freeze-' + candidates, voice: id, pitch, beat: audible, duration: finish - audible, velocity: Math.max(0, Math.min(1, note.velocity * clip.gain)), probability: 1 });
+      }
+    }
+    if (validateOnly) return;
+    if (!voices.size) for (const voice of targets.slice(0, 1)) voices.set(voice.id, { id: voice.id, name: voice.name || voice.id, pitch: voice.pitch ?? 60 });
+    if (!voices.size) voices.set('main', { id: 'main', name: 'Notes', pitch: 60 });
+    if (voices.size > 64) throw Error('This track contains too many native voices to freeze. Print it to audio first.');
+    return pattern({ format: 'musiclab-pattern', version: 1, name: track.name + ' · instrument performance', sourceApp: track.instrument?.id || 'loom', kind: adapter?.notes?.pitched === false ? 'drums' : 'notes', tempo: state.tempo, swing: 0, lengthBeats, meter: [4, 4], seed: 170519, voices: [...voices.values()], notes });
+  }
   function decodedBytes(audio) { return audio.left.byteLength + (audio.right === audio.left ? 0 : audio.right.byteLength); }
 
   class LoomNoteRenderer {
@@ -159,7 +196,7 @@
       if (seconds + tailSeconds > MAX_SECONDS + 1e-8) throw Error('This pattern lasts more than 120 seconds at the session tempo. Split it into smaller patterns before rendering. Long note clips can loop a shorter pattern.');
       const key = this._key(instrument, packet, voiceMap, tempo, transpose, tailSeconds, loop), cached = this._cached(key);
       if (cached) return { audio: cached, key };
-      await session.host.load('render-source', instrument, session.frame); this._active(signal);
+      if (!options.preparedHost) await session.host.load('render-source', instrument, session.frame); this._active(signal);
       const adapter = session.host.getPatternAdapter?.('render-source');
       if (!adapter?.renderPattern && !session.host.capabilities('render-source')?.notes) throw Error('This instrument needs a native note-rendering adapter before it can print note clips.');
       const mapped = preparedPacket(packet, voiceMap, transpose, adapter);
@@ -193,10 +230,12 @@
     }
     async prepareNotes(state, assets = {}, options = {}) {
       this._active(options.signal);
+      if (options.preserveTails) return this._prepareFreezeNotes(state, assets, options);
       // Freeze all source descriptors, notes and arrangement geometry before awaiting any frame.
       const renderState = copy(state), renderAssets = Object.assign(Object.create(null), assets instanceof Map ? Object.fromEntries(assets) : assets);
       const captures = [];
       for (const track of renderState.tracks || []) {
+        if (track.freeze) continue;
         if (options.trackId != null && (typeof options.trackId === 'number' ? renderState.tracks[options.trackId]?.id : options.trackId) !== track.id) continue;
         for (const clip of track.clips || []) if (clip.type === 'notes') {
           if (options.startBeat != null && clip.start + clip.length <= options.startBeat || options.endBeat != null && clip.start >= options.endBeat) continue;
@@ -205,7 +244,7 @@
       }
       // Unselected sources are removed only from this export snapshot so the DSP cannot
       // mistake beat-based note geometry for an audio source.
-      for (const track of renderState.tracks || []) track.clips = (track.clips || []).filter(clip => clip.type !== 'notes' || captures.some(item => item.clip === clip));
+      for (const track of renderState.tracks || []) track.clips = (track.clips || []).filter(clip => track.freeze || clip.type !== 'notes' || captures.some(item => item.clip === clip));
       if (!captures.length) { options.onProgress?.(1); return { state: renderState, assets: renderAssets, generatedIds: [] }; }
       const session = this._session(options.signal), rendered = new Map(), generatedIds = []; let used = 0;
       try {
@@ -227,8 +266,37 @@
         this._active(options.signal); return { state: renderState, assets: renderAssets, generatedIds };
       } finally { await this._close(session); }
     }
+    async _prepareFreezeNotes(state, assets, options) {
+      const renderState = copy(state), renderAssets = Object.assign(Object.create(null), assets instanceof Map ? Object.fromEntries(assets) : assets), generatedIds = [];
+      const tracks = renderState.tracks.filter(track => !track.freeze && (options.trackId == null || (typeof options.trackId === 'number' ? renderState.tracks[options.trackId]?.id : options.trackId) === track.id) && track.clips.some(clip => clip.type === 'notes'));
+      if (!tracks.length) { options.onProgress?.(1); return { state: renderState, assets: renderAssets, generatedIds }; }
+      const tailSeconds = options.tailSeconds ?? 8, seconds = state.lengthBars * 4 * 60 / state.tempo;
+      if (seconds + tailSeconds > MAX_SECONDS + 1e-8) throw Error('Native track freezing is limited to 120 seconds including its release. Print long native performances to audio before freezing.');
+      for (const track of tracks) compileFreezeNotes(renderState, track, null, true);
+      const session = this._session(options.signal); let used = 0;
+      try {
+        options.onProgress?.(0);
+        for (let index = 0; index < tracks.length; index++) {
+          this._active(options.signal); const track = tracks[index], instrument = captureInstrument(track.instrument);
+          await session.host.load('render-source', instrument, session.frame); this._active(options.signal);
+          const adapter = session.host.getPatternAdapter?.('render-source'), packet = compileFreezeNotes(renderState, track, adapter);
+          const clip = { id: 'freeze-source-' + track.id, name: packet.name, type: 'notes', pattern: packet, voiceMap: {}, start: 0, length: renderState.lengthBars * 4, sourceOffset: 0, rate: 1, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 };
+          const captured = this._capture(renderState, track, clip, { instrument, tailSeconds }), result = await this._render(session, captured, { ...options, preparedHost: true });
+          this._active(options.signal); used += decodedBytes(result.audio);
+          if (used > this.maxBytes) throw Error('These native track sources exceed GALLEY’s 64 MiB render budget. Freeze one track at a time.');
+          const id = 'notes-render-' + result.key; generatedIds.push(id); renderAssets[id] = result.audio;
+          track.clips = track.clips.filter(source => source.type !== 'notes');
+          track.clips.push({ id: clip.id, name: clip.name, type: 'audio', assetId: id, start: 0, length: result.audio.left.length / result.audio.sampleRate * renderState.tempo / 60, sourceStart: 0, sourceEnd: result.audio.left.length / result.audio.sampleRate, sourceOffset: 0, rate: 1, reverse: false, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, freezeTailSource: true });
+          options.onProgress?.((index + 1) / tracks.length);
+        }
+        return { state: renderState, assets: renderAssets, generatedIds };
+      } finally { await this._close(session); }
+    }
+    static compileFreezeNotes(state, track, adapter) { return compileFreezeNotes(state, track, adapter); }
     async print(state, trackId, clipId, options = {}) {
-      this._active(options.signal); const { track, clip } = findClip(state, trackId, clipId), captured = this._capture(state, track, clip, options);
+      this._active(options.signal); const { track, clip } = findClip(state, trackId, clipId);
+      if (track.freeze) throw Error('Unfreeze this track before printing or editing its source.');
+      const captured = this._capture(state, track, clip, options);
       const used = (state.assets || []).reduce((sum, value) => sum + value.frames * value.channels * 2, 0);
       const session = this._session(options.signal);
       try {
@@ -245,6 +313,7 @@
     }
     async update(state, trackId, clipId, options = {}) {
       this._active(options.signal); const { track, clip } = findClip(state, trackId, clipId), source = clip.origin;
+      if (track.freeze) throw Error('Unfreeze this track before updating its source.');
       if (source?.format !== 'loom-render-source' || source.version !== 1 || !source.sourceClip || !source.instrument) throw Error('This audio clip has no editable instrument source.');
       const snapshot = copy(state), target = findClip(snapshot, trackId, clipId);
       target.clip.type = 'notes'; target.clip.pattern = copy(source.pattern); target.clip.voiceMap = copy(source.voiceMap);

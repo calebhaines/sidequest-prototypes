@@ -128,6 +128,7 @@
         message: this.message };
     }
     async open() {
+      if (this._project().tracks.some(track => track.freeze)) { this.options.status?.('Unfreeze tracks before opening SERVICE.'); return false; }
       if (this.isOpen) return true;
       if (this.opening) return false;
       if (this.options.canOpen && !this.options.canOpen()) { this.options.status?.('Finish the current recording or operation before opening SERVICE.'); return false; }
@@ -185,6 +186,7 @@
       return { id: scene.id, clips, holds, lengthBeats: scene.lengthBeats, loop: true };
     }
     async _play() {
+      if (this._project().tracks.some(track => track.freeze)) throw Error('Unfreeze tracks before playing SERVICE.');
       if (!this.isOpen || this.running || this.busy) return;
       const scene = this._config().scenes.find(s => s.id === (this.selectedSceneId || this.activeSceneId)) || this.config.scenes[0];
       if (!scene) throw Error('Create a scene and choose clips for its tracks first.');
