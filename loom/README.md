@@ -2,6 +2,12 @@
 
 Kitchen’s central production station.
 
+**CPU resources** folds open above the arrangement for sampled audio-processing
+budget diagnostics, down to each track, return, master and insert. Profiling is
+off while closed, out of view or hidden; Light sampling is the default. Reports
+distinguish GALLEY mix/effect processing from upstream instrument synthesis and
+coarse browser timers from precise measurements. See [the diagnostics guide](CPU-GUIDE.md).
+
 **Four global LFOs** live in Automation. Each can target multiple numeric
 parameters across tracks, returns and master inserts, or modulate the other LFOs.
 Tempo sync, seven waveforms, seeded random movement, signed amounts and folded
@@ -108,7 +114,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.23.0.
+SERVICE is version 1.0.0; GALLEY is version 1.24.0.
 
 ## Making a piece
 
@@ -792,7 +798,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.23.0.
+font license notices. Version 1.24.0.
 
 ## Compatibility
 

@@ -95,6 +95,8 @@
     "check:tape-browser": "node loom/tape-browser-checks.cjs",
     "check:lfos": "node loom/lfo-checks.cjs && node loom/lfo-service-checks.cjs",
     "check:lfos-browser": "node loom/lfo-browser-checks.cjs",
+    "check:cpu": "node loom/cpu-checks.cjs",
+    "check:cpu-browser": "node loom/cpu-browser-checks.cjs",
     "check:ear-training-temperaments": "node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-temperaments.cjs"
   },
   "devDependencies": {
