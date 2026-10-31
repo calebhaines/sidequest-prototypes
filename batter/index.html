@@ -1055,14 +1055,16 @@
             gateEnvelope = smoothing * gateEnvelope + (1 - smoothing) * peak;
             const open = clamp((gateEnvelope - threshold * 0.45) / (threshold * 0.55 + 1e-15), 0, 1), gain = gateFloor + (1 - gateFloor) * open * open;
             gateGain += gateSmooth * (gain - gateGain); wetL *= gateGain; wetR *= gateGain;
-            meter.gateReductionDb = -20 * Math.log10(Math.max(gateGain, 1e-6));
-          } else meter.gateReductionDb = 0;
+          }
           if (p.deess === 'on' && p.deessAmount > 0) {
             const sL = filter(wetL, deessCoefficient, deessState, 0), sR = filter(wetR, deessCoefficient, deessState, 2), peak = Math.max(Math.abs(sL), Math.abs(sR));
             const smoothing = peak > deessEnvelope ? deessAttack : deessRelease; deessEnvelope = smoothing * deessEnvelope + (1 - smoothing) * peak;
             const excess = Math.max(0, 1 - deessThreshold / Math.max(deessEnvelope, 1e-12)), attenuation = clamp(excess * p.deessAmount, 0, 0.96);
-            meter.deessDb = -20 * Math.log10(Math.max(1 - attenuation, 0.001));
-            if (++deessCounter >= 32) {
+            const updateShelf = ++deessCounter >= 32;
+            // The shelf reads this value only at its original control tick;
+            // also retain the exact final sample for the returned meter.
+            if (updateShelf || i === left.length - 1) meter.deessDb = -20 * Math.log10(Math.max(1 - attenuation, 0.001));
+            if (updateShelf) {
               deessCounter = 0;
               if (Math.abs(deessShelfDb + meter.deessDb) > 0.1) { deessShelfDb = -meter.deessDb; biquad('high', p.deessFreq, 0.707, deessShelfDb, sr, deessShelf); }
             }
@@ -1166,6 +1168,7 @@
           meter.limiterReductionDb = p.guard === 'on' ? Math.max(guardReduction, meter.limiterReductionDb * 0.9998) : 0;
           left[i] = bounded(resultL); right[i] = bounded(resultR); outputPeak = Math.max(Math.abs(left[i]), Math.abs(right[i]), outputPeak * 0.9995);
         }
+        if (left.length) meter.gateReductionDb = p.clean === 'on' ? -20 * Math.log10(Math.max(gateGain, 1e-6)) : 0;
         meter.inputDb = Math.max(-120, 20 * Math.log10(Math.max(inputPeak, 1e-6))); meter.outputDb = Math.max(-120, 20 * Math.log10(Math.max(outputPeak, 1e-6))); updateLatency();
       }
       function reset() {
@@ -1387,8 +1390,14 @@
           if (job === 3) {
             const count = Math.min(span - at, Math.floor(budget / 12));
             if (!count) break;
+            const w0=fractionalWeights[0],w1=fractionalWeights[1],w2=fractionalWeights[2],w3=fractionalWeights[3],w4=fractionalWeights[4],w5=fractionalWeights[5],w6=fractionalWeights[6],w7=fractionalWeights[7],w8=fractionalWeights[8],w9=fractionalWeights[9],w10=fractionalWeights[10],w11=fractionalWeights[11];
             for (let end = at + count; at < end; at++) {
-              let delayed = 0; for (let j = 0; j < 12; j++) delayed += fractionalWeights[j] * scratch[at + 6 + fractionalIndex + j];
+              // Preserve every accumulation in order and the same analysis
+              // budget, while removing the inner tap loop and repeated loads.
+              const base = at + 6 + fractionalIndex; let delayed = 0;
+              delayed += w0*scratch[base]; delayed += w1*scratch[base+1]; delayed += w2*scratch[base+2]; delayed += w3*scratch[base+3];
+              delayed += w4*scratch[base+4]; delayed += w5*scratch[base+5]; delayed += w6*scratch[base+6]; delayed += w7*scratch[base+7];
+              delayed += w8*scratch[base+8]; delayed += w9*scratch[base+9]; delayed += w10*scratch[base+10]; delayed += w11*scratch[base+11];
               const d = scratch[at + 6] - delayed; difference += d * d;
             }
             budget -= count * 12;
@@ -1552,11 +1561,13 @@
       let env = 0, detectorL = 0, detectorR = 0, detectorPreviousL = 0, detectorPreviousR = 0, lfoPhase = 0, controlFrame = 0, expectedBeat = NaN;
       let cutoffLog = Math.log(p.cutoff), res = p.resonance, gain = db(p.drive), level = db(p.output), mix = p.mix, sweep = p.envAmount, lfoDepth = p.lfoAmount, stereo = p.stereo;
       let attack = 0, release = 0, detectorCoefficient = 0, sensitivity = 1;
+      let targetLog = Math.log(p.cutoff), targetGain = db(p.drive), targetLevel = db(p.output), controlLogL = NaN, controlLogR = NaN;
       const slew = 1 - Math.exp(-1 / (sr * .008)), frequencySlew = 1 - Math.exp(-1 / (sr * .012)), peakDecay = Math.exp(-1 / (sr * .15));
       let gL = Math.tan(PI * p.cutoff / sr), gR = gL, targetGL = gL, targetGR = gR, hzL = p.cutoff, hzR = p.cutoff;
       let inputPeak = 0, outputPeak = 0, envelopeResponse = 0, modulation = 0, dcInputL = 0, dcInputR = 0, dcOutputL = 0, dcOutputR = 0;
       const dcCoefficient = Math.exp(-TAU * 8 / sr);
       function update() {
+        targetLog = Math.log(p.cutoff); targetGain = db(p.drive); targetLevel = db(p.output);
         // RMS follows power internally; twice the coefficient rate gives its
         // amplitude release the same millisecond meaning as the peak follower.
         const scale = p.envMode === 'rms' ? 2 : 1;
@@ -1567,7 +1578,7 @@
         sv.fill(0); ladder.fill(0); previousInput.fill(0); combL.fill(0); combR.fill(0);
         combAt = combToneL = combToneR = env = detectorL = detectorR = detectorPreviousL = detectorPreviousR = lfoPhase = controlFrame = inputPeak = outputPeak = envelopeResponse = modulation = 0;
         dcInputL = dcInputR = dcOutputL = dcOutputR = 0;
-        expectedBeat = NaN;
+        expectedBeat = NaN; controlLogL = controlLogR = NaN;
         cutoffLog = Math.log(p.cutoff); res = p.resonance; gain = db(p.drive); level = db(p.output); mix = p.mix; sweep = p.envAmount; lfoDepth = p.lfoAmount; stereo = p.stereo;
         hzL = hzR = Math.min(p.cutoff, maxHz); gL = gR = targetGL = targetGR = Math.tan(PI * hzL / sr);
       }
@@ -1636,7 +1647,6 @@
           }
           lfoPhase += left.length * increment; return;
         }
-        const targetLog = Math.log(p.cutoff), targetGain = db(p.drive), targetLevel = db(p.output);
         for (let i = 0; i < left.length; i++) {
           const dryL = safe(left[i]), dryR = safe(right[i]);
           inputPeak = Math.max(Math.abs(dryL), Math.abs(dryR), inputPeak * peakDecay);
@@ -1650,8 +1660,10 @@
           if (controlFrame === 0) {
             const base = cutoffLog + sweep * envelopeResponse * Math.LN2 / 12, offset = p.phase / 360;
             const movementL = lfoDepth * wave(lfoPhase + offset, p.shape), movementR = lfoDepth * wave(lfoPhase + offset + stereo * .5, p.shape);
-            hzL = clamp(Math.exp(base + movementL * Math.LN2 / 12), 20, maxHz); hzR = clamp(Math.exp(base + movementR * Math.LN2 / 12), 20, maxHz);
-            targetGL = Math.tan(PI * hzL / sr); targetGR = Math.tan(PI * hzR / sr); modulation = sweep * envelopeResponse + movementL;
+            const nextLogL = base + movementL * Math.LN2 / 12, nextLogR = base + movementR * Math.LN2 / 12;
+            if (nextLogL !== controlLogL) { controlLogL = nextLogL; hzL = clamp(Math.exp(nextLogL), 20, maxHz); targetGL = Math.tan(PI * hzL / sr); }
+            if (nextLogR !== controlLogR) { controlLogR = nextLogR; hzR = clamp(Math.exp(nextLogR), 20, maxHz); targetGR = Math.tan(PI * hzR / sr); }
+            modulation = sweep * envelopeResponse + movementL;
           }
           // Continuous coefficient interpolation avoids steps from control-rate
           // updates. Its phase is kept across blocks, including offline chunks.
@@ -1740,7 +1752,7 @@
     function create(type, sampleRate, params) {
       let p = normalize(type, params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000), smooth = 1 - Math.exp(-1 / (sr * .004)), peakDecay = Math.exp(-1 / (sr * .12));
-      let peakIn = 0, peakOut = 0, currentMix = p.mix, currentOutput = db(p.output);
+      let peakIn = 0, peakOut = 0, currentMix = p.mix, currentOutput = db(p.output), targetOutput = currentOutput;
       let run, resetState, tail, meters, update;
       const meterSample = (a, b, l, r) => { peakIn = Math.max(Math.abs(a), Math.abs(b), peakIn * peakDecay); peakOut = Math.max(Math.abs(l), Math.abs(r), peakOut * peakDecay); };
       if (type === 'swirl') {
@@ -1748,16 +1760,30 @@
         let stages = Number(p.stages), phase = 0, envelope = 0, lastL = 0, lastR = 0, controlFrame = 0, fade = 1;
         let centre = Math.log2(p.center), spread = p.spread, depth = p.depth, stereo = p.stereo / 360, envAmount = p.envAmount, feedback = p.feedback, polarity = p.polarity === 'subtract' ? -1 : 1;
         let detectorGain = db(p.sensitivity), attack = 0, release = 0, rateHz = p.rate, centreL = p.center, centreR = p.center;
+        let targetCentre = Math.log2(p.center), targetDetectorGain = detectorGain;
+        const stageRatios = new Float64Array(12), tunedHz = new Float64Array([NaN, NaN]), tunedRevision = new Float64Array([-1, -1]);
+        let ratioSpread = NaN, ratioStages = 0, tuningRevision = 0;
         const coefficientSmooth = 1 - Math.exp(-1 / (sr * .001)), fadeStep = 1 / (sr * .005);
         update = previous => {
+          targetCentre = Math.log2(p.center); targetDetectorGain = db(p.sensitivity); targetOutput = db(p.output);
           attack = 1 - Math.exp(-1 / (sr * p.attack * .001)); release = 1 - Math.exp(-1 / (sr * p.release * .001));
           if (previous && previous.stages !== p.stages) { states.fill(0); lastL = lastR = 0; stages = Number(p.stages); controlFrame = 0; fade = 0; }
         };
         const wave = value => p.shape === 'triangle' ? 1 - 4 * Math.abs(value - Math.floor(value) - .5) : Math.sin(TAU * value);
         const tune = (channel, hz) => {
+          // These are exact reusable transforms of the current controls, not
+          // approximated coefficients or a slower modulation clock.
+          if (ratioSpread !== spread || ratioStages !== stages) {
+            ratioSpread = spread; ratioStages = stages; tuningRevision++;
+            for (let stage = 0; stage < stages; stage++) {
+              const stagePosition = stages > 1 ? stage / (stages - 1) - .5 : 0;
+              stageRatios[stage] = Math.pow(2, stagePosition * spread);
+            }
+          }
+          if (tunedHz[channel] === hz && tunedRevision[channel] === tuningRevision) return;
+          tunedHz[channel] = hz; tunedRevision[channel] = tuningRevision;
           for (let stage = 0; stage < stages; stage++) {
-            const stagePosition = stages > 1 ? stage / (stages - 1) - .5 : 0;
-            const frequency = clamp(hz * Math.pow(2, stagePosition * spread), 15, sr * .43);
+            const frequency = clamp(hz * stageRatios[stage], 15, sr * .43);
             const g = Math.tan(PI * frequency / sr); targetCoefficients[channel * 12 + stage] = (g - 1) / (g + 1);
           }
         };
@@ -1770,9 +1796,9 @@
           for (let i = 0; i < left.length; i++) {
             const dryL = safe(left[i]), dryR = safe(right[i]), detector = Math.max(Math.abs(dryL), Math.abs(dryR));
             envelope += (detector > envelope ? attack : release) * (detector - envelope);
-            centre += smooth * (Math.log2(p.center) - centre); spread += smooth * (p.spread - spread); depth += smooth * (p.depth - depth); stereo += smooth * (p.stereo / 360 - stereo);
-            envAmount += smooth * (p.envAmount - envAmount); detectorGain += smooth * (db(p.sensitivity) - detectorGain); feedback += smooth * (p.feedback - feedback);
-            currentMix += smooth * (p.mix - currentMix); currentOutput += smooth * (db(p.output) - currentOutput); polarity += smooth * ((p.polarity === 'subtract' ? -1 : 1) - polarity);
+            centre += smooth * (targetCentre - centre); spread += smooth * (p.spread - spread); depth += smooth * (p.depth - depth); stereo += smooth * (p.stereo / 360 - stereo);
+            envAmount += smooth * (p.envAmount - envAmount); detectorGain += smooth * (targetDetectorGain - detectorGain); feedback += smooth * (p.feedback - feedback);
+            currentMix += smooth * (p.mix - currentMix); currentOutput += smooth * (targetOutput - currentOutput); polarity += smooth * ((p.polarity === 'subtract' ? -1 : 1) - polarity);
             if (controlFrame === 0) {
               const envelopeOffset = clamp(envelope * detectorGain, 0, 1) * envAmount / 12;
               centreL = clamp(Math.pow(2, centre + wave(phase) * depth / 24 + envelopeOffset), 15, sr * .43);
@@ -1804,22 +1830,25 @@
       } else {
         let seed = 0x4352554d, untilL = 0, untilR = 0, heldL = 0, heldR = 0, preL = 0, preR = 0, pre2L = 0, pre2R = 0, toneL = 0, toneR = 0, fast = 0, slow = 0, transient = 0;
         let bitDepth = p.bits, clock = Math.min(sr, p.sampleRate), jitter = p.jitter, dither = p.dither, drive = db(p.drive), cutoff = p.tone, recovery = p.transient;
+        let targetDrive = drive, coefficientClock = NaN, coefficientCutoff = NaN, levelsBits = NaN, preCoefficient = 0, toneCoefficient = 0, levels = 0;
         const fastCoefficient = 1 - Math.exp(-1 / (sr * .0005)), slowCoefficient = 1 - Math.exp(-1 / (sr * .02));
         const random = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; };
         const quantize = (sample, levels) => {
           const noise = Math.abs(sample) > 1e-12 && dither > 1e-9 ? (random() - random()) * dither : 0;
           return Math.round(clamp(sample, -1, 1) * levels + noise) / levels;
         };
-        update = previous => { if (previous && previous.stereo !== p.stereo) untilR = untilL; };
+        update = previous => { targetDrive = db(p.drive); targetOutput = db(p.output); if (previous && previous.stereo !== p.stereo) untilR = untilL; };
         run = (left, right) => {
           for (let i = 0; i < left.length; i++) {
             const dryL = safe(left[i]), dryR = safe(right[i]);
             bitDepth += smooth * (p.bits - bitDepth); clock += smooth * (Math.min(sr, p.sampleRate) - clock); jitter += smooth * (p.jitter - jitter); dither += smooth * (p.dither - dither);
-            drive += smooth * (db(p.drive) - drive); cutoff += smooth * (p.tone - cutoff); recovery += smooth * (p.transient - recovery);
-            currentMix += smooth * (p.mix - currentMix); currentOutput += smooth * (db(p.output) - currentOutput);
-            const inputL = dryL * drive, inputR = dryR * drive, preCoefficient = 1 - Math.exp(-TAU * Math.min(sr * .45, clock * .45) / sr);
+            drive += smooth * (targetDrive - drive); cutoff += smooth * (p.tone - cutoff); recovery += smooth * (p.transient - recovery);
+            currentMix += smooth * (p.mix - currentMix); currentOutput += smooth * (targetOutput - currentOutput);
+            const inputL = dryL * drive, inputR = dryR * drive;
+            if (clock !== coefficientClock) { coefficientClock = clock; preCoefficient = 1 - Math.exp(-TAU * Math.min(sr * .45, clock * .45) / sr); }
             preL += preCoefficient * (inputL - preL); preR += preCoefficient * (inputR - preR); pre2L += preCoefficient * (preL - pre2L); pre2R += preCoefficient * (preR - pre2R);
-            const feedL = p.prefilter === 'soft' ? pre2L : inputL, feedR = p.prefilter === 'soft' ? pre2R : inputR, levels = Math.pow(2, bitDepth - 1);
+            const feedL = p.prefilter === 'soft' ? pre2L : inputL, feedR = p.prefilter === 'soft' ? pre2R : inputR;
+            if (bitDepth !== levelsBits) { levelsBits = bitDepth; levels = Math.pow(2, bitDepth - 1); }
             if (untilL <= 0) {
               heldL = quantize(feedL, levels);
               if (p.stereo === 'linked') heldR = quantize(feedR, levels);
@@ -1830,7 +1859,7 @@
               untilR -= 1;
             }
             untilL -= 1;
-            const toneCoefficient = 1 - Math.exp(-TAU * Math.min(sr * .45, cutoff) / sr);
+            if (cutoff !== coefficientCutoff) { coefficientCutoff = cutoff; toneCoefficient = 1 - Math.exp(-TAU * Math.min(sr * .45, cutoff) / sr); }
             toneL += toneCoefficient * (heldL - toneL); toneR += toneCoefficient * (heldR - toneR);
             const detector = Math.max(Math.abs(dryL), Math.abs(dryR)); fast += fastCoefficient * (detector - fast); slow += slowCoefficient * (detector - slow);
             transient = clamp(6 * (fast - slow) / (slow + .04), 0, 1);
@@ -2222,6 +2251,7 @@
       const colourPrevious = new Float64Array(2), colourDCPrevious = new Float64Array(2), colourDC = new Float64Array(2), core = new Float64Array(2), colourState = new Float64Array(8), colourActive = new Int32Array(2);
       const colourFilters = [lowpassCoefficients(sr*.39, .5411961, osr), lowpassCoefficients(sr*.39, 1.306563, osr)];
       const smoothKeys = ['threshold','ratio','knee','input','makeup','mix','colour','link'], smooth = new Float64Array(8), target = new Float64Array(8), slew = 1-Math.exp(-1/(sr*.004));
+      let cachedInputDb = NaN, cachedMakeupDb = NaN, cachedInputGain = 1, cachedMakeupGain = 1;
       const declickFrames = Math.max(1, Math.round(sr*.004)), lastWet = new Float64Array(2), offset = new Float64Array(2), declickLeft = new Int32Array(2), declickPending = new Int32Array(2);
       const thrustLowCoefficient = 1-Math.exp(-TAU*300/sr), thrustHighCoefficient = 1-Math.exp(-TAU*2200/sr), coreCoefficient = 1-Math.exp(-TAU*45/osr), dcCoefficient = Math.exp(-TAU*9/sr);
       let initialized = false, topology = '', cleanInput = 1, cleanInputTarget = 1, cleanLink = 1, cleanLinkTarget = 1, model = 0, baseAttack = .012, baseRelease = .18, detectorAttack = 1, detectorRelease = 1, rmsCoefficient = 1, attackStep = 1, releaseStep = 1, slowAttack = 1, slowRelease = 1, memoryAttack = 1, memoryRelease = 1;
@@ -2428,7 +2458,8 @@
         let inEnergy=0,outEnergy=0,lastGRL=0,lastGRR=0;
         for(let i=0;i<left.length;i++){
           for(let key=0;key<smooth.length;key++){smooth[key]+=slew*(target[key]-smooth[key]);if(Math.abs(target[key]-smooth[key])<1e-10)smooth[key]=target[key];}
-          const dryL=bound(left[i]),dryR=bound(right[i]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],makeupGain=db(smooth[4]);
+          if(smooth[4]!==cachedMakeupDb){cachedMakeupDb=smooth[4];cachedMakeupGain=db(smooth[4]);}
+          const dryL=bound(left[i]),dryR=bound(right[i]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],makeupGain=cachedMakeupGain;
           cleanInput+=slew*(cleanInputTarget-cleanInput);cleanLink+=slew*(cleanLinkTarget-cleanLink);
           const drivenL=bound(dryL*cleanInput),drivenR=bound(dryR*cleanInput);
           hpL=drivenL-previousL+hp*hpL;hpR=drivenR-previousR+hp*hpR;previousL=drivenL;previousR=drivenR;
@@ -2449,7 +2480,9 @@
         let inEnergy=0,outEnergy=0,detectorLevel=-120;
         for(let i=0;i<left.length;i++){
           for(let k=0;k<smooth.length;k++){smooth[k]+=slew*(target[k]-smooth[k]);if(Math.abs(target[k]-smooth[k])<1e-10)smooth[k]=target[k];}
-          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=db(smooth[3]),makeupGain=db(smooth[4]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
+          if(smooth[3]!==cachedInputDb){cachedInputDb=smooth[3];cachedInputGain=db(smooth[3]);}
+          if(smooth[4]!==cachedMakeupDb){cachedMakeupDb=smooth[4];cachedMakeupGain=db(smooth[4]);}
+          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=cachedInputGain,makeupGain=cachedMakeupGain,threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
           const drivenL=bound(dryL*inputGain),drivenR=bound(dryR*inputGain);
           for(let channel=0;channel<2;channel++){
             const x=channel?drivenR:drivenL;
@@ -2751,7 +2784,7 @@
         const y = 2 * (1 + feedback) * magnitude / (a + Math.sqrt(a * a - 4 * feedback * (1 + feedback) * magnitude));
         return x < 0 ? -y : y;
       }
-      let firstBaseline = 0, firstNormalization = 1, secondBaseline = 0, secondNormalization = 1;
+      let firstBaseline = 0, firstNormalization = 1, secondBaseline = 0, secondNormalization = 1, baselineBias = NaN, baselineLoop = NaN;
       function loopNormalization(y, feedback) {
         const slope = (1 - Math.abs(y)) * (1 - Math.abs(y));
         return (1 + feedback * slope) / ((1 + feedback) * slope);
@@ -2807,9 +2840,12 @@
             scrubIn = 1024;
           }
           for (let j = 0; j < values.length; j++) values[j] += smooth * (targets[j] - values[j]);
-          if (p.model !== 'clean') {
+          if (p.model !== 'clean' && (values[6] !== baselineBias || values[7] !== baselineLoop)) {
+            // Bias/feedback may settle between edits; reuse their exact
+            // transforms without changing the per-sample control smoothing.
+            baselineBias = values[6]; baselineLoop = values[7];
             firstBaseline = closedLoop(values[6], values[7]); firstNormalization = loopNormalization(firstBaseline, values[7]);
-            if (profile[11]) { secondBaseline = closedLoop(-values[6] * .55, values[7] * .7); secondNormalization = loopNormalization(secondBaseline, values[7] * .7); }
+            secondBaseline = closedLoop(-values[6] * .55, values[7] * .7); secondNormalization = loopNormalization(secondBaseline, values[7] * .7);
           }
           for (let channel = 0; channel < 2; channel++) {
             const data = channel ? right : left, dry = bound(data[i]);
@@ -2942,7 +2978,7 @@
     }
     function create(sampleRate, source) {
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000), osr = sr * 4;
-      let p = normalize(source), dirty = true, first = true, tick = 0;
+      let p = normalize(source), dirty = true, first = true, tick = 0, controlsMoving = false;
       // Numeric derived controls: gain staging is smoothed jointly, so opposing
       // Drive and compensation gains cannot cause an automation level surge.
       const V = { pre: 0, net: 1, warmth: 2, wear: 3, headroom: 4, asymmetry: 5, memory: 6, emphasis: 7, lowGain: 8, highGain: 9, lowCut: 10, headL: 11, headR: 12,
@@ -2962,8 +2998,12 @@
       const meter = { inputDb: -120, tapeDb: -120, outputDb: -120, compressionDb: 0, transportMs: 0 };
       const history = [previous, recordLow, magnet, nonlinearFilters, deEmphasis, dcPrevious, dcState, bumpState, cutState, head1, head2, lowTone, highTone, hissLow, hissHigh];
       function random() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+      let clockWowRate = NaN, clockFlutterRate = NaN, clockWowStep = 0, clockFlutterStep = 0;
+      let cachedEmphasis = NaN, inverseEmphasis = 1;
       function clock() {
-        wowPhase += TAU * values[V.wowRate] / sr; flutterPhase += TAU * values[V.flutterRate] / sr; wearPhase += TAU * .41 / sr;
+        if (values[V.wowRate] !== clockWowRate) { clockWowRate = values[V.wowRate]; clockWowStep = TAU * values[V.wowRate] / sr; }
+        if (values[V.flutterRate] !== clockFlutterRate) { clockFlutterRate = values[V.flutterRate]; clockFlutterStep = TAU * values[V.flutterRate] / sr; }
+        wowPhase += clockWowStep; flutterPhase += clockFlutterStep; wearPhase += TAU * .41 / sr;
         if (wowPhase > TAU * 10000) wowPhase -= TAU * 10000;
         if (flutterPhase > TAU * 10000) flutterPhase -= TAU * 10000;
         if (wearPhase > TAU) wearPhase -= TAU;
@@ -2997,8 +3037,23 @@
         targets[V.mix] = p.mix > 0 ? p.mix : first ? 0 : values[V.mix];
         targets[V.active] = p.bypass || p.mix === 0 ? 0 : 1;
         peakCoefficients(machine[3] * speed / 15, p.headBump * (p.model === 'studio' ? 5 : 7), sr, bumpTarget);
-        if (first) { values.set(targets); bump.set(bumpTarget); first = false; }
+        controlsMoving = true;
+        if (first) { values.set(targets); bump.set(bumpTarget); first = false; controlsMoving = false; }
         dirty = false;
+      }
+      function advanceControls() {
+        if (!controlsMoving) return;
+        if (tick & 255) {
+          for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+          for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+          return;
+        }
+        // Only skip additions after they stop changing the actual IEEE values.
+        // Do not snap to targets or alter any transition, random or tape clock.
+        let moving = false;
+        for (let key = 0; key < values.length; key++) { const before = values[key]; values[key] += smooth * (targets[key] - values[key]); if (values[key] !== before) moving = true; }
+        for (let key = 0; key < 5; key++) { const before = bump[key]; bump[key] += smooth * (bumpTarget[key] - bump[key]); if (bump[key] !== before) moving = true; }
+        controlsMoving = moving;
       }
       // Causal cubic Lagrange interpolation uses the current and three older
       // samples; it never requests an as-yet-unwritten sample at tiny delays.
@@ -3029,7 +3084,8 @@
         previous[channel] = x;
         // Apply the inverse record emphasis to the nonlinear delta only. The
         // undelayed linear path remains intact when Warmth is zero.
-        const inverse = 1 / values[V.emphasis];
+        if (values[V.emphasis] !== cachedEmphasis) { cachedEmphasis = values[V.emphasis]; inverseEmphasis = 1 / values[V.emphasis]; }
+        const inverse = inverseEmphasis;
         deEmphasis[channel] += values[V.inverseCoefficient] * (delta - deEmphasis[channel]);
         delta = inverse * delta + (1 - inverse) * deEmphasis[channel];
         const cleaned = delta - dcPrevious[channel] + dcDecay * dcState[channel];
@@ -3054,8 +3110,7 @@
           // memory before a later fade-in can reveal it.
           dormant = true;
           for (let frame = 0; frame < left.length; frame++) {
-            for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
-            for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
+            advanceControls();
             const l = safe(left[frame]), r = safe(right[frame]); left[frame] = l; right[frame] = r;
             inputPower += l * l + r * r;
             random(); random(); random(); random(); clock(); tick++;
@@ -3068,12 +3123,11 @@
         for (let frame = 0; frame < left.length; frame++) {
           if (tick++ % 32 === 0 && dirty) update();
           if (dormant && targets[V.active] > 0) { clearSignal(); dormant = false; }
-          for (let key = 0; key < values.length; key++) values[key] += smooth * (targets[key] - values[key]);
+          advanceControls();
           if (targets[V.active] === 0 && values[V.active] < 1e-7) {
             values[V.active] = 0; dormant = true;
             if (p.mix === 0) values[V.mix] = targets[V.mix] = 0;
           }
-          for (let key = 0; key < 5; key++) bump[key] += smooth * (bumpTarget[key] - bump[key]);
           if (--scrub === 0) { for (const state of history) for (let cell = 0; cell < state.length; cell++) if (Math.abs(state[cell]) < 1e-28) state[cell] = 0; scrub = 1024; }
           const dryL = safe(left[frame]), dryR = safe(right[frame]), maximum = Math.max(Math.abs(dryL), Math.abs(dryR));
           gate += (maximum > gate ? gateAttack : gateRelease) * (maximum - gate);
@@ -3247,8 +3301,10 @@
       const attack = 1 - Math.exp(-1 / (osr * .0006)), release = 1 - Math.exp(-1 / (osr * .045)), gateCoefficient = 1 - Math.exp(-1 / (osr * .0008));
       const transitionFrames = Math.max(1, Math.round(sr * .005)), correction = new Float64Array(2);
       let transitionPending = false, transitionRemaining = 0, dormant = false, inputPeak = 0, outputPeak = 0;
+      let preCoefficient = 0, biasCurve = null, biasInput = NaN, biasZero = 0;
       function updateTargets() {
         circuit = circuits[p.shape] || null;
+        preCoefficient = circuit?.pre > 0 ? lowpass(circuit.pre, osr) : 0;
         targets[0] = db(p.drive); targets[1] = p.bias; targets[2] = lowpass(Math.min(p.tone, circuit?.cap || 20000), osr); targets[3] = db(p.output); targets[4] = p.mix; targets[5] = p.bypass ? 0 : 1;
       }
       function clearNew() {
@@ -3266,7 +3322,7 @@
       function bridge(left, right) { for (let frame = 0; frame < left.length; frame++) finishFrame(left, right, frame); }
       function runNew(left, right) {
         inputPeak = outputPeak = 0;
-        const preCoefficient = circuit.pre > 0 ? lowpass(circuit.pre, osr) : 0, nonlinear = circuit.curve;
+        const nonlinear = circuit.curve;
         for (let frame = 0; frame < left.length; frame++) {
           for (let key = 0; key < values.length; key++) { values[key] += (targets[key] - values[key]) * (key === 5 ? activitySmooth : smooth); if (Math.abs(targets[key] - values[key]) < 1e-10) values[key] = targets[key]; }
           const blend = values[4] * values[5];
@@ -3280,7 +3336,9 @@
           // A settled dry/bypassed insert resumes from the present source,
           // rather than resurrecting an interpolator sample from its past.
           if (dormant) { clearNew(); previous[0] = safe(left[frame]); previous[1] = safe(right[frame]); dormant = false; }
-          const bias = values[1], zero = circuit.dynamic ? 0 : nonlinear(bias, 0, 1);
+          const bias = values[1];
+          if (!circuit.dynamic && (biasCurve !== nonlinear || biasInput !== bias)) { biasCurve = nonlinear; biasInput = bias; biasZero = nonlinear(bias, 0, 1); }
+          const zero = circuit.dynamic ? 0 : biasZero;
           for (let channel = 0; channel < 2; channel++) {
             const data = channel ? right : left, dry = safe(data[frame]), before = previous[channel]; let wet = 0;
             inputPeak = Math.max(inputPeak, Math.abs(dry));
@@ -3425,7 +3483,8 @@
 
     function read(buffer, write, delay) {
       let position = write - delay;
-      position %= buffer.length;
+      // Every caller bounds its nonnegative delay below this ring's length.
+      // A single wrap is identical to remainder here, including fractional reads.
       if (position < 0) position += buffer.length;
       const index = Math.floor(position), fraction = position - index;
       const next = index + 1 === buffer.length ? 0 : index + 1;
@@ -3607,6 +3666,8 @@
         const cabExtraState = new Float64Array(4);
         const wsToneState = Array.from({length: 4}, () => new Float64Array(4));
         let workshop = false, workshopReady = false, wsKey = '', wsTone = [], wsStackAfter = 1, wsInsertion = 1, wsTubeGain = 1, wsTubeHeadroom = 1, wsPowerKind = '6l6', wsPowerKnee = 1, wsPowerGain = 1, wsPowerNorm = 1, wsStageCoefficient = 1, wsCathodeCoefficient = 1, wsGridAttack = 1, wsGridRelease = 1;
+        let wsMoving = false, wsControlsDirty = true, wsVoltage = 1, wsFeedbackAmount = 0, wsSolidStock = false, wsScaledPower = 1, wsTightRC = 1, wsCathodeAmount = 0, wsRail = 1, wsBright = 0, wsBrightDenominator = 1, wsGridModel = 0, wsGridCoupling = 1, wsPowerBias = 0, wsPowerBaseline = 0, wsDepth = 0, wsPresence = 0;
+        const wsStageBias = new Float64Array(4);
         const pedalInstances = [null, null, null, null], pedalKeys = ['', '', '', ''], prePedals = [], postPedals = [];
         let pedalCount = 0, rigTail = .35, quietLimit = sr, pedalsDirty = true;
         const transitionFrames = Math.max(1, Math.round(sr*.005)), transitionPending = new Int32Array(2), transitionRemaining = new Int32Array(2), transitionOffset = new Float64Array(2), lastWet = new Float64Array(2);
@@ -3639,8 +3700,9 @@
         }
         function updateWorkshop() {
           workshop = !!workshopModels[p.model] || p.preampTube !== 'stock' || p.powerTube !== 'stock' || p.toneStack !== 'stock' || wsKeys.some((key, i) => p[key] !== wsDefaults[i]);
-          for (let i = 0; i < wsKeys.length; i++) wsTarget[i] = p[wsKeys[i]];
-          if (!workshopReady) { wsSmooth.set(wsTarget); workshopReady = true; }
+          wsMoving = false; wsControlsDirty = true;
+          for (let i = 0; i < wsKeys.length; i++) { wsTarget[i] = p[wsKeys[i]]; if (wsSmooth[i] !== wsTarget[i]) wsMoving = true; }
+          if (!workshopReady) { wsSmooth.set(wsTarget); workshopReady = true; wsMoving = false; }
           const next = [p.model, p.preampTube, p.powerTube, p.toneStack, p.bass, p.mid, p.midFreq, p.treble, p.drive, p.master].join('|');
           if (next === wsKey) return;
           wsKey = next;
@@ -3751,18 +3813,34 @@
         };
         const wsBrightCoefficient = lowpass(1600, sr*4), wsFeedbackLowCoefficient = lowpass(90, sr*4), wsFeedbackHighCoefficient = lowpass(3200, sr*4), wsFluxCoefficient = lowpass(48, sr*4), wsCoreCoefficient = lowpass(11500, sr*4);
         const wsCore = new Float64Array(2), wsBrightLP = new Float64Array(2);
-        function workshopPower(value, bias, headroom) {
+        function updateWorkshopControls() {
+          // Both channels and all four oversampling phases use these same
+          // exact host-sample controls. Keep the original arithmetic grouping.
+          wsControlsDirty = false; wsVoltage = wsSmooth[1];
+          wsFeedbackAmount = clamp((model.feedback === undefined ? .35 : model.feedback)+(wsSmooth[2]-.5)*.9, 0, .95);
+          wsSolidStock = model.shape === 'solid' && p.preampTube === 'stock'; wsScaledPower = .28+wsSmooth[8]*.72;
+          const couplingRC = couplingCoefficient+(1-couplingCoefficient)*(wsSmooth[5]-.5)*1.5;
+          wsTightRC = 1-(1-couplingRC)*(.45+wsSmooth[3]*1.1);
+          wsCathodeAmount = (model.cathode === undefined ? .25 : model.cathode)*(.25+wsSmooth[6]*1.5);
+          wsRail = Math.max(.25, wsVoltage*wsTubeHeadroom); wsBright = wsSmooth[4]+(model.bright || 0)*(1-wsSmooth[4]); wsBrightDenominator = 1+p.drive*.065;
+          wsGridModel = model.grid === undefined ? .25 : model.grid; wsGridCoupling = .35+wsSmooth[5];
+          for (let stage = 0; stage < 4; stage++) wsStageBias[stage] = model.bias*(stage & 1 ? -.7 : 1)+wsSmooth[0]*.5;
+          wsPowerBias = model.powerBias+wsSmooth[0]*.17;
+          wsPowerBaseline = wsPowerKind === 'el34' ? saturate(wsPowerBias*1.12)/1.12 : wsPowerKind === 'el84' ? saturate(wsPowerBias+.08) : saturate(wsPowerBias);
+          wsDepth = p.depth*.72; wsPresence = p.presence*.75;
+        }
+        function workshopPower(value, headroom) {
           const scaled = value / headroom;
           if (wsPowerKind === 'solid') {
             // High-headroom transistor output stays linear until its rail knee.
             const magnitude = Math.abs(scaled), clipped = magnitude <= 1 ? magnitude : 1 + .18*saturate((magnitude-1)/.18);
             return (scaled < 0 ? -clipped : clipped)*headroom;
           }
-          if (wsPowerKind === 'el34') return (saturate((scaled+bias)*1.12)/1.12 - saturate(bias*1.12)/1.12)*headroom;
-          if (wsPowerKind === 'el84') return (saturate(scaled+bias+.08)-saturate(bias+.08))*headroom;
+          if (wsPowerKind === 'el34') return (saturate((scaled+wsPowerBias)*1.12)/1.12 - wsPowerBaseline)*headroom;
+          if (wsPowerKind === 'el84') return (saturate(scaled+wsPowerBias+.08)-wsPowerBaseline)*headroom;
           if (wsPowerKind === 'kt88') return scaled / Math.sqrt(Math.sqrt(1 + scaled*scaled*scaled*scaled))*headroom;
           // Beam tetrode / small beam-valve soft knees retain bias asymmetry.
-          return (saturate(scaled+bias)-saturate(bias))*headroom;
+          return (saturate(scaled+wsPowerBias)-wsPowerBaseline)*headroom;
         }
         function workshopSample(dry, channel) {
           const offset = channel*4, stateOffset = channel*2, trimmed = ampBound(dry*trim), peak = Math.abs(trimmed);
@@ -3770,44 +3848,39 @@
           gateGain[channel] += gateSmooth*(clamp(gateEnvelope[channel]/gateThreshold-.5, 0, 1)-gateGain[channel]);
           const envelopeCoefficient = peak > sagEnvelope[channel] ? sagAttack : sagRelease;
           sagEnvelope[channel] = envelopeCoefficient*sagEnvelope[channel]+(1-envelopeCoefficient)*peak;
-          const voltage = wsSmooth[1], feedback = clamp((model.feedback === undefined ? .35 : model.feedback)+(wsSmooth[2]-.5)*.9, 0, .95);
-          const solidStock = model.shape === 'solid' && p.preampTube === 'stock';
-          const supply = voltage / (1 + p.sag*sagEnvelope[channel]*sagDepth*(solidStock ? .1 : 1));
-          const scaledPower = .28 + wsSmooth[8]*.72, headroom = Math.max(.12, wsPowerKnee*supply*scaledPower);
-          const couplingRC = couplingCoefficient + (1-couplingCoefficient)*(wsSmooth[5]-.5)*1.5;
-          const tightRC = 1 - (1-couplingRC)*(.45+wsSmooth[3]*1.1);
-          const cathodeAmount = (model.cathode === undefined ? .25 : model.cathode)*(.25+wsSmooth[6]*1.5);
+          const feedback = wsFeedbackAmount;
+          const supply = wsVoltage / (1 + p.sag*sagEnvelope[channel]*sagDepth*(wsSolidStock ? .1 : 1));
+          const headroom = Math.max(.12, wsPowerKnee*supply*wsScaledPower);
           let head = ampFilter(trimmed, coefficients[0], states[0], stateOffset);
           if (preToneCoefficient) head = ampFilter(head, preToneCoefficient, preToneState, stateOffset);
           const prior = previous[channel];
           for (let sub = 1; sub <= 4; sub++) {
             let value = (prior+(head-prior)*sub*.25)*preGain*wsTubeGain;
             wsBrightLP[channel] += wsBrightCoefficient*(value-wsBrightLP[channel]);
-            const bright = wsSmooth[4]+(model.bright || 0)*(1-wsSmooth[4]);
-            value += (value-wsBrightLP[channel])*bright*1.5/(1+p.drive*.065);
+            value += (value-wsBrightLP[channel])*wsBright*1.5/wsBrightDenominator;
             for (let stage = 0; stage < model.stages; stage++) {
               const index = offset+stage;
               let stageValue = value*(stage ? model.next : 1);
               wsCathode[index] += wsCathodeCoefficient*(stageValue-wsCathode[index]);
-              stageValue -= wsCathode[index]*cathodeAmount;
+              stageValue -= wsCathode[index]*wsCathodeAmount;
               const over = Math.max(0, stageValue-.65), gridCoefficient = over > wsGrid[index] ? wsGridAttack : wsGridRelease;
               wsGrid[index] += gridCoefficient*(over-wsGrid[index]);
-              const bias = model.bias*(stage & 1 ? -.7 : 1)+wsSmooth[0]*.5-wsGrid[index]*(model.grid === undefined ? .25 : model.grid)*(.35+wsSmooth[5]);
-              const rail = Math.max(.25, voltage*wsTubeHeadroom);
-              if (solidStock) value = ampBound(stageValue);
+              const bias = wsStageBias[stage]-wsGrid[index]*wsGridModel*wsGridCoupling;
+              const rail = wsRail;
+              if (wsSolidStock) value = ampBound(stageValue);
               else if (model.coldStage === stage) {
                 const x = stageValue/rail+bias;
                 value = (x >= 0 ? saturate(x) : saturate(x*1.7)/1.7) - (bias >= 0 ? saturate(bias) : saturate(bias*1.7)/1.7); value *= rail;
               } else value = (saturate(stageValue/rail+bias)-saturate(bias))*rail;
               interLP[index] += wsStageCoefficient*(value-interLP[index]); value = interLP[index];
-              couplingOut[index] = value-couplingPrevious[index]+tightRC*couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
+              couplingOut[index] = value-couplingPrevious[index]+wsTightRC*couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
               if (stage === wsStackAfter) { for (let band = 0; band < wsTone.length; band++) value = ampFilter(value, wsTone[band], wsToneState[band], stateOffset); value *= wsInsertion; }
             }
             value *= preNormalization;
             wsFeedbackLow[channel] += wsFeedbackLowCoefficient*(wsFeedback[channel]-wsFeedbackLow[channel]);
             wsFeedbackHigh[channel] += wsFeedbackHighCoefficient*(wsFeedback[channel]-wsFeedbackHigh[channel]);
-            const returnSignal = wsFeedback[channel] - p.depth*.72*wsFeedbackLow[channel] - p.presence*.75*(wsFeedback[channel]-wsFeedbackHigh[channel]);
-            value = workshopPower(value*wsPowerGain*(1+feedback*.45)-returnSignal*feedback*.7, model.powerBias+wsSmooth[0]*.17, headroom)*wsPowerNorm;
+            const returnSignal = wsFeedback[channel] - wsDepth*wsFeedbackLow[channel] - wsPresence*(wsFeedback[channel]-wsFeedbackHigh[channel]);
+            value = workshopPower(value*wsPowerGain*(1+feedback*.45)-returnSignal*feedback*.7, headroom)*wsPowerNorm;
             wsFeedback[channel] = value;
             wsFlux[channel] += wsFluxCoefficient*(value-wsFlux[channel]);
             const transformer = wsSmooth[7];
@@ -3939,7 +4012,14 @@
             const dryL = input(left[i]), dryR = input(right[i]), mono = (dryL + dryR) * 0.5;
             quietFrames = dryL === 0 && dryR === 0 ? quietFrames + 1 : 0;
             if (quietFrames >= quietLimit) { if (quietFrames !== Infinity) reset(); left[i] = dryL; right[i] = dryR; continue; }
-            if (workshop) for (let control = 0; control < wsSmooth.length; control++) wsSmooth[control] += wsSmoothing*(wsTarget[control]-wsSmooth[control]);
+            if (workshop) {
+              if (wsMoving) {
+                let moving = false;
+                for (let control = 0; control < wsSmooth.length; control++) { const before = wsSmooth[control]; wsSmooth[control] += wsSmoothing*(wsTarget[control]-wsSmooth[control]); if (wsSmooth[control] !== before) moving = true; }
+                wsMoving = moving; wsControlsDirty = true;
+              }
+              if (wsControlsDirty) updateWorkshopControls();
+            }
             const wetL = channelSample(monoInput ? mono : dryL, 0), wetR = monoInput ? wetL : channelSample(dryR, 1);
             left[i] = output(dryL, wetL, mix); right[i] = output(dryR, wetR, mix);
             inputEnergy += dryL*dryL+dryR*dryR; outputEnergy += left[i]*left[i]+right[i]*right[i];
@@ -3949,7 +4029,7 @@
           meter.inputDb = 10*Math.log10(Math.max(1e-12, inputEnergy/Math.max(1,left.length*2))); meter.outputDb = 10*Math.log10(Math.max(1e-12, outputEnergy/Math.max(1,left.length*2))); meter.gateGain = p.ampEnable === 'off' ? 1 : Math.max(gateGain[0], gateGain[1]);
           meter.reductionDb = p.ampEnable === 'off' ? 0 : 20 * Math.log10(1 + p.sag * Math.max(sagEnvelope[0], monoInput ? sagEnvelope[0] : sagEnvelope[1]) * sagDepth);
         };
-        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, preToneState, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); [cabExtraState, wsCathode, wsGrid, wsFeedback, wsFeedbackLow, wsFeedbackHigh, wsFlux, wsTransformerDC, wsCore, wsBrightLP, transitionPending, transitionRemaining, transitionOffset, lastWet].forEach(clear); wsToneState.forEach(clear); wsSmooth.set(wsTarget); pedalInstances.forEach(pedal => {if (pedal) pedal.reset();}); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; meter.inputDb = meter.outputDb = -120; meter.gateGain = 0; };
+        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, preToneState, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); [cabExtraState, wsCathode, wsGrid, wsFeedback, wsFeedbackLow, wsFeedbackHigh, wsFlux, wsTransformerDC, wsCore, wsBrightLP, transitionPending, transitionRemaining, transitionOffset, lastWet].forEach(clear); wsToneState.forEach(clear); wsSmooth.set(wsTarget); wsMoving = false; wsControlsDirty = true; pedalInstances.forEach(pedal => {if (pedal) pedal.reset();}); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; meter.inputDb = meter.outputDb = -120; meter.gateGain = 0; };
         tail = () => rigTail;
       } else if (type === 'undertow') {
         const length = Math.ceil(sr * 0.08) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);
@@ -4273,14 +4353,15 @@
     return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
         constructor(options) {
-          super();const p=options.processorOptions||{};this.core=createCore(makeEffects,sampleRate,p.slots);this.clock=p.clock||{tempo:120,beat:0,time:0,playing:false};this.pending=[];this.clocks=[];this.count=0;this.offlineId=p.offlineId||null;this.offlineConfigured=false;
-          this.port.onmessage=event=>{const m=event.data;if(this.offlineId)return;if(m.type==='slots')this.core.setSlots(m.slots);else if(m.type==='clock'){const frame=Math.round(m.clock.time*sampleRate);if(m.replaceFuture||!m.clock.playing)this.clocks=this.clocks.filter(item=>item.frame<frame);if(frame<=currentFrame)this.clock=m.clock;else{this.clocks=this.clocks.filter(item=>item.frame!==frame);this.clocks.push({frame,clock:m.clock});this.clocks.sort((a,b)=>a.frame-b.frame);}}else if(m.type==='reset'){this.pending=[];if(m.frame<=currentFrame)this.core.reset();else this.pending=[m.frame];}};
+          super();const p=options.processorOptions||{};this.core=createCore(makeEffects,sampleRate,p.slots);this.clock=p.clock||{tempo:120,beat:0,time:0,playing:false};this.pending=[];this.clocks=[];this.disposed=false;this.offlineId=p.offlineId||null;this.offlineConfigured=false;
+          this.port.onmessage=event=>{const m=event.data;if(m.type==='dispose'){this.disposed=true;return;}if(this.disposed)return;if(m.type==='meters'){this.port.postMessage({type:'meters',value:this.core.getMeters()});return;}if(this.offlineId)return;if(m.type==='slots')this.core.setSlots(m.slots);else if(m.type==='clock'){const frame=Math.round(m.clock.time*sampleRate);if(m.replaceFuture||!m.clock.playing)this.clocks=this.clocks.filter(item=>item.frame<frame);if(frame<=currentFrame)this.clock=m.clock;else{this.clocks=this.clocks.filter(item=>item.frame!==frame);this.clocks.push({frame,clock:m.clock});this.clocks.sort((a,b)=>a.frame-b.frame);}}else if(m.type==='reset'){this.pending=[];if(m.frame<=currentFrame)this.core.reset();else this.pending=[m.frame];}};
         }
         process(inputs,outputs) {
+          if(this.disposed){for(const output of outputs)for(const channel of output)channel.fill(0);return false;}
           if(this.offlineId&&!this.offlineConfigured){const all=globalThis.__kitchenVoiceFxOfflineConfigs,config=all?.racks?.[this.offlineId],bank=config&&all.banks[config.bank];if(config&&bank){this.core=createCore(makeEffects,sampleRate,config.slots);this.clock=bank.clock;this.clocks=bank.clocks.map(clock=>({frame:Math.round(clock.time*sampleRate),clock}));this.pending=config.resetFrames.slice();this.offlineConfigured=true;}}
           const output=outputs[0],left=output[0],right=output[1]||left,input=inputs[0];if(!left)return true;if(input[0])left.set(input[0]);else left.fill(0);if(right!==left){if(input[1]||input[0])right.set(input[1]||input[0]);else right.fill(0);}
           let at=0;while(at<left.length){while(this.pending[0]<=currentFrame+at){this.core.reset();this.pending.shift();}while(this.clocks[0]?.frame<=currentFrame+at)this.clock=this.clocks.shift().clock;const end=Math.min(left.length,this.pending.length?Math.max(at,this.pending[0]-currentFrame):left.length,this.clocks.length?Math.max(at,this.clocks[0].frame-currentFrame):left.length);if(end<=at)continue;const c=this.clock,beat=c.beat+(c.playing?(currentFrame+at)/sampleRate-c.time:0)*c.tempo/60;this.core.process(left.subarray(at,end),right.subarray(at,end),{tempo:c.tempo,beat,playing:c.playing});at=end;}
-          if(++this.count>=16){this.count=0;this.port.postMessage({type:'meters',value:this.core.getMeters()});}return true;
+          return true;
         }
       }
       registerProcessor('kitchen-voice-effects-v1',KitchenVoiceEffectsProcessor);`;
@@ -4328,7 +4409,7 @@
     const count = Math.max(1, Math.min(64, Math.round(finite(options.voiceCount, Array.isArray(destinations) ? destinations.length : 8))));
     const destination = index => Array.isArray(destinations) ? destinations[index] : destinations;
     if (Array.from({ length: count }, (_, i) => destination(i)).some(node => !node || typeof node.connect !== 'function')) throw new Error('Every voice effects bank needs a valid destination.');
-    const slots = Array.from({ length: count }, empty), racks = Array(count).fill(null), audible = Array(count).fill(true), routes = Array.from({ length: count }, () => new Set());
+    const slots = Array.from({ length: count }, empty), slotSignatures = Array(count).fill(null), racks = Array(count).fill(null), audible = Array(count).fill(true), routes = Array.from({ length: count }, () => new Set());
     let clock = { tempo: clamp(finite(options.tempo, 120), 30, 300), beat: 0, time: 0, playing: false }, latestClock = clock, disposed = false;
     const clockEvents = [];
     function clockAt(time) { let value = clock; for (const event of clockEvents) { if (event.time > time + 1e-9) break; value = event; } return value; }
@@ -4338,10 +4419,10 @@
       if (!mode || mode === 'pending') throw new Error('Prepare GALLEY voice effects before starting audio.');
       if (mode === 'unavailable') throw new Error('This browser cannot render GALLEY voice effects offline. Use a current browser with Offline AudioWorklet support, or clear the two voice effect slots.');
       const gate = context.createGain(); gate.gain.value = audible[index] ? 1 : 0; gate.connect(destination(index));
-      const rack = { node: null, gate, mode, meters: [null, null], core: null, resetFrames: [], offlineId: offline(context) ? bankId + '-' + index : null };
+      const rack = { node: null, gate, mode, meters: [null, null], meterPending: false, core: null, resetFrames: [], offlineId: offline(context) ? bankId + '-' + index : null };
       if (mode === 'worklet') {
         rack.node = new scope.AudioWorkletNode(context, 'kitchen-voice-effects-v1', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { slots: slots[index], clock: clockAt(context.currentTime || 0), offlineId: rack.offlineId } });
-        rack.node.port.onmessage = event => { if (event.data?.type === 'meters') rack.meters = event.data.value; };
+        rack.node.port.onmessage = event => { if (event.data?.type === 'meters') { rack.meters = event.data.value; rack.meterPending = false; } };
         for (const value of clockEvents) if (value.time > (context.currentTime || 0)) rack.node.port.postMessage({ type: 'clock', clock: value });
       } else {
         rack.core = createProcessor(context.sampleRate, slots[index], clock); rack.node = context.createScriptProcessor(256, 2, 2); rack.node.channelCount = 2; rack.node.channelCountMode = 'explicit';
@@ -4349,7 +4430,6 @@
           const left = event.outputBuffer.getChannelData(0), right = event.outputBuffer.getChannelData(1); left.set(event.inputBuffer.getChannelData(0)); right.set(event.inputBuffer.getChannelData(Math.min(1, event.inputBuffer.numberOfChannels - 1)));
           const start = Math.round((event.playbackTime || context.currentTime) * context.sampleRate); let at = 0;
           while (at < left.length) { while (rack.resetFrames[0] <= start + at) { rack.core.reset(); rack.resetFrames.shift(); } const nextClock = clockEvents.find(event => Math.round(event.time * context.sampleRate) > start + at), end = Math.min(left.length, rack.resetFrames.length ? Math.max(at, rack.resetFrames[0] - start) : left.length, nextClock ? Math.round(nextClock.time * context.sampleRate) - start : left.length); if (end <= at) continue; const time = (start + at) / context.sampleRate, active = clockAt(time); rack.core.process(left.subarray(at, end), right.subarray(at, end), { tempo: active.tempo, beat: active.beat + (active.playing ? time - active.time : 0) * active.tempo / 60, playing: active.playing }); at = end; }
-          rack.meters = rack.core.getMeters();
         };
       }
       if (rack.offlineId) { prepared.banks.set(bankId, () => ({ clock: clockAt(0), clocks: clockEvents.filter(value => value.time > 0) })); prepared.racks.set(rack.offlineId, () => ({ bank: bankId, slots: slots[index], resetFrames: rack.resetFrames.slice() })); }
@@ -4372,8 +4452,38 @@
       }
       moveGain(rack.gate.gain, audible[index] ? 1 : 0);
     }
+    function readMeters(rack) {
+      if (rack && !disposed) {
+        if (rack.mode === 'worklet') {
+          // The editor polls only its selected voice. Keep at most one
+          // outstanding snapshot instead of streaming every unused rack.
+          if (!rack.meterPending) {
+            rack.meterPending = true;
+            try { rack.node.port.postMessage({ type: 'meters' }); }
+            catch (_) { rack.meterPending = false; }
+          }
+        } else rack.meters = rack.core.getMeters();
+      }
+      return clone(rack?.meters || [null, null]);
+    }
     return {
-      setVoice(index, value) { check(index); const next = normalizeSlots(value), prior = hasEffects(slots[index]); slots[index] = next; const rack = racks[index] || (hasEffects(next) ? makeRack(index) : null); if (rack) { if (rack.mode === 'worklet') rack.node.port.postMessage({ type: 'slots', slots: next }); else rack.core.setSlots(next); if (prior !== hasEffects(next)) reroute(index); } },
+      setVoice(index, value) {
+        check(index);
+        const next = normalizeSlots(value), prior = hasEffects(slots[index]), signature = JSON.stringify(next);
+        // Native sequencers submit this voice on each strike. Validate and
+        // detach its patch every time, but send only actual sound changes to
+        // the audio thread. Caller-owned objects can still change in place.
+        slots[index] = next;
+        if (slotSignatures[index] === signature) return;
+        const rack = racks[index] || (hasEffects(next) ? makeRack(index) : null);
+        if (rack) {
+          if (rack.mode === 'worklet') rack.node.port.postMessage({ type: 'slots', slots: next });
+          else rack.core.setSlots(next);
+          if (prior !== hasEffects(next)) reroute(index);
+        }
+        // Failed preparation or delivery must remain retryable.
+        slotSignatures[index] = signature;
+      },
       input(index) { check(index); return racks[index]?.node || (hasEffects(slots[index]) ? makeRack(index).node : destination(index)); },
       connectSource(index, node) {
         check(index); if (!node || typeof node.connect !== 'function') throw new Error('Choose a source node for this voice.');
@@ -4398,9 +4508,9 @@
       setAudible(index, value) { check(index); audible[index] = value !== false; const rack = racks[index]; if (rack) { moveGain(rack.gate.gain, audible[index] ? 1 : 0); for (const route of routes[index]) if (route.dry) moveGain(route.dry.gain, 0); } },
       reset(index, when = context.currentTime || 0) { const list = index === undefined ? racks.map((_, i) => i) : [index]; for (const i of list) { check(i); const rack = racks[i]; if (!rack) continue; const frame = Math.round(Math.max(0, finite(when, context.currentTime || 0)) * context.sampleRate); if (rack.mode === 'worklet') { rack.resetFrames.length = 0; rack.resetFrames.push(frame); rack.node.port.postMessage({ type: 'reset', frame }); } else { rack.resetFrames.length = 0; if (frame <= Math.round(context.currentTime * context.sampleRate)) rack.core.reset(); else rack.resetFrames.push(frame); } } },
       finalizeOffline: () => finalizeOffline(context),
-      getMeters(index) { return index === undefined ? racks.map(rack => clone(rack?.meters || [null, null])) : clone(racks[index]?.meters || [null, null]); },
+      getMeters(index) { return index === undefined ? racks.map(readMeters) : readMeters(racks[index]); },
       get mode() { return contexts.get(context)?.mode || 'pending'; }, get latencySeconds() { return racks.some(rack => rack?.mode === 'script') ? 256 / context.sampleRate : 0; },
-      dispose() { if (disposed) return; const record = contexts.get(context); record?.banks.delete(bankId); for (const rack of racks) if (rack?.offlineId) record?.racks.delete(rack.offlineId); for (const row of routes) for (const route of Array.from(row)) route.detach(); disposed = true; for (const rack of racks) if (rack) { rack.node.onaudioprocess = null; if (rack.node.port) { rack.node.port.onmessage = null; rack.node.port.close(); } rack.node.disconnect(); rack.gate.disconnect(); rack.core?.reset(); } }
+      dispose() { if (disposed) return; const record = contexts.get(context); record?.banks.delete(bankId); for (const rack of racks) if (rack?.offlineId) record?.racks.delete(rack.offlineId); for (const row of routes) for (const route of Array.from(row)) route.detach(); disposed = true; for (const rack of racks) if (rack) { rack.node.onaudioprocess = null; if (rack.node.port) { try { rack.node.port.postMessage({ type: 'dispose' }); } catch (_) {} rack.node.port.onmessage = null; rack.node.port.close(); } rack.node.disconnect(); rack.gate.disconnect(); rack.core?.reset(); } }
     };
   }
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));

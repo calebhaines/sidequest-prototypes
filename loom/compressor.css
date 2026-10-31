@@ -37,7 +37,7 @@
 .compressor-meter>output{font:11px var(--kk-mono,monospace);color:#3e492f;font-variant-numeric:tabular-nums;white-space:nowrap}
 .compressor-gr>span,.compressor-gr>output{color:#7c5327}
 .compressor-meter-track{grid-column:1/-1;height:7px;overflow:hidden;background:#87916c55;border:1px solid #78816044;border-radius:2px;box-shadow:inset 0 1px 2px #58624522}
-.compressor-meter-track i{display:block;height:100%;width:0;background:#687850;transition:width .08s linear}
+.compressor-meter-track i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:#687850;transition:transform .08s linear}
 .compressor-gr .compressor-meter-track i{background:#a1743b}
 .compressor-meter small{grid-column:1/-1;display:flex;justify-content:space-between;gap:5px;font:7px var(--kk-mono,monospace);color:#747a57}
 .compressor-core-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 24px;padding:24px 0 20px;border-bottom:1px solid #85774a55}

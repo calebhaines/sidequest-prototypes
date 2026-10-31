@@ -42,3 +42,13 @@ CHAR offers fifteen distortion circuits, and BUTTER offers an optional three-ban
 compressor with independent band controls. Voice inserts retain two slots.
 Legacy BUTTER patches without any multiband fields inherit the full-band defaults;
 partially specified or invalid new controls remain subject to strict validation.
+
+### Performance maintenance
+
+Repeated strikes with identical normalized inserts reuse the delivered voice
+patch. Mutated controls, bypass, slot order, removal and re-adding still update
+the processing chain. Voice effect meters are requested by their reader, with
+one outstanding request per voice; unopened editors produce no periodic meter
+traffic. Every voice continues processing its signal, effect histories and tails.
+Run `node shared/voice-effects-performance-checks.cjs` from the repository root
+for message-count, on-demand-meter and exact Worklet/fallback audio checks.

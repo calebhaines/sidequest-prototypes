@@ -120,14 +120,15 @@
     return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
         constructor(options) {
-          super();const p=options.processorOptions||{};this.core=createCore(makeEffects,sampleRate,p.slots);this.clock=p.clock||{tempo:120,beat:0,time:0,playing:false};this.pending=[];this.clocks=[];this.count=0;this.offlineId=p.offlineId||null;this.offlineConfigured=false;
-          this.port.onmessage=event=>{const m=event.data;if(this.offlineId)return;if(m.type==='slots')this.core.setSlots(m.slots);else if(m.type==='clock'){const frame=Math.round(m.clock.time*sampleRate);if(m.replaceFuture||!m.clock.playing)this.clocks=this.clocks.filter(item=>item.frame<frame);if(frame<=currentFrame)this.clock=m.clock;else{this.clocks=this.clocks.filter(item=>item.frame!==frame);this.clocks.push({frame,clock:m.clock});this.clocks.sort((a,b)=>a.frame-b.frame);}}else if(m.type==='reset'){this.pending=[];if(m.frame<=currentFrame)this.core.reset();else this.pending=[m.frame];}};
+          super();const p=options.processorOptions||{};this.core=createCore(makeEffects,sampleRate,p.slots);this.clock=p.clock||{tempo:120,beat:0,time:0,playing:false};this.pending=[];this.clocks=[];this.disposed=false;this.offlineId=p.offlineId||null;this.offlineConfigured=false;
+          this.port.onmessage=event=>{const m=event.data;if(m.type==='dispose'){this.disposed=true;return;}if(this.disposed)return;if(m.type==='meters'){this.port.postMessage({type:'meters',value:this.core.getMeters()});return;}if(this.offlineId)return;if(m.type==='slots')this.core.setSlots(m.slots);else if(m.type==='clock'){const frame=Math.round(m.clock.time*sampleRate);if(m.replaceFuture||!m.clock.playing)this.clocks=this.clocks.filter(item=>item.frame<frame);if(frame<=currentFrame)this.clock=m.clock;else{this.clocks=this.clocks.filter(item=>item.frame!==frame);this.clocks.push({frame,clock:m.clock});this.clocks.sort((a,b)=>a.frame-b.frame);}}else if(m.type==='reset'){this.pending=[];if(m.frame<=currentFrame)this.core.reset();else this.pending=[m.frame];}};
         }
         process(inputs,outputs) {
+          if(this.disposed){for(const output of outputs)for(const channel of output)channel.fill(0);return false;}
           if(this.offlineId&&!this.offlineConfigured){const all=globalThis.__kitchenVoiceFxOfflineConfigs,config=all?.racks?.[this.offlineId],bank=config&&all.banks[config.bank];if(config&&bank){this.core=createCore(makeEffects,sampleRate,config.slots);this.clock=bank.clock;this.clocks=bank.clocks.map(clock=>({frame:Math.round(clock.time*sampleRate),clock}));this.pending=config.resetFrames.slice();this.offlineConfigured=true;}}
           const output=outputs[0],left=output[0],right=output[1]||left,input=inputs[0];if(!left)return true;if(input[0])left.set(input[0]);else left.fill(0);if(right!==left){if(input[1]||input[0])right.set(input[1]||input[0]);else right.fill(0);}
           let at=0;while(at<left.length){while(this.pending[0]<=currentFrame+at){this.core.reset();this.pending.shift();}while(this.clocks[0]?.frame<=currentFrame+at)this.clock=this.clocks.shift().clock;const end=Math.min(left.length,this.pending.length?Math.max(at,this.pending[0]-currentFrame):left.length,this.clocks.length?Math.max(at,this.clocks[0].frame-currentFrame):left.length);if(end<=at)continue;const c=this.clock,beat=c.beat+(c.playing?(currentFrame+at)/sampleRate-c.time:0)*c.tempo/60;this.core.process(left.subarray(at,end),right.subarray(at,end),{tempo:c.tempo,beat,playing:c.playing});at=end;}
-          if(++this.count>=16){this.count=0;this.port.postMessage({type:'meters',value:this.core.getMeters()});}return true;
+          return true;
         }
       }
       registerProcessor('kitchen-voice-effects-v1',KitchenVoiceEffectsProcessor);`;
@@ -175,7 +176,7 @@
     const count = Math.max(1, Math.min(64, Math.round(finite(options.voiceCount, Array.isArray(destinations) ? destinations.length : 8))));
     const destination = index => Array.isArray(destinations) ? destinations[index] : destinations;
     if (Array.from({ length: count }, (_, i) => destination(i)).some(node => !node || typeof node.connect !== 'function')) throw new Error('Every voice effects bank needs a valid destination.');
-    const slots = Array.from({ length: count }, empty), racks = Array(count).fill(null), audible = Array(count).fill(true), routes = Array.from({ length: count }, () => new Set());
+    const slots = Array.from({ length: count }, empty), slotSignatures = Array(count).fill(null), racks = Array(count).fill(null), audible = Array(count).fill(true), routes = Array.from({ length: count }, () => new Set());
     let clock = { tempo: clamp(finite(options.tempo, 120), 30, 300), beat: 0, time: 0, playing: false }, latestClock = clock, disposed = false;
     const clockEvents = [];
     function clockAt(time) { let value = clock; for (const event of clockEvents) { if (event.time > time + 1e-9) break; value = event; } return value; }
@@ -185,10 +186,10 @@
       if (!mode || mode === 'pending') throw new Error('Prepare GALLEY voice effects before starting audio.');
       if (mode === 'unavailable') throw new Error('This browser cannot render GALLEY voice effects offline. Use a current browser with Offline AudioWorklet support, or clear the two voice effect slots.');
       const gate = context.createGain(); gate.gain.value = audible[index] ? 1 : 0; gate.connect(destination(index));
-      const rack = { node: null, gate, mode, meters: [null, null], core: null, resetFrames: [], offlineId: offline(context) ? bankId + '-' + index : null };
+      const rack = { node: null, gate, mode, meters: [null, null], meterPending: false, core: null, resetFrames: [], offlineId: offline(context) ? bankId + '-' + index : null };
       if (mode === 'worklet') {
         rack.node = new scope.AudioWorkletNode(context, 'kitchen-voice-effects-v1', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { slots: slots[index], clock: clockAt(context.currentTime || 0), offlineId: rack.offlineId } });
-        rack.node.port.onmessage = event => { if (event.data?.type === 'meters') rack.meters = event.data.value; };
+        rack.node.port.onmessage = event => { if (event.data?.type === 'meters') { rack.meters = event.data.value; rack.meterPending = false; } };
         for (const value of clockEvents) if (value.time > (context.currentTime || 0)) rack.node.port.postMessage({ type: 'clock', clock: value });
       } else {
         rack.core = createProcessor(context.sampleRate, slots[index], clock); rack.node = context.createScriptProcessor(256, 2, 2); rack.node.channelCount = 2; rack.node.channelCountMode = 'explicit';
@@ -196,7 +197,6 @@
           const left = event.outputBuffer.getChannelData(0), right = event.outputBuffer.getChannelData(1); left.set(event.inputBuffer.getChannelData(0)); right.set(event.inputBuffer.getChannelData(Math.min(1, event.inputBuffer.numberOfChannels - 1)));
           const start = Math.round((event.playbackTime || context.currentTime) * context.sampleRate); let at = 0;
           while (at < left.length) { while (rack.resetFrames[0] <= start + at) { rack.core.reset(); rack.resetFrames.shift(); } const nextClock = clockEvents.find(event => Math.round(event.time * context.sampleRate) > start + at), end = Math.min(left.length, rack.resetFrames.length ? Math.max(at, rack.resetFrames[0] - start) : left.length, nextClock ? Math.round(nextClock.time * context.sampleRate) - start : left.length); if (end <= at) continue; const time = (start + at) / context.sampleRate, active = clockAt(time); rack.core.process(left.subarray(at, end), right.subarray(at, end), { tempo: active.tempo, beat: active.beat + (active.playing ? time - active.time : 0) * active.tempo / 60, playing: active.playing }); at = end; }
-          rack.meters = rack.core.getMeters();
         };
       }
       if (rack.offlineId) { prepared.banks.set(bankId, () => ({ clock: clockAt(0), clocks: clockEvents.filter(value => value.time > 0) })); prepared.racks.set(rack.offlineId, () => ({ bank: bankId, slots: slots[index], resetFrames: rack.resetFrames.slice() })); }
@@ -219,8 +219,38 @@
       }
       moveGain(rack.gate.gain, audible[index] ? 1 : 0);
     }
+    function readMeters(rack) {
+      if (rack && !disposed) {
+        if (rack.mode === 'worklet') {
+          // The editor polls only its selected voice. Keep at most one
+          // outstanding snapshot instead of streaming every unused rack.
+          if (!rack.meterPending) {
+            rack.meterPending = true;
+            try { rack.node.port.postMessage({ type: 'meters' }); }
+            catch (_) { rack.meterPending = false; }
+          }
+        } else rack.meters = rack.core.getMeters();
+      }
+      return clone(rack?.meters || [null, null]);
+    }
     return {
-      setVoice(index, value) { check(index); const next = normalizeSlots(value), prior = hasEffects(slots[index]); slots[index] = next; const rack = racks[index] || (hasEffects(next) ? makeRack(index) : null); if (rack) { if (rack.mode === 'worklet') rack.node.port.postMessage({ type: 'slots', slots: next }); else rack.core.setSlots(next); if (prior !== hasEffects(next)) reroute(index); } },
+      setVoice(index, value) {
+        check(index);
+        const next = normalizeSlots(value), prior = hasEffects(slots[index]), signature = JSON.stringify(next);
+        // Native sequencers submit this voice on each strike. Validate and
+        // detach its patch every time, but send only actual sound changes to
+        // the audio thread. Caller-owned objects can still change in place.
+        slots[index] = next;
+        if (slotSignatures[index] === signature) return;
+        const rack = racks[index] || (hasEffects(next) ? makeRack(index) : null);
+        if (rack) {
+          if (rack.mode === 'worklet') rack.node.port.postMessage({ type: 'slots', slots: next });
+          else rack.core.setSlots(next);
+          if (prior !== hasEffects(next)) reroute(index);
+        }
+        // Failed preparation or delivery must remain retryable.
+        slotSignatures[index] = signature;
+      },
       input(index) { check(index); return racks[index]?.node || (hasEffects(slots[index]) ? makeRack(index).node : destination(index)); },
       connectSource(index, node) {
         check(index); if (!node || typeof node.connect !== 'function') throw new Error('Choose a source node for this voice.');
@@ -245,9 +275,9 @@
       setAudible(index, value) { check(index); audible[index] = value !== false; const rack = racks[index]; if (rack) { moveGain(rack.gate.gain, audible[index] ? 1 : 0); for (const route of routes[index]) if (route.dry) moveGain(route.dry.gain, 0); } },
       reset(index, when = context.currentTime || 0) { const list = index === undefined ? racks.map((_, i) => i) : [index]; for (const i of list) { check(i); const rack = racks[i]; if (!rack) continue; const frame = Math.round(Math.max(0, finite(when, context.currentTime || 0)) * context.sampleRate); if (rack.mode === 'worklet') { rack.resetFrames.length = 0; rack.resetFrames.push(frame); rack.node.port.postMessage({ type: 'reset', frame }); } else { rack.resetFrames.length = 0; if (frame <= Math.round(context.currentTime * context.sampleRate)) rack.core.reset(); else rack.resetFrames.push(frame); } } },
       finalizeOffline: () => finalizeOffline(context),
-      getMeters(index) { return index === undefined ? racks.map(rack => clone(rack?.meters || [null, null])) : clone(racks[index]?.meters || [null, null]); },
+      getMeters(index) { return index === undefined ? racks.map(readMeters) : readMeters(racks[index]); },
       get mode() { return contexts.get(context)?.mode || 'pending'; }, get latencySeconds() { return racks.some(rack => rack?.mode === 'script') ? 256 / context.sampleRate : 0; },
-      dispose() { if (disposed) return; const record = contexts.get(context); record?.banks.delete(bankId); for (const rack of racks) if (rack?.offlineId) record?.racks.delete(rack.offlineId); for (const row of routes) for (const route of Array.from(row)) route.detach(); disposed = true; for (const rack of racks) if (rack) { rack.node.onaudioprocess = null; if (rack.node.port) { rack.node.port.onmessage = null; rack.node.port.close(); } rack.node.disconnect(); rack.gate.disconnect(); rack.core?.reset(); } }
+      dispose() { if (disposed) return; const record = contexts.get(context); record?.banks.delete(bankId); for (const rack of racks) if (rack?.offlineId) record?.racks.delete(rack.offlineId); for (const row of routes) for (const route of Array.from(row)) route.detach(); disposed = true; for (const rack of racks) if (rack) { rack.node.onaudioprocess = null; if (rack.node.port) { try { rack.node.port.postMessage({ type: 'dispose' }); } catch (_) {} rack.node.port.onmessage = null; rack.node.port.close(); } rack.node.disconnect(); rack.gate.disconnect(); rack.core?.reset(); } }
     };
   }
   const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));

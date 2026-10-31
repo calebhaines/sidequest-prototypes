@@ -95,8 +95,8 @@
       const effect = Number.isInteger(slot), button = effect && !!effectType && !!this.selectEffect;
       return `<div class="cpu-component" data-cpu-row="${esc(id)}"><${button ? 'button type="button"' : 'div'} class="cpu-component-name" ${button ? `data-cpu-effect-owner="${esc(ownerId)}" data-cpu-slot="${slot}" title="Open this insert"` : ''}><strong>${esc(label)}</strong><small>${esc(subtitle)}</small></${button ? 'button' : 'div'}><div class="cpu-values">${statistics.map(key => `<span><small>${statLabels[key]}</small><output data-cpu-stat="${key}">—</output></span>`).join('')}</div></div>`;
     }
-    rebuildOwners() {
-      const owners = this.owners(), key = owners.map(owner => owner.id + '|' + owner.name + '|' + (owner.effects || []).map(effect => effect ? effect.type + ':' + (effect.params?.bypass ? '1' : '0') : '').join(',')).join(';');
+    rebuildOwners(owners = this.owners()) {
+      const key = owners.map(owner => owner.id + '|' + owner.name + '|' + (owner.effects || []).map(effect => effect ? effect.type + ':' + (effect.params?.bypass ? '1' : '0') : '').join(',')).join(';');
       if (key === this.topology) return; this.topology = key;
       const open = new Set([...this.element.querySelectorAll('[data-cpu-owner][open]')].map(element => element.dataset.cpuOwner));
       const active = this.element.contains(document.activeElement) ? document.activeElement : null, focus = active?.dataset.cpuEffectOwner ? active.dataset.cpuEffectOwner + '|' + active.dataset.cpuSlot : null;
@@ -110,14 +110,16 @@
       }).join('');
       if (focus) [...this.element.querySelectorAll('[data-cpu-effect-owner]')].find(element => element.dataset.cpuEffectOwner + '|' + element.dataset.cpuSlot === focus)?.focus({ preventScroll: true });
     }
-    paintRow(element, row, snapshot) {
-      for (const key of statistics) text(element.querySelector(`[data-cpu-stat="${key}"]`), this.format(row, key, snapshot));
+    paintRow(element, row, snapshot, ownerById) {
+      const fields = element._loomCPUFields || (element._loomCPUFields = statistics.map(key => element.querySelector(`[data-cpu-stat="${key}"]`)));
+      for (let index = 0; index < statistics.length; index++) text(fields[index], this.format(row, statistics[index], snapshot));
       element.classList.toggle('cpu-row-warm', !row?.samples);
-      const type = this.owners().find(owner => owner.id === row?.ownerId)?.effects?.[row?.slot]?.type;
+      const type = ownerById?.get(row?.ownerId)?.effects?.[row?.slot]?.type;
       if (row?.kind === 'effect' && row.effectType && type && type !== row.effectType) for (const output of element.querySelectorAll('output')) text(output, '—');
     }
     render() {
       if (this.disposed) return;
+      if (!this.element.open) { text(this.element.querySelector('[data-cpu-summary]'), 'Profiling off'); return; }
       const snapshot = this.engine.getDiagnostics?.() || {};
       const context = this.engine.context || null, processed = snapshot.processedBlocks || 0;
       if (context !== this.contextRef || this.lastProcessed !== null && processed < this.lastProcessed) { this.history = []; this.sequence = ''; }
@@ -126,7 +128,8 @@
       const warming = (snapshot.total?.samples || 0) < (snapshot.clock?.coarse ? 64 : 16), unsupported = snapshot.status === 'unsupported', reportRevision = snapshot.reportRevision === undefined ? snapshot.revision : snapshot.reportRevision, pending = reportRevision !== null && reportRevision !== snapshot.revision;
       text(summary, !this.element.open ? 'Profiling off' : this.paused ? 'Readings paused' : !this.active ? 'Profiling paused · out of view' : unsupported ? 'Timing unavailable' : pending ? 'Refreshing measurements' : snapshot.status === 'waiting' ? 'Waiting for audio' : snapshot.total?.samples ? warming ? 'Sampling · warming up' : 'Sampling · ' + this.format(snapshot.total, 'meanPercent', snapshot) : 'Waiting for audio');
       if (!this.element.open || !this.visible || document.hidden) return;
-      this.rebuildOwners();
+      const owners = this.owners(), ownerById = new Map(owners.map(owner => [owner.id, owner]));
+      this.rebuildOwners(owners);
       const diagnostics = this.engine.getAudioDiagnostics?.() || {}, stats = snapshot.total, available = snapshot.available !== false, contextState = this.engine.context?.state || (diagnostics.active ? 'active' : 'not started');
       const precision = snapshot.clock?.coarse ? `This audio worklet uses a coarse millisecond clock (${snapshot.clock.resolutionKnown === false ? 'at least ' : ''}${amount(snapshot.clock.resolutionMs || 1)} ms). Short timings are estimates; “< clock” does not mean free.` : snapshot.clock?.name && snapshot.clock.name !== 'unavailable' ? 'Timings are sampled wall time in GALLEY’s mixer and effect callback.' : 'The timing clock is not available yet.';
       const message = this.paused ? 'Readings held. Resume to collect new samples.' : this.active && pending ? 'Collecting the next profiling window; previous readings are shown until it arrives.' : !this.active ? 'Profiling paused while this hatch is hidden or out of view.' : !diagnostics.active ? 'Start playback or monitoring to open audio. This panel does not start audio itself.' : unsupported ? 'This browser does not expose a usable audio timing clock. Context information remains available.' : contextState === 'suspended' ? 'The audio context is suspended; timings are held until audio resumes.' : (warming ? 'Collecting timing samples. ' : '') + precision;
@@ -140,17 +143,17 @@
       for (const owner of this.element.querySelectorAll('[data-cpu-owner]')) {
         const id = owner.dataset.cpuOwner, row = rows.get(id);
         text(owner.querySelector('[data-cpu-owner-percent]'), this.format(row, 'meanPercent', snapshot)); text(owner.querySelector('[data-cpu-owner-time]'), this.format(row, 'meanMs', snapshot));
-        const bar = owner.querySelector('[data-cpu-owner-bar]'); if (bar) bar.style.width = Math.min(100, Math.max(0, row?.meanPercent || 0)) + '%';
-        if (owner.open) for (const component of owner.querySelectorAll('[data-cpu-row]')) this.paintRow(component, rows.get(component.dataset.cpuRow), snapshot);
+        const bar = owner.querySelector('[data-cpu-owner-bar]'); if (bar) { const transform = 'scaleX(' + Math.min(1, Math.max(0, (row?.meanPercent || 0) / 100)) + ')'; if (bar.style.transform !== transform) bar.style.transform = transform; }
+        if (owner.open) for (const component of owner.querySelectorAll('[data-cpu-row]')) this.paintRow(component, rows.get(component.dataset.cpuRow), snapshot, ownerById);
       }
       if (this.element.querySelector('[data-cpu-stages-fold]').open) {
         const stageRows = (snapshot.rows || []).filter(row => row.kind === 'stage'), holder = this.element.querySelector('[data-cpu-stages]'), key = stageRows.map(row => row.id).join('|');
         if (holder.dataset.rows !== key) { holder.dataset.rows = key; holder.innerHTML = stageRows.map(row => this.component(row.id, row.label || row.id, { subtitle: row.id === 'engine' ? 'Inclusive engine processing' : 'Measured engine stage' })).join('') || '<p class="cpu-no-data">No stage timings yet.</p>'; }
-        for (const component of holder.querySelectorAll('[data-cpu-row]')) this.paintRow(component, rows.get(component.dataset.cpuRow), snapshot);
+        for (const component of holder.querySelectorAll('[data-cpu-row]')) this.paintRow(component, rows.get(component.dataset.cpuRow), snapshot, ownerById);
       }
-      const hot = (snapshot.rows || []).filter(row => row.kind === 'effect' && row.active !== false && row.samples >= (snapshot.clock?.coarse ? 64 : 16) && finite(row.meanMs) && row.meanMs > 0 && this.owners().find(owner => owner.id === row.ownerId)?.effects?.[row.slot]?.type === row.effectType).sort((a, b) => b.meanMs - a.meanMs).slice(0, 5), items = this.element.querySelectorAll('[data-cpu-hotspots] li');
-      items.forEach((item, index) => { const row = hot[index]; item.hidden = !row; if (!row) return; const owner = this.owners().find(owner => owner.id === row.ownerId), definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === row.effectType); text(item.querySelector('strong'), definition?.name || row.effectType || 'Insert'); text(item.querySelector('small'), (owner ? ownerName(owner, this.owners().indexOf(owner)) : row.ownerId) + ' · slot ' + (Number(row.slot) + 1) + (row.bypassed ? ' · bypassed' : '')); text(item.querySelector('output'), this.format(row, 'meanMs', snapshot)); });
-      const emptyHotspots = this.element.querySelector('[data-cpu-hotspots-empty]'), assignedInserts = this.owners().reduce((count, owner) => count + (owner.effects || []).filter(Boolean).length, 0); emptyHotspots.hidden = hot.length > 0; text(emptyHotspots, !assignedInserts ? 'No insert processors assigned.' : warming ? 'Collecting enough observations to compare inserts.' : snapshot.available && stats?.samples ? 'Insert timings are below the clock resolution. Longer sampling may reveal sustained differences.' : 'No insert timings yet.');
+      const hot = (snapshot.rows || []).filter(row => row.kind === 'effect' && row.active !== false && row.samples >= (snapshot.clock?.coarse ? 64 : 16) && finite(row.meanMs) && row.meanMs > 0 && ownerById.get(row.ownerId)?.effects?.[row.slot]?.type === row.effectType).sort((a, b) => b.meanMs - a.meanMs).slice(0, 5), items = this.element.querySelectorAll('[data-cpu-hotspots] li');
+      items.forEach((item, index) => { const row = hot[index]; item.hidden = !row; if (!row) return; const owner = ownerById.get(row.ownerId), definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === row.effectType); text(item.querySelector('strong'), definition?.name || row.effectType || 'Insert'); text(item.querySelector('small'), (owner ? ownerName(owner, owners.indexOf(owner)) : row.ownerId) + ' · slot ' + (Number(row.slot) + 1) + (row.bypassed ? ' · bypassed' : '')); text(item.querySelector('output'), this.format(row, 'meanMs', snapshot)); });
+      const emptyHotspots = this.element.querySelector('[data-cpu-hotspots-empty]'), assignedInserts = owners.reduce((count, owner) => count + (owner.effects || []).filter(Boolean).length, 0); emptyHotspots.hidden = hot.length > 0; text(emptyHotspots, !assignedInserts ? 'No insert processors assigned.' : warming ? 'Collecting enough observations to compare inserts.' : snapshot.available && stats?.samples ? 'Insert timings are below the clock resolution. Longer sampling may reveal sustained differences.' : 'No insert timings yet.');
       const sequence = [reportRevision, snapshot.sampledBlocks].join(':');
       if (this.active && !pending && reportRevision !== null && sequence !== this.sequence && finite(stats?.meanPercent) && stats?.samples > 0) { this.sequence = sequence; const now = clockNow(); this.history.push({ time: now, value: stats.meanPercent }); this.history = this.history.filter(point => point.time >= now - 30000).slice(-120); }
       this.paintHistory();

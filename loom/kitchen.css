@@ -191,7 +191,7 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 .mic-monitor-button[aria-pressed=true] { background: #dba254; border-color: #ffc67a; color: #172124; }
 .mic-input-meter { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; font-family: var(--kk-mono, monospace); font-size: 8px; color: #b8c4ae; }
 .mic-input-meter>div { grid-column: 1 / -1; grid-row: 2; height: 12px; border: 1px solid #53615b; background: #101819; overflow: hidden; }
-.mic-input-meter i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #aeb985, #f6ba65 75%, #ef7350); transition: width 45ms linear; }
+.mic-input-meter i { display: block; width:100%;transform:scaleX(0);transform-origin:left center; height: 100%; background: linear-gradient(90deg, #aeb985, #f6ba65 75%, #ef7350); transition: transform 45ms linear; }
 .mic-input-meter output { color: #e9ce9a; }
 .mic-input-meter.clipping output { color: #ff8969; }
 .mic-setup-controls { display: grid; grid-template-columns: minmax(130px, .9fr) minmax(160px, 1fr) minmax(105px, .6fr) minmax(210px, 1.3fr); gap: 20px; align-items: start; padding-top: 20px; }
@@ -386,7 +386,7 @@ footer { font-family: var(--kk-mono, monospace); color: #a4ada0; letter-spacing:
 .utility-confidence { margin-top: 17px; }
 .utility-confidence>span { display: flex; justify-content: space-between; gap: 5px; font: 7px var(--kk-mono, monospace); color: #b9c7b0; }
 .utility-confidence>div { margin-top: 7px; height: 4px; background: #15251d; }
-.utility-confidence i { display: block; height: 100%; width: 0; background: #adc990; transition: width .12s; }
+.utility-confidence i { display: block; height: 100%; width:100%;transform:scaleX(0);transform-origin:left center; background: #adc990; transition: transform .12s; }
 #utilityTunerStatus { margin: 12px 0 0; min-height: 32px; color: #d4d5bc; font: 10px/1.6 var(--kk-mono, monospace); }
 .in-tune #utilityTunerStatus { color: #d8f4bf; }
 .utility-guide-buttons { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 18px; border-top: 1px solid #9dad8166; padding-top: 14px; }

@@ -83,8 +83,10 @@
       const attack = 1 - Math.exp(-1 / (osr * .0006)), release = 1 - Math.exp(-1 / (osr * .045)), gateCoefficient = 1 - Math.exp(-1 / (osr * .0008));
       const transitionFrames = Math.max(1, Math.round(sr * .005)), correction = new Float64Array(2);
       let transitionPending = false, transitionRemaining = 0, dormant = false, inputPeak = 0, outputPeak = 0;
+      let preCoefficient = 0, biasCurve = null, biasInput = NaN, biasZero = 0;
       function updateTargets() {
         circuit = circuits[p.shape] || null;
+        preCoefficient = circuit?.pre > 0 ? lowpass(circuit.pre, osr) : 0;
         targets[0] = db(p.drive); targets[1] = p.bias; targets[2] = lowpass(Math.min(p.tone, circuit?.cap || 20000), osr); targets[3] = db(p.output); targets[4] = p.mix; targets[5] = p.bypass ? 0 : 1;
       }
       function clearNew() {
@@ -102,7 +104,7 @@
       function bridge(left, right) { for (let frame = 0; frame < left.length; frame++) finishFrame(left, right, frame); }
       function runNew(left, right) {
         inputPeak = outputPeak = 0;
-        const preCoefficient = circuit.pre > 0 ? lowpass(circuit.pre, osr) : 0, nonlinear = circuit.curve;
+        const nonlinear = circuit.curve;
         for (let frame = 0; frame < left.length; frame++) {
           for (let key = 0; key < values.length; key++) { values[key] += (targets[key] - values[key]) * (key === 5 ? activitySmooth : smooth); if (Math.abs(targets[key] - values[key]) < 1e-10) values[key] = targets[key]; }
           const blend = values[4] * values[5];
@@ -116,7 +118,9 @@
           // A settled dry/bypassed insert resumes from the present source,
           // rather than resurrecting an interpolator sample from its past.
           if (dormant) { clearNew(); previous[0] = safe(left[frame]); previous[1] = safe(right[frame]); dormant = false; }
-          const bias = values[1], zero = circuit.dynamic ? 0 : nonlinear(bias, 0, 1);
+          const bias = values[1];
+          if (!circuit.dynamic && (biasCurve !== nonlinear || biasInput !== bias)) { biasCurve = nonlinear; biasInput = bias; biasZero = nonlinear(bias, 0, 1); }
+          const zero = circuit.dynamic ? 0 : biasZero;
           for (let channel = 0; channel < 2; channel++) {
             const data = channel ? right : left, dry = safe(data[frame]), before = previous[channel]; let wet = 0;
             inputPeak = Math.max(inputPeak, Math.abs(dry));

@@ -1,0 +1,389 @@
+{
+  "baseline": "47d210f95124c54ba5aa4a87f4370986963f32c6",
+  "frames": 8192,
+  "sampleRate": 48000,
+  "results": [
+    {
+      "kind": "effect",
+      "type": "prism",
+      "automated": false,
+      "peak": 0.18338437378406525,
+      "rms": 0.09157951559275886,
+      "sha256": "c6994df5fd2971b4e09568bd0a052d333a3081da9611a005b560e7faed5500b0"
+    },
+    {
+      "kind": "effect",
+      "type": "prism",
+      "automated": true,
+      "peak": 0.1822246015071869,
+      "rms": 0.09129715234806995,
+      "sha256": "9d5fe513467c223941f07ae5f1f10a811c641b127a7432a71b18ae4aee51e9ec"
+    },
+    {
+      "kind": "effect",
+      "type": "velvet",
+      "automated": false,
+      "peak": 0.17910915613174438,
+      "rms": 0.0595686787503368,
+      "sha256": "fbece9271657ad9d80556ca9d511eff01dfb4cb3a7ee4a25d31002f826aa089a"
+    },
+    {
+      "kind": "effect",
+      "type": "velvet",
+      "automated": true,
+      "peak": 0.17913828790187836,
+      "rms": 0.06328787803597309,
+      "sha256": "cbee40d1884e8175f83c435b6a9b48ec48e70dcfbd3c7d3d09b73c38724cb6c8"
+    },
+    {
+      "kind": "effect",
+      "type": "cinder",
+      "automated": false,
+      "peak": 0.18319112062454224,
+      "rms": 0.09269422436526994,
+      "sha256": "90ab7ff28cb433632fb298b0cab651aab8c66d607945fa45d73010174c876876"
+    },
+    {
+      "kind": "effect",
+      "type": "cinder",
+      "automated": true,
+      "peak": 0.21082454919815063,
+      "rms": 0.10030457383286277,
+      "sha256": "54ef46bfc62e80c483f6c8bf34b0489a11e21155cbde204a441483255e682599"
+    },
+    {
+      "kind": "effect",
+      "type": "undertow",
+      "automated": false,
+      "peak": 0.19243323802947998,
+      "rms": 0.0914705336383482,
+      "sha256": "3350a48380546a4f687b02b194632d334db9f1c0fb25685db4271b338ae98551"
+    },
+    {
+      "kind": "effect",
+      "type": "undertow",
+      "automated": true,
+      "peak": 0.17801626026630402,
+      "rms": 0.07972651589923953,
+      "sha256": "8d7aeffc03250940e86cac7a0a96adb8843891680526c12740f91c00512e54b9"
+    },
+    {
+      "kind": "effect",
+      "type": "parallax",
+      "automated": false,
+      "peak": 0.11388800293207169,
+      "rms": 0.05772200702123772,
+      "sha256": "3c19d7ac7bd69e77e83fcc73578c26fb7121312adf6c7a1df6696622806386e3"
+    },
+    {
+      "kind": "effect",
+      "type": "parallax",
+      "automated": true,
+      "peak": 0.11388800293207169,
+      "rms": 0.05772200702123772,
+      "sha256": "3c19d7ac7bd69e77e83fcc73578c26fb7121312adf6c7a1df6696622806386e3"
+    },
+    {
+      "kind": "effect",
+      "type": "vestige",
+      "automated": false,
+      "peak": 0.12955135107040405,
+      "rms": 0.06414306367535072,
+      "sha256": "6c209091dbf1e0d1613806a05223f1bf6328100426e188449140c117dadc9937"
+    },
+    {
+      "kind": "effect",
+      "type": "vestige",
+      "automated": true,
+      "peak": 0.13112878799438477,
+      "rms": 0.06423640737321559,
+      "sha256": "154142e42584192d364b5fc14f9c627575088a62bf40b2974a8ff1829a400e0c"
+    },
+    {
+      "kind": "effect",
+      "type": "halo",
+      "automated": false,
+      "peak": 0.15435056388378143,
+      "rms": 0.05945080861739434,
+      "sha256": "964dc1177fbf17145aefc9afc850d02b7f9cc8cd8987f6d45c23d966e3af4869"
+    },
+    {
+      "kind": "effect",
+      "type": "halo",
+      "automated": true,
+      "peak": 0.1510106325149536,
+      "rms": 0.05961697218220909,
+      "sha256": "63033b03ab9b133816dc713eff4c54229dc0ded2ac77db73b22071963ad378bc"
+    },
+    {
+      "kind": "effect",
+      "type": "tremor",
+      "automated": false,
+      "peak": 0.16780909895896912,
+      "rms": 0.0662880530901804,
+      "sha256": "847182af9cca1fb599ce121b0f04ca2cd03e9021471cfd04d55a245f1fe9c347"
+    },
+    {
+      "kind": "effect",
+      "type": "tremor",
+      "automated": true,
+      "peak": 0.1701175719499588,
+      "rms": 0.06835857361470103,
+      "sha256": "3131f741d49b498cdb3322cabff4ef0da1d19c92a06f4292af05262c6df89c78"
+    },
+    {
+      "kind": "effect",
+      "type": "broiler",
+      "automated": false,
+      "peak": 0.09826404601335526,
+      "rms": 0.03596645112438222,
+      "sha256": "e9c40cab4942522b461a91042d4311f781bcf61cbc708a1d9b50d8ea43999b79"
+    },
+    {
+      "kind": "effect",
+      "type": "broiler",
+      "automated": true,
+      "peak": 0.09885071963071823,
+      "rms": 0.03522573678968951,
+      "sha256": "74e9f360871a913fefcddf91bd5d177b404d1068863a5acee7f2018ca2c12d35"
+    },
+    {
+      "kind": "effect",
+      "type": "glaze",
+      "automated": false,
+      "peak": 0.10752329975366592,
+      "rms": 0.05471710504641991,
+      "sha256": "687d59612fe2738b11c994b16a4bb37bfd20c2c7d2c310b3d6f4b279b92c53d1"
+    },
+    {
+      "kind": "effect",
+      "type": "glaze",
+      "automated": true,
+      "peak": 0.09831730276346207,
+      "rms": 0.03677639584421723,
+      "sha256": "06ddfa07a8954570e08af95c74db773f7d227be6f87b040f36cdd9f0f700f1b8"
+    },
+    {
+      "kind": "effect",
+      "type": "scales",
+      "automated": false,
+      "peak": 0.11518076062202454,
+      "rms": 0.05837721647842147,
+      "sha256": "533948a8ba4842ff2e63d673d8069e703cd2c6db5f1843fc27decb2f3ba211ea"
+    },
+    {
+      "kind": "effect",
+      "type": "scales",
+      "automated": true,
+      "peak": 0.48696672916412354,
+      "rms": 0.13415932344915685,
+      "sha256": "b70f3d95bdec165c4bd9e7c0ad49306838ea651d33bbc99d74815bb6f656367e"
+    },
+    {
+      "kind": "effect",
+      "type": "strainer",
+      "automated": false,
+      "peak": 0.34299296140670776,
+      "rms": 0.16143196975639434,
+      "sha256": "8787bab1fd2ae2e7eb21cda34eb4ca1c1d57d664d1b7a29acb6d86f6db25de63"
+    },
+    {
+      "kind": "effect",
+      "type": "strainer",
+      "automated": true,
+      "peak": 0.27520355582237244,
+      "rms": 0.08347172987297072,
+      "sha256": "55c72e7a58634f6d12311545c0c9395337cab7f951e58819ed08e3e5f4f9d020"
+    },
+    {
+      "kind": "effect",
+      "type": "swirl",
+      "automated": false,
+      "peak": 0.14790818095207214,
+      "rms": 0.060413764127697334,
+      "sha256": "065e606c801877617d927e9ce25442e690be3a87322c8413815ec7ca48d1fc65"
+    },
+    {
+      "kind": "effect",
+      "type": "swirl",
+      "automated": true,
+      "peak": 0.14790818095207214,
+      "rms": 0.060413764127697334,
+      "sha256": "065e606c801877617d927e9ce25442e690be3a87322c8413815ec7ca48d1fc65"
+    },
+    {
+      "kind": "effect",
+      "type": "crumble",
+      "automated": false,
+      "peak": 0.13898050785064697,
+      "rms": 0.07017704880781117,
+      "sha256": "f365245cc577dbf7eccabca2df688f6a35920e4c6c1381c6bef3430532623448"
+    },
+    {
+      "kind": "effect",
+      "type": "crumble",
+      "automated": true,
+      "peak": 0.1388608068227768,
+      "rms": 0.0701797772618527,
+      "sha256": "9c8b8ecaf6eb2263362bb7fdb377781459c611d7ca9da966390aa779a8e933bd"
+    },
+    {
+      "kind": "effect",
+      "type": "saute",
+      "automated": false,
+      "peak": 0.09469787776470184,
+      "rms": 0.04894272726294974,
+      "sha256": "419c187376b172866f343cc81c08d50b6a223ed913b7dbd3d7fe1ac5e3ab5a9b"
+    },
+    {
+      "kind": "effect",
+      "type": "saute",
+      "automated": true,
+      "peak": 0.09611372649669647,
+      "rms": 0.04774775520399263,
+      "sha256": "45c07e4c0365bef505d8d935e34c1d39ccbb16f1936cfd4e0e5542eb490ab915"
+    },
+    {
+      "kind": "effect",
+      "type": "preserve",
+      "automated": false,
+      "peak": 0.10768535733222961,
+      "rms": 0.05426260574963375,
+      "sha256": "b7b0d1e1faeaccda1b8ad44db3e677d52a058df71e71f61fb270941fb331a27d"
+    },
+    {
+      "kind": "effect",
+      "type": "preserve",
+      "automated": true,
+      "peak": 0.10670865327119827,
+      "rms": 0.05348045526626246,
+      "sha256": "469b5e20e4dca7169bbe096cbc8f1cba001b643a355e547684274ccba8a63488"
+    },
+    {
+      "kind": "core",
+      "fixture": "plain",
+      "block": 128,
+      "transport": true,
+      "peak": 0.01621556282043457,
+      "rms": 0.007629500393727107,
+      "sha256": "eb90909b9b2e6c48f32f48e2ef9c95a48fe8107e421f9cb3129edbe994ce75b9"
+    },
+    {
+      "kind": "core",
+      "fixture": "plain",
+      "block": 137,
+      "transport": false,
+      "peak": 0.01621556282043457,
+      "rms": 0.007629500393727107,
+      "sha256": "eb90909b9b2e6c48f32f48e2ef9c95a48fe8107e421f9cb3129edbe994ce75b9"
+    },
+    {
+      "kind": "core",
+      "fixture": "dense",
+      "block": 128,
+      "transport": true,
+      "peak": 0.022695651277899742,
+      "rms": 0.008478171177229887,
+      "sha256": "d0eeff0f3c2049b5afb027f2d64b31ce6e6b6996f6b089ac630739826c59725e"
+    },
+    {
+      "kind": "core",
+      "fixture": "dense",
+      "block": 137,
+      "transport": false,
+      "peak": 0.022695651277899742,
+      "rms": 0.008478171177229887,
+      "sha256": "d0eeff0f3c2049b5afb027f2d64b31ce6e6b6996f6b089ac630739826c59725e"
+    },
+    {
+      "kind": "core",
+      "fixture": "automation",
+      "block": 128,
+      "transport": true,
+      "peak": 0.017534708604216576,
+      "rms": 0.0061709956438567755,
+      "sha256": "d1c6a0b95c129ad0ee6879e10094ac73a4ebabb46cfabaa275cc8f2cccafd9b6"
+    },
+    {
+      "kind": "core",
+      "fixture": "automation",
+      "block": 137,
+      "transport": false,
+      "peak": 0.017534708604216576,
+      "rms": 0.0061709956438567755,
+      "sha256": "d1c6a0b95c129ad0ee6879e10094ac73a4ebabb46cfabaa275cc8f2cccafd9b6"
+    },
+    {
+      "kind": "core",
+      "fixture": "arrangement",
+      "block": 128,
+      "transport": true,
+      "peak": 0.009700157679617405,
+      "rms": 0.004093758134189547,
+      "sha256": "ec04358432df0844ba7fc7639ff675846bd1a9a3919b5ab99d9a0bc332d9fc5e"
+    },
+    {
+      "kind": "core",
+      "fixture": "arrangement",
+      "block": 137,
+      "transport": false,
+      "peak": 0.009700157679617405,
+      "rms": 0.004093758134189547,
+      "sha256": "ec04358432df0844ba7fc7639ff675846bd1a9a3919b5ab99d9a0bc332d9fc5e"
+    },
+    {
+      "kind": "core",
+      "fixture": "compressors",
+      "block": 128,
+      "transport": true,
+      "peak": 0.019566787406802177,
+      "rms": 0.009205215689277403,
+      "sha256": "837b21c39f25dd2d48a7cf12c95595b1c8f60dcb231fb9338e6a5db935a60e22"
+    },
+    {
+      "kind": "core",
+      "fixture": "compressors",
+      "block": 137,
+      "transport": false,
+      "peak": 0.019566787406802177,
+      "rms": 0.009205215689277403,
+      "sha256": "837b21c39f25dd2d48a7cf12c95595b1c8f60dcb231fb9338e6a5db935a60e22"
+    },
+    {
+      "kind": "core",
+      "fixture": "multiband",
+      "block": 128,
+      "transport": true,
+      "peak": 0.019623754546046257,
+      "rms": 0.009211913667143539,
+      "sha256": "31107f23a37c2ccd7f0be7ec25b8cea13e9c9bacc018ec93a3488f075613d0be"
+    },
+    {
+      "kind": "core",
+      "fixture": "multiband",
+      "block": 137,
+      "transport": false,
+      "peak": 0.019623754546046257,
+      "rms": 0.009211913667143539,
+      "sha256": "31107f23a37c2ccd7f0be7ec25b8cea13e9c9bacc018ec93a3488f075613d0be"
+    },
+    {
+      "kind": "core",
+      "fixture": "silent",
+      "block": 128,
+      "transport": true,
+      "peak": 0,
+      "rms": 0,
+      "sha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31"
+    },
+    {
+      "kind": "core",
+      "fixture": "silent",
+      "block": 137,
+      "transport": false,
+      "peak": 0,
+      "rms": 0,
+      "sha256": "de2f256064a0af797747c2b97505dc0b9f3df0de4f489eac731c23ae9ca9cc31"
+    }
+  ]
+}

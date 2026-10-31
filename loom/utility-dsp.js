@@ -163,8 +163,14 @@
           if (job === 3) {
             const count = Math.min(span - at, Math.floor(budget / 12));
             if (!count) break;
+            const w0=fractionalWeights[0],w1=fractionalWeights[1],w2=fractionalWeights[2],w3=fractionalWeights[3],w4=fractionalWeights[4],w5=fractionalWeights[5],w6=fractionalWeights[6],w7=fractionalWeights[7],w8=fractionalWeights[8],w9=fractionalWeights[9],w10=fractionalWeights[10],w11=fractionalWeights[11];
             for (let end = at + count; at < end; at++) {
-              let delayed = 0; for (let j = 0; j < 12; j++) delayed += fractionalWeights[j] * scratch[at + 6 + fractionalIndex + j];
+              // Preserve every accumulation in order and the same analysis
+              // budget, while removing the inner tap loop and repeated loads.
+              const base = at + 6 + fractionalIndex; let delayed = 0;
+              delayed += w0*scratch[base]; delayed += w1*scratch[base+1]; delayed += w2*scratch[base+2]; delayed += w3*scratch[base+3];
+              delayed += w4*scratch[base+4]; delayed += w5*scratch[base+5]; delayed += w6*scratch[base+6]; delayed += w7*scratch[base+7];
+              delayed += w8*scratch[base+8]; delayed += w9*scratch[base+9]; delayed += w10*scratch[base+10]; delayed += w11*scratch[base+11];
               const d = scratch[at + 6] - delayed; difference += d * d;
             }
             budget -= count * 12;

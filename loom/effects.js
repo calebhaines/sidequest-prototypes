@@ -87,7 +87,8 @@
 
     function read(buffer, write, delay) {
       let position = write - delay;
-      position %= buffer.length;
+      // Every caller bounds its nonnegative delay below this ring's length.
+      // A single wrap is identical to remainder here, including fractional reads.
       if (position < 0) position += buffer.length;
       const index = Math.floor(position), fraction = position - index;
       const next = index + 1 === buffer.length ? 0 : index + 1;
@@ -269,6 +270,8 @@
         const cabExtraState = new Float64Array(4);
         const wsToneState = Array.from({length: 4}, () => new Float64Array(4));
         let workshop = false, workshopReady = false, wsKey = '', wsTone = [], wsStackAfter = 1, wsInsertion = 1, wsTubeGain = 1, wsTubeHeadroom = 1, wsPowerKind = '6l6', wsPowerKnee = 1, wsPowerGain = 1, wsPowerNorm = 1, wsStageCoefficient = 1, wsCathodeCoefficient = 1, wsGridAttack = 1, wsGridRelease = 1;
+        let wsMoving = false, wsControlsDirty = true, wsVoltage = 1, wsFeedbackAmount = 0, wsSolidStock = false, wsScaledPower = 1, wsTightRC = 1, wsCathodeAmount = 0, wsRail = 1, wsBright = 0, wsBrightDenominator = 1, wsGridModel = 0, wsGridCoupling = 1, wsPowerBias = 0, wsPowerBaseline = 0, wsDepth = 0, wsPresence = 0;
+        const wsStageBias = new Float64Array(4);
         const pedalInstances = [null, null, null, null], pedalKeys = ['', '', '', ''], prePedals = [], postPedals = [];
         let pedalCount = 0, rigTail = .35, quietLimit = sr, pedalsDirty = true;
         const transitionFrames = Math.max(1, Math.round(sr*.005)), transitionPending = new Int32Array(2), transitionRemaining = new Int32Array(2), transitionOffset = new Float64Array(2), lastWet = new Float64Array(2);
@@ -301,8 +304,9 @@
         }
         function updateWorkshop() {
           workshop = !!workshopModels[p.model] || p.preampTube !== 'stock' || p.powerTube !== 'stock' || p.toneStack !== 'stock' || wsKeys.some((key, i) => p[key] !== wsDefaults[i]);
-          for (let i = 0; i < wsKeys.length; i++) wsTarget[i] = p[wsKeys[i]];
-          if (!workshopReady) { wsSmooth.set(wsTarget); workshopReady = true; }
+          wsMoving = false; wsControlsDirty = true;
+          for (let i = 0; i < wsKeys.length; i++) { wsTarget[i] = p[wsKeys[i]]; if (wsSmooth[i] !== wsTarget[i]) wsMoving = true; }
+          if (!workshopReady) { wsSmooth.set(wsTarget); workshopReady = true; wsMoving = false; }
           const next = [p.model, p.preampTube, p.powerTube, p.toneStack, p.bass, p.mid, p.midFreq, p.treble, p.drive, p.master].join('|');
           if (next === wsKey) return;
           wsKey = next;
@@ -413,18 +417,34 @@
         };
         const wsBrightCoefficient = lowpass(1600, sr*4), wsFeedbackLowCoefficient = lowpass(90, sr*4), wsFeedbackHighCoefficient = lowpass(3200, sr*4), wsFluxCoefficient = lowpass(48, sr*4), wsCoreCoefficient = lowpass(11500, sr*4);
         const wsCore = new Float64Array(2), wsBrightLP = new Float64Array(2);
-        function workshopPower(value, bias, headroom) {
+        function updateWorkshopControls() {
+          // Both channels and all four oversampling phases use these same
+          // exact host-sample controls. Keep the original arithmetic grouping.
+          wsControlsDirty = false; wsVoltage = wsSmooth[1];
+          wsFeedbackAmount = clamp((model.feedback === undefined ? .35 : model.feedback)+(wsSmooth[2]-.5)*.9, 0, .95);
+          wsSolidStock = model.shape === 'solid' && p.preampTube === 'stock'; wsScaledPower = .28+wsSmooth[8]*.72;
+          const couplingRC = couplingCoefficient+(1-couplingCoefficient)*(wsSmooth[5]-.5)*1.5;
+          wsTightRC = 1-(1-couplingRC)*(.45+wsSmooth[3]*1.1);
+          wsCathodeAmount = (model.cathode === undefined ? .25 : model.cathode)*(.25+wsSmooth[6]*1.5);
+          wsRail = Math.max(.25, wsVoltage*wsTubeHeadroom); wsBright = wsSmooth[4]+(model.bright || 0)*(1-wsSmooth[4]); wsBrightDenominator = 1+p.drive*.065;
+          wsGridModel = model.grid === undefined ? .25 : model.grid; wsGridCoupling = .35+wsSmooth[5];
+          for (let stage = 0; stage < 4; stage++) wsStageBias[stage] = model.bias*(stage & 1 ? -.7 : 1)+wsSmooth[0]*.5;
+          wsPowerBias = model.powerBias+wsSmooth[0]*.17;
+          wsPowerBaseline = wsPowerKind === 'el34' ? saturate(wsPowerBias*1.12)/1.12 : wsPowerKind === 'el84' ? saturate(wsPowerBias+.08) : saturate(wsPowerBias);
+          wsDepth = p.depth*.72; wsPresence = p.presence*.75;
+        }
+        function workshopPower(value, headroom) {
           const scaled = value / headroom;
           if (wsPowerKind === 'solid') {
             // High-headroom transistor output stays linear until its rail knee.
             const magnitude = Math.abs(scaled), clipped = magnitude <= 1 ? magnitude : 1 + .18*saturate((magnitude-1)/.18);
             return (scaled < 0 ? -clipped : clipped)*headroom;
           }
-          if (wsPowerKind === 'el34') return (saturate((scaled+bias)*1.12)/1.12 - saturate(bias*1.12)/1.12)*headroom;
-          if (wsPowerKind === 'el84') return (saturate(scaled+bias+.08)-saturate(bias+.08))*headroom;
+          if (wsPowerKind === 'el34') return (saturate((scaled+wsPowerBias)*1.12)/1.12 - wsPowerBaseline)*headroom;
+          if (wsPowerKind === 'el84') return (saturate(scaled+wsPowerBias+.08)-wsPowerBaseline)*headroom;
           if (wsPowerKind === 'kt88') return scaled / Math.sqrt(Math.sqrt(1 + scaled*scaled*scaled*scaled))*headroom;
           // Beam tetrode / small beam-valve soft knees retain bias asymmetry.
-          return (saturate(scaled+bias)-saturate(bias))*headroom;
+          return (saturate(scaled+wsPowerBias)-wsPowerBaseline)*headroom;
         }
         function workshopSample(dry, channel) {
           const offset = channel*4, stateOffset = channel*2, trimmed = ampBound(dry*trim), peak = Math.abs(trimmed);
@@ -432,44 +452,39 @@
           gateGain[channel] += gateSmooth*(clamp(gateEnvelope[channel]/gateThreshold-.5, 0, 1)-gateGain[channel]);
           const envelopeCoefficient = peak > sagEnvelope[channel] ? sagAttack : sagRelease;
           sagEnvelope[channel] = envelopeCoefficient*sagEnvelope[channel]+(1-envelopeCoefficient)*peak;
-          const voltage = wsSmooth[1], feedback = clamp((model.feedback === undefined ? .35 : model.feedback)+(wsSmooth[2]-.5)*.9, 0, .95);
-          const solidStock = model.shape === 'solid' && p.preampTube === 'stock';
-          const supply = voltage / (1 + p.sag*sagEnvelope[channel]*sagDepth*(solidStock ? .1 : 1));
-          const scaledPower = .28 + wsSmooth[8]*.72, headroom = Math.max(.12, wsPowerKnee*supply*scaledPower);
-          const couplingRC = couplingCoefficient + (1-couplingCoefficient)*(wsSmooth[5]-.5)*1.5;
-          const tightRC = 1 - (1-couplingRC)*(.45+wsSmooth[3]*1.1);
-          const cathodeAmount = (model.cathode === undefined ? .25 : model.cathode)*(.25+wsSmooth[6]*1.5);
+          const feedback = wsFeedbackAmount;
+          const supply = wsVoltage / (1 + p.sag*sagEnvelope[channel]*sagDepth*(wsSolidStock ? .1 : 1));
+          const headroom = Math.max(.12, wsPowerKnee*supply*wsScaledPower);
           let head = ampFilter(trimmed, coefficients[0], states[0], stateOffset);
           if (preToneCoefficient) head = ampFilter(head, preToneCoefficient, preToneState, stateOffset);
           const prior = previous[channel];
           for (let sub = 1; sub <= 4; sub++) {
             let value = (prior+(head-prior)*sub*.25)*preGain*wsTubeGain;
             wsBrightLP[channel] += wsBrightCoefficient*(value-wsBrightLP[channel]);
-            const bright = wsSmooth[4]+(model.bright || 0)*(1-wsSmooth[4]);
-            value += (value-wsBrightLP[channel])*bright*1.5/(1+p.drive*.065);
+            value += (value-wsBrightLP[channel])*wsBright*1.5/wsBrightDenominator;
             for (let stage = 0; stage < model.stages; stage++) {
               const index = offset+stage;
               let stageValue = value*(stage ? model.next : 1);
               wsCathode[index] += wsCathodeCoefficient*(stageValue-wsCathode[index]);
-              stageValue -= wsCathode[index]*cathodeAmount;
+              stageValue -= wsCathode[index]*wsCathodeAmount;
               const over = Math.max(0, stageValue-.65), gridCoefficient = over > wsGrid[index] ? wsGridAttack : wsGridRelease;
               wsGrid[index] += gridCoefficient*(over-wsGrid[index]);
-              const bias = model.bias*(stage & 1 ? -.7 : 1)+wsSmooth[0]*.5-wsGrid[index]*(model.grid === undefined ? .25 : model.grid)*(.35+wsSmooth[5]);
-              const rail = Math.max(.25, voltage*wsTubeHeadroom);
-              if (solidStock) value = ampBound(stageValue);
+              const bias = wsStageBias[stage]-wsGrid[index]*wsGridModel*wsGridCoupling;
+              const rail = wsRail;
+              if (wsSolidStock) value = ampBound(stageValue);
               else if (model.coldStage === stage) {
                 const x = stageValue/rail+bias;
                 value = (x >= 0 ? saturate(x) : saturate(x*1.7)/1.7) - (bias >= 0 ? saturate(bias) : saturate(bias*1.7)/1.7); value *= rail;
               } else value = (saturate(stageValue/rail+bias)-saturate(bias))*rail;
               interLP[index] += wsStageCoefficient*(value-interLP[index]); value = interLP[index];
-              couplingOut[index] = value-couplingPrevious[index]+tightRC*couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
+              couplingOut[index] = value-couplingPrevious[index]+wsTightRC*couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
               if (stage === wsStackAfter) { for (let band = 0; band < wsTone.length; band++) value = ampFilter(value, wsTone[band], wsToneState[band], stateOffset); value *= wsInsertion; }
             }
             value *= preNormalization;
             wsFeedbackLow[channel] += wsFeedbackLowCoefficient*(wsFeedback[channel]-wsFeedbackLow[channel]);
             wsFeedbackHigh[channel] += wsFeedbackHighCoefficient*(wsFeedback[channel]-wsFeedbackHigh[channel]);
-            const returnSignal = wsFeedback[channel] - p.depth*.72*wsFeedbackLow[channel] - p.presence*.75*(wsFeedback[channel]-wsFeedbackHigh[channel]);
-            value = workshopPower(value*wsPowerGain*(1+feedback*.45)-returnSignal*feedback*.7, model.powerBias+wsSmooth[0]*.17, headroom)*wsPowerNorm;
+            const returnSignal = wsFeedback[channel] - wsDepth*wsFeedbackLow[channel] - wsPresence*(wsFeedback[channel]-wsFeedbackHigh[channel]);
+            value = workshopPower(value*wsPowerGain*(1+feedback*.45)-returnSignal*feedback*.7, headroom)*wsPowerNorm;
             wsFeedback[channel] = value;
             wsFlux[channel] += wsFluxCoefficient*(value-wsFlux[channel]);
             const transformer = wsSmooth[7];
@@ -601,7 +616,14 @@
             const dryL = input(left[i]), dryR = input(right[i]), mono = (dryL + dryR) * 0.5;
             quietFrames = dryL === 0 && dryR === 0 ? quietFrames + 1 : 0;
             if (quietFrames >= quietLimit) { if (quietFrames !== Infinity) reset(); left[i] = dryL; right[i] = dryR; continue; }
-            if (workshop) for (let control = 0; control < wsSmooth.length; control++) wsSmooth[control] += wsSmoothing*(wsTarget[control]-wsSmooth[control]);
+            if (workshop) {
+              if (wsMoving) {
+                let moving = false;
+                for (let control = 0; control < wsSmooth.length; control++) { const before = wsSmooth[control]; wsSmooth[control] += wsSmoothing*(wsTarget[control]-wsSmooth[control]); if (wsSmooth[control] !== before) moving = true; }
+                wsMoving = moving; wsControlsDirty = true;
+              }
+              if (wsControlsDirty) updateWorkshopControls();
+            }
             const wetL = channelSample(monoInput ? mono : dryL, 0), wetR = monoInput ? wetL : channelSample(dryR, 1);
             left[i] = output(dryL, wetL, mix); right[i] = output(dryR, wetR, mix);
             inputEnergy += dryL*dryL+dryR*dryR; outputEnergy += left[i]*left[i]+right[i]*right[i];
@@ -611,7 +633,7 @@
           meter.inputDb = 10*Math.log10(Math.max(1e-12, inputEnergy/Math.max(1,left.length*2))); meter.outputDb = 10*Math.log10(Math.max(1e-12, outputEnergy/Math.max(1,left.length*2))); meter.gateGain = p.ampEnable === 'off' ? 1 : Math.max(gateGain[0], gateGain[1]);
           meter.reductionDb = p.ampEnable === 'off' ? 0 : 20 * Math.log10(1 + p.sag * Math.max(sagEnvelope[0], monoInput ? sagEnvelope[0] : sagEnvelope[1]) * sagDepth);
         };
-        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, preToneState, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); [cabExtraState, wsCathode, wsGrid, wsFeedback, wsFeedbackLow, wsFeedbackHigh, wsFlux, wsTransformerDC, wsCore, wsBrightLP, transitionPending, transitionRemaining, transitionOffset, lastWet].forEach(clear); wsToneState.forEach(clear); wsSmooth.set(wsTarget); pedalInstances.forEach(pedal => {if (pedal) pedal.reset();}); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; meter.inputDb = meter.outputDb = -120; meter.gateGain = 0; };
+        reset = () => { states.forEach(clear); [previous, interLP, couplingPrevious, couplingOut, antiAlias, preToneState, decimated, sagEnvelope, gateEnvelope, gateGain, dcPrevious, dcOut].forEach(clear); reflections.forEach(clear); [cabExtraState, wsCathode, wsGrid, wsFeedback, wsFeedbackLow, wsFeedbackHigh, wsFlux, wsTransformerDC, wsCore, wsBrightLP, transitionPending, transitionRemaining, transitionOffset, lastWet].forEach(clear); wsToneState.forEach(clear); wsSmooth.set(wsTarget); wsMoving = false; wsControlsDirty = true; pedalInstances.forEach(pedal => {if (pedal) pedal.reset();}); reflectionPosition = 0; wasMono = false; quietFrames = Infinity; meter.reductionDb = 0; meter.inputDb = meter.outputDb = -120; meter.gateGain = 0; };
         tail = () => rigTail;
       } else if (type === 'undertow') {
         const length = Math.ceil(sr * 0.08) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);

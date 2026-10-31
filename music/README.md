@@ -198,3 +198,8 @@ measurements.
 GALLEY 1.25 adds sweepable low/high mid EQ frequencies, a fifth insert on each
 instrument track, three-band BUTTER compression and twelve new CHAR distortion
 types (fifteen total). Existing projects retain their original settings.
+
+GALLEY 1.25.1 reduces redundant mixer/effect calculations, avoids unnecessary
+interface repainting, and requests percussion voice meters only while observed.
+DSP performance changes retain the released sound, control clocks, oversampling
+and effect histories; see [the performance guide](../loom/PERFORMANCE-GUIDE.md).

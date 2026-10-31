@@ -54,6 +54,7 @@
       const colourPrevious = new Float64Array(2), colourDCPrevious = new Float64Array(2), colourDC = new Float64Array(2), core = new Float64Array(2), colourState = new Float64Array(8), colourActive = new Int32Array(2);
       const colourFilters = [lowpassCoefficients(sr*.39, .5411961, osr), lowpassCoefficients(sr*.39, 1.306563, osr)];
       const smoothKeys = ['threshold','ratio','knee','input','makeup','mix','colour','link'], smooth = new Float64Array(8), target = new Float64Array(8), slew = 1-Math.exp(-1/(sr*.004));
+      let cachedInputDb = NaN, cachedMakeupDb = NaN, cachedInputGain = 1, cachedMakeupGain = 1;
       const declickFrames = Math.max(1, Math.round(sr*.004)), lastWet = new Float64Array(2), offset = new Float64Array(2), declickLeft = new Int32Array(2), declickPending = new Int32Array(2);
       const thrustLowCoefficient = 1-Math.exp(-TAU*300/sr), thrustHighCoefficient = 1-Math.exp(-TAU*2200/sr), coreCoefficient = 1-Math.exp(-TAU*45/osr), dcCoefficient = Math.exp(-TAU*9/sr);
       let initialized = false, topology = '', cleanInput = 1, cleanInputTarget = 1, cleanLink = 1, cleanLinkTarget = 1, model = 0, baseAttack = .012, baseRelease = .18, detectorAttack = 1, detectorRelease = 1, rmsCoefficient = 1, attackStep = 1, releaseStep = 1, slowAttack = 1, slowRelease = 1, memoryAttack = 1, memoryRelease = 1;
@@ -260,7 +261,8 @@
         let inEnergy=0,outEnergy=0,lastGRL=0,lastGRR=0;
         for(let i=0;i<left.length;i++){
           for(let key=0;key<smooth.length;key++){smooth[key]+=slew*(target[key]-smooth[key]);if(Math.abs(target[key]-smooth[key])<1e-10)smooth[key]=target[key];}
-          const dryL=bound(left[i]),dryR=bound(right[i]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],makeupGain=db(smooth[4]);
+          if(smooth[4]!==cachedMakeupDb){cachedMakeupDb=smooth[4];cachedMakeupGain=db(smooth[4]);}
+          const dryL=bound(left[i]),dryR=bound(right[i]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],makeupGain=cachedMakeupGain;
           cleanInput+=slew*(cleanInputTarget-cleanInput);cleanLink+=slew*(cleanLinkTarget-cleanLink);
           const drivenL=bound(dryL*cleanInput),drivenR=bound(dryR*cleanInput);
           hpL=drivenL-previousL+hp*hpL;hpR=drivenR-previousR+hp*hpR;previousL=drivenL;previousR=drivenR;
@@ -281,7 +283,9 @@
         let inEnergy=0,outEnergy=0,detectorLevel=-120;
         for(let i=0;i<left.length;i++){
           for(let k=0;k<smooth.length;k++){smooth[k]+=slew*(target[k]-smooth[k]);if(Math.abs(target[k]-smooth[k])<1e-10)smooth[k]=target[k];}
-          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=db(smooth[3]),makeupGain=db(smooth[4]),threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
+          if(smooth[3]!==cachedInputDb){cachedInputDb=smooth[3];cachedInputGain=db(smooth[3]);}
+          if(smooth[4]!==cachedMakeupDb){cachedMakeupDb=smooth[4];cachedMakeupGain=db(smooth[4]);}
+          const dryL=bound(left[i]),dryR=bound(right[i]),inputGain=cachedInputGain,makeupGain=cachedMakeupGain,threshold=smooth[0],ratio=smooth[1],knee=smooth[2],mix=p.mix===0?0:smooth[5],colour=smooth[6],link=smooth[7];
           const drivenL=bound(dryL*inputGain),drivenR=bound(dryR*inputGain);
           for(let channel=0;channel<2;channel++){
             const x=channel?drivenR:drivenL;

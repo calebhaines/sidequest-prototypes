@@ -2,6 +2,12 @@
 
 Kitchen’s central production station.
 
+**Performance maintenance (1.25.1)** removes redundant mixer and effect work,
+reduces display invalidation and meters percussion voice effects only on demand.
+Audio, modulation clocks, oversampling and effect histories retain their released
+behavior. See [the performance guide](PERFORMANCE-GUIDE.md) for measured results
+and exact audio validation.
+
 **The mixing desk** now has five insert slots on each instrument track,
 sweep knobs for both mid EQ bands, a three-band option in BUTTER and fifteen
 CHAR distortion circuits. The master and shared returns each have four slots.
@@ -120,7 +126,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.25.0.
+SERVICE is version 1.0.0; GALLEY is version 1.25.1.
 
 ## Making a piece
 
@@ -802,7 +808,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.25.0.
+font license notices. Version 1.25.1.
 
 ## Compatibility
 

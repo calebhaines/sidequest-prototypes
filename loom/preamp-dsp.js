@@ -116,7 +116,7 @@
         const y = 2 * (1 + feedback) * magnitude / (a + Math.sqrt(a * a - 4 * feedback * (1 + feedback) * magnitude));
         return x < 0 ? -y : y;
       }
-      let firstBaseline = 0, firstNormalization = 1, secondBaseline = 0, secondNormalization = 1;
+      let firstBaseline = 0, firstNormalization = 1, secondBaseline = 0, secondNormalization = 1, baselineBias = NaN, baselineLoop = NaN;
       function loopNormalization(y, feedback) {
         const slope = (1 - Math.abs(y)) * (1 - Math.abs(y));
         return (1 + feedback * slope) / ((1 + feedback) * slope);
@@ -172,9 +172,12 @@
             scrubIn = 1024;
           }
           for (let j = 0; j < values.length; j++) values[j] += smooth * (targets[j] - values[j]);
-          if (p.model !== 'clean') {
+          if (p.model !== 'clean' && (values[6] !== baselineBias || values[7] !== baselineLoop)) {
+            // Bias/feedback may settle between edits; reuse their exact
+            // transforms without changing the per-sample control smoothing.
+            baselineBias = values[6]; baselineLoop = values[7];
             firstBaseline = closedLoop(values[6], values[7]); firstNormalization = loopNormalization(firstBaseline, values[7]);
-            if (profile[11]) { secondBaseline = closedLoop(-values[6] * .55, values[7] * .7); secondNormalization = loopNormalization(secondBaseline, values[7] * .7); }
+            secondBaseline = closedLoop(-values[6] * .55, values[7] * .7); secondNormalization = loopNormalization(secondBaseline, values[7] * .7);
           }
           for (let channel = 0; channel < 2; channel++) {
             const data = channel ? right : left, dry = bound(data[i]);
