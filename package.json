@@ -112,7 +112,10 @@
     "check:lofi": "node loom/lofi-checks.cjs && node loom/lofi-project-checks.cjs",
     "check:lofi-browser": "node loom/lofi-browser-checks.cjs",
     "check:pedal-synth": "node loom/pedal-synth-checks.cjs && node loom/pedal-synth-project-checks.cjs",
-    "check:pedal-synth-browser": "node loom/pedal-synth-browser-checks.cjs"
+    "check:pedal-synth-browser": "node loom/pedal-synth-browser-checks.cjs",
+    "check:recordings": "node loom/project-capacity-checks.cjs && node loom/recordings-checks.cjs",
+    "check:recordings-browser": "node loom/recordings-browser-checks.cjs",
+    "check:project-capacity-large": "node loom/project-capacity-checks.cjs --large"
   },
   "devDependencies": {
     "vite": "^7.1.0"

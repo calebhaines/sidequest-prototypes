@@ -21,7 +21,8 @@
   let recoveryWarned=false,recoveryUnavailable=false;
   let assetMap = {}, waveformFrame = 0, fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
-  let automationEditor, pianoRoll, noteWorkflow, serviceController, cpuInspector, freezeController;
+  let automationEditor, pianoRoll, noteWorkflow, serviceController, cpuInspector, freezeController, recordingsBrowser;
+  let recordingsCommitting = false, projectReadBusy = 0;
   let trackFreezeStatus = { busy: false };
   // Share one read-only meter snapshot during a paint. Scheduling and recording
   // continue to read the audio engine directly outside this presentation pass.
@@ -1349,7 +1350,40 @@
   function splitClip() { const location=clipLocation();if(!location||!allowTrackEdit(location.track))return;const c=location.clip,point=snap(engine.getMeters().beat||0);if(point<=c.start+.015625||point>=c.start+c.length-.015625){status('Move the playhead inside the selected clip, then split.');return;}if(location.track.clips.length>=128){status('This track has reached its 128-clip limit.');return;}remember();const leftLength=point-c.start,rawOffset=(c.sourceOffset||0)+leftLength*(c.type==='notes'?1:60/state.tempo)*c.rate,offset=c.loop?rawOffset%Math.max(.000001,c.type==='notes'?c.pattern.lengthBeats:c.sourceEnd-c.sourceStart):(c.type==='notes'?Math.min(rawOffset,c.pattern.lengthBeats):rawOffset),right={...clone(c),id:S.uid('clip'),start:point,length:c.length-leftLength,sourceOffset:offset,fadeIn:0,name:c.name+' / II'};c.length=leftLength;c.fadeOut=0;location.track.clips.push(right);selectedClip=right.id;changed({arrangement:true,inspector:true});status('One sound, now in two agreeable pieces.'); }
   async function importAudio(file) { if(!file||!allowTrackEdit(track()))return;if(file.size>64*1024*1024){status('Choose an audio file smaller than 64 MB. A clip can hold up to two minutes.');return;}const generation=lifecycle,operation=++importOperation,target=track().id;status('Decoding audio locally…');try{const context=await engine.init(),bytes=await file.arrayBuffer();if(generation!==lifecycle||operation!==importOperation)return;const audio=await context.decodeAudioData(bytes);if(generation!==lifecycle||operation!==importOperation)return;const framesCount=Math.min(audio.length,Math.floor(audio.sampleRate*120)),left=new Float32Array(audio.getChannelData(0).subarray(0,framesCount)),right=new Float32Array(audio.getChannelData(Math.min(1,audio.numberOfChannels-1)).subarray(0,framesCount));const asset=S.encodeAsset({left,right,sampleRate:audio.sampleRate,name:file.name.replace(/\.[^.]+$/,'')||'Imported audio'}),t=state.tracks.find(t=>t.id===target);if(!allowTrackEdit(t))return;if(t.clips.length>=128)throw Error('This track has reached its 128-clip limit.');const used=state.assets.reduce((sum,a)=>sum+a.frames*a.channels*2,0);if(used+asset.frames*asset.channels*2>64*1024*1024)throw Error('This audio would exceed the project’s 64 MB audio budget.');const start=Math.min(state.lengthBars*4-.015625,Math.max(0,snap(engine.getMeters().beat||0))),duration=framesCount/audio.sampleRate;if(frozenTracks().length&&start+duration*state.tempo/60>state.lengthBars*4)throw Error('Unfreeze all tracks before importing audio that needs more arrangement bars.');remember();state.lengthBars=Math.max(state.lengthBars,Math.min(64,Math.ceil((start+duration*state.tempo/60)/4)));state.assets.push(asset);const c={id:S.uid('clip'),name:asset.name,assetId:asset.id,start,length:Math.min(duration*state.tempo/60,state.lengthBars*4-start),sourceStart:0,sourceEnd:duration,sourceOffset:0,rate:1,reverse:false,loop:false,gain:1,fadeIn:.01,fadeOut:.03};t.clips.push(c);rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=c.id;decodeAssets();changed({arrangement:true,mixer:true,rack:true,inspector:true});status(file.name+' is in the arrangement'+(audio.length>framesCount?' (first two minutes retained).':'.')+(duration*state.tempo/60>c.length+.001?' The full source is retained; the visible clip ends at the 64-bar session limit.':''));}catch(e){if(generation===lifecycle&&operation===importOperation)status('Audio import: '+e.message);} }
   async function saveProject() { const generation=lifecycle,operation=++projectOperation;status('Gathering the instruments’ settings…');$('saveButton').disabled=true;try{if(engine.getMeters().recording)await stop();await snapshotAll();if(generation!==lifecycle||operation!==projectOperation)return;download(new Blob([S.serializeProject(state)],{type:'application/json'}),filename('.loom.json'));status('Project saved, including audio and instrument settings.');}catch(e){if(generation===lifecycle)status(e.message);}finally{$('saveButton').disabled=false;} }
-  async function openProject(file) { if(!file)return;if(file.size>256*1024*1024){status('Choose a GALLEY project smaller than 256 MB.');return;}const generation=lifecycle,operation=++projectOperation;status('Reading the project…');try{const next=S.parseProject(await file.text());if(generation!==lifecycle||operation!==projectOperation)return;await replaceState(next,{message:'Project opened. All eight stations are ready.'});}catch(e){if(generation===lifecycle&&operation===projectOperation)status(e.message);} }
+  async function openProject(file) {
+    if (!file) return;
+    if (file.size > S.LIMITS.projectBytes) { status('Choose a GALLEY project no larger than 448 MiB.'); return; }
+    const generation = lifecycle, operation = ++projectOperation; projectReadBusy = operation;
+    status('Reading the project…');
+    try { const next = S.parseProject(await file.text()); if (generation !== lifecycle || operation !== projectOperation) return; await replaceState(next, { message: 'Project opened. All eight stations are ready.' }); }
+    catch (error) { if (generation === lifecycle && operation === projectOperation) status(error.message); }
+    finally { if (projectReadBusy === operation) projectReadBusy = 0; }
+  }
+  function recordingsBusy() {
+    return recordingsCommitting || !!projectReadBusy || $('saveButton').disabled || transportLocked() || transportPending || !!exportAbort || !!transferAbort || !!noteWorkflow?.controller || !!noteRenderer.operations.size || !!serviceController?.isOpen || !!serviceController?.busy || !!serviceController?.opening || ampPracticeBusy || audioDeviceBusy || !!drag || !!trackEqDrag || !!tapeDrag || !!seekDrag || !!pianoRoll?.drag || !!automationEditor?.drag || !!automationEditor?.lfoEditor?.drag;
+  }
+  async function deleteProjectRecordings(ids, review = {}) {
+    if (recordingsBusy()) throw Error('Finish the current recording, render or project operation before deleting audio.');
+    if (review.generation !== undefined && review.generation !== lifecycle) throw Error('The project changed. Review the recordings again before deleting.');
+    const generation = lifecycle; recordingsCommitting = true;
+    try {
+      // Preserve the latest instrument edits before resetting the audio graph.
+      await snapshotAll();
+      if (generation !== lifecycle) throw Error('The project changed. Review the recordings again before deleting.');
+      const result = window.LoomRecordings.remove(state, ids);
+      if (!result.plan.ids.length) return result.plan;
+      checkFreezeSampleRate(result.state); serviceController.reset();
+      noteWorkflow.sourceEdit = null;
+      await replaceState(result.state, { undo: true, message: 'Selected audio permanently deleted. Save the project to keep the smaller file.' });
+      history = []; future = []; renderHistory();
+      for (const timer of snapshotTimers.values()) clearTimeout(timer); snapshotTimers.clear();
+      notePlayback.releaseSources(); noteRenderer.clearCache(); serviceNoteRenderer.clearCache();
+      clearTimeout(autosaveTimer);
+      try { localStorage.removeItem('loom-session-v1'); } catch (_) { recoveryUnavailable = true; }
+      scheduleAutosave(); recordingsBrowser.refresh();
+      return result.plan;
+    } finally { recordingsCommitting = false; }
+  }
   function openEffects(slot, index = null) {
     if (index !== null) selectedTrack(index, { keepClip: true });
     selectedSlot = slot;
@@ -2106,6 +2140,12 @@
     restoreArrangement:beat=>{engine.seek(beat);renderTransport();status(serviceReturnStatus);},
     applyArrangement:next=>replaceState(next,{message:'SERVICE take placed in the arrangement. One Undo restores the previous session.'}),status
   });
+  recordingsBrowser = window.LoomRecordingsUI.create({
+    getState: () => state, getGeneration: () => lifecycle, getAsset: id => assetMap[id],
+    onDelete: deleteProjectRecordings, onStatus: status, isBusy: recordingsBusy
+  });
+  $('recordingsButton').addEventListener('click', () => recordingsBrowser.open());
+  window.addEventListener('pagehide', () => recordingsBrowser.destroy());
   const serviceOpenButton=document.createElement('button');serviceOpenButton.type='button';serviceOpenButton.dataset.serviceOpen='';serviceOpenButton.textContent='Open SERVICE · performance desk';serviceOpenButton.title='Separate performance view (Alt + P)';
   serviceOpenButton.style.cssText='width:100%;white-space:normal;margin:0 0 18px;padding:12px';
   $('helpDialog').querySelector('.dialog-top').insertAdjacentElement('afterend',serviceOpenButton);
@@ -2113,5 +2153,5 @@
   document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
   window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
   const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
-  window.LoomApp=Object.freeze({freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  window.LoomApp=Object.freeze({openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,7)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

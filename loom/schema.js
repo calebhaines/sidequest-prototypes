@@ -1,7 +1,7 @@
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.30.0';
+  const VERSION = '1.31.0';
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BUTTER_MULTIBAND_KEYS = new Set(['bandMode', 'crossoverLow', 'crossoverHigh', ...['low', 'mid', 'high'].flatMap(band => ['Threshold', 'Ratio', 'Attack', 'Release', 'Gain', 'Enabled', 'Solo'].map(key => band + key))]);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
@@ -25,7 +25,7 @@
   const defaultLFOs = () => lfoModule ? lfoModule.defaultLFOs() : Array.from({ length: 4 }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, rate: 1, division: 4, depth: 1, offset: 0, phase: 0, symmetry: .5, smoothing: 10, retrigger: 'transport', routes: [] }));
   const lfoTargets = state => lfoModule ? lfoModule.targets(state, automationTargets) : [];
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb'];
-  const LIMITS = Object.freeze({ tracks: 8, returns: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, freezePcmBytes: 192 * 1024 * 1024, freezeAssets: 2048, freezeChunkSeconds: 10, freezeSampleRate: 192000, projectBytes: 256 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ tracks: 8, returns: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, freezePcmBytes: 192 * 1024 * 1024, freezeAssets: 2048, freezeChunkSeconds: 10, freezeSampleRate: 192000, projectBytes: 448 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine'];
   // Display branding is independent of legacy IDs, project formats and storage.
   const INSTRUMENT_NAMES = Object.freeze({ grain: 'SIZZLE', form: 'HOTPLATE', tine: 'CLATTER', mire: 'REDUCE', spool: 'ROTISSERIE', haze: 'STEAM', bower: 'SKEWER', ravel: 'DICER', fable: 'STOCK', roux: 'ROUX', batter: 'BATTER', proof: 'LEAVEN', marinade: 'MARINADE', picnic: 'PICNIC', morsel: 'MORSEL', heirloom: 'HEIRLOOM', brine: 'BRINE' });
@@ -35,6 +35,27 @@
   const bool = (v, d = false) => typeof v === 'boolean' ? v : d;
   const text = (v, d = '', max = 100) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) || d : d;
   const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  // Blob/file sizes use UTF-8 bytes, not JavaScript's UTF-16 string length.
+  // Most project data is ASCII base64: count it without allocating an encoded
+  // copy of the entire project. Invalid surrogate halves become U+FFFD, as
+  // they do in TextEncoder and a downloaded JSON Blob.
+  function projectByteLength(value) {
+    if (typeof value !== 'string') throw new TypeError('Project size needs a string.');
+    const first = value.search(/[\u0080-\uffff]/);
+    if (first < 0) return value.length;
+    let bytes = value.length;
+    for (let i = first; i < value.length; i++) {
+      const code = value.charCodeAt(i);
+      if (code < 0x80) continue;
+      if (code < 0x800) { bytes++; continue; }
+      if (code >= 0xd800 && code <= 0xdbff && i + 1 < value.length) {
+        const next = value.charCodeAt(i + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) { bytes += 2; i++; continue; }
+      }
+      bytes += 2;
+    }
+    return bytes;
+  }
   const immutableFreezeAssets = new WeakSet(), checkedFreezeAssets = new WeakMap(), sourceAssetHashes = new WeakMap(), structureHashes = new WeakMap();
   // PCM strings are immutable. Structural copies share their storage during Undo.
   function copy(v) {
@@ -388,7 +409,7 @@
     validateAutomation(bus.automation, bus, totalBeats, label, true);
   }
   function parseProject(json) {
-    if (typeof json !== 'string' || json.length > LIMITS.projectBytes) throw Error('Choose a GALLEY project smaller than 256 MB.');
+    if (typeof json !== 'string' || json.length > LIMITS.projectBytes || projectByteLength(json) > LIMITS.projectBytes) throw Error('Choose a GALLEY project no larger than 448 MiB.');
     let p; try { p = JSON.parse(json); } catch { throw Error('This file is not valid JSON.'); }
     if (!plain(p) || p.format !== 'loom-project' || p.formatVersion !== 1 || !plain(p.state)) throw Error('Choose a GALLEY project (.loom.json).');
     const s = p.state;
@@ -476,8 +497,11 @@
     return s;
   }
   function serializeProject(state) {
-    const json = JSON.stringify({ format: 'loom-project', formatVersion: 1, appVersion: VERSION, state: normalize(pruneAssets(state)) });
-    if (json.length > LIMITS.projectBytes) throw Error('The project exceeds the 256 MB file limit.');
+    const portable = { format: 'loom-project', formatVersion: 1, appVersion: VERSION, state: normalize(pruneAssets(state)) };
+    let json;
+    try { json = JSON.stringify(portable); }
+    catch (error) { if (error instanceof RangeError) throw Error('The project exceeds the 448 MiB file limit.'); throw error; }
+    if (json.length > LIMITS.projectBytes || projectByteLength(json) > LIMITS.projectBytes) throw Error('The project exceeds the 448 MiB file limit.');
     return json;
   }
   function encodeAsset({ left, right, sampleRate, name = 'Recorded part', id = uid('audio') }) {
@@ -534,5 +558,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, COLORS, LIMITS, projectByteLength, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

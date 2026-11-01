@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Project recordings (1.31.0)** adds a searchable audio browser beside Save/Open, source previews and WAV downloads, clip-use details, and permanent deletion with a review of affected clips and frozen tracks. Project files now support 448 MiB with consistent UTF-8 size checks. See [the recordings guide](RECORDINGS-GUIDE.md).
+
 **FERMENT (1.30.0)** turns guitar or bass audio into a customizable synth pedal:
 two bandlimited oscillators and a sub, three nonlinear filter circuits, input
 following or ADSR envelopes, PWM, vibrato and synced modulation. Input-range and
@@ -156,7 +158,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.30.0.
+SERVICE is version 1.0.0; GALLEY is version 1.31.0.
 
 ## Making a piece
 
@@ -840,7 +842,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.30.0.
+font license notices. Version 1.31.0.
 
 ## Compatibility
 

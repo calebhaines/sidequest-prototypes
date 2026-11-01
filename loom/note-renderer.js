@@ -335,10 +335,11 @@
       result.clip = { ...geometry, assetId: result.asset.id, origin: result.origin };
       this._active(options.signal); return result;
     }
+    clearCache() { this.cache.clear(); this.cacheBytes = 0; }
     async dispose() {
       if (this.disposed) return; this.disposed = true;
       await Promise.allSettled([...this.operations].map(session => this._close(session)));
-      this.cache.clear(); this.cacheBytes = 0;
+      this.clearCache();
     }
   }
   global.LoomNoteRenderer = LoomNoteRenderer;
