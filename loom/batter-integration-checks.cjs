@@ -86,7 +86,7 @@ async function nativeAndClock(page) {
   for (const id of [...legacy, 'batter', 'proof', 'marinade', 'picnic']) assert(inventory.manifest.includes(id), 'Native catalog retains ' + id);
   assert.deepEqual(inventory.lanes, voices); assert.deepEqual(inventory.caps.notes.voices.map(voice => voice.id), voices); assert(inventory.caps.renderPattern && inventory.caps.patternImport && inventory.caps.patternExport && inventory.caps.importAudio && inventory.caps.exportAudio);
   assert.notEqual(inventory.name, 'Standalone recovery must remain private', 'A hosted instance must not read standalone IndexedDB or local recovery.');
-  assert.equal(inventory.tracks.length, 8); assert(inventory.tracks.every(slots => slots === 5));
+  assert.equal(inventory.tracks.length, 10); assert(inventory.tracks.every(slots => slots === 5));
   await frame.locator('#auditionButton').click();
   let audible = 0; for (let i = 0; i < 12; i++) { audible = Math.max(audible, await page.evaluate(() => window.qaBatterRMS())); await wait(12); }
   assert(audible > .001, 'A real embedded drum audition reaches GALLEY’s actual output.');

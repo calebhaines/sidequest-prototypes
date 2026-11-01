@@ -49,8 +49,8 @@ async function run() {
     for (const preset of definition.presets) { assert(preset.name && preset.description.length > 20); assert.deepEqual(q.plain(F.normalize(preset.params)), q.plain(preset.params), preset.id); assert.deepEqual(Object.keys(preset.params).sort(), Object.keys(definition.defaults).sort(), preset.id + ' incomplete recipe'); registers.add(preset.params.register); modes.add(preset.params.mode); filters.add(preset.params.filterModel); }
     assert.deepEqual([...registers].sort(), ['bass', 'guitar', 'played']); assert.deepEqual([...modes].sort(), ['chord', 'track']); assert.deepEqual([...filters].sort(), ['ladder', 'ota', 'svf']);
   });
-  await check('Every numeric synth control round-trips in all eight tracks, both returns and master', () => {
-    for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) for (const mode of ['track', 'chord']) {
+  await check('Every numeric synth control round-trips in all ten tracks, both returns and master', () => {
+    for (let ownerIndex = 0; ownerIndex < 13; ownerIndex++) for (const mode of ['track', 'chord']) {
       const state = blank(release), owner = owners(state)[ownerIndex], params = { ...definition.defaults, mode, ...Object.fromEntries(ranges.map(param => [param.key, param.min + (param.max - param.min) * .37])) }; owner.effects = owner.effects.map(() => S.effect({ type: 'ferment', params }));
       owner.automation = ranges.map(param => ({ target: 'fx:2:' + param.key, effectType: 'ferment', enabled: true, interpolation: 'linear', points: [{ beat: 0, value: param.min }, { beat: 4, value: param.max }] }));
       const restored = S.parseProject(S.serializeProject(state)), actual = owners(restored)[ownerIndex]; assert.deepEqual(q.plain(actual.effects), q.plain(owner.effects)); assert.deepEqual(q.plain(actual.automation), q.plain(owner.automation));
@@ -65,7 +65,7 @@ async function run() {
   });
   await check('Track, return and master racks use the same saved pitch-synth processor', () => {
     const report = {};
-    for (const ownerIndex of [0, 8, 10]) { const input = fixture(release, { inputRange: 'guitar', mix: 1 }), state = input.state; state.tracks[0].effects[0] = null; owners(state)[ownerIndex].effects[0] = S.effect({ type: 'ferment', params: { ...definition.defaults, inputRange: 'guitar', mix: 1 } }); if (ownerIndex === 8) state.tracks[0].sends = [.6, 0]; const output = render(release, state, input.assets, input.rate, input.frames); q.finite(output.audio); assert(q.rms(output.audio[0], input.rate / 2) > .0001, 'No synth audio in owner ' + ownerIndex); const slots = ownerIndex === 0 ? output.core.slots[0] : ownerIndex === 8 ? output.core.returnSlots[0] : output.core.masterSlots; assert(slots[0]?.dsp); report[ownerIndex] = q.hash(output.audio); }
+    for (const ownerIndex of [0, 10, 12]) { const input = fixture(release, { inputRange: 'guitar', mix: 1 }), state = input.state; state.tracks[0].effects[0] = null; owners(state)[ownerIndex].effects[0] = S.effect({ type: 'ferment', params: { ...definition.defaults, inputRange: 'guitar', mix: 1 } }); if (ownerIndex === 8) state.tracks[0].sends = [.6, 0]; const output = render(release, state, input.assets, input.rate, input.frames); q.finite(output.audio); assert(q.rms(output.audio[0], input.rate / 2) > .0001, 'No synth audio in owner ' + ownerIndex); const slots = ownerIndex === 0 ? output.core.slots[0] : ownerIndex === 8 ? output.core.returnSlots[0] : output.core.masterSlots; assert(slots[0]?.dsp); report[ownerIndex] = q.hash(output.audio); }
     assert.equal(new Set(Object.values(report)).size, 3); evidence.ownerRenders = report;
   });
   await check('Drawn and cross-modulated LFO controls remain exact across irregular block boundaries', () => {

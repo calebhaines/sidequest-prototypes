@@ -78,7 +78,7 @@ function fixture(options = {}) {
       if (control.startDeferred) await control.startDeferred.promise;
       if (generation !== engineGeneration) return false;
       beat = packet.fromBeat || 0; engineActive = true;
-      this.emit({ type: 'scene', beat, scene: clone(packet.scene), sceneStarts: Array(8).fill(beat), padBeats: Array(8).fill(beat), phaseOrigins: Array(8).fill(0), tempo: state.tempo });
+      this.emit({ type: 'scene', beat, scene: clone(packet.scene), sceneStarts: Array(10).fill(beat), padBeats: Array(10).fill(beat), phaseOrigins: Array(10).fill(0), tempo: state.tempo });
       this.setServicePerformance(packet.performance); return true;
     },
     stopService() {
@@ -89,7 +89,7 @@ function fixture(options = {}) {
     queueServiceScene(scene, config) { const seq = queued.length + 1; queued.push({ scene: clone(scene), config: clone(config), seq }); return seq; },
     setServicePerformance(performance) {
       performances.push(clone(performance));
-      if (engineActive) this.emit({ type: 'performance', beat, performance: clone(performance), padBeats: Array(8).fill(beat), phaseOrigins: Array(8).fill(0), tempo: state.tempo });
+      if (engineActive) this.emit({ type: 'performance', beat, performance: clone(performance), padBeats: Array(10).fill(beat), phaseOrigins: Array(10).fill(0), tempo: state.tempo });
     },
     panic() { this.stopService(); }
   };
@@ -121,7 +121,7 @@ function fixture(options = {}) {
     state: () => state, replaceState: value => { state = S.copy(value); }, ui: () => ui, requests: () => midiRequests,
     engineActive: () => engineActive, engineAssets: () => engineAssets, suspendCount: () => suspendCount, stopCount: () => stopCount,
     advance(value) { beat = value; controller._tick(); },
-    flushScene(at = queued.length - 1) { const packet = queued[at]; engine.emit({ type: 'scene', seq: packet.seq, beat, scene: packet.scene, sceneStarts: Array(8).fill(beat), padBeats: Array(8).fill(beat), phaseOrigins: Array(8).fill(0), tempo: state.tempo }); },
+    flushScene(at = queued.length - 1) { const packet = queued[at]; engine.emit({ type: 'scene', seq: packet.seq, beat, scene: packet.scene, sceneStarts: Array(10).fill(beat), padBeats: Array(10).fill(beat), phaseOrigins: Array(10).fill(0), tempo: state.tempo }); },
     async open() { assert.equal(await controller.open(), true); },
     async capture() { await this.open(); await controller.perform('capture-toggle', { enabled: true }); await controller.perform('play'); this.advance(1); await controller.perform('macro-value', { macroId: 'macro-1', value: .8 }); this.advance(4); await controller.perform('scene-launch', { sceneId: controller.getSnapshot().service.scenes[1].id }); this.flushScene(); this.advance(8); await controller.perform('stop'); }
   };
@@ -134,10 +134,10 @@ async function check(name, run) {
 }
 
 (async () => {
-  await check('Opening and closing preserves every arrangement field, eight tracks, four slots and the original needle', async () => {
+  await check('Opening and closing preserves every arrangement field, ten tracks, four slots and the original needle', async () => {
     const f = fixture(); const before = JSON.stringify(f.state()); await f.open();
-    const snapshot = f.controller.getSnapshot(); assert.equal(snapshot.tracks.length, 8); assert(snapshot.service.scenes.every(scene => scene.slots.length === 8));
-    assert.equal(f.state().tracks.length, 8); assert(f.state().tracks.every(track => track.effects.length === 5)); assert.equal(f.persist.length, 0); assert.equal(f.requests(), 0);
+    const snapshot = f.controller.getSnapshot(); assert.equal(snapshot.tracks.length, 10); assert(snapshot.service.scenes.every(scene => scene.slots.length === 10));
+    assert.equal(f.state().tracks.length, 10); assert(f.state().tracks.every(track => track.effects.length === 5)); assert.equal(f.persist.length, 0); assert.equal(f.requests(), 0);
     await f.controller.close(); assert.equal(JSON.stringify(f.state()), before); assert.deepEqual(f.restores, [7.25]); assert.equal(f.intervals.size, 0); assert.equal(f.ui().opens, 1); assert.equal(f.ui().closes, 1);
   });
   await check('A blocked recording/operation never suspends Arrange, mounts the desk or requests MIDI', async () => {
@@ -190,7 +190,7 @@ async function check(name, run) {
   });
   await check('SERVICE packets preserve source sound controls while placing independent clip copies at beat zero', async () => {
     const f = fixture(); await f.open(); await f.controller.perform('play'); assert.equal(f.starts.length, 1);
-    const packet = f.starts[0]; assert.equal(packet.scene.clips.length, 8); assert.equal(packet.scene.holds.length, 8); assert.equal(packet.performance.drops.length, 8);
+    const packet = f.starts[0]; assert.equal(packet.scene.clips.length, 10); assert.equal(packet.scene.holds.length, 10); assert.equal(packet.performance.drops.length, 10);
     packet.scene.clips.forEach((clip, index) => { assert.equal(clip.start, 0); for (const field of ['assetId', 'sourceStart', 'sourceEnd', 'sourceOffset', 'rate', 'reverse', 'loop', 'gain', 'fadeIn', 'fadeOut']) assert.equal(clip[field], f.initial.tracks[index].clips[0][field]); });
     for (const override of packet.performance.overrides) if (override.target === 'level') assert.equal(override.value, .8); else if (override.target === 'pan') assert.equal(override.value, 0); else if (override.target === 'fx:0:drive') assert.equal(override.value, 8);
     assert.deepEqual(withoutService(f.state()), f.initial); assert.equal(f.persist.length, 0); await f.controller.close(); assert.equal(f.engineAssets(), f.assets);
@@ -219,13 +219,13 @@ async function check(name, run) {
     assert.equal(f.controller.getSnapshot().service.macros[0].value, 1); assert(f.performances.at(-1).overrides.filter(item => item.target === 'level').every(item => item.value <= 1.5));
     await f.controller.perform('pad', { kind: 'stutter', rate: .5, active: true, source: 'pointer-one' }); await f.controller.perform('pad', { kind: 'stutter', rate: .125, active: true, source: 'pointer-two' }); assert.equal(f.performances.at(-1).stutterBeats, .125);
     await f.controller.perform('pad', { kind: 'stutter', rate: .125, active: false, source: 'pointer-two' }); assert.equal(f.performances.at(-1).stutterBeats, .5);
-    await f.controller.perform('pad', { kind: 'drop', active: true, trackIds: ['track-2'], source: 'pointer-drop' }); assert.deepEqual(f.performances.at(-1).drops, [false, true, false, false, false, false, false, false]);
+    await f.controller.perform('pad', { kind: 'drop', active: true, trackIds: ['track-2'], source: 'pointer-drop' }); assert.deepEqual(f.performances.at(-1).drops, [false, true, false, false, false, false, false, false, false, false]);
     assert.deepEqual(withoutService(f.state()), f.initial); await f.controller.perform('stop'); assert.equal(f.controller.getSnapshot().padState.stutter, 0); assert(f.controller.getSnapshot().padState.drops.every(value => value === false));
   });
   await check('Drop targets can be chosen before pressing the pad, changed while held and released with all other pads', async () => {
     const f = fixture(); await f.open(); await f.controller.perform('play'); await f.controller.perform('pad-targets', { trackIds: ['track-3', 'track-7', 'unknown-track'] });
-    await f.controller.perform('pad', { kind: 'drop', active: true, source: 'test-drop' }); assert.deepEqual(f.performances.at(-1).drops, [false, false, true, false, false, false, true, false]);
-    await f.controller.perform('pad-targets', { trackIds: ['track-2'] }); assert.deepEqual(f.performances.at(-1).drops, [false, true, false, false, false, false, false, false]);
+    await f.controller.perform('pad', { kind: 'drop', active: true, source: 'test-drop' }); assert.deepEqual(f.performances.at(-1).drops, [false, false, true, false, false, false, true, false, false, false]);
+    await f.controller.perform('pad-targets', { trackIds: ['track-2'] }); assert.deepEqual(f.performances.at(-1).drops, [false, true, false, false, false, false, false, false, false, false]);
     await f.controller.perform('pad', { kind: 'fill', active: true }); await f.controller.perform('pad', { kind: 'stutter', active: true, rate: .5 }); await f.controller.perform('release-pads');
     assert(f.performances.at(-1).drops.every(value => value === false)); assert.equal(f.performances.at(-1).fill, false); assert.equal(f.performances.at(-1).stutterBeats, 0); assert.deepEqual(withoutService(f.state()), f.initial);
   });
@@ -246,9 +246,9 @@ async function check(name, run) {
     assert.equal(f.commits.length, 0); assert.deepEqual(withoutService(f.state()), f.initial); assert.equal(f.persist.at(-1).settings.remember, false); assert.equal(f.controller.getSnapshot().capture.canApply, true);
     const project = f.scope.LoomSchema.parseProject(f.scope.LoomSchema.serializeProject(f.state())); assert.deepEqual(clone(project.service.take), take);
   });
-  await check('Create arrangement is one explicit commit through the real compiler and preserves all eight tracks/four slots', async () => {
+  await check('Create arrangement is one explicit commit through the real compiler and preserves all ten tracks/four slots', async () => {
     const f = fixture(); await f.capture(); const before = clone(f.state()); await f.controller.perform('capture-apply'); assert.equal(f.commits.length, 1);
-    const applied = f.commits[0]; assert.equal(applied.tracks.length, 8); assert(applied.tracks.every(track => track.effects.length === 5)); assert.equal(applied.lengthBars, 2); assert(applied.tracks.every(track => track.clips.length > 0)); assert.equal(applied.service, undefined); assert.equal(f.controller.isOpen, false);
+    const applied = f.commits[0]; assert.equal(applied.tracks.length, 10); assert(applied.tracks.every(track => track.effects.length === 5)); assert.equal(applied.lengthBars, 2); assert(applied.tracks.every(track => track.clips.length > 0)); assert.equal(applied.service, undefined); assert.equal(f.controller.isOpen, false);
     assert.deepEqual(applied.tracks.map(track => track.effects), before.tracks.map(track => track.effects)); assert.deepEqual(applied.assets, before.assets); assert(applied.tracks.some(track => track.automation.some(lane => lane.target === 'level')));
   });
   await check('Concurrent Create arrangement clicks cannot commit the same take twice while close awaits the audio engine', async () => {

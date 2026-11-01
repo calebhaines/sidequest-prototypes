@@ -80,14 +80,14 @@ check('Practical recipes are complete snapshots, remain in bounds and cover ever
     assert(recipe.id && recipe.name && recipe.description, 'Recipes need useful names and descriptions.');
     assert.deepEqual(Object.keys(recipe.params).sort(), Object.keys(definition.defaults).sort(), recipe.id);
     assert.deepEqual(tape.normalize(recipe.params), recipe.params, recipe.id);
-    for (const ownerIndex of [0, 8, 9, 10]) {
+    for (const ownerIndex of [0, 10, 11, 12]) {
       const state = S.defaultState(); owners(state)[ownerIndex].effects[3] = insert(recipe.params);
       assert.deepEqual(owners(parse(state))[ownerIndex].effects[3], insert(recipe.params), recipe.id);
     }
   }
 });
-check('All owner-specific insert positions, controls and numeric automation round-trip on eight tracks, two returns and master', () => {
-  for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) for (const selected of machine.options) {
+check('All owner-specific insert positions, controls and numeric automation round-trip on ten tracks, two returns and master', () => {
+  for (let ownerIndex = 0; ownerIndex < 13; ownerIndex++) for (const selected of machine.options) {
     const state = S.defaultState(), owner = owners(state)[ownerIndex], params = unusual(selected.value);
     owner.effects = Array.from({ length: S.effectSlotCount(owner) }, () => insert(params));
     owner.automation = ranges.map((param, index) => lane(param, 2, index % 2 ? 'hold' : 'linear'));
@@ -95,18 +95,18 @@ check('All owner-specific insert positions, controls and numeric automation roun
     assert.deepEqual(restored.effects, owner.effects, owner.id + ' / ' + selected.value);
     assert.deepEqual(restored.automation, owner.automation, owner.id + ' / ' + selected.value);
     assert.deepEqual(state, snapshot, 'Loading does not mutate the supplied state.');
-    for (let other = 0; other < 11; other++) if (other !== ownerIndex) assert.deepEqual(owners(restoredState)[other], owners(snapshot)[other], owner.id + ' changed another owner.');
+    for (let other = 0; other < 13; other++) if (other !== ownerIndex) assert.deepEqual(owners(restoredState)[other], owners(snapshot)[other], owner.id + ' changed another owner.');
     for (const slot of restored.effects.keys()) for (const param of ranges) {
       const target = S.automationTargets(restored).find(item => item.target === 'fx:' + slot + ':' + param.key);
       assert(target && target.effectType === 'preserve', owner.id + ':' + slot + ':' + param.key);
       assert.equal(target.min, param.min); assert.equal(target.max, param.max); assert.equal(target.step, param.step);
     }
-    assert.equal(restoredState.tracks.length, 8); assert.equal(restoredState.returns.length, 2);
+    assert.equal(restoredState.tracks.length, 10); assert.equal(restoredState.returns.length, 2);
     assert(owners(restoredState).every(item => item.effects.length === S.effectSlotCount(item)));
   }
 });
 check('Missing fields, non-finite/wrong parameter types, unknown choices and malformed bypass reject atomically', () => {
-  for (const ownerIndex of [0, 7, 8, 9, 10]) {
+  for (const ownerIndex of [0, 7, 8, 9, 10, 11, 12]) {
     for (const key of Object.keys(definition.defaults)) {
       const state = S.defaultState(), owner = owners(state)[ownerIndex]; owner.effects[0] = insert(); delete owner.effects[0].params[key];
       const before = clone(state); assert.throws(() => parse(state), /invalid|settings|effect/i, owner.id + ' missing ' + key); assert.deepEqual(state, before);
@@ -123,7 +123,7 @@ check('Missing fields, non-finite/wrong parameter types, unknown choices and mal
 });
 check('Bus ranges and automation stay strict, while track loading retains its established bounded behavior', () => {
   for (const param of ranges) for (const value of [param.min - Math.max(1, param.step), param.max + Math.max(1, param.step)]) {
-    for (const ownerIndex of [8, 9, 10]) {
+    for (const ownerIndex of [10, 11, 12]) {
       const state = S.defaultState(); owners(state)[ownerIndex].effects[0] = insert({ [param.key]: value });
       assert.throws(() => parse(state), /invalid|settings|effect/i, param.key);
     }
@@ -131,7 +131,7 @@ check('Bus ranges and automation stay strict, while track loading retains its es
     assert.equal(parse(state).tracks[0].effects[0].params[param.key], Math.max(param.min, Math.min(param.max, value)));
   }
   const drive = ranges.find(param => param.key === 'drive') || ranges[0];
-  for (const ownerIndex of [0, 8, 9, 10]) for (const patch of [
+  for (const ownerIndex of [0, 10, 11, 12]) for (const patch of [
     { effectType: 'velvet' }, { target: 'fx:0:' + machine.key }, { target: 'fx:0:missing' },
     { points: [{ beat: 0, value: null }] }, { points: [{ beat: 0, value: drive.max + 1 }] },
     { points: [{ beat: -1, value: drive.default }] }

@@ -23,9 +23,9 @@ function fixture() {
   state.tracks[0].clips.push({ id: 'source-one', name: 'Original source', type: 'audio', assetId: asset.id, start: 8, length: 4, sourceStart: .125, sourceEnd: 1.875, sourceOffset: .2, rate: 1, reverse: false, loop: true, gain: .7, fadeIn: .04, fadeOut: .08 });
   return state;
 }
-function selection(...ids) { return Array.from({ length: 8 }, (_, index) => ids[index] ?? null); }
-function scene(beat = 0, clips = selection('source-one'), extra = {}) { return { kind: 'scene', beat, sceneId: 'scene-one', clips, sceneBeat: beat, padBeat: beat, phaseOrigins: Array(8).fill(0), ...extra }; }
-function performance(beat, extra = {}) { return { kind: 'performance', beat, drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [], ...extra }; }
+function selection(...ids) { return Array.from({ length: 10 }, (_, index) => ids[index] ?? null); }
+function scene(beat = 0, clips = selection('source-one'), extra = {}) { return { kind: 'scene', beat, sceneId: 'scene-one', clips, sceneBeat: beat, padBeat: beat, phaseOrigins: Array(10).fill(0), ...extra }; }
+function performance(beat, extra = {}) { return { kind: 'performance', beat, drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: [], ...extra }; }
 function take(lengthBeats, events = [scene()]) { return { lengthBeats, events }; }
 function render(state, beats, service) {
   const core = new Core(state, S.decodeAssets(state.assets), 8000, { linear: true });
@@ -35,10 +35,10 @@ function render(state, beats, service) {
   for (let at = 0; at < count; at += 128) core.processBlock(left.subarray(at, Math.min(count, at + 128)), right.subarray(at, Math.min(count, at + 128)));
   return { left, right };
 }
-check('Compilation is explicit and pure, preserving all eight tracks, four slots, assets and source controls', () => {
+check('Compilation is explicit and pure, preserving all ten tracks, four slots, assets and source controls', () => {
   const state = fixture(), before = JSON.stringify(state), compiled = C.compile({ state, take: take(12) });
   assert.equal(JSON.stringify(state), before); assert.notEqual(compiled, state);
-  assert.equal(compiled.tracks.length, 8); assert(compiled.tracks.every(track => track.effects.length === 5));
+  assert.equal(compiled.tracks.length, 10); assert(compiled.tracks.every(track => track.effects.length === 5));
   assert.equal(compiled.tracks[0].clips.length, 3); assert.equal(compiled.tracks[0].clips[0].start, 0);
   assert.deepEqual(clone(compiled.assets), clone(state.assets));
   for (const clip of compiled.tracks[0].clips) for (const key of ['assetId', 'sourceStart', 'sourceEnd', 'sourceOffset', 'rate', 'reverse', 'loop', 'gain', 'fadeIn', 'fadeOut']) assert.equal(clip[key], state.tracks[0].clips[0][key]);
@@ -58,7 +58,7 @@ check('Reverse, speed, source trims and offsets remain native controls', () => {
 check('Macro and drop snapshots produce hold automation, restore static baselines, and never split a source cycle', () => {
   const state = fixture(); state.tracks[0].automation = [{ target: 'pan', enabled: true, interpolation: 'linear', points: [{ beat: 0, value: -1 }, { beat: 8, value: 1 }] }];
   const fx = scope.LoomEffectsCatalog.find(effect => effect.id === 'cinder'); state.tracks[0].effects[0] = S.effect({ type: fx.id, params: fx.defaults });
-  const drop = Array(8).fill(false); drop[0] = true;
+  const drop = Array(10).fill(false); drop[0] = true;
   const events = [scene(), performance(1, { overrides: [{ trackId: 'track-1', target: 'level', value: 1.1 }, { trackId: 'track-1', target: 'fx:0:drive', value: 22, effectType: 'cinder' }, { trackId: 'track-1', target: 'fx:0:mix', value: .2, effectType: 'cinder' }] }), performance(2, { drops: drop, overrides: [{ trackId: 'track-1', target: 'level', value: 1.2 }] }), performance(3)];
   const out = C.compile({ state, take: take(8, events) }), lanes = new Map(out.tracks[0].automation.map(lane => [lane.target, lane]));
   assert.equal(out.tracks[0].clips.length, 2); assert.equal(lanes.has('pan'), false); assert.equal(lanes.get('level').interpolation, 'hold');
@@ -68,7 +68,7 @@ check('Macro and drop snapshots produce hold automation, restore static baseline
   assert.deepEqual(clone(out.tracks[0].effects), clone(state.tracks[0].effects));
 });
 check('Fill begins at the acknowledged phase and release returns to the running original scene phase', () => {
-  const state = fixture(), events = [scene(), performance(2, { fill: true, padBeat: 2, phaseOrigins: [2, 0, 0, 0, 0, 0, 0, 0] }), performance(4, { padBeat: 4, phaseOrigins: [2, 0, 0, 0, 0, 0, 0, 0] })];
+  const state = fixture(), events = [scene(), performance(2, { fill: true, padBeat: 2, phaseOrigins: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0] }), performance(4, { padBeat: 4, phaseOrigins: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0] })];
   const out = C.compile({ state, take: take(8, events) }), clips = out.tracks[0].clips;
   assert.equal(clips[0].start, 0); assert.equal(clips[0].length, 2);
   assert.equal(clips[1].start, 2); assert.equal(clips[1].length, 1); assert.equal(clips[1].rate, 2); assert(Math.abs(clips[1].sourceOffset - 1.2) < 1e-8);
@@ -77,19 +77,19 @@ check('Fill begins at the acknowledged phase and release returns to the running 
 });
 check('Fill respects the native eight-times speed limit while preserving its effective cycle length', () => {
   const state = fixture(); state.tracks[0].clips[0].rate = 6;
-  const out = C.compile({ state, take: take(6, [scene(), performance(0, { fill: true, padBeat: 0, phaseOrigins: Array(8).fill(0) })]) });
+  const out = C.compile({ state, take: take(6, [scene(), performance(0, { fill: true, padBeat: 0, phaseOrigins: Array(10).fill(0) })]) });
   assert.equal(out.tracks[0].clips.length, 2); assert.equal(out.tracks[0].clips[0].rate, 8); assert.equal(out.tracks[0].clips[0].length, 3);
 });
 check('A held track preserves its own scene clock and an uninterrupted clip while other tracks relaunch', () => {
   const state = fixture(); state.tracks[1].clips.push({ ...clone(state.tracks[0].clips[0]), id: 'second-source' });
-  const events = [scene(0, selection('source-one', 'second-source')), scene(3, selection('source-one', 'second-source'), { sceneStarts: [0, 3, 3, 3, 3, 3, 3, 3], padBeats: [0, 3, 3, 3, 3, 3, 3, 3] })];
+  const events = [scene(0, selection('source-one', 'second-source')), scene(3, selection('source-one', 'second-source'), { sceneStarts: [0, 3, 3, 3, 3, 3, 3, 3, 3, 3], padBeats: [0, 3, 3, 3, 3, 3, 3, 3, 3, 3] })];
   const out = C.compile({ state, take: take(8, events) });
   assert.deepEqual(Array.from(out.tracks[0].clips, clip => [clip.start, clip.length]), [[0, 4], [4, 4]]);
   assert.deepEqual(Array.from(out.tracks[1].clips, clip => [clip.start, clip.length]), [[0, 3], [3, 4], [7, 1]]);
   assert.equal(out.markers.length, 2);
 });
 check('Short stutters retain the original source, anchored offset and native seam controls', () => {
-  const state = fixture(), events = [scene(), performance(1.5, { stutterBeats: .25, padBeat: 1.5, phaseOrigins: [1.5, 0, 0, 0, 0, 0, 0, 0] }), performance(3.5, { padBeat: 3.5, phaseOrigins: [1.75, 0, 0, 0, 0, 0, 0, 0] })];
+  const state = fixture(), events = [scene(), performance(1.5, { stutterBeats: .25, padBeat: 1.5, phaseOrigins: [1.5, 0, 0, 0, 0, 0, 0, 0, 0, 0] }), performance(3.5, { padBeat: 3.5, phaseOrigins: [1.75, 0, 0, 0, 0, 0, 0, 0, 0, 0] })];
   const out = C.compile({ state, take: take(8, events) }), repeated = out.tracks[0].clips.filter(clip => clip.start >= 1.5 && clip.start < 3.5);
   assert.equal(repeated.length, 8); assert(out.assets.length === state.assets.length);
   for (const clip of repeated) { assert.equal(clip.length, .25); assert(Math.abs(clip.sourceOffset - .95) < 1e-8); assert.equal(clip.loop, true); assert.equal(clip.assetId, 'source-audio'); }
@@ -97,7 +97,7 @@ check('Short stutters retain the original source, anchored offset and native sea
 });
 check('Long stutters use one bounded dry cycle asset with native effects, rather than truncating hundreds of clips', () => {
   const state = fixture(), fx = scope.LoomEffectsCatalog.find(effect => effect.id === 'cinder'); state.tracks[0].effects[0] = S.effect({ type: fx.id, params: fx.defaults });
-  const before = JSON.stringify(state), events = [scene(), performance(0, { stutterBeats: .125, padBeat: 0, phaseOrigins: [1.5, 0, 0, 0, 0, 0, 0, 0] })], request = { state, take: take(64, events) };
+  const before = JSON.stringify(state), events = [scene(), performance(0, { stutterBeats: .125, padBeat: 0, phaseOrigins: [1.5, 0, 0, 0, 0, 0, 0, 0, 0, 0] })], request = { state, take: take(64, events) };
   const summary = C.preflight(request), out = C.compile(request), clip = out.tracks[0].clips[0], generated = out.assets.find(asset => asset.id === clip.assetId), audio = S.decodeAsset(generated);
   assert.equal(JSON.stringify(state), before); assert.equal(summary.generatedAssets, 1); assert.equal(out.tracks[0].clips.length, 1); assert.equal(clip.loop, true); assert.equal(clip.rate, 1); assert.equal(clip.length, 64); assert.equal(clip.sourceEnd, .0625); assert.equal(clip.gain, .7);
   assert(audio.left.some(value => Math.abs(value) > .01)); assert(audio.left.every(Number.isFinite)); assert.equal(audio.left[0], 0); assert.equal(audio.left[audio.left.length - 1], 0);
@@ -128,7 +128,7 @@ check('Normal Stop retains a tiny final cycle from a non-grid source period with
 check('A quantized scene launch beside a non-grid cycle boundary keeps both scenes and all tiny source fragments', () => {
   const state = fixture(); state.tracks[0].clips[0].length = 3.999;
   state.tracks[1].clips.push({ ...clone(state.tracks[0].clips[0]), id: 'held-source', length: 4 });
-  const events = [scene(0, selection('source-one', 'held-source')), scene(4, selection('source-one', 'held-source'), { sceneStarts: [4, 0, 4, 4, 4, 4, 4, 4], padBeats: [4, 0, 4, 4, 4, 4, 4, 4] })];
+  const events = [scene(0, selection('source-one', 'held-source')), scene(4, selection('source-one', 'held-source'), { sceneStarts: [4, 0, 4, 4, 4, 4, 4, 4, 4, 4], padBeats: [4, 0, 4, 4, 4, 4, 4, 4, 4, 4] })];
   const out = C.compile({ state, take: take(8, events) });
   assert.deepEqual(Array.from(out.tracks[0].clips, clip => [clip.start, clip.length, clip.sourceOffset]), [[0, 4, 0], [4, 4, 0]]);
   assert.equal(out.tracks[0].clips[0].assetId, out.tracks[0].clips[1].assetId, 'The same dry cycle should be reused.');

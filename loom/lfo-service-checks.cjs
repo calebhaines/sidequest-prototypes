@@ -15,7 +15,7 @@ for (const file of ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js
 }
 const S = LoomSchema, C = LoomServiceCapture, { Core } = createLoomEngineDSP(createLoomEffectsDSP, createLoomLFODSP);
 const rate = 8000, copy = value => JSON.parse(JSON.stringify(value));
-const blank = (overrides = [], dropped = false) => ({ drops: [dropped, ...Array(7).fill(false)], stutterBeats: 0, fill: false, overrides });
+const blank = (overrides = [], dropped = false) => ({ drops: [dropped, ...Array(9).fill(false)], stutterBeats: 0, fill: false, overrides });
 const route = (id, ownerId, target, amount, extra = {}) => ({ id, ownerId, target, amount, enabled: true, ...extra });
 let passed = 0;
 function check(name, run) { run(); passed++; console.log('PASS ' + name); }
@@ -41,7 +41,7 @@ function recorded(events) {
 function gateAt(points, beat) { let value = 1; for (const point of points || []) { if (point.beat > beat) break; value = point.value; } return value; }
 check('Captured Drop gates close LFO level and pre sends, retain post sends and compose existing gates without changing the source', () => {
   const state = fixture(); state.lfos[0].routes[0].gate = [{ beat: .25, value: 0 }, { beat: .75, value: 1 }, { beat: 3, value: 0 }];
-  const before = JSON.stringify(state), take = { lengthBeats: 2, events: [{ kind: 'scene', beat: 0, clips: ['lfo-source', ...Array(7).fill(null)] }, { kind: 'performance', beat: .5, ...blank([], true) }, { kind: 'performance', beat: 1, ...blank() }] };
+  const before = JSON.stringify(state), take = { lengthBeats: 2, events: [{ kind: 'scene', beat: 0, clips: ['lfo-source', ...Array(9).fill(null)] }, { kind: 'performance', beat: .5, ...blank([], true) }, { kind: 'performance', beat: 1, ...blank() }] };
   const compiled = C.compile({ state, take }), routes = compiled.lfos[0].routes;
   assert.deepEqual(routes.find(route => route.id === 'level').gate, [{ beat: 0, value: 1 }, { beat: .25, value: 0 }, { beat: 1, value: 1 }]);
   assert.deepEqual(routes.find(route => route.id === 'pre').gate, [{ beat: 0, value: 1 }, { beat: .5, value: 0 }, { beat: 1, value: 1 }]);

@@ -73,7 +73,7 @@ function lightChecks() {
   });
   check('ASCII limits are inclusive and a browser string-cap failure gives the project-size error', () => {
     const state = S.defaultState(), json = S.serializeProject(state), exact = loadSchema(json.length + 4).S;
-    assert.equal(exact.parseProject(json + '    ').tracks.length, 8);
+    assert.equal(exact.parseProject(json + '    ').tracks.length, 10);
     assert.throws(() => exact.parseProject(json + '     '), /448 MiB/);
     const { S: limited, scope } = loadSchema();
     vm.runInContext('JSON.stringify = () => { throw new RangeError("Invalid string length"); };', scope);

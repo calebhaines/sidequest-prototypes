@@ -54,7 +54,7 @@ check('Every classic model, its analog controls and automation survive strict pr
     const restored = LoomSchema.parseProject(LoomSchema.serializeProject(state));
     assert.deepEqual(restored.tracks[0].effects[0].params, params); assert.deepEqual(restored.tracks[0].automation, state.tracks[0].automation);
     for (const param of definition.params.filter(param => param.type === 'range')) assert(LoomSchema.automationTargets(restored.tracks[0]).some(target => target.target === 'fx:0:' + param.key && target.min === param.min && target.max === param.max), param.key);
-    assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
+    assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(track => track.effects.length === 5));
   }
   assert.deepEqual(dsp.normalize('velvet', {}), definition.defaults);
   assert.equal(LoomEffectsCatalog.length, 18);

@@ -63,7 +63,7 @@ check('BROILER preserves the original inserts, eight tracks and four slots while
   assert.deepEqual(LoomEffectsCatalog.slice(0, 8).map(effect => effect.id), ['prism', 'velvet', 'cinder', 'undertow', 'parallax', 'vestige', 'halo', 'tremor']);
   assert.equal(options('model').length, 22); assert.equal(options('cabinet').length, 11);
   assert(definition.presets.length >= 13);
-  const state = LoomSchema.defaultState(); assert.equal(state.tracks.length, 8); assert(state.tracks.every(track => track.effects.length === 5));
+  const state = LoomSchema.defaultState(); assert.equal(state.tracks.length, 10); assert(state.tracks.every(track => track.effects.length === 5));
 });
 
 check('Catalog, DSP defaults, preset values and project serialization agree', () => {

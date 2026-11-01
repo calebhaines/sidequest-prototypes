@@ -62,7 +62,7 @@ async function check(name, run) { await run(); assert.equal(frames.size, 0, name
       await received.workflow.importPattern({ pattern: part, options: { target: 'track-1', voiceMap: { melody: 'bass' } } });
       assert.equal(received.state().tracks[0].instrument.id, expected);
       assert.equal(received.state().tracks[0].clips[0].pattern.sourceApp, sourceApp);
-      assert.equal(received.state().tracks.length, 8); assert(received.state().tracks.every(track => track.effects.length === 5));
+      assert.equal(received.state().tracks.length, 10); assert(received.state().tracks.every(track => track.effects.length === 5));
     }
     const assigned = fixture({ id: 'roux', name: 'ROUX' });
     await assigned.workflow.prepareTarget({ target: 'track-1', pattern: { sourceApp: 'GRAIN' } });
@@ -73,10 +73,10 @@ async function check(name, run) { await run(); assert.equal(frames.size, 0, name
       assert.equal(unknown.state().tracks[0].instrument.id, 'fable');
     }
   });
-  await check('Identical pattern sources render once and retain eight tracks / five inserts', async () => {
+  await check('Identical pattern sources render once and retain ten tracks / five inserts', async () => {
     const state = session(), before = JSON.stringify(state), next = note('second'); next.start = 4; state.tracks[0].clips.push(next);
     const source = JSON.stringify(state), r = renderer(), previous = calls.length, result = await r.prepareNotes(state, {});
-    assert.equal(calls.length - previous, 1); assert.equal(result.generatedIds.length, 1); assert.equal(result.state.tracks.length, 8); assert(result.state.tracks.every(t => t.effects.length === 5));
+    assert.equal(calls.length - previous, 1); assert.equal(result.generatedIds.length, 1); assert.equal(result.state.tracks.length, 10); assert(result.state.tracks.every(t => t.effects.length === 5));
     assert.equal(result.state.tracks[0].clips[0].assetId, result.state.tracks[0].clips[1].assetId); assert.equal(JSON.stringify(state), source); assert.notEqual(before, source); await r.dispose();
   });
   await check('Tempo scaling changes musical time while transposition remains explicit', async () => {

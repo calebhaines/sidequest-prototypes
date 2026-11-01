@@ -1,4 +1,4 @@
-/* Editable musical parts and source-aware printing, within GALLEY's eight tracks. */
+/* Editable musical parts and source-aware printing, within GALLEY's ten tracks. */
 (() => {
   'use strict';
   const S = window.LoomSchema, P = window.MusicLabPatternSchema;
@@ -77,7 +77,7 @@
     async prepareTarget({ target, pattern, signal } = {}) {
       if (signal?.aborted) throw abortError();
       const current = this.getState(), t = current.tracks.find(track => track.id === String(target || current.tracks[current.selectedTrack].id));
-      if (!t) throw Error('Choose one of the eight tracks.');
+      if (!t) throw Error('Choose one of the ten tracks.');
       this.editable(t);
       if (!t.instrument) {
         const id = sourceInstrument(pattern?.sourceApp), candidate = copy(current);
@@ -95,7 +95,7 @@
     async importPattern({ pattern, options = {}, signal } = {}) {
       const packet = P.normalize(pattern); if (signal?.aborted || options.signal?.aborted) throw abortError();
       const current = this.getState(), candidate = copy(current), index = candidate.tracks.findIndex(t => t.id === String(options.target || current.tracks[current.selectedTrack].id));
-      if (index < 0) throw Error('Choose one of the eight tracks.'); const t = candidate.tracks[index];
+      if (index < 0) throw Error('Choose one of the ten tracks.'); const t = candidate.tracks[index];
       this.editable(t);
       if (t.clips.length >= 128) throw Error('This track has reached its 128-clip limit.');
       if (!t.instrument) { const id = sourceInstrument(packet.sourceApp); t.instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() }; }

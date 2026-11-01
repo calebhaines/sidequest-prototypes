@@ -168,7 +168,7 @@ async function typeNumber(page, key, value, commit = true) {
 async function selectOwner(page, id, slot = 0) { await page.evaluate(({ id, slot }) => LoomApp.selectEffect(slot, id), { id, slot }); assert.equal(await page.evaluate(() => LoomApp.selectedEffectOwner), id); }
 async function openDetails(page) { for (const id of ['preampInputDetails', 'preampAdvanced', 'preampToneDetails']) if (!(await page.locator('#' + id).evaluate(element => element.open))) await page.locator('#' + id + ' > summary').press('Enter'); }
 async function scopeChecks(page) {
-  const ids = [...Array.from({ length: 8 }, (_, i) => 'track-' + (i + 1)), 'master', 'return-1', 'return-2'];
+  const ids = [...Array.from({ length: 10 }, (_, i) => 'track-' + (i + 1)), 'master', 'return-1', 'return-2'];
   for (const id of ids) {
     await selectOwner(page, id); const selected = await page.evaluate(() => LoomApp.getState().selectedTrack), baseline = await page.evaluate(() => LoomApp.getState());
     if (id.startsWith('track-')) assert.equal(selected, Number(id.slice(-1)) - 1);

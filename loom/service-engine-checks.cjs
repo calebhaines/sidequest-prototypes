@@ -16,10 +16,10 @@ function fixture() {
   const left = Float32Array.from({ length: sr * 2 }, (_, i) => .2 * Math.sin(i * Math.PI * 2 * 113 / sr) + .07 * Math.cos(i * Math.PI * 2 * 29 / sr));
   const right = Float32Array.from(left, (value, i) => value * .8 + .02 * Math.sin(i * .13));
   const assets = new Map([['source', { sampleRate: sr, left, right }]]);
-  const state = { tempo: 120, lengthBars: 4, loopEnabled: false, loopStart: 0, loopEnd: 16, master: { level: .8, metronome: false }, tracks: Array.from({ length: 8 }, (_, i) => ({ id: 'track-' + (i + 1), level: i === 0 ? .8 : .3, pan: i === 0 ? -.2 : .3, instrumentLive: false, effects: [null, null, null, null], automation: [], clips: [] })) };
+  const state = { tempo: 120, lengthBars: 4, loopEnabled: false, loopStart: 0, loopEnd: 16, master: { level: .8, metronome: false }, tracks: Array.from({ length: 10 }, (_, i) => ({ id: 'track-' + (i + 1), level: i === 0 ? .8 : .3, pan: i === 0 ? -.2 : .3, instrumentLive: false, effects: [null, null, null, null], automation: [], clips: [] })) };
   const clip = { id: 'clip-1', type: 'audio', assetId: 'source', start: 0, length: .5, sourceStart: 0, sourceEnd: .25, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: .9, fadeIn: .02, fadeOut: .03 };
   state.tracks[0].clips = [clip];
-  const scene = { id: 'scene-1', clips: [clip, { ...clip, id: 'clip-2', length: 1, sourceStart: .2, sourceEnd: .7, reverse: true }, ...Array(6).fill(null)], lengthBeats: 4 };
+  const scene = { id: 'scene-1', clips: [clip, { ...clip, id: 'clip-2', length: 1, sourceStart: .2, sourceEnd: .7, reverse: true }, ...Array(8).fill(null)], lengthBeats: 4 };
   return { state, assets, clip, scene };
 }
 function render(core, count, block = 128) {
@@ -28,7 +28,7 @@ function render(core, count, block = 128) {
   return { l, r };
 }
 function difference(a, b) { let maximum = 0; for (let i = 0; i < a.length; i++) maximum = Math.max(maximum, Math.abs(a[i] - b[i])); return maximum; }
-const blank = () => ({ drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [] });
+const blank = () => ({ drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: [] });
 
 check('Inactive SERVICE preserves the direct arrangement-rendering path', () => {
   const { state, assets } = fixture(), wrapped = new DSP.Core(state, assets, sr), native = new DSP.Core(copy(state), assets, sr);
@@ -38,7 +38,7 @@ check('Inactive SERVICE preserves the direct arrangement-rendering path', () => 
 
 check('SERVICE loops each selected clip independently through the native signal path', () => {
   const { state, assets, scene } = fixture(), live = new DSP.Core(state, assets, sr), printed = copy(state);
-  for (let track = 0; track < 8; track++) printed.tracks[track].clips = scene.clips[track] ? Array.from({ length: Math.ceil(4 / scene.clips[track].length) }, (_, repetition) => ({ ...scene.clips[track], start: repetition * scene.clips[track].length })) : [];
+  for (let track = 0; track < 10; track++) printed.tracks[track].clips = scene.clips[track] ? Array.from({ length: Math.ceil(4 / scene.clips[track].length) }, (_, repetition) => ({ ...scene.clips[track], start: repetition * scene.clips[track].length })) : [];
   const native = new DSP.Core(printed, assets, sr); live.startService(scene); native.start();
   const actual = render(live, 16000), expected = render(native, 16000);
   assert(difference(actual.l, expected.l) < 1e-8); assert(difference(actual.r, expected.r) < 1e-8);
@@ -48,7 +48,7 @@ check('SERVICE loops each selected clip independently through the native signal 
 check('Quantized scene launches acknowledge their exact sample and audio context time', () => {
   const { state, assets, scene } = fixture(), core = new DSP.Core(state, assets, sr);
   core.startService(scene, 0, 1); core.drainServiceEvents(); render(core, 1000, 137);
-  const target = core.queueService('scene', { ...scene, id: 'scene-2', clips: Array(8).fill(null) }, 'bar', 2);
+  const target = core.queueService('scene', { ...scene, id: 'scene-2', clips: Array(10).fill(null) }, 'bar', 2);
   assert.equal(target, 4); render(core, 15256, 137);
   const events = core.drainServiceEvents(10, 0), event = events.find(item => item.type === 'scene' && item.seq === 2);
   assert(event); assert(Math.abs(event.beat - 4) < 1e-9); assert.equal(event.frame, 16000); assert.equal(event.contextTime, 12);
@@ -64,7 +64,7 @@ check('SERVICE ignores arrangement loops and ends while preserving them for rest
 
 check('Held cells keep their source and cycle origin while other scene cells restart', () => {
   const { state, assets, scene } = fixture(), core = new DSP.Core(state, assets, sr); core.startService(scene); render(core, 1500);
-  const beat = core.beat; core.queueService('scene', { ...scene, id: 'held', holds: [true, false, ...Array(6).fill(false)], clips: [null, scene.clips[1], ...Array(6).fill(null)] }, 'immediate', 3); render(core, 128);
+  const beat = core.beat; core.queueService('scene', { ...scene, id: 'held', holds: [true, false, ...Array(8).fill(false)], clips: [null, scene.clips[1], ...Array(8).fill(null)] }, 'immediate', 3); render(core, 128);
   assert.equal(core.service.scene.clips[0].id, scene.clips[0].id); assert.equal(core.service.sceneStarts[0], 0); assert.equal(core.service.sceneStarts[1], beat);
   const event = core.drainServiceEvents().find(item => item.seq === 3); assert.equal(event.sceneStarts[0], 0); assert.equal(event.sceneStarts[1], beat);
 });

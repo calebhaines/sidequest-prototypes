@@ -19,7 +19,7 @@ function fixture() {
   const s = S.defaultState();
   const samples = Float32Array.from({ length: 8000 }, (_, i) => .2 * Math.sin(i * Math.PI * 2 * 110 / 8000));
   s.assets = [S.encodeAsset({ left: samples, sampleRate: 8000, id: 'source', name: 'Dry recording' })];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     s.tracks[i].clips.push({ id: 'source-' + (i + 1), name: 'Source ' + (i + 1), type: 'audio', assetId: 'source', start: i, length: 4, sourceStart: 0, sourceEnd: 1, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: .8, fadeIn: .01, fadeOut: .02 });
   }
   const char = scope.LoomEffectsCatalog.find(e => e.id === 'cinder');
@@ -42,8 +42,8 @@ function service(s = fixture()) {
     { id: 'fill-pad', inputId: '*', channel: 15, type: 'note', number: 127, target: 'pad:fill' }
   ];
   p.take = { lengthBeats: 16, events: [
-    { kind: 'scene', beat: 0, sceneId: 'first-service', clips: s.tracks.map(t => t.clips[0].id), sceneBeat: 0, padBeat: 0, phaseOrigins: s.tracks.map(t => t.clips[0].start), sceneStarts: Array(8).fill(0), padBeats: Array(8).fill(0), tempo: 96 },
-    { kind: 'performance', beat: 4, drops: Array(8).fill(false), stutterBeats: .25, fill: 1, overrides: [{ trackId: 'track-1', target: 'fx:0:mix', effectType: 'cinder', value: .9 }], sceneBeat: 0, padBeat: 4, phaseOrigins: s.tracks.map(t => t.clips[0].start), sceneStarts: Array(8).fill(0), padBeats: Array(8).fill(4), tempo: 96 }
+    { kind: 'scene', beat: 0, sceneId: 'first-service', clips: s.tracks.map(t => t.clips[0].id), sceneBeat: 0, padBeat: 0, phaseOrigins: s.tracks.map(t => t.clips[0].start), sceneStarts: Array(10).fill(0), padBeats: Array(10).fill(0), tempo: 96 },
+    { kind: 'performance', beat: 4, drops: Array(10).fill(false), stutterBeats: .25, fill: 1, overrides: [{ trackId: 'track-1', target: 'fx:0:mix', effectType: 'cinder', value: .9 }], sceneBeat: 0, padBeat: 4, phaseOrigins: s.tracks.map(t => t.clips[0].start), sceneStarts: Array(10).fill(0), padBeats: Array(10).fill(4), tempo: 96 }
   ] };
   return clone(p);
 }
@@ -66,7 +66,7 @@ check('SERVICE scenes, macros, MIDI and authoritative take phases round-trip in 
   assert.equal(envelope.formatVersion, 1); assert.equal(envelope.state.version, 1); assert.equal(restored.service.version, 1);
   assert.equal(S.serializeProject(restored), json);
   assert.deepEqual(clone(restored.service), service(s));
-  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(t => t.effects.length === 5));
+  assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(t => t.effects.length === 5));
   assert.equal(restored.view.tab, 'arrange'); assert.equal(restored.assets[0].pcm, s.assets[0].pcm);
 });
 check('Four macros are neutral at their baselines, with explicit endpoints and polarity', () => {

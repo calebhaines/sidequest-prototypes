@@ -28,15 +28,28 @@ function inputsFor(fixture, start, frames) {
   if (fixture.inputs === 'none') return [];
   return Array.from({ length: 9 }, (_, track) => [0, 1].map(channel => Float32Array.from({ length: frames }, (_, i) => signal(start + i, track, channel, track === 8 ? .17 : fixture.inputAmplitude ?? .035))));
 }
+// Historical goldens retain their original eight-lane fixtures. Adapt only the
+// current Core's routing envelope so their PCM and old microphone slot stay exact.
+function currentServiceEnvelope(value) {
+  if (Array.isArray(value)) return value.map(currentServiceEnvelope);
+  if (!value || typeof value !== 'object') return value;
+  const result = {};
+  for (const [key, item] of Object.entries(value)) {
+    result[key] = currentServiceEnvelope(item);
+    if (['clips', 'holds', 'drops', 'phaseOrigins', 'sceneStarts', 'padBeats'].includes(key) && Array.isArray(item) && item.length === 8) result[key].push(...Array(2).fill(key === 'clips' ? null : ['holds', 'drops'].includes(key) ? false : 0));
+  }
+  return result;
+}
 function renderCase(scope, fixture, state = clone(fixture.state)) {
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP), core = new DSP.Core(state, assetsFor(fixture), fixture.sampleRate, fixture.options || {});
   const left = new Float32Array(fixture.frames), right = new Float32Array(fixture.frames), commands = fixture.commands || [], blocks = fixture.blocks || [128];
   let at = 0, command = 0, block = 0;
   while (at < fixture.frames) {
-    while (commands[command]?.at === at) { const op = commands[command++]; assert.equal(typeof core[op.method], 'function', op.method); core[op.method](...(clone(op.args) || [])); }
+    while (commands[command]?.at === at) { const op = commands[command++]; assert.equal(typeof core[op.method], 'function', op.method); core[op.method](...((core.tracks.length === 10 ? currentServiceEnvelope(clone(op.args)) : clone(op.args)) || [])); }
     const n = Math.min(blocks[block++ % blocks.length], fixture.frames - at, commands[command] ? commands[command].at - at : Infinity);
     assert(n > 0, fixture.id + ': commands must be chronological and in range');
-    core.processBlock(left.subarray(at, at + n), right.subarray(at, at + n), inputsFor(fixture, at, n)); at += n;
+    const originalInputs = inputsFor(fixture, at, n), inputs = core.tracks.length === 10 && originalInputs.length === 9 ? [...originalInputs.slice(0, 8), [], [], originalInputs[8]] : originalInputs;
+    core.processBlock(left.subarray(at, at + n), right.subarray(at, at + n), inputs); at += n;
   }
   return { left, right, core };
 }
@@ -144,7 +157,7 @@ function main() {
       assert.equal(actual.float32StereoSha256, fixture.expected.float32StereoSha256, fixture.id + '/' + label + ': exact Float32 PCM changed');
       assert.equal(actual.pcm16StereoSha256, fixture.expected.pcm16StereoSha256, fixture.id + '/' + label + ': WAV PCM changed');
       assert(actual.peak > 0, fixture.id + ' must not be a vacuous silent fixture');
-      assert.equal(rendered.core.getMeters().tracks.length, 8);
+      assert.equal(rendered.core.getMeters().tracks.length, 10);
     }
     passed.push(fixture.id);
   }

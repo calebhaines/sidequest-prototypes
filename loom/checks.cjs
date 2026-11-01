@@ -55,7 +55,7 @@ check('ROUX is a bundled instrument with portable native state and unchanged tra
   assert.equal(S.serializeProject(restored), portable);
   assert.equal(S.instrumentName(restored.tracks[7].instrument), 'ROUX');
   assert.equal(restored.tracks[7].instrument.snapshot.state.notes[0].slide, true);
-  assert.equal(restored.tracks.length, 8);
+  assert.equal(restored.tracks.length, 10);
   assert(restored.tracks.every(track => track.effects.length === 5));
 });
 state.tracks[0].effects[0] = S.effect({ type: 'cinder', params: scope.LoomEffectsCatalog.find(e => e.id === 'cinder').defaults });
@@ -70,7 +70,7 @@ check('BATTER sample references and GLAZE controls survive native GALLEY project
   const portable = S.serializeProject(project), restored = S.parseProject(portable);
   assert.equal(S.serializeProject(restored), portable); assert.equal(restored.tracks[0].instrument.snapshot.state.lanes[0].sampleIds[0], 'iron-service-38-01');
   assert.equal(restored.tracks[0].effects[0].params.pitch, 'correct'); assert.equal(restored.tracks[0].effects[0].params.scale, 'minor');
-  assert.equal(restored.tracks[0].automation[0].effectType, 'glaze'); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
+  assert.equal(restored.tracks[0].automation[0].effectType, 'glaze'); assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(track => track.effects.length === 5));
 });
 state.tracks[0].automation = [
   lane('level', [[0, 0], [2, 1]]),
@@ -92,7 +92,7 @@ check('Old projects receive new defaults and retain eight tracks / four slots', 
   const restored = S.parseProject(JSON.stringify({ format: 'loom-project', formatVersion: 1, state: old }));
   assert.equal(restored.recording.countInBars, 0);
   assert.equal(restored.markers.length, 0);
-  assert.equal(restored.tracks.length, 8);
+  assert.equal(restored.tracks.length, 10);
   assert(restored.tracks.every(track => track.effects.length === 5 && track.automation.length === 0));
 });
 
@@ -129,7 +129,7 @@ check('Note clips are portable without audio assets and retain their musical con
   assert.equal(c.pattern.notes[1].velocity, .45); assert.equal(c.pattern.notes[1].probability, .75);
   assert.equal(c.voiceMap.keys, 'notes'); assert.equal(restored.assets.length, 0);
   assert.equal(S.pruneAssets(restored).tracks[0].clips.length, 1);
-  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(t => t.effects.length === 5));
+  assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(t => t.effects.length === 5));
 });
 check('Corrupt patterns, maps, unknown clip types, and invalid note timing reject atomically', () => {
   const musical = session(); musical.tracks[0].clips = [notesClip()];

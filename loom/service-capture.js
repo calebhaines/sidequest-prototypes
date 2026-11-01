@@ -1,21 +1,21 @@
 /* SERVICE takes become ordinary editable GALLEY clips only when explicitly applied. */
 (function (global) {
   'use strict';
-  const EPSILON = 1e-8, MIN_CLIP = 1 / 64, MAX_BEATS = 256;
+  const EPSILON = 1e-8, MIN_CLIP = 1 / 64, MAX_BEATS = 256, TRACK_COUNT = 10;
   const plain = value => !!value && typeof value === 'object' && !Array.isArray(value);
   const finite = value => typeof value === 'number' && Number.isFinite(value);
   const modulo = (value, span) => { const remainder = value % span; return remainder < 0 ? remainder + span : remainder; };
-  const blankPerformance = () => ({ drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [] });
+  const blankPerformance = () => ({ drops: Array(TRACK_COUNT).fill(false), stutterBeats: 0, fill: false, overrides: [] });
   function fail(message) { throw Error('SERVICE capture: ' + message); }
   function schema() { if (!global.LoomSchema) fail('the project schema is unavailable.'); return global.LoomSchema; }
   function timing() { if (!global.LoomServiceTiming?.geometry) fail('the performance timing engine is unavailable.'); return global.LoomServiceTiming; }
   function checkPhase(event) {
     if (event.tempo !== undefined && (!finite(event.tempo) || event.tempo < 40 || event.tempo > 240)) fail('the recorded tempo is invalid.');
     for (const key of ['sceneBeat', 'padBeat']) if (event[key] !== undefined && (!finite(event[key]) || event[key] < 0 || event[key] > event.beat + EPSILON)) fail('a recorded source phase is invalid.');
-    for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (event[key] !== undefined && (!Array.isArray(event[key]) || event[key].length !== 8 || event[key].some(value => !finite(value) || value < 0 || value > MAX_BEATS + EPSILON || key !== 'phaseOrigins' && value > event.beat + EPSILON))) fail('a recorded source phase is invalid.');
+    for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (event[key] !== undefined && (!Array.isArray(event[key]) || event[key].length !== TRACK_COUNT || event[key].some(value => !finite(value) || value < 0 || value > MAX_BEATS + EPSILON || key !== 'phaseOrigins' && value > event.beat + EPSILON))) fail('a recorded source phase is invalid.');
   }
   function sourceIndex(state) {
-    if (!plain(state) || !Array.isArray(state.tracks) || state.tracks.length !== 8 || !Array.isArray(state.assets)) fail('choose an eight-track GALLEY project.');
+    if (!plain(state) || !Array.isArray(state.tracks) || state.tracks.length !== TRACK_COUNT || !Array.isArray(state.assets)) fail('choose a ten-track GALLEY project.');
     const sources = state.tracks.map(track => {
       if (!plain(track) || !Array.isArray(track.effects) || track.effects.length !== (schema().LIMITS.trackSlots || 5) || !Array.isArray(track.clips) || track.clips.length > 128) fail('every track needs five effects slots and up to 128 source clips.');
       return new Map(track.clips.map(clip => [clip.id, clip]));
@@ -31,10 +31,10 @@
       if (!plain(event) || !finite(event.beat) || event.beat < 0 || event.beat > take.lengthBeats + EPSILON || event.beat < previous - EPSILON) fail('performance events must run forward within the take.');
       previous = event.beat; checkPhase(event);
       if (event.kind === 'scene') {
-        if (!Array.isArray(event.clips) || event.clips.length !== 8) fail('a recorded scene needs eight resolved clip selections.');
+        if (!Array.isArray(event.clips) || event.clips.length !== TRACK_COUNT) fail('a recorded scene needs ten resolved clip selections.');
         event.clips.forEach((id, index) => { if (id !== null && (typeof id !== 'string' || !sources[index].has(id))) fail('a scene source is missing. Keep the original source clips until this take has been applied.'); });
       } else if (event.kind === 'performance') {
-        if (!Array.isArray(event.drops) || event.drops.length !== 8 || event.drops.some(value => value !== true && value !== false && value !== 0 && value !== 1) || ![0, .125, .25, .5].includes(event.stutterBeats) || ![false, true, 0, 1].includes(event.fill) || !Array.isArray(event.overrides)) fail('a recorded performance control is invalid.');
+        if (!Array.isArray(event.drops) || event.drops.length !== TRACK_COUNT || event.drops.some(value => value !== true && value !== false && value !== 0 && value !== 1) || ![0, .125, .25, .5].includes(event.stutterBeats) || ![false, true, 0, 1].includes(event.fill) || !Array.isArray(event.overrides)) fail('a recorded performance control is invalid.');
         const seen = new Set();
         for (const override of event.overrides) {
           const index = state.tracks.findIndex(track => track.id === override?.trackId), descriptor = index < 0 ? null : descriptors[index].get(override?.target), key = index + ':' + override?.target;
@@ -64,7 +64,7 @@
     next.loopEnabled = false; next.loopStart = 0; next.loopEnd = take.lengthBeats;
     next.markers = [];
     next.tracks.forEach(track => { track.clips = []; track.automation = []; track.instrumentLive = false; });
-    const active = { clips: Array(8).fill(null), sceneStarts: Array(8).fill(0), padBeats: Array(8).fill(0), phaseOrigins: Array(8).fill(0), tempo: state.tempo, performance: blankPerformance() };
+    const active = { clips: Array(TRACK_COUNT).fill(null), sceneStarts: Array(TRACK_COUNT).fill(0), padBeats: Array(TRACK_COUNT).fill(0), phaseOrigins: Array(TRACK_COUNT).fill(0), tempo: state.tempo, performance: blankPerformance() };
     let boundary = 0, sceneCount = 0, slices = 0, generatedAssets = 0;
     let pcmBytes = next.assets.reduce((sum, asset) => sum + asset.frames * asset.channels * 2, 0);
     const lanes = next.tracks.map(() => new Map()), everTargets = next.tracks.map(() => new Set()), pieceOrigins = new Map();
@@ -192,17 +192,17 @@
       if (event.tempo !== undefined && Math.abs(event.tempo - state.tempo) > EPSILON) fail('tempo changes are not supported inside one capture. Use the same tempo throughout this take.');
       if (event.kind === 'scene') {
         emitInterval(event.beat);
-        active.clips = event.clips.slice(); active.sceneStarts = event.sceneStarts?.slice() || Array(8).fill(event.sceneBeat ?? event.beat); active.padBeats = event.padBeats?.slice() || Array(8).fill(event.padBeat ?? event.beat); active.phaseOrigins = event.phaseOrigins?.slice() || Array(8).fill(0);
+        active.clips = event.clips.slice(); active.sceneStarts = event.sceneStarts?.slice() || Array(TRACK_COUNT).fill(event.sceneBeat ?? event.beat); active.padBeats = event.padBeats?.slice() || Array(TRACK_COUNT).fill(event.padBeat ?? event.beat); active.phaseOrigins = event.phaseOrigins?.slice() || Array(TRACK_COUNT).fill(0);
         sceneCount++;
         if (next.markers.length >= S.LIMITS.markers) fail('this take exceeds 128 scene markers. Apply a shorter take.');
         const scene = state.service?.scenes?.find(scene => scene.id === event.sceneId);
-        next.markers.push({ id: S.uid('marker'), name: scene?.name || 'Scene ' + sceneCount, beat: event.beat, color: /^#[0-9a-f]{6}$/i.test(scene?.color || '') ? scene.color : S.COLORS[(sceneCount - 1) % 8] });
+        next.markers.push({ id: S.uid('marker'), name: scene?.name || 'Scene ' + sceneCount, beat: event.beat, color: /^#[0-9a-f]{6}$/i.test(scene?.color || '') ? scene.color : S.COLORS[(sceneCount - 1) % S.COLORS.length] });
       } else {
         const padChanged = active.performance.stutterBeats !== event.stutterBeats || !!active.performance.fill !== !!event.fill;
         if (padChanged) {
           emitInterval(event.beat);
           const origins = event.phaseOrigins?.slice() || active.clips.map((id, index) => phaseAt(id === null ? null : sources[index].get(id), index, event.beat, active));
-          active.padBeats = event.padBeats?.slice() || Array(8).fill(event.padBeat ?? event.beat); active.phaseOrigins = origins;
+          active.padBeats = event.padBeats?.slice() || Array(TRACK_COUNT).fill(event.padBeat ?? event.beat); active.phaseOrigins = origins;
         }
         active.performance = { drops: event.drops.slice(), stutterBeats: event.stutterBeats, fill: !!event.fill, overrides: S.copy(event.overrides) };
         controls(event.beat, active.performance);
