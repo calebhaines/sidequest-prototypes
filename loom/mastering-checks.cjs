@@ -10,11 +10,11 @@ const { webcrypto, createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const BASELINE = '341fa6b31330162adead3b4c6e45353a577447ad';
-const catalogs = ['vocal', 'utility', 'filter', 'creative', 'preamp', 'tape', 'char', 'lofi', 'pedal-synth'];
+const catalogs = ['vocal', 'utility', 'filter', 'creative', 'preamp', 'tape', 'char', 'lofi', 'pedal-synth', 'deluxe'];
 const modules = [
   'shared/pattern-schema.js',
   ...catalogs.map(name => 'loom/' + name + '-catalog.js'), 'loom/effects-catalog.js',
-  ...['vocal-dsp', 'utility-dsp', 'filter-dsp', 'creative-dsp', 'broiler-pedals', 'compressor-dsp', 'preamp-dsp', 'tape-dsp', 'char-dsp', 'lofi-dsp', 'pedal-synth-tracker', 'pedal-synth-dsp', 'effects', 'mastering-dsp', 'service-schema', 'lfo', 'schema', 'cpu-profiler', 'track-eq-dsp', 'audio-engine', 'service-capture', 'freeze'].map(name => 'loom/' + name + '.js')
+  ...['vocal-dsp', 'utility-dsp', 'filter-dsp', 'creative-dsp', 'broiler-pedals', 'compressor-dsp', 'preamp-dsp', 'tape-dsp', 'char-dsp', 'lofi-dsp', 'pedal-synth-tracker', 'pedal-synth-dsp', 'deluxe-dsp', 'effects', 'mastering-dsp', 'service-schema', 'lfo', 'schema', 'cpu-profiler', 'track-eq-dsp', 'audio-engine', 'service-capture', 'freeze'].map(name => 'loom/' + name + '.js')
 ];
 function source(file, ref) {
   if (ref) return execFileSync('git', ['show', ref + ':' + file], { cwd: root, maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
@@ -27,10 +27,10 @@ function load(ref) {
   scope.atob = value => Buffer.from(value, 'base64').toString('binary');
   scope.btoa = value => Buffer.from(value, 'binary').toString('base64');
   for (const file of modules) {
-    if (ref && file === 'loom/mastering-dsp.js') continue;
+    if (ref && (file === 'loom/mastering-dsp.js' || file.startsWith('loom/deluxe-'))) continue;
     Function('window', 'globalThis', 'crypto', 'atob', 'btoa', source(file, ref) + '\n//# sourceURL=mastering-checks-' + file)(scope, scope, scope.crypto, scope.atob, scope.btoa);
   }
-  const E = scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP);
+  const E = scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP);
   const M = scope.createLoomMasteringDSP?.();
   const DSP = scope.createLoomEngineDSP(scope.createLoomEffectsDSP, scope.createLoomLFODSP, scope.createLoomCPUProfiler, scope.createLoomTrackEQDSP, scope.createLoomMasteringDSP);
   return { scope, S: scope.LoomSchema, E, M, DSP, source: file => source(file, ref) };

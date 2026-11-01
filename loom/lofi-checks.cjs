@@ -17,9 +17,9 @@ const modules=[...catalogNames.map(n=>n+'-catalog.js'),'effects-catalog.js',...d
 function source(name,ref){if(ref)return execFileSync('git',['show',ref+':loom/'+name],{cwd:root,maxBuffer:12*1024*1024,stdio:['ignore','pipe','pipe']}).toString();return fs.readFileSync(path.join(directory,name),'utf8');}
 function load(ref){
  const scope={console,performance,Date,crypto:webcrypto,Blob,AbortController,DOMException,setTimeout,clearTimeout,TextEncoder,TextDecoder,structuredClone};scope.window=scope;scope.globalThis=scope;scope.atob=v=>Buffer.from(v,'base64').toString('binary');scope.btoa=v=>Buffer.from(v,'binary').toString('base64');
- const currentModules=ref?modules:modules.flatMap(name=>name==='effects-catalog.js'?['pedal-synth-catalog.js',name]:name==='effects.js'?['pedal-synth-tracker.js','pedal-synth-dsp.js',name]:[name]);
+ const currentModules=ref?modules:modules.flatMap(name=>name==='effects-catalog.js'?['pedal-synth-catalog.js','deluxe-catalog.js',name]:name==='effects.js'?['pedal-synth-tracker.js','pedal-synth-dsp.js','deluxe-dsp.js',name]:[name]);
  for(const name of currentModules){if(ref&&name.startsWith('lofi-'))continue;Function('window','globalThis','crypto','atob','btoa',source(name,ref)+'\n//# sourceURL=tin-can-'+name)(scope,scope,scope.crypto,scope.atob,scope.btoa);}
- const E=scope.createLoomEffectsDSP(scope.createLoomVocalDSP,scope.createLoomUtilityDSP,scope.createLoomFilterDSP,scope.createLoomCreativeDSP,scope.createLoomBroilerPedalsDSP,scope.createLoomCompressorDSP,scope.createLoomPreampDSP,scope.createLoomTapeDSP,scope.createLoomCharDSP,scope.createLoomLoFiDSP,scope.createLoomPedalSynthDSP,scope.createLoomPedalTrackerDSP);
+ const E=scope.createLoomEffectsDSP(scope.createLoomVocalDSP,scope.createLoomUtilityDSP,scope.createLoomFilterDSP,scope.createLoomCreativeDSP,scope.createLoomBroilerPedalsDSP,scope.createLoomCompressorDSP,scope.createLoomPreampDSP,scope.createLoomTapeDSP,scope.createLoomCharDSP,scope.createLoomLoFiDSP,scope.createLoomPedalSynthDSP,scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP);
  return{scope,E,F:scope.createLoomLoFiDSP?.(),definition:scope.LoomEffectsCatalog.find(e=>e.id==='tinpan')};
 }
 const plain=v=>JSON.parse(JSON.stringify(v));

@@ -25,7 +25,7 @@ async function run() {
     await test(); passed.push(name); console.log('PASS ' + name);
   };
   await check('Ten complete recording tracks have unique identities and keep five inserts EQ sends and full automation', () => {
-    const state = S.defaultState(); assert.equal(S.VERSION, '1.32.0'); assert.equal(S.LIMITS.tracks, 10); assert.equal(state.tracks.length, 10); assert.equal(state.returns.length, 2); assert.equal(state.master.effects.length, 4);
+    const state = S.defaultState(); assert.equal(S.VERSION, '1.33.0'); assert.equal(S.LIMITS.tracks, 10); assert.equal(state.tracks.length, 10); assert.equal(state.returns.length, 2); assert.equal(state.master.effects.length, 4);
     assert.deepEqual(state.tracks.map(track => track.id), Array.from({ length: 10 }, (_, i) => 'track-' + (i + 1)));
     for (const track of state.tracks) { assert.equal(track.effects.length, 5); assert.equal(S.effectSlotCount(track), 5); assert.equal(track.sends.length, 2); assert.equal(track.sendPre.length, 2); assert.match(track.color, /^#[0-9a-f]{6}$/i); assert.equal(S.automationOwner(state, track.id), track); assert(S.automationTargets(track).some(item => item.target === 'eq:highMidFreq')); }
     assert.equal(S.automationOwner(state, 'track-11'), null); assert.equal(S.automationOwner(state, 'track-0'), null); assert.equal(S.automationOwner(state, 'track-01'), null);

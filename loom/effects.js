@@ -1,7 +1,7 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -27,6 +27,8 @@
     const makeTracker = typeof trackerFactory === 'function' ? trackerFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalTrackerDSP === 'function' ? globalThis.createLoomPedalTrackerDSP : null;
     const makePedal = typeof pedalFactory === 'function' ? pedalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalSynthDSP === 'function' ? globalThis.createLoomPedalSynthDSP : null;
     const pedal = makePedal ? makePedal(makeTracker) : null;
+    const makeDeluxe = typeof deluxeFactory === 'function' ? deluxeFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomDeluxeDSP === 'function' ? globalThis.createLoomDeluxeDSP : null;
+    const deluxe = makeDeluxe ? makeDeluxe() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -60,6 +62,7 @@
     if (char) specifications.cinder = char.specifications;
     if (lofi) specifications.tinpan = lofi.specifications;
     if (pedal) specifications.ferment = pedal.specifications;
+    if (deluxe) specifications.sunday = deluxe.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -71,6 +74,7 @@
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'sunday') { if (!deluxe) throw new Error('SUNDAY requires createLoomDeluxeDSP.'); return deluxe.normalize(params); }
       if (type === 'ferment') { if (!pedal) throw new Error('FERMENT requires createLoomPedalSynthDSP.'); return pedal.normalize(params); }
       if (type === 'tinpan') { if (!lofi) throw new Error('TIN CAN requires createLoomLoFiDSP.'); return lofi.normalize(params); }
       if (type === 'cinder' && char) return char.normalize(params);
@@ -137,6 +141,7 @@
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'sunday') { if (!deluxe) throw new Error('SUNDAY requires createLoomDeluxeDSP.'); return deluxe.create(sampleRate, params); }
       if (type === 'ferment') { if (!pedal) throw new Error('FERMENT requires createLoomPedalSynthDSP.'); return pedal.create(sampleRate, params); }
       if (type === 'tinpan') { if (!lofi) throw new Error('TIN CAN requires createLoomLoFiDSP.'); return lofi.create(sampleRate, params); }
       if (type === 'cinder' && char) return char.create(sampleRate, params);

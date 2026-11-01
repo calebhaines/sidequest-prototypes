@@ -1452,13 +1452,14 @@
               const createLoFi=${window.createLoomLoFiDSP ? window.createLoomLoFiDSP.toString() : 'null'};
               const createPedalTracker=${window.createLoomPedalTrackerDSP ? window.createLoomPedalTrackerDSP.toString() : 'null'};
               const createPedalSynth=${window.createLoomPedalSynthDSP ? window.createLoomPedalSynthDSP.toString() : 'null'};
+              const createDeluxe=${window.createLoomDeluxeDSP ? window.createLoomDeluxeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
               const createCPU=${window.createLoomCPUProfiler ? window.createLoomCPUProfiler.toString() : 'null'};
               const createEQ=${window.createLoomTrackEQDSP ? window.createLoomTrackEQDSP.toString() : 'null'};
               const createMastering=${window.createLoomMasteringDSP ? window.createLoomMasteringDSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker),createLFO,createCPU,createEQ,createMastering);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker,createDeluxe),createLFO,createCPU,createEQ,createMastering);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
