@@ -2,6 +2,12 @@
 
 Kitchen’s central production station.
 
+**FERMENT (1.30.0)** turns guitar or bass audio into a customizable synth pedal:
+two bandlimited oscillators and a sub, three nonlinear filter circuits, input
+following or ADSR envelopes, PWM, vibrato and synced modulation. Input-range and
+output-register choices are independent. Tracking mode follows single notes;
+Chord texture shapes the input directly. See [the operating guide](FERMENT-GUIDE.md).
+
 **TIN CAN (1.29.0)** adds twelve lo-fi microphone and telephone characters, from
 carbon handsets and bullet mics to toy capsules, intercoms, megaphones and early
 digital voice. Five face knobs lead to folded bandwidth, transducer, dynamics,
@@ -150,7 +156,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.29.0.
+SERVICE is version 1.0.0; GALLEY is version 1.30.0.
 
 ## Making a piece
 
@@ -397,7 +403,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Seventeen effects
+## Eighteen effects
 
 | Effect | Processing |
 | --- | --- |
@@ -418,6 +424,7 @@ is unavailable, keep a WAV or packet for the next session.
 | SWIRL | Four-, eight-, or twelve-stage stereo phasing with feedback, envelope movement, and synced or free modulation |
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
 | TIN CAN | Twelve lo-fi microphones and telephones with transducer distortion, resonant bandwidth, dynamics, wear, noise and optional PCM, G.711 µ-law or IMA ADPCM texture |
+| FERMENT | Guitar/bass pitch-tracking synthesis, two oscillators and a sub, nonlinear ladder/OTA/state-variable filters, envelopes, modulation and a chord-friendly input-synthesis path |
 
 ### Two GALLEY inserts per percussion voice
 
@@ -492,7 +499,7 @@ checks. See [MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for BUTTER and CHAR.
 
 GALLEY retains eight instrument/audio tracks with five inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
-channels each have four inserts. All seventeen effects work in these racks.
+channels each have four inserts. All eighteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
 LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
 their original sound. Change either return's effects to build another shared
@@ -833,7 +840,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.29.0.
+font license notices. Version 1.30.0.
 
 ## Compatibility
 

@@ -41,7 +41,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -57,8 +57,8 @@
         if (entry.signature === signature) continue;
         const prior = entry.spec;
         if (prior?.type === spec?.type && spec) {
-          // Tape and TIN CAN own their continuous blend fades through bypass.
-          if (swapped || spec.type !== 'preserve' && spec.type !== 'tinpan' && !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
+          // These effects own their continuous blend fades through bypass.
+          if (swapped || spec.type !== 'preserve' && spec.type !== 'tinpan' && spec.type !== 'ferment' && !!prior.params.bypass !== !!spec.params.bypass) entry.dsp.reset();
           entry.dsp.setParams(spec.params);
         } else {
           entry.dsp?.reset(); entry.dsp = spec ? effects.create(spec.type, sr, spec.params) : null;
@@ -75,7 +75,7 @@
         if (!left || !right || left.length !== right.length) throw new Error('Voice effects need equal stereo blocks.');
         for (const entry of entries) {
           if (!entry.spec && !entry.pending && !entry.remaining) { if (left.length) { entry.last[0] = left[left.length - 1]; entry.last[1] = right[right.length - 1]; } continue; }
-          if (entry.dsp && (!entry.spec.params.bypass || entry.spec.type === 'preserve' || entry.spec.type === 'tinpan')) entry.dsp.process(left, right, clock || null);
+          if (entry.dsp && (!entry.spec.params.bypass || entry.spec.type === 'preserve' || entry.spec.type === 'tinpan' || entry.spec.type === 'ferment')) entry.dsp.process(left, right, clock || null);
           if (entry.pending && left.length) {
             entry.offset[0] = entry.last[0] - left[0]; entry.offset[1] = entry.last[1] - right[0]; entry.remaining = ramp; entry.pending = false;
           }
@@ -88,7 +88,7 @@
       },
       reset() { for (const entry of entries) { entry.dsp?.reset(); entry.last[0] = entry.last[1] = entry.offset[0] = entry.offset[1] = 0; entry.pending = false; entry.remaining = 0; } },
       getMeters() { return entries.map(entry => entry.spec ? { type: entry.spec.type, bypass: entry.spec.params.bypass, ...(entry.dsp.getMeters?.() || {}) } : null); },
-      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.type !== 'preserve' && entry.spec.type !== 'tinpan' && (entry.spec.params.bypass || entry.spec.params.mix === 0) ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
+      getTailTime(clock) { return Math.min(20, entries.reduce((sum, entry) => sum + (!entry.spec || entry.spec.type !== 'preserve' && entry.spec.type !== 'tinpan' && entry.spec.type !== 'ferment' && (entry.spec.params.bypass || entry.spec.params.mix === 0) ? 0 : Math.max(0, entry.dsp.getTailTime?.(clock) || 0)), 0)); }
     };
   }
   function createProcessor(sampleRate, slots = empty(), clock = {}) {
@@ -116,9 +116,11 @@
   const offline = context => typeof context?.startRendering === 'function';
   function workletSource() {
     const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP', 'createLoomCharDSP'];
-    if (typeof scope.createLoomLoFiDSP === 'function') names.push('createLoomLoFiDSP');
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
-    return names.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${names.join(',')});\n` + `
+    const optional = ['createLoomLoFiDSP', 'createLoomPedalSynthDSP', 'createLoomPedalTrackerDSP'];
+    const argumentsList = names.concat(optional.map(name => typeof scope[name] === 'function' ? name : 'null'));
+    const declarations = names.concat(optional.filter(name => typeof scope[name] === 'function'));
+    return declarations.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${argumentsList.join(',')});\n` + `
       class KitchenVoiceEffectsProcessor extends AudioWorkletProcessor {
         constructor(options) {
           super();const p=options.processorOptions||{};this.core=createCore(makeEffects,sampleRate,p.slots);this.clock=p.clock||{tempo:120,beat:0,time:0,playing:false};this.pending=[];this.clocks=[];this.disposed=false;this.offlineId=p.offlineId||null;this.offlineConfigured=false;
