@@ -115,8 +115,8 @@
   global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
-</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.29.0"><meta name="galley-service-version" content="1.0.0">
-<meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play seventeen instruments, monitor microphone input through five effects per track, and align recordings. Each track has a four-band EQ with sweepable mid frequencies. Sixteen effects include PRESERVE tape machines, SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
+</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.30.0"><meta name="galley-service-version" content="1.0.0">
+<meta name="description" content="GALLEY is Kitchen’s eight-track browser studio. Arrange audio, play seventeen instruments, monitor microphone input through five effects per track, and align recordings. Each track has a four-band EQ with sweepable mid frequencies. Eighteen effects include FERMENT guitar and bass synthesis, TIN CAN microphone and telephone colours, PRESERVE tape machines, SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
 <style>
@@ -1816,6 +1816,19 @@ button.tape-knob:hover,button.tape-knob:active{border:0;background:transparent}
 @media(max-width:360px){.lofi-editor .effect-right{padding:15px 11px}.lofi-face{padding:21px 13px 16px}.lofi-face-heading{align-items:flex-start}.lofi-face-edition{max-width:165px}.lofi-signal-light{padding-top:7px}.lofi-core-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 20px}.lofi-detail-controls{grid-template-columns:minmax(0,1fr);gap:20px}}
 @media(prefers-reduced-motion:reduce){.lofi-readings b,.lofi-details summary>span:last-child{transition:none}}
 
+/* FERMENT · a string-fed synthesizer, with the culture bench folded below. */
+.effect-editor.pedal-synth-editor{border-color:#a38762;background:#242d2c}.pedal-synth-editor .effect-editor-layout{grid-template-columns:200px minmax(0,1fr)}.pedal-synth-editor .effect-hero{padding:24px 22px;border-color:#7b7462;background:linear-gradient(155deg,#354644,#273330)}.pedal-synth-editor .effect-hero h2{font-size:35px;color:#e8d6b3;letter-spacing:.035em}.pedal-synth-editor .effect-hero>p{color:#bdc8b7}.pedal-synth-editor .effect-art{margin:27px 0 20px}.pedal-synth-editor .effect-info{color:#aebbab;line-height:1.9}.ferment-signal-route{font:7px/2.4 var(--kk-mono,monospace);letter-spacing:.055em;text-align:center;color:#bbbea6;border-block:1px solid #c4b18c33;padding:15px 0;margin:0 0 18px}.pedal-synth-editor .effect-right{min-width:0;padding:24px}.pedal-synth-editor .effect-toolbar{border-color:#bba17b33}.pedal-synth-console{display:grid;gap:18px;min-width:0}.ferment-recipe-bar{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(0,1.1fr);gap:20px;align-items:center}.ferment-recipe-bar label{display:grid;gap:9px;min-width:0}.ferment-recipe-bar .eyebrow{font-size:7px;color:#c8c7ac}.ferment-recipe-bar select{width:100%;min-width:0;background:#263631;border-color:#89927b;color:#ece1c8;padding:11px 12px;font-size:12px}.ferment-recipe-bar>p{font-size:11px;line-height:1.8;color:#bac4af;min-width:0}
+.ferment-face{position:relative;min-width:0;padding:27px 26px 20px;border:1px solid #c7bb92;border-radius:7px;background:radial-gradient(ellipse at 20% 0,#f4ecd0 0,transparent 70%),linear-gradient(130deg,#e7dcc0,#d7ccaa);box-shadow:0 5px 0 #172822,0 15px 30px #0a151727;color:#466455}.ferment-face:before,.ferment-face:after{content:'×';position:absolute;top:7px;color:#8b9879;font:bold 10px/1 monospace;text-shadow:1px 1px #fff9}.ferment-face:before{left:10px}.ferment-face:after{right:10px}.ferment-face-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.ferment-face-heading>div{display:grid;gap:7px;min-width:0}.ferment-face-brand{font-family:'Loom Serif',serif;font-style:italic;font-size:42px;font-weight:700;line-height:1;color:#416a59;letter-spacing:-.035em}.ferment-face-edition{font:6px/1.6 var(--kk-mono,monospace);letter-spacing:.12em;color:#7c886d}.ferment-signal-light{display:flex;align-items:center;gap:7px;color:#808b70;font-size:9px;white-space:nowrap}.ferment-signal-light i{display:block;width:7px;height:7px;border-radius:50%;background:#9aa58b;box-shadow:inset 0 1px 2px #17282333}.ferment-has-signal .ferment-signal-light i{background:#639257;box-shadow:0 0 8px #82a65d88}.ferment-is-bypassed .ferment-signal-light i{background:#a49375;box-shadow:none}.ferment-selectors{display:grid;grid-template-columns:1.05fr 1fr 1fr;gap:15px;min-width:0}.ferment-control{display:grid;gap:9px;align-content:start;min-width:0}.ferment-control>label{display:flex;align-items:baseline;justify-content:space-between;gap:7px;min-width:0;color:#d9ddc4;font-size:10px}.ferment-control select{width:100%;max-width:100%;min-width:0;background:#20362d;border-color:#7b9278;color:#e5e3cc;padding:9px 10px;font-size:12px}.ferment-face .ferment-control>label{color:#557259;font-size:10px}.ferment-face .ferment-control select{background:#f0e9d1;color:#3b6251;border-color:#a5ad87}.ferment-mode-hint{font-size:10px;line-height:1.8;color:#6b7b5f;min-height:3.6em;margin-top:13px}.ferment-tracking{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:20px;border-block:1px solid #72856844;padding:14px 0;margin:17px 0 22px}.ferment-tracking>div{display:grid;align-content:start;gap:7px;min-width:0}.ferment-tracking span{font-size:8px;color:#7a866b}.ferment-tracking output{font:12px var(--kk-mono,monospace);color:#466c54;font-variant-numeric:tabular-nums}.ferment-tracking i,.ferment-readings i{display:block;overflow:hidden;height:5px;background:#9ba98244;border:1px solid #8b9e7444}.ferment-tracking b,.ferment-readings b{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:#67875b;transition:transform .08s linear}
+.ferment-core-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:17px;min-width:0}.ferment-core-controls>.ferment-control{align-items:center;justify-items:center;gap:8px}.ferment-core-controls .ferment-control>label{font-size:11px;font-weight:700;justify-content:center;text-align:center;min-height:17px}.ferment-core-controls .tape-knob{display:block;width:100%;max-width:86px;aspect-ratio:1;padding:0;border:0;background:transparent;cursor:ns-resize;touch-action:none;line-height:1;box-shadow:none}.ferment-core-controls .tape-knob svg{width:100%;height:100%;overflow:visible;pointer-events:none}.ferment-core-controls .tape-knob-track{fill:none;stroke:#b5b78e;stroke-width:2}.ferment-core-controls .tape-knob-zero{fill:none;stroke:#829477;stroke-width:1.5}.ferment-core-controls .tape-knob-shadow{fill:#1b332318}.ferment-core-controls .tape-knob-cap{fill:#e9e3ca;stroke:#8da07d;stroke-width:1}.ferment-core-controls .tape-knob-inner{fill:#d9dfbf;stroke:#b9c29e;stroke-width:1}.ferment-core-controls .tape-knob-pointer{fill:none;stroke:#426d54;stroke-width:2.7;stroke-linecap:round}.ferment-core-controls .tape-knob:hover .tape-knob-cap,.ferment-core-controls .tape-knob.is-adjusting .tape-knob-cap{fill:#f8efd8;stroke:#50785b}.ferment-core-controls .tape-knob:focus-visible{outline:2px solid #59815e;outline-offset:2px;border-radius:50%}.ferment-core-controls .tape-knob-number{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;color:#7d876b;font:8px var(--kk-mono,monospace)}.ferment-core-controls .tape-knob-number input[type=number]{width:61px;max-width:100%;min-width:0;padding:6px 3px;text-align:center;color:#44684f;background:#f3ecd7;border-color:#aab48c;font:11px var(--kk-mono,monospace)}.ferment-value-row{display:grid;grid-template-columns:minmax(0,1fr) 67px;gap:10px;align-items:center;min-width:0}.ferment-value-row input[type=range]{width:100%;min-width:0;min-height:36px;accent-color:#b7bf97}.ferment-value-row input[type=number]{width:100%;min-width:0;min-height:36px;padding:6px 4px;background:#1c3028;border:1px solid #71856b;color:#e3dfc3;text-align:center;font:11px var(--kk-mono,monospace)}.ferment-control output{font-size:10px;color:#bec9ab}.ferment-control-inactive{opacity:.45}.ferment-control-inactive input,.ferment-control-inactive button,.ferment-control-inactive select{cursor:default}
+.ferment-readings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:19px 0 15px}.ferment-readings>div{display:grid;gap:6px;min-width:0}.ferment-readings span{color:#778568;font-size:8px}.ferment-readings output{color:#496b50;font:11px var(--kk-mono,monospace);font-variant-numeric:tabular-nums}.ferment-readings>div:nth-child(2) b{background:#a28b52}.ferment-status-strip{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:7px 15px;padding-top:11px;border-top:1px solid #73836844;color:#77856b;font:8px/1.7 var(--kk-mono,monospace)}.ferment-status-strip output{color:#4d7052;font-size:9px}.ferment-face-note{color:#6b7c61;font-size:10px;line-height:1.8;margin-top:13px}.ferment-details-list{display:grid;gap:10px;min-width:0}.ferment-details{min-width:0;border:1px solid #7b8b70;border-radius:5px;background:#293e31}.ferment-details>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 18px;cursor:pointer;list-style:none;color:#e0d9bc}.ferment-details>summary::-webkit-details-marker{display:none}.ferment-details>summary>span:first-child{display:grid;gap:4px;min-width:0}.ferment-details summary strong{font-size:13px;font-weight:600}.ferment-details summary small{font-size:10px;line-height:1.5;color:#b7c4a6}.ferment-details summary>span:last-child{font-size:20px;line-height:1;transition:transform .15s}.ferment-details[open]>summary{border-bottom:1px solid #8c9c7655}.ferment-details[open] summary>span:last-child{transform:rotate(45deg)}.ferment-details-content{padding:19px 18px 20px}.ferment-details-content>p{color:#c1ccb0;font-size:11px;line-height:1.8;margin-bottom:20px}.ferment-detail-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:23px 22px}.ferment-disclosure{max-width:900px;color:#a4b39a;font-size:10px;line-height:1.85}.pedal-synth-editor summary:focus-visible{outline:2px solid #e0d9b4;outline-offset:3px;border-radius:3px}.ferment-face input:focus-visible,.ferment-face select:focus-visible{outline-color:#5e8057;outline-offset:3px}
+@media(max-width:1150px){.pedal-synth-editor .effect-editor-layout{grid-template-columns:180px minmax(0,1fr)}.pedal-synth-editor .effect-hero{padding:18px 16px}.pedal-synth-editor .effect-hero h2{font-size:30px}.ferment-face{padding:24px 19px 18px}.ferment-core-controls{gap:10px}.ferment-detail-controls{gap:22px 18px}}
+@media(max-width:900px){.pedal-synth-editor .effect-editor-layout{grid-template-columns:minmax(0,1fr)}.pedal-synth-editor .effect-hero{display:grid;grid-template-columns:minmax(0,1fr) 118px;gap:0 15px;border-right:0;border-bottom:1px solid #8b8d73}.pedal-synth-editor .effect-hero>.eyebrow,.pedal-synth-editor .effect-hero>h2,.pedal-synth-editor .effect-hero>p{grid-column:1}.pedal-synth-editor .effect-hero .effect-art{grid-column:2;grid-row:1/4;height:100px;margin:0}.pedal-synth-editor .effect-info,.pedal-synth-editor .ferment-signal-route{display:none}.pedal-synth-editor .effect-right{padding:20px}}
+@media(max-width:650px){.pedal-synth-editor .effect-hero{grid-template-columns:minmax(0,1fr) 88px;padding:17px}.pedal-synth-editor .effect-hero .effect-art{height:80px;align-self:center}.pedal-synth-editor .effect-hero>p{font-size:11px;line-height:1.6}.pedal-synth-editor .effect-right{padding:17px 14px}.pedal-synth-editor .effect-toolbar{flex-wrap:wrap;align-items:flex-start;gap:10px;margin-bottom:18px}.pedal-synth-editor .effect-toolbar>div{flex-wrap:wrap}.ferment-recipe-bar{grid-template-columns:minmax(0,1fr);gap:10px}.ferment-face{padding:22px 16px 17px}.ferment-face-heading{gap:8px}.ferment-face-brand{font-size:34px}.ferment-face-edition{max-width:185px;font-size:6px}.ferment-signal-light{font-size:8px;gap:5px}.ferment-selectors{grid-template-columns:minmax(0,1fr);gap:14px}.ferment-mode-hint{min-height:0;font-size:10px}.ferment-tracking{grid-template-columns:1.1fr 1fr;gap:16px;padding:14px 0;margin:17px 0 22px}.ferment-tracking>div:last-child{grid-column:1/-1;grid-template-columns:auto 1fr;gap:10px;align-items:baseline}.ferment-tracking>div:last-child output{text-align:right}.ferment-tracking span{font-size:8px}.ferment-tracking output{font-size:11px}.ferment-core-controls{grid-template-columns:repeat(3,minmax(0,1fr));gap:23px 15px}.ferment-core-controls .tape-knob{max-width:75px}.ferment-core-controls .tape-knob-number input[type=number]{width:56px;font-size:10px}.ferment-core-controls .ferment-control>label{font-size:10px}.ferment-readings{gap:13px}.ferment-readings span{font-size:7px}.ferment-readings output{font-size:10px}.ferment-status-strip{font-size:7px;gap:4px}.ferment-face-note{font-size:9px}.ferment-details>summary{padding:14px}.ferment-details summary small{font-size:9px}.ferment-details-content{padding:18px 14px 16px}.ferment-details-content>p{font-size:10px}.ferment-detail-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 16px}.ferment-control>label{font-size:10px}.ferment-control select{font-size:11px}.ferment-value-row{grid-template-columns:minmax(0,1fr) 54px;gap:7px}}
+@media(max-width:360px){.pedal-synth-editor .effect-right{padding:15px 11px}.ferment-face{padding:22px 13px 16px}.ferment-face-heading{align-items:flex-start}.ferment-face-edition{max-width:165px}.ferment-signal-light{padding-top:7px}.ferment-core-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 20px}.ferment-detail-controls{grid-template-columns:minmax(0,1fr);gap:20px}}
+@media(prefers-reduced-motion:reduce){.ferment-readings b,.ferment-tracking b,.ferment-details summary>span:last-child{transition:none}}
+
+.ferment-details-content>.ferment-detail-note{margin:18px 0 0;color:#acbd9e;font-size:10px;line-height:1.8}
+
 </style>
 
 <style>
@@ -2075,9 +2088,9 @@ body {
 <dialog id="clipActionsDialog" class="clip-actions-dialog" aria-labelledby="clipActionsTitle"><div class="dialog-top"><div><span class="eyebrow">ONE ITEM ON THE TICKET</span><h2 id="clipActionsTitle">Clip actions.</h2></div><button id="closeClipActions" class="close-button" aria-label="Close clip actions">×</button></div><div class="clip-menu-buttons"><button data-clip-action="edit">Edit clip controls</button><button data-clip-action="notes" hidden>Edit notes</button><button data-clip-action="print" hidden>Print audio</button><button data-clip-action="source" hidden>Edit source instrument ↗</button><button data-clip-action="update" hidden>Update printed audio</button><button data-clip-action="loop">Loop this clip</button><button data-clip-action="split">Split at playhead</button><button data-clip-action="duplicate">Duplicate clip</button><button data-clip-action="transfer">Send to another instrument ↗</button><button data-clip-action="delete" class="delete-clip-action">Delete clip</button></div><p class="fineprint">Deleting removes this recording from the arrangement. Undo brings it back.</p></dialog>
 <dialog id="positionDialog" class="position-dialog" aria-labelledby="positionTitle"><div class="dialog-top"><div><span class="eyebrow">CHECK THE SERVICE CLOCK</span><h2 id="positionTitle">Go to a position.</h2></div><button id="closePosition" class="close-button" aria-label="Close playback position">×</button></div><p class="dialog-intro">Choose a bar, beat, and tick. A thousand ticks make one beat.</p><div class="position-fields"><label>BAR<input id="positionBar" type="number" min="1" max="65" step="1" value="1" inputmode="numeric"></label><label>BEAT<input id="positionBeat" type="number" min="1" max="4" step="1" value="1" inputmode="numeric"></label><label>TICK<input id="positionTick" type="number" min="0" max="999" step="1" value="0" inputmode="numeric"></label></div><div class="position-bottom"><span>SESSION TIME <output id="positionTime">0.000 s</output></span><button id="positionApply" class="play-button">Move the needle →</button></div><p class="fineprint position-hint">Seeking moves the playing audio too. Position controls wait while a take is being recorded or finalized.</p></dialog>
 <dialog id="instrumentDialog" class="instrument-dialog"><div class="dialog-top"><div><span class="eyebrow">THE EQUIPMENT ROSTER</span><h2 id="instrumentDialogTitle">Choose a voice for track 01.</h2></div><button id="closeInstrument" class="close-button" aria-label="Close instrument editor">×</button></div><div id="instrumentBrowser"><p class="dialog-intro">The complete Kitchen instruments, with their original controls. Choose one, arm its track, and Record a take into your arrangement.</p><div id="instrumentGrid" class="instrument-grid"></div><div class="custom-instrument"><div><h3>Bring the next peculiar invention.</h3><p>Upload a self-contained HTML instrument, or use a same-origin URL. Audio must use Web Audio.</p></div><div><button id="uploadAppButton">Upload instrument HTML</button><label><input id="customAppUrl" type="url" placeholder="https://this-site/music/your-app/" aria-label="Same-origin instrument URL"><button id="loadAppUrlButton">Load URL</button></label></div></div></div><div id="instrumentEditorBar" class="instrument-editor-bar" hidden><strong id="instrumentEditorName">INSTRUMENT</strong><span id="instrumentHostStatus">Preparing the audio bridge…</span><button id="instrumentBackButton">Other instruments</button><button id="unloadInstrumentButton">Unload</button></div><div id="instrumentFrames" class="instrument-frames" hidden></div></dialog>
-<dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">SIXTEEN FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
+<dialog id="effectDialog" class="effect-dialog"><div class="dialog-top"><div><span class="eyebrow">FINISHING TOOLS</span><h2>Finish to taste. Check occasionally.</h2></div><button id="closeEffect" class="close-button" aria-label="Close effects chooser">×</button></div><div id="effectGrid" class="effect-grid"></div></dialog>
 <dialog id="exportDialog" class="export-dialog"><div class="dialog-top"><div><span class="eyebrow">PACK THE FINISHED ORDER</span><h2>Export / ready to go.</h2></div><button id="closeExport" class="close-button" aria-label="Close export">×</button></div><p>The master mix includes both returns and master inserts. Stems follow mute/solo, separate the returns and skip master inserts. Note clips use their saved instrument.</p><div class="export-fields"><label>EXPORT<select id="exportMode"><option value="mix">Stereo master mix</option><option value="stem">Selected track stem</option><option value="return-1">Return A · wet stem</option><option value="return-2">Return B · wet stem</option><option value="all">All ten stems · 8 tracks + 2 returns</option></select></label><label>RANGE<select id="exportRange"><option value="session">Whole session</option><option value="loop">Loop region</option></select></label><label>EFFECT TAIL<select id="exportTail"><option value="0">None</option><option value="2" selected>2 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option></select></label></div><progress id="exportProgress" max="1" value="0" hidden></progress><div class="export-bottom"><span id="exportSummary">Stereo PCM WAV · 48 kHz · 16 bit</span><button id="cancelExport" hidden>Cancel render</button><button id="renderButton" class="play-button">Render WAV ↗</button></div></dialog>
-<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of seventeen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s five effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and five effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>MORSEL · words into melody</h3><p>Choose Alto, Tenor, Bass or Soprano, type a phrase, and use <strong>Distribute words</strong> to give each note something to say. Edit the word, note and voice for each step, or play the current word on its keyboard. Each note has its own <strong>Note length</strong>: choose a musical value, enter custom beats, or drag its end on the timing ruler. <strong>Spacing</strong> sets the grid positions independently. In GALLEY’s piano roll, <strong>Word / sound</strong> edits the words on selected MORSEL notes. Patterns, projects and printed sources retain those lyrics and voice choices. English pronunciation is synthesized locally; no microphone or online service is needed.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>CPU resources</h3><p>Open the <strong>CPU resources</strong> fold above the arrangement to inspect GALLEY’s audio processing. Start with Light sampling, then expand tracks, shared returns or the master to compare individual insert costs. The panel shows callback budget estimates, recent peaks, timing coverage and hotspots, with reset, pause and a downloadable report.</p><p>Profiling stops while the panel is collapsed, out of view or the page is hidden. It measures GALLEY’s mixer and insert processing rather than total computer CPU or the complete audio graph. Hosted instrument synthesis and percussion voice effects run outside that measurement. Chrome’s audio-thread clock is coarse, so short effects need more samples and readings are estimates. Timing budget crossings are not a count of verified clicks or dropouts.</p><h3>Four global LFOs</h3><p>Open <strong>Automation</strong>, choose LFO 1–4, turn it on and add destinations. Each LFO can move several numeric automation parameters across tracks, returns and the master, or modulate another LFO’s rate, depth, phase and shape. Choose a waveform and a tempo-synced period or a free rate. Signed destination amounts control the strength and direction; modulation adds to the manual setting or drawn automation. Folded controls expose phase, symmetry, offset, smoothing and loop retrigger. Routes follow reordered inserts and are included in projects and WAV exports.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>BUTTER · classic compression</h3><p><strong>BUTTER</strong> adds eight recognizable analog compressor families alongside its original Clean model: Seventy-six FET, Optical 2A, Optical 3A, Vari 670, Bus 4K, VCA 160, Bus 2500 and Diode 609. Each model has its own detector, gain response and recovery. Model notes identify the hardware inspirations and explain what to listen for.</p><p>Changing <strong>Model</strong> keeps your settings. <strong>Use classic settings</strong> loads that family’s suggested timing and character; complete recipes provide ready-to-use starting points. Classic timing follows the model’s program-dependent recovery, while Manual timing makes Attack and Release editable. Input trim drives the detector and analog path. Threshold, Ratio, Knee, Makeup and Dry / wet shape the result.</p><p>Open the advanced controls for analog colour, stereo link, detector high-pass, Seventy-six all-buttons behaviour and Bus 2500 Thrust weighting. The live meters report input, output and actual gain reduction. Colour changes analog models; Clean keeps the original compressor sound. Settings and numeric automation stay in the project and WAV export. These are reduced-order models of classic behaviour rather than measured replicas of particular hardware units.</p><h3>BUTTER · three-band compression</h3><p>Choose <strong>Three-band</strong> in BUTTER’s band mode to split the sound into Low, Mid and High bands. Two crossover controls set their ranges. Each band has its own threshold, ratio, attack, release and gain, with compression bypass, solo and a live gain-reduction reading. The selected analog model colours each band; Input, Makeup, stereo link and detector controls apply to the shared setup.</p><p>Full-band is the original compressor path. In three-band mode, the global threshold, ratio and timing controls give way to the per-band values. Phase-matched crossover references keep the internal Dry / wet blend coherent. The crossovers rotate phase, and band solos affect the blended audition. Old projects and recipes open in full-band mode.</p><h3>CHAR · fifteen ways to scorch</h3><p>The original Soft saturation, Asymmetric diode and Wavefolder remain. Twelve more circuits add hard clipping, cubic and arctangent saturation, rectification, valve and push-pull colour, transistor fuzz, op-amp drive, LED clipping, gated fuzz, sine folding and a broken-bias character. Choose a <strong>Circuit</strong> and read its short note, then shape Drive, Bias, Tone, Output and Dry / wet. The same CHAR and BUTTER controls are available in percussion voice inserts.</p><h3>SAUTÉ · microphone preamps</h3><p><strong>SAUTÉ</strong> brings twelve recognizable microphone preamp families and a transparent mode into one insert. The model notes identify each inspiration. Change <strong>Model</strong> to keep your settings, use <strong>Use circuit starting point</strong> for that model’s suggested character, or choose a complete recipe.</p><p><strong>Input</strong> changes the signal going into the preamp. <strong>Drive</strong> pushes its stages harder; gain compensation removes that added Drive gain while preserving your Input and Output adjustments. It is nominal gain compensation, not automatic loudness matching. <strong>Colour</strong> blends the circuit character. Open the workshop for headroom, transformer memory, bias, feedback, slew, digital pad, wet-path polarity, virtual loading and tone controls. Virtual loading shapes audio already captured by the interface; it cannot change physical microphone loading. No phantom power is simulated.</p><p>Use it on instrument or audio tracks, the shared returns, or the master. Monitoring a microphone through SAUTÉ still records a dry take. Input/output and drive readings follow the actual processing. Numeric automation, recipes, Undo and saved projects retain the complete setup. These are reduced-order circuit interpretations, not measured replicas of individual units.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly five effect slots. Select a slot to edit it; add any of the sixteen effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Two effects per drum voice</h3><p><strong>SIZZLE, CLATTER, HOTPLATE and BATTER</strong> each have two GALLEY effect slots for every voice. Select a drum voice and open either slot in its voice editor. Choose from all sixteen GALLEY effects, edit their complete settings or recipes, bypass or reset them, or change their order. Each voice has its own processing history; overlapping hits feed the same chain so delays, reverbs and compressors behave consistently.</p><p>These effects belong to the instrument patch. They are included in its processed samples, WAV exports and printed or recorded instrument output. GALLEY’s track inserts and channel EQ remain separate mix controls. Save the instrument or GALLEY project to retain each voice’s settings.</p><h3>Sweepable channel EQ</h3><p>Each mixer strip has a built-in <strong>four-band EQ</strong>: Low at 100 Hz, sweepable Low Mid from 80 Hz to 2 kHz, sweepable High Mid from 400 Hz to 10 kHz, and High at 10 kHz, each with ±12 dB gain. The mid sweeps start at the original 400 Hz and 2.5 kHz. Turn the smaller <strong>Sweep</strong> knob beneath each mid gain, or type its exact frequency in Hz. The outer bands are shelves and the middle bands are broad bells. Drag a knob up or down; hold Shift while dragging for finer adjustment. Use arrow keys for 0.1 dB steps, Shift + arrows or Page Up / Down for 1 dB, and Home / End for minimum or maximum. Double-click a knob to return it to zero, or use <strong>Flat</strong> to reset all four manual gains while keeping the sweep frequencies. Double-click a Sweep knob to restore its original frequency. Sweep knobs use logarithmic dragging, 1 Hz arrow steps and 10 Hz Shift/Page steps; Home and End select their limits. Enabled automation follows the playhead even while paused; disable a lane for manual control, or use Write while playing to record changes.</p><p>The EQ follows the five track inserts and precedes track pan, level and both sends. It uses no effect slot. Flat settings preserve the original audio, and older projects open flat. All four gains and both sweep frequencies support automation, saved projects, Undo and exports. Microphone and instrument takes stay dry.</p><h3>Shared effects and the master</h3><p>Use the mixer’s <strong>A / B sends</strong> to share one effect chain between tracks. Sends start at zero. Return A is ready with fully wet <strong>HOOD</strong> reverb; Return B has fully wet <strong>LEFTOVERS</strong> delay. Each return has four insert slots, a level, pan, Mute and Solo. Open the selected track’s <strong>Sends</strong> fold for exact percentages and a choice of signal before or after its level fader. Both taps follow track pan, mute and solo.</p><p>Solo a return to hear its wet signal alone. Track mute and solo still determine which sources feed it. Return inserts process the combined send signal once. The <strong>Master</strong> has four inserts for the complete mix, before master level. Master mute silences the output. Instrument and microphone recordings stay dry, so you can change these effects afterwards.</p><p>The master WAV includes both shared returns and master inserts. <strong>All ten stems</strong> packs eight direct track stems and two shared wet return stems in one ZIP. Stems follow mute and solo, retain master level, and skip master inserts. A selected track stem always uses the selected instrument track, even when you are editing a return or the master.</p><h3>Freeze a track · keep the CPU cool</h3><p>Select a track and choose <strong>Freeze track</strong> above its five inserts. GALLEY renders the complete arrangement plus eight seconds of effect tail, including its instrument, EQ, inserts, level, pan, both sends and every automation lane or shared LFO target affecting that track. Playback uses this audio and releases the original processing. Shared returns and the master stay live.</p><p><strong>Unfreeze track</strong>, the small snowflake badge, or <strong>Unfreeze all</strong> instantly restores the original editable settings. Mute, Solo, track names, colors and playback positions remain available. Sound and clip edits need an unfreeze; tempo, arrangement length, shared LFOs and audio sample rate stay fixed while a track is frozen. SERVICE is available after all tracks are unfrozen. Freeze is a fresh pass from the arrangement start; time-based or random effects can naturally differ from a live seek. Saved projects and Undo retain the reversible freeze.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>PRESERVE tape machines</h3><p>Start with <strong>Fresh stock</strong>, <strong>Fifteen-IPS glue</strong> or another house recipe. Choose a machine, tape speed and stock; these choices preserve your knobs. <strong>Drive</strong> pushes the recording level, <strong>Warmth</strong> shapes magnetic softening, <strong>Wear</strong> ages the oxide, and <strong>Output</strong> sets the serving level. <strong>Blend</strong> adds the processed colour.</p><p>Folded panels expose record calibration, bias, head bump, playback trims, wow, flutter, dropouts, hiss and stereo alignment. Noise and transport motion start at zero. Wow/flutter move the whole blend; zero motion keeps timing unchanged. Drive compensation trims nominal Drive gain rather than matching loudness. PRESERVE works on tracks, returns and the master, and its numeric controls support automation.</p><h3>TIN CAN · microphones & old telephones</h3><p>Choose <strong>TIN CAN</strong> in any track, return or master insert for small microphones, carbon handsets, rotary telephones, intercoms and early digital voice lines. Select a recording model, then turn <strong>Drive</strong>, <strong>Tone</strong>, <strong>Wear</strong>, <strong>Output</strong> and <strong>Blend</strong>. Models keep your knobs; a house recipe replaces the complete setup. The folded panels expose capsule response, dynamics, line noise, voice encoding and stereo routing. Added hiss, crackle and hum start at zero. Noise can be part of the effect, so use Bypass or turn its line levels down when you want quiet gaps.</p><p>The default wet path is mono, as with a single microphone or handset; the original dry blend stays stereo. Choose stereo in the folded channel controls to retain separate left and right histories. All numeric settings support automation, shared LFOs, saved projects and track freezing.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight instrument tracks with five inserts each, plus two shared returns and a master with four inserts each. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
+<dialog id="helpDialog" class="help-dialog"><div class="dialog-top"><div><span class="eyebrow">OPERATING NOTES / NO. 009</span><h2>Eight tracks.<br><em>Service, approximately.</em></h2></div><button id="closeHelp" class="close-button" aria-label="Close instructions">×</button></div><h3>Make your first arrangement</h3><p>Press <strong>Play</strong> to hear the prepared session. Select a track, choose one of seventeen bundled Kitchen instruments, and use its full editor. <strong>Arm</strong> the track with its round button, then <strong>Record</strong> to capture its output as an editable audio clip. An armed track with note clips records those parts; enable <strong>Live</strong> to layer its native groove. An armed track without note clips captures its native performance. Pause finishes the take and holds its position; Stop finishes it and returns to the beginning. The recording button can also finish a take and hold the position. Panic discards it.</p><p>Import audio directly into the selected track. Microphone recording asks for permission and records into the selected track. Open <strong>Microphone &amp; interface · monitoring &amp; timing</strong> to enable live input through that track’s five effects and mixer, even while stopped. Monitoring starts off; use headphones to prevent feedback. Changing the selected track does not silently move the input: use <strong>Move monitoring here</strong>. Pause, Stop, Panic, and opening a project turn monitoring off. The recording button finishes a take while retaining monitoring when enabled. Recording continues across transport loops. The session extends to keep the complete take, up to 64 bars; a take stops after two minutes or at the 64-bar capacity, whichever comes first. Longer imported sources remain available through the clip’s source controls.</p><h3>Before service</h3><p><strong>Count-in</strong> plays one or two bars of clicks before a new take starts, without recording the clicks. <strong>Punch in / out</strong> records only between the chosen boundaries while the arrangement plays around the take. Use the loop range as a quick starting point. Punch recording makes one pass through its range; an ordinary take can continue through transport loops.</p><h3>Microphone timing and BROILER</h3><p><strong>Recording alignment</strong> compensates microphone takes against the arrangement. Auto uses available input and output timings, then applies your extra trim. The engine block size is shown separately and is not added to the correction. Incomplete estimates are labeled. Manual uses only your signed offset; Off leaves timing unchanged. Positive offsets move new takes earlier and negative offsets move them later. If a take lands early, click <strong>Take too early? Later by 5 ms</strong>; if it lands late, use <strong>Earlier by 5 ms</strong>. Hold Shift while clicking to adjust by 1 ms, or type an exact offset. These controls affect new takes and are included in Undo and saved projects. Settings lock during a take. Auto is an estimate, so fine-tune it by ear for your interface. Compensation keeps take lengths and punch boundaries intact; it does not remove the delay you hear while monitoring.</p><p><strong>BROILER</strong> contains 22 bass and guitar amp models, eleven cabinets and a four-slot pedalboard. Choose an amplifier for its familiar family of sound; the model notes explain its inspiration. A whole-rig recipe replaces the amp, cabinet and pedals together. Changing only the amplifier keeps your pedalboard and cabinet; use the matching-cabinet button when you want that pairing.</p><p>Each pedal can run before the amp or after the cabinet. Turn it on, open its controls, and move it earlier or later to change the order. Overdrives, distortion, fuzz and boost use different clipping and frequency networks. Compression, wah, chorus, phaser, echo and spring add dynamics, motion and space. Switch the head off to use pedals through the selected cabinet; choose DI as well for a pedals-only rig. The output and Dry / wet controls apply to the whole rig.</p><p>Open the <strong>Workshop</strong> to change preamp valves, coupling and cathode response, tone-stack family, power valves, bias, supply voltage, feedback, transformer character and cabinet voicing. These controls affect the audio processing; they are reduced-order circuit models and character models rather than measured replicas of particular products. Keep the Workshop at its stock settings to retain older BROILER sounds. Save rig and Load rig at the bottom of the Workshop move a customized head, cabinet and pedalboard between sessions without replacing your project. Use BROILER on clips, instruments or monitored input; microphone recordings remain dry so you can change the rig later.</p><h3>GLAZE · the vocal finishing station</h3><p><strong>GLAZE</strong> combines cleanup, de-essing, compression, vocal EQ, saturation, transpose and scale correction, fixed-interval harmonies, doubling, vowel resonators, a twelve-band vocoder, ring modulation, rhythmic chopping, ducked delay and reverb, and a peak guard. Choose a house recipe, use <strong>Essentials</strong> for the main controls, or open <strong>Full pantry</strong> for every setting. Each stage has its own switch. Live readings show the selected insert’s actual processing when audio is running.</p><p>Use <strong>Sing through GLAZE</strong> in the microphone panel or <strong>Voice → GLAZE</strong> in Audio settings to connect the selected track without replacing occupied effects. Pitch and harmony add a rolling-window delay; scale correction also needs time to track a new monophonic note. Keep them off for the quickest live response. Vowel shift colours resonant filters, and harmony intervals are fixed. Recorded microphone takes remain dry so you can change the strip afterwards.</p><h3>STRAINER, SWIRL &amp; CRUMBLE · moving ingredients</h3><p><strong>STRAINER</strong> combines clean, ladder, diode, and comb resonance with four filter responses. Envelope sweep opens with your playing at positive values and closes at negative values. Full-sweep level sets the input level that reaches the whole sweep; Attack and Release shape the response. Add a free or synced LFO and stereo offset for movement.</p><p><strong>SWIRL</strong> adds four-, eight-, or twelve-stage phasing with signed feedback, an envelope, and stereo LFO motion. <strong>CRUMBLE</strong> reduces bit depth and sample-clock rate, with jitter, dither, and parallel attack recovery. Each effect has house recipes, grouped controls, actual live readings, and Dry / wet. Numeric controls can be automated, and settings stay with the project.</p><h3>SCALES · tune, measure, tidy</h3><p><strong>SCALES</strong> is the utility insert: a single-note tuner with chromatic, guitar, drop-D, bass, five-string bass, and ukulele guides; adjustable A4 calibration; sample peak and RMS meters; correlation; peak holds and clip flags; trims; channel routing; polarity; width; mono bass; DC removal and cleanup filters; a final peak guard; and output mute. Default settings preserve the incoming audio. Choose a string to hold its target, or <strong>Auto</strong> to follow the nearest note or guide string. The tuner measures audio entering this insert. Move SCALES before distorted effects for the clearest reading.</p><p>Use <strong>Input → SCALES</strong> in Audio settings to connect your selected interface without replacing any occupied effect. Output mute allows quiet tuning while analysis continues. <strong>Bypass</strong> skips all processing and analysis, including mute. <strong>Reset peak holds &amp; clips</strong> clears the meter history without changing sound settings. The tuner and meters add no audio delay; a stable low note still needs time to be measured.</p><h3>BATTER · acoustic drums and moving ingredients</h3><p><strong>BATTER</strong> now includes 148 recorded samples across four offline starter kits. Each of its twelve drum lanes can blend an A and B sample source; both can use recorded velocity layers and alternate hits. Open the blend controls to choose the second source and balance the two sounds. The lane LFO adds repeating motion to pitch, filter tone, pan, level, or that blend, using musical divisions or a free rate. Saved projects and printed audio retain both sources and modulation.</p><p><strong>Clear pattern</strong> empties all hits in the selected BATTER bank, including steps on other pages and protected hits. Other banks and sample settings stay in place. Undo restores the complete pattern.</p><h3>Move the playhead</h3><p><strong>Play</strong> starts or continues from the current position. <strong>Pause</strong> holds the position; <strong>Stop</strong> returns to the beginning. The lower transport row moves to the start or end, steps backward or forward by one bar, and restarts playback from the beginning. Click the clock to enter an exact bar, beat, and tick, click or drag the ruler to seek, or drag the needle’s handle. Seeking also moves playing audio and waits while recording is preparing, active, or finalizing.</p><p>Jump directly to <strong>Loop start</strong> or <strong>Loop end</strong> from the transport. Set the range with the numeric loop boundaries, or choose <strong>Loop this clip</strong> in the clip inspector. <strong>Follow</strong> keeps the moving needle in view; switch it off to explore another part of the arrangement. With Loop off, playback stops at the end of the session.</p><h3>Arrange the ingredients</h3><p>Drag a clip to move it in time or to another track. Drag its edges to trim. The clip inspector offers precise timing, source boundaries, speed/pitch, reverse, loop, level, and fades. Split at the playhead or duplicate to build a phrase. Use Snap and Zoom to set the detail you need.</p><h3>Sections and clip actions</h3><p>Add named, colored <strong>Markers</strong> at the playhead, then click a section to jump there. Use its pencil button to rename, move, or delete it. Select a recording and use <strong>Delete clip</strong> directly below the timeline; Undo restores it. Right-click a clip for its actions. <strong>Send to instrument</strong> transfers its edited audio into a new or existing STOCK sample zone, HOTPLATE layer, REDUCE source, ROTISSERIE deck, DICER sample, STEAM spectral score, or BATTER drum lane. Choose an empty track to load the recipient, or an existing matching instrument. Replacing an existing sample requires the replacement checkbox.</p><h3>A shared sample pantry</h3><p><strong>Samples</strong> opens a local library shared with the other Kitchen apps. Render an instrument or clip into the library, choose a sample to receive, and trim it to its destination’s limit. Portable sample packets preserve audio, tempo, and its source; WAV files work with other music software. The library uses this browser’s storage; save or download audio you want to keep. Samples received in GALLEY become arranged audio clips.</p><h3>The editable recipe</h3><p><strong>+ Note clip</strong> makes an editable musical phrase on the selected track. Choose its instrument, then open <strong>Edit notes</strong>: click the grid to add notes, drag to move, and pull a note’s right edge to change its duration. Shift-click selects more notes; the selection tool draws a box. Exact note, beat, duration, and velocity controls are below the grid. Arrow keys move selected notes; Shift + left/right changes their length. Delete removes selected notes, and Ctrl/Cmd + A selects all notes when the piano roll has focus.</p><p><strong>Patterns</strong> shares notes and rhythms between apps as editable musical parts. Drum patterns include named voices; map those voices explicitly when receiving a rhythm in another instrument. Notes on a GALLEY track play through its instrument and five effects. <strong>Print audio</strong> captures the phrase while keeping its patch and pattern attached to the resulting clip.</p><h3>MORSEL · words into melody</h3><p>Choose Alto, Tenor, Bass or Soprano, type a phrase, and use <strong>Distribute words</strong> to give each note something to say. Edit the word, note and voice for each step, or play the current word on its keyboard. Each note has its own <strong>Note length</strong>: choose a musical value, enter custom beats, or drag its end on the timing ruler. <strong>Spacing</strong> sets the grid positions independently. In GALLEY’s piano roll, <strong>Word / sound</strong> edits the words on selected MORSEL notes. Patterns, projects and printed sources retain those lyrics and voice choices. English pronunciation is synthesized locally; no microphone or online service is needed.</p><h3>Printed audio with the recipe attached</h3><p>Printed clips remember the instrument, settings, and pattern that made them. <strong>Edit source</strong> reopens that saved instrument. Change the sound or edit source notes in the piano roll. After changing its native sequencer, choose <strong>Use instrument pattern</strong> to copy that part into the source. Then choose <strong>Update audio</strong> to replace the clip’s source while keeping its arrangement, trims, level, fades, and effects. The saved source lives in your GALLEY project; Undo restores earlier audio.</p><h3>One clock for the whole kitchen</h3><p>Compatible instruments follow GALLEY’s tempo, bar and beat, seeks, and loop boundaries. Live patterns line up with the arrangement after a seek or loop, and queued pattern changes can land on the next bar. Note clips use their clip position as the musical clock.</p><h3>CPU resources</h3><p>Open the <strong>CPU resources</strong> fold above the arrangement to inspect GALLEY’s audio processing. Start with Light sampling, then expand tracks, shared returns or the master to compare individual insert costs. The panel shows callback budget estimates, recent peaks, timing coverage and hotspots, with reset, pause and a downloadable report.</p><p>Profiling stops while the panel is collapsed, out of view or the page is hidden. It measures GALLEY’s mixer and insert processing rather than total computer CPU or the complete audio graph. Hosted instrument synthesis and percussion voice effects run outside that measurement. Chrome’s audio-thread clock is coarse, so short effects need more samples and readings are estimates. Timing budget crossings are not a count of verified clicks or dropouts.</p><h3>Four global LFOs</h3><p>Open <strong>Automation</strong>, choose LFO 1–4, turn it on and add destinations. Each LFO can move several numeric automation parameters across tracks, returns and the master, or modulate another LFO’s rate, depth, phase and shape. Choose a waveform and a tempo-synced period or a free rate. Signed destination amounts control the strength and direction; modulation adds to the manual setting or drawn automation. Folded controls expose phase, symmetry, offset, smoothing and loop retrigger. Routes follow reordered inserts and are included in projects and WAV exports.</p><h3>Automate the controls</h3><p>Select a track and an automation target, then add a lane. Click the curve to add a point and drag points to change their time or value; precise point controls work with a keyboard too. Choose Linear ramps or Hold steps. Switch a lane off to hear the manual setting. Arm <strong>Write</strong> while playback runs and move mixer or effect controls to record their movement. Write disarms when you switch tracks. Automation is saved in projects and included in WAV exports.</p><h3>BUTTER · classic compression</h3><p><strong>BUTTER</strong> adds eight recognizable analog compressor families alongside its original Clean model: Seventy-six FET, Optical 2A, Optical 3A, Vari 670, Bus 4K, VCA 160, Bus 2500 and Diode 609. Each model has its own detector, gain response and recovery. Model notes identify the hardware inspirations and explain what to listen for.</p><p>Changing <strong>Model</strong> keeps your settings. <strong>Use classic settings</strong> loads that family’s suggested timing and character; complete recipes provide ready-to-use starting points. Classic timing follows the model’s program-dependent recovery, while Manual timing makes Attack and Release editable. Input trim drives the detector and analog path. Threshold, Ratio, Knee, Makeup and Dry / wet shape the result.</p><p>Open the advanced controls for analog colour, stereo link, detector high-pass, Seventy-six all-buttons behaviour and Bus 2500 Thrust weighting. The live meters report input, output and actual gain reduction. Colour changes analog models; Clean keeps the original compressor sound. Settings and numeric automation stay in the project and WAV export. These are reduced-order models of classic behaviour rather than measured replicas of particular hardware units.</p><h3>BUTTER · three-band compression</h3><p>Choose <strong>Three-band</strong> in BUTTER’s band mode to split the sound into Low, Mid and High bands. Two crossover controls set their ranges. Each band has its own threshold, ratio, attack, release and gain, with compression bypass, solo and a live gain-reduction reading. The selected analog model colours each band; Input, Makeup, stereo link and detector controls apply to the shared setup.</p><p>Full-band is the original compressor path. In three-band mode, the global threshold, ratio and timing controls give way to the per-band values. Phase-matched crossover references keep the internal Dry / wet blend coherent. The crossovers rotate phase, and band solos affect the blended audition. Old projects and recipes open in full-band mode.</p><h3>CHAR · fifteen ways to scorch</h3><p>The original Soft saturation, Asymmetric diode and Wavefolder remain. Twelve more circuits add hard clipping, cubic and arctangent saturation, rectification, valve and push-pull colour, transistor fuzz, op-amp drive, LED clipping, gated fuzz, sine folding and a broken-bias character. Choose a <strong>Circuit</strong> and read its short note, then shape Drive, Bias, Tone, Output and Dry / wet. The same CHAR and BUTTER controls are available in percussion voice inserts.</p><h3>SAUTÉ · microphone preamps</h3><p><strong>SAUTÉ</strong> brings twelve recognizable microphone preamp families and a transparent mode into one insert. The model notes identify each inspiration. Change <strong>Model</strong> to keep your settings, use <strong>Use circuit starting point</strong> for that model’s suggested character, or choose a complete recipe.</p><p><strong>Input</strong> changes the signal going into the preamp. <strong>Drive</strong> pushes its stages harder; gain compensation removes that added Drive gain while preserving your Input and Output adjustments. It is nominal gain compensation, not automatic loudness matching. <strong>Colour</strong> blends the circuit character. Open the workshop for headroom, transformer memory, bias, feedback, slew, digital pad, wet-path polarity, virtual loading and tone controls. Virtual loading shapes audio already captured by the interface; it cannot change physical microphone loading. No phantom power is simulated.</p><p>Use it on instrument or audio tracks, the shared returns, or the master. Monitoring a microphone through SAUTÉ still records a dry take. Input/output and drive readings follow the actual processing. Numeric automation, recipes, Undo and saved projects retain the complete setup. These are reduced-order circuit interpretations, not measured replicas of individual units.</p><h3>Mix and shape</h3><p>Every track has level, pan, mute, solo, and exactly five effect slots. Select a slot to edit it; add any of the sixteen effects, bypass, reset, remove, or change its order. Effect order changes the sound. Live mode starts a loaded instrument alongside the DAW transport; turn it off when playing its recorded clips to avoid doubling.</p><h3>Two effects per drum voice</h3><p><strong>SIZZLE, CLATTER, HOTPLATE and BATTER</strong> each have two GALLEY effect slots for every voice. Select a drum voice and open either slot in its voice editor. Choose from all sixteen GALLEY effects, edit their complete settings or recipes, bypass or reset them, or change their order. Each voice has its own processing history; overlapping hits feed the same chain so delays, reverbs and compressors behave consistently.</p><p>These effects belong to the instrument patch. They are included in its processed samples, WAV exports and printed or recorded instrument output. GALLEY’s track inserts and channel EQ remain separate mix controls. Save the instrument or GALLEY project to retain each voice’s settings.</p><h3>Sweepable channel EQ</h3><p>Each mixer strip has a built-in <strong>four-band EQ</strong>: Low at 100 Hz, sweepable Low Mid from 80 Hz to 2 kHz, sweepable High Mid from 400 Hz to 10 kHz, and High at 10 kHz, each with ±12 dB gain. The mid sweeps start at the original 400 Hz and 2.5 kHz. Turn the smaller <strong>Sweep</strong> knob beneath each mid gain, or type its exact frequency in Hz. The outer bands are shelves and the middle bands are broad bells. Drag a knob up or down; hold Shift while dragging for finer adjustment. Use arrow keys for 0.1 dB steps, Shift + arrows or Page Up / Down for 1 dB, and Home / End for minimum or maximum. Double-click a knob to return it to zero, or use <strong>Flat</strong> to reset all four manual gains while keeping the sweep frequencies. Double-click a Sweep knob to restore its original frequency. Sweep knobs use logarithmic dragging, 1 Hz arrow steps and 10 Hz Shift/Page steps; Home and End select their limits. Enabled automation follows the playhead even while paused; disable a lane for manual control, or use Write while playing to record changes.</p><p>The EQ follows the five track inserts and precedes track pan, level and both sends. It uses no effect slot. Flat settings preserve the original audio, and older projects open flat. All four gains and both sweep frequencies support automation, saved projects, Undo and exports. Microphone and instrument takes stay dry.</p><h3>Shared effects and the master</h3><p>Use the mixer’s <strong>A / B sends</strong> to share one effect chain between tracks. Sends start at zero. Return A is ready with fully wet <strong>HOOD</strong> reverb; Return B has fully wet <strong>LEFTOVERS</strong> delay. Each return has four insert slots, a level, pan, Mute and Solo. Open the selected track’s <strong>Sends</strong> fold for exact percentages and a choice of signal before or after its level fader. Both taps follow track pan, mute and solo.</p><p>Solo a return to hear its wet signal alone. Track mute and solo still determine which sources feed it. Return inserts process the combined send signal once. The <strong>Master</strong> has four inserts for the complete mix, before master level. Master mute silences the output. Instrument and microphone recordings stay dry, so you can change these effects afterwards.</p><p>The master WAV includes both shared returns and master inserts. <strong>All ten stems</strong> packs eight direct track stems and two shared wet return stems in one ZIP. Stems follow mute and solo, retain master level, and skip master inserts. A selected track stem always uses the selected instrument track, even when you are editing a return or the master.</p><h3>Freeze a track · keep the CPU cool</h3><p>Select a track and choose <strong>Freeze track</strong> above its five inserts. GALLEY renders the complete arrangement plus eight seconds of effect tail, including its instrument, EQ, inserts, level, pan, both sends and every automation lane or shared LFO target affecting that track. Playback uses this audio and releases the original processing. Shared returns and the master stay live.</p><p><strong>Unfreeze track</strong>, the small snowflake badge, or <strong>Unfreeze all</strong> instantly restores the original editable settings. Mute, Solo, track names, colors and playback positions remain available. Sound and clip edits need an unfreeze; tempo, arrangement length, shared LFOs and audio sample rate stay fixed while a track is frozen. SERVICE is available after all tracks are unfrozen. Freeze is a fresh pass from the arrangement start; time-based or random effects can naturally differ from a live seek. Saved projects and Undo retain the reversible freeze.</p><h3>FERMENT · guitar and bass synth pedal</h3><p>Choose <strong>FERMENT</strong> in any track, return or master insert. Feed it a clean guitar or bass recording, or monitor your interface through the selected track. <strong>Tracking</strong> creates a monophonic synth voice: play a clear single-note line, choose the input range, then choose the sound register separately. Two analog-style oscillators, a sub voice and a resonant analog filter shape the result. <strong>Chord Texture</strong> reshapes the input through the same filter; it does not detect separate notes in a chord.</p><p>Five front knobs set <strong>Cutoff, Resonance, Envelope, Synth level and Blend</strong>. The cutoff knob follows a musical logarithmic scale. Open the folded panels for oscillator shapes and tuning, filter circuits, input sensitivity and glide, envelopes, modulation, and direct/synth output balance. Recipes replace the complete setup. Pitch, confidence and detector estimates help with setup; low bass notes take longer to identify, and audio-interface latency is additional. FERMENT supports automation, LFO targets, portable projects and reversible freezing.</p><h3>Keep your work</h3><p>Save/Open project includes audio, instrument settings, inserted effects, and uploaded instrument HTML. Undo/Redo restores arrangement, mixer, and effect edits. Browser recovery is optional when local storage is available. Stereo WAV export renders your arranged clips; you can export the master mix or individual stems, with an optional effect tail. Save a project before closing the browser.</p><h3>Keys and accessibility</h3><p><kbd>Space</kbd> Play/Pause · <kbd>Enter</kbd> Stop and return to the beginning · <kbd>Shift Space</kbd> Play from the beginning · <kbd>Home</kbd>/<kbd>End</kbd> session start/end · <kbd>Alt ←</kbd>/<kbd>Alt →</kbd> move one bar · <kbd>M</kbd> Add marker · <kbd>G</kbd> Go to position · <kbd>[</kbd>/<kbd>]</kbd> jump to loop start/end · <kbd>F</kbd> Follow · <kbd>L</kbd> Loop · <kbd>Shift L</kbd> Loop selected clip · <kbd>Escape</kbd> Panic when no dialog is open · <kbd>Ctrl/Cmd Z</kbd> Undo · <kbd>Ctrl/Cmd Shift Z</kbd> Redo · <kbd>Delete</kbd> selected clip · <kbd>D</kbd> Duplicate · <kbd>S</kbd> Split. On a focused clip, arrow keys move by the snap interval, and Shift + arrow changes its length. Numeric controls are available for every clip edit.</p><h3>PRESERVE tape machines</h3><p>Start with <strong>Fresh stock</strong>, <strong>Fifteen-IPS glue</strong> or another house recipe. Choose a machine, tape speed and stock; these choices preserve your knobs. <strong>Drive</strong> pushes the recording level, <strong>Warmth</strong> shapes magnetic softening, <strong>Wear</strong> ages the oxide, and <strong>Output</strong> sets the serving level. <strong>Blend</strong> adds the processed colour.</p><p>Folded panels expose record calibration, bias, head bump, playback trims, wow, flutter, dropouts, hiss and stereo alignment. Noise and transport motion start at zero. Wow/flutter move the whole blend; zero motion keeps timing unchanged. Drive compensation trims nominal Drive gain rather than matching loudness. PRESERVE works on tracks, returns and the master, and its numeric controls support automation.</p><h3>TIN CAN · microphones & old telephones</h3><p>Choose <strong>TIN CAN</strong> in any track, return or master insert for small microphones, carbon handsets, rotary telephones, intercoms and early digital voice lines. Select a recording model, then turn <strong>Drive</strong>, <strong>Tone</strong>, <strong>Wear</strong>, <strong>Output</strong> and <strong>Blend</strong>. Models keep your knobs; a house recipe replaces the complete setup. The folded panels expose capsule response, dynamics, line noise, voice encoding and stereo routing. Added hiss, crackle and hum start at zero. Noise can be part of the effect, so use Bypass or turn its line levels down when you want quiet gaps.</p><p>The default wet path is mono, as with a single microphone or handset; the original dry blend stays stereo. Choose stereo in the folded channel controls to retain separate left and right histories. All numeric settings support automation, shared LFOs, saved projects and track freezing.</p><h3>Future instruments</h3><p>Upload a standalone HTML Web Audio instrument, or load a same-origin URL. Existing Kitchen apps use an audio bridge to route their output through the selected track. Future apps can implement the documented Kitchen host interface for transport and project state. Untrusted instrument HTML should only be loaded when you trust its author.</p><p class="fineprint">GALLEY uses eight instrument tracks with five inserts each, plus two shared returns and a master with four inserts each. Audio and note clips share the same arrangement. Printed clips retain their musical source, and compatible instruments follow the studio clock. Large projects consume browser memory. No audio is uploaded.</p><div class="download-links"><a id="downloadHtml" href="./index.html" download="galley.html">↓ Standalone HTML</a><a id="downloadSource" href="./LOOM-source.zip" download>↓ Editable source</a><a id="downloadApi" href="https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md" target="_blank" rel="noopener">Future instrument host guide ↗</a></div><label class="autosave-label"><input id="autosaveEnabled" type="checkbox" checked> Recover this session in this browser when storage is available</label></dialog>
 <input id="audioFile" type="file" accept="audio/*" hidden><input id="projectFile" type="file" accept=".json,.loom.json,application/json" hidden><input id="appFile" type="file" accept=".html,text/html" hidden>
 <script>
 /* GLAZE · a vocal finishing station. All processing is local. */
@@ -2637,6 +2650,85 @@ body {
   }];
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* FERMENT · a played string becomes a living synthesizer voice. */
+(function (scope) {
+  'use strict';
+  const range = (key, label, min, max, step, value, unit = '') => ({ key, label, type: 'range', min, max, step, default: value, unit });
+  const select = (key, label, value, options) => ({ key, label, type: 'select', default: value, options: options.map(([value, label]) => ({ value, label })) });
+  const waves = [['saw', 'Saw'], ['pulse', 'Pulse'], ['triangle', 'Triangle'], ['sine', 'Sine']];
+  const divisions = [['1/32', '1/32 note'], ['1/16', '1/16 note'], ['1/8', 'Eighth note'], ['1/8.', 'Dotted eighth'], ['1/4', 'Quarter note'], ['1/2', 'Half note'], ['1', 'One bar'], ['2', 'Two bars'], ['4', 'Four bars']];
+  const filterModels = [
+    { id: 'ladder', name: 'Ladder · four poles', description: 'A nonlinear four-stage low-pass ladder character with feedback resonance and rounded drive. Band-pass and high-pass are combinations of the ladder stage outputs; their shapes differ from the state-variable circuit.' },
+    { id: 'ota', name: 'OTA · four poles', description: 'A four-stage transconductance-inspired cascade with its own resonance and saturation response. Stage combinations provide low-pass, band-pass and high-pass voices.' },
+    { id: 'svf', name: 'State variable · two poles', description: 'A two-pole state-variable circuit with direct low-pass, band-pass and high-pass outputs. Its open resonance is useful for a focused wah, a hollow lead or a bright string texture.' }
+  ];
+  const modes = [
+    { id: 'track', name: 'Tracking synth', description: 'One played note drives two oscillators and a sub oscillator. The detector follows the fundamental of a guitar or bass line; play one note at a time and mute unused strings.' },
+    { id: 'chord', name: 'Chord texture', description: 'The input itself feeds a shaped, resonant synth-like texture, so it can respond to chord input without waiting for a single pitch estimate. This mode does not track independent voices or transpose a chord. Oscillator and pitch controls remain stored for Tracking synth.' }
+  ];
+  const params = [
+    select('mode', 'Sound engine', 'track', modes.map(mode => [mode.id, mode.name])),
+    select('inputRange', 'Input instrument', 'auto', [['auto', 'Auto · guitar & bass'], ['guitar', 'Guitar focus'], ['bass', 'Bass focus']]),
+    select('register', 'Synth register', 'played', [['played', 'As played'], ['bass', 'Bass · octave below'], ['guitar', 'Guitar · octave above']]),
+    range('cutoff', 'Cutoff', 30, 16000, 1, 1200, 'Hz'), range('resonance', 'Resonance', 0, 1, .01, .35), range('envAmount', 'Envelope', -72, 72, .1, 24, 'st'), range('synthLevel', 'Synth level', 0, 1, .01, .75),
+    select('osc1Wave', 'Oscillator 1', 'saw', waves), range('osc1Octave', 'Oscillator 1 octave', -2, 2, 1, 0, 'oct'),
+    select('osc2Wave', 'Oscillator 2', 'pulse', waves), range('osc2Level', 'Oscillator 2 level', 0, 1, .01, .35), range('interval', 'Oscillator 2 interval', -24, 24, .1, 0, 'st'), range('detune', 'Oscillator 2 detune', -30, 30, .1, 7, 'cents'),
+    range('pulseWidth', 'Pulse width', .05, .95, .01, .5), range('subLevel', 'Sub oscillator', 0, 1, .01, .3), range('drift', 'Analog drift', 0, 1, .01, .12),
+    select('filterModel', 'Filter circuit', 'ladder', filterModels.map(model => [model.id, model.name])), select('filterMode', 'Filter response', 'lowpass', [['lowpass', 'Low-pass'], ['bandpass', 'Band-pass'], ['highpass', 'High-pass']]),
+    range('drive', 'Filter drive', 0, 24, .1, 3, 'dB'), range('keyTrack', 'Pitch to cutoff', 0, 1, .01, .5),
+    range('sensitivity', 'Input sensitivity', -24, 24, .1, 0, 'dB'), range('gate', 'Gate threshold', -90, -24, 1, -60, 'dB'), range('tracking', 'Tracking stability', 0, 1, .01, .5), range('glide', 'Glide', 0, 500, 1, 20, 'ms'),
+    select('retrigger', 'Envelope trigger', 'legato', [['legato', 'Legato · connected notes'], ['each', 'Each detected note']]),
+    select('envMode', 'Envelope source', 'follower', [['follower', 'Follow input level'], ['adsr', 'Triggered ADSR']]), range('attack', 'Attack', 1, 1000, 1, 8, 'ms'), range('decay', 'Decay', 5, 2000, 1, 180, 'ms'), range('sustain', 'Sustain', 0, 1, .01, .65), range('release', 'Release', 5, 3000, 1, 180, 'ms'), range('velocity', 'Playing dynamics', 0, 1, .01, .5),
+    select('clock', 'LFO clock', 'free', [['free', 'Free rate'], ['sync', 'Tempo sync']]), range('rate', 'LFO rate', .02, 15, .01, .8, 'Hz'), select('division', 'LFO cycle', '1/4', divisions), select('wave', 'LFO shape', 'sine', [['sine', 'Sine'], ['triangle', 'Triangle']]),
+    range('depth', 'LFO depth', 0, 1, .01, .25), range('filterLfo', 'LFO to filter', -48, 48, .1, 0, 'st'), range('pwm', 'LFO to pulse width', 0, .9, .01, .1), range('vibrato', 'LFO to pitch', 0, 100, .1, 0, 'cents'),
+    range('direct', 'Filtered input', 0, 1, .01, .15), range('output', 'Output', -24, 12, .1, -3, 'dB'), range('width', 'Synth width', 0, 1, .01, .25)
+  ];
+  const defaults = Object.assign(Object.fromEntries(params.map(param => [param.key, param.default])), { mix: .8, bypass: false });
+  const recipe = (id, name, description, patch = {}) => ({ id, name, description, params: { ...defaults, ...patch } });
+  scope.LoomPedalSynthCatalog = [{
+    id: 'ferment', name: 'FERMENT', subtitle: 'Play the string. Grow something stranger.', color: '#b5bb80', accent: '#eddbb7', visual: 'pedalsynth', panel: 'pedalsynth', mixLabel: 'Blend',
+    description: 'A guitar and bass synth pedal with a causal pitch tracker, two analog-style oscillators, a sub oscillator and three nonlinear resonant filter circuits. Keep five controls at the front; unfold oscillator tuning, input response, envelopes and modulation when the sound needs more room. Tracking synth follows one played note. Chord texture reshapes the input directly for chords without claiming independent polyphonic tracking.',
+    params, defaults, modes, filterModels,
+    chordInactive: ['register', 'osc1Wave', 'osc1Octave', 'osc2Wave', 'osc2Level', 'interval', 'detune', 'pulseWidth', 'subLevel', 'drift', 'tracking', 'glide', 'keyTrack', 'pwm', 'vibrato'],
+    groups: [
+      { id: 'main', section: 'main', label: 'At the pedal', help: 'Choose guitar, bass or the full input range, then choose the synthesized register independently. Cutoff and Resonance shape the filter; Envelope is a signed pitch-like cutoff sweep in semitones. Synth level sets the synthesized or shaped source inside the effect. Blend keeps the original stereo input alongside the processed voice.', keys: ['mode', 'inputRange', 'register', 'cutoff', 'resonance', 'envAmount', 'synthLevel', 'mix'] },
+      { id: 'oscillators', section: 'advanced', label: 'Oscillators & tuning', help: 'Two bandlimited waveform generators follow the detected note in Tracking synth. Oscillator 1 octave and Oscillator 2 interval set independent registers; Detune, Pulse width, Sub and slow Analog drift add movement and weight. Fractional octave and interval automation can make continuous pitch sweeps. Oscillator controls are stored but inactive in Chord texture.', keys: ['osc1Wave', 'osc1Octave', 'osc2Wave', 'osc2Level', 'interval', 'detune', 'pulseWidth', 'subLevel', 'drift'] },
+      { id: 'filter', section: 'advanced', label: 'Analog filter bench', help: 'Ladder and OTA are distinct nonlinear four-stage filter interpretations; their alternate responses combine stage taps. State variable is a two-pole multimode circuit. Drive changes how hard the filter is excited. Pitch to cutoff raises the filter with the tracked note. High resonance emphasizes a small part of the spectrum; adjust Synth level or Output if it becomes too strong.', keys: ['filterModel', 'filterMode', 'drive', 'keyTrack'] },
+      { id: 'tracking', section: 'advanced', label: 'Input & tracking', help: 'Input sensitivity changes how firmly the signal reaches the detector and envelope. Set the gate below normal playing but above idle noise. Tracking stability balances steadiness against new-note response; Glide then moves the oscillators between accepted pitches. The tracker needs several periods of a low bass note, so low notes take longer to identify. Tracking synth works best on clean single-note lines with unused strings muted.', keys: ['sensitivity', 'gate', 'tracking', 'glide', 'retrigger'] },
+      { id: 'envelopes', section: 'advanced', label: 'Touch & envelopes', help: 'Follow input level lets picking strength and sustain shape the voice. Triggered ADSR adds an attack, decay, sustain and release contour, with connected or separate note triggering. The same envelope opens or closes the filter through the front Envelope control. Playing dynamics sets how much input strength changes the synthesized level.', keys: ['envMode', 'attack', 'decay', 'sustain', 'release', 'velocity'] },
+      { id: 'motion', section: 'advanced', label: 'Slow motion', help: 'Choose a free-running speed or a tempo-synced cycle. LFO depth is the common amount; the signed filter amount, pulse-width amount and pitch amount set its destinations. Pulse-width and pitch motion belong to the tracked oscillators and are inactive in Chord texture. Filter motion works in both engines.', keys: ['clock', 'rate', 'division', 'wave', 'depth', 'filterLfo', 'pwm', 'vibrato'] },
+      { id: 'output', section: 'advanced', label: 'At the pass', help: 'Filtered input adds a linear input component before the effect filter. In Chord texture it moves between the shaped and cleaner input. This differs from Blend, which keeps the original input outside the synth/filter path and helps preserve the pick attack while the tracker acquires a note. Width places the synthesized components across stereo; Output trims the processed signal.', keys: ['direct', 'width', 'output'] }
+    ],
+    meters: [{ key: 'frequencyHz', label: 'Tracked pitch', unit: 'Hz' }, { key: 'confidence', label: 'Pitch confidence', unit: '%' }, { key: 'trackingLatencyMs', label: 'Acquisition estimate', unit: 'ms' }, { key: 'inputDb', label: 'Input', unit: 'dB' }, { key: 'synthDb', label: 'Synth', unit: 'dB' }, { key: 'outputDb', label: 'Output', unit: 'dB' }, { key: 'cutoffHz', label: 'Filter cutoff', unit: 'Hz' }, { key: 'envelope', label: 'Envelope', unit: '%' }],
+    presets: [
+      recipe('house-culture', 'House culture', 'A responsive two-oscillator voice in the played register, with a little sub and the original attack alongside it.'),
+      recipe('root-cellar', 'Root cellar', 'A firm bass foundation with a dark ladder filter, a round sub and a picked filter lift.', { inputRange: 'bass', cutoff: 550, resonance: .4, envAmount: 30, subLevel: .55, drive: 4, release: 170, mix: .95, output: -4 }),
+      recipe('guitar-grows-roots', 'Guitar grows roots', 'Turn a clean guitar line into a bass-register oscillator voice. Keep the playing monophonic and let the low note settle.', { inputRange: 'guitar', register: 'bass', cutoff: 850, envAmount: 12, subLevel: .15, osc2Level: .2, direct: .08, glide: 30, mix: 1, output: -4 }),
+      recipe('bass-climbs', 'Bass climbs', 'A bass line drives a brighter octave-up lead, with less sub and a wider oscillator pair.', { inputRange: 'bass', register: 'guitar', cutoff: 2200, envAmount: 18, detune: 9, subLevel: .08, attack: 6, width: .5, mix: 1, output: -5 }),
+      recipe('round-stock', 'Round stock', 'A smooth sine and sub voice with a gentle filter. Useful when the bass should remain deep rather than buzzy.', { inputRange: 'bass', osc1Wave: 'sine', osc2Level: 0, subLevel: .65, cutoff: 380, resonance: .15, drive: 1, envAmount: 8, synthLevel: .85, direct: .08, release: 160, velocity: .6, mix: 1, output: -4 }),
+      recipe('acid-brine', 'Acid brine', 'A short pulse bass opens a resonant OTA cascade on each accepted note. Adjust the gate to your instrument before pushing the resonance.', { inputRange: 'bass', osc1Wave: 'pulse', pulseWidth: .35, osc2Level: .1, subLevel: .25, filterModel: 'ota', cutoff: 420, resonance: .82, envAmount: 42, drive: 10, keyTrack: .25, envMode: 'adsr', attack: 2, decay: 170, sustain: .12, release: 80, retrigger: 'each', output: -7, mix: 1 }),
+      recipe('octave-garnish', 'Octave garnish', 'A bright saw-and-pulse voice one octave above the played note. Keep the input clean enough to retain a clear detector signal.', { inputRange: 'guitar', osc1Octave: 1, interval: 12, osc2Level: .25, cutoff: 3500, resonance: .2, envAmount: 12, subLevel: 0, release: 250, direct: .05, output: -5, mix: 1 }),
+      recipe('pulse-onion', 'Pulse onion', 'A narrow pulse lead with a fifth above it and slow pulse-width movement.', { inputRange: 'guitar', osc1Wave: 'pulse', osc2Wave: 'pulse', interval: 7, detune: 0, pulseWidth: .32, pwm: .6, rate: .6, depth: .5, filterLfo: 8, cutoff: 900, envAmount: 18, output: -5 }),
+      recipe('liquid-stock', 'Liquid stock', 'A hollow band-pass bass voice with a responsive filter envelope and a little low foundation.', { inputRange: 'bass', filterModel: 'svf', filterMode: 'bandpass', cutoff: 700, resonance: .7, envAmount: 24, drive: 4, subLevel: .25, synthLevel: .8, output: -5, mix: .9 }),
+      recipe('ladder-lead', 'Ladder lead', 'A rounded resonant lead with a quiet fifth and deliberate glide between connected notes.', { inputRange: 'guitar', filterModel: 'ladder', cutoff: 3500, resonance: .65, envAmount: 12, drive: 8, interval: 7, osc2Level: .25, subLevel: .1, glide: 60, output: -7, mix: 1 }),
+      recipe('brass-pass', 'Brass at the pass', 'Two saws and a shaped envelope give a brassy attack through the OTA circuit.', { inputRange: 'guitar', osc1Wave: 'saw', osc2Wave: 'saw', detune: 11, subLevel: .1, filterModel: 'ota', cutoff: 1400, envAmount: 30, drive: 4, envMode: 'adsr', attack: 20, decay: 180, sustain: .55, release: 250, width: .5, output: -5, mix: 1 }),
+      recipe('glass-cut', 'Glass cut', 'A high-pass triangle pluck whose cutoff dips after the attack, leaving a lightly ringing edge.', { inputRange: 'guitar', filterModel: 'svf', filterMode: 'highpass', cutoff: 1200, resonance: .45, envAmount: -24, envMode: 'adsr', attack: 3, decay: 120, sustain: .05, release: 100, osc1Wave: 'triangle', osc2Wave: 'sine', interval: 12, osc2Level: .2, subLevel: 0, drive: 2, output: -4, mix: 1 }),
+      recipe('slow-rise', 'Slow rise', 'A held single note swells into a warm oscillator pad. The attack is intentionally slow; the dry blend is off.', { inputRange: 'guitar', filterModel: 'ladder', cutoff: 1000, envAmount: 36, envMode: 'adsr', attack: 450, decay: 600, sustain: .75, release: 1200, osc1Wave: 'saw', osc2Wave: 'saw', detune: 7, subLevel: .2, width: .7, direct: 0, mix: 1, output: -5 }),
+      recipe('square-meal', 'Square meal', 'A broad pulse-and-sub bass, with a little drifting edge and a steady played register.', { inputRange: 'bass', osc1Wave: 'pulse', osc2Wave: 'pulse', subLevel: .5, pulseWidth: .5, drift: .2, cutoff: 1600, envAmount: 10, direct: .1, output: -5, mix: .95 }),
+      recipe('bowed-wire', 'Bowed wire', 'A triangle voice grows behind the picked string, with soft saw detail and a longer release.', { inputRange: 'guitar', osc1Wave: 'triangle', osc2Wave: 'saw', osc2Level: .22, detune: 4, envMode: 'adsr', attack: 120, release: 800, cutoff: 2300, resonance: .5, envAmount: 18, width: .55, output: -5, mix: .9 }),
+      recipe('fifths-at-the-pass', 'Fifths at the pass', 'A clear oscillator fifth from one played note, with enough filter movement to distinguish the attack.', { inputRange: 'guitar', interval: 7, osc2Level: .7, cutoff: 2200, envAmount: 12, subLevel: .15, direct: .08, output: -6, mix: 1 }),
+      recipe('underground', 'Underground', 'A sine fundamental and a second oscillator below it keep a bass line round and restrained.', { inputRange: 'bass', osc1Wave: 'sine', osc2Wave: 'triangle', interval: -12, osc2Level: .6, subLevel: 0, cutoff: 1800, resonance: .3, envAmount: 12, direct: .1, output: -4, mix: .95 }),
+      recipe('plucked-culture', 'Plucked culture', 'A very short synthesized pluck follows distinct notes, leaving space between the attacks.', { inputRange: 'guitar', filterModel: 'ota', cutoff: 2400, resonance: .3, envAmount: 18, envMode: 'adsr', attack: 1, decay: 90, sustain: 0, release: 65, retrigger: 'each', subLevel: .1, osc2Level: .2, glide: 0, output: -5, mix: .85 }),
+      recipe('clockwork-broth', 'Clockwork broth', 'A tempo-synced filter sweep gives a held note rhythmic motion without needing extra played notes.', { clock: 'sync', division: '1/8', wave: 'triangle', depth: .8, filterLfo: 36, pwm: .3, cutoff: 700, envAmount: 0, attack: 3, release: 150, output: -5, mix: .9 }),
+      recipe('warm-double', 'Warm double', 'A gently spread oscillator pair adds a beating, analog-style layer beside the clean instrument.', { osc1Wave: 'saw', osc2Wave: 'saw', detune: 15, drift: .25, width: .8, envMode: 'adsr', attack: 80, cutoff: 2600, envAmount: 12, direct: .05, output: -6, mix: .65 }),
+      recipe('chord-skillet', 'Chord skillet', 'Input-derived drive and a resonant ladder reshape a chord without reducing it to one detected pitch.', { mode: 'chord', inputRange: 'guitar', direct: .15, filterModel: 'ladder', cutoff: 1600, drive: 12, envAmount: 18, resonance: .5, synthLevel: .8, mix: .8, output: -5 }),
+      recipe('nasal-chord', 'Nasal chord', 'A narrow state-variable band-pass and touch response make a hollow, vocal-like chord texture.', { mode: 'chord', inputRange: 'guitar', direct: .3, filterModel: 'svf', filterMode: 'bandpass', cutoff: 900, resonance: .75, envAmount: 24, drive: 8, mix: .65, output: -6 }),
+      recipe('bass-ladle', 'Bass ladle', 'A touch-driven filter on the original bass waveform, with no oscillator pitch-acquisition wait.', { mode: 'chord', inputRange: 'bass', direct: .25, filterModel: 'svf', cutoff: 650, resonance: .7, envAmount: 36, drive: 6, sensitivity: 3, gate: -65, attack: 3, release: 180, mix: .8, output: -4 }),
+      recipe('open-pan', 'Open pan', 'A bright high-pass chord texture with a slow synchronized sweep and the clean source left in parallel.', { mode: 'chord', inputRange: 'auto', direct: .4, filterModel: 'ota', filterMode: 'highpass', cutoff: 900, resonance: .4, drive: 5, envAmount: 8, clock: 'sync', division: '2', wave: 'sine', depth: .5, filterLfo: 18, mix: .55, output: -4 })
+    ]
+  }];
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* GALLEY effects · clear controls, finishing tools. No external assets. */
 (function (scope) {
   'use strict';
@@ -2867,6 +2959,7 @@ body {
   if (scope.LoomPreampCatalog) catalog.push(...scope.LoomPreampCatalog);
   if (scope.LoomTapeCatalog) catalog.push(...scope.LoomTapeCatalog);
   if (scope.LoomLoFiCatalog) catalog.push(...scope.LoomLoFiCatalog);
+  if (scope.LoomPedalSynthCatalog) catalog.push(...scope.LoomPedalSynthCatalog);
   const charIndex = catalog.findIndex(effect => effect.id === 'cinder');
   if (scope.LoomCharCatalog && charIndex >= 0) catalog[charIndex] = scope.LoomCharCatalog;
   catalog.forEach(effect => { effect.params.push(range('mix', effect.mixLabel || 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
@@ -5719,10 +5812,506 @@ body {
   scope.createLoomLoFiDSP = createLoomLoFiDSP;
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* FERMENT · causal, incrementally updated guitar/bass pitch analysis. */
+(function (scope) {
+  'use strict';
+  function createLoomPedalTrackerDSP() {
+    'use strict';
+    const TAU = Math.PI * 2;
+    const clamp = (value, low, high) => value < low ? low : value > high ? high : value;
+    const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const ranges = { auto: [27, 1600], guitar: [50, 1600], bass: [27, 660] };
+    function create(sampleRate, params) {
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), stride = Math.max(1, Math.ceil(sr / 8000)), rate = sr / stride;
+      const maximumLag = Math.ceil(rate / 27) + 4, minimumWindow = Math.max(24, Math.round(rate * .006));
+      let ringLength = 1; while (ringLength < maximumLag * 3.5 + minimumWindow + 16) ringLength *= 2;
+      const ringMask = ringLength - 1, ring = new Float64Array(ringLength);
+      // Dense short lags preserve high guitar pitches. The two-sample grid at
+      // longer periods halves the work; fractional refinement restores pitch.
+      const lagList = [];
+      for (let lag = 2; lag <= maximumLag; lag += lag < 48 ? 1 : 2) lagList.push(lag);
+      const lags = new Int32Array(lagList), windows = new Int32Array(lags.length), differences = new Float64Array(lags.length), energies = new Float64Array(lags.length), scores = new Float64Array(lags.length);
+      for (let i = 0; i < lags.length; i++) windows[i] = Math.max(minimumWindow, Math.round(lags[i] * 1.3));
+      const analysisInterval = Math.max(8, Math.round(rate * .0025));
+      const spectralLength = 64, spectralHop = 12, spectralWindow = new Float64Array(spectralLength);
+      const interpolationWeights = new Float64Array(8), interpolationDenominators = new Float64Array(8);
+      for (let i = 0; i < 8; i++) { let denominator = 1; for (let j = 0; j < 8; j++) if (i !== j) denominator *= i - j; interpolationDenominators[i] = 1 / denominator; }
+      for (let i = 0; i < spectralLength; i++) spectralWindow[i] = .5 - .5 * Math.cos(TAU * i / (spectralLength - 1));
+      const lowCoefficient = 1 - Math.exp(-TAU * Math.min(1800, sr * .22) / sr), dcCoefficient = Math.exp(-TAU * 12 / sr);
+      const attack = 1 - Math.exp(-1 / (sr * .001)), release = 1 - Math.exp(-1 / (sr * .035));
+      let p, threshold = .001, firstIndex = 0, lastIndex = lags.length - 1, updateFirst = 0, updateLast = lags.length - 1;
+      let write = 0, seen = 0, decimation = 0, interval = 0, sampleClock = 0, quietFrames = 0, idle = true;
+      let dcInput = 0, dcOutput = 0, low1 = 0, low2 = 0, low3 = 0, low4 = 0;
+      let lastGoodClock = -1, candidateHz = 0, candidateCount = 0, successful = 0;
+      const api = { frequency: 0, confidence: 0, active: false, level: 0, period: 0, trackingLatencyMs: 0, analysisRate: rate, push, process: push, setParams, reset, getMeters };
+      function clearAnalysis() {
+        ring.fill(0); differences.fill(0); energies.fill(0); scores.fill(2);
+        write = seen = decimation = interval = 0; dcInput = dcOutput = low1 = low2 = low3 = low4 = 0;
+        lastGoodClock = -1; candidateHz = candidateCount = successful = 0;
+        api.frequency = api.confidence = api.period = api.trackingLatencyMs = 0; api.active = false;
+      }
+      function reset() { clearAnalysis(); sampleClock = quietFrames = 0; api.level = 0; idle = true; }
+      function setParams(values) {
+        const previous = p;
+        const source = Object.assign({}, p || {}, values && typeof values === 'object' ? values : {});
+        p = { range: Object.prototype.hasOwnProperty.call(ranges, source.range) ? source.range : 'auto', tracking: clamp(finite(source.tracking, .5), 0, 1), sensitivity: clamp(finite(source.sensitivity, -60), -96, -6) };
+        threshold = Math.pow(10, p.sensitivity / 20);
+        const bounds = ranges[p.range]; firstIndex = 0; lastIndex = lags.length - 1;
+        while (firstIndex < lastIndex && lags[firstIndex] < rate / bounds[1] - .5) firstIndex++;
+        while (lastIndex > firstIndex && lags[lastIndex] > rate / bounds[0] + 1) lastIndex--;
+        updateFirst = 0; updateLast = Math.min(lags.length - 1, lastIndex + 1);
+        if (previous && previous.range !== p.range) { clearAnalysis(); idle = true; }
+      }
+      function refinedLag(index) {
+        const period = lags[index];
+        if (index <= 0 || index >= lags.length - 1 || scores[index - 1] >= 1.5 || scores[index + 1] >= 1.5) return period;
+        const a = scores[index - 1], b = scores[index], c = scores[index + 1], left = period - lags[index - 1], right = lags[index + 1] - period;
+        const slopeLeft = (b - a) / left, slopeRight = (c - b) / right, curve = (slopeRight - slopeLeft) / (left + right);
+        if (!(curve > 1e-12)) return period;
+        const gradient = slopeLeft + curve * left;
+        let shift = clamp(-gradient / (2 * curve), -left * .75, right * .75);
+        // A sinusoidal trough is curved at short periods. This trigonometric
+        // correction avoids the high-note bias of a plain parabolic fit.
+        if (period < 32 && left === right) for (let pass = 0; pass < 3; pass++) {
+          const omega = TAU * left / Math.max(2, period + shift);
+          shift = clamp(Math.atan((a - c) / (a + c - 2 * b) * Math.tan(omega * .5)) / omega * left, -left * .75, right * .75);
+        }
+        return period + shift;
+      }
+      function minimumError(index) {
+        const value = scores[index];
+        if (index <= 0 || index >= lags.length - 1) return value;
+        const a = scores[index - 1], c = scores[index + 1], left = lags[index] - lags[index - 1], right = lags[index + 1] - lags[index];
+        const slopeLeft = (value - a) / left, slopeRight = (c - value) / right, curve = (slopeRight - slopeLeft) / (left + right), gradient = slopeLeft + curve * left;
+        return curve > 1e-12 && a < 1.5 && c < 1.5 ? Math.max(0, value - gradient * gradient / (4 * curve)) : value;
+      }
+      function continuousError(period, fallback) {
+        const whole = Math.floor(period), t = whole - period, span = Math.max(minimumWindow, Math.round(period * 1.3));
+        if (seen < span + whole + 4) return fallback;
+        if (period < 32) {
+          // An eighth-order sample grid has appreciably less high-harmonic
+          // attenuation than cubic interpolation. Its -4..+3 nodes remain
+          // causal at this detector's minimum period, with no lookahead.
+          if (t === 0) { interpolationWeights.fill(0); interpolationWeights[4] = 1; }
+          else {
+            let product = 1; for (let j = 0; j < 8; j++) product *= t - (j - 4);
+            for (let j = 0; j < 8; j++) interpolationWeights[j] = product / (t - (j - 4)) * interpolationDenominators[j];
+          }
+          let difference = 0, energy = 0;
+          for (let i = 0; i < span; i++) {
+            const at = write - 1 - i, x = ring[at & ringMask], base = at - whole;
+            let y = 0; for (let j = 0; j < 8; j++) y += interpolationWeights[j] * ring[(base + j - 4) & ringMask];
+            const delta = x - y; difference += delta * delta; energy += x * x + y * y;
+          }
+          return energy > 1e-14 ? clamp(difference / energy, 0, 2) : fallback;
+        }
+        const a = -(t + 1) * t * (t - 1) / 6, b = (t + 2) * t * (t - 1) / 2, c = -(t + 2) * (t + 1) * (t - 1) / 2, d = (t + 2) * (t + 1) * t / 6;
+        let difference = 0, energy = 0;
+        // Evaluate the chosen fractional period rather than comparing the
+        // interpolation residue of different integer-grid troughs. Otherwise
+        // a perfectly good F0 can lose to a numerically cleaner suboctave.
+        for (let i = 0; i < span; i++) {
+          const at = write - 1 - i, x = ring[at & ringMask], base = at - whole;
+          const y = a * ring[(base - 2) & ringMask] + b * ring[(base - 1) & ringMask] + c * ring[base & ringMask] + d * ring[(base + 1) & ringMask], delta = x - y;
+          difference += delta * delta; energy += x * x + y * y;
+        }
+        return energy > 1e-14 ? clamp(difference / energy, 0, 2) : fallback;
+      }
+      function phaseRefinement(frequency) {
+        if (frequency < 500 || seen < spectralLength + spectralHop + 24) return frequency;
+        let strongest = 0, bestRealA = 0, bestImagA = 0, bestRealB = 0, bestImagB = 0, bestHarmonic = 1;
+        // A tiny lock-in comparison refines the already selected octave. A
+        // dominant second harmonic is useful here, even when F0 is absent.
+        // Only three narrow frequencies are probed; there is no FFT or job.
+        for (let harmonic = 1; harmonic <= 3; harmonic++) {
+          const nominal = frequency * harmonic;
+          if (nominal >= rate * .46) break;
+          const omega = TAU * nominal / rate, cosine = Math.cos(omega), sine = Math.sin(omega);
+          let c = 1, q = 0, realA = 0, imagA = 0, realB = 0, imagB = 0;
+          for (let i = 0; i < spectralLength; i++) {
+            const weight = spectralWindow[i], a = ring[(write - spectralLength + i) & ringMask] * weight, b = ring[(write - spectralLength - spectralHop + i) & ringMask] * weight;
+            realA += a * c; imagA -= a * q; realB += b * c; imagB -= b * q;
+            const nextC = c * cosine - q * sine; q = q * cosine + c * sine; c = nextC;
+          }
+          const power = Math.min(realA * realA + imagA * imagA, realB * realB + imagB * imagB);
+          if (power > strongest) { strongest = power; bestRealA = realA; bestImagA = imagA; bestRealB = realB; bestImagB = imagB; bestHarmonic = harmonic; }
+        }
+        if (strongest < 1e-14) return frequency;
+        const phase = Math.atan2(bestImagA * bestRealB - bestRealA * bestImagB, bestRealA * bestRealB + bestImagA * bestImagB);
+        let residual = phase - TAU * frequency * bestHarmonic * spectralHop / rate;
+        residual -= TAU * Math.round(residual / TAU);
+        const refined = frequency + residual * rate / (TAU * spectralHop * bestHarmonic);
+        return Math.abs(refined / frequency - 1) <= .08 ? refined : frequency;
+      }
+      function analyse() {
+        let first = -1;
+        const maximumError = .22 - p.tracking * .045;
+        for (let i = updateFirst; i <= updateLast; i++) {
+          const energy = energies[i];
+          scores[i] = seen >= windows[i] + lags[i] + 2 && energy > 1e-14 ? clamp(differences[i] / energy, 0, 2) : Infinity;
+        }
+        let crossedLobe = false;
+        for (let i = 0; i <= lastIndex; i++) {
+          // Near-flat parts of a low bass wave can resemble a short period.
+          // A true repeat must follow a substantially decorrelated first lobe.
+          if (scores[i] > .6 && Number.isFinite(scores[i])) crossedLobe = true;
+          if (i >= firstIndex && crossedLobe && Number.isFinite(scores[i - 1]) && Number.isFinite(scores[i + 1]) && scores[i] < scores[i - 1] && scores[i] <= scores[i + 1] && minimumError(i) < .35) { first = i; break; }
+        }
+        if (first < 0) {
+          if (lastGoodClock >= 0 && sampleClock - lastGoodClock > sr * Math.max(.03, 2.5 / Math.max(27, api.frequency))) {
+            api.confidence *= .8;
+            if (api.confidence < .45) { api.frequency = api.period = 0; api.active = false; }
+          }
+          return false;
+        }
+        let selected = first, period = rate / phaseRefinement(rate / refinedLag(first));
+        let error = continuousError(period, minimumError(first));
+        // Four-tap fractional sampling has a larger irreducible residue for
+        // short, harmonic-rich periods near the detector Nyquist limit.
+        const initialPeriod = period, cleanError = rate / period > 500 ? .07 : .025;
+        // An unresolved very short period should wait for the narrow-band
+        // phase comparison, instead of speaking an octave error for a few ms.
+        if (!api.active && rate / period > 500 && error > cleanError && seen < spectralLength + spectralHop + 24) return false;
+        for (let multiple = 2; multiple <= 4 && error > cleanError; multiple++) {
+          const target = initialPeriod * multiple;
+          if (target > lags[lastIndex] + 2) break;
+          let best = -1, bestError = 2, bestPeriod = 0;
+          for (let i = first + 1; i <= lastIndex; i++) if (Number.isFinite(scores[i - 1]) && Number.isFinite(scores[i + 1]) && Math.abs(lags[i] - target) <= Math.max(2.5, target * .10) && scores[i] < scores[i - 1] && scores[i] <= scores[i + 1]) {
+            const candidatePeriod = rate / phaseRefinement(rate / refinedLag(i)), e = continuousError(candidatePeriod, minimumError(i));
+            if (e < bestError) { best = i; bestError = e; bestPeriod = candidatePeriod; }
+          }
+          if (best >= 0 && bestError < error * .45 && error - bestError > .01) {
+            selected = best; error = bestError; period = bestPeriod;
+            if (error <= cleanError) break;
+          }
+        }
+        const lag = period, frequency = rate / period, bounds = ranges[p.range], certainty = clamp(1 - error, 0, 1);
+        if (error > maximumError) return false;
+        if (frequency < bounds[0] * .98 || frequency > bounds[1] * 1.02 || api.level < threshold) return false;
+        // Delay a merely plausible early harmonic until enough data exists to
+        // check the lower octave. A very clean period can speak immediately.
+        if (!api.active && certainty < .985 && seen < Math.min((windows[selected] + lags[selected]) * 2, windows[lastIndex] + lags[lastIndex])) return false;
+        const close = candidateHz > 0 && Math.abs(Math.log2(frequency / candidateHz)) < .035;
+        candidateCount = close ? candidateCount + 1 : 1; candidateHz = frequency;
+        const changing = api.active && Math.abs(Math.log2(frequency / api.frequency)) > .065;
+        if (changing && Math.abs(Math.log2(frequency / api.frequency)) > .65 && certainty < .93) return false;
+        const needed = changing || certainty < .985 ? 2 : 1;
+        if (candidateCount < needed) return false;
+        if (api.active && Math.abs(Math.log2(frequency / api.frequency)) < .025) api.frequency += (frequency - api.frequency) * .65;
+        else api.frequency = frequency;
+        api.confidence = certainty; api.period = sr / api.frequency; api.active = true;
+        api.trackingLatencyMs = (Math.max(windows[selected] + lag, frequency >= 500 && seen >= spectralLength + spectralHop + 24 ? spectralLength + spectralHop + 24 : 0) + analysisInterval * needed) * 1000 / rate;
+        lastGoodClock = sampleClock; successful++; return true;
+      }
+      function push(value) {
+        const x = clamp(finite(value, 0), -8, 8), magnitude = Math.abs(x); sampleClock++;
+        api.level += (magnitude - api.level) * (magnitude > api.level ? attack : release);
+        if (api.level < 1e-12) api.level = 0;
+        if (api.level < threshold) {
+          quietFrames++;
+          if (quietFrames > sr * .012 && api.active) { api.active = false; api.frequency = api.confidence = api.period = 0; candidateCount = 0; }
+          if (quietFrames > sr * .06 && !idle) { clearAnalysis(); idle = true; }
+        } else { quietFrames = 0; idle = false; }
+        if (idle) return false;
+        const dc = x - dcInput + dcCoefficient * dcOutput; dcInput = x; dcOutput = dc;
+        low1 += lowCoefficient * (dc - low1); low2 += lowCoefficient * (low1 - low2); low3 += lowCoefficient * (low2 - low3); low4 += lowCoefficient * (low3 - low4);
+        if (++decimation < stride) return false;
+        decimation = 0;
+        const current = low4; ring[write] = current;
+        // Each lag's finite-window difference and energy are maintained in
+        // constant work. No complete autocorrelation is launched on a quantum.
+        for (let i = updateFirst; i <= updateLast; i++) {
+          const lag = lags[i], oldAt = (write - windows[i]) & ringMask;
+          const delayed = ring[(write - lag) & ringMask], old = ring[oldAt], oldDelayed = ring[(oldAt - lag) & ringMask];
+          const difference = current - delayed, oldDifference = old - oldDelayed;
+          differences[i] += difference * difference - oldDifference * oldDifference;
+          energies[i] += current * current + delayed * delayed - old * old - oldDelayed * oldDelayed;
+        }
+        write = (write + 1) & ringMask; seen++;
+        if (++interval < analysisInterval) return false;
+        interval = 0; return analyse();
+      }
+      function getMeters() {
+        return { frequencyHz: api.frequency, detectedHz: api.frequency, confidence: api.confidence, active: api.active, levelDb: Math.max(-120, 20 * Math.log10(Math.max(api.level, 1e-6))), trackingLatencyMs: api.trackingLatencyMs, analysisRate: rate, successfulEstimates: successful, minHz: ranges[p.range][0], maxHz: ranges[p.range][1] };
+      }
+      setParams(params); return api;
+    }
+    return { create };
+  }
+  scope.createLoomPedalTrackerDSP = createLoomPedalTrackerDSP;
+})(typeof window === 'undefined' ? globalThis : window);
+
+/* FERMENT · causal string synthesis, bandlimited oscillators and nonlinear TPT filters. */
+(function (scope) {
+  'use strict';
+  function createLoomPedalSynthDSP(trackerFactory) {
+    'use strict';
+    const makeTracker = typeof trackerFactory === 'function' ? trackerFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalTrackerDSP === 'function' ? globalThis.createLoomPedalTrackerDSP : null;
+    const PI = Math.PI, TAU = PI * 2, LN2 = Math.LN2;
+    const specifications = {
+      mode: ['track', 'chord'], inputRange: ['auto', 'guitar', 'bass'], register: ['played', 'bass', 'guitar'],
+      cutoff: [30, 16000, 1200], resonance: [0, 1, .35], envAmount: [-72, 72, 24], synthLevel: [0, 1, .75],
+      osc1Wave: ['saw', 'pulse', 'triangle', 'sine'], osc1Octave: [-2, 2, 0], osc2Wave: ['pulse', 'saw', 'triangle', 'sine'], osc2Level: [0, 1, .35], interval: [-24, 24, 0], detune: [-30, 30, 7], pulseWidth: [.05, .95, .5], subLevel: [0, 1, .3], drift: [0, 1, .12],
+      filterModel: ['ladder', 'ota', 'svf'], filterMode: ['lowpass', 'bandpass', 'highpass'], drive: [0, 24, 3], keyTrack: [0, 1, .5],
+      sensitivity: [-24, 24, 0], gate: [-90, -24, -60], tracking: [0, 1, .5], glide: [0, 500, 20], retrigger: ['legato', 'each'],
+      envMode: ['follower', 'adsr'], attack: [1, 1000, 8], decay: [5, 2000, 180], sustain: [0, 1, .65], release: [5, 3000, 180], velocity: [0, 1, .5],
+      clock: ['free', 'sync'], rate: [.02, 15, .8], division: ['1/4', '1/32', '1/16', '1/8', '1/8.', '1/2', '1', '2', '4'], wave: ['sine', 'triangle'], depth: [0, 1, .25], filterLfo: [-48, 48, 0], pwm: [0, .9, .1], vibrato: [0, 100, 0],
+      direct: [0, 1, .15], output: [-24, 12, -3], width: [0, 1, .25], mix: [0, 1, .8]
+    };
+    const divisions = { '1/32': .125, '1/16': .25, '1/8': .5, '1/8.': .75, '1/4': 1, '1/2': 2, '1': 4, '2': 8, '4': 16 };
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const finite = (x, fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
+    const safe = x => x >= -32 && x <= 32 ? x : Number.isFinite(x) ? clamp(x, -32, 32) : 0;
+    const outputSafe = x => x >= -8 && x <= 8 ? x : Number.isFinite(x) ? clamp(x, -8, 8) : 0;
+    const db = x => Math.pow(10, x / 20);
+    const levelDb = x => Math.max(-120, 20 * Math.log10(Math.max(x, 1e-6)));
+    function normalize(params) {
+      const source = params && typeof params === 'object' ? params : {}, result = {};
+      for (const key of Object.keys(specifications)) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true; return result;
+    }
+    // Polynomial residuals repair the waveform's step/slope discontinuities.
+    // The triangle uses the integrated residual, rather than a naive corner.
+    function blep(t, dt) {
+      if (t < dt) { const x = t / dt; return x + x - x * x - 1; }
+      if (t > 1 - dt) { const x = (t - 1) / dt; return x * x + x + x + 1; }
+      return 0;
+    }
+    function blamp(t, dt) {
+      if (t < dt) { const x = 1 - t / dt; return x * x * x / 3; }
+      if (t > 1 - dt) { const x = 1 + (t - 1) / dt; return x * x * x / 3; }
+      return 0;
+    }
+    function oscillatorSample(phase, increment, wave, width = .5) {
+      const t = phase - Math.floor(phase), dt = clamp(Math.abs(increment), 1e-9, .45);
+      if (wave === 'sine') return Math.sin(TAU * t);
+      if (wave === 'triangle') { const half = t < .5 ? t + .5 : t - .5; return (t < .5 ? -1 + 4 * t : 3 - 4 * t) + 4 * dt * (blamp(t, dt) - blamp(half, dt)); }
+      if (wave === 'pulse') {
+        const pw = clamp(width, dt, 1 - dt), shifted = t >= pw ? t - pw : t - pw + 1;
+        return (t < pw ? 1 : -1) + blep(t, dt) - blep(shifted, dt) - (2 * pw - 1);
+      }
+      return 2 * t - 1 - blep(t, dt);
+    }
+    // Bounded rational differential-pair law; unity small-signal slope.
+    function soft(x) { if (x >= 3) return 1; if (x <= -3) return -1; const q = x * x; return x * (27 + q) / (27 + 9 * q); }
+    function create(sampleRate, params) {
+      if (!makeTracker) throw Error('FERMENT requires createLoomPedalTrackerDSP.');
+      let p = normalize(params);
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), maxHz = Math.min(16000, sr * .42), subRate = sr * 2;
+      const tracker = makeTracker().create(sr, { range: p.inputRange, tracking: p.tracking, sensitivity: p.gate });
+      const filters = new Float64Array(8), previousFilterInput = new Float64Array(2), hpLow = new Float64Array(2), dcInput = new Float64Array(2), dcState = new Float64Array(2);
+      const lastWet = new Float64Array(2), correction = new Float64Array(2);
+      const slowDetectorCoefficient = 1 - Math.exp(-1 / (sr * .06));
+      const fadeFrames = Math.max(1, Math.round(sr * .006)), slew = 1 - Math.exp(-1 / (sr * .006)), detectorAttack = 1 - Math.exp(-1 / (sr * .0007)), detectorRelease = Math.exp(-1 / (sr * .03)), gateDecay = Math.exp(-1 / (sr * .01)), peakDecay = Math.exp(-1 / (sr * .12)), dcDecay = Math.exp(-TAU * 9 / sr);
+      let sensitivityGain = 1, threshold = .001, hpCoefficient = 0, attackCoefficient = 0, decayCoefficient = 0, releaseCoefficient = 0, glideCoefficient = 1, driveTarget = 1, outputTarget = 1, ratio1 = 1, ratio2 = 1;
+      let targetCutoffLog = Math.log(p.cutoff);
+      let gain = 1, outputGain = 1, cutoffLog = Math.log(p.cutoff), resonance = p.resonance, synthLevel = p.synthLevel, direct = p.direct, width = p.width;
+      let mix = p.bypass ? 0 : p.mix, mixTarget = mix, mixRemaining = 0, suspended = mix === 0, idle = true;
+      let phase1 = .5, phase2 = .25, subPhase = .5, lfoPhase = 0, driftPhase1 = .17, driftPhase2 = .61, lfo = 0, pitchRatio1 = 1, pitchRatio2 = 1, pulse = p.pulseWidth;
+      let targetFrequency = 0, frequency = 0, acceptedFrequency = 0, oscillatorGain = 0, detector = 0, gateDetector = 0, slowDetector = 0, inputGate = false, ampEnvelope = 0, filterEnvelope = 0, envelopeStage = 0, retriggerGuard = 0;
+      let g = .01, targetG = .01, actualCutoff = p.cutoff, controlFrame = 0, sampleClock = 0, expectedBeat = NaN, wetTransition = 0, pendingTransition = false, quietSamples = 0;
+      let noteVelocity = 1, velocityWindow = 0, lastTouch = 0, releaseTouch = 0, voiceAuthorized = false, pitchHold = 0;
+      let inputPeak = 0, synthPeak = 0, outputPeak = 0, lastTopology = '', initialized = false;
+      function clear() {
+        tracker.reset(); filters.fill(0); previousFilterInput.fill(0); hpLow.fill(0); dcInput.fill(0); dcState.fill(0);
+        lastWet.fill(0); correction.fill(0); phase1 = .5; phase2 = .25; subPhase = .5; lfoPhase = 0; driftPhase1 = .17; driftPhase2 = .61;
+        targetFrequency = frequency = acceptedFrequency = oscillatorGain = detector = gateDetector = slowDetector = ampEnvelope = filterEnvelope = 0;
+        inputGate = false; voiceAuthorized = false; pitchHold = 0; noteVelocity = 1; velocityWindow = 0; lastTouch = releaseTouch = 0; envelopeStage = retriggerGuard = wetTransition = controlFrame = sampleClock = quietSamples = 0; pendingTransition = false; expectedBeat = NaN; idle = true;
+      }
+      function update(previous) {
+        sensitivityGain = db(p.sensitivity); threshold = db(p.gate);
+        hpCoefficient = 1 - Math.exp(-TAU * (p.inputRange === 'bass' ? 20 : p.inputRange === 'guitar' ? 45 : 25) / sr);
+        attackCoefficient = 1 - Math.exp(-6.907755278982137 / (sr * p.attack * .001));
+        decayCoefficient = 1 - Math.exp(-6.907755278982137 / (sr * p.decay * .001));
+        releaseCoefficient = Math.exp(-6.907755278982137 / (sr * p.release * .001));
+        glideCoefficient = p.glide === 0 ? 1 : 1 - Math.exp(-1 / (sr * p.glide * .001));
+        driveTarget = db(p.drive); outputTarget = db(p.output); targetCutoffLog = Math.log(p.cutoff);
+        const register = p.register === 'bass' ? .5 : p.register === 'guitar' ? 2 : 1;
+        ratio1 = register * Math.pow(2, p.osc1Octave); ratio2 = register * Math.pow(2, (p.interval + p.detune / 100) / 12);
+        tracker.setParams({ range: p.inputRange, tracking: p.tracking, sensitivity: p.gate });
+        if (previous && previous.envMode !== p.envMode) { envelopeStage = inputGate ? 1 : ampEnvelope > 0 ? 4 : 0; noteVelocity = clamp(detector * 7, .02, 1); velocityWindow = 0; }
+        const topology = [p.mode, p.filterModel, p.filterMode, p.osc1Wave, p.osc2Wave, p.register].join('|');
+        if (initialized && topology !== lastTopology) {
+          filters.fill(0); previousFilterInput.fill(0); dcInput.fill(0); dcState.fill(0); pendingTransition = true;
+          if (previous && previous.mode !== p.mode) { tracker.reset(); targetFrequency = frequency = acceptedFrequency = oscillatorGain = 0; voiceAuthorized = false; pitchHold = 0; }
+        }
+        lastTopology = topology;
+        const nextMix = p.bypass ? 0 : p.mix;
+        if (nextMix !== mixTarget) { mixTarget = nextMix; mixRemaining = fadeFrames; }
+        if (suspended && nextMix > 0) { clear(); suspended = false; mix = 0; mixRemaining = fadeFrames; }
+        if (!initialized) {
+          gain = driveTarget; outputGain = outputTarget; cutoffLog = Math.log(p.cutoff); resonance = p.resonance; synthLevel = p.synthLevel; direct = p.direct; width = p.width;
+          actualCutoff = clamp(p.cutoff, 20, maxHz); g = targetG = Math.tan(PI * actualCutoff / subRate); initialized = true;
+        }
+      }
+      function trigger() { envelopeStage = 1; retriggerGuard = Math.round(sr * .035); noteVelocity = .02; velocityWindow = Math.round(sr * .025); }
+      function filterSample(x, channel) {
+        const at = channel * 4;
+        if (p.filterModel === 'svf') {
+          const k = 2 - 1.94 * resonance, a = 1 / (1 + g * (g + k));
+          const driven = soft(x), v3 = driven - filters[at + 1], v1 = a * (filters[at] + g * v3), v2 = filters[at + 1] + g * v1;
+          filters[at] = safe(2 * v1 - filters[at]); filters[at + 1] = safe(2 * v2 - filters[at + 1]);
+          const result = p.filterMode === 'highpass' ? driven - k * v1 - v2 : p.filterMode === 'bandpass' ? k * v1 : v2;
+          return soft(result * .8) / .8;
+        }
+        const G = g / (1 + g), G2 = G * G, G3 = G2 * G, G4 = G2 * G2;
+        const ota = p.filterModel === 'ota', k = resonance * (ota ? 3.72 : 3.96);
+        const s0 = filters[at], s1 = filters[at + 1], s2 = filters[at + 2], s3 = filters[at + 3];
+        const memory = (1 - G) * (G3 * s0 + G2 * s1 + G * s2 + s3);
+        let u = (x - k * memory) / (1 + k * G4);
+        u = ota ? soft(u * 1.08 + .04) - soft(.04) : soft(u);
+        let v = (u - s0) * G, y1 = v + s0; filters[at] = safe(y1 + v);
+        let input = ota ? soft(y1 * 1.08) / 1.08 : y1;
+        v = (input - s1) * G; const y2 = v + s1; filters[at + 1] = safe(y2 + v);
+        input = ota ? soft(y2 * .96) / .96 : y2;
+        v = (input - s2) * G; const y3 = v + s2; filters[at + 2] = safe(y3 + v);
+        input = ota ? soft(y3 * 1.12) / 1.12 : y3;
+        v = (input - s3) * G; const y4 = v + s3; filters[at + 3] = safe(y4 + v);
+        const result = p.filterMode === 'highpass' ? u - 4 * y1 + 6 * y2 - 4 * y3 + y4 : p.filterMode === 'bandpass' ? 4 * (y2 - 2 * y3 + y4) : y4;
+        return soft(result * (1 + resonance * .55));
+      }
+      function filtered(x, channel) {
+        const previous = previousFilterInput[channel]; previousFilterInput[channel] = x;
+        filterSample((previous + x) * .5, channel); return filterSample(x, channel);
+      }
+      function process(left, right, context) {
+        if (!left || !right || left.length !== right.length) throw Error('FERMENT requires equal stereo blocks.');
+        if (suspended) { for (let frame = 0; frame < left.length; frame++) { if (!Number.isFinite(left[frame])) left[frame] = 0; if (!Number.isFinite(right[frame])) right[frame] = 0; } return; }
+        if (idle && !mixRemaining) {
+          let silent = true; for (let frame = 0; frame < left.length; frame++) if (left[frame] !== 0 || right[frame] !== 0) { silent = false; break; }
+          if (silent) return;
+        }
+        const tempo = clamp(finite(context && context.tempo, 120), 40, 300), cycleBeats = divisions[p.division], running = context?.playing !== false;
+        const lfoRate = p.clock === 'sync' ? tempo / (60 * cycleBeats) : p.rate;
+        const beat = finite(context && context.beat, 0), beatAdvance = tempo / (60 * sr);
+        if (p.clock === 'sync' && running && (!Number.isFinite(expectedBeat) || Math.abs(beat - expectedBeat) > 1e-4)) lfoPhase = ((beat / cycleBeats) % 1 + 1) % 1;
+        expectedBeat = running ? beat + left.length * beatAdvance : beat;
+        for (let frame = 0; frame < left.length; frame++) {
+          const dryL = Number.isFinite(left[frame]) ? left[frame] : 0, dryR = Number.isFinite(right[frame]) ? right[frame] : 0;
+          if (suspended) { left[frame] = dryL; right[frame] = dryR; continue; }
+          if (idle && dryL === 0 && dryR === 0) {
+            if (mixRemaining) { mix += (mixTarget - mix) / mixRemaining; if (--mixRemaining === 0) { mix = mixTarget; if (mix === 0) suspended = true; } }
+            left[frame] = dryL; right[frame] = dryR; continue;
+          }
+          if (idle) {
+            idle = false; controlFrame = 0;
+            if (p.clock === 'sync' && running) lfoPhase = (((beat + frame * beatAdvance) / cycleBeats) % 1 + 1) % 1;
+          }
+          const inputL = clamp(dryL, -8, 8), inputR = clamp(dryR, -8, 8);
+          hpLow[0] += hpCoefficient * (inputL - hpLow[0]); hpLow[1] += hpCoefficient * (inputR - hpLow[1]);
+          const conditionedL = inputL - hpLow[0], conditionedR = inputR - hpLow[1], monoInput = (conditionedL + conditionedR) * .5;
+          const detectorInput = Math.min(8, Math.max(Math.abs(conditionedL), Math.abs(conditionedR)) * sensitivityGain);
+          const beforeDetector = detector;
+          detector = detectorInput > detector ? detector + detectorAttack * (detectorInput - detector) : detector * detectorRelease;
+          slowDetector += slowDetectorCoefficient * (detector - slowDetector);
+          gateDetector = detectorInput > gateDetector ? gateDetector + detectorAttack * (detectorInput - gateDetector) : gateDetector * gateDecay;
+          const priorGate = inputGate; inputGate = gateDetector >= threshold * (inputGate ? .7 : 1.2);
+          if (inputGate && !priorGate) trigger();
+          if (!inputGate && priorGate) releaseTouch = lastTouch;
+          if (retriggerGuard > 0) retriggerGuard--;
+          if (p.retrigger === 'each' && inputGate && retriggerGuard === 0 && detector > Math.max(threshold * 4, slowDetector * 1.75) && detector > beforeDetector * 1.005) trigger();
+          if (p.mode === 'track') {
+            const changed = tracker.push(monoInput * sensitivityGain);
+            if (changed && tracker.active && tracker.frequency > 0) {
+              const nextFrequency = tracker.frequency;
+              if (p.retrigger === 'each' && acceptedFrequency > 0 && Math.abs(Math.log(nextFrequency / acceptedFrequency)) > .055 && inputGate) trigger();
+              acceptedFrequency = nextFrequency; targetFrequency = nextFrequency;
+              if (!frequency) frequency = nextFrequency;
+            }
+          }
+          const confident = p.mode === 'track' && inputGate && tracker.active && tracker.confidence >= .45 && targetFrequency > 0;
+          if (confident) { voiceAuthorized = true; pitchHold = Math.round(sr * .22); }
+          else if (inputGate && voiceAuthorized && pitchHold > 0 && --pitchHold === 0) voiceAuthorized = false;
+          if (!inputGate && ampEnvelope <= 1e-7) voiceAuthorized = false;
+          // A detector can retire before the slower amplitude gate closes. Hold
+          // that accepted note through a short dropout and its release, rather
+          // than dipping out and reappearing at the release boundary.
+          const locked = p.mode === 'track' && voiceAuthorized && targetFrequency > 0 && (inputGate || ampEnvelope > 1e-7);
+          oscillatorGain += ((locked ? 1 : 0) - oscillatorGain) * slew;
+          if (Math.abs(oscillatorGain) < 1e-12) oscillatorGain = 0;
+          if (targetFrequency > 0) frequency += (targetFrequency - frequency) * glideCoefficient;
+          const touch = clamp(detector * 7, 0, 1);
+          if (velocityWindow > 0) { if (inputGate) noteVelocity = Math.max(noteVelocity, touch); velocityWindow--; }
+          if (inputGate) lastTouch = touch;
+          if (p.envMode === 'follower') {
+            const goal = inputGate ? touch : 0;
+            ampEnvelope += (goal - ampEnvelope) * (goal >= ampEnvelope ? attackCoefficient : 1 - releaseCoefficient);
+          } else {
+            if (!inputGate && envelopeStage !== 0) envelopeStage = 4;
+            if (envelopeStage === 1) { ampEnvelope += 1 / (sr * p.attack * .001); if (ampEnvelope >= 1) { ampEnvelope = 1; envelopeStage = 2; } }
+            else if (envelopeStage === 2) { ampEnvelope += (p.sustain - ampEnvelope) * decayCoefficient; if (Math.abs(ampEnvelope - p.sustain) < 1e-5) { ampEnvelope = p.sustain; envelopeStage = 3; } }
+            else if (envelopeStage === 3) ampEnvelope = p.sustain;
+            else if (envelopeStage === 4) ampEnvelope *= releaseCoefficient;
+          }
+          if (ampEnvelope < 1e-7 && !inputGate) { ampEnvelope = 0; envelopeStage = 0; }
+          filterEnvelope = ampEnvelope;
+          gain += (driveTarget - gain) * slew; outputGain += (outputTarget - outputGain) * slew; resonance += (p.resonance - resonance) * slew; synthLevel += (p.synthLevel - synthLevel) * slew; direct += (p.direct - direct) * slew; width += (p.width - width) * slew;
+          cutoffLog += (targetCutoffLog - cutoffLog) * slew;
+          if ((controlFrame++ & 15) === 0) {
+            lfo = p.wave === 'triangle' ? 1 - 4 * Math.abs(lfoPhase - .5) : Math.sin(TAU * lfoPhase);
+            const vibrato = p.mode === 'track' ? lfo * p.depth * p.vibrato : 0;
+            const drift1 = p.drift > 0 ? Math.sin(TAU * driftPhase1) * p.drift * 7 : 0, drift2 = p.drift > 0 ? Math.sin(TAU * driftPhase2) * p.drift * 9 : 0;
+            pitchRatio1 = ratio1 * Math.pow(2, (vibrato + drift1) / 1200); pitchRatio2 = ratio2 * Math.pow(2, (vibrato + drift2) / 1200);
+            const key = p.mode === 'track' && frequency > 0 ? p.keyTrack * Math.log(Math.max(20, frequency) / 261.6255653005986) : 0;
+            const cutoff = clamp(Math.exp(cutoffLog + key + LN2 / 12 * (p.envAmount * filterEnvelope + p.filterLfo * p.depth * lfo)), 20, maxHz);
+            actualCutoff = cutoff; targetG = Math.tan(PI * cutoff * (p.filterModel === 'ota' ? 1.08 : 1) / subRate);
+          }
+          g += (targetG - g) * .12;
+          pulse += (clamp(p.pulseWidth + lfo * p.depth * p.pwm * .45, .05, .95) - pulse) * slew;
+          let rawL, rawR;
+          if (p.mode === 'track') {
+            const inc1 = clamp(frequency * pitchRatio1 / sr, 0, .42), inc2 = clamp(frequency * pitchRatio2 / sr, 0, .42), incSub = inc1 * .5;
+            const a = oscillatorSample(phase1, inc1, p.osc1Wave, pulse), b = oscillatorSample(phase2, inc2, p.osc2Wave, pulse), sub = oscillatorSample(subPhase, incSub, 'pulse', .5);
+            phase1 += inc1; if (phase1 >= 1) phase1 -= 1; phase2 += inc2; if (phase2 >= 1) phase2 -= 1; subPhase += incSub; if (subPhase >= 1) subPhase -= 1;
+            const source = (a + b * p.osc2Level + sub * p.subLevel) / (1 + p.osc2Level + p.subLevel), side = (a - b) * p.osc2Level * width * .22;
+            const oscillator = synthLevel * oscillatorGain * (1 - direct);
+            rawL = (source + side) * oscillator + conditionedL * direct; rawR = (source - side) * oscillator + conditionedR * direct;
+          } else {
+            const middle = monoInput, spread = (conditionedL - conditionedR) * width * .5;
+            rawL = soft((middle + spread) * 6) * synthLevel * (1 - direct) + conditionedL * direct;
+            rawR = soft((middle - spread) * 6) * synthLevel * (1 - direct) + conditionedR * direct;
+          }
+          const dynamics = p.envMode === 'adsr' ? noteVelocity : inputGate ? touch : releaseTouch;
+          const amplitude = ampEnvelope * ((1 - p.velocity) + p.velocity * dynamics), normalization = 1 / Math.sqrt(Math.max(1, gain));
+          let wetL = filtered(rawL * gain, 0) * normalization * amplitude * outputGain, wetR = filtered(rawR * gain, 1) * normalization * amplitude * outputGain;
+          let dc = wetL - dcInput[0] + dcDecay * dcState[0]; dcInput[0] = wetL; dcState[0] = safe(dc); wetL = dcState[0];
+          dc = wetR - dcInput[1] + dcDecay * dcState[1]; dcInput[1] = wetR; dcState[1] = safe(dc); wetR = dcState[1];
+          if (pendingTransition) { correction[0] = lastWet[0] - wetL; correction[1] = lastWet[1] - wetR; wetTransition = fadeFrames; pendingTransition = false; }
+          if (wetTransition) { const amount = .5 - .5 * Math.cos(PI * wetTransition / fadeFrames); wetL += correction[0] * amount; wetR += correction[1] * amount; wetTransition--; }
+          lastWet[0] = wetL; lastWet[1] = wetR;
+          left[frame] = outputSafe(mix === 1 ? wetL : dryL + (wetL - dryL) * mix); right[frame] = outputSafe(mix === 1 ? wetR : dryR + (wetR - dryR) * mix);
+          inputPeak = Math.max(inputPeak * peakDecay, Math.abs(dryL), Math.abs(dryR)); synthPeak = Math.max(synthPeak * peakDecay, Math.abs(wetL), Math.abs(wetR)); outputPeak = Math.max(outputPeak * peakDecay, Math.abs(left[frame]), Math.abs(right[frame]));
+          if (mixRemaining) { mix += (mixTarget - mix) / mixRemaining; if (--mixRemaining === 0) { mix = mixTarget; if (mix === 0) suspended = true; } }
+          lfoPhase += lfoRate / sr; if (lfoPhase >= 1) lfoPhase -= Math.floor(lfoPhase);
+          driftPhase1 += .137 / sr; if (driftPhase1 >= 1) driftPhase1--; driftPhase2 += .193 / sr; if (driftPhase2 >= 1) driftPhase2--;
+          sampleClock++;
+          if (!inputGate && ampEnvelope === 0 && detector < threshold * .1) quietSamples++; else quietSamples = 0;
+          if (quietSamples >= Math.round(sr * .25)) {
+            clear(); inputPeak = synthPeak = outputPeak = 0;
+          }
+        }
+      }
+      update();
+      return {
+        setParams(values) { const previous = p; p = normalize(Object.assign({}, p, values && typeof values === 'object' ? values : {})); update(previous); },
+        process,
+        reset() { clear(); gain = driveTarget; outputGain = outputTarget; cutoffLog = Math.log(p.cutoff); resonance = p.resonance; synthLevel = p.synthLevel; direct = p.direct; width = p.width; mix = mixTarget = p.bypass ? 0 : p.mix; mixRemaining = 0; suspended = mix === 0; actualCutoff = clamp(p.cutoff, 20, maxHz); g = targetG = Math.tan(PI * actualCutoff / subRate); },
+        getTailTime() { return suspended || idle ? 0 : Math.min(6, p.release * .001 * 1.8 + .4); },
+        getMeters() { return { frequencyHz: p.mode === 'track' && !idle ? tracker.frequency : 0, synthFrequencyHz: p.mode === 'track' && !idle ? frequency * ratio1 : 0, confidence: p.mode === 'track' && !idle ? tracker.confidence : 0, trackingLatencyMs: p.mode === 'track' ? tracker.trackingLatencyMs : 0, inputDb: levelDb(inputPeak), synthDb: levelDb(synthPeak), outputDb: levelDb(outputPeak), cutoffHz: actualCutoff, envelope: ampEnvelope, gateOpen: inputGate, mode: p.mode, active: !suspended && !idle }; }
+      };
+    }
+    return { specifications, normalize, create, oscillatorSample };
+  }
+  scope.createLoomPedalSynthDSP = createLoomPedalSynthDSP;
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -5745,6 +6334,9 @@ body {
     const char = makeChar ? makeChar() : null;
     const makeLoFi = typeof lofiFactory === 'function' ? lofiFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomLoFiDSP === 'function' ? globalThis.createLoomLoFiDSP : null;
     const lofi = makeLoFi ? makeLoFi() : null;
+    const makeTracker = typeof trackerFactory === 'function' ? trackerFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalTrackerDSP === 'function' ? globalThis.createLoomPedalTrackerDSP : null;
+    const makePedal = typeof pedalFactory === 'function' ? pedalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalSynthDSP === 'function' ? globalThis.createLoomPedalSynthDSP : null;
+    const pedal = makePedal ? makePedal(makeTracker) : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -5777,6 +6369,7 @@ body {
     if (tape) specifications.preserve = tape.specifications;
     if (char) specifications.cinder = char.specifications;
     if (lofi) specifications.tinpan = lofi.specifications;
+    if (pedal) specifications.ferment = pedal.specifications;
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -5788,6 +6381,7 @@ body {
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'ferment') { if (!pedal) throw new Error('FERMENT requires createLoomPedalSynthDSP.'); return pedal.normalize(params); }
       if (type === 'tinpan') { if (!lofi) throw new Error('TIN CAN requires createLoomLoFiDSP.'); return lofi.normalize(params); }
       if (type === 'cinder' && char) return char.normalize(params);
       if (type === 'preserve') { if (!tape) throw new Error('PRESERVE requires createLoomTapeDSP.'); return tape.normalize(params); }
@@ -5853,6 +6447,7 @@ body {
     }
 
     function create(type, sampleRate, params) {
+      if (type === 'ferment') { if (!pedal) throw new Error('FERMENT requires createLoomPedalSynthDSP.'); return pedal.create(sampleRate, params); }
       if (type === 'tinpan') { if (!lofi) throw new Error('TIN CAN requires createLoomLoFiDSP.'); return lofi.create(sampleRate, params); }
       if (type === 'cinder' && char) return char.create(sampleRate, params);
       if (type === 'preserve') { if (!tape) throw new Error('PRESERVE requires createLoomTapeDSP.'); return tape.create(sampleRate, params); }
@@ -6951,7 +7546,7 @@ body {
 /* GALLEY projects. Eight stations, with fixed capacity. */
 (() => {
   'use strict';
-  const VERSION = '1.29.0';
+  const VERSION = '1.30.0';
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
   const BUTTER_MULTIBAND_KEYS = new Set(['bandMode', 'crossoverLow', 'crossoverHigh', ...['low', 'mid', 'high'].flatMap(band => ['Threshold', 'Ratio', 'Attack', 'Release', 'Gain', 'Enabled', 'Solo'].map(key => band + key))]);
   const BROILER_WORKSHOP_KEYS = new Set(['ampEnable', 'preampTube', 'powerTube', 'toneStack', 'bias', 'voltage', 'feedback', 'tightness', 'bright', 'coupling', 'cathode', 'transformer', 'powerScale', 'micType', 'cabLowCut', 'cabHighCut', 'cabResonance', ...Array.from({ length: 4 }, (_, i) => ['Type', 'Enabled', 'Route', 'Drive', 'Tone', 'Level', 'Mix'].map(key => 'pedal' + (i + 1) + key)).flat()]);
@@ -9138,12 +9733,14 @@ body {
               const createTape=${window.createLoomTapeDSP ? window.createLoomTapeDSP.toString() : 'null'};
               const createChar=${window.createLoomCharDSP ? window.createLoomCharDSP.toString() : 'null'};
               const createLoFi=${window.createLoomLoFiDSP ? window.createLoomLoFiDSP.toString() : 'null'};
+              const createPedalTracker=${window.createLoomPedalTrackerDSP ? window.createLoomPedalTrackerDSP.toString() : 'null'};
+              const createPedalSynth=${window.createLoomPedalSynthDSP ? window.createLoomPedalSynthDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
               const createCPU=${window.createLoomCPUProfiler ? window.createLoomCPUProfiler.toString() : 'null'};
               const createEQ=${window.createLoomTrackEQDSP ? window.createLoomTrackEQDSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi),createLFO,createCPU,createEQ);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker),createLFO,createCPU,createEQ);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -13890,7 +14487,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   const broilerDetailsOpen = new Set();
   let compressorAdvancedOpen = false;
   const preampDetailsOpen = new Set();
-  const tapeDetailsOpen = new Set(), lofiDetailsOpen = new Set();
+  const tapeDetailsOpen = new Set(), lofiDetailsOpen = new Set(), pedalSynthDetailsOpen = new Set();
   let tapeDrag = null, tapeKeyboard = null;
   let trackEqDrag = null, trackEqKeyboard = null;
   const trackEqBands = [
@@ -14091,6 +14688,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       swirl: `<path d="M33 48c0-20 33-34 78-34s78 14 78 34v24c0 22-34 38-78 38S33 94 33 72V48Zm0 0c0 22 34 38 78 38s78-16 78-38M189 50l37-12 3 9-40 15M22 111h178"/><path d="M67 49c0-14 88-14 88 2 0 18-65 19-65 5 0-9 42-10 42 0 0 6-19 8-22 1M171 45l8 9-12 4" stroke="${a}"/><path d="m51 103-4 12m128-13 5 13M61 26l-4-10m109 7 4-12" opacity=".45"/>`,
       crumble: `<path d="M39 18h112v21H39zM45 39v19l37 30v19h29V88l34-30V39M34 13h122v5H34zM81 107h32v11H81zM151 23h27v16h-27m27-8h20v44h-20M67 48l8 7 10-9 12 12 11-9 13 7"/><path d="m64 9 6-5 9 5m18 0 7-5 8 5M51 91h14v-9h13v13h13m41-3h14v10h14V86h14M49 120h117" stroke="${a}"/><path d="M196 76v32m-8-16h16m-16 9h16" opacity=".5"/>`,
       scales: `<path d="M25 77h200v34H25zM35 83h180v22H35zM54 77V61m142 16V61M49 48h152v13H49zM67 48l9-17h98l10 17M125 31V8m-9 0h18M78 118h94"/><path d="M125 78V44m-5-1h10M66 95h35m-35 5h35M164 92h35m-35 7h35" stroke="${a}"/><circle cx="125" cy="93" r="12"/><path d="m118 97 7-12 7 12M62 25l8-10m118 10-8-10M99 21h52" stroke="${a}"/>`,
+      ferment: `<path d="M47 12h155v104H47zM56 21h137v86H56zM84 116v5m81-5v5"/><circle cx="82" cy="43" r="10"/><circle cx="125" cy="43" r="10"/><circle cx="168" cy="43" r="10"/><path d="M82 43v-6m43 6 3-6m40 6-3-6M64 67h121M69 80h11l5-9 7 17 7-17 7 17 7-17 7 17 7-17 7 17 7-17 7 17 7-17 5 9h15" stroke="${a}"/><circle cx="125" cy="100" r="5"/><path d="M46 79H28V58h-9m183 21h18V58h11M14 54h7v9h-7m216-9h7v9h-7"/>`,
       tinpan: `<path d="M25 44q0-22 25-22h65q25 0 25 22v10h-24V43H49v11H25zM46 59l-14 48h116l-14-48M40 115h100"/><circle cx="89" cy="78" r="22"/><circle cx="89" cy="78" r="8"/><path d="M89 60v4m13 1-4 4m9 9h-5m0 13-4-4m-9 9v-5m-13 0 4-4m-9-9h5m0-13 4 4M160 36q0-17 17-17t17 17v28q0 17-17 17t-17-17zM152 59v8q0 26 25 26t25-26v-8m-25 35v18m-16 4h32M167 34h20m-20 9h20m-20 9h20m-20 9h20" stroke="${a}"/><path d="M17 122h199"/>`,
       glaze: `<path d="M25 13h202v92H25zM33 21h186v76H33zM37 105v10m178-10v10M20 117h211"/><path d="M48 31h37v56H48zM103 31h49v25h-49zM170 31h31v56h-31zM103 68h49v19h-49z" opacity=".5"/><path d="M61 38h11m-11 7h11m-11 7h11m-11 7h11M66 65v9m-9-7q0 14 9 14t9-14m-9 14v6M110 38h35m-35 7h35M110 76h35m-35 6h35" stroke="${a}"/><circle cx="185" cy="43" r="6"/><circle cx="185" cy="61" r="6"/><circle cx="185" cy="79" r="6"/><path d="M85 51h12m55 0h12M91 46l6 5-6 5M158 46l6 5-6 5M6 65h9l4-11 5 26 5-31 5 24 4-8M225 65h5l3-8 4 16 4-22 4 14h7" stroke="${a}"/><path d="M40 14q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0m22 0q6-12 12 0" opacity=".4"/>`
     };
@@ -14402,7 +15000,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     if (tapePercentKeys.has(param.key)) return (value > 0 && ['bias', 'azimuth'].includes(param.key) ? '+' : '') + Number((value * 100).toFixed(param.key === 'crosstalk' ? 1 : 0)) + '%';
     return formatParam(param, value);
   }
-  function tapeNumberScale(param, effectId = 'preserve') { return effectId === 'tinpan' ? lofiNumberScale(param) : tapePercentKeys.has(param.key) ? 100 : 1; }
+  function tapeNumberScale(param, effectId = 'preserve') { return effectId === 'ferment' ? pedalSynthNumberScale(param) : effectId === 'tinpan' ? lofiNumberScale(param) : tapePercentKeys.has(param.key) ? 100 : 1; }
   function tapeControl(param, params, rotary = false) {
     if (!param) return '';
     const value = params[param.key] ?? param.default;
@@ -14444,8 +15042,8 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   function paintTapeKnob(element, param, value) {
     if (!element || !Number.isFinite(value)) return;
-    updateAttribute(element, 'aria-valuenow', value); updateAttribute(element, 'aria-valuetext', element.closest('.lofi-console') ? lofiValue(param, value) : tapeValue(param, value));
-    updateAttribute(element.querySelector('[data-tape-pointer]'), 'transform', `rotate(${-135 + 270 * (value - param.min) / (param.max - param.min)} 38 38)`);
+    updateAttribute(element, 'aria-valuenow', value); updateAttribute(element, 'aria-valuetext', element.closest('.pedal-synth-console') ? pedalSynthValue(param, value) : element.closest('.lofi-console') ? lofiValue(param, value) : tapeValue(param, value));
+    updateAttribute(element.querySelector('[data-tape-pointer]'), 'transform', `rotate(${-135 + 270 * (element.closest('.pedal-synth-console') ? pedalSynthKnobFraction(param, value) : (value - param.min) / (param.max - param.min))} 38 38)`);
   }
   function renderTapeState() {
     const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
@@ -14495,17 +15093,17 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   }
   function finishTapeKeyboard() { if (tapeKeyboard) tapeKeyboard.element.classList.remove('is-adjusting'); tapeKeyboard = null; }
   function tapeGesture(element) {
-    const owner = effectOwner(), slot = owner.effects[selectedSlot], param = ['preserve', 'tinpan'].includes(slot?.type) && effectParams(effectById(slot.type)).find(param => param.key === element.dataset.tapeKnob);
+    const owner = effectOwner(), slot = owner.effects[selectedSlot], param = ['preserve', 'tinpan', 'ferment'].includes(slot?.type) && effectParams(effectById(slot.type)).find(param => param.key === element.dataset.tapeKnob);
     return param ? { element, owner, slot, index: selectedSlot, param, remembered: false, lifecycle } : null;
   }
   function setTapeKnob(gesture, value) {
-    if (!gesture || gesture.lifecycle !== lifecycle || S.automationOwner(state, gesture.owner.id) !== gesture.owner || gesture.owner.effects[gesture.index] !== gesture.slot || !['preserve', 'tinpan'].includes(gesture.slot.type)) return false;
+    if (!gesture || gesture.lifecycle !== lifecycle || S.automationOwner(state, gesture.owner.id) !== gesture.owner || gesture.owner.effects[gesture.index] !== gesture.slot || !['preserve', 'tinpan', 'ferment'].includes(gesture.slot.type)) return false;
     const param = gesture.param, next = Math.max(param.min, Math.min(param.max, Number((Math.round(value / param.step) * param.step).toFixed(6))));
     if (!Number.isFinite(next) || gesture.slot.params[param.key] === next) return false;
     if (!gesture.remembered) { remember(); gesture.remembered = true; }
     gesture.slot.params[param.key] = next;
     automationEditor?.capture('fx:' + gesture.index + ':' + param.key, next, { remembered: true, ownerId: gesture.owner.id });
-    changed(); renderTapeState();renderLoFiState(); return true;
+    changed(); renderTapeState();renderLoFiState();renderPedalSynthState(); return true;
   }
   const lofiPercentKeys = new Set(['tone', 'wear', 'resonance', 'compression', 'distance', 'noise', 'crackle', 'hum', 'jitter', 'mix']);
   function lofiNumberScale(param) { return lofiPercentKeys.has(param.key) ? 100 : 1; }
@@ -14585,6 +15183,96 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }
     updateText($('lofiBandwidth'), valid && Number.isFinite(reading.lowCutHz) && Number.isFinite(reading.highCutHz) ? Math.round(reading.lowCutHz).toLocaleString() + '–' + Math.round(reading.highCutHz).toLocaleString() + ' Hz' : '—');
   }
+  function pedalSynthNumberScale(param) { return param.type === 'range' && !param.unit && param.min >= 0 && param.max <= 2 && param.step < .1 ? 100 : 1; }
+  function pedalSynthValue(param, value) {
+    if (pedalSynthNumberScale(param) === 100) return Math.round(value * 100) + '%';
+    if (param.key === 'envAmount') return (value > 0 ? '+' : '') + Number(value.toFixed(1)) + ' st';
+    return formatParam(param, value);
+  }
+  function pedalSynthKnobFraction(param, value) { return param.key === 'cutoff' ? Math.log(value / param.min) / Math.log(param.max / param.min) : (value - param.min) / (param.max - param.min); }
+  function pedalSynthControl(param, params, rotary = false) {
+    if (!param) return '';
+    const value = params[param.key] ?? param.default;
+    if (param.type === 'select') return `<div class="control ferment-control"><label for="fx-${param.key}">${escape(param.label)}</label><select id="fx-${param.key}" data-effect-param="${param.key}">${param.options.map(option => `<option value="${escape(option.value)}" ${option.value === value ? 'selected' : ''}>${escape(option.label)}</option>`).join('')}</select></div>`;
+    const scale = pedalSynthNumberScale(param), unit = scale === 100 ? '%' : param.unit || '';
+    const exact = `<input id="fx-number-${param.key}" data-tape-number="${param.key}" data-tape-scale="${scale}" type="number" min="${Number((param.min * scale).toFixed(6))}" max="${Number((param.max * scale).toFixed(6))}" step="${Number((param.step * scale).toFixed(6))}" value="${Number((value * scale).toFixed(4))}" aria-label="${escape(param.label)} exact value${unit ? ' in ' + escape(unit) : ''}">`;
+    if (!rotary) return `<div class="control ferment-control"><label for="fx-${param.key}"><span>${escape(param.label)}</span><output>${pedalSynthValue(param, value)}</output></label><div class="ferment-value-row">${effectRange(param, value)}${exact}</div></div>`;
+    const angle = -135 + 270 * pedalSynthKnobFraction(param, value);
+    return `<div class="control ferment-control tape-knob-control"><label for="fx-${param.key}">${escape(param.label)}</label><button type="button" id="fx-${param.key}" class="tape-knob" role="slider" data-tape-knob="${param.key}" aria-label="${escape(param.label)}" aria-valuemin="${param.min}" aria-valuemax="${param.max}" aria-valuenow="${value}" aria-valuetext="${escape(pedalSynthValue(param, value))}" aria-orientation="vertical" title="Drag up or down; hold Shift for fine control. Arrow keys adjust, Page keys make larger changes. Home/End select the limits. Double-click, Enter or Space restores the starting value."><svg viewBox="0 0 76 76" aria-hidden="true" focusable="false"><path class="tape-knob-track" d="M14.67 61.33A33 33 0 1 1 61.33 61.33"/><path class="tape-knob-zero" d="M38 1v3"/><circle class="tape-knob-shadow" cx="38" cy="40" r="26"/><circle class="tape-knob-cap" cx="38" cy="38" r="25"/><circle class="tape-knob-inner" cx="38" cy="38" r="20"/><path class="tape-knob-pointer" data-tape-pointer d="M38 34V20" transform="rotate(${angle} 38 38)"/></svg></button><output class="sr-only">${pedalSynthValue(param, value)}</output><div class="tape-knob-number">${exact}<span aria-hidden="true">${escape(unit)}</span></div></div>`;
+  }
+  function pedalSynthControls(def, params) {
+    const descriptors = new Map(effectParams(def).map(param => [param.key, param])), selectors = ['mode', 'inputRange', 'register'], core = ['cutoff', 'resonance', 'envAmount', 'synthLevel', 'mix'];
+    const used = new Set([...selectors, ...core]), groups = [];
+    for (const group of def.groups || []) {
+      if (group.section === 'main') continue;
+      const keys = group.keys.filter(key => descriptors.has(key) && !used.has(key));
+      if (keys.length) { keys.forEach(key => used.add(key)); groups.push({ ...group, keys }); }
+    }
+    const remaining = effectParams(def).map(param => param.key).filter(key => !used.has(key));
+    if (remaining.length) groups.push({ id: 'additional', label: 'Fine adjustments', help: 'Finish the synthesizer voice.', keys: remaining });
+    const summaries = { oscillators: 'Two oscillators, pulse movement & sub', filter: 'Circuit, response & analog drive', tracking: 'Input sensitivity, pitch lock & glide', envelopes: 'Follow the strings or shape each note', motion: 'Synced or free modulation', output: 'Direct input, synth voice & final level' };
+    return `<div class="pedal-synth-console"><div class="ferment-recipe-bar"><label for="fermentPreset"><span class="eyebrow">HOUSE RECIPES / COMPLETE SYNTH PEDAL</span><select id="fermentPreset" aria-label="FERMENT recipe"><option value="">Custom settings</option>${(def.presets || []).map(preset => `<option value="${escape(preset.id)}">${escape(preset.name)}</option>`).join('')}</select></label><p id="fermentPresetDescription"></p></div>
+      <section class="ferment-face" aria-labelledby="fermentFaceTitle"><div class="ferment-face-heading"><div><span id="fermentFaceTitle" class="ferment-face-brand">Ferment</span><span class="ferment-face-edition">STRING CULTURE / GUITAR & BASS SYNTHESIZER</span></div><span class="ferment-signal-light"><i aria-hidden="true"></i><span id="fermentTrackingStatus" aria-live="off">Ready</span></span></div>
+      <div class="ferment-selectors">${selectors.map(key => pedalSynthControl(descriptors.get(key), params)).join('')}</div><p id="fermentModeHint" class="ferment-mode-hint"></p>
+      <div class="ferment-tracking" aria-label="Measured pitch tracking"><div><span>Pitch</span><output id="fermentPitch" aria-label="Detected input pitch" aria-live="off">—</output></div><div><span>Confidence</span><output id="fermentConfidence" aria-label="Pitch confidence" aria-live="off">—</output><i aria-hidden="true"><b id="fermentConfidenceBar"></b></i></div><div><span>Detector estimate</span><output id="fermentLatency" aria-label="Estimated pitch detection latency" aria-live="off">—</output></div></div>
+      <div class="ferment-core-controls">${core.map(key => pedalSynthControl(descriptors.get(key), params, true)).join('')}</div>
+      <div class="ferment-readings" aria-label="Measured synthesizer levels">${[['inputDb', 'Input'], ['synthDb', 'Synth voice'], ['outputDb', 'Output']].map(([key, label]) => `<div><span>${label}</span><output data-ferment-meter="${key}" aria-label="${label} level" aria-live="off">—</output><i aria-hidden="true"><b data-ferment-meter-bar="${key}"></b></i></div>`).join('')}</div>
+      <div class="ferment-status-strip"><span>Filter <output id="fermentFilterReadout" aria-label="Effective filter cutoff" aria-live="off">—</output></span><span id="fermentRegisterHint"></span></div><p class="ferment-face-note">Start with a clean guitar or bass signal. Play a single line for tracking synthesis; use Chord Texture for input-driven chord colours. Lower notes need more time to identify.</p></section>
+      <div class="ferment-details-list">${groups.map(group => `<details id="ferment-${escape(group.id)}-details" class="ferment-details" data-ferment-details="${escape(group.id)}" ${pedalSynthDetailsOpen.has(group.id) ? 'open' : ''}><summary><span><strong>${escape(group.label)}</strong><small>${escape(summaries[group.id] || 'Fine adjustments')}</small></span><span aria-hidden="true">+</span></summary><div class="ferment-details-content"><p id="ferment-${escape(group.id)}-hint">${escape(group.help || group.description || '')}</p><div class="ferment-detail-controls">${group.keys.map(key => pedalSynthControl(descriptors.get(key), params)).join('')}</div>${group.id === 'filter' ? '<p id="fermentFilterModelHint" class="ferment-detail-note"></p>' : group.id === 'envelopes' ? '<p id="fermentEnvelopeHint" class="ferment-detail-note"></p>' : ''}</div></details>`).join('')}</div>
+      <p class="ferment-disclosure">FERMENT turns the recorded input into a synth voice; no MIDI pickup is required. Bass and guitar describe input tracking and output register separately. The analog circuit characters are musical models.</p></div>`;
+  }
+  function renderPedalSynthState() {
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
+    if (def?.id !== 'ferment' || !$('fermentFaceTitle')) return;
+    const params = slot.params, chord = params.mode === 'chord';
+    const recipe = def.presets?.find(preset => effectParams(def).every(param => params[param.key] === (preset.params[param.key] ?? def.defaults[param.key])) && params.bypass === (preset.params.bypass ?? false));
+    updateProperty($('fermentPreset'), 'value', recipe?.id || '');
+    updateText($('fermentPresetDescription'), recipe?.description || 'Custom synth voice. Shape the front panel, or load a complete house recipe.');
+    updateText($('fermentModeHint'), chord ? 'Chord Texture follows the input waveform through a synth-like shaper and analog filter. It does not track separate pitches; oscillator and register settings are retained for Tracking mode.' : 'Tracking is monophonic: play a clear single-note guitar or bass line. Input range tunes detection; Sound register places the synthesized voice.');
+    if ($('fermentEnvelopeHint')) updateText($('fermentEnvelopeHint'), params.envMode === 'follower' ? 'Input following uses Attack and Release. Decay, Sustain and note retrigger settings are retained for Triggered ADSR.' : 'Triggered ADSR uses all four envelope stages; choose connected or separate note triggers in Input & tracking.');
+    if ($('fermentFilterModelHint')) updateText($('fermentFilterModelHint'), def.filterModels?.find(model => model.id === params.filterModel)?.description || 'Choose a filter circuit and response.');
+    updateText($('fermentRegisterHint'), chord ? 'Input-driven texture · original chord register' : params.register === 'bass' ? 'Bass register · one octave down' : params.register === 'guitar' ? 'Guitar register · one octave up' : 'Played register · follows the input');
+    updateClass($('fermentFaceTitle').closest('.ferment-face'), 'ferment-is-bypassed', params.bypass);
+    for (const param of effectParams(def)) {
+      const input = $('fx-' + param.key), value = params[param.key] ?? param.default;
+      if (!input) continue;
+      const control = input.closest('.control'), exact = control?.querySelector('[data-tape-number]');
+      if (input.hasAttribute('data-tape-knob')) paintTapeKnob(input, param, value);
+      else if (document.activeElement !== input) updateProperty(input, 'value', input.dataset.log === 'true' ? Math.log(value / param.min) / Math.log(param.max / param.min) : value);
+      if (param.type === 'range') { updateText(control.querySelector('output'), pedalSynthValue(param, value)); if (exact && document.activeElement !== exact) updateProperty(exact, 'value', Number((value * pedalSynthNumberScale(param)).toFixed(4))); }
+      const chordInactive = chord && def.chordInactive?.includes(param.key), followerInactive = params.envMode === 'follower' && ['decay', 'sustain', 'retrigger'].includes(param.key);
+      const inactive = chordInactive || followerInactive || param.key === 'rate' && params.clock === 'sync' || param.key === 'division' && params.clock === 'free';
+      input.disabled = !!inactive; if (exact) exact.disabled = !!inactive;
+      updateClass(control, 'ferment-control-inactive', !!inactive);
+      updateAttribute(control, 'title', chordInactive ? 'Stored for Tracking synth.' : followerInactive ? 'Stored for Triggered ADSR.' : param.key === 'rate' && params.clock === 'sync' ? 'Choose Free rate to use this speed.' : param.key === 'division' && params.clock === 'free' ? 'Choose Tempo sync to use this cycle.' : '');
+      if (['mode', 'inputRange', 'register'].includes(param.key)) updateAttribute(input, 'aria-describedby', 'fermentModeHint');
+      const group = def.groups?.find(group => group.section !== 'main' && group.keys.includes(param.key));
+      if (group) { updateAttribute(input, 'aria-describedby', 'ferment-' + group.id + '-hint'); if (exact) updateAttribute(exact, 'aria-describedby', 'ferment-' + group.id + '-hint'); }
+    }
+    renderPedalSynthMeters();
+  }
+  function renderPedalSynthMeters(meters = visualMeters()) {
+    const slot = effectOwner().effects[selectedSlot]; if (slot?.type !== 'ferment' || $('effectEditor').hidden || !$('fermentFaceTitle')) return;
+    const reading = effectReading(meters), valid = reading?.type === 'ferment' && !reading.bypass && !slot.params.bypass, chord = slot.params.mode === 'chord';
+    const confidence = valid && Number.isFinite(reading.confidence) ? Math.max(0, Math.min(1, reading.confidence)) : 0, frequency = valid && Number.isFinite(reading.frequencyHz) ? reading.frequencyHz : 0;
+    const signal = valid && Number.isFinite(reading.inputDb) && reading.inputDb > -85;
+    updateText($('fermentTrackingStatus'), slot.params.bypass ? 'Bypassed' : chord ? signal ? 'Texture active' : 'Ready' : !signal ? 'Ready' : frequency > 0 && confidence > .5 ? 'Pitch locked' : 'Finding pitch');
+    updateClass($('fermentFaceTitle').closest('.ferment-face'), 'ferment-has-signal', signal);
+    let pitch = '—';
+    if (!chord && frequency > 0) { const note = Math.round(69 + 12 * Math.log2(frequency / 440)), names = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B']; pitch = names[((note % 12) + 12) % 12] + (Math.floor(note / 12) - 1) + ' · ' + frequency.toFixed(frequency < 100 ? 1 : 0) + ' Hz'; }
+    updateText($('fermentPitch'), chord ? 'Input texture' : pitch);
+    updateText($('fermentConfidence'), valid && !chord ? Math.round(confidence * 100) + '%' : '—');
+    updateMeterBar($('fermentConfidenceBar'), !chord ? Number(confidence.toFixed(2)) : 0);
+    updateText($('fermentLatency'), valid && !chord && Number.isFinite(reading.trackingLatencyMs) && reading.trackingLatencyMs > 0 ? reading.trackingLatencyMs.toFixed(0) + ' ms' : '—');
+    for (const output of $('effectEditor').querySelectorAll('[data-ferment-meter]')) {
+      const key = output.dataset.fermentMeter, value = reading?.[key], available = valid && Number.isFinite(value);
+      updateText(output, available ? value <= -90 ? '−∞ dB' : (value > 0 ? '+' : '') + value.toFixed(1) + ' dB' : '—');
+      const bar = $('effectEditor').querySelector('[data-ferment-meter-bar="' + key + '"]');
+      if (bar) updateMeterBar(bar, available ? Number(Math.min(1, Math.max(0, (value + 60) / 60)).toFixed(2)) : 0);
+    }
+    updateText($('fermentFilterReadout'), valid && Number.isFinite(reading.cutoffHz) ? Math.round(reading.cutoffHz).toLocaleString() + ' Hz' : '—');
+  }
+
   function broilerParam(def, key) { return effectParams(def).find(param => param.key === key); }
   function broilerValue(param, value) {
     if (/^pedal[1-4](Drive|Tone|Mix)$/.test(param.key)) return Math.round(value * 100) + '%';
@@ -14772,11 +15460,11 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function renderEffectEditorContents() {
     finishTapeDrag(); finishTapeKeyboard();
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
-    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',tape=def.id==='preserve',lofi=def.id==='tinpan',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('tape-editor',tape);editor.classList.toggle('lofi-editor',lofi);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
-    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):lofi?lofiControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}${def.id==='cinder'?'<p id="charCircuitHint" class="fineprint char-circuit-note"></p>':''}</div>`;
-    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':lofi?'<div class="lofi-signal-route">CAPSULE → COLOUR → CASING<br>↓<br>LINE → VOICE ENCODER<br>↓<br>OUTPUT → BLEND</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
-    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':lofi?'CAPSULE / LINE / LO-FI':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
-    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
+    const def=effectById(slot.type),amp=def.id==='broiler',compressor=def.id==='velvet',preamp=def.id==='saute',tape=def.id==='preserve',lofi=def.id==='tinpan',pedalsynth=def.id==='ferment',vocal=def.id==='glaze',utility=def.id==='scales',creative=isCreativeEffect(def);editor.classList.toggle('amp-editor',amp);editor.classList.toggle('compressor-editor',compressor);editor.classList.toggle('preamp-editor',preamp);editor.classList.toggle('tape-editor',tape);editor.classList.toggle('lofi-editor',lofi);editor.classList.toggle('pedal-synth-editor',pedalsynth);editor.classList.toggle('vocal-editor',vocal);editor.classList.toggle('utility-editor',utility);editor.classList.toggle('creative-editor',creative);editor.dataset.effect=def.id;editor.style.setProperty('--effect-color',def.color);
+    const controls=amp?broilerControls(def,slot.params):compressor?compressorControls(def,slot.params):preamp?preampControls(def,slot.params):tape?tapeControls(def,slot.params):lofi?lofiControls(def,slot.params):pedalsynth?pedalSynthControls(def,slot.params):vocal?vocalControls(def,slot.params):utility?utilityControls(def,slot.params):creative?creativeControls(def,slot.params):`<div class="effect-controls">${effectParams(def).map(p=>effectControl(p,slot.params)).join('')}${def.id==='cinder'?'<p id="charCircuitHint" class="fineprint char-circuit-note"></p>':''}</div>`;
+    const route=amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':lofi?'<div class="lofi-signal-route">CAPSULE → COLOUR → CASING<br>↓<br>LINE → VOICE ENCODER<br>↓<br>OUTPUT → BLEND</div>':pedalsynth?'<div class="ferment-signal-route">GUITAR / BASS → DETECTOR<br>↓<br>OSCILLATORS + INPUT / TEXTURE<br>↓<br>ANALOG FILTER → ENVELOPE<br>↓<br>OUTPUT → DRY / WET</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
+    editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':lofi?'CAPSULE / LINE / LO-FI':pedalsynth?'STRINGS / OSCILLATORS / FILTER':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
+    renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderPedalSynthState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
   }
   function renderCharState() {
     const slot = effectOwner().effects[selectedSlot], note = $('charCircuitHint');
@@ -15235,7 +15923,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     const gesture = tapeDrag; if (!gesture || gesture.pointer !== e.pointerId) return;
     e.preventDefault(); e.stopPropagation();
     const delta = gesture.lastY - e.clientY; gesture.lastY = e.clientY;
-    gesture.value = Math.max(gesture.param.min, Math.min(gesture.param.max, gesture.value + delta * (gesture.param.max - gesture.param.min) / (e.shiftKey ? 1600 : 220)));
+    gesture.value = Math.max(gesture.param.min, Math.min(gesture.param.max, gesture.slot.type === 'ferment' && gesture.param.key === 'cutoff' ? gesture.value * Math.exp(delta * Math.log(gesture.param.max / gesture.param.min) / (e.shiftKey ? 1600 : 220)) : gesture.value + delta * (gesture.param.max - gesture.param.min) / (e.shiftKey ? 1600 : 220)));
     setTapeKnob(gesture, gesture.value);
   });
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) $('effectEditor').addEventListener(name, e => {
@@ -15262,6 +15950,13 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   });
   window.addEventListener('blur', () => { finishTapeDrag(); finishTapeKeyboard(); });
   document.addEventListener('change', e => {
+    if (e.target.id === 'fermentPreset') {
+      const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), preset = def?.presets?.find(preset => preset.id === e.target.value);
+      if (def?.id !== 'ferment' || !preset) return;
+      finishTapeDrag(); finishTapeKeyboard(); remember(); slot.params = { ...clone(def.defaults), ...clone(preset.params) };
+      changed({ rack: true, mixer: true, automation: true }); renderPedalSynthState();
+      status(preset.name + ' loaded. ' + preset.description); return;
+    }
     if (e.target.id === 'lofiPreset') {
       const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), preset = def?.presets?.find(preset => preset.id === e.target.value);
       if (def?.id !== 'tinpan' || !preset) return;
@@ -15277,7 +15972,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       status(preset.name + ' loaded. ' + preset.description); return;
     }
     const input = e.target, key = input.dataset.tapeNumber; if (!key) return;
-    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), param = ['preserve', 'tinpan'].includes(def?.id) && effectParams(def).find(param => param.key === key);
+    const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type), param = ['preserve', 'tinpan', 'ferment'].includes(def?.id) && effectParams(def).find(param => param.key === key);
     if (!param || input.disabled) return;
     const scale = tapeNumberScale(param, def.id), value = input.valueAsNumber / scale;
     if (!Number.isFinite(value) || value < param.min || value > param.max) {
@@ -15286,10 +15981,11 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }
     finishTapeDrag(); finishTapeKeyboard();
     if (slot.params[key] !== value) { remember(); slot.params[key] = value; automationEditor?.capture('fx:' + selectedSlot + ':' + key, value, { remembered: true, ownerId: effectOwner().id }); changed(); }
-    renderTapeState();renderLoFiState();
+    renderTapeState();renderLoFiState();renderPedalSynthState();
   });
   document.addEventListener('toggle', e => { const detail = e.target; if (!detail.matches?.('[data-tape-details]')) return; if (detail.open) tapeDetailsOpen.add(detail.dataset.tapeDetails); else tapeDetailsOpen.delete(detail.dataset.tapeDetails); }, true);
   document.addEventListener('toggle', e => { const detail = e.target; if (!detail.matches?.('[data-lofi-details]')) return; if (detail.open) lofiDetailsOpen.add(detail.dataset.lofiDetails); else lofiDetailsOpen.delete(detail.dataset.lofiDetails); }, true);
+  document.addEventListener('toggle', e => { const detail = e.target; if (!detail.matches?.('[data-ferment-details]')) return; if (detail.open) pedalSynthDetailsOpen.add(detail.dataset.fermentDetails); else pedalSynthDetailsOpen.delete(detail.dataset.fermentDetails); }, true);
   document.addEventListener('pointerdown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'){remember();activeRanges.add(e.target);}});
   document.addEventListener('keydown',e=>{if(e.target.matches('input[type=range]')&&e.target.id!=='zoom'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key)&&!activeRanges.has(e.target)){remember();activeRanges.add(e.target);}});
   document.addEventListener('change',e=>{if(e.target.matches('input[type=range]'))activeRanges.delete(e.target);});
@@ -15364,7 +16060,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       if(owner.name!==name){remember();owner.name=name;changed();renderSendControls();automationEditor?.render();if(rackTarget===owner.id&&selectedSlot!==null)renderEffectEditor();}return;
     }
   });
-  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();} });
+  document.addEventListener('input',e=>{const input=e.target;if(input.dataset.mix){if(!activeRanges.has(input)){remember();activeRanges.add(input);}const t=state.tracks[Number(input.dataset.track)],key=input.dataset.mix;t[key]=Number(input.value);automationEditor?.capture(key,t[key],{remembered:true,ownerId:t.id});if(key==='pan')input.nextElementSibling.textContent=panLabel(t.pan);else input.closest('.mixer-channel').querySelector('.channel-db').textContent=levelLabel(t.level);changed();}if(input.dataset.effectParam&&input.type==='range'){if(!activeRanges.has(input)&&input.type==='range'){remember();activeRanges.add(input);}const slot=effectOwner().effects[selectedSlot],p=effectParams(effectById(slot.type)).find(p=>p.key===input.dataset.effectParam);slot.params[p.key]=p.type==='select'?input.value:Number(input.value);if(input.dataset.log==='true')slot.params[p.key]=p.min*Math.pow(p.max/p.min,Number(input.value));automationEditor?.capture('fx:'+selectedSlot+':'+p.key,slot.params[p.key],{remembered:true});if(p.type==='range')input.closest('.control').querySelector('output').textContent=formatParam(p,slot.params[p.key]);changed();const graphic=$('effectEditor').querySelector('.effect-art');if(graphic)graphic.style.filter=`drop-shadow(0 0 ${2+slot.params.mix*7}px ${effectById(slot.type).color}22)`;renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderPedalSynthState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();} });
   document.addEventListener('change',e=>{
     const input=e.target;if(!input.dataset.effectParam||input.tagName!=='SELECT')return;
     const key=input.dataset.effectParam,slot=effectOwner().effects[selectedSlot],def=effectById(slot.type),previous=slot.params[key];
@@ -15379,7 +16075,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }
     changed(pedalType?{automation:true}:{});
     if(def.id==='glaze'&&vocalEditorView==='basic'&&(key==='delayClock'||def.groups.some(g=>g.enableKey===key))){renderEffectEditor();$('fx-'+key)?.focus({preventScroll:true});}
-    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();}
+    else{renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderPedalSynthState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();}
   });
   document.addEventListener('change',e=>{
     if(e.target.id==='broilerRigFile'){loadBroilerRig(e.target.files?.[0],e.target);return;}
@@ -15500,7 +16196,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       renderPlayhead(m);
       if (panelVisible('mixer')) renderTrackEqState(m);
       if (panelVisible('micInputPanel') || $('audioSettingsDialog').open) renderMicrophone(m.microphone);
-      if (panelVisible('effectEditor') && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderUtilityMeters(m);renderCreativeMeters(m); }
+      if (panelVisible('effectEditor') && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);renderUtilityMeters(m);renderCreativeMeters(m); }
       if (panelVisible('busChannels')) renderBusMeters(m);
       automationEditor?.tick(panelVisible('automationEditor'));
       if (panelVisible('pianoRollEditor')) pianoRoll?.tick();
