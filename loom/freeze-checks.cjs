@@ -32,7 +32,7 @@ function load(ref = 'working', instrument = false) {
   };
   // The working release has an additional effect; historical comparisons keep
   // their own dependency graph and must never read files absent at that commit.
-  const loadedModules = ref === 'working' ? modules.flatMap(file => file === 'loom/effects-catalog.js' ? ['loom/lofi-catalog.js', 'loom/pedal-synth-catalog.js', file] : file === 'loom/effects.js' ? ['loom/lofi-dsp.js', 'loom/pedal-synth-tracker.js', 'loom/pedal-synth-dsp.js', file] : [file]) : modules;
+  const loadedModules = ref === 'working' ? modules.flatMap(file => file === 'loom/effects-catalog.js' ? ['loom/lofi-catalog.js', 'loom/pedal-synth-catalog.js', 'loom/deluxe-catalog.js', file] : file === 'loom/effects.js' ? ['loom/lofi-dsp.js', 'loom/pedal-synth-tracker.js', 'loom/pedal-synth-dsp.js', 'loom/deluxe-dsp.js', file] : [file]) : modules;
   for (const file of loadedModules) {
     Function('window', 'globalThis', 'crypto', 'atob', 'btoa', source(file) + '\n//# sourceURL=freeze-checks-' + path.basename(file))(scope, scope, scope.crypto, scope.atob, scope.btoa);
     if (instrument && file === 'loom/effects.js') {

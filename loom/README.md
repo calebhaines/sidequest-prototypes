@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**SUNDAY (1.33.0)** adds five Deluxe Reverb AB763 circuit interpretations in a separate amp effect. A–E retain the same controls for auditioning; independent input/output trims, fixed comparison levels, preserved clean playing dynamics, passive tone interaction, spring/tremolo and deep circuit/load controls are included. BROILER is unchanged. See [the operating and research guide](DELUXE-REVERB-GUIDE.md).
+
 **Ten tracks & mastering (1.32.0)** adds two complete recording/instrument tracks and a dedicated master finishing bench after the four master inserts and fader. Cleanup, three-band EQ, glue compression, stereo width/mono bass, soft clipping and a linked sample-peak limiter have folded controls and complete recipes. Optional loudness, estimated intersample-peak and stereo metering run on demand. Older projects gain two empty tracks and keep the new processing off. See [the mastering guide](MASTERING-GUIDE.md).
 
 **Project recordings (1.31.0)** adds a searchable audio browser beside Save/Open, source previews and WAV downloads, clip-use details, and permanent deletion with a review of affected clips and frozen tracks. Project files now support 448 MiB with consistent UTF-8 size checks. See [the recordings guide](RECORDINGS-GUIDE.md).
@@ -160,7 +162,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.32.0.
+SERVICE is version 1.0.0; GALLEY is version 1.33.0.
 
 ## Making a piece
 
@@ -407,7 +409,7 @@ stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
 
-## Eighteen effects
+## Nineteen effects
 
 | Effect | Processing |
 | --- | --- |
@@ -429,6 +431,7 @@ is unavailable, keep a WAV or packet for the next session.
 | CRUMBLE | Bit-depth and sample-rate reduction with clock jitter, dither, transient recovery, and output tone |
 | TIN CAN | Twelve lo-fi microphones and telephones with transducer distortion, resonant bandwidth, dynamics, wear, noise and optional PCM, G.711 µ-law or IMA ADPCM texture |
 | FERMENT | Guitar/bass pitch-tracking synthesis, two oscillators and a sub, nonlinear ladder/OTA/state-variable filters, envelopes, modulation and a chord-friendly input-synthesis path |
+| SUNDAY | Five Deluxe Reverb AB763 formulations with preserved clean dynamics, interactive tone stack, spring reverb, optical-style tremolo, open-back cabinet and circuit/load customization |
 
 ### Two GALLEY inserts per percussion voice
 
@@ -503,7 +506,7 @@ checks. See [MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for BUTTER and CHAR.
 
 GALLEY retains ten instrument/audio tracks with five inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
-channels each have four inserts. All eighteen effects work in these racks.
+channels each have four inserts. All nineteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
 LEFTOVERS delay. Every track's send levels start at zero, so older sessions keep
 their original sound. Change either return's effects to build another shared
@@ -844,7 +847,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.32.0.
+font license notices. Version 1.33.0.
 
 ## Compatibility
 

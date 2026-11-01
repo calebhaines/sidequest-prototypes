@@ -13,7 +13,7 @@ const directory = __dirname, root = path.resolve(directory, '..');
 const BASELINE = '96692e865db605361c6f34ab3b7e5c34f691d68f';
 const catalogs = ['vocal', 'utility', 'filter', 'creative', 'preamp', 'tape', 'char', 'lofi'];
 const dsps = ['vocal', 'utility', 'filter', 'creative', 'preamp', 'tape', 'char', 'lofi'];
-const modules = [...catalogs.map(name => name + '-catalog.js'), 'pedal-synth-catalog.js', 'effects-catalog.js', ...dsps.map(name => name + '-dsp.js'), 'pedal-synth-tracker.js', 'pedal-synth-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'effects.js'];
+const modules = [...catalogs.map(name => name + '-catalog.js'), 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'effects-catalog.js', ...dsps.map(name => name + '-dsp.js'), 'pedal-synth-tracker.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'effects.js'];
 function source(name, ref) {
   if (ref) return execFileSync('git', ['show', ref + ':loom/' + name], { cwd: root, maxBuffer: 12 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }).toString();
   return fs.readFileSync(path.join(directory, name), 'utf8');
@@ -23,10 +23,10 @@ function load(ref) {
   scope.window = scope; scope.globalThis = scope;
   scope.atob = value => Buffer.from(value, 'base64').toString('binary'); scope.btoa = value => Buffer.from(value, 'binary').toString('base64');
   for (const name of modules) {
-    if (ref && name.startsWith('pedal-synth-')) continue;
+    if (ref && (name.startsWith('pedal-synth-') || name.startsWith('deluxe-'))) continue;
     Function('window', 'globalThis', 'crypto', 'atob', 'btoa', source(name, ref) + '\n//# sourceURL=ferment-' + name)(scope, scope, scope.crypto, scope.atob, scope.btoa);
   }
-  const E = scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP);
+  const E = scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP);
   return { scope, E, F: scope.createLoomPedalSynthDSP?.(scope.createLoomPedalTrackerDSP), T: scope.createLoomPedalTrackerDSP?.(), definition: scope.LoomEffectsCatalog.find(effect => effect.id === 'ferment') };
 }
 const plain = value => JSON.parse(JSON.stringify(value));

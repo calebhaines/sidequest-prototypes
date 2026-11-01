@@ -229,6 +229,7 @@
   if (scope.LoomTapeCatalog) catalog.push(...scope.LoomTapeCatalog);
   if (scope.LoomLoFiCatalog) catalog.push(...scope.LoomLoFiCatalog);
   if (scope.LoomPedalSynthCatalog) catalog.push(...scope.LoomPedalSynthCatalog);
+  if (scope.LoomDeluxeCatalog) catalog.push(...scope.LoomDeluxeCatalog);
   const charIndex = catalog.findIndex(effect => effect.id === 'cinder');
   if (scope.LoomCharCatalog && charIndex >= 0) catalog[charIndex] = scope.LoomCharCatalog;
   catalog.forEach(effect => { effect.params.push(range('mix', effect.mixLabel || 'Dry / wet', 0, 1, 0.01, effect.defaults.mix, '')); if (effect.presets) effect.presets.forEach(preset => { preset.params = Object.assign({}, effect.defaults, preset.params); }); });
