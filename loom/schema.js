@@ -1,7 +1,7 @@
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.33.0';
+  const VERSION = '1.34.0';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
@@ -37,6 +37,14 @@
   }
   function validateMastering(raw) {
     if (!plain(raw) || Object.keys(raw).length !== MASTERING_FLAGS.length + Object.keys(MASTERING_NUMERIC).length || MASTERING_FLAGS.some(key => typeof raw[key] !== 'boolean') || Object.entries(MASTERING_NUMERIC).some(([key, rule]) => typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < rule[0] || raw[key] > rule[1])) throw Error('The master contains invalid mastering tools or values.');
+  }
+  const MASTER_PLAYBACK_KEYS = Object.freeze(['speed', 'pitch', 'preservePitch']);
+  const defaultMasterPlayback = () => ({ speed: 1, pitch: 0, preservePitch: true });
+  function normalizeMasterPlayback(raw) {
+    return { speed: number(raw?.speed, .25, 2, 1), pitch: number(raw?.pitch, -24, 24, 0), preservePitch: bool(raw?.preservePitch, true) };
+  }
+  function validateMasterPlayback(raw) {
+    if (!plain(raw) || Object.keys(raw).length !== MASTER_PLAYBACK_KEYS.length || MASTER_PLAYBACK_KEYS.some(key => !Object.prototype.hasOwnProperty.call(raw, key)) || typeof raw.speed !== 'number' || !Number.isFinite(raw.speed) || raw.speed < .25 || raw.speed > 2 || typeof raw.pitch !== 'number' || !Number.isFinite(raw.pitch) || raw.pitch < -24 || raw.pitch > 24 || typeof raw.preservePitch !== 'boolean') throw Error('The master contains invalid playback speed or pitch settings.');
   }
   const defaultTrackEq = () => ({ low: 0, lowMid: 0, highMid: 0, high: 0, lowMidFreq: 400, highMidFreq: 2500 });
   const trackEq = raw => ({ ...Object.fromEntries(TRACK_EQ_BANDS.map(band => [band.key, number(raw?.[band.key], -12, 12, 0)])), ...Object.fromEntries(TRACK_EQ_SWEEPS.map(sweep => [sweep.key, number(raw?.[sweep.key], sweep.min, sweep.max, sweep.default)])) });
@@ -98,7 +106,7 @@
     return { id: 'track-' + (index + 1), name: 'Track ' + (index + 1), color: COLORS[index], level: 0.8, pan: 0, mute: false, solo: false, armed: false, instrumentLive: false, instrument: null, effects: [null, null, null, null, null], eq: defaultTrackEq(), sends: [0, 0], sendPre: [false, false], automation: [], clips: [] };
   }
   function defaultMaster() {
-    return { id: 'master', name: 'Master', level: 0.8, metronome: false, mute: false, effects: [null, null, null, null], mastering: defaultMastering(), automation: [] };
+    return { id: 'master', name: 'Master', level: 0.8, metronome: false, mute: false, effects: [null, null, null, null], mastering: defaultMastering(), playback: defaultMasterPlayback(), automation: [] };
   }
   function defaultReturn(index) {
     if (index !== 0 && index !== 1) throw Error('Choose Return A or Return B.');
@@ -256,6 +264,7 @@
     // Other owners' leaf routes cannot feed this track or the LFO graph.
     // Their effect edits may remove/remap routes while this cache stays valid.
     const lfos = state.lfos?.map(lfo => ({ ...lfo, routes: (lfo.routes || []).filter(route => route.ownerId === t.id || /^lfo-[1-4]$/.test(route.ownerId)) }));
+    // Global master playback transforms happen after this cached track recipe.
     const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects: t.effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
     if (state.service?.take !== undefined) recipe.take = state.service.take;
     return 'freeze-1-' + structureHash(recipe);
@@ -358,7 +367,7 @@
       ids.add(a.id); freezeAssets.push(canonicalFreezeAsset(a));
     }
     const assetMap = new Map(assets.map(a => [a.id, a]));
-    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { id: 'master', name: text(raw.master?.name, 'Master'), level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome), mute: bool(raw.master?.mute), effects: Array.from({ length: 4 }, (_, slot) => effect(raw.master?.effects?.[slot])), mastering: normalizeMastering(raw.master?.mastering), automation: [] }, returns: [], selectedTrack: integer(raw.selectedTrack, 0, TRACK_COUNT - 1, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
+    const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { id: 'master', name: text(raw.master?.name, 'Master'), level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome), mute: bool(raw.master?.mute), effects: Array.from({ length: 4 }, (_, slot) => effect(raw.master?.effects?.[slot])), mastering: normalizeMastering(raw.master?.mastering), playback: normalizeMasterPlayback(raw.master?.playback), automation: [] }, returns: [], selectedTrack: integer(raw.selectedTrack, 0, TRACK_COUNT - 1, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (freezeAssets.length) s.freezeAssets = freezeAssets;
     s.master.automation = automation(raw.master?.automation, s.master, totalBeats);
     s.returns = Array.from({ length: 2 }, (_, index) => {
@@ -436,10 +445,10 @@
   }
   function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter, legacyMultiband) {
     const master = index === -1, id = master ? 'master' : 'return-' + (index + 1), label = master ? 'The master bus' : 'Return ' + (index === 0 ? 'A' : 'B');
-    const fields = master ? ['id', 'name', 'level', 'metronome', 'mute', 'effects', 'mastering', 'automation'] : ['id', 'name', 'level', 'pan', 'mute', 'solo', 'effects', 'automation'];
+    const fields = master ? ['id', 'name', 'level', 'metronome', 'mute', 'effects', 'mastering', 'playback', 'automation'] : ['id', 'name', 'level', 'pan', 'mute', 'solo', 'effects', 'automation'];
     if (!plain(bus) || bus.id !== id || fields.some(key => !Object.prototype.hasOwnProperty.call(bus, key)) || Object.keys(bus).some(key => !fields.includes(key)) || typeof bus.name !== 'string' || !bus.name.trim() || bus.name.length > 100 || typeof bus.mute !== 'boolean' || !Array.isArray(bus.effects) || bus.effects.length !== 4) throw Error(label + ' contains invalid settings, effects slots, or unsupported routing.');
     strictNumbers(bus, master ? ['level'] : ['level', 'pan'], label + ' contains invalid mix settings.');
-    if (master) validateMastering(bus.mastering);
+    if (master) { validateMastering(bus.mastering); validateMasterPlayback(bus.playback); }
     if (!master && (bus.level < 0 || bus.level > 1.5 || bus.pan < -1 || bus.pan > 1 || typeof bus.solo !== 'boolean') || master && typeof bus.metronome !== 'boolean') throw Error(label + ' contains invalid mix settings.');
     migrateEffectFields(bus.effects, legacyBroiler, legacyButter, legacyMultiband);
     for (const slot of bus.effects) {
@@ -462,9 +471,11 @@
     const legacyTrackEq = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 18);
     const legacyMixUpgrade = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 25);
     const legacyTenTracks = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 32);
+    const legacyMasterPlayback = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 34);
     const sourceTrackCount = Array.isArray(s.tracks) ? s.tracks.length : 0;
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || sourceTrackCount !== TRACK_COUNT && !(legacyTenTracks && sourceTrackCount === LEGACY_TRACK_COUNT) || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain ten complete tracks; older eight-track projects are also supported.');
     if (legacyTenTracks && !Object.prototype.hasOwnProperty.call(s.master, 'mastering')) s.master.mastering = defaultMastering();
+    if (legacyMasterPlayback && !Object.prototype.hasOwnProperty.call(s.master, 'playback')) s.master.playback = defaultMasterPlayback();
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack >= sourceTrackCount || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
@@ -603,5 +614,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, COLORS, LIMITS, projectByteLength, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, projectByteLength, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

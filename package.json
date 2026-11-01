@@ -119,7 +119,9 @@
     "check:mastering": "node loom/mastering-checks.cjs && node loom/ten-track-checks.cjs",
     "check:mastering-browser": "node loom/mastering-browser-checks.cjs",
     "check:deluxe": "node loom/deluxe-checks.cjs && node loom/deluxe-project-checks.cjs",
-    "check:deluxe-browser": "node loom/deluxe-browser-checks.cjs"
+    "check:deluxe-browser": "node loom/deluxe-browser-checks.cjs",
+    "check:master-playback": "node loom/master-playback-schema-checks.cjs && node loom/master-playback-dsp-checks.cjs && node loom/master-playback-render-checks.cjs && node loom/master-playback-checks.cjs",
+    "check:master-playback-browser": "node loom/master-playback-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

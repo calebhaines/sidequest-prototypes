@@ -49,7 +49,7 @@
   function create(options) {
     const { element, getState, getMeters = () => ({}), onChange = () => {}, onStatus = () => {}, onAnalysis = () => {}, onResetMeters = () => {}, getGeneration = () => 0 } = options;
     if (!element) throw Error('The mastering bench needs a container.');
-    let disposed = false, gesture = null, keyboard = null, rangeGesture = null, observer = null, visible = true, externalVisible = true, requestedAnalysis = false, activeAnalysis = false, measured = false, lastAnalysis = {}, generation = getGeneration();
+    let disposed = false, gesture = null, keyboard = null, rangeGesture = null, observer = null, visible = true, externalVisible = true, prepared = false, requestedAnalysis = false, activeAnalysis = false, measured = false, lastAnalysis = {}, generation = getGeneration();
     const defaults = normalized({}), completeRecipes = recipes.map(recipe => ({ ...recipe, params: normalized(recipe.params) }));
     const $ = id => element.querySelector('#' + id), params = () => getState().master?.mastering || defaults;
     const exact = definition => `<div class="mastering-exact"><input type="number" data-mastering-number="${definition.key}" aria-label="${escape(definition.label)} exact value" min="${definition.min * numberScale(definition)}" max="${definition.max * numberScale(definition)}" step="${definition.step * numberScale(definition)}"><span>${definition.unit === '%' ? '%' : escape(definition.unit)}</span></div>`;
@@ -75,11 +75,11 @@
     function gestureValid(active) { return active && active.generation === getGeneration(); }
     function disabled(d, p) { return !p.enabled || !!(d.stage && !p[d.stage]); }
     function updateAnalysis() {
-      const next = requestedAnalysis && $('masteringBench').open && visible && externalVisible && !document.hidden && !disposed;
+      const next = !prepared && requestedAnalysis && $('masteringBench').open && visible && externalVisible && !document.hidden && !disposed;
       if (next !== activeAnalysis) { activeAnalysis = next; onAnalysis(next); }
-      $('masteringAnalysisStart').disabled = requestedAnalysis;
+      $('masteringAnalysisStart').disabled = prepared || requestedAnalysis;
       $('masteringAnalysisPause').disabled = !requestedAnalysis;
-      $('masteringAnalysisStatus').textContent = activeAnalysis ? 'Measuring the final stereo master. Play the complete passage for a useful integrated reading.' : requestedAnalysis ? 'Measurement paused while the bench is hidden. It will resume when the bench is visible.' : measured ? 'Measurement is paused. The last readings are retained for inspection.' : 'Measurement is off. Start it when you want to check the finished mix.';
+      $('masteringAnalysisStatus').textContent = prepared ? 'Loudness analysis is paused during prepared master playback. Reset Speed & Pitch for live analysis.' : activeAnalysis ? 'Measuring the final stereo master. Play the complete passage for a useful integrated reading.' : requestedAnalysis ? 'Measurement paused while the bench is hidden. It will resume when the bench is visible.' : measured ? 'Measurement is paused. The last readings are retained for inspection.' : 'Measurement is off. Start it when you want to check the finished mix.';
     }
     function render() {
       if (disposed) return;
@@ -95,7 +95,7 @@
       $('masteringBypass').setAttribute('aria-pressed', String(p.bypass)); $('masteringBypass').disabled = !p.enabled;
       const active = stages.filter(stage => p[stage.id]);
       $('masteringSummary').textContent = !p.enabled ? 'All tools off' : p.bypass ? 'Bypassed' : active.length ? active.length + ' stages on' : 'Input / output only';
-      $('masteringSignalStatus').textContent = !p.enabled ? 'Tools off' : p.bypass ? 'Bypassed' : 'Tools active';
+      $('masteringSignalStatus').textContent = prepared ? 'Prepared master' : !p.enabled ? 'Tools off' : p.bypass ? 'Bypassed' : 'Tools active';
       element.classList.toggle('mastering-is-bypassed', p.bypass || !p.enabled);
       $('masteringFaceNote').textContent = !p.enabled ? 'Enable the tools or switch on a stage. Stored adjustments stay ready; the four master inserts remain available.' : p.bypass ? 'Tools are bypassed. Your settings are retained for comparison.' : 'Five performance controls above; open a stage below for its full adjustment range.';
       for (const stage of stages) {
@@ -113,7 +113,7 @@
       updateAnalysis();
     }
     function paint(readings = getMeters()) {
-      if (disposed || !$('masteringBench').open || !visible || !externalVisible || document.hidden) return;
+      if (disposed || prepared || !$('masteringBench').open || !visible || !externalVisible || document.hidden) return;
       const incoming = readings?.mastering || readings || {}, p = params();
       if (incoming.analysisEnabled) { lastAnalysis = { ...incoming }; measured = true; }
       const meters = { ...lastAnalysis, ...incoming };
@@ -174,7 +174,17 @@
     const visibilityChange = () => updateAnalysis(); document.addEventListener('visibilitychange', visibilityChange);
     if (typeof IntersectionObserver === 'function') { observer = new IntersectionObserver(entries => { const next = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0); if (next !== visible) { visible = next; updateAnalysis(); } }); observer.observe(element); }
     render();
-    return { render, paint, setVisible(value) { const next = !!value; if (next !== externalVisible) { externalVisible = next; updateAnalysis(); } }, dispose() { if (disposed) return; disposed = true; requestedAnalysis = false; if (activeAnalysis) { activeAnalysis = false; onAnalysis(false); } observer?.disconnect(); document.removeEventListener('visibilitychange', visibilityChange); for (const [event, handler] of Object.entries(handlers)) element.removeEventListener(event, handler, event === 'toggle'); element.innerHTML = ''; }, get element() { return element; } };
+    return { render, paint, setVisible(value) { const next = !!value; if (next !== externalVisible) { externalVisible = next; updateAnalysis(); } }, setPrepared(value) {
+      const next = !!value; if (disposed || next === prepared) return; prepared = next;
+      if (prepared) {
+        requestedAnalysis = false; measured = false; lastAnalysis = {};
+        for (const output of element.querySelectorAll('[data-mastering-meter]')) output.textContent = '—';
+        for (const bar of element.querySelectorAll('[data-mastering-meter-bar]')) bar.style.transform = 'scaleX(0)';
+        $('masteringSignalStatus').textContent = 'Prepared master';
+        $('masteringTargetReadout').textContent = 'Reset Speed & Pitch for live analysis.';
+      }
+      updateAnalysis(); if (!prepared) { render(); paint(); }
+    }, dispose() { if (disposed) return; disposed = true; requestedAnalysis = false; if (activeAnalysis) { activeAnalysis = false; onAnalysis(false); } observer?.disconnect(); document.removeEventListener('visibilitychange', visibilityChange); for (const [event, handler] of Object.entries(handlers)) element.removeEventListener(event, handler, event === 'toggle'); element.innerHTML = ''; }, get element() { return element; } };
   }
   scope.LoomMasteringUI = Object.freeze({ create, definitions, recipes, stages });
 })(typeof window === 'undefined' ? globalThis : window);
