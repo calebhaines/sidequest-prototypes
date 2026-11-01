@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Master playback (1.34.0)** adds whole-mix Speed and Pitch controls, pitch-preserving or tape-style playback, and prepared stereo playback that includes the nominal effects and automation. Neutral playback retains its normal live path. Stereo mix exports include the transform; stems and frozen track sources remain nominal. See [the playback guide](MASTER-PLAYBACK-GUIDE.md).
+
 **SUNDAY (1.33.0)** adds five Deluxe Reverb AB763 circuit interpretations in a separate amp effect. A–E retain the same controls for auditioning; independent input/output trims, fixed comparison levels, preserved clean playing dynamics, passive tone interaction, spring/tremolo and deep circuit/load controls are included. BROILER is unchanged. See [the operating and research guide](DELUXE-REVERB-GUIDE.md).
 
 **Ten tracks & mastering (1.32.0)** adds two complete recording/instrument tracks and a dedicated master finishing bench after the four master inserts and fader. Cleanup, three-band EQ, glue compression, stereo width/mono bass, soft clipping and a linked sample-peak limiter have folded controls and complete recipes. Optional loudness, estimated intersample-peak and stereo metering run on demand. Older projects gain two empty tracks and keep the new processing off. See [the mastering guide](MASTERING-GUIDE.md).
@@ -162,7 +164,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.33.0.
+SERVICE is version 1.0.0; GALLEY is version 1.34.0.
 
 ## Making a piece
 
@@ -847,7 +849,7 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.33.0.
+font license notices. Version 1.34.0.
 
 ## Compatibility
 

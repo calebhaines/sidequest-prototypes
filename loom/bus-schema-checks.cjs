@@ -45,9 +45,9 @@ function richState() {
 }
 
 check('Defaults add two wet returns and a four-slot master without adding instrument tracks', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.33.0'); assert.equal(state.version, 1);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.34.0'); assert.equal(state.version, 1);
   assert.equal(state.tracks.length, 10); assert.equal(S.LIMITS.tracks, 10); assert.equal(S.LIMITS.returns, 2);
-  assert.deepEqual(state.master, { id: 'master', name: 'Master', level: .8, metronome: false, mute: false, effects: [null, null, null, null], automation: [], mastering: S.defaultMastering() });
+  assert.deepEqual(state.master, { id: 'master', name: 'Master', level: .8, metronome: false, mute: false, effects: [null, null, null, null], automation: [], mastering: S.defaultMastering(), playback: S.defaultMasterPlayback() });
   for (const track of state.tracks) { assert.equal(track.effects.length, 5); assert.deepEqual(track.sends, [0, 0]); assert.deepEqual(track.sendPre, [false, false]); }
   for (const [index, bus] of state.returns.entries()) {
     assert.equal(bus.id, 'return-' + (index + 1)); assert.equal(bus.name, index ? 'Return B' : 'Return A');
@@ -77,7 +77,7 @@ check('Legacy migration adds only missing buses and preserves clips, PCM, snapsh
 
 check('Current projects must include every new master field, return array and track send vector', () => {
   const base = envelope();
-  const mutations = [p => delete p.state.returns, ...['id', 'name', 'mute', 'effects', 'automation', 'mastering'].map(key => p => delete p.state.master[key])];
+  const mutations = [p => delete p.state.returns, ...['id', 'name', 'mute', 'effects', 'automation', 'mastering', 'playback'].map(key => p => delete p.state.master[key])];
   for (let index = 0; index < 10; index++) for (const key of ['sends', 'sendPre']) mutations.push(p => delete p.state.tracks[index][key]);
   for (const mutate of mutations) { const saved = clone(base); mutate(saved); assert.throws(() => parse(saved), /master|return|send/i); }
   assert.equal(parse(base).selectedTrack, 0);

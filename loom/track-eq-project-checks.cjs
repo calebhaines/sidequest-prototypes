@@ -21,8 +21,8 @@ const parse = value => S.parseProject(JSON.stringify(value));
 const lane = (key, index = 0) => ({ target: 'eq:' + key, enabled: true, interpolation: index % 2 ? 'hold' : 'linear', points: [{ beat: 0, value: -12 }, { beat: 8, value: 12 }] });
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
 
-check('Eight independent flat EQs retain five insert slots, four bands with sweepable mids and track-only ownership', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.33.0'); assert.equal(state.tracks.length, 10);
+check('Ten independent flat EQs retain five insert slots, four bands with sweepable mids and track-only ownership', () => {
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.34.0'); assert.equal(state.tracks.length, 10);
   assert.deepEqual(S.defaultTrackEq(), flat());
   assert.deepEqual(S.TRACK_EQ_BANDS.map(band => [band.key, band.frequency, band.type, band.q]), [['low', 100, 'lowshelf', .707], ['lowMid', 400, 'peaking', .707], ['highMid', 2500, 'peaking', .707], ['high', 10000, 'highshelf', .707]]);
   assert(Object.isFrozen(S.TRACK_EQ_BANDS) && S.TRACK_EQ_BANDS.every(Object.isFrozen));
@@ -119,7 +119,7 @@ check('SERVICE exposes valid track EQ mappings, rejects bus/stale targets and re
 });
 
 check('SERVICE take compilation retains independent EQ settings and compiles EQ override lanes with no FX slot use', () => {
-  const state = serviceFixture(), before = JSON.stringify(state), clips = ['eq-clip', null, null, null, null, null, null, null];
+  const state = serviceFixture(), before = JSON.stringify(state), clips = state.tracks.map((_, index) => index === 0 ? 'eq-clip' : null);
   const take = { lengthBeats: 4, events: [
     { kind: 'scene', beat: 0, sceneId: 'eq-scene', clips },
     { kind: 'performance', beat: 1, drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: [{ trackId: 'track-1', target: 'eq:lowMid', value: 9 }] },

@@ -2003,6 +2003,45 @@
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
       } finally { this._exportCount--; }
     }
+    async renderMasterPCM(state = this.state, assets = this.assets, options = {}) {
+      if (this._audioApplying) throw Error('Finish setting up the audio interface before rendering master playback.');
+      this._exportCount++;
+      try {
+        if (options.trackId != null || options.returnId != null) throw Error('Master playback renders the complete mix. Use WAV export for individual stems.');
+        const frozenRate = this._frozenSampleRate(state), sampleRate = options.sampleRate == null ? frozenRate || 48000 : Number(options.sampleRate);
+        if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000) throw Error('Choose a supported sample rate for master playback.');
+        if (frozenRate && sampleRate !== frozenRate) throw Error('Master playback must use the frozen tracks’ sample rate. Unfreeze them before changing it.');
+        const startBeat = Math.max(0, Math.min(255.999, Number(options.startBeat) || 0)), endBeat = Math.max(startBeat + .0001, Math.min(256, Number(options.endBeat) || (state.lengthBars || 4) * 4));
+        const previewLoop = options.previewLoop === true, tempo = Math.max(40, Math.min(240, Number(state.tempo) || 120));
+        if (previewLoop && (startBeat > 255 || endBeat - startBeat < .25)) throw Error('Choose a master preview loop at least a quarter beat long, starting no later than beat 256.');
+        const nominalFrames = (endBeat - startBeat) * 60 / tempo * sampleRate, bodyFrames = Math.max(1, Math.round(nominalFrames));
+        const tailFrames = previewLoop ? 0 : Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds ?? 8) || 0)) * sampleRate), frames = bodyFrames + tailFrames;
+        const maxPCMBytes = options.maxPCMBytes == null ? 128 * 1024 * 1024 : Number(options.maxPCMBytes);
+        if (!Number.isFinite(maxPCMBytes) || maxPCMBytes < 0) throw Error('Choose a finite memory budget for master playback.');
+        if (!Number.isSafeInteger(frames * 8) || frames * 8 > maxPCMBytes) throw Error('This master preview exceeds the available audio memory. Use a shorter loop or a shorter playback range.');
+        if (options.signal?.aborted) throw abortError();
+        const renderState = dspState(state);
+        if (previewLoop) { renderState.loopEnabled = true; renderState.loopStart = startBeat; renderState.loopEnd = endBeat; }
+        const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler, window.createLoomTrackEQDSP, window.createLoomMasteringDSP);
+        const core = new DSP.Core(renderState, assets, sampleRate, { linear: !previewLoop, includeMetronome: options.includeMetronome === true });
+        const left = new Float32Array(frames), right = new Float32Array(frames), scratchLeft = new Float32Array(2048), scratchRight = new Float32Array(2048);
+        const warmupFrames = previewLoop ? Math.ceil(nominalFrames) : 0, totalWork = warmupFrames + frames;
+        core.start(startBeat); let at = 0, blocks = 0;
+        options.onProgress?.(0);
+        while (at < totalWork) {
+          if (options.signal?.aborted) throw abortError();
+          if (!previewLoop && at === bodyFrames) core.stop();
+          const boundary = at < warmupFrames ? warmupFrames : at < warmupFrames + bodyFrames ? warmupFrames + bodyFrames : totalWork;
+          const count = Math.min(2048, totalWork - at, boundary - at), blockLeft = scratchLeft.subarray(0, count), blockRight = scratchRight.subarray(0, count);
+          core.processBlock(blockLeft, blockRight);
+          if (at >= warmupFrames) { left.set(blockLeft, at - warmupFrames); right.set(blockRight, at - warmupFrames); }
+          at += count;
+          if (++blocks % 12 === 0) { options.onProgress?.(at / totalWork); await new Promise(resolve => setTimeout(resolve, 0)); }
+        }
+        if (options.signal?.aborted) throw abortError(); options.onProgress?.(1);
+        return { left, right, sampleRate, frames, bodyFrames, startBeat, endBeat, tailFrames };
+      } finally { this._exportCount--; }
+    }
     async renderFreezeTrack(state = this.state, assets = this.assets, options = {}) {
       if (this._audioApplying) throw Error('Finish setting up the audio interface before freezing a track.');
       if (options.trackId == null) throw Error('Choose one of the ten tracks to freeze.');
