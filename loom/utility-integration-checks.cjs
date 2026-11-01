@@ -105,7 +105,7 @@ function installWorkletHarness(scope) {
     for (let at = 0; at < 24000; at += 128) assert.deepEqual(block(utilityCore, stereo(at, 128)), block(plainCore, stereo(at, 128)));
     const meter = utilityCore.getMeters().effects[0][0];
     assert.equal(meter.type, 'scales'); assert(meter.inputDb > -40); assert(meter.detectedHz > 0); assert.equal(meter.bypass, false);
-    assert.equal(utilityCore.tracks.length, 8); assert(utilityCore.slots.every(row => row.length === 5));
+    assert.equal(utilityCore.tracks.length, 10); assert(utilityCore.slots.every(row => row.length === 5));
   });
 
   await check('Meter reset preserves active filters, pitch analysis, project state and audio history', () => {
@@ -143,7 +143,7 @@ function installWorkletHarness(scope) {
     const serialized = S.serializeProject(state), restored = S.parseProject(serialized);
     assert.equal(S.serializeProject(restored), serialized); assert.equal(restored.tracks[0].effects[0].params.targetNote, 23);
     assert(S.automationTargets(restored.tracks[0]).some(item => item.target === 'fx:0:reference'));
-    assert.equal(restored.tracks[0].automation[0].effectType, 'scales'); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
+    assert.equal(restored.tracks[0].automation[0].effectType, 'scales'); assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(track => track.effects.length === 5));
     const a = core(scope, restored, { linear: true }), b = core(scope, restored, { linear: true });
     a.start(0); b.start(0);
     const leftA = [], rightA = [], leftB = [], rightB = [];

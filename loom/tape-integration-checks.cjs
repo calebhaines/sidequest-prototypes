@@ -20,7 +20,7 @@ async function check(name, run) { await run(); passed.push(name); console.log('P
 function state() {
   return {
     tempo: 120, lengthBars: 4, loopEnabled: false, loopStart: 0, loopEnd: 16,
-    tracks: Array.from({ length: 8 }, (_, index) => ({ id: 'track-' + (index + 1), name: 'Track ' + (index + 1), level: 1, pan: 0, mute: false, solo: false, instrumentLive: true, sends: [0, 0], sendPre: [false, false], effects: [null, null, null, null], automation: [], clips: [] })),
+    tracks: Array.from({ length: 10 }, (_, index) => ({ id: 'track-' + (index + 1), name: 'Track ' + (index + 1), level: 1, pan: 0, mute: false, solo: false, instrumentLive: true, sends: [0, 0], sendPre: [false, false], effects: [null, null, null, null], automation: [], clips: [] })),
     returns: [0, 1].map(index => ({ id: 'return-' + (index + 1), name: 'Return ' + (index + 1), level: 1, pan: 0, mute: false, solo: false, effects: [null, null, null, null], automation: [] })),
     master: { id: 'master', name: 'Master', level: 1, mute: false, metronome: false, effects: [null, null, null, null], automation: [] }
   };
@@ -40,7 +40,7 @@ function feed(core, sources, frames, block = 128, offset = 0) {
   const left = new Float32Array(frames), right = new Float32Array(frames);
   for (let at = 0; at < frames; at += block) {
     const count = Math.min(block, frames - at);
-    const inputs = Array.from({ length: 9 }, (_, index) => sources[index] ? sources[index].map(channel => channel.subarray(offset + at, offset + at + count)) : []);
+    const inputs = Array.from({ length: 11 }, (_, index) => sources[index] ? sources[index].map(channel => channel.subarray(offset + at, offset + at + count)) : []);
     core.processBlock(left.subarray(at, at + count), right.subarray(at, at + count), inputs);
   }
   return { left, right };
@@ -65,13 +65,13 @@ function activeState() {
 }
 
 (async () => {
-  await check('PRESERVE processes real stereo audio in all eight track racks, both returns and master', () => {
+  await check('PRESERVE processes real stereo audio in all ten track racks, both returns and master', () => {
     const signal = source(8192);
-    for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) {
+    for (let ownerIndex = 0; ownerIndex < 13; ownerIndex++) {
       const value = state(), slot = ownerIndex % 4;
-      let owner, meterPath, track = ownerIndex < 8 ? ownerIndex : 0;
-      if (ownerIndex < 8) { owner = value.tracks[track]; meterPath = output => output.core.getMeters().effects[track][slot]; }
-      else if (ownerIndex < 10) { const bus = ownerIndex - 8; owner = value.returns[bus]; owner.solo = true; value.tracks[0].sends[bus] = 1; meterPath = output => output.core.getMeters().returnEffects[bus][slot]; }
+      let owner, meterPath, track = ownerIndex < 10 ? ownerIndex : 0;
+      if (ownerIndex < 10) { owner = value.tracks[track]; meterPath = output => output.core.getMeters().effects[track][slot]; }
+      else if (ownerIndex < 12) { const bus = ownerIndex - 10; owner = value.returns[bus]; owner.solo = true; value.tracks[0].sends[bus] = 1; meterPath = output => output.core.getMeters().returnEffects[bus][slot]; }
       else { owner = value.master; meterPath = output => output.core.getMeters().masterEffects[slot]; }
       const dry = copy(value), sources = []; sources[track] = signal;
       owner.effects[slot] = tape({ drive: 11, warmth: .7 });
@@ -114,8 +114,8 @@ function activeState() {
     const core = new engine.Core(value, assets, rate); core.start(); feed(core, [signal], 4096);
     assert(core.slots[0][0].automationValues.drive > 2);
     const clip = { assetId: 'voice', start: 0, length: 2, sourceStart: 0, sourceEnd: 1, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: 1, fadeIn: 0, fadeOut: 0 };
-    const performance = drive => ({ drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: drive == null ? [] : [{ trackId: 'track-1', target: 'fx:0:drive', value: drive }] });
-    core.startService({ clips: [clip, ...Array(7).fill(null)] }, 0, 1, performance(21));
+    const performance = drive => ({ drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: drive == null ? [] : [{ trackId: 'track-1', target: 'fx:0:drive', value: drive }] });
+    core.startService({ clips: [clip, ...Array(9).fill(null)] }, 0, 1, performance(21));
     function measureDrive(expected) {
       assert.equal(core.automation[0].effects[0].length, 0, 'Saved arrangement automation is reserved during SERVICE');
       assert.equal(core.slots[0][0].automationValues, null, 'SERVICE must clear former arrangement control values');

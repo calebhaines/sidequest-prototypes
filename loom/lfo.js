@@ -18,19 +18,24 @@
     });
     const defaultLFOs = () => Array.from({ length: COUNT }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, ...Object.fromEntries(Object.entries(parameters).map(([key, d]) => [key, d.default])), retrigger: 'transport', routes: [] }));
     const logTarget = d => d.min > 0 && (d.scale === 'log' || /(?:cutoff|freq|frequency|crossover|damping|sidechain|lowcut|highcut|lowpass|highpass|tone|rate|division|wowrate|flutterrate)$/i.test(d.target.split(':').pop()));
-    function targets(state, automationTargets, specifications) {
+    function targets(state, automationTargets, specifications, masteringSpecifications) {
       const result = [], owners = [...(state?.tracks || []), ...(state?.returns || []), ...(state?.master ? [state.master] : [])];
       for (const owner of owners) {
         let descriptors;
         if (typeof automationTargets === 'function') descriptors = automationTargets(owner);
         else {
-          const master = owner.id === 'master', track = /^track-[1-8]$/.test(owner.id);
+          const master = owner.id === 'master', track = /^track-(?:[1-9]|10)$/.test(owner.id);
           descriptors = [{ target: 'level', label: 'Volume', min: 0, max: 1.5, step: .01, default: master || track ? .8 : 1, value: owner.level }];
           if (!master) descriptors.push({ target: 'pan', label: 'Pan', min: -1, max: 1, step: .01, default: 0, value: owner.pan });
           if (track) {
             for (let index = 0; index < 2; index++) descriptors.push({ target: 'send:' + index, label: 'Send ' + (index ? 'B' : 'A'), min: 0, max: 1, step: .01, default: 0, value: owner.sends?.[index] });
             for (const key of ['low', 'lowMid', 'highMid', 'high']) descriptors.push({ target: 'eq:' + key, label: 'EQ ' + key, min: -12, max: 12, step: .1, default: 0, value: owner.eq?.[key], unit: 'dB' });
             for (const [key, label, min, max, value] of [['lowMidFreq', 'Lo mid sweep', 80, 2000, 400], ['highMidFreq', 'Hi mid sweep', 400, 10000, 2500]]) descriptors.push({ target: 'eq:' + key, label: 'EQ ' + label, min, max, step: 1, default: value, value: owner.eq?.[key], unit: 'Hz', scale: 'log' });
+          }
+          if (master) for (const [key, rule] of Object.entries(masteringSpecifications || {})) {
+            if (typeof rule[0] !== 'number') continue;
+            const frequency = /Hz$|cutoff|freq/i.test(key);
+            descriptors.push({ target: 'mastering:' + key, label: 'Mastering · ' + key.replace(/([A-Z])/g, ' $1').toLowerCase(), min: rule[0], max: rule[1], step: .001, default: rule[2], value: owner.mastering?.[key], unit: frequency ? 'Hz' : /Db$|gain|ceiling|threshold/i.test(key) ? 'dB' : '', ...(frequency && rule[0] > 0 ? { scale: 'log' } : {}) });
           }
           for (let slot = 0; slot < (track ? 5 : 4); slot++) {
             const effect = owner.effects?.[slot], spec = specifications?.[effect?.type];

@@ -41,13 +41,13 @@ function dspChecks() {
       for (let at = 0; at < frames;) {
         const size = Math.min(128, frames - at), mic = Float32Array.from({ length: size }, (_, i) => signal(clock + i));
         const native = Float32Array.from({ length: size }, () => -.75);
-        const inputs = Array.from({ length: 9 }, () => []); inputs[0] = [native, native]; inputs[8] = [mic];
+        const inputs = Array.from({ length: 11 }, () => []); inputs[0] = [native, native]; inputs[10] = [mic];
         if (useCore) core.processBlock(new Float32Array(size), new Float32Array(size), inputs);
         recorder.capture(inputs, size, useCore ? core : undefined); clock += size; at += size;
       }
     }
     function start(maxFrames = 800, startBeat = 2) {
-      const full = { ...schedule, microphone: { inputIndex: 8, compensationFrames } };
+      const full = { ...schedule, microphone: { inputIndex: 10, compensationFrames } };
       core.seek(startBeat); core.beginRecording(full); recorder.start(1, [0], startBeat, maxFrames, full);
     }
     function samples() { return Float32Array.from(chunks.flatMap(c => Array.from(c.left))); }
@@ -372,7 +372,7 @@ async function uiChecks(browser, url) {
     await page.locator('#microphoneRouteButton').click(); await page.waitForFunction(() => window.LoomApp.engine.getMicrophoneStatus().trackId === 'track-2');
     assert(await page.locator('#microphoneRouteLabel').textContent());
     const layout = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth, tracks: window.LoomApp.getState().tracks.length, slots: window.LoomApp.getState().tracks.map(t => t.effects.length), effects: window.LoomEffectsCatalog.length, targets: ['microphoneMonitorButton', 'microphoneLaterButton', 'microphoneEarlierButton'].map(id => document.getElementById(id).getBoundingClientRect().toJSON()) }));
-    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 8); assert(layout.slots.every(n => n === 5)); assert.equal(layout.effects, 11); assert(layout.targets.every(box => box.width >= 35 && box.height >= 35), 'Monitoring and timing nudges have usable touch targets.');
+    assert(layout.document <= width + 1 && layout.body <= width + 1, 'Microphone controls do not overflow at ' + width + 'px.'); assert.equal(layout.tracks, 10); assert(layout.slots.every(n => n === 5)); assert.equal(layout.effects, 11); assert(layout.targets.every(box => box.width >= 35 && box.height >= 35), 'Monitoring and timing nudges have usable touch targets.');
     if (process.env.LOOM_MIC_QA_SCREENSHOTS && [390, 1440].includes(width)) {
       fs.mkdirSync(process.env.LOOM_MIC_QA_SCREENSHOTS, { recursive: true });
       await page.locator('#micInputPanel').screenshot({ path: path.join(process.env.LOOM_MIC_QA_SCREENSHOTS, 'microphone-timing-' + width + '.png') });

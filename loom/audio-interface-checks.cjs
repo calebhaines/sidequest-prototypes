@@ -147,15 +147,15 @@ function plain(value) { return JSON.parse(JSON.stringify(value)); }
   await check('Live BROILER emits an impulse in the same render block even with recording compensation active', async () => {
     const f = fixture(), DSP = f.scope.createLoomEngineDSP(f.scope.createLoomEffectsDSP), definition = f.scope.LoomEffectsCatalog.find(fx => fx.id === 'broiler');
     f.state.tracks[0].effects[0] = { type: 'broiler', params: { ...definition.defaults, cabinet: 'di', drive: 8, output: -12, stereo: 'mono' } };
-    const core = new DSP.Core(f.state, {}, 48000); core.setMicrophoneMonitor(0, true); core.beginRecording({ microphone: { inputIndex: 8, compensationFrames: 4800 }, startTransport: false });
-    const input = Array.from({ length: 9 }, () => [new Float32Array(128), new Float32Array(128)]); input[8][0][16] = .4; input[8][1][16] = .4;
+    const core = new DSP.Core(f.state, {}, 48000); core.setMicrophoneMonitor(0, true); core.beginRecording({ microphone: { inputIndex: 10, compensationFrames: 4800 }, startTransport: false });
+    const input = Array.from({ length: 11 }, () => [new Float32Array(128), new Float32Array(128)]); input[10][0][16] = .4; input[10][1][16] = .4;
     const left = new Float32Array(128), right = new Float32Array(128); core.processBlock(left, right, input);
     assert(left.subarray(0, 16).every(sample => sample === 0)); const first = left.findIndex(sample => Math.abs(sample) > 1e-6); assert(first >= 16 && first < 48, 'Live monitoring must not wait for an application block or the 100 ms recording-alignment window.'); assert(left.every(Number.isFinite)); assert(right.every(Number.isFinite));
   });
   await check('Device preferences persist locally while portable project data contains no hardware identities', async () => {
     const f = fixture(); await f.engine.applyAudioSettings({ inputDeviceId: 'interface-input', outputDeviceId: 'interface-output', inputChannel: '1', sampleRate: 48000, latencyProfile: 'balanced' });
     assert(f.storage.size > 0); const restored = new f.scope.LoomAudio(f.scope.LoomSchema.defaultState()); assert.equal(restored.getAudioSettings().inputDeviceId, 'interface-input'); assert.equal(restored.getAudioSettings().outputDeviceId, 'interface-output');
-    const serialized = f.scope.LoomSchema.serializeProject(f.state); assert(!serialized.includes('interface-input')); assert(!serialized.includes('interface-output')); assert.equal(f.state.tracks.length, 8); assert(f.state.tracks.every(t => t.effects.length === 5)); await f.engine.dispose();
+    const serialized = f.scope.LoomSchema.serializeProject(f.state); assert(!serialized.includes('interface-input')); assert(!serialized.includes('interface-output')); assert.equal(f.state.tracks.length, 10); assert(f.state.tracks.every(t => t.effects.length === 5)); await f.engine.dispose();
   });
   for (const name of passed) console.log('PASS', name);
   console.log(`${passed.length} audio interface checks passed.`);

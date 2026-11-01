@@ -109,7 +109,7 @@ function workletHarness(scope) {
         const saved = S.serializeProject(state), restored = S.parseProject(saved);
         assert.equal(S.serializeProject(restored), saved); assert.deepEqual(plain(restored.tracks[0].effects[0].params), plain(preset.params));
         assert(S.automationTargets(restored.tracks[0]).some(item => item.effectType === id && item.target === 'fx:0:' + target.key));
-        assert.equal(restored.tracks[0].automation[0].effectType, id); assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
+        assert.equal(restored.tracks[0].automation[0].effectType, id); assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(track => track.effects.length === 5));
       }
     }
   });

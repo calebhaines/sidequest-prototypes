@@ -1,7 +1,8 @@
 /* Optional SERVICE performance data. Arrangement state and audio remain authoritative. */
 (() => {
   'use strict';
-  const LIMITS = Object.freeze({ scenes: 16, macros: 4, mappingsPerMacro: 32, midiBindings: 64, takeEvents: 8192, overridesPerEvent: 128, beats: 256 });
+  const TRACK_COUNT = 10;
+  const LIMITS = Object.freeze({ tracks: TRACK_COUNT, scenes: 16, macros: 4, mappingsPerMacro: 32, midiBindings: 64, takeEvents: 8192, overridesPerEvent: 128, beats: 256 });
   const QUANTIZE = Object.freeze([0, 1, 2, 4, 8, 16]);
   const STUTTER = Object.freeze([0, .125, .25, .5]);
   const MACRO_NAMES = Object.freeze(['Heat', 'Pressure', 'Space', 'Motion']);
@@ -12,7 +13,7 @@
   const label = (v, fallback, max = 60) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) || fallback : fallback;
   const identifier = v => typeof v === 'string' && /^[a-z0-9_-]{1,100}$/i.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
   const targetName = v => v === 'level' || v === 'pan' || v === 'send:0' || v === 'send:1' || typeof v === 'string' && /^eq:(low|lowMid|highMid|high|lowMidFreq|highMidFreq)$/.test(v) || typeof v === 'string' && /^fx:[0-4]:[a-z][a-z0-9_]{0,59}$/i.test(v);
-  const trackId = v => typeof v === 'string' && /^track-[1-8]$/.test(v);
+  const trackId = v => typeof v === 'string' && /^track-(?:[1-9]|10)$/.test(v);
   const macroId = v => typeof v === 'string' && /^macro-[1-4]$/.test(v);
   const fail = message => { throw Error('SERVICE ' + message); };
   const trackFor = (state, id) => state?.tracks?.find(t => t.id === id);
@@ -41,8 +42,8 @@
     if (!result || result.effectType && reference.effectType && reference.effectType !== result.effectType) return null;
     return result;
   }
-  function referenceShape(reference, state, valueKeys, index) {
-    if (!plain(reference) || !trackId(reference.trackId) || !targetName(reference.target)) fail('contains an invalid parameter target.');
+  function referenceShape(reference, state, valueKeys, index, trackCount = TRACK_COUNT) {
+    if (!plain(reference) || !trackId(reference.trackId) || Number(reference.trackId.slice(6)) > trackCount || !targetName(reference.target)) fail('contains an invalid parameter target.');
     const fx = reference.target.startsWith('fx:');
     if (fx ? !identifier(reference.effectType) : reference.effectType !== undefined) fail('contains an invalid effect reference.');
     for (const key of valueKeys) if (!finite(reference[key]) || Math.abs(reference[key]) > 1e9) fail('contains a non-finite or excessive parameter value.');
@@ -73,7 +74,7 @@
     const result = {};
     for (const key of ['sceneBeat', 'padBeat']) if (event[key] !== undefined) result[key] = number(event[key], 0, LIMITS.beats, 0);
     if (event.tempo !== undefined) result.tempo = number(event.tempo, 40, 240, 96);
-    for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (event[key] !== undefined) result[key] = Array.from({ length: 8 }, (_, i) => number(event[key]?.[i], 0, key === 'phaseOrigins' ? LIMITS.beats : number(event.beat, 0, LIMITS.beats, 0), 0));
+    for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (event[key] !== undefined) result[key] = Array.from({ length: TRACK_COUNT }, (_, i) => number(event[key]?.[i], 0, key === 'phaseOrigins' ? LIMITS.beats : number(event.beat, 0, LIMITS.beats, 0), 0));
     return result;
   }
   function normalizeTake(raw, state, sceneIds, index) {
@@ -83,7 +84,7 @@
       if (!plain(e) || !finite(e.beat)) continue;
       const beat = number(e.beat, 0, lengthBeats, 0);
       if (e.kind === 'scene') {
-        events.push({ kind: 'scene', beat, sceneId: sceneIds.has(e.sceneId) ? e.sceneId : null, clips: Array.from({ length: 8 }, (_, i) => validClip(state, i, e.clips?.[i]) ? e.clips[i] : null), ...phaseFields(e) });
+        events.push({ kind: 'scene', beat, sceneId: sceneIds.has(e.sceneId) ? e.sceneId : null, clips: Array.from({ length: TRACK_COUNT }, (_, i) => validClip(state, i, e.clips?.[i]) ? e.clips[i] : null), ...phaseFields(e) });
       } else if (e.kind === 'performance') {
         const overrides = [], seen = new Set();
         for (const r of (Array.isArray(e.overrides) ? e.overrides : []).slice(0, LIMITS.overridesPerEvent)) {
@@ -95,7 +96,7 @@
           if (d.effectType) override.effectType = d.effectType;
           overrides.push(override);
         }
-        events.push({ kind: 'performance', beat, drops: Array.from({ length: 8 }, (_, i) => e.drops?.[i] === true), stutterBeats: STUTTER.includes(e.stutterBeats) ? e.stutterBeats : 0, fill: e.fill === 1 ? 1 : 0, overrides, ...phaseFields(e) });
+        events.push({ kind: 'performance', beat, drops: Array.from({ length: TRACK_COUNT }, (_, i) => e.drops?.[i] === true), stutterBeats: STUTTER.includes(e.stutterBeats) ? e.stutterBeats : 0, fill: e.fill === 1 ? 1 : 0, overrides, ...phaseFields(e) });
       }
     }
     // Stable ordering keeps same-beat gestures in their recorded order.
@@ -113,7 +114,7 @@
       const id = identifier(scene.id) ? scene.id : uid();
       if (ids.has(id)) continue;
       ids.add(id);
-      result.scenes.push({ id, name: label(scene.name, 'Scene ' + (result.scenes.length + 1)), lengthBeats: number(scene.lengthBeats, 4, LIMITS.beats, 4), slots: Array.from({ length: 8 }, (_, i) => {
+      result.scenes.push({ id, name: label(scene.name, 'Scene ' + (result.scenes.length + 1)), lengthBeats: number(scene.lengthBeats, 4, LIMITS.beats, 4), slots: Array.from({ length: TRACK_COUNT }, (_, i) => {
         const slot = scene.slots?.[i];
         if (slot?.mode === 'clip' && validClip(state, i, slot.clipId)) return { mode: 'clip', clipId: slot.clipId };
         return { mode: slot?.mode === 'hold' ? 'hold' : 'silence' };
@@ -135,13 +136,31 @@
     if (raw.take !== undefined) result.take = normalizeTake(raw.take, state, ids, index) || { lengthBeats: 0, events: [] };
     return result;
   }
-  function validate(raw, state) {
+  // Pad only the exact historical vector length. Supplied malformed vectors
+  // remain malformed and must still fail strict project validation.
+  function migrateLegacy(raw) {
+    if (!plain(raw)) return raw;
+    const padded = (value, extra) => Array.isArray(value) && value.length === 8 ? value.concat(extra()) : value;
+    const result = { ...raw };
+    if (Array.isArray(raw.scenes)) result.scenes = raw.scenes.map(scene => plain(scene) ? { ...scene, slots: padded(scene.slots, () => [{ mode: 'silence' }, { mode: 'silence' }]) } : scene);
+    if (plain(raw.take) && Array.isArray(raw.take.events)) result.take = { ...raw.take, events: raw.take.events.map(event => {
+      if (!plain(event)) return event;
+      const next = { ...event };
+      if (event.kind === 'scene') next.clips = padded(event.clips, () => [null, null]);
+      if (event.kind === 'performance') next.drops = padded(event.drops, () => [false, false]);
+      for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (event[key] !== undefined) next[key] = padded(event[key], () => [0, 0]);
+      return next;
+    }) };
+    return result;
+  }
+  function validate(raw, state, { trackCount = TRACK_COUNT } = {}) {
+    if (![8, TRACK_COUNT].includes(trackCount)) fail('contains an invalid track capacity.');
     if (!plain(raw) || raw.version !== 1 || !QUANTIZE.includes(raw.quantize) || raw.selectedSceneId !== null && !identifier(raw.selectedSceneId)) fail('contains invalid settings.');
     if (!Array.isArray(raw.scenes) || raw.scenes.length > LIMITS.scenes || !Array.isArray(raw.macros) || raw.macros.length !== LIMITS.macros || !Array.isArray(raw.midiBindings) || raw.midiBindings.length > LIMITS.midiBindings) fail('exceeds its scene, macro, or MIDI capacity.');
     const index = targetIndex(state);
     const ids = new Set();
     for (const scene of raw.scenes) {
-      if (!plain(scene) || !identifier(scene.id) || ids.has(scene.id) || typeof scene.name !== 'string' || scene.name.length > 60 || !finite(scene.lengthBeats) || scene.lengthBeats < 4 || scene.lengthBeats > LIMITS.beats || !Array.isArray(scene.slots) || scene.slots.length !== 8) fail('contains an invalid scene.');
+      if (!plain(scene) || !identifier(scene.id) || ids.has(scene.id) || typeof scene.name !== 'string' || scene.name.length > 60 || !finite(scene.lengthBeats) || scene.lengthBeats < 4 || scene.lengthBeats > LIMITS.beats || !Array.isArray(scene.slots) || scene.slots.length !== trackCount) fail('contains an invalid scene.');
       ids.add(scene.id);
       for (const slot of scene.slots) if (!plain(slot) || !['clip', 'silence', 'hold'].includes(slot.mode) || slot.mode === 'clip' && (typeof slot.clipId !== 'string' || !slot.clipId || slot.clipId.length > 100) || slot.mode !== 'clip' && slot.clipId !== undefined) fail('contains an invalid scene slot.');
     }
@@ -149,7 +168,7 @@
       const macro = raw.macros[i];
       if (!plain(macro) || macro.id !== 'macro-' + (i + 1) || typeof macro.name !== 'string' || macro.name.length > 60 || !finite(macro.value) || macro.value < 0 || macro.value > 1 || !Array.isArray(macro.mappings) || macro.mappings.length > LIMITS.mappingsPerMacro) fail('contains an invalid macro.');
       for (const mapping of macro.mappings) {
-        const d = referenceShape(mapping, state, ['min', 'max', 'baseline'], index);
+        const d = referenceShape(mapping, state, ['min', 'max', 'baseline'], index, trackCount);
         if (!['normal', 'inverse'].includes(mapping.polarity) || mapping.min > mapping.max || mapping.baseline < mapping.min || mapping.baseline > mapping.max || d && (mapping.min < d.min || mapping.max > d.max)) fail('contains a macro mapping outside its valid range.');
       }
     }
@@ -168,14 +187,14 @@
         if (!plain(e) || !finite(e.beat) || e.beat < 0 || e.beat > take.lengthBeats) fail('contains an invalid recorded event time.');
         for (const key of ['sceneBeat', 'padBeat']) if (e[key] !== undefined && (!finite(e[key]) || e[key] < 0 || e[key] > LIMITS.beats)) fail('contains an invalid recorded phase.');
         if (e.tempo !== undefined && (!finite(e.tempo) || e.tempo < 40 || e.tempo > 240)) fail('contains an invalid recorded tempo.');
-        for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (e[key] !== undefined && (!Array.isArray(e[key]) || e[key].length !== 8 || e[key].some(v => !finite(v) || v < 0 || v > (key === 'phaseOrigins' ? LIMITS.beats : e.beat)))) fail('contains invalid recorded clip phases.');
+        for (const key of ['phaseOrigins', 'sceneStarts', 'padBeats']) if (e[key] !== undefined && (!Array.isArray(e[key]) || e[key].length !== trackCount || e[key].some(v => !finite(v) || v < 0 || v > (key === 'phaseOrigins' ? LIMITS.beats : e.beat)))) fail('contains invalid recorded clip phases.');
         if (e.kind === 'scene') {
-          if (e.sceneId !== null && !identifier(e.sceneId) || !Array.isArray(e.clips) || e.clips.length !== 8 || e.clips.some(id => id !== null && (typeof id !== 'string' || !id || id.length > 100))) fail('contains an invalid recorded scene.');
+          if (e.sceneId !== null && !identifier(e.sceneId) || !Array.isArray(e.clips) || e.clips.length !== trackCount || e.clips.some(id => id !== null && (typeof id !== 'string' || !id || id.length > 100))) fail('contains an invalid recorded scene.');
         } else if (e.kind === 'performance') {
-          if (!Array.isArray(e.drops) || e.drops.length !== 8 || e.drops.some(v => typeof v !== 'boolean') || !STUTTER.includes(e.stutterBeats) || ![0, 1].includes(e.fill) || !Array.isArray(e.overrides) || e.overrides.length > LIMITS.overridesPerEvent) fail('contains an invalid recorded gesture.');
+          if (!Array.isArray(e.drops) || e.drops.length !== trackCount || e.drops.some(v => typeof v !== 'boolean') || !STUTTER.includes(e.stutterBeats) || ![0, 1].includes(e.fill) || !Array.isArray(e.overrides) || e.overrides.length > LIMITS.overridesPerEvent) fail('contains an invalid recorded gesture.');
           const seen = new Set();
           for (const override of e.overrides) {
-            const d = referenceShape(override, state, ['value'], index), key = override.trackId + ':' + override.target;
+            const d = referenceShape(override, state, ['value'], index, trackCount), key = override.trackId + ':' + override.target;
             if (seen.has(key) || d && (override.value < d.min || override.value > d.max)) fail('contains an invalid recorded parameter value.');
             seen.add(key);
           }
@@ -184,5 +203,5 @@
     }
     return true;
   }
-  window.LoomServiceSchema = Object.freeze({ LIMITS, QUANTIZE, STUTTER, defaults, targets, normalize, validate, mappingValue });
+  window.LoomServiceSchema = Object.freeze({ TRACK_COUNT, LIMITS, QUANTIZE, STUTTER, defaults, targets, normalize, validate, migrateLegacy, mappingValue });
 })();

@@ -115,7 +115,9 @@
     "check:pedal-synth-browser": "node loom/pedal-synth-browser-checks.cjs",
     "check:recordings": "node loom/project-capacity-checks.cjs && node loom/recordings-checks.cjs",
     "check:recordings-browser": "node loom/recordings-browser-checks.cjs",
-    "check:project-capacity-large": "node loom/project-capacity-checks.cjs --large"
+    "check:project-capacity-large": "node loom/project-capacity-checks.cjs --large",
+    "check:mastering": "node loom/mastering-checks.cjs && node loom/ten-track-checks.cjs",
+    "check:mastering-browser": "node loom/mastering-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

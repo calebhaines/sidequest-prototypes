@@ -175,7 +175,7 @@ function main() {
     original.tracks[0].eq = { ...S.defaultTrackEq(), low: 3, lowMid: -2, highMid: 1, high: -1 };
     const left = Float32Array.from({ length: 16000 }, (_, i) => .09 * Math.sin(2 * Math.PI * 91 * i / rate) + .03 * Math.sin(2 * Math.PI * 1711 * i / rate)), right = Float32Array.from(left, (v, i) => v * .7 + .01 * Math.sin(2 * Math.PI * 431 * i / rate)), asset = S.encodeAsset({ id: 'eq-service-source', name: 'EQ performance ingredient', sampleRate: rate, left, right });
     original.assets = [asset]; original.tracks[0].clips = [{ id: 'eq-source', name: 'Source', type: 'audio', assetId: asset.id, start: 0, length: 4, sourceStart: 0, sourceEnd: 2, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: 1, fadeIn: .01, fadeOut: .01 }];
-    const s = S.normalize(original), before = JSON.stringify(s), live = new DSP.Core(s, S.decodeAssets(s.assets), rate, { linear: true }), blank = overrides => ({ drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides });
+    const s = S.normalize(original), before = JSON.stringify(s), live = new DSP.Core(s, S.decodeAssets(s.assets), rate, { linear: true }), blank = overrides => ({ drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides });
     live.startService({ id: 'eq-performance', clips: s.tracks.map(track => track.clips[0] || null) }, 0, 0, blank([{ trackId: 'track-1', target: 'eq:lowMid', value: 5 }]));
     const events = [{ at: 2500, overrides: [{ trackId: 'track-1', target: 'eq:low', value: 10 }] }, { at: 5000, overrides: [{ trackId: 'track-1', target: 'eq:highMid', value: -9 }] }, { at: 7000, overrides: [] }], actualL = new Float32Array(frames), actualR = actualL.slice(); let next = 0;
     for (let at = 0; at < frames;) {

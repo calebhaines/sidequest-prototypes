@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Ten tracks & mastering (1.32.0)** adds two complete recording/instrument tracks and a dedicated master finishing bench after the four master inserts and fader. Cleanup, three-band EQ, glue compression, stereo width/mono bass, soft clipping and a linked sample-peak limiter have folded controls and complete recipes. Optional loudness, estimated intersample-peak and stereo metering run on demand. Older projects gain two empty tracks and keep the new processing off. See [the mastering guide](MASTERING-GUIDE.md).
+
 **Project recordings (1.31.0)** adds a searchable audio browser beside Save/Open, source previews and WAV downloads, clip-use details, and permanent deletion with a review of affected clips and frozen tracks. Project files now support 448 MiB with consistent UTF-8 size checks. See [the recordings guide](RECORDINGS-GUIDE.md).
 
 **FERMENT (1.30.0)** turns guitar or bass audio into a customizable synth pedal:
@@ -71,7 +73,7 @@ retain those lyrics through shared Patterns, portable projects and revisable
 Prints. English pronunciation is synthesized offline. Words are prepared before
 playback; the shared audio clock controls actual note starts.
 
-An eight-track browser studio for Kitchen. Eight tracks. One increasingly specific order.
+An ten-track browser studio for Kitchen. Ten tracks. One increasingly specific order.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
@@ -100,7 +102,7 @@ all sound controls stay visible. DCO, twin VCO, hard sync, four-operator FM and
 spectral vector synthesis are available in the same editor. LEAVEN shares realized
 notes through Patterns, plays incoming piano-roll notes directly through its synth,
 and uses that same engine for live audio and revisable prints. The complete app is
-embedded for offline use; the studio retains eight tracks and five inserts per track.
+embedded for offline use; the studio retains ten tracks and five inserts per track.
 
 **MARINADE** combines two recorded ingredients into a polyphonic spectral morphing instrument. Its full native editor, two sample-import bays, editable note patterns and isolated native renderer are available inside the studio. Printed parts retain the source audio, patch and original notes for Edit source, Update audio or Restore notes.
 
@@ -118,7 +120,7 @@ the **Operating notes** dialog, or **Alt + P**. It opens its own full-screen des
 GALLEY's existing arrangement layout and controls remain unchanged. Closing it
 stops the performance and returns to the original arrangement position.
 
-Sixteen scenes each select a clip, silence, or **Hold** for each of the eight
+Sixteen scenes each select a clip, silence, or **Hold** for each of the ten
 tracks. Hold keeps that track's current source and phase while the others change.
 Use **From loop** or **From markers** to build a scene bank, then edit each scene's
 source clips. Each source repeats its own length. Scene launches can be immediate
@@ -158,7 +160,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.31.0.
+SERVICE is version 1.0.0; GALLEY is version 1.32.0.
 
 ## Making a piece
 
@@ -310,14 +312,14 @@ correction actually applied while recording. Delay compensation keeps the
 intended length, count-in, and punch boundaries, including a short finishing
 capture when needed. Recording alignment does not remove live monitoring delay.
 
-Each of the eight tracks has level, pan, mute, solo, and exactly four serial
+Each of the ten tracks has level, pan, mute, solo, and exactly four serial
 effects slots. Effects can be edited, bypassed, reordered, reset, or removed.
 Recordings capture live track input before the DAW inserts. Play existing clips
 while recording a new performance, then shape the recorded part afterward.
 
 The bundled starter session contains actual rendered DICER percussion, SKEWER
 strings, and STEAM clouds, with matching instrument states. The other tracks are
-ready for new parts. Empty session starts with eight blank tracks.
+ready for new parts. Empty session starts with ten blank tracks.
 
 ## Transport and navigation
 
@@ -400,7 +402,7 @@ transfer Undo/Redo restores the previous instrument audio.
 The **Samples** panel shares the same local library as all standalone Kitchen
 apps and hosted editors. Render the selected clip, arranged mix, or track
 instrument; save audio to the library or download WAV/portable packets. Receive a
-sample as a new clip on any of the eight tracks. Hosted instrument project storage
+sample as a new clip on any of the ten tracks. Hosted instrument project storage
 stays isolated, while its sample library is deliberately shared with the studio.
 Downloaded HTML includes all exchange code and works offline. If browser storage
 is unavailable, keep a WAV or packet for the next session.
@@ -465,7 +467,7 @@ checks. See each instrument README for its native test commands.
 
 ### Sweepable four-band track EQ
 
-Each of the eight mixer strips has four gain knobs and two smaller mid sweep
+Each of the ten mixer strips has four gain knobs and two smaller mid sweep
 knobs, separate from its five insert slots. **Low** is a shelf at 100 Hz and
 **High** a shelf at 10 kHz. **Low Mid** sweeps from 80 Hz to 2 kHz (default
 400 Hz); **High Mid** sweeps from 400 Hz to 10 kHz (default 2.5 kHz). All four
@@ -499,7 +501,7 @@ checks. See [MIX-UPGRADE-GUIDE.md](MIX-UPGRADE-GUIDE.md) for BUTTER and CHAR.
 
 ### Master and shared effect returns
 
-GALLEY retains eight instrument/audio tracks with five inserts each. The master
+GALLEY retains ten instrument/audio tracks with five inserts each. The master
 adds four inserts for the combined mix, and two independent stereo return
 channels each have four inserts. All eighteen effects work in these racks.
 Return A starts with fully wet HOOD reverb; Return B starts with fully wet
@@ -518,7 +520,7 @@ Microphone and hosted-instrument takes stay dry.
 
 ```mermaid
 flowchart LR
-  Tracks[Eight tracks: inserts then channel EQ] --> Mix[Dry mix]
+  Tracks[Ten tracks: inserts then channel EQ] --> Mix[Dry mix]
   Tracks -->|Send A| A[Return A: four inserts]
   Tracks -->|Send B| B[Return B: four inserts]
   A --> Mix
@@ -538,7 +540,7 @@ dry recording.
 
 The master mix WAV includes both returns and the master inserts. Track stems
 contain the track's direct contribution; return stems contain each complete
-shared wet return. All stems exports ten WAVs: eight tracks and two returns.
+shared wet return. All stems exports ten WAVs: ten tracks and two returns.
 Stems follow mute/solo, retain the existing master-level/output-protection path,
 and skip master inserts. This keeps shared nonlinear effects in a single return
 stem. Master dynamics or output protection can make the final mix differ from a
@@ -553,15 +555,15 @@ return IDs are `return-1` and `return-2`, and the master ID is `master`.
 `automationTargets(owner)` supplies only its applicable targets. Track sends use
 `send:0` and `send:1`. Older files inherit missing defaults; malformed supplied
 routing rejects before loading. Buses carry no instruments, clips or outgoing
-sends, and the audio host still exposes eight instrument inputs and one dry
+sends, and the audio host still exposes ten instrument inputs and one dry
 microphone input.
 
 `LoomAudio.renderWav(state,assets,{trackId})` renders a direct track stem;
 `{returnId:'return-1'}` or `return-2` renders that return from all normally audible
-source tracks. Neither option applies master inserts, and the two selectors are
+source tracks. Neither option applies master inserts or mastering, and the two selectors are
 mutually exclusive. With neither selector, the complete master mix renders.
 Effect readings are in `meters.masterEffects` and `meters.returnEffects`; the
-existing eight-row `meters.effects` remains the track rack readings.
+existing ten-row `meters.effects` remains the track rack readings.
 
 Run `npm run check:buses` and `npm run check:buses-browser`. Extracted source
 checks are `node bus-schema-checks.cjs`, `node bus-routing-checks.cjs`,
@@ -757,7 +759,7 @@ keep rendering manageable. Native note synthesis is rendered first, then passes
 through the studio mixer, automation, and inserts. Live performances outside
 note clips should be recorded before exporting.
 
-GALLEY has eight fixed tracks, five slots each, up to 64 bars, and up to 128 clips
+GALLEY has ten fixed tracks, five slots each, up to 64 bars, and up to 128 clips
 per track. Each imported or recorded source holds up to 120 seconds. The source
 audio budget is 64 MB of PCM; native app snapshots and saved sources share a
 separate 96 MB budget. A pattern can hold 4,096 notes, 64 voices, and 256 beats.
@@ -842,8 +844,8 @@ and Chromium installed.
 
 Bundled Noto fonts are copyright Google, licensed under the SIL Open Font
 License 1.1; see `fonts/LICENSE.txt`. Instrument pages retain their embedded
-font license notices. Version 1.31.0.
+font license notices. Version 1.32.0.
 
 ## Compatibility
 
-The Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same eight tracks and five effects slots per track.
+The Kitchen rebrand changes display names and visual styling. Existing URLs, the `.loom.json` project format, `loom-*` browser storage, native instrument IDs, host APIs, effect IDs, and source archive paths stay compatible with earlier releases. GALLEY projects contain the same ten tracks and five effects slots per track.

@@ -22,7 +22,7 @@ const lane = (key, index = 0) => ({ target: 'eq:' + key, enabled: true, interpol
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
 
 check('Eight independent flat EQs retain five insert slots, four bands with sweepable mids and track-only ownership', () => {
-  const state = S.defaultState(); assert.equal(S.VERSION, '1.31.0'); assert.equal(state.tracks.length, 8);
+  const state = S.defaultState(); assert.equal(S.VERSION, '1.32.0'); assert.equal(state.tracks.length, 10);
   assert.deepEqual(S.defaultTrackEq(), flat());
   assert.deepEqual(S.TRACK_EQ_BANDS.map(band => [band.key, band.frequency, band.type, band.q]), [['low', 100, 'lowshelf', .707], ['lowMid', 400, 'peaking', .707], ['highMid', 2500, 'peaking', .707], ['high', 10000, 'highshelf', .707]]);
   assert(Object.isFrozen(S.TRACK_EQ_BANDS) && S.TRACK_EQ_BANDS.every(Object.isFrozen));
@@ -75,7 +75,7 @@ check('All bands and automation survive portable saving on all tracks without ef
     for (const d of eq) { assert.equal(d.min, -12); assert.equal(d.max, 12); assert.equal(d.step, .1); assert.equal(d.default, 0); assert.equal(d.unit, 'dB'); assert.equal(d.effectType, undefined); assert.equal(d.value, track.eq[d.target.slice(3)]); }
   }
   const actual = S.parseProject(S.serializeProject(state));
-  for (let index = 0; index < 8; index++) { assert.deepEqual(actual.tracks[index].eq, state.tracks[index].eq); assert.deepEqual(actual.tracks[index].automation, state.tracks[index].automation); }
+  for (let index = 0; index < 10; index++) { assert.deepEqual(actual.tracks[index].eq, state.tracks[index].eq); assert.deepEqual(actual.tracks[index].automation, state.tracks[index].automation); }
   const occupied = S.defaultState().tracks[0]; occupied.effects.fill(S.effect({ type: 'broiler', params: LoomEffectsCatalog.find(effect => effect.id === 'broiler').defaults }));
   const targets = S.automationTargets(occupied); assert(targets.length > 64); assert(targets.slice(4, -6).every(d => d.target.startsWith('fx:'))); assert.deepEqual(targets.slice(-6).map(d => d.target), [...keys, 'lowMidFreq', 'highMidFreq'].map(key => 'eq:' + key));
 });
@@ -122,8 +122,8 @@ check('SERVICE take compilation retains independent EQ settings and compiles EQ 
   const state = serviceFixture(), before = JSON.stringify(state), clips = ['eq-clip', null, null, null, null, null, null, null];
   const take = { lengthBeats: 4, events: [
     { kind: 'scene', beat: 0, sceneId: 'eq-scene', clips },
-    { kind: 'performance', beat: 1, drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [{ trackId: 'track-1', target: 'eq:lowMid', value: 9 }] },
-    { kind: 'performance', beat: 3, drops: Array(8).fill(false), stutterBeats: 0, fill: false, overrides: [] }
+    { kind: 'performance', beat: 1, drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: [{ trackId: 'track-1', target: 'eq:lowMid', value: 9 }] },
+    { kind: 'performance', beat: 3, drops: Array(10).fill(false), stutterBeats: 0, fill: false, overrides: [] }
   ] };
   const out = C.compile({ state, take }); assert.equal(JSON.stringify(state), before); assert.deepEqual(out.tracks[0].eq, state.tracks[0].eq); assert.equal(out.tracks[0].effects.length, 5);
   assert.deepEqual(out.tracks[0].automation, [{ target: 'eq:lowMid', enabled: true, interpolation: 'hold', points: [{ beat: 0, value: -2 }, { beat: 1, value: 9 }, { beat: 3, value: -2 }] }]);

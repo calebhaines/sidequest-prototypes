@@ -56,7 +56,7 @@ check('Complete modern rigs, workshop values and numeric automation survive proj
   for (const param of definition.params.filter(param => param.type === 'range')) {
     assert(LoomSchema.automationTargets(restored.tracks[0]).some(target => target.target === 'fx:0:' + param.key && target.min === param.min && target.max === param.max), param.key);
   }
-  assert.equal(restored.tracks.length, 8); assert(restored.tracks.every(track => track.effects.length === 5));
+  assert.equal(restored.tracks.length, 10); assert(restored.tracks.every(track => track.effects.length === 5));
 });
 
 function fingerprint(params) {

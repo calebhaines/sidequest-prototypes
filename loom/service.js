@@ -4,6 +4,7 @@
   'use strict';
   const copy = value => global.LoomSchema.copy(value);
   const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, Number(value) || 0));
+  const TRACK_COUNT = 10;
   const QUANTIZE = { 0: 'immediate', 1: 'beat', 2: 'halfbar', 4: 'bar', 8: '2bar', 16: '4bar' };
   // Some browser resamplers decode an exact-duration WAV one frame short.
   // Keep this accommodation private to SERVICE: the arrangement renderer and
@@ -34,7 +35,7 @@
       this.options = options; this.engine = options.engine; this.isOpen = false;
       this.listeners = new Set(); this.prepared = null; this.busy = false; this.running = false;
       this.activeSceneId = null; this.queuedSceneId = null; this.selectedSceneId = null;
-      this.activeClips = Array(8).fill(null); this.padHolds = new Map(); this.holdOrder = 0;
+      this.activeClips = Array(TRACK_COUNT).fill(null); this.padHolds = new Map(); this.holdOrder = 0;
       this.padTargets=[options.getState().tracks[options.getState().selectedTrack].id];
       this.captureEnabled = false; this.captureRecording = false; this.message = 'Prepare a scene, then press Play. Nothing is written to the arrangement until you create one.';
       this.operation = 0; this.abort = null; this.timer = null; this.beat = 0;
@@ -93,7 +94,7 @@
     }
     _scenesFor(source) {
       const state = this._project(), uid = global.LoomSchema.uid;
-      if (source === 'empty') return [{ id: uid('scene'), name: 'New order', lengthBeats: 16, slots: Array.from({ length: 8 }, () => ({ mode: 'silence' })) }];
+      if (source === 'empty') return [{ id: uid('scene'), name: 'New order', lengthBeats: 16, slots: Array.from({ length: TRACK_COUNT }, () => ({ mode: 'silence' })) }];
       if (source === 'markers') return state.markers.slice(0, 16).map((marker, index, markers) => {
         const end = markers[index + 1]?.beat || state.lengthBars * 4;
         return { id: uid('scene'), name: marker.name, lengthBeats: clamp(end - marker.beat, 4, 256), slots: this._slotsAt(marker.beat, end) };
@@ -120,7 +121,7 @@
         tracks: state.tracks.map(track => ({ id: track.id, name: track.name, color: track.color,
           clips: track.clips.map(c => ({ id: c.id, name: c.name, type: c.type, length: c.length })),
           targets: global.LoomServiceSchema.targets(track) })),
-        meters: meters.tracks?.map(track => track.peak || 0) || Array(8).fill(0),
+        meters: meters.tracks?.map(track => track.peak || 0) || Array(TRACK_COUNT).fill(0),
         capture: { enabled: this.captureEnabled, recording: this.captureRecording, events: this.take?.events.length || 0,
           durationBeats, canApply: !this.running && !this.busy && !!this.take?.events.length && durationBeats > 0 },
         padState: { stutter: pads.stutterBeats, stutterBeats: pads.stutterBeats, fill: pads.fill, drops: pads.drops, trackIds: state.tracks.filter((_, i) => pads.drops[i]).map(t => t.id),targetIds:this.padTargets.slice() },
@@ -257,7 +258,7 @@
       if (event.type === 'scene' || event.kind === 'scene') {
         const scene = event.scene;
         captured = { kind: 'scene', beat: event.beat, sceneId: scene?.id || event.id, clips: (scene?.clips || []).map(clip => clip?.id || null) };
-        if (captured.clips.length !== 8) return;
+        if (captured.clips.length !== TRACK_COUNT) return;
       } else if (event.type === 'performance' || event.kind === 'performance') {
         const performance = event.performance;
         if (!performance) return;

@@ -16,9 +16,9 @@ const passed = [];
 function check(name, run) { run(); passed.push(name); }
 function pcm(index) { return index < 0 ? 0 : (index + 1) / 100000; }
 function inputs(at, n, microphone = true) {
-  const list = Array.from({ length: 9 }, () => [new Float32Array(n), new Float32Array(n)]);
+  const list = Array.from({ length: 11 }, () => [new Float32Array(n), new Float32Array(n)]);
   list[3][0].fill(-.75); list[3][1].fill(.55);
-  if (microphone) for (let f = 0; f < n; f++) { list[8][0][f] = pcm(at + f); list[8][1][f] = -pcm(at + f); }
+  if (microphone) for (let f = 0; f < n; f++) { list[10][0][f] = pcm(at + f); list[10][1][f] = -pcm(at + f); }
   return list;
 }
 function flattened(chunks, side = 'left') { return Float32Array.from(chunks.flatMap(chunk => Array.from(chunk[side]))); }
@@ -31,7 +31,7 @@ function recorderFixture(compensationFrames, preRoll = 0) {
 }
 function scheduledPunch(compensationFrames) {
   const fixture = recorderFixture(compensationFrames, 1000), { recorder } = fixture;
-  const schedule = { countInBeats: 1, punchEnabled: true, punchStart: .25, punchEnd: .5, requireTransport: true, microphone: { inputIndex: 8, compensationFrames } };
+  const schedule = { countInBeats: 1, punchEnabled: true, punchStart: .25, punchEnd: .5, requireTransport: true, microphone: { inputIndex: 10, compensationFrames } };
   recorder.start(11, [3], 0, rate * 120, schedule);
   for (let at = 0; at < 2900; at += 137) {
     const n = Math.min(137, 2900 - at), beats = Float64Array.from({ length: n }, (_, f) => Math.max(0, at + f - 500) / 4000);
@@ -51,7 +51,7 @@ for (const offset of [-80, 0, 80]) check(`Signed ${offset}-frame compensation pr
 
 check('Positive compensation finishes with bounded post-roll and retains the final transient', () => {
   const { recorder, chunks, limits } = recorderFixture(80);
-  recorder.start(12, [3], 0, rate * 120, { microphone: { inputIndex: 8, compensationFrames: 80 } });
+  recorder.start(12, [3], 0, rate * 120, { microphone: { inputIndex: 10, compensationFrames: 80 } });
   recorder.capture(inputs(0, 400), 400);
   assert.equal(recorder.stop(31).pending, true);
   recorder.capture(inputs(400, 80), 80);
@@ -61,18 +61,18 @@ check('Positive compensation finishes with bounded post-roll and retains the fin
 
 check('A negative take at absolute zero pads only missing history and keeps the attack', () => {
   const { recorder, chunks } = recorderFixture(-80);
-  recorder.start(13, [3], 0, rate * 120, { microphone: { inputIndex: 8, compensationFrames: -80 } });
+  recorder.start(13, [3], 0, rate * 120, { microphone: { inputIndex: 10, compensationFrames: -80 } });
   recorder.capture(inputs(0, 400), 400); assert.equal(recorder.stop().frames, 400);
   assert.deepEqual(flattened(chunks), Float32Array.from({ length: 400 }, (_, f) => pcm(f - 80)));
 });
 
 check('Continuous monitoring supplies signed pre-roll, while replacing the physical stream clears its history', () => {
   const { recorder, chunks } = recorderFixture(-80, 1000);
-  recorder.start(14, [3], 2, rate * 120, { microphone: { inputIndex: 8, compensationFrames: -80 } });
+  recorder.start(14, [3], 2, rate * 120, { microphone: { inputIndex: 10, compensationFrames: -80 } });
   recorder.capture(inputs(1000, 200), 200); recorder.stop();
   assert.deepEqual(flattened(chunks), expectedPcm(920, 200));
   chunks.length = 0; recorder.clearMicrophoneHistory();
-  recorder.start(15, [3], 2, rate * 120, { microphone: { inputIndex: 8, compensationFrames: -80 } });
+  recorder.start(15, [3], 2, rate * 120, { microphone: { inputIndex: 10, compensationFrames: -80 } });
   recorder.capture(inputs(1200, 200), 200); recorder.stop();
   const expected = Float32Array.from({ length: 200 }, (_, f) => f < 80 ? 0 : pcm(1200 + f - 80));
   assert.deepEqual(flattened(chunks), expected);
@@ -80,20 +80,20 @@ check('Continuous monitoring supplies signed pre-roll, while replacing the physi
 
 check('Stopping during count-in returns no empty microphone take or post-roll', () => {
   const { recorder, chunks, limits } = recorderFixture(80);
-  recorder.start(16, [3], 0, rate * 120, { countInBeats: 4, requireTransport: true, microphone: { inputIndex: 8, compensationFrames: 80 } });
+  recorder.start(16, [3], 0, rate * 120, { countInBeats: 4, requireTransport: true, microphone: { inputIndex: 10, compensationFrames: 80 } });
   recorder.capture(inputs(0, 400), 400, { timelineCountIn: new Uint8Array(400).fill(1), timelinePlaying: new Uint8Array(400).fill(1) });
   const stopped = recorder.stop(32); assert.equal(stopped.frames, 0); assert.equal(stopped.pending, undefined); assert.equal(chunks.length, 0); assert.equal(limits.length, 0);
 });
 
 check('The microphone recording budget counts compensated audio rather than pre/post-roll', () => {
   const { recorder, chunks, limits } = recorderFixture(80);
-  recorder.start(17, [3], 0, 240, { microphone: { inputIndex: 8, compensationFrames: 80 } });
+  recorder.start(17, [3], 0, 240, { microphone: { inputIndex: 10, compensationFrames: 80 } });
   recorder.capture(inputs(0, 480), 480);
   assert.equal(limits[0].frames, 240); assert.deepEqual(flattened(chunks), expectedPcm(80, 240));
 });
 
 function session() {
-  return { tempo: 120, lengthBars: 4, loopEnabled: false, master: { level: 1, metronome: false }, tracks: Array.from({ length: 8 }, (_, i) => ({ id: `track-${i + 1}`, level: 1, pan: 0, mute: false, solo: false, instrumentLive: false, effects: Array(4).fill(null), clips: [] })) };
+  return { tempo: 120, lengthBars: 4, loopEnabled: false, master: { level: 1, metronome: false }, tracks: Array.from({ length: 10 }, (_, i) => ({ id: `track-${i + 1}`, level: 1, pan: 0, mute: false, solo: false, instrumentLive: false, effects: Array(4).fill(null), clips: [] })) };
 }
 function renderCore(core, source, blocks = 20) {
   let result;
@@ -101,20 +101,20 @@ function renderCore(core, source, blocks = 20) {
   return result;
 }
 check('Stopped monitoring traverses the actual track rack once and excludes its hosted instrument', () => {
-  const state = session(), source = inputs(0, 128, false); source[8][0].fill(.1); source[8][1].fill(-.08);
+  const state = session(), source = inputs(0, 128, false); source[10][0].fill(.1); source[10][1].fill(-.08);
   state.tracks[3].effects[0] = { type: 'cinder', params: { ...scope.LoomEffectsCatalog.find(item => item.id === 'cinder').defaults, drive: 25 } };
   const monitored = new DSP.Core(state, {}, rate); monitored.setMicrophoneMonitor(3, true);
   // Record-only gates belong to hosted sources and cannot silence a dedicated mic.
   monitored.setRecordOnly(3, true);
   const reference = new DSP.Core({ ...state, tracks: state.tracks.map((track, i) => ({ ...track, instrumentLive: i === 3 })) }, {}, rate);
-  const referenceInputs = Array.from({ length: 9 }, () => [new Float32Array(128), new Float32Array(128)]); referenceInputs[3] = source[8];
+  const referenceInputs = Array.from({ length: 11 }, () => [new Float32Array(128), new Float32Array(128)]); referenceInputs[3] = source[10];
   const actual = renderCore(monitored, source), expected = renderCore(reference, referenceInputs);
   assert.deepEqual(actual, expected); assert(actual[0].some(sample => Math.abs(sample) > .01));
-  assert.equal(monitored.tracks.length, 8); assert(monitored.slots.every(row => row.length === 5));
+  assert.equal(monitored.tracks.length, 10); assert(monitored.slots.every(row => row.length === 5));
 });
 
 check('Count-in keeps live microphone effects audible, and mixer mute/solo remain authoritative', () => {
-  const state = session(), source = inputs(0, 128, false); source[8][0].fill(.1); source[8][1].fill(.1);
+  const state = session(), source = inputs(0, 128, false); source[10][0].fill(.1); source[10][1].fill(.1);
   const monitor = new DSP.Core(state, {}, rate); monitor.setMicrophoneMonitor(3, true); monitor.beginRecording({ countInBeats: 4 });
   assert(renderCore(monitor, source)[0].some(value => Math.abs(value) > .03));
   const muted = session(); muted.tracks[3].mute = true; const muteCore = new DSP.Core(muted, {}, rate); muteCore.setMicrophoneMonitor(3, true); assert(renderCore(muteCore, source)[0].every(value => value === 0));
@@ -203,11 +203,11 @@ check('Known round-trip impulses align to the exact performance frames in both r
     const engine = latencyFixture({ mode, processingFrames: block, input: { latency: .01 }, context: { currentTime: 10, getOutputTimestamp: () => ({ contextTime: 9.98, performanceTime: 10000 }) } });
     const compensationFrames = Math.round(engine.getMicrophoneLatency().compensationMs * sampleRate / 1000); assert.equal(compensationFrames, physicalDelay);
     const chunks = [], recorder = new DSP.Recorder(sampleRate, chunk => chunks.push(chunk));
-    recorder.start(20, [3], 0, sampleRate, { requireTransport: true, countInBeats: 1, microphone: { inputIndex: 8, compensationFrames } });
+    recorder.start(20, [3], 0, sampleRate, { requireTransport: true, countInBeats: 1, microphone: { inputIndex: 10, compensationFrames } });
     function feed(start, count) {
       for (let at = start; at < start + count; at += block) {
-        const n = Math.min(block, start + count - at), list = Array.from({ length: 9 }, () => [new Float32Array(n), new Float32Array(n)]);
-        for (let f = 0; f < n; f++) for (const hit of [137, 1709]) if (at + f === logicalStart + physicalDelay + hit) { list[8][0][f] = .7; list[8][1][f] = -.3; }
+        const n = Math.min(block, start + count - at), list = Array.from({ length: 11 }, () => [new Float32Array(n), new Float32Array(n)]);
+        for (let f = 0; f < n; f++) for (const hit of [137, 1709]) if (at + f === logicalStart + physicalDelay + hit) { list[10][0][f] = .7; list[10][1][f] = -.3; }
         recorder.capture(list, n, { timelineBeats: Float64Array.from({ length: n }, (_, f) => Math.max(0, at + f - logicalStart) / 24000), timelineCountIn: Uint8Array.from({ length: n }, (_, f) => at + f < logicalStart ? 1 : 0), timelinePlaying: new Uint8Array(n).fill(1) });
       }
     }

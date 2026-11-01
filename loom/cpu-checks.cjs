@@ -99,8 +99,8 @@ check('Profiled and unprofiled track, return, master, automation and LFO audio s
 check('All five track inserts are profiled while master and returns keep four slots', () => {
   const state = fixture(), core = new Core(state, {}, 48000, { linear: true }); core.start(0); core.setDiagnostics({ enabled: true, mode: 'deep' }); feed(core, source(512));
   const rows = core.getDiagnostics().rows;
-  assert.equal(rows.length, 89, 'Eight added track slots extend the original 81-row topology.');
-  assert.equal(rows.filter(row => row.kind === 'effect').length, 52);
+  assert.equal(rows.length, 106, 'Ten track owners plus returns, master and the mastering stage are represented.');
+  assert.equal(rows.filter(row => row.kind === 'effect').length, 62);
   for (const owner of [...state.tracks, ...state.returns, state.master]) {
     const effects = rows.filter(row => row.kind === 'effect' && row.ownerId === owner.id);
     assert.equal(effects.length, owner.id.startsWith('track-') ? 5 : 4);

@@ -77,7 +77,7 @@ check('Sixteen recipes are complete, normalized snapshots and cover every model'
     assert(preset.name && preset.description.length > 30);
     assert.deepEqual(Object.keys(preset.params).sort(), Object.keys(definition.defaults).sort(), preset.id);
     assert.deepEqual(dsp.normalize(preset.params), preset.params, preset.id);
-    for (const ownerIndex of [0, 8, 10]) {
+    for (const ownerIndex of [0, 10, 12]) {
       const state = S.defaultState(); owners(state)[ownerIndex].effects[3] = insert(preset.params);
       assert.deepEqual(owners(parse(state))[ownerIndex].effects[3], insert(preset.params), preset.id);
     }
@@ -85,7 +85,7 @@ check('Sixteen recipes are complete, normalized snapshots and cover every model'
 });
 check('Every model, control and all seventeen numeric automation targets round-trip on every owner', () => {
   assert.equal(ranges.length, 17);
-  for (let ownerIndex = 0; ownerIndex < 11; ownerIndex++) for (const model of definition.models) {
+  for (let ownerIndex = 0; ownerIndex < 13; ownerIndex++) for (const model of definition.models) {
     const state = S.defaultState(), owner = owners(state)[ownerIndex], params = unusual(model.id);
     owner.effects = Array.from({ length: S.effectSlotCount(owner) }, () => insert(params));
     owner.automation = ranges.map(param => automation(param, 2));
@@ -97,11 +97,11 @@ check('Every model, control and all seventeen numeric automation targets round-t
       assert(target && target.effectType === 'saute', owner.id + ':' + slot + ':' + param.key);
       assert.equal(target.min, param.min); assert.equal(target.max, param.max); assert.equal(target.step, param.step);
     }
-    assert.equal(loaded.tracks.length, 8); assert.equal(loaded.returns.length, 2);
+    assert.equal(loaded.tracks.length, 10); assert.equal(loaded.returns.length, 2);
   }
 });
 check('Missing controls, wrong types, bad enum values and malformed bypass are rejected without repairing', () => {
-  for (const ownerIndex of [0, 7, 8, 9, 10]) {
+  for (const ownerIndex of [0, 7, 8, 9, 10, 11, 12]) {
     for (const key of Object.keys(definition.defaults)) {
       const state = S.defaultState(), owner = owners(state)[ownerIndex]; owner.effects[0] = insert(); delete owner.effects[0].params[key];
       assert.throws(() => parse(state), /invalid|settings|effect/i, owner.id + ' missing ' + key);
@@ -118,14 +118,14 @@ check('Missing controls, wrong types, bad enum values and malformed bypass are r
 });
 check('Bus parameters and automation reject out-of-range data; track loading keeps existing bounded semantics', () => {
   for (const param of ranges) for (const value of [param.min - 1, param.max + 1]) {
-    for (const ownerIndex of [8, 9, 10]) {
+    for (const ownerIndex of [10, 11, 12]) {
       const state = S.defaultState(); owners(state)[ownerIndex].effects[0] = insert({ [param.key]: value });
       assert.throws(() => parse(state), /invalid|settings|effect/i, param.key);
     }
     const state = S.defaultState(); state.tracks[0].effects[0] = insert({ [param.key]: value });
     assert.equal(parse(state).tracks[0].effects[0].params[param.key], Math.max(param.min, Math.min(param.max, value)));
   }
-  for (const ownerIndex of [0, 8, 10]) {
+  for (const ownerIndex of [0, 10, 12]) {
     for (const patch of [{ effectType: 'velvet' }, { target: 'fx:0:model' }, { target: 'fx:0:missing' }, { points: [{ beat: 0, value: null }] }, { points: [{ beat: 0, value: 1000 }] }]) {
       const state = S.defaultState(), owner = owners(state)[ownerIndex]; owner.effects[0] = insert(); owner.automation = [{ ...automation(ranges.find(param => param.key === 'drive')), ...patch }];
       assert.throws(() => parse(state), /invalid|automation/i);
