@@ -77,11 +77,13 @@ sound by running the original effect algorithms at a different rate.
 
 The separate temporary-audio budget is 192 MiB of decoded Float32 audio; the
 ordinary sample budget remains 64 MiB and portable project files remain bounded
-at 256 MiB. Audio is stored in chunks, with silent send feeds omitted. Long dense
+at 448 MiB. Audio is stored in chunks, with silent send feeds omitted. Long dense
 arrangements with both sends can reach these limits. Freezing reports a clear
 error before committing incomplete audio; unfreeze unused tracks or shorten the
 arrangement to make room. Original recorded and sampled audio is retained for
-unfreezing.
+unfreezing. The Recordings browser lists frozen renders by track. Releasing one
+unfreezes that track and deletes its temporary audio while retaining the original
+clips and effect settings. See [the recordings guide](RECORDINGS-GUIDE.md).
 
 ## Verification
 

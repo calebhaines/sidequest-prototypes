@@ -189,6 +189,10 @@
       for (const [id, entry] of this.tracks) { entry.prepareAbort?.abort(); this.host.setClockDriven(id, false); if (entry.adapter?.transport) { try { this.host.transportInstrument(id, { ...clock, playing: false }); } catch (_) {} } }
     }
     panic() { this.stop(); }
+    releaseSources() {
+      this.stop(); this.tracks.clear(); this.compiledPatterns = new WeakMap();
+      this.stateSignature = ''; this.recordingTracks.clear();
+    }
     setRecordingTracks(ids = []) { this.recordingTracks = new Set(ids); }
     _signature() {
       const state = this.getState();
