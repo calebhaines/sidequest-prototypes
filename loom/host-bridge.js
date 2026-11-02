@@ -93,11 +93,12 @@
       const raw = record.getContext();
       if (!raw) throw new Error('Start GALLEY audio before playing an instrument.');
       const output = raw.createGain(); output.gain.value = record.soundEnabled ? 1 : 0; output.connect(record.getInput());
-      const listeners = new Set(), modules = new Map(), nodes = new Set();
+      const listeners = new Set(), modules = new Map(), nodes = new Set(), worklets = new Set();
       const processorPrefix = 'loom-' + key.replace(/[^a-zA-Z0-9-]/g, '-') + '-' + (++sequence) + '-';
       let closed = false, suspended = false;
       const facade = {
         _nodes: nodes,
+        _worklets: worklets,
         get __loomRawContext() { return raw; },
         get destination() { return wrapNode(output, proxy); },
         get state() { return closed || cancelled() ? 'closed' : suspended ? 'suspended' : raw.state; },
@@ -111,7 +112,13 @@
             // Processor names belong to the shared context; give every hosted context its own names.
             const response = await fetch(url); if (!response.ok) throw new Error('Could not load the instrument processor.');
             const source = await response.text(); requireActive();
-            const renamed = 'const registerProcessor=(name,processor)=>globalThis.registerProcessor(' + JSON.stringify(processorPrefix) + '+name,processor);\n' + source.replace(/globalThis\.registerProcessor\s*\(/g, 'registerProcessor(');
+            // A disconnected source-like Worklet can keep returning true on
+            // the shared audio thread. Give each facade an explicit shutdown
+            // protocol, intercepted before the instrument's own port handlers.
+            const renamed = 'const __loomClosed=Symbol("host-context-closed");\n' +
+              'const AudioWorkletProcessor=class extends globalThis.AudioWorkletProcessor{constructor(...args){super(...args);this[__loomClosed]=false;this.port.addEventListener("message",event=>{if(event.data?.__loomShutdown===' + JSON.stringify(processorPrefix) + '){this[__loomClosed]=true;event.stopImmediatePropagation();}});this.port.start();}};\n' +
+              'const registerProcessor=(name,Processor)=>globalThis.registerProcessor(' + JSON.stringify(processorPrefix) + '+name,class extends Processor{static get parameterDescriptors(){return Processor.parameterDescriptors}constructor(...args){super(...args);if(Object.prototype.hasOwnProperty.call(this,"process")){const process=this.process;this.process=(inputs,outputs,parameters)=>this[__loomClosed]?false:process.call(this,inputs,outputs,parameters);}}process(inputs,outputs,parameters){return this[__loomClosed]?false:super.process(inputs,outputs,parameters);}});\n' +
+              source.replace(/globalThis\.registerProcessor\s*\(/g, 'registerProcessor(').replace(/globalThis\.AudioWorkletProcessor\b/g, 'AudioWorkletProcessor');
             const blobURL = URL.createObjectURL(new Blob([renamed], { type: 'text/javascript' }));
             try { await raw.audioWorklet.addModule(blobURL, options); requireActive(); }
             finally { URL.revokeObjectURL(blobURL); }
@@ -122,7 +129,7 @@
         },
         async resume() { requireActive(); if (closed) throw new DOMException('This context is closed.', 'InvalidStateError'); suspended = false; output.gain.setValueAtTime(record.soundEnabled ? 1 : 0, raw.currentTime); if (raw.state === 'suspended' && record.soundEnabled) await raw.resume(); requireActive(); dispatch(); },
         async suspend() { if (closed) return; suspended = true; output.gain.setValueAtTime(0, raw.currentTime); dispatch(); },
-        async close() { if (closed) return; closed = true; output.gain.setValueAtTime(0, raw.currentTime); nodes.forEach(node => { try { node.stop?.(); } catch (_) {} try { node.disconnect(); } catch (_) {} }); nodes.clear(); try { output.disconnect(); } catch (_) {} contexts.delete(proxy); dispatch(); },
+        async close() { if (closed) return; closed = true; output.gain.setValueAtTime(0, raw.currentTime); worklets.forEach(node => { try { node.port.postMessage({ __loomShutdown: processorPrefix }); } catch (_) {} }); nodes.forEach(node => { try { if ('onaudioprocess' in node) node.onaudioprocess = null; } catch (_) {} try { node.stop?.(); } catch (_) {} try { node.disconnect(); } catch (_) {} }); nodes.clear(); worklets.clear(); try { output.disconnect(); } catch (_) {} contexts.delete(proxy); dispatch(); },
         addEventListener(type, listener) { if (type === 'statechange') listeners.add(listener); },
         removeEventListener(type, listener) { if (type === 'statechange') listeners.delete(listener); },
         dispatchEvent(event) { if (event.type === 'statechange') dispatch(); return true; },
@@ -151,7 +158,9 @@
         const facade = args[0]; if (!facade?.__loomRawContext) return Reflect.construct(target, args);
         requireActive(); if (facade.state === 'closed') throw new DOMException('This context is closed.', 'InvalidStateError'); const rawArgs = [...args]; rawArgs[0] = facade.__loomRawContext;
         if (name === 'AudioWorkletNode') rawArgs[1] = facade._processorName(rawArgs[1]);
-        return wrapNode(Reflect.construct(target, rawArgs), facade);
+        const node = Reflect.construct(target, rawArgs);
+        if (name === 'AudioWorkletNode') facade._worklets?.add(node);
+        return wrapNode(node, facade);
       } });
     });
     if (nativeGetUserMedia) navigator.mediaDevices.getUserMedia = async constraints => {

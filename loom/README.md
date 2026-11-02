@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Track power and CPU review (1.36.0)** adds a power switch to each track header and mixer channel. Off stops its instrument, effects, EQ, sends, clip playback and note scheduling while keeping the complete editable source. Switch it on to restore the saved sound. This release also caches redundant effect/control calculations and releases closed CPU diagnostics. Enabled audio is checked exactly against 1.35. See [the CPU review and operating notes](CPU-REVIEW-1.36.md).
+
 **Master playback (1.34.0)** adds whole-mix Speed and Pitch controls, pitch-preserving or tape-style playback, and prepared stereo playback that includes the nominal effects and automation. Neutral playback retains its normal live path. Stereo mix exports include the transform; stems and frozen track sources remain nominal. See [the playback guide](MASTER-PLAYBACK-GUIDE.md).
 
 **SUNDAY (1.33.0)** adds five Deluxe Reverb AB763 circuit interpretations in a separate amp effect. A–E retain the same controls for auditioning; independent input/output trims, fixed comparison levels, preserved clean playing dynamics, passive tone interaction, spring/tremolo and deep circuit/load controls are included. BROILER is unchanged. See [the operating and research guide](DELUXE-REVERB-GUIDE.md).
@@ -164,7 +166,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.34.0.
+SERVICE is version 1.0.0; GALLEY is version 1.36.0.
 
 ## Making a piece
 

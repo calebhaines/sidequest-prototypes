@@ -41,7 +41,7 @@
     visualPanelObserver = new IntersectionObserver(entries => {
       for (const entry of entries) visualPanels.set(entry.target.id, entry.isIntersecting && entry.intersectionRatio > 0);
     });
-    for (const id of ['mixer', 'busChannels', 'effectEditor', 'automationEditor', 'pianoRollEditor', 'micInputPanel', 'masteringSection']) {
+    for (const id of ['mixer', 'busChannels', 'effectEditor', 'automationEditor', 'pianoRollEditor', 'micInputPanel', 'masteringSection', 'masterPlaybackSection']) {
       const element = $(id); if (element) visualPanelObserver.observe(element);
     }
   }
@@ -68,17 +68,26 @@
   const trackEqControls = [...trackEqBands.map(band => ({ ...band, min: -12, max: 12, default: 0, step: .1 })), ...trackEqSweeps];
   const trackEqDefinition = key => trackEqControls.find(control => control.key === key);
   const instrumentHistory=new WeakSet();
-  const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map();
+  const frames = new Map(), armedBeforeRecord = new Map(), openedApps = new Map(), trackPowerOperations = new Map();
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
   state = S.normalize(state);
   const engine = new window.LoomAudio(state);
   const host = new window.LoomInstrumentHost({ context: () => engine.context, transport: () => engine.getTransport(), getTrackInput: id => engine.getTrackInput(id), onStatus: (id, message, kind) => { if (id === frameTrack) $('instrumentHostStatus').textContent = message; if (kind === 'error') status(message); }, onStateChange: id => { scheduleSnapshot(id); } });
-  const notePlayback = new window.LoomNotePlayback({ audio: engine, host, getState: () => state, ensureInstrument: t => ensureInstrument(t), onStatus: message => status(message) });
+  const notePlayback = new window.LoomNotePlayback({ audio: engine, host, getState: () => state, ensureInstrument: async t => {
+    const generation = lifecycle, pending = trackPowerOperations.get(t.id);
+    if (pending) {
+      try { await pending.promise; }
+      catch (error) { if (state.tracks.find(item => item.id === t.id)?.disabled) throw error; }
+    }
+    const current = state.tracks.find(item => item.id === t.id);
+    if (generation !== lifecycle || !current || current.disabled) return false;
+    return ensureInstrument(current);
+  }, onStatus: message => status(message) });
   const noteRenderer = new window.LoomNoteRenderer({ host, context: () => engine.context });
   const nativeRenderWav = engine.renderWav.bind(engine);
   async function renderSnapshot(source, signal, options = {}) {
     const captured = clone(source), generation = lifecycle;
-    for (const t of captured.tracks) if (!t.freeze && t.instrument && (!options.trackId || t.id === options.trackId) && t.clips.some(c => c.type === 'notes' && c.start < (options.endBeat ?? source.lengthBars * 4) && c.start + c.length > (options.startBeat ?? 0))) {
+    for (const t of captured.tracks) if (!t.disabled && !t.freeze && t.instrument && (!options.trackId || t.id === options.trackId) && t.clips.some(c => c.type === 'notes' && c.start < (options.endBeat ?? source.lengthBars * 4) && c.start + c.length > (options.startBeat ?? 0))) {
       if (signal?.aborted) throw canceledError();
       const actual = state.tracks.find(track => track.id === t.id && track.instrument?.id === t.instrument.id);
       if (actual) { await ensureInstrument(actual); const snapshot = await host.snapshot(t.id); if (snapshot) { t.instrument.snapshot = snapshot; options.onSnapshot?.(t.id, snapshot); noteWorkflow?.captureSnapshot(t.id, snapshot); } }
@@ -87,15 +96,15 @@
     return captured;
   }
   engine.renderWav = async (renderState = state, renderAssets = assetMap, options = {}) => {
-    if (!renderState.tracks.some(t => !t.freeze && t.clips.some(c => c.type === 'notes'))) return nativeRenderWav(renderState, renderAssets, options);
+    if (!renderState.tracks.some(t => !t.disabled && !t.freeze && t.clips.some(c => c.type === 'notes'))) return nativeRenderWav(renderState, renderAssets, options);
     const captured = options.snapshotReady ? clone(renderState) : await renderSnapshot(renderState, options.signal, options);
     const prepared = await noteRenderer.prepareNotes(captured, renderAssets, { ...options, onProgress: p => options.onProgress?.(p * .35) });
     return nativeRenderWav(prepared.state, prepared.assets, { ...options, onProgress: p => options.onProgress?.(.35 + p * .65) });
   };
   async function prepareMasterSources(source, assets, options = {}) {
     const captured = options.snapshotReady ? clone(source) : await renderSnapshot(source, options.signal, options), generation = lifecycle;
-    const solo = captured.tracks.some(t => t.solo);
-    for (const t of captured.tracks) if (!t.freeze && t.instrument && t.instrumentLive && !t.mute && (!solo || t.solo)) {
+    const solo = captured.tracks.some(t => !t.disabled && t.solo);
+    for (const t of captured.tracks) if (!t.disabled && !t.freeze && t.instrument && t.instrumentLive && !t.mute && (!solo || t.solo)) {
       const actual = state.tracks.find(track => track.id === t.id && track.instrument?.id === t.instrument.id);
       if (!actual || !await ensureInstrument(actual)) throw Error('Open the instrument on ' + t.name + ' before preparing master playback.');
       if (generation !== lifecycle || options.signal?.aborted) throw canceledError();
@@ -107,10 +116,11 @@
       t.clips.push(S.noteClip({ id: S.uid('master-live'), name: t.name + ' · live pattern', type: 'notes', pattern, voiceMap: {}, start: 0, length: captured.lengthBars * 4, sourceOffset: 0, rate: 1, loop: adapter.nativeSequenceLoop !== false, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 }, captured.lengthBars * 4));
       t.instrumentLive = false;
     }
-    const longest = Math.max(0, ...captured.tracks.flatMap(t => t.clips.filter(c => c.type === 'notes').map(c => c.pattern.lengthBeats * 60 / (captured.tempo * c.rate))));
+    const longest = Math.max(0, ...captured.tracks.filter(t => !t.disabled).flatMap(t => t.clips.filter(c => c.type === 'notes').map(c => c.pattern.lengthBeats * 60 / (captured.tempo * c.rate))));
     return noteRenderer.prepareNotes(captured, assets, { ...options, tailSeconds: Math.max(0, Math.min(8, 120 - longest)) });
   }
   function commitNotes(next, { selected, trackIndex, instruments = false } = {}) {
+    if (trackPowerOperations.size) throw Error('Wait for track power to finish changing.');
     checkFreezeDependencies(next); const previous = state, normalized = S.normalize(next); remember({ instruments }); state = normalized;
     if (selected !== undefined) selectedClip = selected; if (trackIndex !== undefined) { rackTarget = 'track'; state.selectedTrack = trackIndex; }
     for (let i = 0; i < S.LIMITS.tracks; i++) if (frames.has(state.tracks[i].id) && previous.tracks[i].instrument?.id !== state.tracks[i].instrument?.id) {
@@ -146,11 +156,113 @@
     }
   }
   function status(message) { $('status').textContent = message; }
+  function trackPowerButton(t, index) {
+    const label = (t.disabled ? 'Enable ' : 'Disable ') + t.name;
+    return `<button type="button" class="track-power ${t.disabled ? 'is-off' : ''}" data-track-power="${index}" aria-label="${escape(label)}" aria-pressed="${!t.disabled}" title="${escape(label + (t.disabled ? ' · restore its saved sound' : ' · stop all track processing and keep its settings'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v6M4 3.2a5.7 5.7 0 1 0 8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>`;
+  }
+  function renderTrackPowerState() {
+    const blocked = freezeBusy() || audioSettingsBusy || recordPending || recordFinishing || engine.recordingBusy || transportPending || !!exportAbort || !!transferAbort || !!noteWorkflow?.controller || !!serviceController?.isOpen;
+    for (const button of document.querySelectorAll('[data-track-power]')) {
+      const t = state.tracks[Number(button.dataset.trackPower)], busy = trackPowerOperations.has(t.id);
+      updateProperty(button, 'disabled', blocked || !!trackPowerOperations.size);
+      updateAttribute(button, 'aria-busy', busy);
+    }
+  }
+  function beginTrackPower(t, { historyEntry = null, captureSnapshot = true, restore = false } = {}) {
+    const current = trackPowerOperations.get(t.id); if (current) return current.promise;
+    const operation = { descriptor: t.instrument }, id = t.id;
+    trackPowerOperations.set(id, operation);
+    const valid = () => trackPowerOperations.get(id) === operation && state.tracks.find(item => item.id === id)?.instrument === operation.descriptor;
+    operation.promise = (async () => {
+      try {
+        if (t.disabled) {
+          clearTimeout(snapshotTimers.get(id)); snapshotTimers.delete(id);
+          loadOperations.set(id, (loadOperations.get(id) || 0) + 1);
+          engine.clearAudition(id);
+          const [snapshot] = await Promise.all([host.setDisabled(id, true), noteRenderer.setDisabled(id, true)]);
+          if (!valid() || !state.tracks.find(item => item.id === id)?.disabled) return false;
+          if (captureSnapshot && snapshot && operation.descriptor && snapshot.app === operation.descriptor.id) {
+            operation.descriptor.snapshot = snapshot;
+            const before = historyEntry?.tracks.find(item => item.id === id);
+            if (before?.instrument?.id === snapshot.app) before.instrument.snapshot = clone(snapshot);
+            noteWorkflow?.captureSnapshot(id, snapshot);
+          }
+          releaseFrozenInstrument(id);
+        } else {
+          await host.setDisabled(id, false);
+          if (restore && t.instrument && !t.freeze) {
+            if (!await ensureInstrument(t) || !valid() || t.disabled) return false;
+            await host.command(id, 'prepare');
+            if (!valid() || t.disabled) return false;
+            await host.command(id, 'stop');
+            if (!valid() || t.disabled) return false;
+            const adapter = host.getPatternAdapter(id), continuous = !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern;
+            const clockOwned = notePlayback.active && (continuous || adapter?.voiceEffectsClock || adapter?.exportPattern && adapter?.scheduleNote || t.clips.some(clip => clip.type === 'notes'));
+            if (engine.getMeters().playing && t.instrumentLive && !clockOwned) {
+              if (valid() && !t.disabled && engine.getMeters().playing) await host.command(id, 'start');
+            }
+          }
+        }
+        if (valid()) { notePlayback.setState(state); scheduleAutosave(); }
+        return true;
+      } catch (error) {
+        if (valid() && t.disabled && !host.isDisabled(id)) {
+          t.disabled = false;
+          if (history[history.length - 1] === historyEntry) history.pop();
+          changed({ arrangement: true, mixer: true, rack: true });
+        } else if (valid() && !t.disabled) {
+          t.disabled = true;
+          try { await host.setDisabled(id, true); } catch (_) { await host.unload(id); await host.setDisabled(id, true); }
+          if (valid()) {
+            releaseFrozenInstrument(id);
+            if (history[history.length - 1] === historyEntry) history.pop();
+            changed({ arrangement: true, mixer: true, rack: true });
+          }
+        }
+        throw error;
+      } finally {
+        if (trackPowerOperations.get(id) === operation) {
+          trackPowerOperations.delete(id); renderHistory(); renderTransport();
+        }
+      }
+    })();
+    operation.promise.catch(() => {});
+    return operation.promise;
+  }
+  function synchronizeTrackPower(previous = null, { captureSnapshot = true } = {}) {
+    for (const t of state.tracks) {
+      if (t.disabled && !host.isDisabled(t.id)) beginTrackPower(t, { captureSnapshot }).catch(error => status(error.message));
+      else if (!t.disabled && host.isDisabled(t.id)) {
+        host.setDisabled(t.id, false);
+        if (previous?.tracks.find(item => item.id === t.id)?.disabled) beginTrackPower(t, { restore: true }).catch(error => status(error.message));
+      }
+    }
+  }
+  async function setTrackDisabled(index, disabled) {
+    const t = typeof index === 'string' ? state.tracks.find(item => item.id === index) : state.tracks[index];
+    if (!t) throw Error('Choose a track.');
+    const value = disabled === undefined ? !t.disabled : disabled;
+    if (typeof value !== 'boolean') throw Error('Choose whether this track is enabled.');
+    if (trackPowerOperations.has(t.id)) return trackPowerOperations.get(t.id).promise;
+    if (trackPowerOperations.size) throw Error('Wait for track power to finish changing.');
+    if (t.disabled === value) return true;
+    if (freezeBusy() || audioSettingsBusy || recordPending || recordFinishing || engine.recordingBusy || transportPending || exportAbort || transferAbort || noteWorkflow?.controller || serviceController?.isOpen) throw Error('Finish the current audio operation before switching track power.');
+    remember({ instruments: true }); const historyEntry = history[history.length - 1];
+    t.disabled = value;
+    if (!value) engine.setState(state);
+    const pending = beginTrackPower(t, { historyEntry, restore: !value });
+    changed({ arrangement: true, mixer: true, rack: true, deferNotes: !value });
+    renderTransport();
+    await pending;
+    if (state.tracks.find(item => item.id === t.id) === t) status(t.disabled ? t.name + ' is off. Its instrument and processing are stopped; clips and settings are kept.' : t.name + ' is enabled with its saved settings.');
+    return true;
+  }
   const freezeDisabled = new Map();
   const freezeBusy = () => !!trackFreezeStatus.busy;
   const frozenTracks = () => state.tracks.filter(t => t.freeze);
   function trackLocked(t) { return freezeBusy() || !!t?.freeze; }
   function allowTrackEdit(t) {
+    if (trackPowerOperations.size) { status('Wait for track power to finish changing.'); return false; }
     if (!trackLocked(t)) return true;
     status(freezeBusy() ? 'Finish or cancel the track freeze before editing.' : 'Unfreeze ' + t.name + ' to edit its sound or clips.');
     return false;
@@ -162,7 +274,7 @@
     if (frozenTracks().length && (next.tempo !== state.tempo || next.lengthBars !== state.lengthBars || !sameFreezeSetting(next.lfos, state.lfos))) throw Error('Unfreeze all tracks before changing tempo, arrangement length or shared LFOs.');
     for (const t of frozenTracks()) {
       const target = next.tracks.find(item => item.id === t.id);
-      const sound = owner => { const copy = { ...owner }; for (const key of ['name', 'color', 'mute', 'solo']) delete copy[key]; return copy; };
+      const sound = owner => { const copy = { ...owner }; for (const key of ['name', 'color', 'mute', 'solo', 'disabled']) delete copy[key]; return copy; };
       if (!target || !sameFreezeSetting(sound(target), sound(t))) throw Error('Unfreeze ' + t.name + ' before editing its sound or clips.');
     }
   }
@@ -197,7 +309,7 @@
     const info = freezeController?.getStatus() || { busy: false }, count = frozenTracks().length, t = track(), button = $('trackFreezeButton');
     if (!button) return;
     $('trackFreeze').hidden = rackTarget !== 'track' && !info.busy;
-    button.textContent = t.freeze ? 'Unfreeze track' : 'Freeze track'; button.disabled = !!info.busy || audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || transportPending || !!exportAbort || !!transferAbort || !!noteWorkflow?.controller || !!serviceController?.isOpen;
+    button.textContent = t.freeze ? 'Unfreeze track' : 'Freeze track'; button.disabled = !!t.disabled || trackPowerOperations.has(t.id) || !!info.busy || audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || transportPending || !!exportAbort || !!transferAbort || !!noteWorkflow?.controller || !!serviceController?.isOpen;
     button.setAttribute('aria-pressed', String(!!t.freeze));
     $('cancelTrackFreezeButton').hidden = !info.busy; $('cancelTrackFreezeButton').disabled = /cancel/i.test(info.stage || '');
     $('unfreezeAllButton').hidden = !count; $('unfreezeAllButton').disabled = !!info.busy;
@@ -205,10 +317,11 @@
     updateText($('trackFreezeStatus'), message);
     $('trackFreezeProgress').hidden = !info.busy; if (Number.isFinite(info.progress)) $('trackFreezeProgress').value = info.progress; else $('trackFreezeProgress').removeAttribute('value');
     $('trackFreeze').classList.toggle('is-frozen', !!t.freeze); $('trackFreeze').setAttribute('aria-busy', String(!!info.busy));
+    renderTrackPowerState();
     if (!info.busy && !count) { for (const element of document.querySelectorAll('[data-service-open]')) { element.disabled = false; element.title = 'Separate performance view (Alt + P)'; } return; }
     for (const element of document.querySelectorAll('button,input,select,textarea,[role="slider"]')) if (freezeControlBlocked(element)) disableForFreeze(element);
     for (const element of document.querySelectorAll('[data-track-freeze]')) element.disabled = !!info.busy;
-    $('recordButton').disabled ||= trackLocked(t) && ($('recordSource').value === 'microphone' || !state.tracks.some(owner => !owner.freeze && owner.armed && owner.instrument));
+    $('recordButton').disabled ||= trackLocked(t) && ($('recordSource').value === 'microphone' || !state.tracks.some(owner => !owner.disabled && !owner.freeze && owner.armed && owner.instrument));
     for (const id of ['browseInstrumentButton', 'openInstrumentButton', 'instrumentLive']) if (trackLocked(t)) disableForFreeze($(id));
     for (const element of document.querySelectorAll('[data-service-open]')) { element.disabled = !!info.busy || !!count; element.title = count ? 'Unfreeze all tracks before opening SERVICE.' : 'Separate performance view (Alt + P)'; }
   }
@@ -228,6 +341,9 @@
   function unfreezeAll() { return freezeController?.unfreezeAll(); }
   for (const type of ['pointerdown', 'click', 'input', 'change', 'keydown', 'dblclick']) document.addEventListener(type, event => {
     if (type === 'keydown' && (event.key === 'Tab' || event.key === 'Escape')) return;
+    if (trackPowerOperations.size && event.target.closest?.('button,input,select,textarea,[role="slider"],.clip,.auto-canvas,.piano-canvas') && !event.target.closest('[id^="close"],#panicButton,#pauseButton,#stopButton,#saveButton,#helpButton')) {
+      event.preventDefault(); event.stopImmediatePropagation(); status('Wait for track power to finish changing.'); return;
+    }
     if (!freezeControlBlocked(event.target)) return;
     event.preventDefault(); event.stopImmediatePropagation();
     if (type === 'click' || type === 'pointerdown' || type === 'keydown') status(freezeBusy() ? 'Finish or cancel the track freeze before editing.' : 'Unfreeze the affected track before changing its baked settings. Tempo, length and shared LFOs stay fixed while any track is frozen.');
@@ -241,14 +357,14 @@
   function filename(suffix) { return (state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'loom-session') + suffix; }
   function download(blob, name) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000); }
   function remember({instruments=false}={}) { const entry=clone(state); if(instruments)instrumentHistory.add(entry); history.push(entry); if (history.length > 40) history.shift(); future = []; renderHistory(); }
-  function renderHistory() { $('undoButton').disabled = !history.length; $('redoButton').disabled = !future.length; }
+  function renderHistory() { $('undoButton').disabled = !history.length || !!trackPowerOperations.size; $('redoButton').disabled = !future.length || !!trackPowerOperations.size; }
   function decodeAssets() { const next = {}; for (const asset of [...state.assets, ...(state.freezeAssets || [])]) { next[asset.id] = assetMap[asset.id] || (asset.encoding === 'float32le' ? S.decodeFreezeAsset(asset) : S.decodeAsset(asset)); } assetMap = next; engine.setAssets(assetMap); }
-  function changed(options = {}) { engine.setState(state); notePlayback.setState(state); renderHistory(); if (options.arrangement) renderArrangement(); if (options.mixer) renderMixer(); if (options.rack) renderRack(); if (options.inspector) renderClipInspector(); if(options.automation) automationEditor?.render(); if(options.notes) pianoRoll?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
+  function changed(options = {}) { engine.setState(state); if (!options.deferNotes) notePlayback.setState(state); renderHistory(); if (options.arrangement) renderArrangement(); if (options.mixer) renderMixer(); if (options.rack) renderRack(); if (options.inspector) renderClipInspector(); if(options.automation) automationEditor?.render(); if(options.notes) pianoRoll?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
   function recoveryInfo(message){$('recoveryStatus').hidden=!message;$('recoveryStatus').textContent=message||'';if(message&&!recoveryWarned){recoveryWarned=true;status(message);}}
   function scheduleAutosave(){clearTimeout(autosaveTimer);if(!recovery){recoveryInfo('Browser recovery is off. Save a project to keep this session.');return;}autosaveTimer=setTimeout(()=>{try{const recoveryLimit=8*1024*1024,encodedSize=[...state.assets,...(state.freezeAssets||[])].reduce((n,a)=>n+(a.pcm?.length||0),0)+state.tracks.reduce((n,t)=>n+(t.instrument?.html?.length||0),0);if(encodedSize>=recoveryLimit){localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');return;}const serialized=S.serializeProject(state);if(serialized.length<8*1024*1024){localStorage.setItem('loom-session-v1',serialized);recoveryUnavailable=false;recoveryInfo('');}else{localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');}}catch(_){recoveryUnavailable=true;recoveryInfo('Browser recovery is unavailable or full. Save a project to keep this session.');}},1600);}
   const snapshotTimers = new Map();
-  function scheduleSnapshot(id) { clearTimeout(snapshotTimers.get(id)); if (state.tracks.find(t => t.id === id)?.freeze || freezeBusy()) return; const generation = lifecycle; snapshotTimers.set(id, setTimeout(async () => { try { const snapshot = await host.snapshot(id); if (generation !== lifecycle || freezeBusy()) return; const t = state.tracks.find(t => t.id === id); if (t && !t.freeze && t.instrument && snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(id, snapshot); if(masterPlayback?.altered())engine.setState(state); scheduleAutosave(); } } catch (_) {} }, 900)); }
-  async function snapshotAll() { for (const t of state.tracks) if (!t.freeze && t.instrument && frames.has(t.id)) { try { const snapshot = await host.snapshot(t.id); if (snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(t.id, snapshot); } } catch (e) { status('The audio project is safe; one instrument could not provide its current settings. ' + e.message); } } }
+  function scheduleSnapshot(id) { clearTimeout(snapshotTimers.get(id)); if (state.tracks.find(t => t.id === id)?.freeze || state.tracks.find(t => t.id === id)?.disabled || trackPowerOperations.has(id) || freezeBusy()) return; const generation = lifecycle; snapshotTimers.set(id, setTimeout(async () => { try { const snapshot = await host.snapshot(id); if (generation !== lifecycle || freezeBusy()) return; const t = state.tracks.find(t => t.id === id); if (t && !t.disabled && !t.freeze && t.instrument && snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(id, snapshot); if(masterPlayback?.altered())engine.setState(state); scheduleAutosave(); } } catch (_) {} }, 900)); }
+  async function snapshotAll() { await Promise.all([...trackPowerOperations.values()].map(operation => operation.promise)); for (const t of state.tracks) if (!t.disabled && !t.freeze && t.instrument && frames.has(t.id)) { try { const snapshot = await host.snapshot(t.id); if (snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(t.id, snapshot); } } catch (e) { status('The audio project is safe; one instrument could not provide its current settings. ' + e.message); } } }
   function snap(value) { const step = state.view.snap; return step ? Math.round(value / step) * step : Math.round(value * 1000) / 1000; }
   function selectedTrack(index, options = {}) { rackTarget = 'track'; state.selectedTrack = index; if (!options.keepClip) selectedClip = null; if (selectedSlot !== null && !effectOwner().effects[selectedSlot]) selectedSlot = null; renderTrackHeaders(); renderLanes(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); automationEditor?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
   function panLabel(value) { return Math.abs(value) < .01 ? 'C' : Math.round(Math.abs(value) * 100) + (value < 0 ? ' L' : ' R'); }
@@ -298,7 +414,7 @@
     };
     return `<svg viewBox="0 0 230 82" aria-hidden="true"><g fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${pots[id] || pots.fable}</g></svg>`;
   }
-  function renderTrackHeaders() { $('trackHeaders').innerHTML = state.tracks.map((t,i)=>`<div class="track-header ${t.freeze?'is-frozen':''} ${i===state.selectedTrack?'selected':''}" data-track="${i}" style="--track:${escape(t.color)}"><div class="track-name-row"><span class="track-number">${String(i+1).padStart(2,'0')}</span><span class="track-name">${escape(t.name)}</span><button class="track-arm" data-arm="${i}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1} for recording"><i></i></button></div><div class="track-lower-row"><button class="instrument-chip" data-instrument="${i}" title="Choose or open this track's instrument">${escape(t.instrument ? S.instrumentName(t.instrument) : '+ Load')}</button><button class="track-ms ${t.mute?'active':''}" data-mute="${i}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button class="track-ms ${t.solo?'active':''}" data-solo="${i}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button>${freezeBadge(t)}<span class="track-fx-dots">${t.effects.map(f=>`<i style="${f?'background:'+effectById(f.type).color:''}"></i>`).join('')}</span></div></div>`).join(''); }
+  function renderTrackHeaders() { $('trackHeaders').innerHTML = state.tracks.map((t,i)=>`<div class="track-header ${t.disabled?'is-disabled':''} ${t.freeze?'is-frozen':''} ${i===state.selectedTrack?'selected':''}" data-track="${i}" style="--track:${escape(t.color)}"><div class="track-name-row"><span class="track-number">${String(i+1).padStart(2,'0')}</span>${trackPowerButton(t,i)}<span class="track-name">${escape(t.name)}</span><button class="track-arm" data-arm="${i}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1} for recording"><i></i></button></div><div class="track-lower-row"><button class="instrument-chip" data-instrument="${i}" title="Choose or open this track's instrument">${escape(t.instrument ? S.instrumentName(t.instrument) : '+ Load')}</button><button class="track-ms ${t.mute?'active':''}" data-mute="${i}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button class="track-ms ${t.solo?'active':''}" data-solo="${i}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button>${freezeBadge(t)}<span class="track-fx-dots">${t.effects.map(f=>`<i style="${f?'background:'+effectById(f.type).color:''}"></i>`).join('')}</span></div></div>`).join(''); }
   function timelineWidth() { timelineViewportWidth = $('timelineScroll').clientWidth; return Math.max(timelineViewportWidth, state.lengthBars * 4 * state.view.zoom); }
   function renderArrangement() { renderTrackHeaders(); $('zoom').value = state.view.zoom; $('snap').value = state.view.snap; $('lengthBars').value = state.lengthBars; $('loopStart').value = state.loopStart / 4 + 1; $('loopEnd').value = state.loopEnd / 4 + 1; const width = timelineWidth(); $('timeline').style.width = width + 'px'; $('timeline').style.setProperty('--bar-width', state.view.zoom*4 + 'px'); $('timeline').style.setProperty('--beat-width', state.view.zoom + 'px'); $('ruler').innerHTML = Array.from({length:state.lengthBars},(_,i)=>`<span class="ruler-label" style="left:${i*4*state.view.zoom}px">${String(i+1).padStart(2,'0')}</span>`).join(''); renderMarkers(); $('loopStrip').innerHTML = state.loopEnabled ? `<div class="loop-region" style="left:${state.loopStart*state.view.zoom}px;width:${(state.loopEnd-state.loopStart)*state.view.zoom}px"></div>` : ''; if(state.recording.punchEnabled)$('loopStrip').insertAdjacentHTML('beforeend',`<div class="punch-region" style="left:${state.recording.punchStart*state.view.zoom}px;width:${(state.recording.punchEnd-state.recording.punchStart)*state.view.zoom}px"></div>`); renderLanes(); renderPlayhead(); automationEditor?.render(); }
   function renderLanes() { $('trackLanes').innerHTML = state.tracks.map((t,i)=>`<div class="track-lane ${t.freeze?'is-frozen':''} ${i===state.selectedTrack?'selected':''}" data-lane="${i}" style="--track:${escape(t.color)}">${!t.clips.length?'<span class="lane-empty">IMPORT AUDIO OR RECORD A TAKE</span>':''}${t.clips.map(c=>`<div class="clip ${c.id===selectedClip?'selected':''} ${c.type==='notes'?'clip-notes':c.origin?'clip-printed':''}" data-clip="${escape(c.id)}" data-track="${i}" role="button" tabindex="0" aria-label="${escape(c.name)} on track ${i+1}, starts at beat ${c.start+1}, length ${c.length} beats. Arrow keys move; Shift arrows trim." style="left:${c.start*state.view.zoom}px;width:${Math.max(5,c.length*state.view.zoom)}px"><span class="clip-label">${c.type==='notes'?'♪ ':c.origin?'↪ ':''}${escape(c.name)}${c.reverse?' ↶':''}${c.loop?' ⟳':''}</span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i></div>`).join('')}</div>`).join(''); queueWaveforms(); }
@@ -352,7 +468,7 @@
   function renderTrackEqState(meters = engine.getMeters()) {
     for (const button of $('mixer').querySelectorAll('[data-eq-band]')) {
       const owner = state.tracks[Number(button.dataset.track)], key = button.dataset.eqBand;
-      if (owner?.freeze) continue;
+      if (owner?.freeze || owner?.disabled) continue;
       if (!owner || trackEqDrag?.element === button || trackEqKeyboard?.element === button) continue;
       const reading = trackEqRead(owner, key, meters.beat || 0), sweep = trackEqSweeps.find(control => control.band === key);
       paintTrackEqKnob(button, reading.value, reading.automated, sweep ? trackEqRead(owner, sweep.key, meters.beat || 0).value : undefined);
@@ -378,7 +494,7 @@
     automationEditor?.capture('eq:' + key, next, { remembered: true, ownerId: owner.id });
     changed(); paintTrackEqKnob(element, next); return true;
   }
-  function renderMixer() { finishTrackEqDrag(); endTrackEqKeyboard(); $('mixer').innerHTML = state.tracks.map((t,i)=>`<div class="mixer-channel ${t.freeze?'is-frozen':''} ${i===state.selectedTrack?'selected':''}" data-channel="${i}" style="--track:${escape(t.color)}"><span class="channel-number">${String(i+1).padStart(2,'0')}</span><div class="channel-name">${escape(t.name)}${freezeBadge(t)}</div>${trackEqKnobs(t,i)}<div class="channel-pan"><label for="pan-${i}">PAN</label><input id="pan-${i}" data-mix="pan" data-track="${i}" type="range" min="-1" max="1" step="0.01" value="${t.pan}"><output>${panLabel(t.pan)}</output></div><div class="fader-wrap"><input class="channel-fader" id="level-${i}" data-mix="level" data-track="${i}" type="range" min="0" max="1.5" step="0.01" value="${t.level}" aria-label="Track ${i+1} level"><div class="channel-meter"><i id="meter-${i}"></i></div></div><output class="channel-db">${levelLabel(t.level)}</output><div class="channel-ms"><button data-mute="${i}" class="${t.mute?'active':''}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button data-solo="${i}" class="${t.solo?'active':''}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><button data-arm="${i}" class="${t.armed?'active':''}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1}">R</button></div><div class="channel-sends">${[0,1].map(send=>`<label><span>${send===0?'A':'B'}</span><input data-track-send="${send}" data-track="${i}" type="range" min="0" max="1" step="0.01" value="${t.sends[send]}" aria-label="Track ${i+1} send ${send===0?'A':'B'}"><output data-send-value="${send}" data-track="${i}">${Math.round(t.sends[send]*100)}%</output></label>`).join('')}</div><div class="channel-slots">${t.effects.map((f,s)=>`<button data-effect-track="${i}" data-effect-slot="${s}" title="Track ${i+1}, effect slot ${s+1}${f?': '+effectById(f.type).name:''}" style="${f?'--effect-color:'+effectById(f.type).color:''}">${f?effectById(f.type).name.slice(0,3):'+'}</button>`).join('')}</div></div>`).join(''); renderBuses(); renderSendState(); renderTrackEqState(); renderFreezeState(); }
+  function renderMixer() { finishTrackEqDrag(); endTrackEqKeyboard(); $('mixer').innerHTML = state.tracks.map((t,i)=>`<div class="mixer-channel ${t.disabled?'is-disabled':''} ${t.freeze?'is-frozen':''} ${i===state.selectedTrack?'selected':''}" data-channel="${i}" style="--track:${escape(t.color)}">${trackPowerButton(t,i)}<span class="channel-number">${String(i+1).padStart(2,'0')}${t.disabled?' · OFF':''}</span><div class="channel-name">${escape(t.name)}${freezeBadge(t)}</div>${trackEqKnobs(t,i)}<div class="channel-pan"><label for="pan-${i}">PAN</label><input id="pan-${i}" data-mix="pan" data-track="${i}" type="range" min="-1" max="1" step="0.01" value="${t.pan}"><output>${panLabel(t.pan)}</output></div><div class="fader-wrap"><input class="channel-fader" id="level-${i}" data-mix="level" data-track="${i}" type="range" min="0" max="1.5" step="0.01" value="${t.level}" aria-label="Track ${i+1} level"><div class="channel-meter"><i id="meter-${i}"></i></div></div><output class="channel-db">${levelLabel(t.level)}</output><div class="channel-ms"><button data-mute="${i}" class="${t.mute?'active':''}" aria-pressed="${t.mute}" aria-label="Mute track ${i+1}">M</button><button data-solo="${i}" class="${t.solo?'active':''}" aria-pressed="${t.solo}" aria-label="Solo track ${i+1}">S</button><button data-arm="${i}" class="${t.armed?'active':''}" aria-pressed="${t.armed}" aria-label="Arm track ${i+1}">R</button></div><div class="channel-sends">${[0,1].map(send=>`<label><span>${send===0?'A':'B'}</span><input data-track-send="${send}" data-track="${i}" type="range" min="0" max="1" step="0.01" value="${t.sends[send]}" aria-label="Track ${i+1} send ${send===0?'A':'B'}"><output data-send-value="${send}" data-track="${i}">${Math.round(t.sends[send]*100)}%</output></label>`).join('')}</div><div class="channel-slots">${t.effects.map((f,s)=>`<button data-effect-track="${i}" data-effect-slot="${s}" title="Track ${i+1}, effect slot ${s+1}${f?': '+effectById(f.type).name:''}" style="${f?'--effect-color:'+effectById(f.type).color:''}">${f?effectById(f.type).name.slice(0,3):'+'}</button>`).join('')}</div></div>`).join(''); renderBuses(); renderSendState(); renderTrackEqState(); renderFreezeState(); }
   function renderRack() { const t=track(); $('trackName').value=t.name;$('trackColor').value=t.color; $('rackTrack').textContent='TRACK '+String(state.selectedTrack+1).padStart(2,'0'); $('rack').innerHTML=t.effects.map((f,i)=>{const def=f&&effectById(f.type);return `<button class="rack-slot ${f?'':'empty'} ${rackTarget==='track'&&selectedSlot===i?'selected':''}" data-slot="${i}" style="${def?'--effect-color:'+def.color:''}"><span class="slot-index">${i+1}</span>${def?`<span class="slot-tiny-art">${effectArt(def,true)}</span><span class="slot-name"><strong>${def.name}</strong><small>${escape(def.description)}</small></span>${f.params.bypass?'<span class="slot-bypass">BYPASSED</span>':'<span class="slot-arrow">↗</span>'}`:'<span class="slot-name">Add an effect</span><span class="slot-arrow">+</span>'}</button>`;}).join(''); $('trackInstrumentName').textContent=t.instrument ? S.instrumentName(t.instrument) : 'No instrument loaded'; $('openInstrumentButton').hidden=!t.instrument; const browseLabel=t.instrument?'Replace instrument':'Choose instrument';if($('browseInstrumentButton').textContent!==browseLabel)$('browseInstrumentButton').textContent=browseLabel; $('instrumentLive').checked=t.instrumentLive; $('instrumentLive').disabled=!t.instrument; renderSendControls(); renderBuses(); renderFreezeState(); }
   function renderBuses() {
     if (!$('busChannels')) return;
@@ -1058,8 +1174,8 @@
     pedalMidiUI = window.LoomPedalMidiUI.create({
       element: $('fermentMidiMount'), engine, getOwnerId: () => effectOwner().id, getSlot: () => selectedSlot, getGeneration: () => lifecycle, onStatus: status,
       getTargets: () => {
-        const preferred = state.tracks.find(t => !t.freeze && t.id !== effectOwner().id && !t.instrument && !t.clips.length);
-        return state.tracks.filter(t => !t.freeze).map(t => ({ id: t.id, name: t.name + ' · ' + (t.instrument ? S.instrumentName(t.instrument) : 'CITRUS (new instrument)'), selected: t.id === (preferred?.id || track().id) }));
+        const preferred = state.tracks.find(t => !t.disabled && !t.freeze && t.id !== effectOwner().id && !t.instrument && !t.clips.length);
+        return state.tracks.filter(t => !t.disabled && !t.freeze).map(t => ({ id: t.id, name: t.name + ' · ' + (t.instrument ? S.instrumentName(t.instrument) : 'CITRUS (new instrument)'), selected: t.id === (preferred?.id || track().id) }));
       },
       onPlacePattern: placePedalMidiPattern
     });
@@ -1069,7 +1185,7 @@
     const take = engine.getPedalMidiTake(), generation = lifecycle;
     if (!take || take.capturing || take.token !== meta.token) throw Error('Stop the current MIDI take before placing it.');
     const target = state.tracks.find(t => t.id === meta.targetId);
-    if (!target || target.freeze || target.clips.length >= S.LIMITS.clipsPerTrack) throw Error('Choose an unfrozen track with room for a note clip.');
+    if (!target || target.disabled || target.freeze || target.clips.length >= S.LIMITS.clipsPerTrack) throw Error('Choose an unfrozen track with room for a note clip.');
     let voice = 'bass';
     if (target.instrument) {
       await ensureInstrument(target);
@@ -1287,7 +1403,7 @@
   }
   function effectRange(p,value){const log=p.unit==='Hz'&&p.min>0&&p.max/p.min>8;return `<input id="fx-${p.key}" data-effect-param="${p.key}" ${log?'data-log="true"':''} type="range" min="${log?0:p.min}" max="${log?1:p.max}" step="${log?.001:p.step}" value="${log?Math.log(value/p.min)/Math.log(p.max/p.min):value}">`;}
   function formatParam(p,value) { if(p.key==='balance')return panLabel(value);if(p.key==='targetNote')return utilityNoteName(value)+' / '+Math.round(value);if(p.key==='carrierNote'){const notes=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'],note=Math.round(value);return notes[note%12]+(Math.floor(note/12)-1)+' / '+note;} if(p.unit==='dB')return (value>0?'+':'')+Number(value).toFixed(1)+' dB'; if (p.key==='mix'||(!p.unit&&['depth','spread','width','size','diffusion','pan','duty','cleanLow','presence','master','sag','speakerDrive','mic','distance','air'].includes(p.key))) return Math.round(value*100)+'%'; if(p.unit==='%')return Math.round(value*100)+'%'; if(p.unit==='Hz'&&value>=1000)return (value/1000).toFixed(value>=10000?1:2)+' kHz'; if(p.unit===':1')return Number(value).toFixed(1)+':1'; const decimals=p.step>=1?0:p.step>=.1?1:2; return Number(value).toFixed(decimals)+(p.unit?' '+p.unit:''); }
-  function transportLocked() { return freezeBusy() || audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
+  function transportLocked() { return !!trackPowerOperations.size || freezeBusy() || audioSettingsBusy || recordPending || recordFinishing || engine.isRecording || !!engine.recordingBusy; }
   function renderTransport() {
     const m=engine.getMeters(), recording=!!m.recording, locked=transportLocked();
     $('playButton').disabled=transportPending||locked||!!m.playing;
@@ -1366,12 +1482,12 @@
   function instrumentOptions() { return [...(window.LoomInstrumentManifest||host.manifest||[]),...customManifest]; }
   function renderInstrumentBrowser() { const i=browserTrack===null?state.selectedTrack:browserTrack;$('instrumentDialogTitle').textContent='Choose a voice for track '+String(i+1).padStart(2,'0')+'.';$('instrumentGrid').innerHTML=instrumentOptions().map((app,index)=>`<button class="instrument-card" data-app="${index}" style="--app-color:${app.color||'#dce89b'}"><span class="eyebrow">${host.manifest.some(item=>item.id===app.id)?'KITCHEN / BUNDLED':'KITCHEN / DISCOVERED'}</span><h3>${escape(app.name||app.id.toUpperCase())}</h3><div class="instrument-art">${instrumentArt(app.id,app.color||'#dce89b')}</div><p>${escape(app.description||'A browser instrument from the Kitchen.')}</p><span class="instrument-open">LOAD INTO TRACK ${String(i+1).padStart(2,'0')} ↗</span></button>`).join(''); }
   async function discoverInstruments() { if(discoveryDone||location.protocol==='file:')return;discoveryDone=true;try{const hub=new URL('../index.html',location.href),response=await fetch(hub,{credentials:'same-origin'});if(!response.ok)return;const doc=new DOMParser().parseFromString(await response.text(),'text/html');const known=new Set(instrumentOptions().map(a=>a.id));for(const a of doc.querySelectorAll('.instrument .open-app')){const url=new URL(a.getAttribute('href'),hub);if(url.origin!==location.origin)continue;const match=url.pathname.match(/\/music\/([a-z0-9-]+)\/(?:index\.html)?$/i);if(!match||match[1]==='loom'||known.has(match[1]))continue;const id=match[1];known.add(id);const card=a.closest('.instrument');customManifest.push({id,name:card.querySelector('h2,h3')?.textContent?.trim()||id.toUpperCase(),url:url.href,color:'#b9ced7',description:'New equipment from Kitchen. Editor-controlled transport until its host API is registered.'});}renderInstrumentBrowser();}catch(_){} }
-  function openInstrumentBrowser(index=state.selectedTrack) { if (!allowTrackEdit(state.tracks[index])) return; browserTrack=index;if(frameTrack)engine.clearAudition(frameTrack);frameTrack=null;$('instrumentBrowser').hidden=false;$('instrumentEditorBar').hidden=true;$('instrumentFrames').hidden=true;renderInstrumentBrowser();if(!$('instrumentDialog').open)$('instrumentDialog').showModal();discoverInstruments(); }
-  async function ensureInstrument(t,{open=false,replace=false,descriptor=null,freezePreparation=false}={}) { if (t.freeze || freezeBusy() && !freezePreparation) throw Error('Unfreeze '+t.name+' before opening its instrument.'); const id=t.id,operation=(loadOperations.get(id)||0)+1;loadOperations.set(id,operation);const generation=lifecycle;if(descriptor){if(replace){remember({instruments:true});if(frames.has(id)){host.unload(id);frames.get(id).remove();frames.delete(id);openedApps.delete(id);}t.instrument=clone(descriptor);changed({arrangement:true,rack:true});}else t.instrument=clone(descriptor);}if(!t.instrument)throw Error('Choose an instrument for '+t.name+' first.');await engine.init();if(generation!==lifecycle||operation!==loadOperations.get(id))return false;const frame=makeFrame(id),identity=t.instrument.html||t.instrument.url||t.instrument.id;if(open){showFrame(id);if(!$('instrumentDialog').open)$('instrumentDialog').showModal();$('instrumentHostStatus').textContent='Preparing the instrument and audio bridge…';}if(openedApps.get(id)!==identity){const result=await host.load(id,{id:t.instrument.id,name:t.instrument.name,url:t.instrument.url,html:t.instrument.html,state:t.instrument.snapshot},frame);if(generation!==lifecycle||operation!==loadOperations.get(id))return false;openedApps.set(id,identity);const capabilities=result&&result.capabilities;const transport=capabilities&&typeof capabilities==='object'?capabilities.transport:undefined;if(open)$('instrumentHostStatus').textContent=transport===false?'Editor-controlled transport · play the app, then Record its track.':'Instrument ready · output is routed through this track.';}else if(open)$('instrumentHostStatus').textContent=host.capabilities(id).transport?'Instrument ready · your previous settings are intact.':'Editor-controlled transport · play the app, then Record its track.';return true; }
+  function openInstrumentBrowser(index=state.selectedTrack) { if(state.tracks[index].disabled){status('Enable '+state.tracks[index].name+' before opening its instrument.');return;} if (!allowTrackEdit(state.tracks[index])) return; browserTrack=index;if(frameTrack)engine.clearAudition(frameTrack);frameTrack=null;$('instrumentBrowser').hidden=false;$('instrumentEditorBar').hidden=true;$('instrumentFrames').hidden=true;renderInstrumentBrowser();if(!$('instrumentDialog').open)$('instrumentDialog').showModal();discoverInstruments(); }
+  async function ensureInstrument(t,{open=false,replace=false,descriptor=null,freezePreparation=false}={}) { if(t.disabled || host.isDisabled(t.id)) throw Error('Enable '+t.name+' before opening its instrument.'); if (t.freeze || freezeBusy() && !freezePreparation) throw Error('Unfreeze '+t.name+' before opening its instrument.'); const id=t.id,operation=(loadOperations.get(id)||0)+1;loadOperations.set(id,operation);const generation=lifecycle;if(descriptor){if(replace){remember({instruments:true});if(frames.has(id)){host.unload(id);frames.get(id).remove();frames.delete(id);openedApps.delete(id);}t.instrument=clone(descriptor);changed({arrangement:true,rack:true});}else t.instrument=clone(descriptor);}if(!t.instrument)throw Error('Choose an instrument for '+t.name+' first.');await engine.init();if(generation!==lifecycle||operation!==loadOperations.get(id))return false;const frame=makeFrame(id),identity=t.instrument.html||t.instrument.url||t.instrument.id;if(open){showFrame(id);if(!$('instrumentDialog').open)$('instrumentDialog').showModal();$('instrumentHostStatus').textContent='Preparing the instrument and audio bridge…';}if(openedApps.get(id)!==identity){const result=await host.load(id,{id:t.instrument.id,name:t.instrument.name,url:t.instrument.url,html:t.instrument.html,state:t.instrument.snapshot},frame);if(generation!==lifecycle||operation!==loadOperations.get(id))return false;openedApps.set(id,identity);const capabilities=result&&result.capabilities;const transport=capabilities&&typeof capabilities==='object'?capabilities.transport:undefined;if(open)$('instrumentHostStatus').textContent=transport===false?'Editor-controlled transport · play the app, then Record its track.':'Instrument ready · output is routed through this track.';}else if(open)$('instrumentHostStatus').textContent=host.capabilities(id).transport?'Instrument ready · your previous settings are intact.':'Editor-controlled transport · play the app, then Record its track.';return true; }
   async function openExisting(index=state.selectedTrack) { selectedTrack(index);const t=track();if(!t.instrument){openInstrumentBrowser(index);return;}browserTrack=index;try{await ensureInstrument(t,{open:true});}catch(e){status(e.message);$('instrumentHostStatus').textContent=e.message;} }
-  function clearAllFrames() { for(const id of frames.keys()){host.unload(id);frames.get(id).remove();engine.clearAudition(id);}frames.clear();openedApps.clear();loadOperations.clear();frameTrack=null; }
+  function clearAllFrames() { trackPowerOperations.clear(); for(const t of state.tracks)host.setDisabled(t.id,false); for(const id of frames.keys()){host.unload(id);frames.get(id).remove();engine.clearAudition(id);}frames.clear();openedApps.clear();loadOperations.clear();frameTrack=null; }
   function fireCommand(id,command,payload){const generation=lifecycle;return host.command(id,command,payload).catch(e=>{if(generation===lifecycle)status('Instrument '+command+': '+e.message);return false;});}
-  async function transportStart() { if(transportPending||transportLocked()||engine.getMeters().playing)return;if((engine.getMeters().beat||0)>=state.lengthBars*4)seekTo(0);const operation=++transportOperation,generation=lifecycle;transportPending=true;renderTransport();try{await engine.init();if(masterPlayback?.altered()){const started=await engine.play();if(started&&operation===transportOperation&&generation===lifecycle)status('Playing master Speed & Pitch. Edits pause the prepared mix.');return;}const live=state.tracks.filter(t=>!t.freeze&&t.instrument&&t.instrumentLive);await Promise.all(live.map(async t=>{const ready=await ensureInstrument(t);if(ready)await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo); await notePlayback.prepare(); if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.play();if(!started||operation!==transportOperation||generation!==lifecycle)return; notePlayback.start(); for(const t of live)fireCommand(t.id,'start');status('Service has started. The specials are behaving, for now.');}catch(e){if(operation===transportOperation)status(e.message);}finally{if(operation===transportOperation){transportPending=false;renderTransport();}} }
+  async function transportStart() { if(transportPending||transportLocked()||engine.getMeters().playing)return;if((engine.getMeters().beat||0)>=state.lengthBars*4)seekTo(0);const operation=++transportOperation,generation=lifecycle;transportPending=true;renderTransport();try{await engine.init();if(masterPlayback?.altered()){const started=await engine.play();if(started&&operation===transportOperation&&generation===lifecycle)status('Playing master Speed & Pitch. Edits pause the prepared mix.');return;}const live=state.tracks.filter(t=>!t.disabled&&!t.freeze&&t.instrument&&t.instrumentLive);await Promise.all(live.map(async t=>{const ready=await ensureInstrument(t);if(ready)await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo); await notePlayback.prepare(); if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.play();if(!started||operation!==transportOperation||generation!==lifecycle)return; notePlayback.start(); for(const t of live)fireCommand(t.id,'start');status('Service has started. The specials are behaving, for now.');}catch(e){if(operation===transportOperation)status(e.message);}finally{if(operation===transportOperation){transportPending=false;renderTransport();}} }
   async function halt({rewind=false,keepMicrophone=false}={}) {
     if(recordFinishing)return;
     const operation=++transportOperation,generation=lifecycle,recording=engine.isRecording;
@@ -1390,7 +1506,7 @@
   function togglePlayback() { return engine.getMeters().playing||transportPending||recordPending?pause():transportStart(); }
   async function restart() { if(transportLocked())return;const generation=lifecycle;await pause();if(generation!==lifecycle||transportLocked())return;if(seekTo(0))await transportStart(); }
   function panic(message='Silence. Pending recordings have been discarded.') { freezeController?.cancel(); ++microphoneOperation;++lifecycle;++transferOperation;transferAbort?.abort();automationEditor?.disarm?.();++recordFinishOperation;++importOperation;++projectOperation;++transportOperation;for(const [id,op]of loadOperations)loadOperations.set(id,op+1);recordPending=false;transportPending=false;recordFinishing=false; noteWorkflow?.cancel(); notePlayback.panic(); notePlayback.setRecordingTracks([]); engine.panic();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'panic');for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();renderTransport();status(message); }
-  async function startRecording() { if(freezeBusy()){status('Finish or cancel the track freeze before recording.');return;} if(audioSettingsBusy||recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{if(source==='microphone'&&!allowTrackEdit(target))return;if(frozenTracks().length&&(engine.getMeters().beat||0)>=state.lengthBars*4)throw Error('Move the playhead before the arrangement end to record. Unfreeze all tracks to add more bars.');await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,((frozenTracks().length?state.lengthBars*4:256)-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>!t.freeze&&t.armed&&t.instrument);if(!armed.length&&track().instrument&&!track().freeze){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,((frozenTracks().length?state.lengthBars*4:256)-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
+  async function startRecording() { if(freezeBusy()){status('Finish or cancel the track freeze before recording.');return;} if(audioSettingsBusy||recordPending||recordFinishing||transportPending)return;if(engine.getMeters().recording){await halt({keepMicrophone:true});return;}if(trackPowerOperations.size){status('Wait for track power to finish changing.');return;}const source=$('recordSource').value,target=track(),operation=++transportOperation,generation=lifecycle;recordPending=true;renderTransport();try{if(source==='microphone'&&target.disabled)throw Error('Enable '+target.name+' before recording.');if(source==='microphone'&&!allowTrackEdit(target))return;if(frozenTracks().length&&(engine.getMeters().beat||0)>=state.lengthBars*4)throw Error('Move the playhead before the arrangement end to record. Unfreeze all tracks to add more bars.');await engine.init();if(operation!==transportOperation||generation!==lifecycle)return;const used=state.assets.reduce((total,a)=>total+a.frames*a.channels*2,0),budgetBytes=Math.max(0,64*1024*1024-used);if(budgetBytes<48000*4)throw Error('This project has reached its audio memory limit. Start a new session or remove unused audio.');if(source==='microphone'){const mic=engine.getMicrophoneStatus();if(mic.enabled&&mic.trackId!==target.id)throw Error('Monitoring is on another track. Select that track, or use Move monitoring here before recording.');if(target.clips.length>=128)throw Error('This track has reached its 128-clip limit. Remove a clip before recording.');notePlayback.setRecordingTracks([]);await notePlayback.prepare();if(operation!==transportOperation||generation!==lifecycle)return;const started=await engine.startMicrophoneRecording(target.id,{maxSeconds:Math.min(120,((frozenTracks().length?state.lengthBars*4:256)-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(started&&operation===transportOperation&&generation===lifecycle)status('Recording microphone into '+target.name+'. '+(engine.getMicrophoneStatus().enabled?'Live effects are monitored; the take stays dry. ':'The microphone is not monitored. ')+'Finish take keeps its alignment; Panic discards it.');return;}let armed=state.tracks.filter(t=>!t.disabled&&!t.freeze&&t.armed&&t.instrument);if(!armed.length&&track().instrument&&!track().freeze&&!track().disabled){remember();track().armed=true;armed=[track()];renderTrackHeaders();renderMixer();}if(!armed.length)throw Error('Choose an instrument, then arm its track before recording.');if(armed.some(t=>t.clips.length>=128))throw Error('An armed track has reached its 128-clip limit. Remove a clip or disarm it before recording.');await Promise.all(armed.map(async t=>{if(await ensureInstrument(t))await host.command(t.id,'prepare');}));if(operation!==transportOperation||generation!==lifecycle)return;await host.setTempo(state.tempo);if(operation!==transportOperation||generation!==lifecycle)return;notePlayback.setRecordingTracks(armed.map(t=>t.id)); await notePlayback.prepare(); for(const t of armed){armedBeforeRecord.set(t.id,t.instrumentLive);engine.resumeAudition(t.id);}const started=await engine.startRecording(armed.map(t=>t.id),{maxSeconds:Math.min(120,((frozenTracks().length?state.lengthBars*4:256)-(engine.getMeters().beat||0))*60/state.tempo),budgetBytes,startTransport:true});if(!started||operation!==transportOperation||generation!==lifecycle)return;status('Recording '+armed.map(t=>t.name).join(', ')+'. Stop turns the performance into editable clips.');}catch(e){if(operation===transportOperation){notePlayback.setRecordingTracks([]);engine.cancelRecording();for(const id of armedBeforeRecord.keys())engine.clearAudition(id);armedBeforeRecord.clear();status(e.message);}}finally{if(operation===transportOperation){recordPending=false;renderTransport();}} }
   async function finishRecording(limited=false){
     if(recordFinishing)return;recordFinishing=true;recordPending=false;const generation=lifecycle,operation=++recordFinishOperation;renderTransport();
     try{
@@ -1410,25 +1526,25 @@
     }catch(e){if(generation===lifecycle)status(e.message);}
     finally{if(operation===recordFinishOperation){notePlayback.setRecordingTracks([]);for(const id of armedBeforeRecord.keys())if(id!==frameTrack)engine.clearAudition(id);armedBeforeRecord.clear();recordFinishing=false;renderTransport();}}
   }
-  engine.onRecordingTransportStart=()=>{notePlayback.start();for(const t of state.tracks)if(!t.freeze&&t.instrument&&frames.has(t.id)&&(armedBeforeRecord.has(t.id)||t.instrumentLive))fireCommand(t.id,'start');};
+  engine.onRecordingTransportStart=()=>{notePlayback.start();for(const t of state.tracks)if(!t.disabled&&!t.freeze&&t.instrument&&frames.has(t.id)&&(armedBeforeRecord.has(t.id)||t.instrumentLive))fireCommand(t.id,'start');};
   engine.onRecordingLimit=info=>{notePlayback.stop();engine.stop();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'stop');finishRecording(info?.reason==='punch'?'punch':true);};
   engine.onTransportEnd=()=>{notePlayback.stop();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'stop');renderTransport();status('The session has reached its end. Play starts again from the beginning.');};
-  async function replaceState(next,{message='Project opened.',undo=false}={}) { const normalized=S.normalize(next);checkFreezeSampleRate(normalized);const old=state;++lifecycle;++projectOperation;++importOperation;++transportOperation;exportAbort?.abort();panic('');engine.clearPedalMidiTake({force:true});if(!undo)remember();clearAllFrames();if($('instrumentDialog').open)closeInstrument();state=normalized;host.setTempo(state.tempo);selectedClip=null;selectedSlot=null;rackTarget='track';assetMap={};decodeAssets();engine.setState(state);notePlayback.setState(state);engine.seek(0);renderAll();scheduleAutosave();status(message); }
+  async function replaceState(next,{message='Project opened.',undo=false}={}) { const normalized=S.normalize(next);checkFreezeSampleRate(normalized);const old=state;++lifecycle;++projectOperation;++importOperation;++transportOperation;exportAbort?.abort();panic('');engine.clearPedalMidiTake({force:true});if(!undo)remember();clearAllFrames();if($('instrumentDialog').open)closeInstrument();state=normalized;synchronizeTrackPower();host.setTempo(state.tempo);selectedClip=null;selectedSlot=null;rackTarget='track';assetMap={};decodeAssets();engine.setState(state);notePlayback.setState(state);engine.seek(0);renderAll();scheduleAutosave();status(message); }
   function historyState(next,message,{restoreInstruments=false}={}){
     freezeController?.cancel(); const previous=state,normalized=S.normalize(next),playing=engine.getMeters().playing;const identity=t=>t.instrument&&(t.instrument.html||t.instrument.url||t.instrument.id);checkFreezeSampleRate(normalized);
     ++lifecycle;++importOperation;++projectOperation;++transportOperation;exportAbort?.abort();transportPending=false;if(recordPending){engine.cancelRecording();recordPending=false;}
     for(let i=0;i<S.LIMITS.tracks;i++){
       const old=previous.tracks[i],t=normalized.tracks[i];
       if(t.freeze&&frames.has(old.id))releaseFrozenInstrument(old.id);
-      if(identity(old)===identity(t)&&t.instrument&&!t.freeze){if(restoreInstruments&&t.instrument.snapshot&&frames.has(t.id)){clearTimeout(snapshotTimers.get(t.id));host.restore(t.id,t.instrument.snapshot).then(()=>{if(state.tracks[i].instrument?.id===t.instrument.id)scheduleSnapshot(t.id);}).catch(e=>status('Instrument restore: '+e.message));}else if(old.instrument.snapshot)t.instrument.snapshot=clone(old.instrument.snapshot);}
-      else if(frames.has(old.id)){host.unload(old.id);frames.get(old.id).remove();frames.delete(old.id);openedApps.delete(old.id);engine.clearAudition(old.id);loadOperations.set(old.id,(loadOperations.get(old.id)||0)+1);if(frameTrack===old.id){frameTrack=null;$('instrumentDialog').close();}}
+      if(identity(old)===identity(t)&&t.instrument&&!t.freeze&&!t.disabled){if(restoreInstruments&&t.instrument.snapshot&&frames.has(t.id)){clearTimeout(snapshotTimers.get(t.id));host.restore(t.id,t.instrument.snapshot).then(()=>{if(state.tracks[i].instrument?.id===t.instrument.id)scheduleSnapshot(t.id);}).catch(e=>status('Instrument restore: '+e.message));}else if(old.instrument.snapshot)t.instrument.snapshot=clone(old.instrument.snapshot);}
+      else if(!t.disabled&&frames.has(old.id)){host.unload(old.id);frames.get(old.id).remove();frames.delete(old.id);openedApps.delete(old.id);engine.clearAudition(old.id);loadOperations.set(old.id,(loadOperations.get(old.id)||0)+1);if(frameTrack===old.id){frameTrack=null;$('instrumentDialog').close();}}
       if(playing&&frames.has(t.id)&&old.instrumentLive&&!t.instrumentLive)fireCommand(t.id,'stop');
     }
-    state=normalized;host.setTempo(state.tempo);decodeAssets();engine.setState(state);notePlayback.setState(state);if(!clipLocation())selectedClip=null;if(selectedSlot!==null&&!effectOwner().effects[selectedSlot])selectedSlot=null;renderAll();scheduleAutosave();status(message);
-    if(playing){const generation=lifecycle;for(let i=0;i<S.LIMITS.tracks;i++){const t=state.tracks[i];if(!t.freeze&&t.instrument&&t.instrumentLive&&!previous.tracks[i].instrumentLive){ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle){await host.command(t.id,'prepare');if(generation===lifecycle&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}}}
+    state=normalized;synchronizeTrackPower(previous,{captureSnapshot:!restoreInstruments});host.setTempo(state.tempo);decodeAssets();engine.setState(state);notePlayback.setState(state);if(!clipLocation())selectedClip=null;if(selectedSlot!==null&&!effectOwner().effects[selectedSlot])selectedSlot=null;renderAll();scheduleAutosave();status(message);
+    if(playing){const generation=lifecycle;for(let i=0;i<S.LIMITS.tracks;i++){const t=state.tracks[i];if(!t.disabled&&!t.freeze&&t.instrument&&t.instrumentLive&&!previous.tracks[i].instrumentLive&&!previous.tracks[i].disabled){ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle){await host.command(t.id,'prepare');if(generation===lifecycle&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}}}
   }
-  function undo(){if(freezeBusy()){status('Finish or cancel the track freeze before Undo.');return;}if(recordFinishing){status('Finishing this take. Undo will be available in a moment.');return;}if(!history.length)return;try{checkFreezeSampleRate(history[history.length-1]);}catch(error){status(error.message);return;}const next=history.pop(),restoreInstruments=instrumentHistory.has(next),current=clone(state);if(restoreInstruments)instrumentHistory.add(current);future.push(current);historyState(next,'The previous order has returned.',{restoreInstruments});}
-  function redo(){if(freezeBusy()){status('Finish or cancel the track freeze before Redo.');return;}if(recordFinishing){status('Finishing this take. Redo will be available in a moment.');return;}if(!future.length)return;try{checkFreezeSampleRate(future[future.length-1]);}catch(error){status(error.message);return;}const next=future.pop(),restoreInstruments=instrumentHistory.has(next),current=clone(state);if(restoreInstruments)instrumentHistory.add(current);history.push(current);historyState(next,'The next order has returned.',{restoreInstruments});}
+  function undo(){if(trackPowerOperations.size){status('Wait for track power to finish changing.');return;}if(freezeBusy()){status('Finish or cancel the track freeze before Undo.');return;}if(recordFinishing){status('Finishing this take. Undo will be available in a moment.');return;}if(!history.length)return;try{checkFreezeSampleRate(history[history.length-1]);}catch(error){status(error.message);return;}const next=history.pop(),restoreInstruments=instrumentHistory.has(next),current=clone(state);if(restoreInstruments)instrumentHistory.add(current);future.push(current);historyState(next,'The previous order has returned.',{restoreInstruments});}
+  function redo(){if(trackPowerOperations.size){status('Wait for track power to finish changing.');return;}if(freezeBusy()){status('Finish or cancel the track freeze before Redo.');return;}if(recordFinishing){status('Finishing this take. Redo will be available in a moment.');return;}if(!future.length)return;try{checkFreezeSampleRate(future[future.length-1]);}catch(error){status(error.message);return;}const next=future.pop(),restoreInstruments=instrumentHistory.has(next),current=clone(state);if(restoreInstruments)instrumentHistory.add(current);history.push(current);historyState(next,'The next order has returned.',{restoreInstruments});}
   function removeClip() { const location=clipLocation();if(!location||!allowTrackEdit(location.track))return;remember();location.track.clips=location.track.clips.filter(c=>c.id!==selectedClip);selectedClip=null;state=S.pruneAssets(state);decodeAssets();changed({arrangement:true,inspector:true});status('Clip removed. Undo will bring it back.'); }
   function duplicateClip() { const location=clipLocation();if(!location||!allowTrackEdit(location.track))return;if(location.track.clips.length>=128){status('This track has reached its 128-clip limit.');return;}const c=location.clip,start=snap(c.start+c.length);if(start>=state.lengthBars*4){status('Increase the session length to make room for a duplicate.');return;}remember();const copy={...clone(c),id:S.uid('clip'),start,length:Math.min(c.length,state.lengthBars*4-start),name:c.name+' copy'};location.track.clips.push(copy);selectedClip=copy.id;changed({arrangement:true,inspector:true});status('A second piece, just beside the first.'); }
   function splitClip() { const location=clipLocation();if(!location||!allowTrackEdit(location.track))return;const c=location.clip,point=snap(engine.getMeters().beat||0);if(point<=c.start+.015625||point>=c.start+c.length-.015625){status('Move the playhead inside the selected clip, then split.');return;}if(location.track.clips.length>=128){status('This track has reached its 128-clip limit.');return;}remember();const leftLength=point-c.start,rawOffset=(c.sourceOffset||0)+leftLength*(c.type==='notes'?1:60/state.tempo)*c.rate,offset=c.loop?rawOffset%Math.max(.000001,c.type==='notes'?c.pattern.lengthBeats:c.sourceEnd-c.sourceStart):(c.type==='notes'?Math.min(rawOffset,c.pattern.lengthBeats):rawOffset),right={...clone(c),id:S.uid('clip'),start:point,length:c.length-leftLength,sourceOffset:offset,fadeIn:0,name:c.name+' / II'};c.length=leftLength;c.fadeOut=0;location.track.clips.push(right);selectedClip=right.id;changed({arrangement:true,inspector:true});status('One sound, now in two agreeable pieces.'); }
@@ -1686,6 +1802,7 @@
     const busFocus=e.target.closest('[data-bus-focus]');if(busFocus){focusBus(busFocus.dataset.busFocus);return;}
     const busJump=e.target.closest('[data-bus-jump]');if(busJump){focusBus(busJump.dataset.busJump);$('busPanel').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
     const busToggle=e.target.closest('[data-bus-toggle]');if(busToggle){const owner=S.automationOwner(state,busToggle.dataset.owner),key=busToggle.dataset.busToggle;if(!owner||!['mute','solo'].includes(key)||key==='solo'&&owner.id==='master')return;remember();owner[key]=!owner[key];changed();updateAttribute(busToggle,'aria-pressed',owner[key]);return;}
+    const power=e.target.closest('[data-track-power]');if(power){setTrackDisabled(Number(power.dataset.trackPower)).catch(error=>status(error.message));return;}
     const arm=e.target.closest('[data-arm]'),mute=e.target.closest('[data-mute]'),solo=e.target.closest('[data-solo]');
     if(arm||mute||solo){const el=arm||mute||solo,key=arm?'armed':mute?'mute':'solo',i=Number(el.dataset[arm?'arm':mute?'mute':'solo']);remember();state.tracks[i][key]=!state.tracks[i][key];changed({arrangement:true,mixer:true});return;}
     const instrument=e.target.closest('[data-instrument]');if(instrument){openExisting(Number(instrument.dataset.instrument));return;}
@@ -1876,8 +1993,9 @@
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();seekTo((engine.getMeters().beat||0)+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?4:state.view.snap||.25));}
   });
   function animate(now) {
-    cpuInspector?.setVisible(!serviceController?.isOpen && !document.hidden && (!cpuInspector.element.open || !document.querySelector('dialog[open]')));
-    masteringUI?.setVisible(!serviceController?.isOpen && !document.hidden && !document.querySelector('dialog[open]') && panelVisible('masteringSection'));
+    const dialogOpen = !document.hidden && !!document.querySelector('dialog[open]');
+    cpuInspector?.setVisible(!serviceController?.isOpen && !document.hidden && (!cpuInspector.element.open || !dialogOpen));
+    masteringUI?.setVisible(!serviceController?.isOpen && !document.hidden && !dialogOpen && panelVisible('masteringSection'));
     if(serviceController?.isOpen || document.hidden){requestAnimationFrame(animate);return;}
     if(now-meterTime>45){
       meterTime=now;const m=engine.getMeters(),beat=m.beat||0;
@@ -1888,7 +2006,7 @@
       renderPlayhead(m);
       if (panelVisible('mixer')) renderTrackEqState(m);
       if (panelVisible('micInputPanel') || $('audioSettingsDialog').open) renderMicrophone(m.microphone);
-      if (panelVisible('effectEditor') && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
+      if (panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
       if (panelVisible('busChannels')) renderBusMeters(m);
       if (panelVisible('masteringSection')) masteringUI?.paint(m.mastering);
       if (panelVisible('masterPlaybackSection')) masterPlaybackUI?.paint(masterPlayback.getStatus());
@@ -1897,7 +2015,7 @@
       if($('audioSettingsDialog').open&&now-audioDiagnosticsTime>250){audioDiagnosticsTime=now;renderAudioDiagnostics();}
       const master=m.master||{},level=Math.max(master.rmsLeft||0,master.rmsRight||0,master.rms||0);
       updateMeterBar($('masterLeft'),Math.min(1,Math.sqrt(master.rmsLeft||master.rms||0)*1.4));updateMeterBar($('masterRight'),Math.min(1,Math.sqrt(master.rmsRight||master.rms||0)*1.4));updateText($('masterDb'),level>1e-5?(20*Math.log10(level)).toFixed(0)+' dB':'−∞');
-      if (panelVisible('mixer')) for(let i=0;i<S.LIMITS.tracks;i++){const el=$('meter-'+i);if(el)updateMeterBar(el,Math.min(1,Math.sqrt(m.tracks?.[i]?.rms||0)*1.35),'Y');}
+      if (panelVisible('mixer')) for(let i=0;i<S.LIMITS.tracks;i++){if(state.tracks[i].disabled)continue;const el=$('meter-'+i);if(el)updateMeterBar(el,Math.min(1,Math.sqrt(m.tracks?.[i]?.rms||0)*1.35),'Y');}
       const mode=String(m.playing)+'/'+String(m.recording)+'/'+String(m.ended)+'/'+String(m.recordStage);
       if($('playButton').dataset.transportMode!==mode){$('playButton').dataset.transportMode=mode;renderTransport();}
       if(state.view.follow&&m.playing&&!seekDrag&&!drag&&now>=followUntil){
@@ -1958,6 +2076,7 @@
   function readAudioSettingsForm(){return {inputDeviceId:$('audioInputDevice').value||'default',outputDeviceId:$('audioOutputDevice').value||'default',inputChannel:$('audioInputChannel').value,sampleRate:$('audioSampleRate').value==='auto'?'auto':Number($('audioSampleRate').value),latencyProfile:$('audioLatencyProfile').value};}
   function audioSettingsDirty(){const current=engine.getAudioSettings(),draft=readAudioSettingsForm();return Object.keys(current).some(key=>current[key]!==draft[key]);}
   function audioOperationBlocked(){
+    if(trackPowerOperations.size)return 'Wait for track power to finish changing before changing the interface.';
     if(recordPending||recordFinishing||engine.recordingBusy||engine.isRecording)return 'Finish or cancel the current take before changing the interface.';
     if(transportPending)return 'Wait for playback to finish preparing before changing the interface.';
     if(exportAbort||transferAbort||noteWorkflow?.controller||engine.getAudioDiagnostics().exportBusy)return 'Finish or cancel the audio render or transfer before changing the interface.';
@@ -2028,7 +2147,7 @@
     try{
       await halt();if(generation!==lifecycle||operation!==audioSettingsOperation)throw new DOMException('Interface change cancelled.','AbortError');
       const result=await engine.applyAudioSettings(prefs,{beforeRestart:async()=>{
-        const loaded=state.tracks.filter(t=>t.instrument&&frames.has(t.id));
+        const loaded=state.tracks.filter(t=>!t.disabled&&t.instrument&&frames.has(t.id));
         const captured=await Promise.all(loaded.map(async t=>{
           let timer;try{const snapshot=await Promise.race([host.snapshot(t.id),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Could not preserve '+t.name+' in time. Finish its current operation before changing the interface.')),8000);})]);if(!snapshot)throw Error('Could not preserve '+t.name+'. Reopen its instrument before changing the interface.');return {id:t.id,snapshot};}finally{clearTimeout(timer);}
         }));
@@ -2044,6 +2163,7 @@
     finally{if(operation===audioSettingsOperation){audioSettingsBusy=false;renderAudioDiagnostics();renderTransport();}}
   }
   async function startAmpPractice(kind){
+    if(track().disabled){interfaceMessage('Enable '+track().name+' before monitoring its input.',true);return;}
     if(!allowTrackEdit(track()))return;
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Guitar or Bass.',true);return;}
@@ -2059,6 +2179,7 @@
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){const message=e.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser to play through BROILER.':e.message;interfaceMessage(message,true);status(message);}}finally{ampPracticeBusy=false;renderAudioDiagnostics();renderMicrophone();}
   }
   async function startVocalPractice(){
+    if(track().disabled){interfaceMessage('Enable '+track().name+' before monitoring its input.',true);return;}
     if(!allowTrackEdit(track()))return;
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Voice → GLAZE.',true);return;}
@@ -2074,6 +2195,7 @@
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){const message=e.name==='NotAllowedError'?'Microphone access was denied. Allow it in your browser to sing through GLAZE.':e.message;interfaceMessage(message,true);status(message);}}finally{ampPracticeBusy=false;renderAudioDiagnostics();renderMicrophone();}
   }
   async function startUtilityPractice(){
+    if(track().disabled){interfaceMessage('Enable '+track().name+' before monitoring its input.',true);return;}
     if(!allowTrackEdit(track()))return;
     const blocked=audioOperationBlocked();if(audioSettingsBusy||ampPracticeBusy||blocked){if(blocked)interfaceMessage(blocked,true);return;}
     if(audioSettingsDirty()){interfaceMessage('Apply your interface changes first, then choose Input → SCALES.',true);return;}
@@ -2091,7 +2213,7 @@
   }
   async function setMicrophoneMonitor({move=false}={}) {
     const current=engine.getMicrophoneStatus(),enabled=move||!(current.enabled||current.pending),target=enabled?(current.recording?current.trackId:track().id):current.trackId||track().id;
-    if(enabled&&!allowTrackEdit(state.tracks.find(t=>t.id===target)))return;
+    if(enabled&&state.tracks.find(t=>t.id===target)?.disabled){status('Enable this track before monitoring its input.');return;}if(enabled&&!allowTrackEdit(state.tracks.find(t=>t.id===target)))return;
     const operation=++microphoneOperation,generation=lifecycle;
     try {
       const connected=await engine.setMicrophoneMonitoring(target,{enabled,gainDb:state.recording.micInputGainDb});
@@ -2221,7 +2343,7 @@
   $('unfreezeAllButton').addEventListener('click',()=>{try{unfreezeAll();}catch(error){status(error.message);}});
   document.addEventListener('click',event=>{const button=event.target.closest('[data-track-freeze]');if(!button)return;event.stopPropagation();try{unfreezeTrack(button.dataset.trackFreeze);}catch(error){status(error.message);}});
   window.MusicLabPatternInstrument = { get patternImport(){return noteWorkflow.patternImport;}, patternExport:{scopes:[{id:'clip',label:'Selected note or source pattern'},{id:'instrument',label:'Selected track instrument pattern'}],defaultScope:'clip'}, prepareTarget:request=>noteWorkflow.prepareTarget(request), importPattern:request=>noteWorkflow.importPattern(request), exportPattern:request=>noteWorkflow.exportPattern(request) };
-  host.setTempo(state.tempo);decodeAssets();renderAll();observeVisualPanels();if(recoveryUnavailable)recoveryInfo('Browser recovery is unavailable. Save a project to keep this session.');requestAnimationFrame(()=>{fitTimeline();requestAnimationFrame(animate);});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(fitInitial)fitTimeline();else renderArrangement();},100);});
+  synchronizeTrackPower();host.setTempo(state.tempo);decodeAssets();renderAll();observeVisualPanels();if(recoveryUnavailable)recoveryInfo('Browser recovery is unavailable. Save a project to keep this session.');requestAnimationFrame(()=>{fitTimeline();requestAnimationFrame(animate);});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(fitInitial)fitTimeline();else renderArrangement();},100);});
   const releaseInputOnExit=()=>{++microphoneOperation;engine.panic();};window.addEventListener('beforeunload',releaseInputOnExit);
   if(location.protocol==='file:'){const home='https://calebhaines.github.io/sidequest-prototypes/music/';$('musicHome').href=home;$('downloadHtml').href=home+'loom/index.html';$('downloadSource').href=home+'loom/LOOM-source.zip';$('downloadApi').href='https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md';}
   window.addEventListener('pagehide',()=>{freezeController?.dispose();visualPanelObserver?.disconnect();visualSizeObserver?.disconnect();++microphoneOperation;notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
@@ -2273,5 +2395,5 @@
   document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
   window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
   const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
-  window.LoomApp=Object.freeze({get pedalMidi(){return pedalMidiUI;},placePedalMidiPattern,get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  window.LoomApp=Object.freeze({setTrackDisabled,get trackPowerBusy(){return [...trackPowerOperations.keys()];},get pedalMidi(){return pedalMidiUI;},placePedalMidiPattern,get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

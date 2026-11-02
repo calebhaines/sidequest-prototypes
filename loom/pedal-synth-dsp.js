@@ -64,6 +64,8 @@
       const filters = new Float64Array(8), previousFilterInput = new Float64Array(2), hpLow = new Float64Array(2), dcInput = new Float64Array(2), dcState = new Float64Array(2);
       const lastWet = new Float64Array(2), correction = new Float64Array(2);
       const slowDetectorCoefficient = 1 - Math.exp(-1 / (sr * .06));
+      const retriggerFrames = Math.round(sr * .035), velocityFrames = Math.round(sr * .025), pitchHoldFrames = Math.round(sr * .22), quietFrames = Math.round(sr * .25);
+      const driftStep1 = .137 / sr, driftStep2 = .193 / sr, otaBias = soft(.04);
       const fadeFrames = Math.max(1, Math.round(sr * .006)), slew = 1 - Math.exp(-1 / (sr * .006)), detectorAttack = 1 - Math.exp(-1 / (sr * .0007)), detectorRelease = Math.exp(-1 / (sr * .03)), gateDecay = Math.exp(-1 / (sr * .01)), peakDecay = Math.exp(-1 / (sr * .12)), dcDecay = Math.exp(-TAU * 9 / sr);
       let sensitivityGain = 1, threshold = .001, hpCoefficient = 0, attackCoefficient = 0, decayCoefficient = 0, releaseCoefficient = 0, glideCoefficient = 1, driveTarget = 1, outputTarget = 1, ratio1 = 1, ratio2 = 1;
       let targetCutoffLog = Math.log(p.cutoff);
@@ -72,6 +74,7 @@
       let phase1 = .5, phase2 = .25, subPhase = .5, lfoPhase = 0, driftPhase1 = .17, driftPhase2 = .61, lfo = 0, pitchRatio1 = 1, pitchRatio2 = 1, pulse = p.pulseWidth;
       let targetFrequency = 0, frequency = 0, acceptedFrequency = 0, oscillatorGain = 0, detector = 0, gateDetector = 0, slowDetector = 0, inputGate = false, ampEnvelope = 0, filterEnvelope = 0, envelopeStage = 0, retriggerGuard = 0;
       let g = .01, targetG = .01, actualCutoff = p.cutoff, controlFrame = 0, sampleClock = 0, expectedBeat = NaN, wetTransition = 0, pendingTransition = false, quietSamples = 0;
+      let filterK = 0, filterA = 0, filterG = 0, filterG2 = 0, filterG3 = 0, filterG4 = 0, filterDenominator = 1, filterOutputDrive = 1, oscillatorDenominator = 1, attackIncrement = 0, followerRelease = 0;
       let noteVelocity = 1, velocityWindow = 0, lastTouch = 0, releaseTouch = 0, voiceAuthorized = false, pitchHold = 0;
       let inputPeak = 0, synthPeak = 0, outputPeak = 0, lastTopology = '', initialized = false;
       function clear() {
@@ -90,10 +93,12 @@
         attackCoefficient = 1 - Math.exp(-6.907755278982137 / (sr * p.attack * .001));
         decayCoefficient = 1 - Math.exp(-6.907755278982137 / (sr * p.decay * .001));
         releaseCoefficient = Math.exp(-6.907755278982137 / (sr * p.release * .001));
+        attackIncrement = 1 / (sr * p.attack * .001); followerRelease = 1 - releaseCoefficient;
         glideCoefficient = p.glide === 0 ? 1 : 1 - Math.exp(-1 / (sr * p.glide * .001));
         driveTarget = db(p.drive); outputTarget = db(p.output); targetCutoffLog = Math.log(p.cutoff);
         const register = p.register === 'bass' ? .5 : p.register === 'guitar' ? 2 : 1;
         ratio1 = register * Math.pow(2, p.osc1Octave); ratio2 = register * Math.pow(2, (p.interval + p.detune / 100) / 12);
+        oscillatorDenominator = 1 + p.osc2Level + p.subLevel;
         tracker.setParams({ range: p.inputRange, tracking: p.tracking, sensitivity: p.gate });
         if (previous && previous.envMode !== p.envMode) { envelopeStage = inputGate ? 1 : ampEnvelope > 0 ? 4 : 0; noteVelocity = clamp(detector * 7, .02, 1); velocityWindow = 0; }
         const topology = [p.mode, p.filterModel, p.filterMode, p.osc1Wave, p.osc2Wave, p.register].join('|');
@@ -110,22 +115,28 @@
           actualCutoff = clamp(p.cutoff, 20, maxHz); g = targetG = Math.tan(PI * actualCutoff / subRate); initialized = true;
         }
       }
-      function trigger() { envelopeStage = 1; retriggerGuard = Math.round(sr * .035); noteVelocity = .02; velocityWindow = Math.round(sr * .025); }
+      function trigger() { envelopeStage = 1; retriggerGuard = retriggerFrames; noteVelocity = .02; velocityWindow = velocityFrames; }
+      function filterCoefficients() {
+        // The existing g/resonance smoothers advance once per output sample.
+        // Both channels and both half steps therefore share these exact values.
+        if (p.filterModel === 'svf') { filterK = 2 - 1.94 * resonance; filterA = 1 / (1 + g * (g + filterK)); }
+        else { filterG = g / (1 + g); filterG2 = filterG * filterG; filterG3 = filterG2 * filterG; filterG4 = filterG2 * filterG2; filterK = resonance * (p.filterModel === 'ota' ? 3.72 : 3.96); filterDenominator = 1 + filterK * filterG4; filterOutputDrive = 1 + resonance * .55; }
+      }
       function filterSample(x, channel) {
         const at = channel * 4;
         if (p.filterModel === 'svf') {
-          const k = 2 - 1.94 * resonance, a = 1 / (1 + g * (g + k));
+          const k = filterK, a = filterA;
           const driven = soft(x), v3 = driven - filters[at + 1], v1 = a * (filters[at] + g * v3), v2 = filters[at + 1] + g * v1;
           filters[at] = safe(2 * v1 - filters[at]); filters[at + 1] = safe(2 * v2 - filters[at + 1]);
           const result = p.filterMode === 'highpass' ? driven - k * v1 - v2 : p.filterMode === 'bandpass' ? k * v1 : v2;
           return soft(result * .8) / .8;
         }
-        const G = g / (1 + g), G2 = G * G, G3 = G2 * G, G4 = G2 * G2;
-        const ota = p.filterModel === 'ota', k = resonance * (ota ? 3.72 : 3.96);
+        const G = filterG, G2 = filterG2, G3 = filterG3;
+        const ota = p.filterModel === 'ota', k = filterK;
         const s0 = filters[at], s1 = filters[at + 1], s2 = filters[at + 2], s3 = filters[at + 3];
         const memory = (1 - G) * (G3 * s0 + G2 * s1 + G * s2 + s3);
-        let u = (x - k * memory) / (1 + k * G4);
-        u = ota ? soft(u * 1.08 + .04) - soft(.04) : soft(u);
+        let u = (x - k * memory) / filterDenominator;
+        u = ota ? soft(u * 1.08 + .04) - otaBias : soft(u);
         let v = (u - s0) * G, y1 = v + s0; filters[at] = safe(y1 + v);
         let input = ota ? soft(y1 * 1.08) / 1.08 : y1;
         v = (input - s1) * G; const y2 = v + s1; filters[at + 1] = safe(y2 + v);
@@ -134,7 +145,7 @@
         input = ota ? soft(y3 * 1.12) / 1.12 : y3;
         v = (input - s3) * G; const y4 = v + s3; filters[at + 3] = safe(y4 + v);
         const result = p.filterMode === 'highpass' ? u - 4 * y1 + 6 * y2 - 4 * y3 + y4 : p.filterMode === 'bandpass' ? 4 * (y2 - 2 * y3 + y4) : y4;
-        return soft(result * (1 + resonance * .55));
+        return soft(result * filterOutputDrive);
       }
       function filtered(x, channel) {
         const previous = previousFilterInput[channel]; previousFilterInput[channel] = x;
@@ -149,7 +160,7 @@
           if (silent) { if (capture) capture.advance(left.length); return; }
         }
         const tempo = clamp(finite(context && context.tempo, 120), 40, 300), cycleBeats = divisions[p.division], running = context?.playing !== false;
-        const lfoRate = p.clock === 'sync' ? tempo / (60 * cycleBeats) : p.rate;
+        const lfoRate = p.clock === 'sync' ? tempo / (60 * cycleBeats) : p.rate, lfoStep = lfoRate / sr;
         const beat = finite(context && context.beat, 0), beatAdvance = tempo / (60 * sr);
         if (p.clock === 'sync' && running && (!Number.isFinite(expectedBeat) || Math.abs(beat - expectedBeat) > 1e-4)) lfoPhase = ((beat / cycleBeats) % 1 + 1) % 1;
         expectedBeat = running ? beat + left.length * beatAdvance : beat;
@@ -190,7 +201,7 @@
             }
           } else if (capture?.active) midiFresh = tracker.push(monoInput * sensitivityGain);
           const confident = p.mode === 'track' && inputGate && tracker.active && tracker.confidence >= .45 && targetFrequency > 0;
-          if (confident) { voiceAuthorized = true; pitchHold = Math.round(sr * .22); }
+          if (confident) { voiceAuthorized = true; pitchHold = pitchHoldFrames; }
           else if (inputGate && voiceAuthorized && pitchHold > 0 && --pitchHold === 0) voiceAuthorized = false;
           if (!inputGate && ampEnvelope <= 1e-7) voiceAuthorized = false;
           // A detector can retire before the slower amplitude gate closes. Hold
@@ -206,10 +217,10 @@
           if (inputGate) lastTouch = touch;
           if (p.envMode === 'follower') {
             const goal = inputGate ? touch : 0;
-            ampEnvelope += (goal - ampEnvelope) * (goal >= ampEnvelope ? attackCoefficient : 1 - releaseCoefficient);
+            ampEnvelope += (goal - ampEnvelope) * (goal >= ampEnvelope ? attackCoefficient : followerRelease);
           } else {
             if (!inputGate && envelopeStage !== 0) envelopeStage = 4;
-            if (envelopeStage === 1) { ampEnvelope += 1 / (sr * p.attack * .001); if (ampEnvelope >= 1) { ampEnvelope = 1; envelopeStage = 2; } }
+            if (envelopeStage === 1) { ampEnvelope += attackIncrement; if (ampEnvelope >= 1) { ampEnvelope = 1; envelopeStage = 2; } }
             else if (envelopeStage === 2) { ampEnvelope += (p.sustain - ampEnvelope) * decayCoefficient; if (Math.abs(ampEnvelope - p.sustain) < 1e-5) { ampEnvelope = p.sustain; envelopeStage = 3; } }
             else if (envelopeStage === 3) ampEnvelope = p.sustain;
             else if (envelopeStage === 4) ampEnvelope *= releaseCoefficient;
@@ -228,13 +239,14 @@
             actualCutoff = cutoff; targetG = Math.tan(PI * cutoff * (p.filterModel === 'ota' ? 1.08 : 1) / subRate);
           }
           g += (targetG - g) * .12;
+          filterCoefficients();
           pulse += (clamp(p.pulseWidth + lfo * p.depth * p.pwm * .45, .05, .95) - pulse) * slew;
           let rawL, rawR;
           if (p.mode === 'track') {
             const inc1 = clamp(frequency * pitchRatio1 / sr, 0, .42), inc2 = clamp(frequency * pitchRatio2 / sr, 0, .42), incSub = inc1 * .5;
             const a = oscillatorSample(phase1, inc1, p.osc1Wave, pulse), b = oscillatorSample(phase2, inc2, p.osc2Wave, pulse), sub = oscillatorSample(subPhase, incSub, 'pulse', .5);
             phase1 += inc1; if (phase1 >= 1) phase1 -= 1; phase2 += inc2; if (phase2 >= 1) phase2 -= 1; subPhase += incSub; if (subPhase >= 1) subPhase -= 1;
-            const source = (a + b * p.osc2Level + sub * p.subLevel) / (1 + p.osc2Level + p.subLevel), side = (a - b) * p.osc2Level * width * .22;
+            const source = (a + b * p.osc2Level + sub * p.subLevel) / oscillatorDenominator, side = (a - b) * p.osc2Level * width * .22;
             const oscillator = synthLevel * oscillatorGain * (1 - direct);
             rawL = (source + side) * oscillator + conditionedL * direct; rawR = (source - side) * oscillator + conditionedR * direct;
           } else {
@@ -253,11 +265,11 @@
           left[frame] = outputSafe(mix === 1 ? wetL : dryL + (wetL - dryL) * mix); right[frame] = outputSafe(mix === 1 ? wetR : dryR + (wetR - dryR) * mix);
           inputPeak = Math.max(inputPeak * peakDecay, Math.abs(dryL), Math.abs(dryR)); synthPeak = Math.max(synthPeak * peakDecay, Math.abs(wetL), Math.abs(wetR)); outputPeak = Math.max(outputPeak * peakDecay, Math.abs(left[frame]), Math.abs(right[frame]));
           if (mixRemaining) { mix += (mixTarget - mix) / mixRemaining; if (--mixRemaining === 0) { mix = mixTarget; if (mix === 0) suspended = true; } }
-          lfoPhase += lfoRate / sr; if (lfoPhase >= 1) lfoPhase -= Math.floor(lfoPhase);
-          driftPhase1 += .137 / sr; if (driftPhase1 >= 1) driftPhase1--; driftPhase2 += .193 / sr; if (driftPhase2 >= 1) driftPhase2--;
+          lfoPhase += lfoStep; if (lfoPhase >= 1) lfoPhase -= Math.floor(lfoPhase);
+          driftPhase1 += driftStep1; if (driftPhase1 >= 1) driftPhase1--; driftPhase2 += driftStep2; if (driftPhase2 >= 1) driftPhase2--;
           sampleClock++;
           if (!inputGate && ampEnvelope === 0 && detector < threshold * .1) quietSamples++; else quietSamples = 0;
-          if (quietSamples >= Math.round(sr * .25)) {
+          if (quietSamples >= quietFrames) {
             clear(); inputPeak = synthPeak = outputPeak = 0;
           }
         }

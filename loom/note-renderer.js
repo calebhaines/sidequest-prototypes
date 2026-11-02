@@ -70,6 +70,7 @@
     return pattern(result);
   }
   function compileFreezeNotes(state, track, adapter, validateOnly = false) {
+    if (track.disabled === true) throw Error('Enable this track before rendering its instrument.');
     const lengthBeats = state.lengthBars * 4, voices = new Map(), notes = [], targets = adapter?.notes?.voices || adapter?.patternImport?.voices || [];
     let candidates = 0;
     const chance = (seed, key) => {
@@ -115,7 +116,7 @@
       this.cache = new Map(); this.cacheBytes = 0; this.operations = new Set(); this.disposed = false;
     }
     _active(signal) { check(signal); if (this.disposed) throw abort(); }
-    _session(signal) {
+    _session(signal, trackIds = []) {
       this._active(signal);
       if (!global.LoomInstrumentHost || !global.document) throw Error('The native instrument renderer is unavailable.');
       let context = null, input = null, ownContext = false, closed = false;
@@ -137,7 +138,7 @@
         return input;
       };
       const host = new global.LoomInstrumentHost({ context: getContext, getTrackInput: getInput, baseURL: this.baseURL, embedded: this.embedded });
-      const operation = { host, frame, async close() {
+      const operation = { host, frame, trackIds: new Set(trackIds), get closed() { return closed; }, async close() {
         if (closed) return; closed = true; signal?.removeEventListener('abort', cancel);
         try { host.dispose(); } finally { frame.remove(); try { input?.disconnect(); } catch (_) {} if (ownContext) await context?.close().catch(() => {}); }
       } };
@@ -147,6 +148,11 @@
       return operation;
     }
     async _close(session) { this.operations.delete(session); await session.close(); }
+    setDisabled(trackId, value = true) {
+      if (value !== true) return Promise.resolve();
+      return Promise.allSettled([...this.operations].filter(session => session.trackIds.has(trackId)).map(session => this._close(session)));
+    }
+    _sourceActive(captured, session) { if (session.closed || this.host?.isDisabled?.(captured.trackId)) throw abort(); }
     _key(descriptor, packet, map, tempo, transpose, tailSeconds, loop) {
       return fingerprint(JSON.stringify({ descriptor, packet, map, tempo, transpose, tailSeconds, loop }));
     }
@@ -191,17 +197,18 @@
     }
     async _render(session, captured, options) {
       const { signal } = options; this._active(signal);
+      this._sourceActive(captured, session);
       const { instrument, packet, voiceMap, renderTempo: tempo, transpose, tailSeconds, loop } = captured;
       const seconds = packet.lengthBeats * 60 / tempo;
       if (seconds + tailSeconds > MAX_SECONDS + 1e-8) throw Error('This pattern lasts more than 120 seconds at the session tempo. Split it into smaller patterns before rendering. Long note clips can loop a shorter pattern.');
       const key = this._key(instrument, packet, voiceMap, tempo, transpose, tailSeconds, loop), cached = this._cached(key);
       if (cached) return { audio: cached, key };
-      if (!options.preparedHost) await session.host.load('render-source', instrument, session.frame); this._active(signal);
+      if (!options.preparedHost) await session.host.load('render-source', instrument, session.frame); this._active(signal); this._sourceActive(captured, session);
       const adapter = session.host.getPatternAdapter?.('render-source');
       if (!adapter?.renderPattern && !session.host.capabilities('render-source')?.notes) throw Error('This instrument needs a native note-rendering adapter before it can print note clips.');
       const mapped = preparedPacket(packet, voiceMap, transpose, adapter);
       const result = await session.host.renderPattern('render-source', { pattern: mapped, state: copy(instrument.snapshot.state), tempo, tailSeconds, signal });
-      this._active(signal); let audio = await this._audio(result, session, signal);
+      this._active(signal); this._sourceActive(captured, session); let audio = await this._audio(result, session, signal);
       const cycleFrames = Math.max(1, Math.round(seconds * audio.sampleRate));
       if (audio.left.length < cycleFrames) throw Error('The instrument returned a source shorter than the requested pattern.');
       if (loop) {
@@ -213,9 +220,10 @@
         }
         audio = { left, right, sampleRate: audio.sampleRate };
       }
-      this._active(signal); this._remember(key, audio); return { audio, key };
+      this._active(signal); this._sourceActive(captured, session); this._remember(key, audio); return { audio, key };
     }
     _capture(state, track, clip, options = {}) {
+      if (track.disabled === true || this.host?.isDisabled?.(track.id)) throw Error('Enable this track before rendering its instrument.');
       const sourceClip = noteClip(options.clip || clip);
       const packet = pattern(options.pattern || sourceClip.pattern), voiceMap = mapping(options.voiceMap || sourceClip.voiceMap, packet);
       const instrument = captureInstrument(options.instrument || track.instrument);
@@ -226,7 +234,7 @@
       const transpose = sourceClip.transpose || 0;
       if (!Number.isInteger(transpose) || transpose < -127 || transpose > 127) throw Error('This note clip has an invalid transposition.');
       sourceClip.pattern = packet; sourceClip.voiceMap = voiceMap;
-      return { instrument, packet, voiceMap, tempo, renderTempo: tempo * sourceClip.rate, transpose, tailSeconds, sourceClip, loop: sourceClip.loop === true };
+      return { trackId: track.id, instrument, packet, voiceMap, tempo, renderTempo: tempo * sourceClip.rate, transpose, tailSeconds, sourceClip, loop: sourceClip.loop === true };
     }
     async prepareNotes(state, assets = {}, options = {}) {
       this._active(options.signal);
@@ -235,7 +243,7 @@
       const renderState = copy(state), renderAssets = Object.assign(Object.create(null), assets instanceof Map ? Object.fromEntries(assets) : assets);
       const captures = [];
       for (const track of renderState.tracks || []) {
-        if (track.freeze) continue;
+        if (track.freeze || track.disabled === true || this.host?.isDisabled?.(track.id)) continue;
         if (options.trackId != null && (typeof options.trackId === 'number' ? renderState.tracks[options.trackId]?.id : options.trackId) !== track.id) continue;
         for (const clip of track.clips || []) if (clip.type === 'notes') {
           if (options.startBeat != null && clip.start + clip.length <= options.startBeat || options.endBeat != null && clip.start >= options.endBeat) continue;
@@ -246,7 +254,7 @@
       // mistake beat-based note geometry for an audio source.
       for (const track of renderState.tracks || []) track.clips = (track.clips || []).filter(clip => track.freeze || clip.type !== 'notes' || captures.some(item => item.clip === clip));
       if (!captures.length) { options.onProgress?.(1); return { state: renderState, assets: renderAssets, generatedIds: [] }; }
-      const session = this._session(options.signal), rendered = new Map(), generatedIds = []; let used = 0;
+      const session = this._session(options.signal, captures.map(item => item.track.id)), rendered = new Map(), generatedIds = []; let used = 0;
       try {
         options.onProgress?.(0);
         for (let i = 0; i < captures.length; i++) {
@@ -268,12 +276,12 @@
     }
     async _prepareFreezeNotes(state, assets, options) {
       const renderState = copy(state), renderAssets = Object.assign(Object.create(null), assets instanceof Map ? Object.fromEntries(assets) : assets), generatedIds = [];
-      const tracks = renderState.tracks.filter(track => !track.freeze && (options.trackId == null || (typeof options.trackId === 'number' ? renderState.tracks[options.trackId]?.id : options.trackId) === track.id) && track.clips.some(clip => clip.type === 'notes'));
+      const tracks = renderState.tracks.filter(track => track.disabled !== true && !this.host?.isDisabled?.(track.id) && !track.freeze && (options.trackId == null || (typeof options.trackId === 'number' ? renderState.tracks[options.trackId]?.id : options.trackId) === track.id) && track.clips.some(clip => clip.type === 'notes'));
       if (!tracks.length) { options.onProgress?.(1); return { state: renderState, assets: renderAssets, generatedIds }; }
       const tailSeconds = options.tailSeconds ?? 8, seconds = state.lengthBars * 4 * 60 / state.tempo;
       if (seconds + tailSeconds > MAX_SECONDS + 1e-8) throw Error('Native track freezing is limited to 120 seconds including its release. Print long native performances to audio before freezing.');
       for (const track of tracks) compileFreezeNotes(renderState, track, null, true);
-      const session = this._session(options.signal); let used = 0;
+      const session = this._session(options.signal, tracks.map(track => track.id)); let used = 0;
       try {
         options.onProgress?.(0);
         for (let index = 0; index < tracks.length; index++) {
@@ -295,10 +303,11 @@
     static compileFreezeNotes(state, track, adapter) { return compileFreezeNotes(state, track, adapter); }
     async print(state, trackId, clipId, options = {}) {
       this._active(options.signal); const { track, clip } = findClip(state, trackId, clipId);
+      if (track.disabled === true || this.host?.isDisabled?.(track.id)) throw Error('Enable this track before printing its instrument.');
       if (track.freeze) throw Error('Unfreeze this track before printing or editing its source.');
       const captured = this._capture(state, track, clip, options);
       const used = (state.assets || []).reduce((sum, value) => sum + value.frames * value.channels * 2, 0);
-      const session = this._session(options.signal);
+      const session = this._session(options.signal, [track.id]);
       try {
         options.onProgress?.(0); const { audio } = await this._render(session, captured, options); this._active(options.signal);
         const encodedBytes = Math.floor(audio.left.length * Math.min(48000, audio.sampleRate) / audio.sampleRate) * 4;
@@ -313,6 +322,7 @@
     }
     async update(state, trackId, clipId, options = {}) {
       this._active(options.signal); const { track, clip } = findClip(state, trackId, clipId), source = clip.origin;
+      if (track.disabled === true || this.host?.isDisabled?.(track.id)) throw Error('Enable this track before updating its instrument source.');
       if (track.freeze) throw Error('Unfreeze this track before updating its source.');
       if (source?.format !== 'loom-render-source' || source.version !== 1 || !source.sourceClip || !source.instrument) throw Error('This audio clip has no editable instrument source.');
       const snapshot = copy(state), target = findClip(snapshot, trackId, clipId);
