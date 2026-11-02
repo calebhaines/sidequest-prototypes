@@ -78,6 +78,8 @@
       const tankAt = new Int32Array(6), tankLow = new Float64Array(6), dispersion = [0, 1].map(ch => [.00113, .00171, .00227].map((seconds, i) => new Float64Array(Math.max(3, Math.round(sr * (seconds + ch * .00007 + i * .00009))))));
       const dispersionAt = new Int32Array(6), springLow = new Float64Array(2), lastWet = new Float64Array(2), transitionOffset = new Float64Array(2); let transition = 0, pendingTransition = false;
       let aa = 0, brightCoefficient = 0, couplingCoefficient = 0, cathodeCoefficient = 0, dcCoefficient = 0, loadCoefficient = 0, fluxCoefficient = 0, revDamp = 0, springHp = 0;
+      let preLaterHead = 1, preAsymmetry = 0, reactiveAsymmetry = 0, powerFeedback = 0, powerHeadScale = 1, powerAsymmetry = 0, powerBiasKnee = 0, feedbackGain = 1, feedbackDenominator = 1, feedbackNormalization = 1;
+      let loadAmount = 0, reactiveLoadAmount = 0, reactiveStrength = 0, powerBiasAmount = 0, speakerGain = 1, roomDelay = 0, tremStep = 0, safeThreshold = 1;
       const sagAttack = 1 - Math.exp(-1 / (sr * .035)), sagRelease = 1 - Math.exp(-1 / (sr * .22)), energyCoefficient = 1 - Math.exp(-1 / (sr * .05));
       function clearAudio(all = true) {
         toneHistory.fill(0); previousInput.fill(0); previousPower.fill(0); preDown.fill(0); powerDown.fill(0); brightLow.fill(0); dcIn.fill(0); dcOut.fill(0); charge.fill(0); cathode.fill(0); adaaPrevious.fill(0); load.fill(0); flux.fill(0); pairMemory.fill(0);
@@ -89,25 +91,35 @@
       function update(previous) {
         const oldOs = os; os = p.quality === 'high' ? 4 : 2; subRate = sr * os;
         model = modelNames.indexOf(p.model);
-        inputTarget = db(p.input) * (p.jack === 'low' ? .5011872336 : 1);
+        if (!previous || previous.input !== p.input || previous.jack !== p.jack) inputTarget = db(p.input) * (p.jack === 'low' ? .5011872336 : 1);
         // Reference DI scale: .126 peak (-18 dBFS) at Volume3 has substantial
         // voltage margin. Output is a separate post-amp listening trim.
-        volumeTarget = Math.pow(p.volume / 3, 2);
-        outTarget = db(p.output); threshold = 1.05 * db(p.headroom) * p.supply; preThreshold = 4.2 * db(p.headroom) * Math.sqrt(p.supply);
-        matched = rawGain[model] * (p.trim === 'matched' ? 1 / rawGain[model] : 1);
-        brightTarget = p.bright === 'on' || p.bright === 'stock' && p.channel === 'vibrato' ? .28 * (1 - p.volume / 10) : 0;
-        revTarget = p.channel === 'vibrato' ? Math.pow(p.reverb / 10, 1.5) * .65 : 0;
-        tremTarget = p.channel === 'vibrato' ? p.intensity / 10 * .92 : 0; tremHz = 1.5 + p.speed * .7;
-        aa = 1 - Math.exp(-TAU * Math.min(18000, sr * .42) / subRate); brightCoefficient = 1 - Math.exp(-TAU * 1900 / subRate); couplingCoefficient = 1 - Math.exp(-TAU * 12 / subRate); cathodeCoefficient = 1 - Math.exp(-TAU * 9 / subRate); dcCoefficient = Math.exp(-TAU * 7 / sr); loadCoefficient = 1 - Math.exp(-TAU * 95 / subRate); fluxCoefficient = 1 - Math.exp(-TAU * 28 / subRate); revDamp = 1 - Math.exp(-TAU * 4100 / sr); springHp = 1 - Math.exp(-TAU * 170 / sr);
+        if (!previous || previous.volume !== p.volume) volumeTarget = Math.pow(p.volume / 3, 2);
+        if (!previous || previous.output !== p.output) outTarget = db(p.output);
+        if (!previous || previous.headroom !== p.headroom || previous.supply !== p.supply) { threshold = 1.05 * db(p.headroom) * p.supply; preThreshold = 4.2 * db(p.headroom) * Math.sqrt(p.supply); }
+        // These depend only on the current controls, not the oversampled
+        // voltage/state. Preserve the original arithmetic and its grouping.
+        preLaterHead = preThreshold * .7; preAsymmetry = .035 + p.bias * .035; reactiveAsymmetry = preAsymmetry * 1.4;
+        powerFeedback = p.feedback * 1.3; powerHeadScale = model === 2 ? 1 : 1 + .25 * (p.feedback - .5); powerAsymmetry = p.bias * .09; powerBiasKnee = knee(powerAsymmetry);
+        feedbackGain = 1 + powerFeedback; feedbackDenominator = 1 + powerFeedback * .72; feedbackNormalization = feedbackDenominator / feedbackGain;
+        loadAmount = .018 * p.speakerLoad; reactiveLoadAmount = .065 * p.speakerLoad; reactiveStrength = .16 + p.speakerLoad * .06; powerBiasAmount = p.bias * .035;
+        speakerGain = 1 + p.speakerDrive * 1.5; roomDelay = Math.min(room[0].length - 1, Math.round(sr * (.003 + p.distance * .018))); safeThreshold = Math.max(threshold, 1e-6);
+        if (!previous || previous.model !== p.model || previous.trim !== p.trim) matched = rawGain[model] * (p.trim === 'matched' ? 1 / rawGain[model] : 1);
+        if (!previous || previous.bright !== p.bright || previous.channel !== p.channel || previous.volume !== p.volume) brightTarget = p.bright === 'on' || p.bright === 'stock' && p.channel === 'vibrato' ? .28 * (1 - p.volume / 10) : 0;
+        if (!previous || previous.channel !== p.channel || previous.reverb !== p.reverb) revTarget = p.channel === 'vibrato' ? Math.pow(p.reverb / 10, 1.5) * .65 : 0;
+        tremTarget = p.channel === 'vibrato' ? p.intensity / 10 * .92 : 0; tremHz = 1.5 + p.speed * .7; tremStep = tremHz / sr;
+        if (!previous || oldOs !== os) {
+          aa = 1 - Math.exp(-TAU * Math.min(18000, sr * .42) / subRate); brightCoefficient = 1 - Math.exp(-TAU * 1900 / subRate); couplingCoefficient = 1 - Math.exp(-TAU * 12 / subRate); cathodeCoefficient = 1 - Math.exp(-TAU * 9 / subRate); dcCoefficient = Math.exp(-TAU * 7 / sr); loadCoefficient = 1 - Math.exp(-TAU * 95 / subRate); fluxCoefficient = 1 - Math.exp(-TAU * 28 / subRate); revDamp = 1 - Math.exp(-TAU * 4100 / sr); springHp = 1 - Math.exp(-TAU * 170 / sr);
+        }
         if (!previous || oldOs !== os || previous.bass !== p.bass || previous.treble !== p.treble || previous.mid !== p.mid) {
           capG = toneCoefficients(subRate, p.bass, p.treble, p.mid, toneTarget);
           if (!previous || oldOs !== os) { tone.set(toneTarget); toneStep.fill(0); toneRemaining = 0; }
           else { toneRemaining = ramp * os; for (let i = 0; i < 24; i++) toneStep[i] = (toneTarget[i] - tone[i]) / toneRemaining; }
         }
-        biquad('hp', 68 - p.speakerLoad * 9, 0, .7, sr, cabinet[0].c);
-        biquad('lp', 4000 + p.mic * 2100 + p.air * 900 - p.distance * 650, 0, .64, sr, cabinet[1].c);
-        biquad('peak', 2400 + p.mic * 700, 1.1 + p.mic * 2.4 - p.distance * 2, .7, sr, cabinet[2].c);
-        biquad('peak', 92 + p.speakerLoad * 15, p.speakerLoad * 3.5, .85, sr, cabinet[3].c);
+        if (!previous || previous.speakerLoad !== p.speakerLoad) biquad('hp', 68 - p.speakerLoad * 9, 0, .7, sr, cabinet[0].c);
+        if (!previous || previous.mic !== p.mic || previous.air !== p.air || previous.distance !== p.distance) biquad('lp', 4000 + p.mic * 2100 + p.air * 900 - p.distance * 650, 0, .64, sr, cabinet[1].c);
+        if (!previous || previous.mic !== p.mic || previous.distance !== p.distance) biquad('peak', 2400 + p.mic * 700, 1.1 + p.mic * 2.4 - p.distance * 2, .7, sr, cabinet[2].c);
+        if (!previous || previous.speakerLoad !== p.speakerLoad) biquad('peak', 92 + p.speakerLoad * 15, p.speakerLoad * 3.5, .85, sr, cabinet[3].c);
         const nextMix = p.bypass ? 0 : p.mix;
         if (nextMix !== mixTarget) { mixTarget = nextMix; mixRemaining = ramp; }
         if (suspended && nextMix > 0) { clearAudio(); suspended = false; mix = 0; mixRemaining = ramp; }
@@ -137,7 +149,7 @@
         return toneV[5] * 12;
       }
       function valve(x, channel, stage) {
-        const at = channel * 4 + stage, head = preThreshold * (stage ? .7 : 1), n = clamp(x / head, -20, 20), asym = .035 + p.bias * .035;
+        const at = channel * 4 + stage, head = stage ? preLaterHead : preThreshold * 1, n = clamp(x / head, -20, 20), asym = preAsymmetry;
         if (model === 0) return head * node(n, .11, asym);
         if (model === 1) {
           const conduction = Math.max(0, n - .65); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? .035 : couplingCoefficient);
@@ -148,31 +160,31 @@
         if (model === 3) { const previous = adaaPrevious[at], difference = n - previous; adaaPrevious[at] = n; const y = Math.abs(difference) < 1e-7 ? knee((n + previous) * .5) : (area(n) - area(previous)) / difference; return head * y; }
         cathode[at] += (n - cathode[at]) * cathodeCoefficient;
         const conductance = 1 + .16 * Math.max(0, Math.abs(n) - .35), shift = n - cathode[at] * .025;
-        return head * node(shift / conductance, .065, asym * 1.4);
+        return head * node(shift / conductance, .065, reactiveAsymmetry);
       }
       function powerSample(x, channel) {
-        const feedback = p.feedback * 1.3, h = actualHead * (model === 2 ? 1 : 1 + .25 * (p.feedback - .5)), asym = p.bias * .09;
+        const feedback = powerFeedback, h = actualHead * powerHeadScale, asym = powerAsymmetry;
         let n = clamp(x / h, -32, 32), y;
         load[channel] += (n - load[channel]) * loadCoefficient;
-        n += .018 * p.speakerLoad * (n - load[channel]);
-        if (model === 0) { const a = node(n * (1 + feedback) + asym, .20, .018), b = node(-n * (1 + feedback) + asym, .20, .018); y = .5 * (a - b) / (1 + feedback * .72); }
+        n += loadAmount * (n - load[channel]);
+        if (model === 0) { const a = node(n * feedbackGain + asym, .20, .018), b = node(-n * feedbackGain + asym, .20, .018); y = .5 * (a - b) / feedbackDenominator; }
         else if (model === 1) {
           const conduction = Math.max(0, Math.abs(n) - .7), at = channel * 4 + 3; charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? .04 : couplingCoefficient);
           const v = n / (1 + charge[at] * .16); y = v / Math.pow(1 + Math.pow(Math.abs(v), 6), 1 / 6);
         } else if (model === 2) {
           y = pairMemory[channel];
-          for (let i = 0; i < 4; i++) { const v = (1 + feedback) * n - feedback * y, z = v + asym, f = knee(z) - knee(asym), a = Math.abs(z), derivative = a <= .5 ? 1 : 1 / ((a + .5) * (a + .5)); y -= (y - f) / (1 + feedback * derivative); }
+          for (let i = 0; i < 4; i++) { const v = feedbackGain * n - feedback * y, z = v + asym, f = knee(z) - powerBiasKnee, a = Math.abs(z), derivative = a <= .5 ? 1 : 1 / ((a + .5) * (a + .5)); y -= (y - f) / (1 + feedback * derivative); }
           pairMemory[channel] = y;
         } else if (model === 3) {
           const at = channel * 4 + 3, v = n * 1.08, previous = adaaPrevious[at], d = v - previous; adaaPrevious[at] = v; y = (Math.abs(d) < 1e-7 ? knee((v + previous) * .5) : (area(v) - area(previous)) / d) / 1.08;
         } else {
           flux[channel] += (n - flux[channel]) * fluxCoefficient;
-          const current = n + .065 * p.speakerLoad * (n - load[channel]), stiffness = 1 + .09 * Math.max(0, Math.abs(flux[channel]) - .3);
-          y = node(current / stiffness, .16 + p.speakerLoad * .06, asym) + .018 * p.speakerLoad * (n - load[channel]);
+          const current = n + reactiveLoadAmount * (n - load[channel]), stiffness = 1 + .09 * Math.max(0, Math.abs(flux[channel]) - .3);
+          y = node(current / stiffness, reactiveStrength, asym) + loadAmount * (n - load[channel]);
         }
-        if (model === 1 || model === 3 || model === 4) y += p.bias * .035 * n * n / (1 + n * n);
+        if (model === 1 || model === 3 || model === 4) y += powerBiasAmount * n * n / (1 + n * n);
         // Individual formulations have unity static gain at their rest point.
-        if (model === 0) y *= (1 + feedback * .72) / (1 + feedback);
+        if (model === 0) y *= feedbackNormalization;
         const result = safe(y * h); powerPeak = Math.max(powerPeak, Math.abs(result)); return result;
       }
       function downSample(state, x, channel) {
@@ -204,8 +216,8 @@
         if (p.cabinet === 'di') return x;
         let y = x;
         for (const f of cabinet) y = filter(f, y, channel);
-        if (p.speakerDrive > 0) { const drive = 1 + p.speakerDrive * 1.5, n = y * drive; y += (knee(n) / drive - y) * p.speakerDrive; }
-        const ring = room[channel], delay = Math.min(ring.length - 1, Math.round(sr * (.003 + p.distance * .018))), at = (roomAt + ring.length - delay) % ring.length, reflection = ring[at]; ring[roomAt % ring.length] = y;
+        if (p.speakerDrive > 0) { const drive = speakerGain, n = y * drive; y += (knee(n) / drive - y) * p.speakerDrive; }
+        const ring = room[channel], at = (roomAt + ring.length - roomDelay) % ring.length, reflection = ring[at]; ring[roomAt % ring.length] = y;
         return y + reflection * p.distance * .13;
       }
       function process(left, right) {
@@ -220,11 +232,11 @@
           const xL = (p.stereo === 'mono' ? (a + b) * .5 : a) * inputGain, xR = (p.stereo === 'mono' ? (a + b) * .5 : b) * inputGain;
           preampPair(xL, xR); l = preampOutput[0]; r = preampOutput[1];
           if (revAmount > 1e-6 || revTarget > 0) { l += spring(l, 0) * revAmount; if (p.stereo === 'mono') r = l; else r += spring(r, 1) * revAmount; }
-          const trem = 1 - tremAmount * (.5 + .5 * Math.sin(TAU * tremPhase)); tremPhase += tremHz / sr; if (tremPhase >= 1) tremPhase -= 1;
+          const trem = tremAmount === 0 ? 1 : 1 - tremAmount * (.5 + .5 * Math.sin(TAU * tremPhase)); tremPhase += tremStep; if (tremPhase >= 1) tremPhase -= 1;
           l *= trem; r *= trem;
           // Supply responds only to overload POWER demand; it never tracks the
           // input envelope to normalize quiet or ordinary picking levels.
-          const excessive = Math.max(0, lastPowerPeak / Math.max(threshold, 1e-6) - .55), desired = Math.min(1.5, excessive * excessive);
+          const excessive = Math.max(0, lastPowerPeak / safeThreshold - .55), desired = Math.min(1.5, excessive * excessive);
           supplyState += (desired - supplyState) * (desired > supplyState ? sagAttack : sagRelease); sagDepth = p.sag * supplyState * .22; actualHead = threshold / (1 + sagDepth);
           powerPeak = 0; let wetL = 0, wetR = 0;
           for (let step = 1; step <= os; step++) { wetL = downSample(powerDown, powerSample(previousPower[0] + (l - previousPower[0]) * step / os, 0), 0); if (p.stereo === 'mono') wetR = wetL; else wetR = downSample(powerDown, powerSample(previousPower[1] + (r - previousPower[1]) * step / os, 1), 1); }

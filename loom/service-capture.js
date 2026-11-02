@@ -60,10 +60,12 @@
     const S = schema(), beforeSources = sourceIndex(state), descriptors = validateTake(take, beforeSources, state);
     // This clone is the only project object changed by the compiler. PCM strings remain shared.
     const next = S.copy(state), sources = sourceIndex(next), originalAssets = new Map(next.assets.map(asset => [asset.id, asset])), allIds = new Set(), usedOriginalIds = new Set(), decoded = new Map(), stutterAssets = new Map();
-    next.lengthBars = Math.max(1, Math.ceil(take.lengthBeats / 4));
+    next.lengthBars = Math.max(1, Math.ceil(take.lengthBeats / 4), state.tracks.some(track => track.disabled) ? state.lengthBars : 1);
     next.loopEnabled = false; next.loopStart = 0; next.loopEnd = take.lengthBeats;
     next.markers = [];
-    next.tracks.forEach(track => { track.clips = []; track.automation = []; track.instrumentLive = false; });
+    // Disabled channels are parked project data. Creating a performance on
+    // other channels must not replace their clips, automation or live choice.
+    next.tracks.forEach(track => { if (track.disabled) { for (const clip of track.clips) allIds.add(clip.id); return; } track.clips = []; track.automation = []; track.instrumentLive = false; });
     const active = { clips: Array(TRACK_COUNT).fill(null), sceneStarts: Array(TRACK_COUNT).fill(0), padBeats: Array(TRACK_COUNT).fill(0), phaseOrigins: Array(TRACK_COUNT).fill(0), tempo: state.tempo, performance: blankPerformance() };
     let boundary = 0, sceneCount = 0, slices = 0, generatedAssets = 0;
     let pcmBytes = next.assets.reduce((sum, asset) => sum + asset.frames * asset.channels * 2, 0);
@@ -79,6 +81,7 @@
     function controls(beat, performance) {
       const overrides = new Map(performance.overrides.map(item => [item.trackId + ':' + item.target, item.value]));
       next.tracks.forEach((track, index) => {
+        if (track.disabled) return;
         for (const target of everTargets[index]) {
           const descriptor = descriptors[index].get(target);
           let value = overrides.has(track.id + ':' + target) ? overrides.get(track.id + ':' + target) : descriptor.value;
@@ -140,7 +143,7 @@
     function emitInterval(end) {
       if (end <= boundary + EPSILON) { boundary = end; return; }
       active.clips.forEach((id, index) => {
-        if (id === null) return;
+        if (id === null || next.tracks[index].disabled) return;
         const source = nativeSource(sources[index].get(id)), span = source.sourceEnd - source.sourceStart;
         if (!originalAssets.has(source.assetId)) fail('a selected source audio asset is missing.');
         const firstGeometry = timing().geometry({ clip: source, tempo: active.tempo, sceneBeat: active.sceneStarts[index], padBeat: active.padBeats[index], phaseOrigin: active.phaseOrigins[index], stutterBeats: active.performance.stutterBeats, fill: !!active.performance.fill }, boundary + EPSILON);
@@ -192,7 +195,7 @@
       if (event.tempo !== undefined && Math.abs(event.tempo - state.tempo) > EPSILON) fail('tempo changes are not supported inside one capture. Use the same tempo throughout this take.');
       if (event.kind === 'scene') {
         emitInterval(event.beat);
-        active.clips = event.clips.slice(); active.sceneStarts = event.sceneStarts?.slice() || Array(TRACK_COUNT).fill(event.sceneBeat ?? event.beat); active.padBeats = event.padBeats?.slice() || Array(TRACK_COUNT).fill(event.padBeat ?? event.beat); active.phaseOrigins = event.phaseOrigins?.slice() || Array(TRACK_COUNT).fill(0);
+        active.clips = event.clips.map((id, index) => next.tracks[index].disabled ? null : id); active.sceneStarts = event.sceneStarts?.slice() || Array(TRACK_COUNT).fill(event.sceneBeat ?? event.beat); active.padBeats = event.padBeats?.slice() || Array(TRACK_COUNT).fill(event.padBeat ?? event.beat); active.phaseOrigins = event.phaseOrigins?.slice() || Array(TRACK_COUNT).fill(0);
         sceneCount++;
         if (next.markers.length >= S.LIMITS.markers) fail('this take exceeds 128 scene markers. Apply a shorter take.');
         const scene = state.service?.scenes?.find(scene => scene.id === event.sceneId);
@@ -211,6 +214,7 @@
     emitInterval(take.lengthBeats);
     if (!slices) fail('the take contains no audible source clips. Launch a scene while capture is armed.');
     next.tracks.forEach((track, index) => {
+      if (track.disabled) return;
       if (lanes[index].size > S.LIMITS.automationLanes) fail('this take exceeds the automation lane limit.');
       track.automation = [...lanes[index].values()];
     });
@@ -239,6 +243,7 @@
     });
     for (const lfo of next.lfos || []) for (const route of lfo.routes || []) {
       const index = next.tracks.findIndex(track => track.id === route.ownerId), track = next.tracks[index];
+      if (track?.disabled) continue;
       const closesOnDrop = track && (route.target === 'level' || /^send:[01]$/.test(route.target) && track.sendPre?.[Number(route.target.slice(5))]);
       const original = Array.isArray(route.gate) ? route.gate : [], drops = closesOnDrop ? dropGates[index] : [];
       if (!original.length && !drops.some(point => point.value === 0)) continue;

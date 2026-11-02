@@ -22,7 +22,9 @@
     const instrument = value => value && ({ id: value.id, url: value.url, html: value.html, snapshot: value.snapshot?.state != null ? { app: value.snapshot.app, state: value.snapshot.state } : value.snapshot });
     return JSON.stringify({ tempo: state.tempo, lengthBars: state.lengthBars, loopEnabled: state.loopEnabled, loopStart: state.loopStart, loopEnd: state.loopEnd,
       master: { ...owner(state.master), metronome: state.master.metronome, mastering: state.master.mastering }, returns: state.returns?.map(owner), lfos: state.lfos,
-      tracks: state.tracks.map(track => ({ ...owner(track), clips: track.clips.map(({ origin, ...clip }) => clip), freeze: track.freeze, instrumentLive: track.instrumentLive, instrument: track.instrument && (track.instrumentLive || track.clips.some(clip => clip.type === 'notes')) ? instrument(track.instrument) : null })) });
+      // Parked channels cannot contribute audio. Keep their large editable
+      // recipes out of cache comparisons until the channel is enabled again.
+      tracks: state.tracks.map(track => track.disabled === true ? { disabled: true } : ({ ...owner(track), clips: track.clips.map(({ origin, ...clip }) => clip), freeze: track.freeze, instrumentLive: track.instrumentLive, instrument: track.instrument && (track.instrumentLive || track.clips.some(clip => clip.type === 'notes')) ? instrument(track.instrument) : null })) });
   }
   function encodeWav(audio, signal) {
     const buffer = new ArrayBuffer(44 + audio.left.length * 4), view = new DataView(buffer);

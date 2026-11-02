@@ -9,3 +9,4 @@
 .cpu-load[data-cpu-load-state=busy]{background:#453e28;border-color:#b3a06b}.cpu-load[data-cpu-load-state=busy]>output{color:#f0dfab}.cpu-load[data-cpu-load-state=high]{background:#4d3327;border-color:#ca956c}.cpu-load[data-cpu-load-state=high]>output{color:#f2c59d}
 @media(max-width:600px){.cpu-component .cpu-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 12px}.cpu-component .cpu-values small{font-size:7px}.cpu-component .cpu-values output{font-size:11px}}
 @media(max-width:360px){.cpu-component .cpu-values{gap:8px 9px}.cpu-component .cpu-values small{font-size:6px}.cpu-component .cpu-values output{font-size:10px}}
+.cpu-owner[data-cpu-disabled=true]>.cpu-owner-components{background:#293925}.cpu-owner[data-cpu-disabled=true] .cpu-owner-label small{color:#b4bb98}.cpu-owner[data-cpu-disabled=true] .cpu-owner-meter{opacity:.35}

@@ -59,6 +59,7 @@
       if (this.canFreeze?.(trackId) === false) throw Error('Finish the current operation before freezing a track.');
       const initial = this.getState(), original = initial.tracks.find(track => track.id === trackId);
       if (!original) throw Error('Choose one of the eight tracks.');
+      if (original.disabled) throw Error('Enable ' + original.name + ' before freezing its sound.');
       if (original.freeze) return copy(original.freeze);
       if (this.engine.isRecording) throw Error('Finish recording before freezing a track.');
       const source = copy(initial), sourceTrack = source.tracks.find(track => track.id === trackId);
@@ -111,7 +112,7 @@
           if (snapshotKey(latestSnapshot) !== snapshotKey(captured.snapshot)) throw Error('The instrument patch changed while freezing. Try again.');
         }
         const latest = this.getState(), latestTrack = latest.tracks.find(track => track.id === trackId);
-        if (!latestTrack || latestTrack.freeze || descriptorKey(latestTrack.instrument) !== sourceDescriptor) throw Error('The track changed while freezing. Try again.');
+        if (!latestTrack || latestTrack.disabled || latestTrack.freeze || descriptorKey(latestTrack.instrument) !== sourceDescriptor) throw Error('The track changed while freezing. Try again.');
         const candidate = copy(latest), target = candidate.tracks.find(track => track.id === trackId);
         if (captured.descriptor) target.instrument = copy(captured.descriptor);
         if (S.freezeFingerprint(candidate, trackId) !== fingerprint) throw Error('The track or its automation changed while freezing. Try again.');

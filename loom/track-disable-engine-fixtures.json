@@ -1,0 +1,110 @@
+{
+  "baseline": "59a31f7563ab60dff7f54cd3eb5b3bc04ec34a15",
+  "definitionsHash": "029f0f4e747bbde4007d061ee7c1a0cc3056754a14bcda6daa16504040872106",
+  "sourceHashes": {
+    "shared/pattern-schema.js": "4ac23f8655bfb8b8653a286c805829dac46aba23c44b79f8dad118adea4cc58a",
+    "loom/vocal-catalog.js": "b7d08125dee5c30228d6edee55ef13b6fe9ffabad9aff323bc2a8d1bda80b103",
+    "loom/utility-catalog.js": "a910a2cfa1769ef18b65a448f5b6e02f2212c790df3fa68a0202e55aa7e0834f",
+    "loom/filter-catalog.js": "9d45ebd1ad93809e2c02dca07268015ee5575f781d5fc57802bebd35c252fd4a",
+    "loom/creative-catalog.js": "a7a17a4096f4d7b127f5f97a0fc2b28653787c4d1496fc568f9f666f205c30c8",
+    "loom/preamp-catalog.js": "a311f4f9fc38e1bd91f80e0a1de45f74476e3de84d325cf62ef0622acb526727",
+    "loom/tape-catalog.js": "a0b00d1cfcf41d75bcdd1e5609db4134c96692c7626372590ec05386097a3054",
+    "loom/char-catalog.js": "bee97b7b9d9f17d5079f30f82dee1009407f63355d2dfdd91400a3ee98a0c957",
+    "loom/lofi-catalog.js": "3c69f4287a653fac9e32c014420c33878ca89333b24b164f158d59b426c22a8e",
+    "loom/pedal-synth-catalog.js": "c325f96621363cc79fd7b00b6454047a1dec11220f19a16bfc8f247678f9a9ec",
+    "loom/deluxe-catalog.js": "bc470d78a313bab9a984bae637fd97a8ecf76f304ec63a4920fe309c669995f5",
+    "loom/effects-catalog.js": "37c875111422f96072d8f3be098928a237e790b8a3cf7463aadaae8087a11b16",
+    "loom/vocal-dsp.js": "8fc84009623ab2509e06d52d74bc2c237123016ec8ef40e40e6a1ffad1340d4d",
+    "loom/utility-dsp.js": "3574688e05480bf92c411d74f0a9ea9aa123274d161439d20d767e6ed9090570",
+    "loom/filter-dsp.js": "8be15f1ed19c4266a0dd824fb93e8f72fb986dc69e033b18aadd043928117ae6",
+    "loom/creative-dsp.js": "b6779c44d7a69fc57ad4db84b63a511dfeec5a15688ec6c68d2a50581560e6aa",
+    "loom/broiler-pedals.js": "1627c303b7109186f5fe1f0e71f35d070565aa3130d3fef6402aae6f5510d05c",
+    "loom/compressor-dsp.js": "3075ac20024d2f31b43e5a0a27106c81e991e563f3a79f022ff6ab7f61caf544",
+    "loom/preamp-dsp.js": "60113271bbd15d6abcfb18f4dc799e8db537ad7b8e35e9a7edcc52a13f744801",
+    "loom/tape-dsp.js": "fbfd8e2eaf6d2d973f2c7241f420a7700acca0372594fcec949344b15ecf9aaf",
+    "loom/char-dsp.js": "3591601edac9bbdfecd6edab698df2cb654ce24e61dd45df6030dfff18d794e2",
+    "loom/lofi-dsp.js": "baac055587634c4197080f0b27c363a1a1e90f39ad3fb41c929ce2ef233c196d",
+    "loom/pedal-synth-tracker.js": "6bf28039518a1d7b34ecf6df03aa3fed91292271fce02fef3bba59901d256fdc",
+    "loom/pedal-midi-dsp.js": "e61b505311ea08f600cc6cd04e1f0fa91bde81c106a5235484846feb973b7026",
+    "loom/pedal-synth-dsp.js": "8c5647bb663860309926ac6911e0987280129f0cdc3994bffffa57404b0a7273",
+    "loom/deluxe-dsp.js": "0188b6eea8f477fb90f76357d68d5a66c09f710f6c2386f12ef8b013fb0f7e80",
+    "loom/effects.js": "88d15ee87c6ce397e31da758f5e5d147d3fc0737cad1281894c697a521c2e952",
+    "loom/lfo.js": "4057a8ae69aae71d0506e2cf1035c9195a4083f13697ceb6864c358c156a1692",
+    "loom/cpu-profiler.js": "5ab91d7630e8ed666961dcf329a1510ee255da3edcb2a4382f3c5764aca3ca7c",
+    "loom/track-eq-dsp.js": "6890c21877395671bf44f55b7d3c54cd918a09c2f0940cf01f78e124da509fa4",
+    "loom/mastering-dsp.js": "4251924180a93eed2594127dfb18b414af45b5cc0c2db113c9dc2c99cc2e5161",
+    "loom/service-schema.js": "22fa585206eb77ca246dbf59cc589e68dbf26382fd975e3c2e79cd7f3841909e",
+    "loom/schema.js": "0141b1f2bce66bc73f858de7c7524e053dd4131832560cae2f64d217ec66f03a",
+    "loom/audio-engine.js": "00711c4aafc3d142b103ef6e18dca628ff45ff39c9b4e311527f274ff30ee5fe"
+  },
+  "expected": {
+    "plain-8000": {
+      "pcm": "bdcd82a2ea2f479b3f6532165ae4ae05fce41f895fabf06766c69fd94257646d",
+      "meters": "3b18f6884a1614afa289cb08ce51649f6dea4619d577ac4cf60b3c566ab368c0"
+    },
+    "plain-44100": {
+      "pcm": "13f6e26633d309b562c5054aa0724800b54ef3393b56b658517949a7aac5b268",
+      "meters": "81631852b7c84b3cc103ce16743aa9d610373bd8d97fb6acdad0b8d5249feebd"
+    },
+    "plain-48000": {
+      "pcm": "384caabb5ca1c292c8b6636f043ef9e14db391ade4d9edb323be14d11e6ae362",
+      "meters": "bc6495581f7c89bdbfe400d15290d016ae254f16f5ae6864ee9cec1d3217b03f"
+    },
+    "plain-96000": {
+      "pcm": "3cd19d5bd79070f4818869fd0618dfe8a474c76a4ec9d8e3fce2bb33a828ad6e",
+      "meters": "48b2655ab291049d91cce2cc2bc353c6e5ee264eea89d16d4e4c413a46b16d9e"
+    },
+    "plain-192000": {
+      "pcm": "0ebf601202402645d661ddbe2f49a5e5a90a908ac6e3155f07020169e5cd25fd",
+      "meters": "971ec2ee61293c23b469306dd9ce9aaa51d64da8991c4df16c5e96857b159842"
+    },
+    "ten-track-racks": {
+      "pcm": "b4e26868126ecdca55b9bce688eb630493248412107ac43e11a19e0dc78e625d",
+      "meters": "f7d9b78849400f8f527e1f2ab0a8fe6c3cfc0c12fba45f8b43308b033b038b41"
+    },
+    "new-effects-racks": {
+      "pcm": "c187e1309b3ff080b34368890aa4127be586e7975831ab4721c1ceb66af7540c",
+      "meters": "dfdaf7d427e30fef1fd024823462568b1b3423e04f51402073bd8c84e93bdf6b"
+    },
+    "mastering": {
+      "pcm": "7deae1a5118219e1676b343499e2531ea657fc4ec3605e626d97033f99d1049b",
+      "meters": "c71e9bc5eceb4c57740658e839755f5f20d484fab6452d4efe604e33b98809e8"
+    },
+    "audio-clips": {
+      "pcm": "d38a0c5e4e3269803e38f737d87dc192eca31fa850dcb6cce0386d9960a2f671",
+      "meters": "11dac3144568b14b1712cfe1ddf512fd4a7df38f2a74e9ccec048bae79ef1053"
+    },
+    "static-controls-and-edits": {
+      "pcm": "0f1482b53631de4bedf9eb53b36490cab0b4be4aaa78413971624df190cd7f53",
+      "meters": "2a00cc79958e069e420cef573bda32072705e3186bb73e069f90128d8c14cbc6"
+    },
+    "static-automation-lfo-transitions": {
+      "pcm": "e651a2b5c226bf8734f226a9095205bf3ca3ffb5a6c216a8f493c496cfda543e",
+      "meters": "fb7e300efe9fd00398d230f54f1c0bca2a8dcb85517c12423495fec6e1415317"
+    },
+    "loop-boundary": {
+      "pcm": "0af05e10e2579b7e90f41329fce96cdcbd3214134666b5a4a93a921d4366ff25",
+      "meters": "68eabcd2e90fecbb6cf17d34358e9f8626f859e4c51e0eae8bc750fb0db5aadf"
+    },
+    "service-events": {
+      "pcm": "7f5fa013e2a149471d7292de49193145ce28422c2b29d6131a11312892d1eba9",
+      "meters": "3b7317aed2f667fcdf097f201696079037e775f662e4bff6a839370195dd36d3"
+    },
+    "frozen-playback": {
+      "pcm": "bdb220edb31420beb58ec4a4a083a3d0f3bef223d6cc190986ecda39eac528c0",
+      "meters": "612f164259267188ed934f5f0adc45b03cc1f03907f7ee909655a7900520e378"
+    },
+    "solo-mute-return-solo": {
+      "pcm": "16a3f29d3c743819122f9108509d4d05985681a6dd19b83f5efe368a2394c66b",
+      "meters": "fadebcb53256f5cb57e690f7db7fb0e51c317364e02b0296fcfe6d0f01060ace"
+    },
+    "transport-seek-stop-countin": {
+      "pcm": "9857cde6407abaae9a1fd1af4300855776bf26e4bf3a3e122c35a0d43fc8d7ac",
+      "meters": "ec54cda442b43c8fa08ebf1c322ab03f0900970546085308e81c2a5b57c2eac2"
+    },
+    "track-ten-stem": {
+      "pcm": "eb628f3c071224a761497ac57dbb712172a5ce25a2188fa4df1b590d150ad52b",
+      "meters": "5bd04e4ab40b9bbcf849af43b40a32a40cfd88036a84aa491abc44a44da55c61"
+    }
+  }
+}

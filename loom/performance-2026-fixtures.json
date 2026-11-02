@@ -1,0 +1,2593 @@
+{
+  "baseline": "59a31f7563ab60dff7f54cd3eb5b3bc04ec34a15",
+  "sourceHashes": {
+    "shared/pattern-schema.js": "4ac23f8655bfb8b8653a286c805829dac46aba23c44b79f8dad118adea4cc58a",
+    "loom/vocal-catalog.js": "b7d08125dee5c30228d6edee55ef13b6fe9ffabad9aff323bc2a8d1bda80b103",
+    "loom/utility-catalog.js": "a910a2cfa1769ef18b65a448f5b6e02f2212c790df3fa68a0202e55aa7e0834f",
+    "loom/filter-catalog.js": "9d45ebd1ad93809e2c02dca07268015ee5575f781d5fc57802bebd35c252fd4a",
+    "loom/creative-catalog.js": "a7a17a4096f4d7b127f5f97a0fc2b28653787c4d1496fc568f9f666f205c30c8",
+    "loom/preamp-catalog.js": "a311f4f9fc38e1bd91f80e0a1de45f74476e3de84d325cf62ef0622acb526727",
+    "loom/tape-catalog.js": "a0b00d1cfcf41d75bcdd1e5609db4134c96692c7626372590ec05386097a3054",
+    "loom/char-catalog.js": "bee97b7b9d9f17d5079f30f82dee1009407f63355d2dfdd91400a3ee98a0c957",
+    "loom/lofi-catalog.js": "3c69f4287a653fac9e32c014420c33878ca89333b24b164f158d59b426c22a8e",
+    "loom/pedal-synth-catalog.js": "c325f96621363cc79fd7b00b6454047a1dec11220f19a16bfc8f247678f9a9ec",
+    "loom/deluxe-catalog.js": "bc470d78a313bab9a984bae637fd97a8ecf76f304ec63a4920fe309c669995f5",
+    "loom/effects-catalog.js": "37c875111422f96072d8f3be098928a237e790b8a3cf7463aadaae8087a11b16",
+    "loom/vocal-dsp.js": "8fc84009623ab2509e06d52d74bc2c237123016ec8ef40e40e6a1ffad1340d4d",
+    "loom/utility-dsp.js": "3574688e05480bf92c411d74f0a9ea9aa123274d161439d20d767e6ed9090570",
+    "loom/filter-dsp.js": "8be15f1ed19c4266a0dd824fb93e8f72fb986dc69e033b18aadd043928117ae6",
+    "loom/creative-dsp.js": "b6779c44d7a69fc57ad4db84b63a511dfeec5a15688ec6c68d2a50581560e6aa",
+    "loom/broiler-pedals.js": "1627c303b7109186f5fe1f0e71f35d070565aa3130d3fef6402aae6f5510d05c",
+    "loom/compressor-dsp.js": "3075ac20024d2f31b43e5a0a27106c81e991e563f3a79f022ff6ab7f61caf544",
+    "loom/preamp-dsp.js": "60113271bbd15d6abcfb18f4dc799e8db537ad7b8e35e9a7edcc52a13f744801",
+    "loom/tape-dsp.js": "fbfd8e2eaf6d2d973f2c7241f420a7700acca0372594fcec949344b15ecf9aaf",
+    "loom/char-dsp.js": "3591601edac9bbdfecd6edab698df2cb654ce24e61dd45df6030dfff18d794e2",
+    "loom/lofi-dsp.js": "baac055587634c4197080f0b27c363a1a1e90f39ad3fb41c929ce2ef233c196d",
+    "loom/pedal-synth-tracker.js": "6bf28039518a1d7b34ecf6df03aa3fed91292271fce02fef3bba59901d256fdc",
+    "loom/pedal-midi-dsp.js": "e61b505311ea08f600cc6cd04e1f0fa91bde81c106a5235484846feb973b7026",
+    "loom/pedal-synth-dsp.js": "8c5647bb663860309926ac6911e0987280129f0cdc3994bffffa57404b0a7273",
+    "loom/deluxe-dsp.js": "0188b6eea8f477fb90f76357d68d5a66c09f710f6c2386f12ef8b013fb0f7e80",
+    "loom/effects.js": "88d15ee87c6ce397e31da758f5e5d147d3fc0737cad1281894c697a521c2e952",
+    "loom/service-schema.js": "22fa585206eb77ca246dbf59cc589e68dbf26382fd975e3c2e79cd7f3841909e",
+    "loom/lfo.js": "4057a8ae69aae71d0506e2cf1035c9195a4083f13697ceb6864c358c156a1692",
+    "loom/schema.js": "0141b1f2bce66bc73f858de7c7524e053dd4131832560cae2f64d217ec66f03a",
+    "loom/cpu-profiler.js": "5ab91d7630e8ed666961dcf329a1510ee255da3edcb2a4382f3c5764aca3ca7c",
+    "loom/track-eq-dsp.js": "6890c21877395671bf44f55b7d3c54cd918a09c2f0940cf01f78e124da509fa4",
+    "loom/mastering-dsp.js": "4251924180a93eed2594127dfb18b414af45b5cc0c2db113c9dc2c99cc2e5161",
+    "loom/audio-engine.js": "00711c4aafc3d142b103ef6e18dca628ff45ff39c9b4e311527f274ff30ee5fe"
+  },
+  "definitions": [
+    {
+      "id": "prism/44100/false",
+      "type": "prism",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "prism/44100/true",
+      "type": "prism",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "prism/48000/false",
+      "type": "prism",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "prism/48000/true",
+      "type": "prism",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "prism/96000/false",
+      "type": "prism",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "prism/96000/true",
+      "type": "prism",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "velvet/44100/false",
+      "type": "velvet",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "velvet/44100/true",
+      "type": "velvet",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "velvet/48000/false",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "velvet/48000/true",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "velvet/96000/false",
+      "type": "velvet",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "velvet/96000/true",
+      "type": "velvet",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "velvet/model/clean",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "clean"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/fet-76",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "fet-76"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/opto-2a",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "opto-2a"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/opto-3a",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "opto-3a"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/vari-670",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "vari-670"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/bus-4k",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "bus-4k"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/vca-160",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "vca-160"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/bus-2500",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "bus-2500"
+      },
+      "automated": true
+    },
+    {
+      "id": "velvet/model/diode-609",
+      "type": "velvet",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "diode-609"
+      },
+      "automated": true
+    },
+    {
+      "id": "cinder/44100/false",
+      "type": "cinder",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "cinder/44100/true",
+      "type": "cinder",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "cinder/48000/false",
+      "type": "cinder",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "cinder/48000/true",
+      "type": "cinder",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "cinder/96000/false",
+      "type": "cinder",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "cinder/96000/true",
+      "type": "cinder",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "undertow/44100/false",
+      "type": "undertow",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "undertow/44100/true",
+      "type": "undertow",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "undertow/48000/false",
+      "type": "undertow",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "undertow/48000/true",
+      "type": "undertow",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "undertow/96000/false",
+      "type": "undertow",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "undertow/96000/true",
+      "type": "undertow",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "parallax/44100/false",
+      "type": "parallax",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "parallax/44100/true",
+      "type": "parallax",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "parallax/48000/false",
+      "type": "parallax",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "parallax/48000/true",
+      "type": "parallax",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "parallax/96000/false",
+      "type": "parallax",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "parallax/96000/true",
+      "type": "parallax",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "vestige/44100/false",
+      "type": "vestige",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "vestige/44100/true",
+      "type": "vestige",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "vestige/48000/false",
+      "type": "vestige",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "vestige/48000/true",
+      "type": "vestige",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "vestige/96000/false",
+      "type": "vestige",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "vestige/96000/true",
+      "type": "vestige",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "halo/44100/false",
+      "type": "halo",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "halo/44100/true",
+      "type": "halo",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "halo/48000/false",
+      "type": "halo",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "halo/48000/true",
+      "type": "halo",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "halo/96000/false",
+      "type": "halo",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "halo/96000/true",
+      "type": "halo",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tremor/44100/false",
+      "type": "tremor",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tremor/44100/true",
+      "type": "tremor",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tremor/48000/false",
+      "type": "tremor",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tremor/48000/true",
+      "type": "tremor",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tremor/96000/false",
+      "type": "tremor",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tremor/96000/true",
+      "type": "tremor",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "broiler/44100/false",
+      "type": "broiler",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "broiler/44100/true",
+      "type": "broiler",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "broiler/48000/false",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "broiler/48000/true",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "broiler/96000/false",
+      "type": "broiler",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "broiler/96000/true",
+      "type": "broiler",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "broiler/model/clean-bass",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "clean-bass"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/flip-top",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "flip-top"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/valve-stack",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "valve-stack"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/modern-grind",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "modern-grind"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/doom-fuzz",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "doom-fuzz"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/american-clean",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "american-clean"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/british-crunch",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "british-crunch"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/high-gain",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "high-gain"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/portaflex-64",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "portaflex-64"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/svt-69",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "svt-69"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/v4b-71",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "v4b-71"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/svt-pro",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "svt-pro"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/tweed-55",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "tweed-55"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/black-panel-65",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "black-panel-65"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/copper-30",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "copper-30"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/royal-68",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "royal-68"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/iron-800",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "iron-800"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/dual-red-92",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "dual-red-92"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/cali-iv",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "cali-iv"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/fifty-one",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "fifty-one"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/citrus-verb",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "citrus-verb"
+      },
+      "automated": true
+    },
+    {
+      "id": "broiler/model/jazz-120",
+      "type": "broiler",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "jazz-120"
+      },
+      "automated": true
+    },
+    {
+      "id": "glaze/44100/false",
+      "type": "glaze",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "glaze/44100/true",
+      "type": "glaze",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "glaze/48000/false",
+      "type": "glaze",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "glaze/48000/true",
+      "type": "glaze",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "glaze/96000/false",
+      "type": "glaze",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "glaze/96000/true",
+      "type": "glaze",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "scales/44100/false",
+      "type": "scales",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "scales/44100/true",
+      "type": "scales",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "scales/48000/false",
+      "type": "scales",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "scales/48000/true",
+      "type": "scales",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "scales/96000/false",
+      "type": "scales",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "scales/96000/true",
+      "type": "scales",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "strainer/44100/false",
+      "type": "strainer",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "strainer/44100/true",
+      "type": "strainer",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "strainer/48000/false",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "strainer/48000/true",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "strainer/96000/false",
+      "type": "strainer",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "strainer/96000/true",
+      "type": "strainer",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "strainer/model/clean",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "clean"
+      },
+      "automated": true
+    },
+    {
+      "id": "strainer/model/ladder",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "ladder"
+      },
+      "automated": true
+    },
+    {
+      "id": "strainer/model/diode",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "diode"
+      },
+      "automated": true
+    },
+    {
+      "id": "strainer/model/comb",
+      "type": "strainer",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "comb"
+      },
+      "automated": true
+    },
+    {
+      "id": "swirl/44100/false",
+      "type": "swirl",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "swirl/44100/true",
+      "type": "swirl",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "swirl/48000/false",
+      "type": "swirl",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "swirl/48000/true",
+      "type": "swirl",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "swirl/96000/false",
+      "type": "swirl",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "swirl/96000/true",
+      "type": "swirl",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "crumble/44100/false",
+      "type": "crumble",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "crumble/44100/true",
+      "type": "crumble",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "crumble/48000/false",
+      "type": "crumble",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "crumble/48000/true",
+      "type": "crumble",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "crumble/96000/false",
+      "type": "crumble",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "crumble/96000/true",
+      "type": "crumble",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "saute/44100/false",
+      "type": "saute",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "saute/44100/true",
+      "type": "saute",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "saute/48000/false",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "saute/48000/true",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "saute/96000/false",
+      "type": "saute",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "saute/96000/true",
+      "type": "saute",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "saute/model/iron-73",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "iron-73"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/clean",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "clean"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/punch-312",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "punch-312"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/console-4k",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "console-4k"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/super-9k",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "super-9k"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/tube-610",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "tube-610"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/redd-47",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "redd-47"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/valve-72",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "valve-72"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/helios-69",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "helios-69"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/trident-a",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "trident-a"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/isa-110",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "isa-110"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/avalon-737",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "avalon-737"
+      },
+      "automated": true
+    },
+    {
+      "id": "saute/model/tg-2",
+      "type": "saute",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "tg-2"
+      },
+      "automated": true
+    },
+    {
+      "id": "preserve/44100/false",
+      "type": "preserve",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "preserve/44100/true",
+      "type": "preserve",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "preserve/48000/false",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "preserve/48000/true",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "preserve/96000/false",
+      "type": "preserve",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "preserve/96000/true",
+      "type": "preserve",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "preserve/model/studio",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "studio"
+      },
+      "automated": true
+    },
+    {
+      "id": "preserve/model/valve",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "valve"
+      },
+      "automated": true
+    },
+    {
+      "id": "preserve/model/home",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "home"
+      },
+      "automated": true
+    },
+    {
+      "id": "preserve/model/cassette",
+      "type": "preserve",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "cassette"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/44100/false",
+      "type": "tinpan",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tinpan/44100/true",
+      "type": "tinpan",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tinpan/48000/false",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tinpan/48000/true",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tinpan/96000/false",
+      "type": "tinpan",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "tinpan/96000/true",
+      "type": "tinpan",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/rotary-50",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "rotary-50"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/carbon-30",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "carbon-30"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/pushbutton-80",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "pushbutton-80"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/payphone",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "payphone"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/intercom",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "intercom"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/bullet",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "bullet"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/cassette",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "cassette"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/toy",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "toy"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/megaphone",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "megaphone"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/piezo",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "piezo"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/mobile-8k",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "mobile-8k"
+      },
+      "automated": true
+    },
+    {
+      "id": "tinpan/model/answerphone",
+      "type": "tinpan",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "answerphone"
+      },
+      "automated": true
+    },
+    {
+      "id": "ferment/44100/false",
+      "type": "ferment",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "ferment/44100/true",
+      "type": "ferment",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "ferment/48000/false",
+      "type": "ferment",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "ferment/48000/true",
+      "type": "ferment",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "ferment/96000/false",
+      "type": "ferment",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "ferment/96000/true",
+      "type": "ferment",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "sunday/44100/false",
+      "type": "sunday",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "sunday/44100/true",
+      "type": "sunday",
+      "rate": 44100,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "sunday/48000/false",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "sunday/48000/true",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "sunday/96000/false",
+      "type": "sunday",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": false
+    },
+    {
+      "id": "sunday/96000/true",
+      "type": "sunday",
+      "rate": 96000,
+      "frames": 4096,
+      "patch": {},
+      "automated": true
+    },
+    {
+      "id": "sunday/model/nodal",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "nodal"
+      },
+      "automated": true
+    },
+    {
+      "id": "sunday/model/charge",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "charge"
+      },
+      "automated": true
+    },
+    {
+      "id": "sunday/model/feedback",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "feedback"
+      },
+      "automated": true
+    },
+    {
+      "id": "sunday/model/adaa",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "adaa"
+      },
+      "automated": true
+    },
+    {
+      "id": "sunday/model/reactive",
+      "type": "sunday",
+      "rate": 48000,
+      "frames": 8192,
+      "patch": {
+        "model": "reactive"
+      },
+      "automated": true
+    }
+  ],
+  "definitionsSHA256": "277d72418ffea6b2fc8e33f02472134e615e4fa21102a17f755efae1b93c6afa",
+  "expected": [
+    {
+      "id": "prism/44100/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "9e4679c393f220950b6278e073fba4ec05bf19b40207b6a6abe900e567ae9fdb"
+    },
+    {
+      "id": "prism/44100/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "a76ca746c50dc633dab672976548e8db0bd025a61008acb2f72e5366fa8863b7"
+    },
+    {
+      "id": "prism/48000/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "9e4679c393f220950b6278e073fba4ec05bf19b40207b6a6abe900e567ae9fdb"
+    },
+    {
+      "id": "prism/48000/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "a76ca746c50dc633dab672976548e8db0bd025a61008acb2f72e5366fa8863b7"
+    },
+    {
+      "id": "prism/96000/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "9e4679c393f220950b6278e073fba4ec05bf19b40207b6a6abe900e567ae9fdb"
+    },
+    {
+      "id": "prism/96000/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "a76ca746c50dc633dab672976548e8db0bd025a61008acb2f72e5366fa8863b7"
+    },
+    {
+      "id": "velvet/44100/false",
+      "pcm": "bac38d2bcd9d1a69f395c3d77fddc78c0e7fd972d3b6e1bb4e5b6c208aced1b6",
+      "meters": "9109d7760195c8f7f1618ad892fe1cba4ee79dcd667791a56a5c2798e58bf1bf"
+    },
+    {
+      "id": "velvet/44100/true",
+      "pcm": "be4a133b718a7d6e8737723c2f43c9b1a252ba93702ccf09838fe9c1f7726619",
+      "meters": "e576752d95f0ce2cf517d76cd5072b2231875d528e0abf745eed6bddda0a85b9"
+    },
+    {
+      "id": "velvet/48000/false",
+      "pcm": "bac38d2bcd9d1a69f395c3d77fddc78c0e7fd972d3b6e1bb4e5b6c208aced1b6",
+      "meters": "d99642dac027fd5dad7cfa383964ec3eb84ceb6b355d9be3e29c08ca4adce721"
+    },
+    {
+      "id": "velvet/48000/true",
+      "pcm": "844d5ff919b922399d996226305d122142a385782fcc6f459247d5bbfad89657",
+      "meters": "00e2f78eb944ef894713d6cace0d5f16e9684640d70d0eebaa1d3ab251f69ffd"
+    },
+    {
+      "id": "velvet/96000/false",
+      "pcm": "bac38d2bcd9d1a69f395c3d77fddc78c0e7fd972d3b6e1bb4e5b6c208aced1b6",
+      "meters": "9b1baba514256f8d30d7f7ce717e01cecffefadd6872b29f1ce7b2a6de24f033"
+    },
+    {
+      "id": "velvet/96000/true",
+      "pcm": "77e61fc4c08bd13bf403d76288040aa0c099b49000bb5e0c9b557b9f3b4d4290",
+      "meters": "8c6533b191c0844a0adfd2f63fd007668213552b63375b31cb30157e0c7823d1"
+    },
+    {
+      "id": "velvet/model/clean",
+      "pcm": "4f59fa5a685500ec293b2fcc00d06e7f008ba3efccae74887ca716be0977279e",
+      "meters": "424f4ba9b39de591cef45cfd93ca1a47dd1a4613576814e409c0a10c5c1d769c"
+    },
+    {
+      "id": "velvet/model/fet-76",
+      "pcm": "348ed4b84cb238a796da4f18287ba920ff42e814c0a200e5bf282ff661b4ba40",
+      "meters": "d067f9246a45069f69720f961459efd66180804181e5941db9501d840323c595"
+    },
+    {
+      "id": "velvet/model/opto-2a",
+      "pcm": "4ca436e763f6d0c74965aea811af0e82612f565686b567f9093fb2c8a397ad36",
+      "meters": "1f6ba4a2e33c200279e5aa68a1e0bff9fa08e458405c9895dfe64abec694c336"
+    },
+    {
+      "id": "velvet/model/opto-3a",
+      "pcm": "841e09033f8573922674c6b9fb5e166cf910cffe65fce3446911538fe789cf6b",
+      "meters": "309ff84ae2017f6d8e7f7b514968c7dbaaaa946b2dd1864a9b070be9c645b7d3"
+    },
+    {
+      "id": "velvet/model/vari-670",
+      "pcm": "6056a08a80940ca71dbfd3c48c0f591b0409c9b9f56edb187a82e2cb22f1cbe9",
+      "meters": "b5302c4550afbcb4cfb40b6e54ad9569c6ecd3ad306f1432f2256b26b16cf8cf"
+    },
+    {
+      "id": "velvet/model/bus-4k",
+      "pcm": "78db723fae0616928cf56c0940fc480164a170f792174a4993611a298a301883",
+      "meters": "bea66d9492eb7ee29662e064932f24c62f662bea672d5019483ee1489658bd52"
+    },
+    {
+      "id": "velvet/model/vca-160",
+      "pcm": "d28d74e04a2ac64866ed3a316d6fab23f777a86d9cd136d353e105be061bb288",
+      "meters": "0b0c19f2a6c97758628b514bddbb21d98a3b919efda1f230ca97f8854f7d1a72"
+    },
+    {
+      "id": "velvet/model/bus-2500",
+      "pcm": "1d80cf0f7e86c880eeb00fcf84130d4f7605d48e676a40a7be0fcc51326ef0b5",
+      "meters": "ed2a2f484223fd80925a47e7e469b189f13a70df9a80c1294cbaea02d4ef8418"
+    },
+    {
+      "id": "velvet/model/diode-609",
+      "pcm": "4e938cc54c76cb09bfb0891c913a00382d6a4071d886594299ff5227a2d4b022",
+      "meters": "df34ddd05390305882bb24d9c0c830011d0ab550e1644fb41b57866fb34dec49"
+    },
+    {
+      "id": "cinder/44100/false",
+      "pcm": "a36f86603b68fcf033192654069a61bc6161cbb44d2c2a51004a11c621aa9174",
+      "meters": "c528a204274b8daf923eb332c463171586157aeacee975ed3673254e02273dc8"
+    },
+    {
+      "id": "cinder/44100/true",
+      "pcm": "7a707a41ad9918d4404d5794a410daf5b06d9dadb2daf12abd32c7123696d9a3",
+      "meters": "0030f2aafe9be9bc9493b3dc1fe9f16945f34962e59ed01f5e02412afdac5df3"
+    },
+    {
+      "id": "cinder/48000/false",
+      "pcm": "e96129dc1a8d39c32e4887468380f0ec2be93fe5324f9314c60d5647a4632ac2",
+      "meters": "c528a204274b8daf923eb332c463171586157aeacee975ed3673254e02273dc8"
+    },
+    {
+      "id": "cinder/48000/true",
+      "pcm": "3d3b3f0dbb8e4328ab3b8e61b62ab2ace286e7637cca8dfccc5b0fff4f9a2868",
+      "meters": "0030f2aafe9be9bc9493b3dc1fe9f16945f34962e59ed01f5e02412afdac5df3"
+    },
+    {
+      "id": "cinder/96000/false",
+      "pcm": "2056be6d1a17e12deabfba9025d581d782861e127d2173396c017cd5a15965f3",
+      "meters": "c528a204274b8daf923eb332c463171586157aeacee975ed3673254e02273dc8"
+    },
+    {
+      "id": "cinder/96000/true",
+      "pcm": "4a5fd04534d546f0b9d30660eecb7c06411a0f59ccd0fa70f10ace4f399fdd76",
+      "meters": "0030f2aafe9be9bc9493b3dc1fe9f16945f34962e59ed01f5e02412afdac5df3"
+    },
+    {
+      "id": "undertow/44100/false",
+      "pcm": "544f28bbac005b631976009f3f9fc43f27cd4d4061a199a3de1545fc9cbf13fd",
+      "meters": "3d6bc059655a2d82aa30d9746094ab92cd1f1a10e740d98ed4f5c7083f03b2a7"
+    },
+    {
+      "id": "undertow/44100/true",
+      "pcm": "b68cf869fa6da8622d9c3f4fba6f1a89833875825933223d50a46a6a6ca6c2f3",
+      "meters": "428b820c21ca11e8498676fbfc27965f58d2afa3d23f0e6a111689c776cea580"
+    },
+    {
+      "id": "undertow/48000/false",
+      "pcm": "0f9d5ca50b7c7ecda402c2868c792df9659073656523d378d8c12d8a1aa0b319",
+      "meters": "3d6bc059655a2d82aa30d9746094ab92cd1f1a10e740d98ed4f5c7083f03b2a7"
+    },
+    {
+      "id": "undertow/48000/true",
+      "pcm": "a5eb92db0045ecc35bffe27545c134f218509883888b781b857d8095f562fa9b",
+      "meters": "428b820c21ca11e8498676fbfc27965f58d2afa3d23f0e6a111689c776cea580"
+    },
+    {
+      "id": "undertow/96000/false",
+      "pcm": "bb6c73a8793532a3f0107afd41eb10995f3eb1b29cd77dd671e7ef65f414a399",
+      "meters": "3d6bc059655a2d82aa30d9746094ab92cd1f1a10e740d98ed4f5c7083f03b2a7"
+    },
+    {
+      "id": "undertow/96000/true",
+      "pcm": "05be7b96fca8f2479e49421f0b68d376647cd63e00f175b5d5c6da0355f2e7cc",
+      "meters": "428b820c21ca11e8498676fbfc27965f58d2afa3d23f0e6a111689c776cea580"
+    },
+    {
+      "id": "parallax/44100/false",
+      "pcm": "51cebd50a91e72c69bda90b6efcdef54674cf7e6266d450520356652c047b214",
+      "meters": "59079c55ef95ec3cf4295aa76094cf06f29c9d5c4d8793a76fb1eceb945dc274"
+    },
+    {
+      "id": "parallax/44100/true",
+      "pcm": "489543556e468da9e63d07e47400378913049cb9df16bb08c1203681b3dd9b15",
+      "meters": "9b48bdd2d771804e78acadef289a17518a5a7772376a96fa6dd69549da9828b9"
+    },
+    {
+      "id": "parallax/48000/false",
+      "pcm": "51cebd50a91e72c69bda90b6efcdef54674cf7e6266d450520356652c047b214",
+      "meters": "59079c55ef95ec3cf4295aa76094cf06f29c9d5c4d8793a76fb1eceb945dc274"
+    },
+    {
+      "id": "parallax/48000/true",
+      "pcm": "489543556e468da9e63d07e47400378913049cb9df16bb08c1203681b3dd9b15",
+      "meters": "9b48bdd2d771804e78acadef289a17518a5a7772376a96fa6dd69549da9828b9"
+    },
+    {
+      "id": "parallax/96000/false",
+      "pcm": "51cebd50a91e72c69bda90b6efcdef54674cf7e6266d450520356652c047b214",
+      "meters": "59079c55ef95ec3cf4295aa76094cf06f29c9d5c4d8793a76fb1eceb945dc274"
+    },
+    {
+      "id": "parallax/96000/true",
+      "pcm": "489543556e468da9e63d07e47400378913049cb9df16bb08c1203681b3dd9b15",
+      "meters": "9b48bdd2d771804e78acadef289a17518a5a7772376a96fa6dd69549da9828b9"
+    },
+    {
+      "id": "vestige/44100/false",
+      "pcm": "83cfd81325a67f8acf2f730bcff324467901ead2d47bee866f9f48bd2cfa8ec9",
+      "meters": "2e8fec53b1e02b23d417160a0ef1ae010d6d5363481d667e507ea543e120047c"
+    },
+    {
+      "id": "vestige/44100/true",
+      "pcm": "bdf950dd92dca6d7c46994811332f83471d9a129f7b80534ed97a4c1210b6e09",
+      "meters": "747a62c85138163621b4d7fe4d2419eb42efaf87f854e9bb8efd859f11b6bb26"
+    },
+    {
+      "id": "vestige/48000/false",
+      "pcm": "7534c073af6833fd11bab13b2dca16904f3a5bcaba788a6398a634dcc56cb417",
+      "meters": "2e8fec53b1e02b23d417160a0ef1ae010d6d5363481d667e507ea543e120047c"
+    },
+    {
+      "id": "vestige/48000/true",
+      "pcm": "9e89e6491b7da3864db6bcddc3ff523e10459cb3c59bce52e398c7789b05517c",
+      "meters": "747a62c85138163621b4d7fe4d2419eb42efaf87f854e9bb8efd859f11b6bb26"
+    },
+    {
+      "id": "vestige/96000/false",
+      "pcm": "fd112e336f9603ea571e635b7662426f8fff21801148c7abfa79f164183383a5",
+      "meters": "2e8fec53b1e02b23d417160a0ef1ae010d6d5363481d667e507ea543e120047c"
+    },
+    {
+      "id": "vestige/96000/true",
+      "pcm": "803c758a745444d8e32ffbec923b92c2bbeb81bd4bee7b1d4ebb7ff8b9b3d8da",
+      "meters": "747a62c85138163621b4d7fe4d2419eb42efaf87f854e9bb8efd859f11b6bb26"
+    },
+    {
+      "id": "halo/44100/false",
+      "pcm": "506a95b5996bb6de0127ee47296650278661d6bb54d1f78157b65e5a0974dfc0",
+      "meters": "efb0626402c10d9fb4f21264182de02ccb103db59542a74db7e6da9d08903dbc"
+    },
+    {
+      "id": "halo/44100/true",
+      "pcm": "b07fb82d0a492cfcb05e908b0dee0b76d81c9f8b592309b4976aeb962f1b68e5",
+      "meters": "337af6a5febee91a7b63c256163d55e45a16b71bdccefd3c200a3353ba3ea1d1"
+    },
+    {
+      "id": "halo/48000/false",
+      "pcm": "75d8750dbc1f6334b28b5b715c3c34ce08eacc6abce89ca17bebf7113773ceba",
+      "meters": "efb0626402c10d9fb4f21264182de02ccb103db59542a74db7e6da9d08903dbc"
+    },
+    {
+      "id": "halo/48000/true",
+      "pcm": "39d2b2b09cb8821d72c7f57fc9bf299e97f102720dd0814a78ae3250f5b89eec",
+      "meters": "337af6a5febee91a7b63c256163d55e45a16b71bdccefd3c200a3353ba3ea1d1"
+    },
+    {
+      "id": "halo/96000/false",
+      "pcm": "fd58c2d1f8891bfdecaee086b5e25bb60b903d05d2eb1d7f4788808c8f43dd45",
+      "meters": "efb0626402c10d9fb4f21264182de02ccb103db59542a74db7e6da9d08903dbc"
+    },
+    {
+      "id": "halo/96000/true",
+      "pcm": "2e0ed2926fe9357483d8fb4f638c22fb2736032cfd24071bc266639097a9aa6d",
+      "meters": "337af6a5febee91a7b63c256163d55e45a16b71bdccefd3c200a3353ba3ea1d1"
+    },
+    {
+      "id": "tremor/44100/false",
+      "pcm": "33d47dd39f960e066943f2286820adaffc475839a5a47de81e00554145b55c1a",
+      "meters": "e916c57df953fb79436fc44a357af4f956cbbc96d85b708f73f3dd803a8a5a63"
+    },
+    {
+      "id": "tremor/44100/true",
+      "pcm": "d681e5a063a874682737568e01f6cfcb1eb798dd798e31b9cb1b1dd8cb732ada",
+      "meters": "18872296ee8f99e398c2bdb24d49deb86c29a2343e9952c94ea2558cf542cb59"
+    },
+    {
+      "id": "tremor/48000/false",
+      "pcm": "f11bd3193a63e7c04c7379a3604977fd247a999a8f7d8bdd0b662e508e9b44e5",
+      "meters": "e916c57df953fb79436fc44a357af4f956cbbc96d85b708f73f3dd803a8a5a63"
+    },
+    {
+      "id": "tremor/48000/true",
+      "pcm": "66c31cff95ed477c320ce199c3593d35aba66ad0434b8763335a5c5a2ee9595d",
+      "meters": "18872296ee8f99e398c2bdb24d49deb86c29a2343e9952c94ea2558cf542cb59"
+    },
+    {
+      "id": "tremor/96000/false",
+      "pcm": "1121a6255f16c1ecf58922507cbcd3fb4636125540e4769c27f0a0de234c365e",
+      "meters": "e916c57df953fb79436fc44a357af4f956cbbc96d85b708f73f3dd803a8a5a63"
+    },
+    {
+      "id": "tremor/96000/true",
+      "pcm": "3ae838f2dea2e06215c6d5840d30263c9ae5dcbf41f2605e71203fa0f94aa52c",
+      "meters": "18872296ee8f99e398c2bdb24d49deb86c29a2343e9952c94ea2558cf542cb59"
+    },
+    {
+      "id": "broiler/44100/false",
+      "pcm": "79f10aac1643abb68a7721f1b80fe1c026b671e57f18cfa9af6d96dcbc413696",
+      "meters": "bdc4550acd71420777e4b9dd26962b8b90dc1618a29a2648b296127e2c52a0e4"
+    },
+    {
+      "id": "broiler/44100/true",
+      "pcm": "9c446745809f97e1b410b6ed3bd06f8b2a10c7ff38fbd3ca412f5831e46ffd4d",
+      "meters": "adc9b9843906978ec01678e16a4b9ea49b7979b92d4e8cd22da69d4188fa3a57"
+    },
+    {
+      "id": "broiler/48000/false",
+      "pcm": "61531d30aee85f698f71ccf6bcdeba7d91d2025feeeb6d83e06712ecca06b2d3",
+      "meters": "ed15e7e93dee0b768f28b5f48bc65e8eba1ceabd0196d5db688f8010684e01c7"
+    },
+    {
+      "id": "broiler/48000/true",
+      "pcm": "cd3fda9baac012fb0d35a6dafc3c272a2c8539cc524a1777a60f970a8ecbb8f8",
+      "meters": "bc16fe833df75bfa386146590e3db13bf81f3d5d20577bac9e3745d0f5f64901"
+    },
+    {
+      "id": "broiler/96000/false",
+      "pcm": "4916d2cf3f7dffc610ab0cdbbe2e735cc2eeeb6798073fe4ff3229b381f768da",
+      "meters": "f34a4b99f15c70565c31f3435d07c9444af7c30561c674d8240f325cc3247a2f"
+    },
+    {
+      "id": "broiler/96000/true",
+      "pcm": "a555434caf994f26f4f4ee4b2973ab0d318fe1eb6d2055c83bbead91a85d93a9",
+      "meters": "6d9426df77db52219ed6c8433e127d57075b285fa5b19c75b1f78ce562139e47"
+    },
+    {
+      "id": "broiler/model/clean-bass",
+      "pcm": "05bbe882e24bfbb72867feebe53655e142e05477863e4d1f1c27172a08b9e97f",
+      "meters": "8128590bc2f763f661ecaca6f257c638a1c9c865d170da6b08d1af86beec975c"
+    },
+    {
+      "id": "broiler/model/flip-top",
+      "pcm": "2a00845259d1d3897843eed288ca4d5c31ea5409dd31995f3d74d6e27e1ca657",
+      "meters": "3a612f79e728596626d21a42ce808aac5ebd52c59160d49f5c714645ef106368"
+    },
+    {
+      "id": "broiler/model/valve-stack",
+      "pcm": "3d8725bbddae3358bffa134de3a7186cb90de2e8de27250d1149e972320950b9",
+      "meters": "094eb8d8189d4e4362b01553f75485122b9b3d74d62536ae85bd6ac76e30bd97"
+    },
+    {
+      "id": "broiler/model/modern-grind",
+      "pcm": "3c1d6530ec2f5943e3324d7ea759cb755639464df6164149166e5a86f242e1be",
+      "meters": "236e605c5efe987ad955238d3a76803e1aba6e336057ba66c66cb2334fb3598d"
+    },
+    {
+      "id": "broiler/model/doom-fuzz",
+      "pcm": "af8a07cb952945b2abfe9a8d8967d566394899de7c2abe277e2a66d05e095d36",
+      "meters": "30ff47474f764e1e74501c0b38f6cf48a1755d56aaa2602b3aea94051f73b31c"
+    },
+    {
+      "id": "broiler/model/american-clean",
+      "pcm": "68f64b58c1aa12b377564eedb9c84ba7d0bb39ff62aec3a141bfee755ad8c358",
+      "meters": "b8db185bdcc38e09422401dbe871970c86b6e40ca63df7e1a78d39f440caa28e"
+    },
+    {
+      "id": "broiler/model/british-crunch",
+      "pcm": "aa673a502e711cbccfc176d47b15c34ccc4ecff16748448aaa623bd248ffbe26",
+      "meters": "a7662c6dcce9c1f476f15ad7a3cb74dd49299e41c7d116f223c93b10a3761156"
+    },
+    {
+      "id": "broiler/model/high-gain",
+      "pcm": "3903bd3be090644a33795ab0bf5e3a37b54067f646024c98ff98afb093b57247",
+      "meters": "494b7ad01e9e53329e8f0edf04ae4807fed1ba52033d2eca6255c3395fd65eae"
+    },
+    {
+      "id": "broiler/model/portaflex-64",
+      "pcm": "806b658eb1e3751506a3f2c5ca931149cb75b23edd12d64e6b5f38bf96b93b38",
+      "meters": "6e9f8d984277fe0534395fb3f6e8495008f04dd7c96b474def5da911461a3a03"
+    },
+    {
+      "id": "broiler/model/svt-69",
+      "pcm": "6b61862e89ec208dc7fcf69c67b92ddfd4d397693881e988ab0b707b5b8a9522",
+      "meters": "bec1833708606aaa00d9906ca684e9a7d12fbb2b3c078e1bd155bab7cd292a88"
+    },
+    {
+      "id": "broiler/model/v4b-71",
+      "pcm": "37e613b166135df85814540b0a850052cf0ba3d0d7248539523ba2c291841669",
+      "meters": "62b18d6e9f746ab57ee22f3c18a8499a108b2ca12bfa44c7ea10ddfd882cb2b5"
+    },
+    {
+      "id": "broiler/model/svt-pro",
+      "pcm": "1ce85b4c2659c56057427246fe516fa7204483607e71257c1643a3361acaf6e8",
+      "meters": "ae5e2fe61db0f94dbec567710b2366e9abde797a407fd6845a8318aaf9dc09da"
+    },
+    {
+      "id": "broiler/model/tweed-55",
+      "pcm": "569d5b4d04c74b846b7b03147d037d853aede2aadb432f4e1412d09a5c792354",
+      "meters": "d62909e47010c2103204f8b93ea1c0749647063c9657c41f1881e159d2881077"
+    },
+    {
+      "id": "broiler/model/black-panel-65",
+      "pcm": "a50f7c63634341866c8874f1c7516ef4ad3d3b7bbefac745d99f6b031f5ef90f",
+      "meters": "cd7026f77487afb70ba308ecb329e9fe6138a6dc8e7577d7f1e556c4e7c90d25"
+    },
+    {
+      "id": "broiler/model/copper-30",
+      "pcm": "18b726fc16e0f2d634f53d191a8d7e75e6b397076e92aa203b0718d3bf91daeb",
+      "meters": "56dc55468020bee4c4792b30a90bbc53e4a7333ff652ccd624f9728efe6ac014"
+    },
+    {
+      "id": "broiler/model/royal-68",
+      "pcm": "95f535361f142f83767a90757f5257e2929b59d89aad126424dcb1f250052306",
+      "meters": "329ed9d010689b72fe31f52d4cebb7a46b94e2677992f20c56711b5e3de71f29"
+    },
+    {
+      "id": "broiler/model/iron-800",
+      "pcm": "bdbd02e14c8c065dc2d6cbfaad679094c679af00a2fb780067ee16d6daa1a938",
+      "meters": "4b03da17b50f5bd7d96836160be3f8acc89c0f28203659f4d2df1f8d8f3a749e"
+    },
+    {
+      "id": "broiler/model/dual-red-92",
+      "pcm": "796478adfa7bb9bf27e2bdd8e7eefb0439e90a303bbf599c5527a60fb3e0ef78",
+      "meters": "d72c735c0c005d0a7d551280aa86b84ac807f741479ee1f09ead1aeb07e41901"
+    },
+    {
+      "id": "broiler/model/cali-iv",
+      "pcm": "5e4b51e0dd80f3c5661e5972e83f0dda235fe3e1f9589ad3e01718e31b7576e6",
+      "meters": "5129509497a6a322893ca2978f2de64ff280bef6bd13786fc1ab7dc72f8bbf45"
+    },
+    {
+      "id": "broiler/model/fifty-one",
+      "pcm": "42f65d13b0d2f53e8e135ce636270b78a5368e98fa6515301ba0b4ec61806f2a",
+      "meters": "ab63ff5f70cd81440190d7e34b7690b568d32fce4893be4af611cf2ee49a0e35"
+    },
+    {
+      "id": "broiler/model/citrus-verb",
+      "pcm": "bc3a71e504375e8c95c9494c990c8abe58409e241f7281c28c3984f392b5cee7",
+      "meters": "8554623bcf36a91d0d5125096c92441902265643609ad1ca1913bd960e6e66bb"
+    },
+    {
+      "id": "broiler/model/jazz-120",
+      "pcm": "bf9d46cb1eebd31637b706db990442cc36984ede144d997f6e6aa48626b3e337",
+      "meters": "c049e64d6f85b8510acae65f95163766a1bd4abd4dfcc9dc141a8fdc45740a1e"
+    },
+    {
+      "id": "glaze/44100/false",
+      "pcm": "86d4bc68bff0e7697c44e6534acd6904fb2b4708cecd962490c71293909d9a7a",
+      "meters": "d7c87f537a5680668c6eb1c882f04027c5e9c5dfbb8fa1343a1bbcde1d28467f"
+    },
+    {
+      "id": "glaze/44100/true",
+      "pcm": "fcfb8f162576f1d2649f8dd416d8aaddb994364ce259cdd94738f467d01f82a0",
+      "meters": "ebcc0422b021f4e2a4eca53899970b4da44feda80791bb4a18716991b048f632"
+    },
+    {
+      "id": "glaze/48000/false",
+      "pcm": "a7cafa6cde37634dc6d4565aaf4bb484b6572f122346f8136e76ef2f472e7e04",
+      "meters": "250d21d6ae766bde12869a4af6daf90eb8ddf0f6a4c9c207225a128dbb4e1dba"
+    },
+    {
+      "id": "glaze/48000/true",
+      "pcm": "0b53d136ce1aa71fdd838bd94af438e6e9a4b6bfd69cdfc6848c4fe3ba3d3641",
+      "meters": "3461e8640c335e1deaecded28fb64fa3384c8079f0cb2463d674d1d99c212773"
+    },
+    {
+      "id": "glaze/96000/false",
+      "pcm": "7de2de4b520a48e79c32028ee3bfe306bd2d85260ba7fdef22d1842678be0288",
+      "meters": "c2f9b2273447d636ff9703f2cc3d0475abf9b7ca307e85c7726f76d06fa15ebc"
+    },
+    {
+      "id": "glaze/96000/true",
+      "pcm": "53e9e4aa808c5e8ae41e4a8ba3346ea10e675b1b380688365c4c40b1bcce9b3d",
+      "meters": "7ea7f96d7df7f6992a302ecb9b5df7cb97eed07a725d03f81ff7afa9f22fdeb3"
+    },
+    {
+      "id": "scales/44100/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "865c80069237ac82f86159ab33130a58dbbeca841fa8239af6321430985e8af4"
+    },
+    {
+      "id": "scales/44100/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "c3f584fdd64bb27b102adbd54907c7907b39484f3a6d85b1340e7022d462de47"
+    },
+    {
+      "id": "scales/48000/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "763b82e6042aa14b518037b0f83ae8a3a172cddb56a943f7527381706bcd5fa5"
+    },
+    {
+      "id": "scales/48000/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "f93f912a41a1d59cfe39c40e7de6973db4190a9e59a007ae43f10f6ecc0d4a99"
+    },
+    {
+      "id": "scales/96000/false",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "e234fbb8eb2e864f9d7f3a6a3bed39ac5cf8a9208c195765b5cbc9d31c478240"
+    },
+    {
+      "id": "scales/96000/true",
+      "pcm": "2823406854dbc1cf7b034d53425e333b5018f6e250e0c1bc54550355fa4e1485",
+      "meters": "a87cdd8ac3b3c1d322993e8bee2a63ece22ef70f13ed6a5c9a6e22bdc3148f76"
+    },
+    {
+      "id": "strainer/44100/false",
+      "pcm": "1d373fa9f0a8c631afde634b9cd32f2e9b0971931f20063f23c5db2a9643b143",
+      "meters": "6ebbf25b15d5f69a324b52298c51576bff0a24b6358b46e0341e06c92de7dcdb"
+    },
+    {
+      "id": "strainer/44100/true",
+      "pcm": "a0b5064e91fd7615e8821d2219a942cdb30754fd448bc22c3b9dd85df2f2627b",
+      "meters": "389fd9c746201939fe5ab23ca803740689620d44cc43ed0e57e2d0f01bcb824f"
+    },
+    {
+      "id": "strainer/48000/false",
+      "pcm": "c35bc293e5a4cd1a026c23277c921f1d911a8b74e9680f4321bdfde9a6a48a2c",
+      "meters": "76f25cc03ad831a0cf5cb8763e24ab515688dc07d18ddc9a5d5303367c99a8ae"
+    },
+    {
+      "id": "strainer/48000/true",
+      "pcm": "a50d58b3c0a4209509e9e872aba5878e76d0f05c5eb2939946802a8374b568b3",
+      "meters": "7cc2fbbc906cdba1561c32391b4ec9334c7e01928d86e34db65228637d370fb0"
+    },
+    {
+      "id": "strainer/96000/false",
+      "pcm": "40069658819e4f293bfe0b5042646ae6d859d8cefafebbb096044037eb7766fb",
+      "meters": "7be82b06db3a3fe5091e927a02fd9cbd41738cebf635d7687a9946207a96960f"
+    },
+    {
+      "id": "strainer/96000/true",
+      "pcm": "704eb015a4f743a33945c59814079ba7ba3040f50de708662089058f7a2fbdb3",
+      "meters": "a2861f90991bc6d22effd49bc691e936153ddc69b3fdb4f69afc08500987d2a6"
+    },
+    {
+      "id": "strainer/model/clean",
+      "pcm": "c2203273ffea1a6c9c607ca6736270b5ec421dcd8797997ce17a755814e2a2b7",
+      "meters": "f0e4e74499c224517b3f4bdde11f92457323efd01dca438aed7074bd83e80f78"
+    },
+    {
+      "id": "strainer/model/ladder",
+      "pcm": "0e010ccebcbb7887ae10aca301653f583edf99eb3b74057506dca4461704829d",
+      "meters": "a31b60ca974dc3126b7e56c50f478a9bc38dab2aff2e21f824de9f14544da8af"
+    },
+    {
+      "id": "strainer/model/diode",
+      "pcm": "24d8b8dedfc8e96b25ab2d352100227cc39e0f7c825153ee1a94d11543e5017f",
+      "meters": "a7f6a84d988549d802860ae31257f1926817b6766047122574ef132e03ce2153"
+    },
+    {
+      "id": "strainer/model/comb",
+      "pcm": "80a59ae35cc49e985bad4cca9c15c6911fc80c9cb46fd0d24faba2f2bbad766a",
+      "meters": "e0266228d0d89e14069d10b9bbdc827c36047dbe838cc3ccb7e5926c3823e1ec"
+    },
+    {
+      "id": "swirl/44100/false",
+      "pcm": "45f145cfa9fe266b3f3ddc37f251af8f9fe31945d8c2950ce25be5d378c8f994",
+      "meters": "031ab0addce4b0818a28f4bc0619fc9f59d90c1c6fde92c171034ea71bd49541"
+    },
+    {
+      "id": "swirl/44100/true",
+      "pcm": "da84677acea2441f5a269f29e75ce85e98d07c30a00fc6de37e19be12eb8d803",
+      "meters": "9886863b63190fd711897806c7fcfb605742178e64f4f90b7cb064208830742f"
+    },
+    {
+      "id": "swirl/48000/false",
+      "pcm": "672b5bd544dda655efe24ba4011a5db87794610edc1cff4fc1e45d3ed4052c9f",
+      "meters": "231e86b4a00f92f22486cb44af1806fbed050f7a558ecd580e185fbe03313251"
+    },
+    {
+      "id": "swirl/48000/true",
+      "pcm": "c045d76cf5178a91e80d694f3716b28be40019c8c5e0c38730515e1523af3fbe",
+      "meters": "9aa15934c00ce1473a6cd4141f22a4feda7505db7b005b7f83da527a3651d497"
+    },
+    {
+      "id": "swirl/96000/false",
+      "pcm": "f6d34aa1f4564ba9012f009669a02f29c25e6f9b1629e14d58fa95d14967c67a",
+      "meters": "a7bcbc0f05e25d6457f26dade3b912e400facad95864ec395c4cc13e5e30ac9b"
+    },
+    {
+      "id": "swirl/96000/true",
+      "pcm": "bc7fc7195c6e3d01a56a6eb4c9b82144ef00cbcf4c0591c562f761d3a99b0d6a",
+      "meters": "c13b5bcf90a69b1bdf7d7b53cc2395db0278a312ecb8b7f62f0d3d7d374af6bf"
+    },
+    {
+      "id": "crumble/44100/false",
+      "pcm": "71ef758d2c57cef12a3913f9ed9146e1305549a1c6f58fe8bd8d5bf5079e1318",
+      "meters": "49c24433dd213b5fdf04ff8ab5cb4337fb3eb9c5d349aeb6cee6acf988074bcc"
+    },
+    {
+      "id": "crumble/44100/true",
+      "pcm": "f4d7b37ca313cc5a958862ced41f06097b73e8c8c997e0dab63d04941e8cf1c8",
+      "meters": "f4c464537bf26cf48c7aef092650794b3efcacc5e6d02f6276b5e9eb7426dcb9"
+    },
+    {
+      "id": "crumble/48000/false",
+      "pcm": "60ea36915d9394d0cf3bfa3b0ff28768daff5d0936db229339e4fd18bdfc33d3",
+      "meters": "10c28c4d56038d7f511c012493d5f30e5aa9f36752506d5a39e047639c230c05"
+    },
+    {
+      "id": "crumble/48000/true",
+      "pcm": "38ae7d3409b9075a73c6e08cd624ec8189572a38d61c22ba5e66b0862484e765",
+      "meters": "29b828c1d03cf9d2ac7e1828ec0327728498e3b6c2c4c83498e9abb9f91a36da"
+    },
+    {
+      "id": "crumble/96000/false",
+      "pcm": "87532ecf3db330cffafff99ef64d47d053f147555e00ee41f67d23ba585f94d1",
+      "meters": "e2e8abb27bd08fb8b766145452e3f049db2852ab3c44a184bf133cf35f00a1cf"
+    },
+    {
+      "id": "crumble/96000/true",
+      "pcm": "6936a5ea22a11bd9ab4bd6e037c9b41758260b264dd6f20ae7909f1fa60e9d33",
+      "meters": "e8214e18a3bbf3ed39407b68e92c3f7a3392dab18e8a002d0b26452842408805"
+    },
+    {
+      "id": "saute/44100/false",
+      "pcm": "0a11bb2844ddbd8e14ccbc2204427fc4462c5e826fcd720668c6b280a9fa12fb",
+      "meters": "0a4051963b86e448e57942caf4e8fa150af0b6fc3295e23b8088ac2d0714385a"
+    },
+    {
+      "id": "saute/44100/true",
+      "pcm": "a9b70422e6caedce11d043fa379489e06fac747f057096824230d975e63b2647",
+      "meters": "0d6f9f9f519e48a463ca0c2286d1681877f4b9b669176bf3766efee7e6095af8"
+    },
+    {
+      "id": "saute/48000/false",
+      "pcm": "68de1e642b5852d9b89d9606db71d312e5241239228937276544f192c44cb9c5",
+      "meters": "3a427a35f71a05e11f7299a98010cac59c904254d4e541a9a30280bc166d8be2"
+    },
+    {
+      "id": "saute/48000/true",
+      "pcm": "2f1783d73bda1421282bd4cde5e7f6386e235cddc5e2d8b2bea42863630347f1",
+      "meters": "80de0d124f2e14dd7158b02dc020be2d0b7f78538d91e6df41ca7419057419b9"
+    },
+    {
+      "id": "saute/96000/false",
+      "pcm": "1032d5284e4823ab5fb2587239ebecc36df82b88e7991e35d02ba5239a508621",
+      "meters": "0265fd5c75b7ec4d9b20f47023aada76e346a9dbfd0488d51effb0129b040f96"
+    },
+    {
+      "id": "saute/96000/true",
+      "pcm": "3109c67ebab44fb417eabe656feed73087bf20a90a920b153539ca872b9329aa",
+      "meters": "cfb0193f105ffb32a2443ecffa98fa648e8177b25cbb8d458ed4efc0b0c4267c"
+    },
+    {
+      "id": "saute/model/iron-73",
+      "pcm": "c263cbcaaafd18a9e4ed7e98182d46e9a5387ac76e7c46707165fea0b845a526",
+      "meters": "4d29bcd9999bc3f483a68573b2a5a97e7eecf4db2e0c109c309b30ba0f960079"
+    },
+    {
+      "id": "saute/model/clean",
+      "pcm": "b6b6078dda26400b46767276a14ee8834d8b4dae11e2becae93ee70730dcf23e",
+      "meters": "74790f098806ad3c185712d42f312cff933bcef2fd12bd31f8faa2bd517bdf03"
+    },
+    {
+      "id": "saute/model/punch-312",
+      "pcm": "bc0f36a613d82011ff839ea02a3eb0fca2b59892404b86c1c1c64f3e83a6fbeb",
+      "meters": "eab962e2ba9e98f663b14f61b69eaed7aa390cfcd43a1a1e8a2e646dc358d906"
+    },
+    {
+      "id": "saute/model/console-4k",
+      "pcm": "1947b118831f0acdf339702447f967847942d53aaff87865c3711eb3b87c123e",
+      "meters": "4746835dc1ce3e3462fef2798876d82cf5dbe7867466918f540d406bd7d3d1ad"
+    },
+    {
+      "id": "saute/model/super-9k",
+      "pcm": "dc782cc3ecc7b4b17ba074b9a666fb61aeff69e06fe801598ec9e28112dcda03",
+      "meters": "3a2b75a1f96355525f0ff8fd98869e06099e038a919a3f9be35fde9fdee6bcf3"
+    },
+    {
+      "id": "saute/model/tube-610",
+      "pcm": "6971625584ec0697ce99888e52b048aa7cb5948dc410140ffa0d6a4055e6a3dd",
+      "meters": "8ad25028ae6e2fb32a0c54445f00b04397f6e5ca624dacda2696efed684003c9"
+    },
+    {
+      "id": "saute/model/redd-47",
+      "pcm": "b74f329fe1f5a527194177a02e8317ee8d1e31f570419f4e02b81dd278309cff",
+      "meters": "42994a8f86f524271f0f548f816e653b49155e1edfc149474f5411571b831c31"
+    },
+    {
+      "id": "saute/model/valve-72",
+      "pcm": "490ee6f7e8a43e8a500ef0aa627e92c2b138234542642883a9a9d5e3bf435170",
+      "meters": "c4644a98bfad9ee740a4a4d98e1a933c9c8323e90a0dc10185c924c61c4218e4"
+    },
+    {
+      "id": "saute/model/helios-69",
+      "pcm": "e99456347ff473377101dcb506981dd3d620f349e65d396dc1308ff6728a508b",
+      "meters": "1632ffc5eafad920456ea754dca33abb176ebb9f25f7b71741daec0d0f189488"
+    },
+    {
+      "id": "saute/model/trident-a",
+      "pcm": "0fb025b1246427a502b983b50a045f8ce2ac070b8c0ef63955f0bb9ce6118433",
+      "meters": "3214faddcb075137b3b17c87b90ce67fe30084e5c31787f9302635b27c156814"
+    },
+    {
+      "id": "saute/model/isa-110",
+      "pcm": "8cbf2a3edd8026d98e6ae329c73ac47d8b323777c42554ca5983a83e3412fcb0",
+      "meters": "cc2768c4c81b65957339504e7c573381277ef270398760d9303023965dcd2616"
+    },
+    {
+      "id": "saute/model/avalon-737",
+      "pcm": "bcc20936976ee07577e3f4db3320fc8445bf3430083b4b99f002e69900370524",
+      "meters": "af65b8b2c9588c49999a40a7762d2e353368a1d8db73f8012cf0f129e7534012"
+    },
+    {
+      "id": "saute/model/tg-2",
+      "pcm": "6e5e8f93cd5436336d0c991398c212b3e720971b02c593d66caa8d9d6af4fd10",
+      "meters": "23e3dfae72e7244070c86bf43c60e3bba0c6cdbbce2e3a5e3c97a3c373cc685e"
+    },
+    {
+      "id": "preserve/44100/false",
+      "pcm": "bc92559223df45dd68b605179ee531fe331353492915d7551ec973d94e1bd44f",
+      "meters": "5a8e332a41c161c354ab112e6faf6f15bb3aba570eebfe11d8a0bceb0a8a25c0"
+    },
+    {
+      "id": "preserve/44100/true",
+      "pcm": "cfbda8b079b98f0a7515ace826fcaf307d56ee1e594362bd43a421fe0fc1c11a",
+      "meters": "61ba45f1ad17ee623dd92869061a4c21fbcc72ff4835b7c44e121a7491fb9fb2"
+    },
+    {
+      "id": "preserve/48000/false",
+      "pcm": "daa043fa93bab1c15cc5dadb3435f96a326d4bf534b67edf7d4d46eac759f1bf",
+      "meters": "a04efa055b62f45271f8c2fde596f5d0e8b37214f30b821f093bfa81b6041ecb"
+    },
+    {
+      "id": "preserve/48000/true",
+      "pcm": "cac852d405712a208f39b417a5baebb09244304ffc16da7f73720b323da17712",
+      "meters": "85974021d0437288c4e2a2e8c5deecfe5e20aecb6b56637924c78c63c39b64c9"
+    },
+    {
+      "id": "preserve/96000/false",
+      "pcm": "1265f17f4504a99c647393daf8a5b3c249b3acfc7c9979388f53257ca571b3ec",
+      "meters": "d6897a3df41099700c4cd71e8a61f4f39e30140910a4c7d724869cb46fe745f3"
+    },
+    {
+      "id": "preserve/96000/true",
+      "pcm": "13b5dbabd89a34511ad334cc263bd756a21a54eb642b92c3dce8c8c0ebec62ad",
+      "meters": "cc755628f6b1d338ca5e2f5ae7e62edbb5be2f645406d3119804b458d2828942"
+    },
+    {
+      "id": "preserve/model/studio",
+      "pcm": "4bf426d3ceb2b7be0b916ad396036c970499d041bbc7dbe331bd7db89bf8c89b",
+      "meters": "705933a49e690b3509bc716a271b44ee679ba91a25309905b45f9f061cd6cea3"
+    },
+    {
+      "id": "preserve/model/valve",
+      "pcm": "ca182ed6e4297c194c2d6d05376300bf11d175d0ccbd451f2a20c42d5cd37312",
+      "meters": "efe957f68a745e95a5fb8aa3245f4415ef5e360957599d9810c40de9c245987f"
+    },
+    {
+      "id": "preserve/model/home",
+      "pcm": "cdae46d205988e9d5f757c115e252fbd023bc00149c752f76ea50a200edb3fcc",
+      "meters": "28b80018c4b7937ccc3d92d0111f159c86159cc38565a69e78d7345015e4abf8"
+    },
+    {
+      "id": "preserve/model/cassette",
+      "pcm": "b3827b4e4cc760ae4c06d630981efb2080894355fdba5b5fa6688c0325617750",
+      "meters": "c837990ba9fc41c7397677e4d3215b37b21fb0503f5d8279dbe5aec2b91b685f"
+    },
+    {
+      "id": "tinpan/44100/false",
+      "pcm": "7475c6b7c6a70b978d53d6569eec00773be1b6bc494b9465e120bb83dcb4ba7f",
+      "meters": "98915973516db8844a6f38a2af22e8c3674c79dea9d1b61492591d9ef75ec982"
+    },
+    {
+      "id": "tinpan/44100/true",
+      "pcm": "60e407a25cf6d343f59d625bb9264668df25824a4b73cd568c70e776f116a8b6",
+      "meters": "00cad29bd1fcc4a4c2e6131b869dce34715c6b7f5344ace6bf12378b20520397"
+    },
+    {
+      "id": "tinpan/48000/false",
+      "pcm": "e1c1d8f59bde35b110df4b6b5b65c54295ef90fd155e6486ecfe3b707e949de0",
+      "meters": "9cc7cce77afe30237233a1488ed8b93f0d6caf0eebd666625183b173d5e17466"
+    },
+    {
+      "id": "tinpan/48000/true",
+      "pcm": "586d77db23a5e04ca9627582c83b6860119726d4b50b2193e016720c6aa686eb",
+      "meters": "59cfac550a5173997504b9dc308db7b1e049d036cbc8213a2c690afe26a4a573"
+    },
+    {
+      "id": "tinpan/96000/false",
+      "pcm": "c911996d61d59fdae823a6809dea271761039e3017d433300f83adce94c4b7ce",
+      "meters": "1272242394009f56f266b4aaf2de0f60f5051a368b1e1be860432ca767572e1e"
+    },
+    {
+      "id": "tinpan/96000/true",
+      "pcm": "791fa4a5374d34f03845bb0880d602e5eb173a95e62e25aedf8baf477e070396",
+      "meters": "23e75a92e303f242f67652c963d8f843e7925b94c8a4d6da86b6b579777db1b3"
+    },
+    {
+      "id": "tinpan/model/rotary-50",
+      "pcm": "bfc1697e90b716fb0cd061b57f586e46343736ef9c3c2da6f0f4ee4a84e752c1",
+      "meters": "d583f96cfd2de5ac8f85b7f28cdb173475fc463f482e9098ee677dbc71a4c052"
+    },
+    {
+      "id": "tinpan/model/carbon-30",
+      "pcm": "0ad8086dc1011da390463fa8ddb8e74afa87d5a821a2849b4e7d181ad22aaf51",
+      "meters": "02ce14f3046c4f2f420e64bfd31d385e3288a4e30f2bb586849430c8586d5cd8"
+    },
+    {
+      "id": "tinpan/model/pushbutton-80",
+      "pcm": "6d0f5f92772b3d6e2b99d63c5c96ea969a8f8bfa06d067d4d0d0ec0988e6c024",
+      "meters": "36a6062f621af62fc2ddd2c99f5657a557f22aa884642fcd04f38336e0ce21d1"
+    },
+    {
+      "id": "tinpan/model/payphone",
+      "pcm": "cf031a36769753f3e04ce20a088a737da21429d801a95171caf6becc39458dac",
+      "meters": "c15b04d3bc948b7e6192a4ba57ba921008a6c71b03aa900d63396ccc3d5373bc"
+    },
+    {
+      "id": "tinpan/model/intercom",
+      "pcm": "52d3e9944805c7e131817749c0df5629ec4fba722124b6200bc5b915f92ccd21",
+      "meters": "ef2c9dbfa812b8f8503a931288529acd1f2f3c7db2d506c0cf0c8e0a32087bd2"
+    },
+    {
+      "id": "tinpan/model/bullet",
+      "pcm": "a34fa9b902000aa28a5f996c4f51ef034ea3f0fa14589c51107a91ac47a8b47a",
+      "meters": "4295504179ec78cc0965072fe087bfff77a09f49179e3664ec357ff5bcd626a8"
+    },
+    {
+      "id": "tinpan/model/cassette",
+      "pcm": "5ce08c23f99fcccc9772ecf3334812a589cee71505ed2625ab5c34e794ce9a35",
+      "meters": "a37c9e168dd950c12ddd04ffd58c2eb18b31d704798d981efc6a9358d119fe8a"
+    },
+    {
+      "id": "tinpan/model/toy",
+      "pcm": "ff19e08d64342d6ec6ee2e357806fe38ccedd8b342c91c7d91b44ea8b6113acb",
+      "meters": "96ec67cd8c4004e6aab2e9557c30b9f27460a65bfed27ae07620219d14100fc1"
+    },
+    {
+      "id": "tinpan/model/megaphone",
+      "pcm": "7d390ed5434223820200b00725af49ba7071d16da317c4a68a0ed09b20df8323",
+      "meters": "616880a7945748f306d26af5d98d49ba3c58eec98feaea370cf5cbc17ef6a1c1"
+    },
+    {
+      "id": "tinpan/model/piezo",
+      "pcm": "9a3861da8d55a4ec283a395d42a0f7de8549ed83eb301f26121f2a9e75523188",
+      "meters": "ee20bb9ab4c7a4f78f2f36d2673a6d2a09a81e1f4f1928bf44418ae86df5d100"
+    },
+    {
+      "id": "tinpan/model/mobile-8k",
+      "pcm": "415b0933a534e4d907c6f627afcfc50fbf25808db6483ce234d585329b579eac",
+      "meters": "6e461be05a418e4b658001c072cb21c562629e71f65f8f45ea7aa20cfaf2f224"
+    },
+    {
+      "id": "tinpan/model/answerphone",
+      "pcm": "1931bc4c5678d96918c8cfbc5753c80219b22fdf284e8a61e959f4bdaf186f53",
+      "meters": "dddb20530493ef0cd26a3eeb96535ea4a0384517712ad570ac718d83ed59b975"
+    },
+    {
+      "id": "ferment/44100/false",
+      "pcm": "2e2c6adc1c4c102023a926785656b90ec3c4d013e2a529489d672cc70bce3273",
+      "meters": "fdafed0663208915521c4c1ac0f33ab57a2419711f4d650e9d6baa876e4312dc"
+    },
+    {
+      "id": "ferment/44100/true",
+      "pcm": "b8e64b2b671c3583c02f1a70cf8e4cabc8a0eb2437e8356bab13ff90da61ec3a",
+      "meters": "6ff6c9bcfd4b515314d1b2e3afff695be42dd55adc560dd0389fe4ff37161cb4"
+    },
+    {
+      "id": "ferment/48000/false",
+      "pcm": "1fe799779a481299642d8ccbb55728961901c07884c4cb76d07fba45d8ab0c8f",
+      "meters": "018ed11fdd5a6cd02d3060a6cd93209b7c4e0727dccf7628e7d649f02bd064d2"
+    },
+    {
+      "id": "ferment/48000/true",
+      "pcm": "b42982e368409a155ec733697cef4a4048d3b78c99db6c80ce325d5959d91de2",
+      "meters": "82b676a9770aec684db13789a00a20b3649b99f5f7d1044b3597045f788d0d49"
+    },
+    {
+      "id": "ferment/96000/false",
+      "pcm": "cd079d3803dfcff18c799e02eeb42c06614a42d05ad1d28f0e74e15440046878",
+      "meters": "9a0b1e3a659c63e7c569cfb4a85c3a32ec0320b5e18fc246c70a0019b9e0dc0c"
+    },
+    {
+      "id": "ferment/96000/true",
+      "pcm": "4e234473c6e9562481df655e89f236b67c10ddc6fcd7fcea099066cf79b3960e",
+      "meters": "c5924d4e1a967fda4b05cc23a78fe732af45616881b7f28af300ea5bf0ff8372"
+    },
+    {
+      "id": "sunday/44100/false",
+      "pcm": "74dbaa5c0cefc47d49b1394c386ee7e76ad7a5c63f491bd708eae486c2b72774",
+      "meters": "070e8da634af2d41e9860ce15eecf0ccf4b62f30148538aa96cebae5769abf73"
+    },
+    {
+      "id": "sunday/44100/true",
+      "pcm": "f9f15992ac4a0448a008e63d9c848103422b4228efceb406332894708c4d10fd",
+      "meters": "3e01db472aaf8a4c070de08de2ba79bf9ee1199398eb8c7058d0b778acc49183"
+    },
+    {
+      "id": "sunday/48000/false",
+      "pcm": "a6df7b219877ba686ef0cbc4db5b725c65d9d3d54d44579f77d8a172e49b6e0e",
+      "meters": "4d8490b9244312da7b3cc711de19ac6f8860d9738cd95539d7dd6f689675997f"
+    },
+    {
+      "id": "sunday/48000/true",
+      "pcm": "fba97f9bba27aa6081fc4ad84ace1f221fb882a3b5aae4ee33f5b2f42da05e5f",
+      "meters": "ee79561484f065ae76af3cf55ef0f7a3f299fb9f9ef0e7712eb16402d07525fa"
+    },
+    {
+      "id": "sunday/96000/false",
+      "pcm": "ddb2bacc2a7b0fa05b2a050f1d21b70823bcdb6a6b9d7aee333f07ce2b261390",
+      "meters": "ace1f16b2decd3e36b9cb578fc727ca8a6d2746c527294d07d3c76f54653c35b"
+    },
+    {
+      "id": "sunday/96000/true",
+      "pcm": "c9fbaf3ab5e62de47fabd3421cb3b448b49376decbbbdb39f91f38b7faca0c7b",
+      "meters": "dd4c1855e962787e4a52803fbfbb2ce80bbbf183ed7a649fe5567e05b9b9475a"
+    },
+    {
+      "id": "sunday/model/nodal",
+      "pcm": "ed19c30eebc341449eac855f174220722286d956c3b5f26a65bcef50870079a8",
+      "meters": "5933d3b2d9dc9a6b402d768467e4a27d96cf4eaf73358ede505289c4640399da"
+    },
+    {
+      "id": "sunday/model/charge",
+      "pcm": "fe36f6d6b77cef63399f6106c5f8017da4dbc487964aa2591853eab300864e8e",
+      "meters": "978f8e076de589f7cbbe189778b2944037b3f328918efe248828c7551e15c229"
+    },
+    {
+      "id": "sunday/model/feedback",
+      "pcm": "acba96bb9933e842401ba262835a4d518535c2f1fe4d8bb5949ae33b08bc9947",
+      "meters": "5b9b0d8414379480372bfc64f9a808ba80be5c9df1def7e0f9c7a5bf179714f7"
+    },
+    {
+      "id": "sunday/model/adaa",
+      "pcm": "cc489d37c4bcd4d035737025b4e6cb573ac25d8f5177faa7c99f235d7b5e3c25",
+      "meters": "befcb5ea2e5490aaba1b4286daf0d71b2ddafb4b274d2437d7ea0ede80af6e2e"
+    },
+    {
+      "id": "sunday/model/reactive",
+      "pcm": "0ed1219cbfacf2e72bc7c284768ddd1f30c1e6ac8d53687a0b9230dd4d1efc9e",
+      "meters": "5e5b8524ad9f510d30ba16e3afb7fc269742871659bab1df8ff0591867d204be"
+    }
+  ],
+  "cores": [
+    {
+      "name": "plain",
+      "block": 128,
+      "sha256": "f6b80747599cec75176e761b6589c83039b00d9da6f7386a4e73f3823a25c849"
+    },
+    {
+      "name": "plain",
+      "block": 137,
+      "sha256": "f6b80747599cec75176e761b6589c83039b00d9da6f7386a4e73f3823a25c849"
+    },
+    {
+      "name": "dense",
+      "block": 128,
+      "sha256": "c5d9bc3755f7bd45d8b404cdd83311692db09a12afed6f9e6c1ac4c64411e608"
+    },
+    {
+      "name": "dense",
+      "block": 137,
+      "sha256": "c5d9bc3755f7bd45d8b404cdd83311692db09a12afed6f9e6c1ac4c64411e608"
+    },
+    {
+      "name": "automation",
+      "block": 128,
+      "sha256": "5c9bdc66a04689c02957d5c1ebfaf765003ba74c7904d8ed329e763dbd32a06d"
+    },
+    {
+      "name": "automation",
+      "block": 137,
+      "sha256": "5c9bdc66a04689c02957d5c1ebfaf765003ba74c7904d8ed329e763dbd32a06d"
+    }
+  ]
+}

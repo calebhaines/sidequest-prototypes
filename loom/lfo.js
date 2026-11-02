@@ -16,6 +16,7 @@
       symmetry: { label: 'Symmetry', min: .05, max: .95, step: .01, default: .5, unit: '' },
       smoothing: { label: 'Smoothing', min: 0, max: 1000, step: 1, default: 10, unit: 'ms' }
     });
+    const parameterEntries = Object.entries(parameters);
     const defaultLFOs = () => Array.from({ length: COUNT }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, ...Object.fromEntries(Object.entries(parameters).map(([key, d]) => [key, d.default])), retrigger: 'transport', routes: [] }));
     const logTarget = d => d.min > 0 && (d.scale === 'log' || /(?:cutoff|freq|frequency|crossover|damping|sidechain|lowcut|highcut|lowpass|highpass|tone|rate|division|wowrate|flutterrate)$/i.test(d.target.split(':').pop()));
     function targets(state, automationTargets, specifications, masteringSpecifications) {
@@ -162,7 +163,7 @@
         // This bounded, causal feedback cannot recurse or depend on LFO order.
         for (let index = 0; index < COUNT; index++) {
           const lfo = this.lfos[index], next = this.effective[index];
-          if (running || this.configurationDirty) for (const [key, d] of Object.entries(parameters)) {
+          if (running || this.configurationDirty) for (const [key, d] of parameterEntries) {
             let delta = 0;
             for (const route of this.routes) if (route.descriptor.ownerId === lfo.id && route.descriptor.target === key && this.lfos[route.index].enabled) delta += this.previous[route.index] * route.amount * gateValue(route.gate, beat);
             next[key] = mapValue(lfo[key], delta, d);

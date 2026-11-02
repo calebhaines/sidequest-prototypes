@@ -122,6 +122,8 @@
     }
     const TrackEQ = eqDSP?.TrackEQ || LegacyTrackEQ;
     const emptyMeter = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
+    const disabledMeter = Object.freeze(emptyMeter());
+    const disabledEffectMeters = Object.freeze(Array(5).fill(null));
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
     const sampleData = (data, position) => {
       if (!data || position < 0 || position >= data.length) return 0;
@@ -246,6 +248,7 @@
         this.masterGain = 0;
         this.limitGain = 1;
         this.limitRelease = 1 - Math.exp(-1 / (.08 * this.sampleRate));
+        this.mixSlew = 1 - Math.exp(-1 / (.012 * this.sampleRate));
         this.panCurves = Array.from({ length: TRACK_COUNT + 2 }, () => ({ value: NaN, cosine: 1, sine: 0 }));
         this.clickPhase = 0;
         this.clickRemaining = 0;
@@ -269,7 +272,7 @@
       startPedalMidi(settings) {
         if (this.service || this.freezeCaptureIndex >= 0) throw Error('Stop SERVICE or offline rendering before capturing live MIDI.');
         const { ownerId, slot, token } = settings || {}, target = this._pedalMidiTarget(ownerId, slot);
-        if (!Number.isInteger(slot) || slot < 0 || slot >= effectSlotCount(target.owner) || !target.owner || target.owner.freeze || target.slot?.type !== 'ferment' || typeof target.slot.dsp.startMidiCapture !== 'function') throw Error('Choose an unfrozen FERMENT insert for MIDI capture.');
+        if (!Number.isInteger(slot) || slot < 0 || slot >= effectSlotCount(target.owner) || !target.owner || target.owner.disabled === true || target.owner.freeze || target.slot?.type !== 'ferment' || typeof target.slot.dsp.startMidiCapture !== 'function') throw Error('Choose an enabled, unfrozen FERMENT insert for MIDI capture.');
         const params = target.owner.effects?.[slot]?.params;
         if (params?.bypass || params?.mix === 0 || params?.mode === 'chord') throw Error('Enable FERMENT in Pitch Tracking mode before capturing a single-note line.');
         if (typeof token !== 'string' || !token || token.length > 120) throw Error('Choose a valid MIDI capture session.');
@@ -291,7 +294,7 @@
         const session = this.pedalMidi;
         if (session) {
           const target = this._pedalMidiTarget(session.ownerId, session.slot);
-          if (target.owner?.freeze || target.slot !== session.runtime) this.stopPedalMidi('target-changed');
+          if (target.owner?.disabled === true || target.owner?.freeze || target.slot !== session.runtime) this.stopPedalMidi('target-changed');
           else {
             const batch = session.dsp.drainMidiEvents();
             if (batch) { this.pedalMidiBatches.push({ ...batch, ownerId: session.ownerId, slot: session.slot }); if (batch.done) this.pedalMidi = null; }
@@ -315,12 +318,16 @@
       resetMasteringMeters() { this.masteringDSP?.resetAnalysis(); }
       setDiagnostics(value = {}) {
         this._diagnosticsConfig = cpuDSP ? cpuDSP.normalizeConfig(value, this._diagnosticsConfig) : { ...this._diagnosticsConfig, ...value, enabled: value.enabled === true };
+        if (!this._diagnosticsConfig.enabled && value.release === true) {
+          this.cpuProfiler = null; this._cpuKeys = null; this._cpuExternal = this._cpuSampled = false;
+          return this.getDiagnostics();
+        }
         if (cpuDSP && this._diagnosticsConfig.enabled && !this.cpuProfiler) this.cpuProfiler = new cpuDSP.Runtime(this.sampleRate, { clock: this.options.diagnosticsClock });
         if (this.cpuProfiler) {
           this.cpuProfiler.configure(this._diagnosticsConfig);
           if (this._diagnosticsConfig.enabled) this._syncDiagnosticsTopology();
         }
-        return this.getDiagnostics();
+        return this._diagnosticsConfig.enabled ? this.getDiagnostics() : { ...this._diagnosticsConfig, status: 'paused' };
       }
       resetDiagnostics(revision = this._diagnosticsConfig.revision) {
         this._diagnosticsConfig.revision = revision;
@@ -337,16 +344,16 @@
         this._cpuKeys = owners.map((owner, index) => {
           const ownerId = index < TRACK_COUNT ? 'track-' + (index + 1) : index < MASTER_INDEX ? 'return-' + (index - RETURN_OFFSET + 1) : 'master';
           const label = owner.name || (index < TRACK_COUNT ? 'Track ' + (index + 1) : index < MASTER_INDEX ? 'Return ' + (index === RETURN_OFFSET ? 'A' : 'B') : 'Master');
-          const frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects, owner.eq, frozen]);
-          rows.push({ id: ownerId, kind: 'owner', ownerId, label, identity, active: true });
+          const disabled = index < TRACK_COUNT && owner.disabled === true, frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects, owner.eq, frozen, disabled]);
+          rows.push({ id: ownerId, kind: 'owner', ownerId, label, identity, active: !disabled, disabled });
           for (let slot = 0; slot < racks[index].length; slot++) {
             const effect = owner.effects?.[slot], dsp = racks[index][slot], id = ownerId + ':fx:' + slot;
             if (dsp) dsp.diagnosticsId = id;
-            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify(effect || null), active: !!effect && !frozen, bypassed: frozen || effect?.params?.bypass === true || dsp?.bypass === true });
+            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify([effect || null, disabled]), active: !!effect && !frozen && !disabled, disabled, bypassed: disabled || frozen || effect?.params?.bypass === true || dsp?.bypass === true });
           }
           const mix = ownerId + ':mix', eq = ownerId + ':eq';
-          rows.push({ id: mix, kind: 'mix', ownerId, label: index === MASTER_INDEX ? 'Output, metronome and limiter' : 'Pan, level, sends and metering', active: true });
-          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: JSON.stringify(owner.eq), active: !frozen });
+          rows.push({ id: mix, kind: 'mix', ownerId, label: index === MASTER_INDEX ? 'Output, metronome and limiter' : 'Pan, level, sends and metering', identity: String(disabled), active: !disabled, disabled });
+          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: JSON.stringify([owner.eq, disabled]), active: !frozen && !disabled, disabled });
           return { owner: ownerId, mix, eq };
         });
         rows.push({ id: 'master:mastering', kind: 'mix', ownerId: 'master', label: 'Mastering tools and analysis', identity: JSON.stringify(this.master.mastering || null), active: !!this.masteringDSP?.isActive() || this.masteringAnalysis });
@@ -379,17 +386,17 @@
         const hadFrozen = this.hasFrozen, previousFlags = this.frozen.map(Boolean);
         this.frozen = this.tracks.map((track, index) => {
           const spec = track.freeze;
-          if (!spec || this.options.freezeCaptureTrackId != null) return null;
+          if (!spec || track.disabled === true || this.options.freezeCaptureTrackId != null) return null;
           if (spec.sampleRate !== this.sampleRate) throw Error('Unfreeze tracks before changing their audio sample rate.');
           const key = JSON.stringify([spec.sampleRate, spec.bodyFrames, spec.totalFrames, spec.fingerprint, spec.chunks]);
-          const previous = this.frozen?.[index], selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks), audible = !track.mute && (!this.tracks.some(item => item.solo === true) || track.solo) && (selected < 0 || selected === index);
+          const previous = this.frozen?.[index], selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks), audible = !track.mute && (!this.tracks.some(item => item.disabled !== true && item.solo === true) || track.solo) && (selected < 0 || selected === index);
           const runtime = previous?.key === key ? previous : { key, gate: audible ? 1 : 0, last: new Float64Array(6), wrapOffsets: new Float64Array(6), wrapRemaining: 0, stopRemaining: 0, chunk: 0 };
           runtime.spec = spec;
           runtime.chunks = (spec.chunks || []).map(chunk => ({ ...chunk, planes: ['main', 'sendA', 'sendB'].map(name => chunk[name] ? this.assets.get(chunk[name]) : null) }));
           return runtime;
         });
         this.hasFrozen = this.frozen.some(Boolean);
-        if (this.playing && this.frozen.some((frozen, index) => !!frozen !== previousFlags[index])) {
+        if (this.playing && this.frozen.some((frozen, index) => this.tracks[index].disabled !== true && !!frozen !== previousFlags[index])) {
           // The live and baked processors have different internal histories.
           // Reuse the output declick without resetting shared bus processing.
           this.seekOrigin[0] = this.lastOutput[0]; this.seekOrigin[1] = this.lastOutput[1];
@@ -402,7 +409,7 @@
           this.freezeFrame = Math.abs(frame - nearest) < .02 ? nearest : frame;
           this.freezeTail = false; this.freezeContinuation = null;
         }
-        this.clipLists = this.tracks.map((track, index) => this.frozen[index] || this.options.freezeCaptureTrackId != null && index !== indexFor(this.options.freezeCaptureTrackId, this.tracks) ? [] : (track.clips || []).map(clip => compileClip(clip, this.assets.get(clip.assetId))).filter(item => item.left?.length && item.span > 0));
+        this.clipLists = this.tracks.map((track, index) => track.disabled === true || this.frozen[index] || this.options.freezeCaptureTrackId != null && index !== indexFor(this.options.freezeCaptureTrackId, this.tracks) ? [] : (track.clips || []).map(clip => compileClip(clip, this.assets.get(clip.assetId))).filter(item => item.left?.length && item.span > 0));
       }
       setState(state) {
         if (this.service) { this.service.baseState = state || {}; this._setState(this._serviceState()); }
@@ -413,8 +420,19 @@
         this.state = state || {};
         this.tempo = clamp(this.state.tempo, 40, 240, 120);
         this.tracks = Array.from({ length: TRACK_COUNT }, (_, i) => this.state.tracks?.[i] || { id: `track-${i + 1}`, clips: [], effects: [] });
+        this.activeTrackIndices = [];
+        for (let index = 0; index < TRACK_COUNT; index++) {
+          if (this.tracks[index].disabled !== true) { this.activeTrackIndices.push(index); continue; }
+          if (this.pedalMidi?.ownerId === this.tracks[index].id) this.stopPedalMidi('track-disabled');
+          this.auditionTracks.delete(index); this.recordOnly.delete(index);
+          if (this.microphoneMonitor.track === index) this.microphoneMonitor.enabled = false;
+          this.gains[index].fill(0); this.preGains[index].fill(0); this.sendGains[index].fill(0);
+          for (let bus = 0; bus < 2; bus++) this.sendPreMix[index][bus] = this.tracks[index].sendPre?.[bus] === true ? 1 : 0;
+          this.clipWrapOffsets[index].fill(0); this.buffers[index] = null;
+        }
         this.freezeCaptureIndex = this.options.freezeCaptureTrackId == null ? -1 : indexFor(this.options.freezeCaptureTrackId, this.tracks);
         if (this.options.freezeCaptureTrackId != null && (this.freezeCaptureIndex < 0 || this.freezeCaptureIndex >= TRACK_COUNT)) throw Error('Choose one of the ten tracks to freeze.');
+        if (this.freezeCaptureIndex >= 0 && this.tracks[this.freezeCaptureIndex].disabled === true) throw Error('Enable the track before freezing it.');
         this._compileClips();
         this.master = this.state.master || {};
         this.returns = Array.from({ length: 2 }, (_, index) => this.state.returns?.[index] || {
@@ -424,18 +442,18 @@
         if (this.options.trackId != null && this.options.returnId != null) throw Error('Choose either a track stem or a return stem, not both.');
         if (this.options.trackId != null) { const selected = indexFor(this.options.trackId, this.tracks); if (!Number.isInteger(selected) || selected < 0 || selected >= TRACK_COUNT) throw Error('Choose one of the ten tracks for the stem.'); }
         if (this.options.returnId != null && !['return-1', 'return-2'].includes(this.options.returnId)) throw Error('Choose Return A or Return B for the return stem.');
-        this.automation = this.tracks.map((track, index) => this._compileAutomation(this.frozen[index] || this.freezeCaptureIndex >= 0 && index !== this.freezeCaptureIndex ? {} : track, 5));
+        this.automation = this.tracks.map((track, index) => this._compileAutomation(track.disabled === true || this.frozen[index] || this.freezeCaptureIndex >= 0 && index !== this.freezeCaptureIndex ? {} : track, 5));
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus, 4));
         this.masterAutomation = this._compileAutomation(this.master, 4);
         if (lfoDSP) { const definitions = lfoDSP.targets(this.state, null, effects.specifications, masteringModule?.specifications).filter(target => {
           if (target.ownerId.startsWith('lfo-')) return true;
           const index = indexFor(target.ownerId, this.tracks);
-          return this.freezeCaptureIndex >= 0 ? index === this.freezeCaptureIndex : index < 0 || !this.frozen[index];
+          return this.freezeCaptureIndex >= 0 ? index === this.freezeCaptureIndex : index < 0 || this.tracks[index].disabled !== true && !this.frozen[index];
         }); if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
         this._compileModulationHandles();
         this._configureMastering();
         for (let t = 0; t < TRACK_COUNT; t++) {
-          if (this.frozen[t] || this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) { this._updateRack({}, this.slots[t]); this.trackEq[t] = null; this.eqAutomationValues[t] = null; continue; }
+          if (this.tracks[t].disabled === true || this.frozen[t] || this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) { this._updateRack({}, this.slots[t]); this.trackEq[t] = null; this.eqAutomationValues[t] = null; continue; }
           this._updateRack(this.tracks[t], this.slots[t], this.automation[t]);
           const params = {};
           for (const key of trackEqKeys) params[key] = (this.automation[t].eq[key] || this.modulation?.has(this.tracks[t].id, 'eq:' + key)) && this.eqAutomationValues[t]?.[key] !== undefined ? this.eqAutomationValues[t][key] : trackEqValue(key, this.tracks[t].eq?.[key]);
@@ -453,7 +471,7 @@
           this.dryGain = this.options.returnId != null || this.returns.some(bus => bus.solo === true) ? 0 : 1;
           this.routingInitialized = true;
         }
-        if (this.pedalMidi) { const target = this._pedalMidiTarget(this.pedalMidi.ownerId, this.pedalMidi.slot); if (target.owner?.freeze || target.slot !== this.pedalMidi.runtime) this.stopPedalMidi('target-changed'); }
+        if (this.pedalMidi) { const target = this._pedalMidiTarget(this.pedalMidi.ownerId, this.pedalMidi.slot); if (target.owner?.disabled === true || target.owner?.freeze || target.slot !== this.pedalMidi.runtime) this.stopPedalMidi('target-changed'); }
         if (this.cpuProfiler?.enabled) this._syncDiagnosticsTopology();
       }
       _compileModulationHandles() {
@@ -619,9 +637,9 @@
         this.previousClickBeat = -1; this.clickRemaining = 0;
       }
       endRecording() { this.countInRemaining = 0; this.recordingPunch = false; }
-      setRecordOnly(index, value) { if (value) this.recordOnly.add(index); else this.recordOnly.delete(index); }
-      setMicrophoneMonitor(track, enabled) { this.microphoneMonitor = { track: Number.isInteger(track) && track >= 0 && track < TRACK_COUNT ? track : -1, enabled: enabled === true }; if (enabled) this.silent = false; }
-      resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
+      setRecordOnly(index, value) { if (value && this.tracks[index]?.disabled !== true) this.recordOnly.add(index); else this.recordOnly.delete(index); }
+      setMicrophoneMonitor(track, enabled) { const valid = Number.isInteger(track) && track >= 0 && track < TRACK_COUNT && this.tracks[track].disabled !== true; this.microphoneMonitor = { track: valid ? track : -1, enabled: valid && enabled === true }; if (this.microphoneMonitor.enabled) this.silent = false; }
+      resumeAudition(index) { if (Number.isInteger(index) && this.tracks[index]?.disabled === true) return; this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
         if (this.pedalMidi) this.stopPedalMidi('panic');
@@ -636,7 +654,7 @@
         this.masterGain = 0;
         for (const pair of this.gains) pair.fill(0);
         for (const row of this.slots) for (const slot of row) if (slot) slot.dsp.reset();
-        for (const pair of this.buffers) for (const buffer of pair) buffer.fill(0);
+        for (const pair of this.buffers) if (pair) for (const buffer of pair) buffer.fill(0);
         this.modulation?.reset(this.beat, this.tempo);
         this._resetTrackEq();
         this._resetBuses();
@@ -648,7 +666,7 @@
           const index = /^track-/.test(ownerId) ? indexFor(ownerId, this.tracks) : -1, returnIndex = this.returns.findIndex(owner => owner.id === ownerId), owner = index >= 0 ? this.tracks[index] : returnIndex >= 0 ? this.returns[returnIndex] : this.master;
           const lane = owner.automation?.find(lane => lane.target === target), parts = target.split(':'), base = target === 'level' || target === 'pan' ? owner[target] : parts[0] === 'send' ? owner.sends?.[Number(parts[1])] : parts[0] === 'eq' ? owner.eq?.[parts[1]] : parts[0] === 'fx' ? owner.effects?.[Number(parts[1])]?.params?.[parts[2]] : parts[0] === 'mastering' ? owner.mastering?.[parts[1]] : 0;
           return automationValue(lane, this.beat, base);
-        }), effects: this.slots.map((row, track) => rackMeters(this.tracks[track], row)), returnEffects: this.returnSlots.map((row, bus) => rackMeters(this.returns[bus], row)), masterEffects: rackMeters(this.master, this.masterSlots) };
+        }), effects: this.slots.map((row, track) => this.tracks[track].disabled === true ? disabledEffectMeters : rackMeters(this.tracks[track], row)), returnEffects: this.returnSlots.map((row, bus) => rackMeters(this.returns[bus], row)), masterEffects: rackMeters(this.master, this.masterSlots) };
       }
       resetEffectMeters(ownerId, insert) {
         if (!Number.isInteger(insert) || insert < 0 || insert >= 5) return false;
@@ -758,7 +776,7 @@
       _serviceClips(endBeat) {
         const service = this.service, p = service.performance;
         return service.scene.clips.map((clip, track) => {
-          if (!clip) return [];
+          if (!clip || this.tracks[track]?.disabled === true) return [];
           const asset = this.assets.get(clip.assetId), sr = clamp(asset?.sampleRate, 8000, 192000, 48000), duration = asset?.left?.length / sr || 0;
           const sourceStart = clamp(clip.sourceStart, 0, duration, 0), sourceEnd = clamp(clip.sourceEnd, sourceStart, duration, duration);
           if (!asset?.left?.length || sourceEnd <= sourceStart) return [];
@@ -850,7 +868,7 @@
         const microphone = inputs[TRACK_COUNT]; this.microphonePeak = 0;
         if (microphone?.[0]) for (let f = 0; f < n; f++) this.microphonePeak = Math.max(this.microphonePeak, Math.abs(microphone[0][f] || 0), Math.abs((microphone[1] || microphone[0])[f] || 0));
         if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() }; return this.meters; }
-        if (!this.buffers.length || this.buffers[0][0].length !== n) this.buffers = Array.from({ length: TRACK_COUNT }, () => [new Float32Array(n), new Float32Array(n)]);
+        for (const t of this.activeTrackIndices) if (this.buffers[t]?.[0].length !== n) this.buffers[t] = [new Float32Array(n), new Float32Array(n)];
         if (!this.returnBuffers.length || this.returnBuffers[0][0].length !== n) this.returnBuffers = Array.from({ length: 2 }, () => [new Float32Array(n), new Float32Array(n)]);
         else for (const pair of this.returnBuffers) { pair[0].fill(0); pair[1].fill(0); }
         if (!this.timelineBeats || this.timelineBeats.length !== n) { this.timelineBeats = new Float64Array(n); this.timelinePlaying = new Uint8Array(n); this.timelineCountIn = new Uint8Array(n); this.timelineClickBeats = new Float64Array(n); }
@@ -861,8 +879,8 @@
         }
         this.countInEnded = false;
         const blockBeat = this.beat, advance = this.tempo / (60 * sr), secondsPerBeat = 60 / this.tempo;
-        const anySolo = this.tracks.some(t => t.solo === true), selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks);
-        const audible = this.tracks.map((t, i) => this.freezeCaptureIndex >= 0 ? i === this.freezeCaptureIndex : !t.mute && (!anySolo || t.solo) && (selected < 0 || i === selected));
+        const anySolo = this.tracks.some(t => t.disabled !== true && t.solo === true), selected = this.options.trackId == null ? -1 : indexFor(this.options.trackId, this.tracks);
+        const audible = this.tracks.map((t, i) => t.disabled !== true && (this.freezeCaptureIndex >= 0 ? i === this.freezeCaptureIndex : !t.mute && (!anySolo || t.solo) && (selected < 0 || i === selected)));
         const trackStem = this.options.trackId != null, returnStem = this.options.returnId != null, selectedReturn = returnStem ? (this.options.returnId === 'return-1' ? 0 : 1) : -1;
         const anyReturnSolo = this.returns.some(bus => bus.solo === true), dryAudible = !returnStem && !anyReturnSolo;
         const loopStart = clamp(this.state.loopStart, 0, 255, 0), loopEnd = clamp(this.state.loopEnd, loopStart + .25, 256, 16);
@@ -872,15 +890,16 @@
         let playingFrames = this.playing ? n : 0;
         const blockEnd = blockBeat + advance * n, wraps = loop && blockEnd >= loopEnd - 1e-10, wholeLoop = loop && advance * n >= loopEnd - loopStart;
         const wrappedEnd = wraps ? loopStart + Math.max(0, blockEnd - loopEnd) % (loopEnd - loopStart) : loopStart;
-        const candidates = this.clipLists.map(list => !this.playing ? [] : list.filter(item => {
+        const candidates = Array(TRACK_COUNT).fill(emptyModulation);
+        for (const t of this.activeTrackIndices) if (this.playing && this.clipLists[t].length) candidates[t] = this.clipLists[t].filter(item => {
           const end = item.start + item.length;
           if (wholeLoop) return (item.start < loopEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
           if (wraps) return (item.start < loopEnd && end > blockBeat) || (item.start <= wrappedEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
           return item.start <= blockEnd && end > blockBeat;
-        }));
+        });
         const minimumFade = .003 / secondsPerBeat;
-        for (const list of candidates) for (const item of list) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
-        for (let t = 0; t < TRACK_COUNT; t++) {
+        for (const t of this.activeTrackIndices) for (const item of candidates[t]) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
+        for (const t of this.activeTrackIndices) {
           const [l, r] = this.buffers[t], input = inputs[t], useInput = !this.frozen[t] && (this.freezeCaptureIndex < 0 || t === this.freezeCaptureIndex) && (this.tracks[t].instrumentLive !== false || this.tracks[t].notePlayback === true || this.auditionTracks.has(t)) && !this.recordOnly.has(t);
           if (useInput && input?.[0]) {
             l.set(input[0].subarray(0, n)); r.set((input[1] || input[0]).subarray(0, n));
@@ -900,7 +919,7 @@
           this.timelineClickBeats[frame] = countingIn ? (this.countInTotal - this.countInRemaining) * advance : this.beat;
           if (countingIn) {
             if (this.hasFrozen) this.timelineFreezeFrames[frame] = -1;
-            for (let t = 0; t < TRACK_COUNT; t++) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
+            for (const t of this.activeTrackIndices) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
             if (--this.countInRemaining === 0) this.countInEnded = true;
             continue;
           }
@@ -910,13 +929,13 @@
           const freezeAdvancing = this.hasFrozen && (this.playing || this.freezeTail);
           if (this.hasFrozen) this.timelineFreezeFrames[frame] = freezeAdvancing ? this.freezeFrame : -1;
           const beat = this.beat;
-          if (this.ended) for (let t = 0; t < TRACK_COUNT; t++) if (!this.auditionTracks.has(t)) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
+          if (this.ended) for (const t of this.activeTrackIndices) if (!this.auditionTracks.has(t)) { this.buffers[t][0][frame] = 0; this.buffers[t][1][frame] = 0; }
           if (this.playing) {
             const wrapContinuation = this.clipWrapContinuation;
             if (wrapContinuation !== null) this.clipWrapRemaining = this.clipWrapFrames;
             const wrapProgress = 1 - this.clipWrapRemaining / this.clipWrapFrames;
             const wrapWeight = this.clipWrapRemaining > 0 ? 1 - wrapProgress * wrapProgress * (3 - 2 * wrapProgress) : 0;
-            for (let t = 0; t < TRACK_COUNT; t++) {
+            for (const t of this.activeTrackIndices) {
               if (this.frozen[t] || this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) continue;
               const [l, r] = this.buffers[t];
               let clipLeft = 0, clipRight = 0;
@@ -974,7 +993,7 @@
           return target === 'level' || /^send:[01]$/.test(target) && this.tracks[index].sendPre?.[Number(target.slice(5))] === true ? 0 : 1;
         } : null);
         if (cpu) cpu.endStage('modulation', modulationStart);
-        const trackMeters = [], slew = 1 - Math.exp(-1 / (.012 * sr));
+        const trackMeters = Array(TRACK_COUNT).fill(disabledMeter), slew = this.mixSlew;
         if (!this.dryMixGains || this.dryMixGains.length !== n) this.dryMixGains = new Float64Array(n);
         const dryGoal = dryAudible ? 1 : 0;
         for (let frame = 0; frame < n; frame++) {
@@ -982,18 +1001,24 @@
           if (Math.abs(dryGoal - this.dryGain) < 1e-10) this.dryGain = dryGoal;
           this.dryMixGains[frame] = this.dryGain;
         }
-        for (let t = 0; t < TRACK_COUNT; t++) {
+        for (const t of this.activeTrackIndices) {
           const [l, r] = this.buffers[t], track = this.tracks[t], modulation = this.modulationOwners[t], panCurve = this.panCurves[t], keys = cpu ? this._cpuKeys[t] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
-          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters.push(this._processFrozen(t, left, right, audible[t], trackStem, slew)); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
-          if (this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) { trackMeters.push(emptyMeter()); continue; }
+          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters[t] = this._processFrozen(t, left, right, audible[t], trackStem, slew); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
+          if (this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) continue;
           this._processRack(track, this.slots[t], this.automation[t], l, r, blockBeat, blockPlaying, modulation);
           const eqStart = cpu ? cpu.start(keys.eq) : NaN;
           this._processTrackEq(t, l, r);
           if (cpu) cpu.endStage(keys.eq, eqStart);
           const mixStart = cpu ? cpu.start(keys.mix) : NaN;
           const gain = this.gains[t]; let peak = 0, powerL = 0, powerR = 0;
+          // Static controls do not need a lane/route lookup on every sample.
+          // Gain ramps and all signal arithmetic retain their released order.
+          const controls = this.automation[t], fixedPan = !controls.pan && !modulation.pan ? clamp(track.pan, -1, 1, 0) : null;
+          const fixedLevel = !audible[t] ? 0 : !controls.level && !modulation.level ? clamp(track.level, 0, 1.5, .8) : null;
+          const fixedSendA = !controls.sends[0] && !modulation.sends[0] ? clamp(track.sends?.[0], 0, 1, 0) : null;
+          const fixedSendB = !controls.sends[1] && !modulation.sends[1] ? clamp(track.sends?.[1], 0, 1, 0) : null;
           for (let f = 0; f < n; f++) {
-            const beat = this.timelineBeats[f], pan = clamp(this._lfoValue(modulation.pan, f, automationValue(this.automation[t].pan, beat, track.pan)), -1, 1, 0), level = audible[t] ? clamp(this._lfoValue(modulation.level, f, automationValue(this.automation[t].level, beat, track.level)), 0, 1.5, .8) : 0;
+            const beat = this.timelineBeats[f], pan = fixedPan ?? clamp(this._lfoValue(modulation.pan, f, automationValue(controls.pan, beat, track.pan)), -1, 1, 0), level = fixedLevel ?? clamp(this._lfoValue(modulation.level, f, automationValue(controls.level, beat, track.level)), 0, 1.5, .8);
             if (pan !== panCurve.value) { const angle = (pan + 1) * Math.PI / 4; panCurve.value = pan; panCurve.cosine = Math.cos(angle); panCurve.sine = Math.sin(angle); }
             // Keep the released multiply order; reassociating the level and
             // equal-power factor would change floating-point output samples.
@@ -1010,7 +1035,7 @@
               const pre = this.preGains[t]; pre[0] += (panL - pre[0]) * slew; pre[1] += (panR - pre[1]) * slew;
               const preL = Number.isFinite(l[f]) ? l[f] * pre[0] : 0, preR = Number.isFinite(r[f]) ? r[f] * pre[1] : 0;
               for (let bus = 0; bus < 2; bus++) {
-                const goal = clamp(this._lfoValue(modulation.sends[bus], f, automationValue(this.automation[t].sends[bus], beat, track.sends?.[bus])), 0, 1, 0), send = this.sendGains[t];
+                const fixedSend = bus ? fixedSendB : fixedSendA, goal = fixedSend ?? clamp(this._lfoValue(modulation.sends[bus], f, automationValue(controls.sends[bus], beat, track.sends?.[bus])), 0, 1, 0), send = this.sendGains[t];
                 send[bus] += (goal - send[bus]) * slew;
                 const tap = this.sendPreMix[t]; tap[bus] += ((track.sendPre?.[bus] === true ? 1 : 0) - tap[bus]) * slew;
                 if (send[bus] !== 0) { this.returnBuffers[bus][0][f] += (a + (preL - a) * tap[bus]) * send[bus]; this.returnBuffers[bus][1][f] += (b + (preR - b) * tap[bus]) * send[bus]; }
@@ -1018,7 +1043,7 @@
             }
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
           }
-          trackMeters.push({ peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) });
+          trackMeters[t] = { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         if (this.freezeCaptureIndex >= 0) {
@@ -1267,7 +1292,7 @@
       returns: state.returns ? Array.from({ length: 2 }, (_, index) => { const bus = state.returns[index] || {}; return { id: 'return-' + (index + 1), name: bus.name, level: bus.level, pan: bus.pan, mute: bus.mute, solo: bus.solo, ...rack(bus) }; }) : undefined,
       tracks: Array.from({ length: TRACK_COUNT }, (_, index) => {
         const track = state.tracks?.[index] || {};
-        return { id: track.id || 'track-' + (index + 1), level: track.level ?? .8, pan: track.pan ?? 0, mute: track.mute === true, solo: track.solo === true, eq: { low: track.eq?.low ?? 0, lowMid: track.eq?.lowMid ?? 0, highMid: track.eq?.highMid ?? 0, high: track.eq?.high ?? 0, lowMidFreq: track.eq?.lowMidFreq ?? 400, highMidFreq: track.eq?.highMidFreq ?? 2500 }, sends: [track.sends?.[0] ?? 0, track.sends?.[1] ?? 0], sendPre: [track.sendPre?.[0] === true, track.sendPre?.[1] === true], instrumentLive: track.instrumentLive, notePlayback: (track.clips || []).some(clip => clip.type === 'notes'),
+        return { id: track.id || 'track-' + (index + 1), disabled: track.disabled === true, level: track.level ?? .8, pan: track.pan ?? 0, mute: track.mute === true, solo: track.solo === true, eq: { low: track.eq?.low ?? 0, lowMid: track.eq?.lowMid ?? 0, highMid: track.eq?.highMid ?? 0, high: track.eq?.high ?? 0, lowMidFreq: track.eq?.lowMidFreq ?? 400, highMidFreq: track.eq?.highMidFreq ?? 2500 }, sends: [track.sends?.[0] ?? 0, track.sends?.[1] ?? 0], sendPre: [track.sendPre?.[0] === true, track.sendPre?.[1] === true], instrumentLive: track.instrumentLive, notePlayback: (track.clips || []).some(clip => clip.type === 'notes'),
           ...(track.freeze ? { freeze: { version: track.freeze.version, sampleRate: track.freeze.sampleRate, tempo: track.freeze.tempo, lengthBeats: track.freeze.lengthBeats, bodyFrames: track.freeze.bodyFrames, totalFrames: track.freeze.totalFrames, tailFrames: track.freeze.tailFrames, fingerprint: track.freeze.fingerprint, chunks: (track.freeze.chunks || []).map(chunk => ({ startFrame: chunk.startFrame, frames: chunk.frames, main: chunk.main, sendA: chunk.sendA, sendB: chunk.sendB })) } } : {}),
           automation: (track.automation || []).map(lane => ({ target: lane.target, effectType: lane.effectType, enabled: lane.enabled, interpolation: lane.interpolation, points: (lane.points || []).map(p => ({ beat: p.beat, value: p.value })) })),
           effects: Array.from({ length: 5 }, (_, slot) => { const effect = track.effects?.[slot]; return effect ? { type: effect.type, bypass: effect.bypass, params: { ...effect.params } } : null; }),
@@ -1327,6 +1352,7 @@
       this._pedalMidiTake = null; this._pedalMidiEffect = null; this._pedalMidiListeners = new Set(); this._pedalMidiRequests = new Map(); this._pedalMidiRequestId = 0; this._pedalMidiOperation = 0; this._pedalMidiFrames = 0; this._pedalMidiNotifyFrame = 0;
       this._pedalMidiBufferLease = null; this._pedalMidiWarmup = null; this._fallbackAudioHandler = null;
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
+      this._disabledTrackFlags = Array.from({ length: TRACK_COUNT }, (_, index) => state.tracks?.[index]?.disabled === true);
       this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null; this.microphoneInput = null; this._micRequest = 0; this._micEnabled = false; this._micTrack = -1; this._micPending = false; this._micPurpose = null; this._recordMicrophone = null;
       this._recordStage = 'idle'; this._recordTransportStarted = false;
@@ -1335,7 +1361,7 @@
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
       this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
       this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
-      this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 }; this._diagnosticsGeneration = 0; this._diagnosticsSnapshot = null; this._masteringAnalysis = false;
+      this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 }; this._diagnosticsGeneration = 0; this._diagnosticsSnapshot = null; this._diagnosticsReleased = true; this._masteringAnalysis = false;
       this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
       if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
     }
@@ -1348,9 +1374,12 @@
     setDiagnostics(value = {}) {
       const previous = this._diagnosticsConfig, mode = ['light', 'balanced', 'deep'].includes(value.mode) ? value.mode : previous.mode;
       const enabled = typeof value.enabled === 'boolean' ? value.enabled : previous.enabled;
-      if (enabled === previous.enabled && mode === previous.mode) return this.getDiagnostics();
+      const release = !enabled && value.release === true;
+      if (enabled === previous.enabled && mode === previous.mode && (!release || this._diagnosticsReleased)) return this.getDiagnostics();
       this._diagnosticsConfig = { enabled, mode, revision: previous.revision + 1 };
-      this._send({ type: 'diagnosticsConfig', config: this._diagnosticsConfig });
+      this._diagnosticsReleased = release;
+      if (release) this._diagnosticsSnapshot = null;
+      this._send({ type: 'diagnosticsConfig', config: { ...this._diagnosticsConfig, ...(release ? { release: true } : {}) } });
       return this.getDiagnostics();
     }
     resetDiagnostics() {
@@ -1364,6 +1393,7 @@
       return { ...config, reportRevision: null, status: !config.enabled ? 'idle' : !this.context ? 'waiting' : this.context.state === 'suspended' ? 'suspended' : 'collecting', contextState: this.context?.state || 'idle', engineMode: this.mode, available: false, clock: { name: 'unavailable', resolutionMs: null, coarse: false }, sampleRate: this.context?.sampleRate || 0, blockFrames: this._processingFrames || 0, budgetMs: this.context && this._processingFrames ? this._processingFrames * 1000 / this.context.sampleRate : 0, processedBlocks: 0, sampledBlocks: 0, sampledFrames: 0, coverage: 0, elapsedSeconds: 0, total: { samples: 0, meanMs: null, p95Ms: null, maxMs: null, meanPercent: null, p95Percent: null, maxPercent: null, overBudget: 0, zeroSamples: 0 }, rows: [], timerReads: 0, invalidTimings: 0 };
     }
     _trackIndex(id) { const i = typeof id === 'number' ? Math.floor(id) : this.state.tracks.findIndex(t => t.id === id); if (!Number.isInteger(i) || i < 0 || i >= TRACK_COUNT) throw Error('Choose one of the ten tracks.'); return i; }
+    _assertTrackEnabled(index) { if (this.state.tracks[index]?.disabled === true) throw Error('Enable the track before using its instrument, recording or microphone.'); return index; }
     get audioSettings() { return this.getAudioSettings(); }
     get audioStatus() { return this.getAudioDiagnostics(); }
     getAudioSettings() { return { ...this._audioSettings }; }
@@ -1724,14 +1754,14 @@
       if (this._audioApplying || this._deviceAccessPending || this.recordingBusy || this.getServiceState().active) throw Error('Finish recording, SERVICE or audio setup before capturing MIDI.');
       if (this.state.master?.playback && window.LoomMasterTransform && !window.LoomMasterTransform.isNeutral(this.state.master.playback)) throw Error('Reset master Speed & Pitch before capturing live MIDI.');
       const owner = this._pedalMidiOwner(this.state, ownerId), effect = owner?.effects?.[slot];
-      if (!owner || owner.freeze || !Number.isInteger(slot) || slot < 0 || slot >= (/^track-/.test(ownerId) ? 5 : 4) || effect?.type !== 'ferment') throw Error('Choose an unfrozen FERMENT insert for MIDI capture.');
+      if (!owner || owner.disabled === true || owner.freeze || !Number.isInteger(slot) || slot < 0 || slot >= (/^track-/.test(ownerId) ? 5 : 4) || effect?.type !== 'ferment') throw Error('Choose an enabled, unfrozen FERMENT insert for MIDI capture.');
       if (effect.params.bypass || effect.params.mix === 0 || effect.params.mode === 'chord') throw Error('Enable FERMENT in Pitch Tracking mode and play one note at a time.');
       const operation = ++this._pedalMidiOperation, generation = this.generation;
       await this.stopPedalMidi('restarted'); await this.init(); await this.context.resume();
-      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect) throw abortError();
+      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.disabled === true || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect) throw abortError();
       try { await this._preparePedalMidiFallback(operation); }
       catch (error) { if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw error; }
-      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect || owner.freeze || effect.params.bypass || effect.params.mix === 0 || effect.params.mode === 'chord' || this.recordingBusy || this.getServiceState().active || this._audioApplying || window.LoomMasterTransform && !window.LoomMasterTransform.isNeutral(this.state.master?.playback)) {
+      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.disabled === true || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect || owner.freeze || effect.params.bypass || effect.params.mix === 0 || effect.params.mode === 'chord' || this.recordingBusy || this.getServiceState().active || this._audioApplying || window.LoomMasterTransform && !window.LoomMasterTransform.isNeutral(this.state.master?.playback)) {
         if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw abortError();
       }
       const token = 'ferment-' + Date.now().toString(36) + '-' + operation;
@@ -1880,15 +1910,18 @@
     _updateRecordHold() { this._send({ type: 'recordHold', value: this.recordingBusy }); }
     _clampBeat(beat) { return Math.max(0, Math.min(Math.max(1, Math.min(64, Number(this.state.lengthBars) || 4)) * 4, Number(beat) || 0)); }
     setState(state) {
+      if (this.recordingBusy && state.tracks?.some((track, index) => track.disabled === true && !this._disabledTrackFlags[index])) throw Error('Finish the current take before disabling a track.');
       if (this._pedalMidiTake?.capturing) {
         const take = this._pedalMidiTake, owner = this._pedalMidiOwner(state, take.ownerId);
-        if (owner?.freeze || owner?.effects?.[take.slot] !== this._pedalMidiEffect) this.stopPedalMidi('target-changed').catch(error => this.onStatus?.({ type: 'error', message: error.message }));
+        if (owner?.disabled === true || owner?.freeze || owner?.effects?.[take.slot] !== this._pedalMidiEffect) this.stopPedalMidi('target-changed').catch(error => this.onStatus?.({ type: 'error', message: error.message }));
       }
       const frozenRate = this._frozenSampleRate(state);
       if (this.context && frozenRate && frozenRate !== this.context.sampleRate) throw Error('Reopen audio at the frozen tracks’ sample rate, or unfreeze them before changing the sample rate.');
       const old = this._clockConfiguration, changedClock = ['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].some(key => old?.[key] !== state?.[key]);
       if (changedClock) this._meters = { ...this._meters, beat: this.getTransport().beat };
       this._clockConfiguration = Object.fromEntries(['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].map(key => [key, state[key]]));
+      this._disabledTrackFlags = Array.from({ length: TRACK_COUNT }, (_, index) => state.tracks?.[index]?.disabled === true);
+      if (this._micTrack >= 0 && this._disabledTrackFlags[this._micTrack]) this._disableMicrophoneMonitoring(true, true);
       this.state = state; if (this._mic && !this._recordMicrophone) this._setMicrophoneGain(state.recording?.micInputGainDb); this._send({ type: 'state', state: dspState(state), ...(changedClock ? { epoch: ++this._transportEpoch } : {}) });
     }
     setAssets(assets) { this.assets = assets instanceof Map ? new Map(assets) : new Map(Object.entries(assets || {})); this._syncAssets(); }
@@ -1961,7 +1994,7 @@
       if (this._serviceRuntime.active) throw Error('Stop SERVICE before moving the arrangement playhead.');
       this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
     }
-    resumeAudition(id) { this._panicLatched = false; this._send({ type: 'audition', track: id == null ? undefined : this._trackIndex(id) }); }
+    resumeAudition(id) { const track = id == null ? undefined : this._assertTrackEnabled(this._trackIndex(id)); this._panicLatched = false; this._send({ type: 'audition', track }); }
     clearAudition(id) { this._send({ type: 'clearAudition', track: id == null ? undefined : this._trackIndex(id) }); }
     resetEffectMeters(ownerId, slot) {
       if (!Number.isInteger(slot) || slot < 0 || slot >= 5) return false;
@@ -1986,6 +2019,7 @@
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
     async startRecording(trackIds, options = {}) {
+      const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._assertTrackEnabled(this._trackIndex(id))))]; if (!tracks.length) throw Error('Arm a track before recording.');
       if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
       if (this._serviceRuntime.active) throw Error('Stop SERVICE before recording a microphone or instrument take.');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
@@ -1993,7 +2027,7 @@
       this._recordPreparing = true; this._updateRecordHold();
       try {
         const generation = this.generation, request = ++this._recordRequest; await this.init(); if (generation !== this.generation || request !== this._recordRequest) return false;
-        const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._trackIndex(id)))]; if (!tracks.length) throw Error('Arm a track before recording.');
+        tracks.forEach(track => this._assertTrackEnabled(track));
         await this.context.resume(); if (generation !== this.generation || request !== this._recordRequest) return false;
         const settings = { ...this.state.recording, ...options }, countInBars = !this._meters.playing && settings.startTransport !== false && [0, 1, 2].includes(settings.countInBars) ? settings.countInBars : 0;
         const punchEnabled = settings.punchEnabled === true, punchStart = this._clampBeat(settings.punchStart), punchEnd = this._clampBeat(settings.punchEnd);
@@ -2122,11 +2156,12 @@
     async setMicrophoneMonitoring(trackId, options = {}) {
       if (options.enabled !== true) { this._disableMicrophoneMonitoring(); return true; }
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before turning on monitoring.');
-      const track = this._trackIndex(trackId);
+      const track = this._assertTrackEnabled(this._trackIndex(trackId));
       if (this.recordingBusy && (this._micTrack !== track || this._micPending)) throw Error('Finish the current take before changing the microphone track.');
       const generation = this.generation, request = ++this._micRequest;
       if (!await this._acquireMicrophone(track, this._recordMicrophone ? this._mic?.gainDb : options.gainDb ?? this.state.recording?.micInputGainDb ?? 0, 'monitor', generation, request)) return false;
       if (generation !== this.generation || request !== this._micRequest) return false;
+      this._assertTrackEnabled(track);
       this._micEnabled = true; this._panicLatched = false; this._send({ type: 'microphoneMonitor', track, enabled: true }); this._emitMicrophoneStatus(); return true;
     }
     _disableMicrophoneMonitoring(force = false, cancelPending = false) {
@@ -2137,10 +2172,11 @@
       this._emitMicrophoneStatus();
     }
     async startMicrophoneRecording(trackId, options = {}) {
+      const track = this._assertTrackEnabled(this._trackIndex(trackId));
       if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
-      const track = this._trackIndex(trackId); if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
+      if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
       const generation = this.generation, request = ++this._micRequest;
       try {
         if (!await this._acquireMicrophone(track, options.micInputGainDb ?? this.state.recording?.micInputGainDb ?? 0, 'record', generation, request)) return false;
@@ -2232,6 +2268,8 @@
     async renderFreezeTrack(state = this.state, assets = this.assets, options = {}) {
       if (this._audioApplying) throw Error('Finish setting up the audio interface before freezing a track.');
       if (options.trackId == null) throw Error('Choose one of the ten tracks to freeze.');
+      const selectedTrack = typeof options.trackId === 'number' ? state.tracks?.[Math.floor(options.trackId)] : state.tracks?.find(track => track.id === options.trackId);
+      if (selectedTrack?.disabled === true) throw Error('Enable the track before freezing it.');
       const sampleRate = Math.round(Number(options.sampleRate) || this.context?.sampleRate || 48000), tempo = Math.max(40, Math.min(240, Number(state.tempo) || 120));
       if (sampleRate < 8000 || sampleRate > 192000) throw Error('Choose a supported sample rate for freezing.');
       const lengthBeats = Math.max(1, Math.min(64, Number(state.lengthBars) || 4)) * 4, bodyFrames = Math.round(lengthBeats * 60 / tempo * sampleRate), tailFrames = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds ?? 8) || 0)) * sampleRate), totalFrames = bodyFrames + tailFrames;
@@ -2294,7 +2332,7 @@
       })().finally(() => { this._closingAudioGraph = null; });
       return this._closingAudioGraph;
     }
-    async dispose() { this.setDiagnostics({ enabled: false }); this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
+    async dispose() { this.setDiagnostics({ enabled: false, release: true }); this.panic(); this._transportListeners.clear(); this._serviceListeners.clear(); for (const resolve of this._serviceStops.values()) resolve({ type: 'stop', active: false, beat: this._serviceRuntime.beat || 0 }); this._serviceStops.clear(); if (typeof navigator !== 'undefined') navigator.mediaDevices?.removeEventListener?.('devicechange', this._deviceChangeListener); await this._closeAudioGraph(); }
   }
   window.createLoomEngineDSP = createLoomEngineDSP;
   const sharedPlayback = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler, window.createLoomTrackEQDSP, window.createLoomMasteringDSP);

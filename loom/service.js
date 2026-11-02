@@ -118,7 +118,7 @@
       return { open: this.isOpen, running: this.running, busy: this.busy, beat: this.beat, tempo: state.tempo,
         activeSceneId: this.activeSceneId, queuedSceneId: this.queuedSceneId, selectedSceneId: this.selectedSceneId,
         service: copy({ ...config, take: undefined }),
-        tracks: state.tracks.map(track => ({ id: track.id, name: track.name, color: track.color,
+        tracks: state.tracks.map(track => ({ id: track.id, name: track.name, color: track.color, disabled: track.disabled === true,
           clips: track.clips.map(c => ({ id: c.id, name: c.name, type: c.type, length: c.length })),
           targets: global.LoomServiceSchema.targets(track) })),
         meters: meters.tracks?.map(track => track.peak || 0) || Array(TRACK_COUNT).fill(0),
@@ -177,8 +177,9 @@
       } finally { if (operation === this.operation) { this.busy = false; this.abort = null; this._notify(); } }
     }
     _scenePacket(scene) {
-      const prepared = this.prepared?.state || this._project(), holds = [];
+      const current = this._project(), prepared = this.prepared?.state || current, holds = [];
       const clips = scene.slots.map((slot, index) => {
+        if (current.tracks[index].disabled) { holds[index] = false; return null; }
         holds[index] = slot.mode === 'hold';
         const id = slot.mode === 'hold' ? this.activeClips[index] : slot.mode === 'clip' ? slot.clipId : null;
         const clip = prepared.tracks[index].clips.find(c => c.id === id);
@@ -232,7 +233,7 @@
     _performance() {
       const state = this._project(), overrides = new Map(), schema = global.LoomServiceSchema;
       for (const macro of this._config().macros) for (const mapping of macro.mappings) {
-        const track = state.tracks.find(t => t.id === mapping.trackId), descriptor = track && schema.targets(track).find(t => t.target === mapping.target);
+        const track = state.tracks.find(t => t.id === mapping.trackId), descriptor = track && !track.disabled && schema.targets(track).find(t => t.target === mapping.target);
         if (!descriptor || (mapping.effectType && mapping.effectType !== descriptor.effectType)) continue;
         const key = mapping.trackId + '/' + mapping.target, previous = overrides.get(key);
         const delta = schema.mappingValue(mapping, macro.value) - mapping.baseline;
@@ -240,7 +241,7 @@
         overrides.set(key, { trackId: mapping.trackId, target: mapping.target, value: clamp(value, descriptor.min, descriptor.max), ...(descriptor.effectType ? { effectType: descriptor.effectType } : {}) });
       }
       const held = [...this.padHolds.values()], stutter = held.filter(pad => pad.kind === 'stutter').sort((a, b) => b.order - a.order)[0];
-      return { drops: state.tracks.map(track => held.some(pad => pad.kind === 'drop' && pad.trackIds.includes(track.id))),
+      return { drops: state.tracks.map(track => !track.disabled && held.some(pad => pad.kind === 'drop' && pad.trackIds.includes(track.id))),
         stutterBeats: stutter?.rate || 0, fill: held.some(pad => pad.kind === 'fill'), overrides: [...overrides.values()] };
     }
     _sendPerformance() { if (this.running) this.engine.setServicePerformance(this._performance()); this._notify(); }
@@ -274,7 +275,7 @@
       const kind = payload.kind, rate = [.125, .25, .5].includes(payload.rate) ? payload.rate : .25;
       if (!['stutter', 'fill', 'drop'].includes(kind)) return;
       const key = (payload.source || 'ui') + ':' + kind + (kind === 'stutter' ? ':' + rate : '');
-      if (payload.active) this.padHolds.set(key, { kind, rate, trackIds: (payload.trackIds || this.padTargets).filter(id => this._project().tracks.some(t => t.id === id)), order: ++this.holdOrder });
+      if (payload.active) this.padHolds.set(key, { kind, rate, trackIds: (payload.trackIds || this.padTargets).filter(id => this._project().tracks.some(t => t.id === id && !t.disabled)), order: ++this.holdOrder });
       else this.padHolds.delete(key);
       this._sendPerformance();
     }
@@ -295,9 +296,12 @@
         const prepared = this.prepared || await this.options.prepareSources({ signal: this.abort.signal });
         if(operation!==this.operation||!this.isOpen||sourceIdentity!==this._project())throw new DOMException('Capture creation cancelled.','AbortError');
         const state = copy(prepared.state), sourceState = this._project(), needed = new Set(take.events.flatMap(event => event.kind === 'scene' ? event.clips.filter(Boolean) : []));
+        // An off channel keeps its original editable source even if a previous
+        // SERVICE preparation rendered that channel before it was disabled.
+        state.tracks.forEach((track, index) => { if (sourceState.tracks[index].disabled) state.tracks[index] = copy(sourceState.tracks[index]); });
         const original = new Map(sourceState.tracks.flatMap(track => track.clips.map(clip => [clip.id, { track, clip }])));
         const assetIds = new Set(state.assets.map(asset => asset.id));
-        for (const track of state.tracks) for (const clip of track.clips) if (needed.has(clip.id) && !assetIds.has(clip.assetId)) {
+        for (const track of state.tracks) if (!track.disabled) for (const clip of track.clips) if (needed.has(clip.id) && !assetIds.has(clip.assetId)) {
           const audio = prepared.assets[clip.assetId]; if (!audio) throw Error('A prepared note source is no longer available. Press Play to prepare the service again.');
           const encoded = global.LoomSchema.encodeAsset({ ...audio, id: clip.assetId, name: clip.name });
           state.assets.push(encoded); assetIds.add(encoded.id);
@@ -347,7 +351,7 @@
         if (action === 'macro-value') { const macro = config.macros.find(m => m.id === payload.macroId); if (!macro) return; macro.value = clamp(payload.value, 0, 1); this._save({ remember: false }); this._sendPerformance(); return; }
         if (action === 'macro-update') { const macro = config.macros.find(m => m.id === payload.macroId); if (!macro) return; Object.assign(macro, copy(payload.patch)); this._save(); this._sendPerformance(); return; }
         if (action === 'pad') { this._pad(payload); return; }
-        if(action==='pad-targets'){this.padTargets=(payload.trackIds||[]).filter(id=>this._project().tracks.some(t=>t.id===id));for(const pad of this.padHolds.values())if(pad.kind==='drop')pad.trackIds=this.padTargets.slice();this._sendPerformance();return;}
+        if(action==='pad-targets'){this.padTargets=(payload.trackIds||[]).filter(id=>this._project().tracks.some(t=>t.id===id&&!t.disabled));for(const pad of this.padHolds.values())if(pad.kind==='drop')pad.trackIds=this.padTargets.slice();this._sendPerformance();return;}
         if(action==='release-pads'){this.padHolds.clear();this.midi.releaseAll();this._sendPerformance();return;}
         if (action === 'capture-toggle') {
           if (this.running && payload.enabled) throw Error('Stop first, then arm capture so the next performance starts at bar one.');

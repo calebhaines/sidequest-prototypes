@@ -33,19 +33,20 @@
     }
     location() { return this.getLocation(); }
     editable(track) { if (track?.freeze) throw Error('Unfreeze this track before editing its clips or instrument.'); }
+    active(track) { if (track?.disabled) throw Error('Enable ' + track.name + ' before using its instrument or rendering its sound.'); }
     voices(trackId) { return this.host.getPatternAdapter?.(trackId)?.notes?.voices || []; }
     render() {
       const location = this.location(), clip = location?.clip, notes = clip?.type === 'notes', source = !!clip?.origin;
       if (this.sourceEdit && (!source || this.sourceEdit.id !== clip.id)) {
         const draft = this.sourceEdit, generation = this.getGeneration(); this.sourceEdit = null;
-        this.host.snapshot(draft.trackId).then(snapshot => { if (generation === this.getGeneration()) { this.captureSnapshot(draft.trackId, snapshot, draft.id); } }).catch(error => this.status(error.message));
+        if (!this.getState().tracks.find(track => track.id === draft.trackId)?.disabled) this.host.snapshot(draft.trackId).then(snapshot => { if (generation === this.getGeneration()) { this.captureSnapshot(draft.trackId, snapshot, draft.id); } }).catch(error => this.status(error.message));
       }
       for (const [id, visible] of [['editNotesButton', notes], ['printNoteClipButton', notes], ['editSourceButton', source], ['updateAudioButton', source], ['restoreNotesButton', source]]) {
-        const button = document.getElementById(id); if (button) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze; }
+        const button = document.getElementById(id); if (button) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled && !['editNotesButton', 'restoreNotesButton'].includes(id); }
       }
       const cancel = document.getElementById('cancelNoteRenderButton'); if (cancel) cancel.hidden = !this.controller;
-      const sourcePattern = document.getElementById('sourcePatternButton'); if (sourcePattern) { sourcePattern.hidden = !(source && this.sourceEdit?.id === clip.id); sourcePattern.disabled = !!this.controller || !!location?.track.freeze; }
-      for (const [action, visible] of [['notes', notes], ['print', notes], ['source', source], ['update', source]]) for (const button of document.querySelectorAll('[data-clip-action="' + action + '"]')) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze; }
+      const sourcePattern = document.getElementById('sourcePatternButton'); if (sourcePattern) { sourcePattern.hidden = !(source && this.sourceEdit?.id === clip.id); sourcePattern.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled; }
+      for (const [action, visible] of [['notes', notes], ['print', notes], ['source', source], ['update', source]]) for (const button of document.querySelectorAll('[data-clip-action="' + action + '"]')) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled && action !== 'notes'; }
       this.piano?.render();
     }
     getEditableClip() {
@@ -79,6 +80,7 @@
       const current = this.getState(), t = current.tracks.find(track => track.id === String(target || current.tracks[current.selectedTrack].id));
       if (!t) throw Error('Choose one of the ten tracks.');
       this.editable(t);
+      this.active(t);
       if (!t.instrument) {
         const id = sourceInstrument(pattern?.sourceApp), candidate = copy(current);
         candidate.tracks[current.tracks.indexOf(t)].instrument = { id, name: S.INSTRUMENT_NAMES[id] || id.toUpperCase() };
@@ -104,7 +106,7 @@
       t.clips.push(clip); const normalized = S.normalize(candidate);
       if (signal?.aborted || options.signal?.aborted) throw abortError(); this.commit(normalized, { selected: id, trackIndex: index }); this.piano?.open();
       this.status('Pattern received as an editable note clip. Map destination voices in the piano roll when needed.');
-      this.ensureInstrument(this.getState().tracks[index]).then(() => this.render()).catch(error => this.status(error.message)); return { trackId: t.id, clipId: id };
+      if (!t.disabled) this.ensureInstrument(this.getState().tracks[index]).then(() => this.render()).catch(error => this.status(error.message)); return { trackId: t.id, clipId: id };
     }
     async create() {
       const current = this.getState(), target = current.tracks[current.selectedTrack].id, generation = this.getGeneration();
@@ -119,20 +121,21 @@
     async editNotes() {
       const location = this.location(); if (location?.clip.type !== 'notes') return;
       this.editable(location.track);
-      await this.ensureInstrument(location.track); this.sourceEdit = null; this.piano?.open(); this.render();
+      if (!location.track.disabled) await this.ensureInstrument(location.track); this.sourceEdit = null; this.piano?.open(); this.render();
     }
     async exportPattern({ scope = 'clip' } = {}) {
       const location = this.location(); if (scope === 'clip') {
         const pattern = location?.clip.type === 'notes' ? location.clip.pattern : location?.clip.origin?.pattern;
         if (!pattern) throw Error('Select a note clip or a printed clip with a source.'); return P.normalize(copy(pattern));
       }
-      const t = this.getState().tracks[this.getState().selectedTrack]; if (!t.instrument) throw Error('Choose an instrument on the selected track.'); await this.ensureInstrument(t); return this.host.exportPattern(t.id);
+      const t = this.getState().tracks[this.getState().selectedTrack]; this.active(t); if (!t.instrument) throw Error('Choose an instrument on the selected track.'); await this.ensureInstrument(t); return this.host.exportPattern(t.id);
     }
     cancel() { ++this.operation; this.controller?.abort(); this.controller = null; this.render(); }
     async _render(update) {
       if (this.controller) throw Error('Finish or cancel the current source render.');
       const location = this.location(); if (!location || (update ? !location.clip.origin : location.clip.type !== 'notes')) return;
       this.editable(location.track);
+      this.active(location.track);
       const generation = this.getGeneration(), operation = ++this.operation, controller = new AbortController(); this.controller = controller; this.render();
       const originalId = location.clip.id, originalTrackId = location.track.id;
       try {
@@ -148,7 +151,7 @@
         const signature = clipSignature(c), request = { instrument, signal: controller.signal, onProgress: progress => this.status('Rendering source · ' + Math.round(progress * 100) + '%') };
         const result = await this.renderer[update ? 'update' : 'print'](copy(current), originalTrackId, originalId, request);
         const latest = this.getState(), actualTrack = latest.tracks.find(t => t.id === originalTrackId), actual = actualTrack?.clips.find(c => c.id === originalId);
-        if (!actual || actualTrack.freeze || signature !== clipSignature(actual) || generation !== this.getGeneration() || operation !== this.operation || controller.signal.aborted) throw abortError();
+        if (!actual || actualTrack.disabled || actualTrack.freeze || signature !== clipSignature(actual) || generation !== this.getGeneration() || operation !== this.operation || controller.signal.aborted) throw abortError();
         const candidate = copy(latest), target = candidate.tracks.find(t => t.id === originalTrackId), position = target.clips.findIndex(c => c.id === originalId);
         candidate.assets.push(result.asset);
         if (update) target.clips[position] = { ...copy(actual), assetId: result.asset.id, origin: result.origin };
@@ -163,6 +166,7 @@
     async editSource() {
       const location = this.location(); if (!location?.clip.origin) return; const generation = this.getGeneration(), { clip, track } = location, origin = copy(clip.origin);
       this.editable(track);
+      this.active(track);
       if (this.engine.getMeters().playing) await this.pause();
       await this.ensureInstrument(track, { open: true, replace: true, descriptor: copy(origin.instrument) });
       const current = this.location(); if (generation !== this.getGeneration() || current?.clip.id !== clip.id || current.track.id !== track.id) return;
@@ -178,6 +182,7 @@
       const location = this.location(), generation = this.getGeneration();
       if (!location?.clip.origin || this.sourceEdit?.id !== location.clip.id || this.controller) return;
       this.editable(location.track);
+      this.active(location.track);
       const packet = P.normalize(await this.host.exportPattern(location.track.id));
       if (generation !== this.getGeneration() || this.location()?.clip.id !== location.clip.id || this.sourceEdit?.id !== location.clip.id) throw abortError();
       const destinations = new Set(this.voices(location.track.id).map(voice => voice.id));
@@ -193,7 +198,7 @@
       candidate.tracks[index].clips[candidate.tracks[index].clips.findIndex(c => c.id === audio.id)] = { ...copy(origin.sourceClip), id: audio.id, name: audio.name, pattern: copy(origin.pattern), voiceMap: copy(origin.voiceMap), start: audio.start, length: audio.length };
       candidate.tracks[index].instrument = copy(origin.instrument);
       await this.commit(S.normalize(S.pruneAssets(candidate)), { selected: audio.id, trackIndex: index, instruments: true }); this.sourceEdit = null;
-      await this.ensureInstrument(this.getState().tracks[index]); this.piano?.open();
+      if (!this.getState().tracks[index].disabled) await this.ensureInstrument(this.getState().tracks[index]); this.piano?.open();
       this.status('Original notes and patch restored. The arrangement and track effects remain in place.');
     }
     dispose() { this.cancel(); this.renderer.dispose(); }

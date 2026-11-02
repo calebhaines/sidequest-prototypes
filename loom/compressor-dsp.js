@@ -31,6 +31,7 @@
       result.bypass = source.bypass === true; return result;
     }
     function saturate(x) { if (x >= 3) return 1; if (x <= -3) return -1; const square = x*x; return x*(27+square)/(27+9*square); }
+    const fetBiasZero = saturate(.045), optoBiasZero = saturate(.11);
     function lowpassCoefficients(frequency, q, rate) {
       const w = TAU*frequency/rate, c = Math.cos(w), alpha = Math.sin(w)/(2*q), a0 = 1+alpha;
       return new Float64Array([(1-c)*.5/a0, (1-c)/a0, (1-c)*.5/a0, -2*c/a0, (1-alpha)/a0]);
@@ -197,14 +198,20 @@
         }
         colourActive[channel]=1;
         const previous = colourPrevious[channel], index = channel*4;
+        // Gain reduction is fixed across this channel's four oversample
+        // steps. Reuse its exact bias baseline; keep every signal evaluation.
+        let stageGain=1,stageBias=0,stageZero=0;
+        if(model===1){stageGain=1.6+(p.fetMode==='all-buttons'?.9:0)+gr*.012;stageBias=.045;stageZero=fetBiasZero;}
+        else if(model===2){stageGain=1.7;stageBias=.11;stageZero=optoBiasZero;}
+        else if(model===4){stageGain=1.5;stageBias=.065+gr*.002;stageZero=saturate(stageBias);}
         let delta = 0;
         for(let sub=1;sub<=4;sub++){
           const x=previous+(value-previous)*sub*.25;
           let shaped=x;
-          if(model===1){const gain=1.6+(p.fetMode==='all-buttons'?.9:0)+gr*.012;shaped=(saturate(x*gain+.045)-saturate(.045))/gain;}
-          else if(model===2){const gain=1.7, bias=.11;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          if(model===1)shaped=(saturate(x*stageGain+stageBias)-stageZero)/stageGain;
+          else if(model===2)shaped=(saturate(x*stageGain+stageBias)-stageZero)/stageGain;
           else if(model===3)shaped=x/Math.sqrt(1+x*x*.65);
-          else if(model===4){const gain=1.5,bias=.065+gr*.002;shaped=(saturate(x*gain+bias)-saturate(bias))/gain;}
+          else if(model===4)shaped=(saturate(x*stageGain+stageBias)-stageZero)/stageGain;
           else if(model===5)shaped=saturate(x*1.15)/1.15;
           else if(model===6)shaped=x/(1+.09*Math.abs(x));
           else if(model===7){core[channel]+=coreCoefficient*(x-core[channel]);const memory=core[channel]*.3;shaped=(saturate((x+memory)*1.35)-saturate(memory*1.35))/1.35;}

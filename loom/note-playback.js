@@ -26,6 +26,7 @@
       this.recordingTracks = new Set(); this.stateSignature = '';
       this.compiledPatterns = new WeakMap();
       this.addingTracks = new Map(); this.prepareAbort = null;
+      this.disabledTracks = new Set(this.getState().tracks.filter(track => track.disabled === true).map(track => track.id));
       this.unsubscribe = audio.subscribeTransport((clock, reason) => {
         if (!this.active) return;
         if (!clock.playing || ['stop', 'panic', 'end'].includes(reason)) { this.stop(); return; }
@@ -36,6 +37,7 @@
       return (global.MusicLabPatternSchema?.fingerprint(pattern) || JSON.stringify(pattern)) + (loop === false ? ':once' : ':loop');
     }
     _preparationKey(adapter, tempo) { return adapter?.preparePattern ? JSON.stringify([tempo, adapter.preparationSignature ?? null]) : null; }
+    _enabled(track) { const current = this.getState().tracks.find(item => item.id === track?.id); return !!current && current.disabled !== true && !current.freeze; }
     async prepare() {
       if (this.disposed) throw Error('Note playback has been disposed.');
       this.prepareAbort?.abort(); this.prepareAbort = typeof AbortController === 'function' ? new AbortController() : null;
@@ -44,14 +46,18 @@
       // A Start request stays pending while the user edits words. Retry from
       // the latest arrangement rather than marking old prepared words current.
       for (;;) {
-        const signature = this._signature(), state = this.getState(), tempo = state.tempo, relevant = state.tracks.filter(track => !track.freeze && track.instrument && (track.instrumentLive || this.recordingTracks.has(track.id) || track.clips.some(clip => clip.type === 'notes')));
+        const signature = this._signature(), state = this.getState(), tempo = state.tempo, relevant = state.tracks.filter(track => track.disabled !== true && !track.freeze && track.instrument && (track.instrumentLive || this.recordingTracks.has(track.id) || track.clips.some(clip => clip.type === 'notes')));
         const entries = await Promise.all(relevant.map(async track => {
+          try {
+          if (!this._enabled(track)) return null;
           if (this.ensureInstrument && !await this.ensureInstrument(track)) throw Error('The instrument on ' + track.name + ' could not open.');
           const record = this.host.records.get(track.id); if (record) await record.ready;
+          if (!this._enabled(track)) return null;
           if (generation !== this.generation || this.disposed) throw abortError();
           const adapter = this.host.getPatternAdapter(track.id), noteClips = track.clips.filter(clip => clip.type === 'notes');
           if (noteClips.length && !adapter?.scheduleNote) throw Error(track.name + ' needs a Kitchen note-compatible instrument.');
           await adapter?.prepare?.();
+          if (!this._enabled(track)) return null;
           if (generation !== this.generation || this.disposed) throw abortError();
           const preparationKey = this._preparationKey(adapter, tempo);
           for (const clip of noteClips) await this._prepareClip(adapter, clip, tempo, signal);
@@ -62,8 +68,9 @@
             entry.signature = this._patternSignature(entry.live, entry.liveLoop);
             await this._prepareClip(adapter, { pattern: entry.live, voiceMap: {} }, tempo, signal);
           }
-          return [track.id, entry];
-        }));
+          return this._enabled(track) ? [track.id, entry] : null;
+          } catch (error) { if (!this._enabled(track)) return null; throw error; }
+        })).then(values => values.filter(Boolean));
         if (generation !== this.generation || this.disposed) throw abortError();
         if (entries.some(([, entry]) => entry.adapter?.preparePattern)) {
           const stale = () => signature !== this._signature() || tempo !== this.getState().tempo || entries.some(([id, entry]) => this.host.getPatternAdapter(id) !== entry.adapter || entry.preparationKey !== this._preparationKey(entry.adapter, this.getState().tempo));
@@ -77,14 +84,14 @@
           if (changed || stale()) continue;
         }
         if (signature !== this._signature()) continue;
-        this.tracks = new Map(entries); this.stateSignature = this._signature(); return true;
+        this.tracks = new Map(entries); this.disabledTracks = new Set(this.getState().tracks.filter(track => track.disabled === true).map(track => track.id)); this.stateSignature = this._signature(); return true;
       }
     }
     _nativeLive(track) {
       // Arming a note arrangement captures that arrangement. An instrument's
       // own sequencer joins it only through the explicit Live switch. Empty
       // armed tracks still record the instrument's native performance.
-      return !track?.freeze && (track?.instrumentLive === true || this.recordingTracks.has(track?.id) && !track?.clips.some(clip => clip.type === 'notes'));
+      return track?.disabled !== true && !track?.freeze && (track?.instrumentLive === true || this.recordingTracks.has(track?.id) && !track?.clips.some(clip => clip.type === 'notes'));
     }
     _clockDriven(track, entry) {
       return !!entry.live || track?.clips.some(clip => clip.type === 'notes') && (!entry.continuous || !this._nativeLive(track));
@@ -119,13 +126,13 @@
       if (signal?.aborted) throw abortError();
     }
     _prepareChangedTrack(entry, track, tempo = this.getState().tempo) {
-      if (!entry.adapter?.preparePattern) return;
+      if (!this._enabled(track) || !entry.adapter?.preparePattern) return;
       entry.prepareAbort?.abort(); entry.prepareAbort = typeof AbortController === 'function' ? new AbortController() : null;
       const signal = entry.prepareAbort?.signal, revision = entry.prepareRevision = (entry.prepareRevision || 0) + 1, generation = this.generation, preparationKey = this._preparationKey(entry.adapter, tempo);
       entry.preparing = true;
       (async () => {
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) await this._prepareClip(entry.adapter, clip, tempo, signal);
-        if (!this.active || generation !== this.generation || entry.prepareRevision !== revision || this.tracks.get(track.id) !== entry) return;
+        if (!this.active || generation !== this.generation || entry.prepareRevision !== revision || this.tracks.get(track.id) !== entry || !this._enabled(track)) return;
         const currentTempo = this.audio.getTransport().tempo ?? this.getState().tempo;
         if (preparationKey !== this._preparationKey(entry.adapter, currentTempo)) { this._prepareChangedTrack(entry, this.getState().tracks.find(item => item.id === track.id) || track, currentTempo); return; }
         entry.preparationKey = preparationKey; entry.preparing = false; entry.catchHeld = true; this._tick();
@@ -135,6 +142,7 @@
       if (this.disposed || !this.audio.getTransport().playing) return false;
       this.active = true;
       for (const [id, entry] of this.tracks) {
+        if (!this._enabled({ id })) continue;
         if (this._clockDriven(this.getState().tracks.find(track => track.id === id), entry)) {
           // Stop autonomous app clocks before handing the same native engine
           // timestamped notes. Subsequent host Start commands stay clock driven.
@@ -196,27 +204,32 @@
     setRecordingTracks(ids = []) { this.recordingTracks = new Set(ids); }
     _signature() {
       const state = this.getState();
-      return JSON.stringify(state.tracks.filter(track => !track.freeze).map(track => ({ id: track.id, instrument: track.instrument?.id, live: track.instrumentLive, record: this.recordingTracks.has(track.id),
+      return JSON.stringify(state.tracks.filter(track => track.disabled !== true && !track.freeze).map(track => ({ id: track.id, instrument: track.instrument?.id, live: track.instrumentLive, record: this.recordingTracks.has(track.id),
         notes: track.clips.filter(clip => clip.type === 'notes').map(clip => ({ id: clip.id, start: clip.start, length: clip.length, sourceOffset: clip.sourceOffset, rate: clip.rate, loop: clip.loop, gain: clip.gain, transpose: clip.transpose, voiceMap: clip.voiceMap, pattern: global.MusicLabPatternSchema?.fingerprint(clip.pattern) || clip.pattern })) })));
     }
     setState() {
-      for (const track of this.getState().tracks) if (track.freeze) {
+      const state = this.getState(), previousDisabled = this.disabledTracks;
+      this.disabledTracks = new Set(state.tracks.filter(track => track.disabled === true).map(track => track.id));
+      for (const track of state.tracks) if (track.disabled === true || track.freeze) {
         const entry = this.tracks.get(track.id);
         entry?.prepareAbort?.abort();
         if (entry) {
           for (const source of new Set(['loom', 'loom-live', ...(entry.sources || [])])) this.host.cancelNotes(track.id, { source });
           this.host.setClockDriven(track.id, false); this.tracks.delete(track.id);
         }
+        for (const key of this.scheduled.keys()) if (key.includes(':' + track.id + ':')) this.scheduled.delete(key);
         this.addingTracks.delete(track.id);
       }
       if (!this.active) return;
       const signature = this._signature(), adapterChanged = [...this.tracks].some(([id, entry]) => this.host.getPatternAdapter(id) !== entry.adapter);
       if (signature === this.stateSignature && !adapterChanged) return;
+      const previous = new Map(JSON.parse(this.stateSignature || '[]').map(track => [track.id, JSON.stringify(track)])), next = new Map(JSON.parse(signature).map(track => [track.id, JSON.stringify(track)]));
+      const powerOnly = [...previous].every(([id, value]) => next.has(id) ? next.get(id) === value : this.disabledTracks.has(id)) && [...next.keys()].every(id => previous.has(id) || previousDisabled.has(id));
       this.stateSignature = signature;
       this.compiledPatterns = new WeakMap();
-      const clock = this.audio.getTransport(); this._reset(clock);
+      const clock = this.audio.getTransport(); if (!powerOnly) this._reset(clock);
       // New note tracks are prepared without interrupting the other lanes.
-      const state = this.getState(), relevant = state.tracks.filter(track => !track.freeze && track.instrument && (track.instrumentLive || this.recordingTracks.has(track.id) || track.clips.some(clip => clip.type === 'notes')));
+      const relevant = state.tracks.filter(track => track.disabled !== true && !track.freeze && track.instrument && (track.instrumentLive || this.recordingTracks.has(track.id) || track.clips.some(clip => clip.type === 'notes')));
       for (const id of [...this.tracks.keys()]) if (!relevant.some(track => track.id === id)) { this.tracks.get(id).prepareAbort?.abort(); this.host.cancelNotes(id, { source: 'loom' }); this.host.cancelNotes(id, { source: 'loom-live' }); this.host.setClockDriven(id, false); this.tracks.delete(id); }
       for (const track of relevant) {
         const entry = this.tracks.get(track.id);
@@ -231,24 +244,25 @@
       this._tick(); if (!this.refreshing) this._refreshLive();
     }
     async _addTrack(track) {
-      if (!track || track.freeze) return;
+      if (!track || !this._enabled(track)) return;
       const generation = this.generation, operation = {}; this.addingTracks.set(track.id, operation);
       try {
         if (this.ensureInstrument && !await this.ensureInstrument(track)) return;
         const record = this.host.records.get(track.id); if (record) await record.ready;
+        if (!this._enabled(track) || this.addingTracks.get(track.id) !== operation) return;
         const adapter = this.host.getPatternAdapter(track.id); await adapter?.prepare?.();
-        if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation) return;
+        if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation || !this._enabled(track)) return;
         const tempo = this.getState().tempo, preparationKey = this._preparationKey(adapter, tempo);
         const entry = { id: track.id, adapter, preparationKey, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) await this._prepareClip(adapter, clip, this.getState().tempo, this.prepareAbort?.signal);
         if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.liveLoop = adapter.nativeSequenceLoop !== false; entry.signature = this._patternSignature(entry.live, entry.liveLoop); await this._prepareClip(adapter, { pattern: entry.live, voiceMap: {} }, this.getState().tempo, this.prepareAbort?.signal); }
-        if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation || !this.getState().tracks.some(item => item.id === track.id && item.instrument && !item.freeze)) return;
+        if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation || !this.getState().tracks.some(item => item.id === track.id && item.instrument && !item.freeze && item.disabled !== true)) return;
         if (adapter?.preparePattern && preparationKey !== this._preparationKey(adapter, this.audio.getTransport().tempo ?? this.getState().tempo)) { this._addTrack(this.getState().tracks.find(item => item.id === track.id)); return; }
         if (this._clockDriven(track, entry)) { this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
         this.tracks.set(track.id, entry);
         if (entry.live) entry.liveSource = this._newSource(entry);
         if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(track)) this.host.transportInstrument(track.id, { ...this.audio.getTransport(), playing: true });
-        this.catchHeld = true; this._tick();
+        entry.catchHeld = true; this._tick();
       } catch (error) { if (this.active && this.addingTracks.get(track.id) === operation && error.name !== 'AbortError') this.onStatus(error.message); }
       finally { if (this.addingTracks.get(track.id) === operation) this.addingTracks.delete(track.id); }
     }
@@ -275,7 +289,7 @@
       for (const entry of this.tracks.values()) for (const [source, when] of entry.retired || []) if (when < clock.contextTime - .5) { entry.sources.delete(source); entry.retired.delete(source); }
       try {
         for (const track of state.tracks) {
-          const entry = this.tracks.get(track.id); if (!entry || track.freeze) continue;
+          const entry = this.tracks.get(track.id); if (!entry || track.freeze || track.disabled === true) continue;
           if (entry.adapter?.preparePattern && !entry.preparing && entry.preparationKey !== this._preparationKey(entry.adapter, clock.tempo)) this._prepareChangedTrack(entry, track, clock.tempo);
           if (entry.preparing) continue;
           if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(track)) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
@@ -310,6 +324,7 @@
       this._clip(track, entry, clip, segment, clock, source);
     }
     _clip(track, entry, clip, segment, clock, source) {
+      if (track.disabled === true || !this._enabled(track)) return;
       if (segment.end <= clip.start + EPSILON || segment.start >= clip.start + clip.length - EPSILON) return;
       const rate = clamp(Number(clip.rate) || 1, .125, 8), offset = Number(clip.sourceOffset) || 0, period = clip.pattern.lengthBeats / rate;
       const localStart = Math.max(0, segment.start - clip.start), localEnd = Math.min(clip.length, segment.end - clip.start);
@@ -346,7 +361,7 @@
         for (const [id, entry] of this.tracks) {
           if (!this.active || generation !== this.generation) break;
           const track = this.getState().tracks.find(item => item.id === id);
-          if (!this._nativeLive(track) || entry.preparing) continue;
+          if (!this._enabled(track) || !this._nativeLive(track) || entry.preparing) continue;
           const continuous = !!entry.adapter?.transport && ['bands', 'decks'].includes(entry.adapter?.patternImport?.mode) && !entry.adapter?.importedPattern;
           if (continuous !== entry.continuous) {
             entry.continuous = continuous; for (const source of entry.sources) this.host.cancelNotes(id, { source }); entry.sources.clear(); entry.live = null; entry.pending = null; entry.signature = '';
@@ -358,6 +373,7 @@
           if (!entry.adapter?.scheduleNote || !entry.adapter?.exportPattern || entry.continuous) continue;
           const pattern = await this.host.exportPattern(id), loop = entry.adapter.nativeSequenceLoop !== false, signature = this._patternSignature(pattern, loop);
           if (!this.active || generation !== this.generation) break;
+          if (!this._enabled(track) || this.tracks.get(id) !== entry) continue;
           if (entry.adapter.preparePattern) {
             await this._prepareClip(entry.adapter, { pattern, voiceMap: {} }, this.getState().tempo, this.prepareAbort?.signal);
             if (!this.active || generation !== this.generation || this.tracks.get(id) !== entry || entry.preparing) continue;

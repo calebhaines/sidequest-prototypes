@@ -56,8 +56,8 @@
       return index;
     }
     function summarize(stats, available, estimated) {
-      const samples = stats.count;
-      const result = { samples, totalSamples: stats.totalSamples, calls: stats.totalCalls, windowCalls: stats.windowCalls, meanMs: null, p95Ms: null, p95MsLower: null, p95MsUpper: null, maxMs: null, meanPercent: null, p95Percent: null, p95PercentLower: null, p95PercentUpper: null, maxPercent: null, overBudget: stats.overBudget, zeroSamples: stats.zeroSamples, estimated, percentileMethod: 'histogram', percentileBins: BINS };
+      const samples = stats?.count || 0;
+      const result = { samples, totalSamples: stats?.totalSamples || 0, calls: stats?.totalCalls || 0, windowCalls: stats?.windowCalls || 0, meanMs: null, p95Ms: null, p95MsLower: null, p95MsUpper: null, maxMs: null, meanPercent: null, p95Percent: null, p95PercentLower: null, p95PercentUpper: null, maxPercent: null, overBudget: stats?.overBudget || 0, zeroSamples: stats?.zeroSamples || 0, estimated, percentileMethod: 'histogram', percentileBins: BINS };
       if (!available || !samples || !stats.windowCalls) return result;
       let max = 0, loadMax = 0;
       for (let index = 0; index < samples; index++) {
@@ -72,9 +72,9 @@
       return result;
     }
     function descriptor(raw) {
-      return { id: String(raw.id), kind: typeof raw.kind === 'string' ? raw.kind : 'stage', ownerId: typeof raw.ownerId === 'string' ? raw.ownerId : null, slot: Number.isInteger(raw.slot) ? raw.slot : null, effectType: typeof raw.effectType === 'string' ? raw.effectType : null, identity: typeof raw.identity === 'string' ? raw.identity : null, label: typeof raw.label === 'string' ? raw.label : String(raw.id), bypassed: raw.bypassed === true, active: raw.active !== false };
+      return { id: String(raw.id), kind: typeof raw.kind === 'string' ? raw.kind : 'stage', ownerId: typeof raw.ownerId === 'string' ? raw.ownerId : null, slot: Number.isInteger(raw.slot) ? raw.slot : null, effectType: typeof raw.effectType === 'string' ? raw.effectType : null, identity: typeof raw.identity === 'string' ? raw.identity : null, label: typeof raw.label === 'string' ? raw.label : String(raw.id), bypassed: raw.bypassed === true, disabled: raw.disabled === true, active: raw.active !== false && raw.disabled !== true };
     }
-    function sameIdentity(a, b) { return a.id === b.id && a.kind === b.kind && a.ownerId === b.ownerId && a.slot === b.slot && a.effectType === b.effectType && a.identity === b.identity; }
+    function sameIdentity(a, b) { return a.id === b.id && a.kind === b.kind && a.ownerId === b.ownerId && a.slot === b.slot && a.effectType === b.effectType && a.identity === b.identity && a.disabled === b.disabled; }
     class Runtime {
       constructor(sampleRate = 48000, options = {}) {
         this.sampleRate = clamp(sampleRate, 8000, 192000, 48000);
@@ -82,7 +82,7 @@
         this.clock = supplied === null ? null : typeof supplied === 'function' ? { now: supplied, name: 'injected', resolutionMs: null, coarse: false, resolutionKnown: false } : supplied && typeof supplied.now === 'function' ? { name: 'injected', resolutionMs: null, coarse: false, resolutionKnown: finite(supplied.resolutionMs), ...supplied } : defaultClock();
         this.available = Boolean(this.clock && typeof this.clock.now === 'function');
         this.config = normalizeConfig(options); this.enabled = this.config.enabled; this.mode = this.config.mode; this.revision = this.config.revision;
-        this.rows = []; this.rowIndex = new Map(); this.durations = new Float64Array(0); this.touched = new Uint8Array(0); this.stageCalls = new Uint32Array(0); this.total = newStats();
+        this.rows = []; this.measuredRows = []; this.rowIndex = new Map(); this.durations = new Float64Array(0); this.stageCalls = new Uint32Array(0); this.total = newStats();
         this.current = false; this.processedBlocks = 0; this.processedFrames = 0; this.sampledBlocks = 0; this.sampledFrames = 0; this.validSampledBlocks = 0; this.validSampledFrames = 0; this.invalidTimings = 0; this.timerReads = 0; this.blockFrames = 0; this.budgetMs = 0; this.observedResolutionMs = null; this._dueFrames = 0; this._cursor = 0; this._seed = 0x6d2b79f5; this._offset = 0; this._stamp = NaN; this._lastStamp = NaN; this._bad = false;
       }
       configure(value = {}) {
@@ -100,13 +100,16 @@
           return;
         }
         const old = new Map(this.rows.map(row => [row.id, row]));
-        this.rows = next.map(meta => { const row = old.get(meta.id); return { ...meta, stats: row && sameIdentity(row, meta) ? row.stats : newStats() }; });
-        this.rowIndex = new Map(this.rows.map((row, index) => [row.id, index]));
-        this.durations = new Float64Array(this.rows.length); this.touched = new Uint8Array(this.rows.length); this.stageCalls = new Uint32Array(this.rows.length);
+        this.rows = next.map(meta => { const row = old.get(meta.id); return { ...meta, stats: meta.disabled ? null : row && sameIdentity(row, meta) ? row.stats : newStats() }; });
+        // Disabled owners retain descriptors for the inspector, but have no
+        // timing rings, callback bookkeeping or slots in the measurement arrays.
+        this.measuredRows = this.rows.filter(row => !row.disabled);
+        this.rowIndex = new Map(this.measuredRows.map((row, index) => [row.id, index]));
+        this.durations = new Float64Array(this.measuredRows.length); this.stageCalls = new Uint32Array(this.measuredRows.length);
         if (this.current) this._bad = true;
       }
       reset() {
-        clearStats(this.total); for (const row of this.rows) clearStats(row.stats);
+        clearStats(this.total); for (const row of this.measuredRows) clearStats(row.stats);
         this.current = false; this.processedBlocks = this.processedFrames = this.sampledBlocks = this.sampledFrames = this.validSampledBlocks = this.validSampledFrames = this.invalidTimings = this.timerReads = this.blockFrames = this.budgetMs = this._dueFrames = this._cursor = 0;
         this.observedResolutionMs = null; this._stamp = this._lastStamp = NaN; this._seed = 0x6d2b79f5; this._offset = 0; this._bad = false;
       }
@@ -138,7 +141,7 @@
         const selected = within === this._offset;
         if (!selected || !this.available) return false;
         this.current = true; this.sampledBlocks++; this.sampledFrames += count; this._bad = false; this._lastStamp = NaN;
-        this.durations.fill(0); this.touched.fill(0); this.stageCalls.fill(0);
+        this.durations.fill(0); this.stageCalls.fill(0);
         this._stamp = this._now(); return true;
       }
       start(id) { return this.current && this.rowIndex.has(id) ? this._now() : NaN; }
@@ -147,7 +150,7 @@
         const index = this.rowIndex.get(id); if (index === undefined) return;
         const end = this._now(), elapsed = end - stamp;
         if (!finite(elapsed) || elapsed < 0 || this.clock.coarse === true && elapsed > 1000) { this._bad = true; return; }
-        this.durations[index] += elapsed; this.touched[index] = 1; this.stageCalls[index]++;
+        this.durations[index] += elapsed; this.stageCalls[index]++;
       }
       finish() {
         if (!this.current) return;
@@ -157,7 +160,7 @@
         record(this.total, elapsed, this.budgetMs, 1); this.validSampledBlocks++; this.validSampledFrames += this.blockFrames;
         // Every row uses the same callback window. An absent execution adds a
         // zero contribution; a window with no calls still reports null timing.
-        for (let index = 0; index < this.rows.length; index++) record(this.rows[index].stats, this.durations[index], this.budgetMs, this.stageCalls[index]);
+        for (let index = 0; index < this.measuredRows.length; index++) record(this.measuredRows[index].stats, this.durations[index], this.budgetMs, this.stageCalls[index]);
       }
       consumeReportDue() {
         if (!this.enabled || this._dueFrames < this.sampleRate * .25) return false;
@@ -170,7 +173,7 @@
           sampleRate: this.sampleRate, blockFrames: this.blockFrames, budgetMs: this.budgetMs, processedBlocks: this.processedBlocks, sampledBlocks: this.sampledBlocks, validSampledBlocks: this.validSampledBlocks, sampledFrames: this.sampledFrames, validSampledFrames: this.validSampledFrames, coverage: this.processedBlocks ? this.sampledBlocks / this.processedBlocks : 0, elapsedSeconds: this.processedFrames / this.sampleRate, windowSize: WINDOW, estimated,
           total: summarize(this.total, this.available, estimated), rows: this.rows.map(row => {
             const result = summarize(row.stats, this.available, estimated);
-            result.id = row.id; result.kind = row.kind; result.ownerId = row.ownerId; result.slot = row.slot; result.effectType = row.effectType; result.label = row.label; result.bypassed = row.bypassed; result.active = row.active;
+            result.id = row.id; result.kind = row.kind; result.ownerId = row.ownerId; result.slot = row.slot; result.effectType = row.effectType; result.label = row.label; result.bypassed = row.bypassed; result.disabled = row.disabled; result.active = row.active;
             return result;
           }), timerReads: this.timerReads, invalidTimings: this.invalidTimings };
       }

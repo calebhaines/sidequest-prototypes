@@ -126,7 +126,10 @@
     "check:citrus-browser": "node citrus/browser-checks.cjs",
     "check:ferment-midi": "node loom/pedal-midi-checks.cjs && node loom/pedal-midi-engine-checks.cjs",
     "check:ferment-midi-browser": "node loom/pedal-midi-browser-checks.cjs",
-    "check:embedded-instruments": "node loom/embedded-instruments-checks.cjs"
+    "check:embedded-instruments": "node loom/embedded-instruments-checks.cjs",
+    "check:track-power": "node loom/track-disable-project-checks.cjs && node loom/track-disable-engine-checks.cjs && node loom/disabled-host-checks.cjs && node loom/track-disable-integration-checks.cjs",
+    "check:galley-cpu-review": "node loom/performance-2026-checks.cjs && node loom/exact-effects-cpu-checks.cjs && node loom/cpu-lifecycle-checks.cjs && npm run check:track-power",
+    "check:galley-cpu-review-browser": "GALLEY_135_REGRESSION=1 node loom/performance-2026-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
