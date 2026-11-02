@@ -236,6 +236,15 @@ async function run() {
     const chunked = makeFrozen(release, moving, { chunkFrames: 997 }), actual = render(release, chunked.state, chunked.assets, moving.sampleRate, moving.frames, {}, 137), expected = render(release, frozen.state, frozen.assets, moving.sampleRate, moving.frames, {}, 137);
     assert.deepEqual(actual.output, expected.output); assert(chunked.state.tracks[0].freeze.chunks.length > 10); evidence.chunkedPcm = digest(actual.output);
   });
+  await check('Frozen arrangement seams exclude unheard events on every stereo main and send plane', () => {
+    const sampleRate = 8000, total = 16000, boundary = 4000, state = blank(release); Object.assign(state, { loopEnabled: true, loopStart: 0, loopEnd: 1 });
+    for (const key of ['main', 'sendA', 'sendB']) {
+      const planes = Object.fromEntries(['main', 'sendA', 'sendB'].map(name => [name, [new Float32Array(total), new Float32Array(total)]])); planes[key][0][boundary] = 1; planes[key][1][boundary] = -.5;
+      const packed = packCapture(release, state, planes, sampleRate, total); assert(S.freezeValid(packed.state, 'track-1'));
+      const a = render(release, packed.state, packed.assets, sampleRate, 8100, { linear: false }, 137), b = render(release, packed.state, packed.assets, sampleRate, 8100, { linear: false }, 128); assert.deepEqual(a.output, b.output);
+      for (const channel of a.output) assert(channel.every(value => value === 0), key + ' leaked an unheard post-loop impulse.');
+    }
+  });
   await check('Save/open, normalization and Undo copies retain exact frozen samples and source assets', () => {
     const text = S.serializeProject(frozen.state), opened = S.parseProject(text), copied = S.copy(opened); assert.deepEqual(opened, frozen.state); assert.deepEqual(copied, opened); assert(S.freezeValid(opened, 'track-1')); assert.strictEqual(copied.freezeAssets[0], opened.freezeAssets[0], 'Undo shares validated immutable cache objects');
     const decoded = S.decodeAssets(opened.assets, opened.freezeAssets); for (const asset of opened.freezeAssets) { const a = decoded instanceof Map ? decoded.get(asset.id) : decoded[asset.id], b = S.decodeFreezeAsset(asset); assert.deepEqual(a.left, b.left); assert.deepEqual(a.right, b.right); }

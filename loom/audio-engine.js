@@ -130,6 +130,13 @@
       const index = Math.floor(position), fraction = position - index;
       return (data[index] || 0) * (1 - fraction) + (data[Math.min(index + 1, data.length - 1)] || 0) * fraction;
     };
+    function boundedContinuation(outgoing, incoming, history, offset, stride) {
+      if (Math.abs(outgoing - incoming) <= 1e-5) return outgoing;
+      const last = history[offset], previous = history[offset + stride], adjacent = Math.max(Math.abs(last - previous), Math.abs(previous - history[offset + 2 * stride]), Math.abs(history[offset + 2 * stride] - history[offset + 3 * stride]));
+      // A future attack outside the loop is not a valid declick anchor. Keep
+      // continuous waveform steps; otherwise continue the genuinely played slope.
+      return Math.abs(outgoing - last) > adjacent * 1.25 + 1e-5 ? 2 * last - previous : outgoing;
+    }
     function loopDelta(data, start, end, reverse) {
       if (end - start < 4) return 0;
       const direction = reverse ? -1 : 1, firstPosition = reverse ? end - 1 : start, lastPosition = reverse ? start : end - 1;
@@ -160,6 +167,16 @@
     }
     function clipSourceSample(item, position, channel) {
       const data = channel ? item.right : item.left, start = item.sourceStart * item.sampleRate;
+      const end = item.sourceEnd * item.sampleRate, lastPosition = Math.max(start, end - 1);
+      if (item.loop && !item.reverse && position > lastPosition) {
+        // A selected source region owns its circular interpolation boundary.
+        // Reading the following asset sample here can insert a one-sample pop
+        // even when the selected region itself is perfectly seamless.
+        const last = sampleData(data, lastPosition);
+        if ((channel ? item.loopDeltaRight : item.loopDeltaLeft) === 0) return last + (position - lastPosition) * (sampleData(data, start) - last);
+        const previous = sampleData(data, Math.max(start, lastPosition - 1));
+        return last + (position - lastPosition) * (last - previous);
+      }
       if (item.loop && item.reverse && position < start) {
         // Reverse playback starts on the last selected sample. At fractional
         // rates its final interpolation can run less than one sample before
@@ -222,6 +239,7 @@
         this.seekFadeFrames = Math.max(1, Math.round(this.sampleRate * .006));
         this.seekFadeRemaining = 0;
         this.clipSample = [0, 0];
+        this.wrapProbe = new Float64Array(24);
         this.clipWrapOffsets = Array.from({ length: TRACK_COUNT }, () => [0, 0]);
         this.clipWrapFrames = Math.max(1, Math.round(this.sampleRate * .003));
         this.clipWrapRemaining = 0;
@@ -842,9 +860,16 @@
           const position = this.timelineFreezeFrames[frame]; let stopGain = 1;
           if (position >= 0) {
             const continuation = this.timelineFreezeOutgoing[frame];
-            if (continuation >= 0) { this._readFrozen(frozen, continuation * rate); frozen.wrapOffsets.set(frozen.last); }
+            if (continuation >= 0) {
+              this._readFrozen(frozen, continuation * rate); frozen.wrapOffsets.set(frozen.last);
+              const count = Math.max(1, Math.min(4, this.sampleClock + frame));
+              for (let past = 0; past < 4; past++) {
+                if (past < count) { this._readFrozen(frozen, (continuation - past - 1) * rate); this.wrapProbe.set(frozen.last, past * 6); }
+                else for (let channel = 0; channel < 6; channel++) this.wrapProbe[past * 6 + channel] = this.wrapProbe[(count - 1) * 6 + channel];
+              }
+            }
             this._readFrozen(frozen, position * rate); frozen.stopRemaining = 0;
-            if (continuation >= 0) { for (let channel = 0; channel < 6; channel++) { const difference = frozen.wrapOffsets[channel] - frozen.last[channel]; frozen.wrapOffsets[channel] = Math.abs(difference) > 1e-5 ? difference : 0; } frozen.wrapRemaining = this.clipWrapFrames; }
+            if (continuation >= 0) { for (let channel = 0; channel < 6; channel++) { const outgoing = boundedContinuation(frozen.wrapOffsets[channel], frozen.last[channel], this.wrapProbe, channel, 6), difference = outgoing - frozen.last[channel]; frozen.wrapOffsets[channel] = Math.abs(difference) > 1e-5 ? difference : 0; } frozen.wrapRemaining = this.clipWrapFrames; }
             if (frozen.wrapRemaining > 0) { const progress = 1 - frozen.wrapRemaining / this.clipWrapFrames, weight = 1 - progress * progress * (3 - 2 * progress); for (let channel = 0; channel < 6; channel++) frozen.last[channel] += frozen.wrapOffsets[channel] * weight; frozen.wrapRemaining--; }
           }
           // Pausing must never play the next cached musical event. Decay the
@@ -947,11 +972,21 @@
               const correction = this.clipWrapOffsets[t];
               if (wrapContinuation !== null) {
                 let outgoingLeft = 0, outgoingRight = 0;
-                // Read the known clip continuation at the next sample time.
-                // This never delays playback or includes the live input/rack.
+                // Read a continuous continuation without admitting an attack
+                // beyond the loop. All probes are seam-only and clip-only.
                 for (const item of this.clipLists[t]) {
                   readClip(item, wrapContinuation, secondsPerBeat, this.clipSample);
                   outgoingLeft += this.clipSample[0]; outgoingRight += this.clipSample[1];
+                }
+                if (Math.abs(outgoingLeft - clipLeft) > 1e-5 || Math.abs(outgoingRight - clipRight) > 1e-5) {
+                  const count = Math.max(1, Math.min(4, this.sampleClock + frame));
+                  for (let past = 0; past < 4; past++) {
+                    let a = 0, b = 0;
+                    if (past < count) for (const item of this.clipLists[t]) { readClip(item, wrapContinuation - (past + 1) * advance, secondsPerBeat, this.clipSample); a += this.clipSample[0]; b += this.clipSample[1]; }
+                    else { a = this.wrapProbe[(count - 1) * 2]; b = this.wrapProbe[(count - 1) * 2 + 1]; }
+                    this.wrapProbe[past * 2] = a; this.wrapProbe[past * 2 + 1] = b;
+                  }
+                  outgoingLeft = boundedContinuation(outgoingLeft, clipLeft, this.wrapProbe, 0, 2); outgoingRight = boundedContinuation(outgoingRight, clipRight, this.wrapProbe, 1, 2);
                 }
                 correction[0] = Math.abs(outgoingLeft - clipLeft) > 1e-5 ? outgoingLeft - clipLeft : 0;
                 correction[1] = Math.abs(outgoingRight - clipRight) > 1e-5 ? outgoingRight - clipRight : 0;

@@ -42,6 +42,50 @@ function difference(a, b, start = 0, end = a.length) { let maximum = 0; for (let
     pass('Cut source-loop seam is continuous without moving its sample boundary.');
   }
 
+  // Deliberately unrelated audio immediately after a selected region must not
+  // enter its forward circular interpolation. Ordinary sine-only fixtures can
+  // hide this bug because the next asset sample happens to be a continuation.
+  for (const options of [
+    { sourceRate: 48000, rate: .5, start: 100, end: 356 },
+    { sourceRate: 44100, rate: 1, start: 100, end: 356 },
+    { sourceRate: 48000, rate: .65, start: 100, end: 356 },
+    { sourceRate: 32000, rate: 1.7, start: 100.25, end: 1124.25 },
+    { sourceRate: 44100, rate: 2.1, start: 100.2, end: 1124.8 }
+  ]) {
+    for (const edited of [false, true]) {
+      const { sourceRate, rate, start, end } = options, f = fixture({ sourceRate, sourceStart: start / sourceRate, span: (end - start) / sourceRate, rate });
+      f.asset.left.fill(-.8); f.asset.right.fill(.9);
+      for (let i = Math.floor(start); i < Math.ceil(end); i++) { f.asset.left[i] = .2 + (edited ? (i - Math.floor(start)) * .0001 : 0); f.asset.right[i] = -.15 + (edited ? (i - Math.floor(start)) * .00007 : 0); }
+      const boundary = (end - start) / sourceRate / rate * sr, frames = Math.ceil(boundary) + 220, a = render(coreFor(f), frames, [128]), b = render(coreFor(f), frames, [17, 137, 251, 31]);
+      assert.deepEqual(a, b, 'Selected-region repair is independent of callback boundaries.');
+      for (const channel of ['left', 'right']) {
+        const jump = maxStep(a[channel], Math.floor(boundary) - 3, Math.ceil(boundary) + 150);
+        assert(jump < .005, 'Following asset samples escaped a forward loop: ' + JSON.stringify({ ...options, edited, channel, jump }));
+        for (const frame of [200, Math.floor(boundary - 4 * sr / sourceRate / rate), Math.ceil(boundary) + 180]) {
+          if (frame >= frames) continue;
+          const phase = (frame / sr * rate) % ((end - start) / sourceRate), position = start + phase * sourceRate;
+          // Compare untouched source interiors, outside the final interpolation
+          // interval and the existing3ms seam correction.
+          if (position >= end - 1 || frame > boundary && frame < boundary + sr * .003 + 1) continue;
+          const index = Math.floor(position), fraction = position - index, expected = f.asset[channel][index] * (1 - fraction) + f.asset[channel][index + 1] * fraction;
+          assert(Math.abs(a[channel][frame] - expected) < 2e-6, 'A source interior changed: ' + JSON.stringify({ ...options, edited, channel, frame }));
+        }
+      }
+    }
+  }
+  pass('Selected forward loops exclude unrelated following audio at slow rates, resampling and fractional stereo region ends.');
+
+  for (const frequency of [100, 4000]) for (const options of [{ sourceRate: 48000, rate: .5 }, { sourceRate: 44100, rate: 1.3 }]) {
+    const f = fixture({ ...options, frequency, duration: .1, span: .1 }), compiled = scope.LoomClipPlayback.compile(f.clip, f.asset), boundary = f.asset.left.length / f.asset.sampleRate / f.clip.rate * sr;
+    assert.equal(compiled.loopDeltaLeft, 0); assert.equal(compiled.loopDeltaRight, 0);
+    const audio = render(coreFor(f), Math.ceil(boundary) + 180, [17, 137, 251]);
+    for (let frame = 150; frame < audio.left.length; frame++) {
+      const position = ((frame / sr * f.clip.rate) % f.clip.sourceEnd) * f.asset.sampleRate, index = Math.floor(position), fraction = position - index;
+      for (const channel of ['left', 'right']) { const data = f.asset[channel], next = (index + 1) % data.length, expected = data[index] * (1 - fraction) + data[next] * fraction; assert(Math.abs(audio[channel][frame] - expected) < 2e-6, 'Full-asset loops need circular interpolation: ' + JSON.stringify({ frequency, ...options, frame, channel })); }
+    }
+  }
+  pass('Full-asset forward loops use periodic interpolation at fractional rates instead of holding their final sample.');
+
   // Source loops retain their first pass and all samples outside the correction.
   for (const options of [
     { rate: 1, sourceOffset: .13 },
@@ -117,6 +161,17 @@ function difference(a, b, start = 0, end = a.length) { let maximum = 0; for (let
     assert(maxStep(result.left, sr / 2 - 2, sr / 2 + 160) < .015, 'A source seam and transport wrap at the same frame do not double-fade or jump.');
   }
   pass('Arrangement wraps repair clip audio only, with fixed placement/length, block-independent results and simultaneous source-wrap continuity.');
+
+  {
+    const f = fixture({ arrangement: true, sourceLoop: false, span: 2 }); f.state.loopEnd = .25;
+    const boundary = sr / 8; f.asset.left.fill(-.8); f.asset.right.fill(.9); f.asset.left.fill(.2, 0, boundary); f.asset.right.fill(-.15, 0, boundary);
+    const a = render(coreFor(f, { linear: false }), boundary + 220, [128]), b = render(coreFor(f, { linear: false }), boundary + 220, [17, 137, 251]);
+    assert.deepEqual(a, b); assert(maxStep(a.left, boundary - 2, boundary + 150) < .005); assert(maxStep(a.right, boundary - 2, boundary + 150) < .005);
+    // Different unplayed post-loop events must not change the seam correction.
+    f.asset.left.fill(.7, boundary); f.asset.right.fill(-.8, boundary); const changed = render(coreFor(f, { linear: false }), boundary + 220, [128]); assert.deepEqual(a, changed);
+    for (let frame = 150; frame < boundary; frame++) { assert.equal(a.left[frame], Math.fround(.2)); assert.equal(a.right[frame], Math.fround(-.15)); }
+  }
+  pass('Arrangement-loop correction excludes unheard post-loop attacks and preserves the played samples.');
 
   {
     const f = fixture({ frequency: 56, arrangement: true, sourceLoop: false, span: 2 });
