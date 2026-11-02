@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const document={addEventListener(){},dispatchEvent(){}},scope={console,TextEncoder,TextDecoder,Blob,DOMException,setTimeout,clearTimeout,URL};
+scope.window=scope;scope.globalThis=scope;scope.addEventListener=()=>{};
+const run=name=>Function('window','globalThis','document','CustomEvent',fs.readFileSync(path.join(__dirname,name),'utf8'))(scope,scope,document,class{constructor(type,options){this.type=type;Object.assign(this,options);}});
+for(const file of [fs.existsSync(path.join(__dirname,'shared/pattern-schema.js'))?'shared/pattern-schema.js':'../shared/pattern-schema.js','dsp.js','schema.js','audio-engine.js'])run(file);
+const S=scope.CitrusSchema,P=scope.MusicLabPatternSchema;let state=S.defaultState(),stops=0,registered,listener;
+const audio=new scope.CitrusAudio(state),scheduled=[];audio.scheduleNote=value=>{scheduled.push(value);return true;};
+scope.CitrusApp={engine:audio,getState:()=>S.copy(state),getProject:()=>JSON.parse(S.serializeProject(state)),loadState:value=>{state=S.normalize(value);audio.setState(state);listener?.(state);},stop:()=>{stops++;audio.stop();},panic:()=>audio.panic(),play:options=>audio.play(options),isPlaying:()=>audio.isPlaying,setTempo:value=>{state.tempo=value;audio.setState(state);},onStateChange:fn=>{listener=fn;return()=>{};}};
+scope.MusicLabHost={registerInstrument:value=>{registered=value;},notifyStateChange(){}};
+run('adapters.js');
+async function main(){const a=scope.MusicLabPatternInstrument;assert(a&&registered);assert.equal(a.notes.polyphonic,false);assert.equal(a.patternExport.defaultScope,'current');assert.equal(a.exportPattern().notes[0].accent,true);assert.equal(typeof a.exportPattern().notes[0].slide,'boolean');
+  const exact=P.normalize({...S.pattern(state),sourceApp:'played-guitar',voices:[{id:'guitar',name:'Guitar'}],lengthBeats:4,notes:[{id:'a',voice:'guitar',pitch:42,beat:.137,duration:.911,velocity:.79,probability:.9,accent:false,slide:true},{id:'b',voice:'guitar',pitch:49,beat:1.048,duration:1.317,velocity:1,probability:1,accent:true,slide:false}]});
+  await assert.rejects(a.importPattern({pattern:exact}),/Confirm/);await a.importPattern({pattern:exact,options:{replace:true,voiceMap:{guitar:'bass'}}});assert.equal(stops,1);assert.deepEqual(a.exportPattern().notes.map(n=>[n.beat,n.duration,n.accent,n.slide]),[[.137,.911,false,true],[1.048,1.317,true,false]]);assert.equal(a.exportPattern({scope:'pattern'}).notes[0].beat,0);assert.equal(state.importedPattern.notes[0].voice,'bass');
+  for(const bad of [null,0,1,'yes'])assert.throws(()=>a.validatePattern({pattern:{...exact,notes:[{...exact.notes[0],accent:bad}]}}),/accent/);assert.throws(()=>a.validatePattern({pattern:{...exact,notes:[{...exact.notes[0],beat:0},{...exact.notes[1],beat:0}]}}),/one note/);
+  console.log('PASS exact mapped import keeps off-grid timing and boolean articulation; native scope remains explicit and chords/types reject');
+  a.scheduleNote({id:'timed',voice:'bass',pitch:42,velocity:.6,when:3.125,durationSeconds:.311,source:'loom',accent:false,slide:true});assert.equal(scheduled[0].accent,false);assert.equal(scheduled[0].slide,true);assert.equal(scheduled[0].when,3.125);assert.equal(scheduled[0].durationSeconds,.311);
+  a.scheduleNote({id:'legacy-local',voice:'bass',pitch:42,when:4,durationSeconds:.5,locks:{accent:1,slide:0,cutoff:900}});assert.equal(scheduled[1].accent,true);assert.equal(scheduled[1].slide,false);assert.deepEqual(scheduled[1].locks,{cutoff:900});assert(!Object.hasOwn(P.LOCK_RANGES,'accent'));
+  console.log('PASS scheduled host notes preserve false flags and timestamps; local legacy articulation converts without widening shared sound locks');
+  const source=S.defaultState(),captured=S.copy(source),packet=S.pattern(source),before=S.serializeProject(state);source.synth.cutoff=6400;const rendered=await a.renderPattern({pattern:packet,state:captured,tempo:120,tailSeconds:0});assert(rendered.pcm.some(v=>Math.abs(v)>1e-4));const reference=await audio.renderNotes({state:captured,pattern:packet,tempo:120,tailSeconds:0,includePCM:true});assert.deepEqual(rendered.pcm,reference.pcm);assert.equal(S.serializeProject(state),before);assert.equal(audio.context,null);console.log('PASS host printing uses the captured source patch and actual native audio without opening or mutating the live editor');
+}
+main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});

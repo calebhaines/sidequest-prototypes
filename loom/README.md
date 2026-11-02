@@ -81,7 +81,7 @@ An ten-track browser studio for Kitchen. Ten tracks. One increasingly specific o
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
-The standalone `index.html` bundles all seventeen Kitchen instruments,
+The standalone `index.html` bundles all eighteen Kitchen instruments,
 the studio, effects, fonts, and a playable starter arrangement. Open it in a
 modern browser and press Play. Instrument HTML can also be added from a file;
 the hosted version can discover and load new instruments from Kitchen.
@@ -89,7 +89,7 @@ the hosted version can discover and load new instruments from Kitchen.
 **ROUX** is the dedicated bass instrument: a circular recipe sequencer combines
 relative note movement, rests, accents, and slides with a deep fundamental and
 a driven resonant waveguide. Its editor, shared patterns, and native synthesis
-are available inside GALLEY alongside the other sixteen instruments.
+are available inside GALLEY alongside the other seventeen instruments.
 
 **BATTER** sequences recorded acoustic drums across twelve lanes and eight
 pattern banks. Its embedded starter kit plays offline; additional recorded kits
@@ -840,7 +840,7 @@ through GALLEY's actual host, once-mode scheduling, private printing, saved
 origins, and arrangement WAV export with per-step sound overrides.
 
 From an extracted source archive, run `python3 build.py` in its directory. The
-archive includes all seventeen standalone instrument pages in
+archive includes all eighteen standalone instrument pages in
 `instruments/`, complete GALLEY sources, fonts, and demo audio. Individual app
 source projects are available from Kitchen.
 The extracted percussion checks are `node percussion-integration-checks.cjs`

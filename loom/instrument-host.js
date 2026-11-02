@@ -18,7 +18,8 @@
     { id: 'picnic', name: 'PICNIC', description: 'Six-part sampled village ensemble', facade: 'PicnicApp', storageKey: 'picnic-project-v1', color: '#7eae83' },
     { id: 'morsel', name: 'MORSEL', description: 'Four-voice word and melody synthesizer', facade: 'MorselApp', storageKey: 'morsel-project-v1', color: '#ed8b59' },
     { id: 'heirloom', name: 'HEIRLOOM', description: 'Five-voice Prophet-5 inspired analog architecture', facade: 'HeirloomApp', storageKey: 'heirloom-project-v1', color: '#d5b677' },
-    { id: 'brine', name: 'BRINE', description: 'Six-voice Juno-inspired DCO synth and stereo BBD chorus', facade: 'BrineApp', storageKey: 'brine-project-v1', color: '#e0a16e' }
+    { id: 'brine', name: 'BRINE', description: 'Six-voice Juno-inspired DCO synth and stereo BBD chorus', facade: 'BrineApp', storageKey: 'brine-project-v1', color: '#e0a16e' },
+    { id: 'citrus', name: 'CITRUS', description: 'Monophonic acid bass with accent and slide', facade: 'CitrusApp', storageKey: 'citrus-project-v1', color: '#d4b45c' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -99,6 +100,11 @@
       this.onStatus(record.trackId, 'Opening ' + (definition?.name || descriptor.name || 'instrument') + '…', 'loading');
       try {
         let html = descriptor.html || this.embedded[id];
+        if (!descriptor.html && html && typeof html !== 'string') {
+          if (typeof global.LoomResolveEmbeddedInstrument !== 'function') throw new Error('The bundled instrument unpacker is unavailable. Open the complete GALLEY app.');
+          html = await global.LoomResolveEmbeddedInstrument(html, { signal: record.abortController.signal, maxBytes: global.LoomSchema?.LIMITS.appHtmlBytes || 36 * 1024 * 1024 });
+          if (!this._current(record)) throw cancelledError();
+        }
         let baseURL = new URL(id + '/index.html', this.baseURL).href;
         if (!html) {
           const url = new URL(descriptor.url || definition?.url || '', descriptor.url ? document.baseURI : new URL('loom/', this.baseURL));

@@ -92,6 +92,16 @@ function reject(edit, expression) { const pattern = fresh(); edit(pattern); asse
     for (const lyric of ['', 'x'.repeat(160), '  crème & tea  ']) { const p = fresh(); p.notes[0].lyric = lyric; assert.equal(S.normalize(p).notes[0].lyric, lyric); }
     await P.remove(saved.id);
   });
+  await check('Optional accent and slide booleans survive portable notes and the library without changing legacy identities', async () => {
+    const raw = fresh(), legacy = S.serialize(raw), fingerprint = S.fingerprint(raw);
+    raw.notes[0].accent = false; raw.notes[0].slide = true; raw.notes[1].accent = true;
+    const saved = await P.save(raw), restored = S.parse(S.serialize(await P.get(saved.id)));
+    assert.equal(restored.notes[0].accent, false); assert.equal(restored.notes[0].slide, true); assert.equal(restored.notes[1].accent, true); assert(!Object.hasOwn(restored.notes[1], 'slide'));
+    raw.notes[0].slide = false; restored.notes[0].accent = true; assert.equal((await P.get(saved.id)).notes[0].slide, true); assert.equal((await P.get(saved.id)).notes[0].accent, false);
+    for (const key of ['accent', 'slide']) for (const value of [null, 0, 1, 'true', {}, []]) reject(p => { p.notes[0][key] = value; }, new RegExp(key));
+    assert.equal(S.serialize(fresh()), legacy); assert.equal(S.fingerprint(fresh()), fingerprint); assert(!Object.hasOwn(S.normalize(fresh()).notes[0], 'accent'));
+    await P.remove(saved.id);
+  });
   await check('Fallback count quota is atomic and deletion frees capacity without evicting parts', async () => {
     const ids = []; for (let i = 0; i < 128; i++) ids.push((await P.save({ ...fresh(), name: 'Part ' + i })).id);
     await assert.rejects(P.save(fresh()), /full/); assert.equal((await P.list()).length, 128);

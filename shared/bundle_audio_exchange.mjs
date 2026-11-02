@@ -11,7 +11,7 @@ export const exchangeFiles = [
 ];
 export const voiceEffectFiles = [
   'vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'effects-catalog.js',
-  'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js',
+  'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-midi-dsp.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js',
 ];
 function insertHeadScripts(html, markup) {
   const head = /<head(?:\s[^>]*)?>/i.exec(html);
@@ -51,7 +51,7 @@ export function exchangeDirectory(root) {
   return path;
 }
 export async function embedExchange(html, root, app = 'form') {
-  if (!['form', 'proof', 'marinade'].includes(app)) throw Error('Choose a registered Kitchen app.');
+  if (!['form', 'proof', 'marinade', 'citrus'].includes(app)) throw Error('Choose a registered Kitchen app.');
   if (app === 'form') html = await embedVoiceEffects(html, root);
   const directory = exchangeDirectory(root);
   const read = name => readFile(resolve(directory, name), 'utf8');
@@ -62,12 +62,16 @@ export async function embedExchange(html, root, app = 'form') {
   if (html.includes('<!-- MUSIC_LAB_EXCHANGE -->')) throw Error('Kitchen exchange was already embedded.');
   if (!/<head(?:\s[^>]*)?>/i.test(html)) throw Error('Standalone HTML needs a head for shared pattern validation.');
   const safe = js => js.replace(/<\/script/gi, '<\\/script');
-  const audioRegistration = app === 'marinade'
+  const audioRegistration = app === 'citrus'
+    ? "MusicLabExchange.register({id:'citrus',name:'CITRUS',sourceApp:'CITRUS',accent:'#d4b45c',mountSelector:'.masthead-actions',getAdapter:()=>window.CitrusApp});"
+    : app === 'marinade'
     ? "MusicLabExchange.register({id:'marinade',name:'MARINADE',sourceApp:'MARINADE',accent:'#dda775',mountSelector:'.masthead-actions',getAdapter:()=>window.MarinadeApp});"
     : app === 'proof'
     ? "MusicLabExchange.register({id:'proof',name:'LEAVEN',sourceApp:'PROOF',accent:'#e6b86e',mountSelector:'.masthead-actions',getAdapter:()=>window.ProofApp});"
     : "MusicLabExchange.register({id:'form',name:'HOTPLATE',sourceApp:'FORM',accent:'#ff8d45',mountSelector:'.topbar-actions',getAdapter:()=>window.FormApp});";
-  const patternRegistration = app === 'marinade'
+  const patternRegistration = app === 'citrus'
+    ? "MusicLabPatterns.register({id:'citrus',name:'CITRUS',sourceApp:'CITRUS',accent:'#d4b45c',mountSelector:'.masthead-actions',getAdapter:()=>window.MusicLabPatternInstrument});"
+    : app === 'marinade'
     ? "MusicLabPatterns.register({id:'marinade',name:'MARINADE',sourceApp:'MARINADE',accent:'#dda775',mountSelector:'.masthead-actions',getAdapter:()=>window.MusicLabPatternInstrument});"
     : app === 'proof'
     ? "MusicLabPatterns.register({id:'proof',name:'LEAVEN',sourceApp:'PROOF',accent:'#e6b86e',mountSelector:'.masthead-actions',getAdapter:()=>window.MusicLabPatternInstrument});"
