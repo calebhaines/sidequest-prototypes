@@ -21,6 +21,7 @@ APPS = {
     'morsel': ('MorselApp', '#ed8b59', '.masthead-actions'),
     'heirloom': ('HeirloomApp', '#d5b677', '.masthead-actions'),
     'brine': ('BrineApp', '#e0a16e', '.masthead-actions'),
+    'citrus': ('CitrusApp', '#d4b45c', '.masthead-actions'),
     'loom': ('LoomApp', '#dcc85e', '.topline'),
 }
 
@@ -28,7 +29,7 @@ APPS = {
 APP_NAMES = {
     'grain': 'SIZZLE', 'tine': 'CLATTER', 'form': 'HOTPLATE', 'mire': 'REDUCE',
     'spool': 'ROTISSERIE', 'haze': 'STEAM', 'bower': 'SKEWER', 'ravel': 'DICER',
-    'fable': 'STOCK', 'roux': 'ROUX', 'batter': 'BATTER', 'proof': 'LEAVEN', 'marinade': 'MARINADE', 'picnic': 'PICNIC', 'morsel': 'MORSEL', 'heirloom': 'HEIRLOOM', 'brine': 'BRINE', 'loom': 'GALLEY',
+    'fable': 'STOCK', 'roux': 'ROUX', 'batter': 'BATTER', 'proof': 'LEAVEN', 'marinade': 'MARINADE', 'picnic': 'PICNIC', 'morsel': 'MORSEL', 'heirloom': 'HEIRLOOM', 'brine': 'BRINE', 'citrus': 'CITRUS', 'loom': 'GALLEY',
 }
 
 EXCHANGE_FILES = [
@@ -45,7 +46,7 @@ VOICE_EFFECT_FILES = [
     'vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js',
     'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'effects-catalog.js',
     'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js',
-    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js',
+    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-midi-dsp.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js',
 ]
 PERCUSSION_APPS = {'grain', 'tine', 'form', 'batter'}
 

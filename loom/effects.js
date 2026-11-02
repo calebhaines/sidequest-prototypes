@@ -1,7 +1,7 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -26,7 +26,8 @@
     const lofi = makeLoFi ? makeLoFi() : null;
     const makeTracker = typeof trackerFactory === 'function' ? trackerFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalTrackerDSP === 'function' ? globalThis.createLoomPedalTrackerDSP : null;
     const makePedal = typeof pedalFactory === 'function' ? pedalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalSynthDSP === 'function' ? globalThis.createLoomPedalSynthDSP : null;
-    const pedal = makePedal ? makePedal(makeTracker) : null;
+    const makePedalMidi = typeof pedalMidiFactory === 'function' ? pedalMidiFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalMidiDSP === 'function' ? globalThis.createLoomPedalMidiDSP : null;
+    const pedal = makePedal ? makePedal(makeTracker, makePedalMidi) : null;
     const makeDeluxe = typeof deluxeFactory === 'function' ? deluxeFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomDeluxeDSP === 'function' ? globalThis.createLoomDeluxeDSP : null;
     const deluxe = makeDeluxe ? makeDeluxe() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;

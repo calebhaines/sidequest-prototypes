@@ -46,6 +46,7 @@ check('ROUX is a bundled instrument with portable native state and unchanged tra
   assert.equal(definition.storageKey, 'roux-project-v1');
   assert.equal(definition.url, '../roux/index.html');
   assert.deepEqual(Array.from(host.manifest, item => item.id), Array.from(S.BUILT_INS));
+  assert.equal(S.BUILT_INS.length, 18); assert(S.BUILT_INS.includes('citrus'));
   const bass = session();
   bass.tracks[7].instrument = {
     id: 'roux', name: 'ROUX',
@@ -84,7 +85,7 @@ state.markers = [
 ];
 state.recording = { countInBars: 2, punchEnabled: true, punchStart: 4, punchEnd: 8 };
 
-check('Old projects receive new defaults and retain eight tracks / four slots', () => {
+check('Old projects receive current defaults with ten tracks and five track inserts', () => {
   const old = session();
   delete old.recording;
   delete old.markers;

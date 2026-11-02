@@ -5,12 +5,14 @@ import runpy
 import hashlib
 import json
 import zipfile
+import gzip
+import io
 
 ROOT = Path(__file__).resolve().parent
 exchange_dir = ROOT / 'shared' if (ROOT / 'shared' / 'bundle_audio_exchange.py').exists() else ROOT.parent / 'shared'
 exchange_helpers = runpy.run_path(str(exchange_dir / 'bundle_audio_exchange.py'))
-INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine']
-SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js', 'service-schema.js', 'lfo.js', 'schema.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'mastering-dsp.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'instrument-host.js', 'clip-transfer.js', 'lfo-ui.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'cpu-ui.js', 'multiband-ui.js', 'freeze.js', 'recordings.js', 'recordings-ui.js', 'mastering-ui.js', 'deluxe-ui.js', 'master-playback-dsp.js', 'master-playback.js', 'master-playback-ui.js', 'app.js']
+INSTRUMENTS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine', 'citrus']
+SCRIPTS = ['vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js', 'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'effects-catalog.js', 'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js', 'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-midi-dsp.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'effects.js', 'service-schema.js', 'lfo.js', 'schema.js', 'cpu-profiler.js', 'track-eq-dsp.js', 'mastering-dsp.js', 'audio-engine.js', 'service-capture.js', 'host-bridge.js', 'embedded-instruments.js', 'instrument-host.js', 'clip-transfer.js', 'lfo-ui.js', 'automation-ui.js', 'note-playback.js', 'note-renderer.js', 'piano-roll.js', 'note-workflow.js', 'service-midi.js', 'service-ui.js', 'service.js', 'cpu-ui.js', 'multiband-ui.js', 'freeze.js', 'recordings.js', 'recordings-ui.js', 'mastering-ui.js', 'deluxe-ui.js', 'master-playback-dsp.js', 'master-playback.js', 'master-playback-ui.js', 'pedal-midi.js', 'pedal-midi-ui.js', 'app.js']
 
 bundled = {}
 instrument_files = {}
@@ -21,7 +23,16 @@ for name in INSTRUMENTS:
         raise FileNotFoundError('Missing bundled instrument: ' + name)
     data = source.read_bytes()
     instrument_files[name] = data
-    bundled[name] = data.decode('utf-8')
+    if name == 'batter':
+        # Lossless packing creates room for new equipment without changing BATTER.
+        stream = io.BytesIO()
+        with gzip.GzipFile(fileobj=stream, filename='', mode='wb', compresslevel=9, mtime=0) as archive:
+            archive.write(data)
+        packed = stream.getvalue()
+        assert gzip.decompress(packed) == data
+        bundled[name] = {'encoding': 'gzip-base64', 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(), 'data': base64.b64encode(packed).decode('ascii')}
+    else:
+        bundled[name] = data.decode('utf-8')
 
 font_faces = []
 for family, weight, style, name in [
@@ -39,7 +50,7 @@ def javascript_value(value):
     # Escape '<' so an instrument's embedded script cannot close LOOM's script.
     return json.dumps(value, ensure_ascii=True, separators=(',', ':')).replace('<', '\\u003c')
 
-css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'lfo.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text() + '\n' + (ROOT / 'broiler.css').read_text() + '\n' + (ROOT / 'compressor.css').read_text() + '\n' + (ROOT / 'buses.css').read_text() + '\n' + (ROOT / 'preamp.css').read_text() + '\n' + (ROOT / 'track-eq.css').read_text() + '\n' + (ROOT / 'tape.css').read_text() + '\n' + (ROOT / 'cpu.css').read_text() + '\n' + (ROOT / 'multiband.css').read_text() + '\n' + (ROOT / 'freeze.css').read_text() + '\n' + (ROOT / 'lofi.css').read_text() + '\n' + (ROOT / 'pedal-synth.css').read_text() + '\n' + (ROOT / 'recordings.css').read_text() + '\n' + (ROOT / 'mastering.css').read_text() + '\n' + (ROOT / 'deluxe.css').read_text() + '\n' + (ROOT / 'master-playback.css').read_text()
+css = (ROOT / 'styles.css').read_text() + '\n' + (ROOT / 'automation.css').read_text() + '\n' + (ROOT / 'lfo.css').read_text() + '\n' + (ROOT / 'piano-roll.css').read_text() + '\n' + (ROOT / 'kitchen.css').read_text() + '\n' + (ROOT / 'service.css').read_text() + '\n' + (ROOT / 'creative-effects.css').read_text() + '\n' + (ROOT / 'broiler.css').read_text() + '\n' + (ROOT / 'compressor.css').read_text() + '\n' + (ROOT / 'buses.css').read_text() + '\n' + (ROOT / 'preamp.css').read_text() + '\n' + (ROOT / 'track-eq.css').read_text() + '\n' + (ROOT / 'tape.css').read_text() + '\n' + (ROOT / 'cpu.css').read_text() + '\n' + (ROOT / 'multiband.css').read_text() + '\n' + (ROOT / 'freeze.css').read_text() + '\n' + (ROOT / 'lofi.css').read_text() + '\n' + (ROOT / 'pedal-synth.css').read_text() + '\n' + (ROOT / 'recordings.css').read_text() + '\n' + (ROOT / 'mastering.css').read_text() + '\n' + (ROOT / 'deluxe.css').read_text() + '\n' + (ROOT / 'master-playback.css').read_text() + '\n' + (ROOT / 'pedal-midi.css').read_text()
 if css.count('/* FONT_FACES */') != 1:
     raise ValueError('styles.css needs exactly one FONT_FACES slot.')
 css = css.replace('/* FONT_FACES */', '\n'.join(font_faces))
@@ -84,6 +95,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['mastering.css', 'MASTERING-GUIDE.md', 'mastering-checks.cjs', 'ten-track-checks.cjs', 'mastering-browser-checks.cjs']
     sources += ['deluxe.css', 'DELUXE-REVERB-GUIDE.md', 'deluxe-checks.cjs', 'deluxe-project-checks.cjs', 'deluxe-browser-checks.cjs']
     sources += ['Signalsmith-Stretch-LICENSE.txt', 'master-playback.css', 'MASTER-PLAYBACK-GUIDE.md', 'master-playback-schema-checks.cjs', 'master-playback-dsp-checks.cjs', 'master-playback-render-checks.cjs', 'master-playback-checks.cjs', 'master-playback-browser-checks.cjs']
+    sources += ['pedal-midi.css', 'FERMENT-MIDI-GUIDE.md', 'pedal-midi-checks.cjs', 'pedal-midi-engine-checks.cjs', 'pedal-midi-browser-checks.cjs', 'embedded-instruments-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.
@@ -105,6 +117,8 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     files += [('HEIRLOOM-source.zip', heirloom_source.read_bytes())]
     brine_source = ROOT.parent / 'music' / 'brine' / 'BRINE-source.zip'
     files += [('BRINE-source.zip', brine_source.read_bytes())]
+    citrus_source = ROOT.parent / 'music' / 'citrus' / 'CITRUS-source.zip'
+    files += [('CITRUS-source.zip', citrus_source.read_bytes())]
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in files:
             info = zipfile.ZipInfo('LOOM-source/' + name, (2026, 10, 5, 0, 0, 0))

@@ -335,7 +335,7 @@
         const audibleBeat = Math.max(beat, segment.start, clip.start), when = Math.max(clock.contextTime + .004, segment.when + (audibleBeat - segment.start) * 60 / clock.tempo);
         const remaining = (end - audibleBeat) * 60 / clock.tempo - Math.max(0, when - (segment.when + (audibleBeat - segment.start) * 60 / clock.tempo));
         if (remaining <= .0001) continue;
-        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, beat: audibleBeat, tempo: clock.tempo, durationSeconds: remaining, source, ...(note.locks ? { locks: { ...note.locks } } : {}), ...(note.lyric === undefined ? {} : { lyric: note.lyric }) });
+        const token = this.host.scheduleNote(track.id, { id: key, pitch: note.pitch + (clip.transpose || 0), velocity: clamp(note.velocity * (clip.gain ?? 1), 0, 1), voice: mapVoice(targets, clip.pattern, clip.voiceMap, note.voice), when, beat: audibleBeat, tempo: clock.tempo, durationSeconds: remaining, source, ...(note.locks ? { locks: { ...note.locks } } : {}), ...(note.accent === undefined ? {} : { accent: note.accent }), ...(note.slide === undefined ? {} : { slide: note.slide }), ...(note.lyric === undefined ? {} : { lyric: note.lyric }) });
         if (token !== false) this.scheduled.set(key, when);
         }
       }

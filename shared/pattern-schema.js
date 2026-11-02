@@ -69,6 +69,12 @@
       // Lyrics are optional musical data. Omitting the field keeps existing
       // version-one serialization and fingerprints exactly unchanged.
       if (note.lyric !== undefined) result.lyric = text(note.lyric, 'Note lyric', 160);
+      // Optional mono articulation keeps every older version-one identity
+      // unchanged when absent. Older instruments safely omit these fields.
+      for (const key of ['accent', 'slide']) if (note[key] !== undefined) {
+        if (typeof note[key] !== 'boolean') throw new Error('Note ' + key + ' must be true or false.');
+        result[key] = note[key];
+      }
       return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;

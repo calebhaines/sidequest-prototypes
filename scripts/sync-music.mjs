@@ -23,6 +23,7 @@ const picnic = fs.readFileSync(path.join(root, 'picnic', 'index.html'));
 const morsel = fs.readFileSync(path.join(root, 'morsel', 'index.html'));
 const heirloom = fs.readFileSync(path.join(root, 'heirloom', 'index.html'));
 const brine = fs.readFileSync(path.join(root, 'brine', 'index.html'));
+const citrus = fs.readFileSync(path.join(root, 'citrus', 'index.html'));
 const loom = fs.readFileSync(path.join(root, 'loom', 'index.html'));
 const legacy = `<!doctype html>
 <html lang="en">
@@ -70,6 +71,7 @@ for (const directory of ['public', 'docs']) {
     ['music/morsel/index.html', morsel],
     ['music/heirloom/index.html', heirloom],
     ['music/brine/index.html', brine],
+    ['music/citrus/index.html', citrus],
     ['music/loom/index.html', loom],
     ['grain/index.html', legacy],
   ]) {

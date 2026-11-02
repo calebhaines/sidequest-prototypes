@@ -121,7 +121,12 @@
     "check:deluxe": "node loom/deluxe-checks.cjs && node loom/deluxe-project-checks.cjs",
     "check:deluxe-browser": "node loom/deluxe-browser-checks.cjs",
     "check:master-playback": "node loom/master-playback-schema-checks.cjs && node loom/master-playback-dsp-checks.cjs && node loom/master-playback-render-checks.cjs && node loom/master-playback-checks.cjs",
-    "check:master-playback-browser": "node loom/master-playback-browser-checks.cjs"
+    "check:master-playback-browser": "node loom/master-playback-browser-checks.cjs",
+    "check:citrus": "node citrus/dsp-checks.cjs && node citrus/checks.cjs && node citrus/adapter-checks.cjs",
+    "check:citrus-browser": "node citrus/browser-checks.cjs",
+    "check:ferment-midi": "node loom/pedal-midi-checks.cjs && node loom/pedal-midi-engine-checks.cjs",
+    "check:ferment-midi-browser": "node loom/pedal-midi-browser-checks.cjs",
+    "check:embedded-instruments": "node loom/embedded-instruments-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

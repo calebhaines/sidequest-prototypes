@@ -1,9 +1,10 @@
 /* FERMENT · causal string synthesis, bandlimited oscillators and nonlinear TPT filters. */
 (function (scope) {
   'use strict';
-  function createLoomPedalSynthDSP(trackerFactory) {
+  function createLoomPedalSynthDSP(trackerFactory, midiFactory) {
     'use strict';
     const makeTracker = typeof trackerFactory === 'function' ? trackerFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalTrackerDSP === 'function' ? globalThis.createLoomPedalTrackerDSP : null;
+    const makeMidi = typeof midiFactory === 'function' ? midiFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomPedalMidiDSP === 'function' ? globalThis.createLoomPedalMidiDSP : null;
     const PI = Math.PI, TAU = PI * 2, LN2 = Math.LN2;
     const specifications = {
       mode: ['track', 'chord'], inputRange: ['auto', 'guitar', 'bass'], register: ['played', 'bass', 'guitar'],
@@ -59,6 +60,7 @@
       let p = normalize(params);
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000), maxHz = Math.min(16000, sr * .42), subRate = sr * 2;
       const tracker = makeTracker().create(sr, { range: p.inputRange, tracking: p.tracking, sensitivity: p.gate });
+      let midiCapture = null;
       const filters = new Float64Array(8), previousFilterInput = new Float64Array(2), hpLow = new Float64Array(2), dcInput = new Float64Array(2), dcState = new Float64Array(2);
       const lastWet = new Float64Array(2), correction = new Float64Array(2);
       const slowDetectorCoefficient = 1 - Math.exp(-1 / (sr * .06));
@@ -79,6 +81,10 @@
         inputGate = false; voiceAuthorized = false; pitchHold = 0; noteVelocity = 1; velocityWindow = 0; lastTouch = releaseTouch = 0; envelopeStage = retriggerGuard = wetTransition = controlFrame = sampleClock = quietSamples = 0; pendingTransition = false; expectedBeat = NaN; idle = true;
       }
       function update(previous) {
+        if (midiCapture?.active && previous) {
+          if (['mode', 'inputRange', 'gate', 'sensitivity', 'tracking'].some(key => previous[key] !== p[key])) midiCapture.stop('tracking settings changed');
+          else if (p.bypass || p.mix === 0) midiCapture.stop(p.bypass ? 'bypassed' : 'zero blend');
+        }
         sensitivityGain = db(p.sensitivity); threshold = db(p.gate);
         hpCoefficient = 1 - Math.exp(-TAU * (p.inputRange === 'bass' ? 20 : p.inputRange === 'guitar' ? 45 : 25) / sr);
         attackCoefficient = 1 - Math.exp(-6.907755278982137 / (sr * p.attack * .001));
@@ -136,10 +142,11 @@
       }
       function process(left, right, context) {
         if (!left || !right || left.length !== right.length) throw Error('FERMENT requires equal stereo blocks.');
-        if (suspended) { for (let frame = 0; frame < left.length; frame++) { if (!Number.isFinite(left[frame])) left[frame] = 0; if (!Number.isFinite(right[frame])) right[frame] = 0; } return; }
+        const capture = midiCapture?.active ? midiCapture : null;
+        if (suspended) { if (capture) capture.advance(left.length); for (let frame = 0; frame < left.length; frame++) { if (!Number.isFinite(left[frame])) left[frame] = 0; if (!Number.isFinite(right[frame])) right[frame] = 0; } return; }
         if (idle && !mixRemaining) {
           let silent = true; for (let frame = 0; frame < left.length; frame++) if (left[frame] !== 0 || right[frame] !== 0) { silent = false; break; }
-          if (silent) return;
+          if (silent) { if (capture) capture.advance(left.length); return; }
         }
         const tempo = clamp(finite(context && context.tempo, 120), 40, 300), cycleBeats = divisions[p.division], running = context?.playing !== false;
         const lfoRate = p.clock === 'sync' ? tempo / (60 * cycleBeats) : p.rate;
@@ -148,8 +155,9 @@
         expectedBeat = running ? beat + left.length * beatAdvance : beat;
         for (let frame = 0; frame < left.length; frame++) {
           const dryL = Number.isFinite(left[frame]) ? left[frame] : 0, dryR = Number.isFinite(right[frame]) ? right[frame] : 0;
-          if (suspended) { left[frame] = dryL; right[frame] = dryR; continue; }
+          if (suspended) { if (capture?.active) capture.advance(1); left[frame] = dryL; right[frame] = dryR; continue; }
           if (idle && dryL === 0 && dryR === 0) {
+            if (capture?.active) capture.advance(1);
             if (mixRemaining) { mix += (mixTarget - mix) / mixRemaining; if (--mixRemaining === 0) { mix = mixTarget; if (mix === 0) suspended = true; } }
             left[frame] = dryL; right[frame] = dryR; continue;
           }
@@ -166,19 +174,21 @@
           slowDetector += slowDetectorCoefficient * (detector - slowDetector);
           gateDetector = detectorInput > gateDetector ? gateDetector + detectorAttack * (detectorInput - gateDetector) : gateDetector * gateDecay;
           const priorGate = inputGate; inputGate = gateDetector >= threshold * (inputGate ? .7 : 1.2);
+          let midiOnset = capture && inputGate && !priorGate, midiFresh = false;
           if (inputGate && !priorGate) trigger();
           if (!inputGate && priorGate) releaseTouch = lastTouch;
           if (retriggerGuard > 0) retriggerGuard--;
-          if (p.retrigger === 'each' && inputGate && retriggerGuard === 0 && detector > Math.max(threshold * 4, slowDetector * 1.75) && detector > beforeDetector * 1.005) trigger();
+          if ((p.retrigger === 'each' || capture?.active) && inputGate && retriggerGuard === 0 && detector > Math.max(threshold * 4, slowDetector * 1.75) && detector > beforeDetector * 1.005) { if (capture) midiOnset = true; if (p.retrigger === 'each') trigger(); }
           if (p.mode === 'track') {
             const changed = tracker.push(monoInput * sensitivityGain);
+            if (capture) midiFresh = changed;
             if (changed && tracker.active && tracker.frequency > 0) {
               const nextFrequency = tracker.frequency;
               if (p.retrigger === 'each' && acceptedFrequency > 0 && Math.abs(Math.log(nextFrequency / acceptedFrequency)) > .055 && inputGate) trigger();
               acceptedFrequency = nextFrequency; targetFrequency = nextFrequency;
               if (!frequency) frequency = nextFrequency;
             }
-          }
+          } else if (capture?.active) midiFresh = tracker.push(monoInput * sensitivityGain);
           const confident = p.mode === 'track' && inputGate && tracker.active && tracker.confidence >= .45 && targetFrequency > 0;
           if (confident) { voiceAuthorized = true; pitchHold = Math.round(sr * .22); }
           else if (inputGate && voiceAuthorized && pitchHold > 0 && --pitchHold === 0) voiceAuthorized = false;
@@ -191,6 +201,7 @@
           if (Math.abs(oscillatorGain) < 1e-12) oscillatorGain = 0;
           if (targetFrequency > 0) frequency += (targetFrequency - frequency) * glideCoefficient;
           const touch = clamp(detector * 7, 0, 1);
+          if (capture?.active) capture.observe(tracker.active ? tracker.frequency : 0, tracker.confidence, touch, inputGate, midiFresh, midiOnset);
           if (velocityWindow > 0) { if (inputGate) noteVelocity = Math.max(noteVelocity, touch); velocityWindow--; }
           if (inputGate) lastTouch = touch;
           if (p.envMode === 'follower') {
@@ -255,7 +266,10 @@
       return {
         setParams(values) { const previous = p; p = normalize(Object.assign({}, p, values && typeof values === 'object' ? values : {})); update(previous); },
         process,
-        reset() { clear(); gain = driveTarget; outputGain = outputTarget; cutoffLog = Math.log(p.cutoff); resonance = p.resonance; synthLevel = p.synthLevel; direct = p.direct; width = p.width; mix = mixTarget = p.bypass ? 0 : p.mix; mixRemaining = 0; suspended = mix === 0; actualCutoff = clamp(p.cutoff, 20, maxHz); g = targetG = Math.tan(PI * actualCutoff / subRate); },
+        startMidiCapture(options) { if (!makeMidi) throw Error('FERMENT note capture is unavailable.'); if (p.bypass || p.mix === 0) throw Error('Enable FERMENT and raise Blend before capturing notes.'); if (!midiCapture) midiCapture = new (makeMidi().Capture)(sr); const take = midiCapture.start(options); if (p.mode === 'chord') tracker.reset(); return take; },
+        stopMidiCapture(reason = 'stopped') { return midiCapture ? midiCapture.stop(reason) : null; },
+        drainMidiEvents() { return midiCapture ? midiCapture.drain() : null; },
+        reset() { if (midiCapture?.active) midiCapture.stop('reset'); clear(); gain = driveTarget; outputGain = outputTarget; cutoffLog = Math.log(p.cutoff); resonance = p.resonance; synthLevel = p.synthLevel; direct = p.direct; width = p.width; mix = mixTarget = p.bypass ? 0 : p.mix; mixRemaining = 0; suspended = mix === 0; actualCutoff = clamp(p.cutoff, 20, maxHz); g = targetG = Math.tan(PI * actualCutoff / subRate); },
         getTailTime() { return suspended || idle ? 0 : Math.min(6, p.release * .001 * 1.8 + .4); },
         getMeters() { return { frequencyHz: p.mode === 'track' && !idle ? tracker.frequency : 0, synthFrequencyHz: p.mode === 'track' && !idle ? frequency * ratio1 : 0, confidence: p.mode === 'track' && !idle ? tracker.confidence : 0, trackingLatencyMs: p.mode === 'track' ? tracker.trackingLatencyMs : 0, inputDb: levelDb(inputPeak), synthDb: levelDb(synthPeak), outputDb: levelDb(outputPeak), cutoffHz: actualCutoff, envelope: ampEnvelope, gateOpen: inputGate, mode: p.mode, active: !suspended && !idle }; }
       };

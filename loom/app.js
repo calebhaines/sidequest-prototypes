@@ -21,7 +21,7 @@
   let recoveryWarned=false,recoveryUnavailable=false;
   let assetMap = {}, waveformFrame = 0, fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
-  let automationEditor, pianoRoll, noteWorkflow, serviceController, cpuInspector, freezeController, recordingsBrowser, masteringUI, deluxeUI, masterPlayback, masterPlaybackUI;
+  let automationEditor, pianoRoll, noteWorkflow, serviceController, cpuInspector, freezeController, recordingsBrowser, masteringUI, deluxeUI, masterPlayback, masterPlaybackUI, pedalMidiUI;
   let recordingsCommitting = false, projectReadBusy = 0;
   let trackFreezeStatus = { busy: false };
   // Share one read-only meter snapshot during a paint. Scheduling and recording
@@ -803,7 +803,7 @@
       <div class="ferment-readings" aria-label="Measured synthesizer levels">${[['inputDb', 'Input'], ['synthDb', 'Synth voice'], ['outputDb', 'Output']].map(([key, label]) => `<div><span>${label}</span><output data-ferment-meter="${key}" aria-label="${label} level" aria-live="off">—</output><i aria-hidden="true"><b data-ferment-meter-bar="${key}"></b></i></div>`).join('')}</div>
       <div class="ferment-status-strip"><span>Filter <output id="fermentFilterReadout" aria-label="Effective filter cutoff" aria-live="off">—</output></span><span id="fermentRegisterHint"></span></div><p class="ferment-face-note">Start with a clean guitar or bass signal. Play a single line for tracking synthesis; use Chord Texture for input-driven chord colours. Lower notes need more time to identify.</p></section>
       <div class="ferment-details-list">${groups.map(group => `<details id="ferment-${escape(group.id)}-details" class="ferment-details" data-ferment-details="${escape(group.id)}" ${pedalSynthDetailsOpen.has(group.id) ? 'open' : ''}><summary><span><strong>${escape(group.label)}</strong><small>${escape(summaries[group.id] || 'Fine adjustments')}</small></span><span aria-hidden="true">+</span></summary><div class="ferment-details-content"><p id="ferment-${escape(group.id)}-hint">${escape(group.help || group.description || '')}</p><div class="ferment-detail-controls">${group.keys.map(key => pedalSynthControl(descriptors.get(key), params)).join('')}</div>${group.id === 'filter' ? '<p id="fermentFilterModelHint" class="ferment-detail-note"></p>' : group.id === 'envelopes' ? '<p id="fermentEnvelopeHint" class="ferment-detail-note"></p>' : ''}</div></details>`).join('')}</div>
-      <p class="ferment-disclosure">FERMENT turns the recorded input into a synth voice; no MIDI pickup is required. Bass and guitar describe input tracking and output register separately. The analog circuit characters are musical models.</p></div>`;
+      <div id="fermentMidiMount"></div><p class="ferment-disclosure">FERMENT turns the recorded input into a synth voice; no MIDI pickup is required. Bass and guitar describe input tracking and output register separately. The analog circuit characters are musical models.</p></div>`;
   }
   function renderPedalSynthState() {
     const slot = effectOwner().effects[selectedSlot], def = slot && effectById(slot.type);
@@ -1042,6 +1042,7 @@
   }
   function renderEffectEditor() { renderEffectEditorContents(); renderFreezeState(); }
   function renderEffectEditorContents() {
+    pedalMidiUI?.dispose(); pedalMidiUI = null;
     deluxeUI?.dispose(); deluxeUI = null;
     finishTapeDrag(); finishTapeKeyboard();
     const slot=selectedSlot!==null&&effectOwner().effects[selectedSlot], editor=$('effectEditor');editor.hidden=!slot;if(!slot)return;
@@ -1050,7 +1051,47 @@
     const route=deluxe?'<div class="deluxe-signal-route">INPUT → CHANNEL / TONE<br>↓<br>SPRING / TREMOLO → 6V6 PAIR<br>↓<br>OPEN 1×12 → OUTPUT</div>':amp?'<div class="amp-signal-route">PEDALS BEFORE AMP<br>↓<br>PREAMP → TONE → POWER<br>↳ CLEAN LOWS → CABINET → MIC<br>↓<br>PEDALS AFTER CABINET → OUT</div>':preamp?'<div class="preamp-signal-route">PAD → INPUT → DRIVE<br>↓<br>MODELED CIRCUIT → COLOUR<br>↓<br>TONE → OUTPUT → BLEND</div>':tape?'<div class="tape-signal-route">INPUT → RECORD STAGE<br>↓<br>TAPE → PLAYBACK HEAD<br>↓<br>OUTPUT → BLEND</div>':lofi?'<div class="lofi-signal-route">CAPSULE → COLOUR → CASING<br>↓<br>LINE → VOICE ENCODER<br>↓<br>OUTPUT → BLEND</div>':pedalsynth?'<div class="ferment-signal-route">GUITAR / BASS → DETECTOR<br>↓<br>OSCILLATORS + INPUT / TEXTURE<br>↓<br>ANALOG FILTER → ENVELOPE<br>↓<br>OUTPUT → DRY / WET</div>':vocal?'<div class="vocal-signal-route"><span>01 / CLEAN & CONTROL</span><i>↓</i><span>02 / TONE & IDENTITY</span><i>↓</i><span>03 / MOVEMENT & SPACE</span></div><div id="vocalStageOverview" class="vocal-stage-overview" aria-label="Vocal stages"></div>':utility?'<div class="utility-signal-route">INPUT ↠ TUNER / INPUT METER<br>↓<br>TRIM → CHANNELS → WIDTH<br>↓<br>CLEANUP → BALANCE → BLEND<br>↓<br>GUARD → MUTE → OUTPUT METERS</div>':creative?`<div class="creative-signal-route"><span>INPUT → ${def.id==='strainer'?'DRIVE → RESONANCE':def.id==='swirl'?'ALL-PASS STAGES':'REDUCE → TONE'}</span><i>↓</i><span>${def.id==='crumble'?'TRANSIENTS → BLEND → OUTPUT':'FOLLOWER + MOTION → BLEND'}</span></div>`:'';
     editor.innerHTML=`<div class="effect-editor-layout"><div class="effect-hero"><span class="eyebrow">INSERT ${selectedSlot+1} / ${escape(effectOwnerLabel())}</span><h2>${def.name}</h2><p>${escape(def.subtitle)}</p><div class="effect-art">${effectArt(def)}</div>${route}<div class="effect-info">${escape(def.description)}${amp?'<p id="ampCabinetHint">Cabinet controls shape the speaker and microphone.</p>':vocal?'<p id="vocalLatencyHint" class="vocal-latency-note"></p><p class="vocal-dry-note">Live monitoring follows this rack. Microphone recordings stay dry, so you can change the recipe afterwards.</p>':utility?'<p class="utility-transparent-note">No audio delay is added by the tuner or meters. Defaults preserve the original sound.</p>':''}</div></div><div class="effect-right"><div class="effect-toolbar"><span>${slot.params.bypass?'BYPASSED':deluxe?'DELUXE REVERB / FIVE CIRCUIT STUDIES':amp?'AMP / CABINET / STEREO':preamp?'PREAMP / CIRCUIT / STEREO':tape?'RECORD / TAPE / PLAYBACK':lofi?'CAPSULE / LINE / LO-FI':pedalsynth?'STRINGS / OSCILLATORS / FILTER':vocal?'VOICE / STRIP / STEREO':utility?'TUNE / MEASURE / HOUSEKEEPING':'PROCESSING IN STEREO'}</span><div><button id="effectBypass" class="${slot.params.bypass?'bypassed':''}" aria-pressed="${slot.params.bypass}">Bypass</button><button id="effectReset">Reset</button><button id="effectUp" ${selectedSlot===0?'disabled':''}>Move ↑</button><button id="effectDown" ${selectedSlot===effectOwner().effects.length-1?'disabled':''}>Move ↓</button><button id="effectReplace">Replace</button><button id="effectRemove">Remove</button></div></div>${controls}</div></div>`;
     if (deluxe) mountDeluxe(slot, def);
+    if (pedalsynth) mountPedalMidi();
     renderAmpState();renderCompressorState();renderPreampState();renderTapeState();renderLoFiState();renderPedalSynthState();renderVocalState();renderUtilityState();renderCreativeState();renderCharState();
+  }
+  function mountPedalMidi() {
+    pedalMidiUI = window.LoomPedalMidiUI.create({
+      element: $('fermentMidiMount'), engine, getOwnerId: () => effectOwner().id, getSlot: () => selectedSlot, getGeneration: () => lifecycle, onStatus: status,
+      getTargets: () => {
+        const preferred = state.tracks.find(t => !t.freeze && t.id !== effectOwner().id && !t.instrument && !t.clips.length);
+        return state.tracks.filter(t => !t.freeze).map(t => ({ id: t.id, name: t.name + ' · ' + (t.instrument ? S.instrumentName(t.instrument) : 'CITRUS (new instrument)'), selected: t.id === (preferred?.id || track().id) }));
+      },
+      onPlacePattern: placePedalMidiPattern
+    });
+  }
+  async function placePedalMidiPattern(packet, meta = {}) {
+    if (transportLocked() || transportPending || exportAbort || serviceController?.isOpen) throw Error('Finish the current audio operation before placing captured notes.');
+    const take = engine.getPedalMidiTake(), generation = lifecycle;
+    if (!take || take.capturing || take.token !== meta.token) throw Error('Stop the current MIDI take before placing it.');
+    const target = state.tracks.find(t => t.id === meta.targetId);
+    if (!target || target.freeze || target.clips.length >= S.LIMITS.clipsPerTrack) throw Error('Choose an unfrozen track with room for a note clip.');
+    let voice = 'bass';
+    if (target.instrument) {
+      await ensureInstrument(target);
+      const adapter = host.getPatternAdapter(target.id), voices = adapter?.notes?.voices || [];
+      if (!adapter?.scheduleNote || !voices.length) throw Error('Choose a Kitchen instrument that can play notes.');
+      voice = voices[0].id;
+    }
+    if (generation !== lifecycle || engine.getPedalMidiTake()?.token !== take.token) throw canceledError();
+    const scale = state.tempo / packet.tempo, length = packet.lengthBeats * scale;
+    if (length > 256) throw Error('This take is too long at the current tempo. Export MIDI or use a shorter take.');
+    const source = window.MusicLabPatternSchema.normalize({ ...packet, tempo: state.tempo, lengthBeats: Math.max(.25, length), notes: packet.notes.map(note => ({ ...note, beat: note.beat * scale, duration: note.duration * scale })) });
+    const start = Math.max(0, Math.min(255.75, take.startBeat || 0)), requiredBars = Math.ceil((start + source.lengthBeats) / 4);
+    if (requiredBars > 64) throw Error('This take extends past the arrangement limit. Export it as MIDI or use a shorter take.');
+    if (requiredBars > state.lengthBars && frozenTracks().length) throw Error('Unfreeze all tracks before extending the arrangement for this take.');
+    const next = clone(state), destination = next.tracks.find(t => t.id === target.id), id = S.uid('notes');
+    if (!destination.instrument) destination.instrument = { id: 'citrus', name: 'CITRUS' };
+    destination.clips.push(S.noteClip({ id, name: source.name, type: 'notes', pattern: source, voiceMap: Object.fromEntries(source.voices.map(item => [item.id, voice])), start, length: source.lengthBeats, sourceOffset: 0, rate: 1, loop: false, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 }, 256, true));
+    next.lengthBars = Math.max(next.lengthBars, requiredBars);
+    commitNotes(next, { selected: id }); pianoRoll?.open();
+    await ensureInstrument(state.tracks.find(t => t.id === target.id));
+    status('Captured notes placed on ' + target.name + '. The guitar track and MIDI take are retained.');
+    return { trackId: target.id, clipId: id };
   }
   function mountDeluxe(slot, definition) {
     const ownerId = effectOwner().id, index = selectedSlot;
@@ -1372,7 +1413,7 @@
   engine.onRecordingTransportStart=()=>{notePlayback.start();for(const t of state.tracks)if(!t.freeze&&t.instrument&&frames.has(t.id)&&(armedBeforeRecord.has(t.id)||t.instrumentLive))fireCommand(t.id,'start');};
   engine.onRecordingLimit=info=>{notePlayback.stop();engine.stop();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'stop');finishRecording(info?.reason==='punch'?'punch':true);};
   engine.onTransportEnd=()=>{notePlayback.stop();for(const t of state.tracks)if(t.instrument&&frames.has(t.id))fireCommand(t.id,'stop');renderTransport();status('The session has reached its end. Play starts again from the beginning.');};
-  async function replaceState(next,{message='Project opened.',undo=false}={}) { const normalized=S.normalize(next);checkFreezeSampleRate(normalized);const old=state;++lifecycle;++projectOperation;++importOperation;++transportOperation;exportAbort?.abort();panic('');if(!undo)remember();clearAllFrames();if($('instrumentDialog').open)closeInstrument();state=normalized;host.setTempo(state.tempo);selectedClip=null;selectedSlot=null;rackTarget='track';assetMap={};decodeAssets();engine.setState(state);notePlayback.setState(state);engine.seek(0);renderAll();scheduleAutosave();status(message); }
+  async function replaceState(next,{message='Project opened.',undo=false}={}) { const normalized=S.normalize(next);checkFreezeSampleRate(normalized);const old=state;++lifecycle;++projectOperation;++importOperation;++transportOperation;exportAbort?.abort();panic('');engine.clearPedalMidiTake({force:true});if(!undo)remember();clearAllFrames();if($('instrumentDialog').open)closeInstrument();state=normalized;host.setTempo(state.tempo);selectedClip=null;selectedSlot=null;rackTarget='track';assetMap={};decodeAssets();engine.setState(state);notePlayback.setState(state);engine.seek(0);renderAll();scheduleAutosave();status(message); }
   function historyState(next,message,{restoreInstruments=false}={}){
     freezeController?.cancel(); const previous=state,normalized=S.normalize(next),playing=engine.getMeters().playing;const identity=t=>t.instrument&&(t.instrument.html||t.instrument.url||t.instrument.id);checkFreezeSampleRate(normalized);
     ++lifecycle;++importOperation;++projectOperation;++transportOperation;exportAbort?.abort();transportPending=false;if(recordPending){engine.cancelRecording();recordPending=false;}
@@ -2218,7 +2259,7 @@
   });
   masteringUI.setPrepared(masterPlayback.altered());
   window.addEventListener('pagehide', () => masteringUI.dispose());
-  window.addEventListener('pagehide', () => deluxeUI?.dispose());
+  window.addEventListener('pagehide', () => { deluxeUI?.dispose(); pedalMidiUI?.dispose(); });
   recordingsBrowser = window.LoomRecordingsUI.create({
     getState: () => state, getGeneration: () => lifecycle, getAsset: id => assetMap[id],
     onDelete: deleteProjectRecordings, onStatus: status, isBusy: recordingsBusy
@@ -2232,5 +2273,5 @@
   document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
   window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
   const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
-  window.LoomApp=Object.freeze({get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  window.LoomApp=Object.freeze({get pedalMidi(){return pedalMidiUI;},placePedalMidiPattern,get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){rackTarget='track';state.selectedTrack=state.tracks.indexOf(t);selectedClip=id;renderAll();return true;}return false;},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

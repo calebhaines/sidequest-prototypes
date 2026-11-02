@@ -453,7 +453,8 @@ async function checkGalley(browser, baseline) {
           await app.host.command(trackId, 'prepare'); const snapshot = await app.host.snapshot(trackId), native = child[facade];
           // Source templates carry the exact complete instrument, rather than
           // loading siblings or fetching an outdated standalone app.
-          const template = window.LoomEmbeddedInstruments?.[id];
+          const record = window.LoomEmbeddedInstruments?.[id];
+          const template = typeof record === 'string' ? record : record && typeof window.LoomResolveEmbeddedInstrument === 'function' ? await window.LoomResolveEmbeddedInstrument(record) : null;
           if (typeof template !== 'string' || await __kitchenHash(new TextEncoder().encode(template)) !== expectedHash) throw Error('Stale embedded instrument source: ' + id);
           if (id === 'tine') {
             if (child.document.querySelector('.impact-details,#impact-knobs,#impact-material')) throw Error('GALLEY still embeds the refreshed CLATTER interface');

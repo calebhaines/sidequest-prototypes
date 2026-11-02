@@ -205,6 +205,7 @@
         this.cpuProfiler = null; this._cpuExternal = false; this._cpuSampled = false; this._cpuKeys = null;
         this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 };
         this.beat = 0;
+        this.pedalMidi = null; this.pedalMidiBatches = [];
         this.playing = false;
         this.ended = false;
         this.recordingHold = false;
@@ -258,6 +259,45 @@
         this.setAssets(assets);
         this.setState(state);
         this.meters = { beat: 0, playing: false, ended: false, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), master: emptyMeter() };
+      }
+      _pedalMidiTarget(ownerId, slot) {
+        const index = this.tracks.findIndex(track => track.id === ownerId);
+        const owner = index >= 0 ? this.tracks[index] : ownerId === 'master' ? this.master : this.returns.find(bus => bus.id === ownerId);
+        const row = index >= 0 ? this.slots[index] : ownerId === 'master' ? this.masterSlots : this.returnSlots[this.returns.findIndex(bus => bus.id === ownerId)];
+        return { owner, slot: row?.[slot], index };
+      }
+      startPedalMidi(settings) {
+        if (this.service || this.freezeCaptureIndex >= 0) throw Error('Stop SERVICE or offline rendering before capturing live MIDI.');
+        const { ownerId, slot, token } = settings || {}, target = this._pedalMidiTarget(ownerId, slot);
+        if (!Number.isInteger(slot) || slot < 0 || slot >= effectSlotCount(target.owner) || !target.owner || target.owner.freeze || target.slot?.type !== 'ferment' || typeof target.slot.dsp.startMidiCapture !== 'function') throw Error('Choose an unfrozen FERMENT insert for MIDI capture.');
+        const params = target.owner.effects?.[slot]?.params;
+        if (params?.bypass || params?.mix === 0 || params?.mode === 'chord') throw Error('Enable FERMENT in Pitch Tracking mode before capturing a single-note line.');
+        if (typeof token !== 'string' || !token || token.length > 120) throw Error('Choose a valid MIDI capture session.');
+        this.stopPedalMidi('restarted');
+        target.slot.dsp.startMidiCapture({ token, tempo: clamp(settings.tempo, 40, 240, this.tempo), maxNotes: 4096, maxBeats: 256 });
+        this.pedalMidi = { token, ownerId, slot, runtime: target.slot, dsp: target.slot.dsp };
+        this.resumeAudition(target.index >= 0 ? target.index : undefined);
+        return { token, sampleRate: this.sampleRate };
+      }
+      stopPedalMidi(reason = 'stopped') {
+        const session = this.pedalMidi;
+        if (!session) return;
+        session.dsp.stopMidiCapture(reason);
+        const batch = session.dsp.drainMidiEvents();
+        if (batch) this.pedalMidiBatches.push({ ...batch, ownerId: session.ownerId, slot: session.slot });
+        this.pedalMidi = null;
+      }
+      drainPedalMidi() {
+        const session = this.pedalMidi;
+        if (session) {
+          const target = this._pedalMidiTarget(session.ownerId, session.slot);
+          if (target.owner?.freeze || target.slot !== session.runtime) this.stopPedalMidi('target-changed');
+          else {
+            const batch = session.dsp.drainMidiEvents();
+            if (batch) { this.pedalMidiBatches.push({ ...batch, ownerId: session.ownerId, slot: session.slot }); if (batch.done) this.pedalMidi = null; }
+          }
+        }
+        const result = this.pedalMidiBatches; this.pedalMidiBatches = []; return result;
       }
       _configureMastering() {
         const params = this.master?.mastering || {};
@@ -413,6 +453,7 @@
           this.dryGain = this.options.returnId != null || this.returns.some(bus => bus.solo === true) ? 0 : 1;
           this.routingInitialized = true;
         }
+        if (this.pedalMidi) { const target = this._pedalMidiTarget(this.pedalMidi.ownerId, this.pedalMidi.slot); if (target.owner?.freeze || target.slot !== this.pedalMidi.runtime) this.stopPedalMidi('target-changed'); }
         if (this.cpuProfiler?.enabled) this._syncDiagnosticsTopology();
       }
       _compileModulationHandles() {
@@ -539,6 +580,7 @@
       get endBeat() { return clamp(this.state.lengthBars, 1, 64, 4) * 4; }
       start(beat = this.beat) { if (this.service) this.stopService(); this.seek(beat); this.playing = true; this.silent = false; this.meters = { ...this.meters, beat: this.beat, playing: true, ended: false }; }
       stop() {
+        if (this.pedalMidi) this.stopPedalMidi('transport-stopped');
         if (this.service) { this.stopService(); return; }
         if (this.freezeCaptureIndex >= 0 && this.playing) { this.freezeSourceTailActive = this.beat >= this.endBeat - 2 * this.tempo / (60 * this.sampleRate); this.freezeSourceTailFrame = 0; this.freezeSourceTailBase = Math.round(this.endBeat * 60 / this.tempo * this.sampleRate); }
         this.freezeTail = this.hasFrozen && (this.ended || this.options.linear && this.beat >= this.endBeat - 1e-7);
@@ -546,6 +588,7 @@
         this.playing = false; this.countInRemaining = 0; this.clickRemaining = 0; this.meters = { ...this.meters, beat: this.beat, playing: false, ended: this.ended, countInBeatsRemaining: 0 };
       }
       seek(beat) {
+        if (this.pedalMidi) this.stopPedalMidi('seek');
         this.beat = clamp(beat, 0, this.options.linear ? 256 : this.endBeat, 0); this.ended = false; this.previousClickBeat = -1; this.clickRemaining = 0;
         this.transportCycle = 0;
         this.sampleClock = 0;
@@ -581,6 +624,7 @@
       resumeAudition(index) { this.silent = false; if (Number.isInteger(index)) this.auditionTracks.add(index); }
       clearAudition(index) { if (Number.isInteger(index)) this.auditionTracks.delete(index); else this.auditionTracks.clear(); }
       panic() {
+        if (this.pedalMidi) this.stopPedalMidi('panic');
         if (this.service) this.stopService();
         this.playing = false; this.ended = false; this.silent = true; this.clickRemaining = 0; this.limitGain = 1; this.auditionTracks.clear();
         this.countInRemaining = 0; this.recordingPunch = false;
@@ -1280,6 +1324,8 @@
 
   class LoomAudio {
     constructor(state) {
+      this._pedalMidiTake = null; this._pedalMidiEffect = null; this._pedalMidiListeners = new Set(); this._pedalMidiRequests = new Map(); this._pedalMidiRequestId = 0; this._pedalMidiOperation = 0; this._pedalMidiFrames = 0; this._pedalMidiNotifyFrame = 0;
+      this._pedalMidiBufferLease = null; this._pedalMidiWarmup = null; this._fallbackAudioHandler = null;
       this.state = state; this.assets = new Map(); this._sentAssets = new Map(); this.context = null; this.node = null; this.core = null; this.mode = 'idle'; this.inputs = [];
       this.generation = 0; this._transportEpoch = 0; this._transportEndedEpoch = -1; this._recordPreparing = false; this._panicLatched = false; this._playRequest = 0; this._recordRequest = 0; this._recordId = 0; this._recordStopId = 0; this._gateId = 0; this._gates = new Map();
       this.isRecording = false; this._chunks = new Map(); this._recordFrames = 0; this._meters = silenceMeters(0); this._recordStartBeat = 0; this._mic = null; this.microphoneInput = null; this._micRequest = 0; this._micEnabled = false; this._micTrack = -1; this._micPending = false; this._micPurpose = null; this._recordMicrophone = null;
@@ -1328,6 +1374,7 @@
       return settings;
     }
     _assertAudioSettingsIdle() {
+      if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) throw Error('Stop MIDI capture before changing the audio interface.');
       if (this.recordingBusy) throw Error('Finish the current take before changing the audio interface.');
       if (this._meters.playing || this._playPending) throw Error('Stop playback before changing the audio interface.');
       if (this._exportCount) throw Error('Finish the audio export before changing the audio interface.');
@@ -1452,6 +1499,7 @@
               const createLoFi=${window.createLoomLoFiDSP ? window.createLoomLoFiDSP.toString() : 'null'};
               const createPedalTracker=${window.createLoomPedalTrackerDSP ? window.createLoomPedalTrackerDSP.toString() : 'null'};
               const createPedalSynth=${window.createLoomPedalSynthDSP ? window.createLoomPedalSynthDSP.toString() : 'null'};
+              const createPedalMidi=${window.createLoomPedalMidiDSP ? window.createLoomPedalMidiDSP.toString() : 'null'};
               const createDeluxe=${window.createLoomDeluxeDSP ? window.createLoomDeluxeDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
@@ -1459,7 +1507,7 @@
               const createEQ=${window.createLoomTrackEQDSP ? window.createLoomTrackEQDSP.toString() : 'null'};
               const createMastering=${window.createLoomMasteringDSP ? window.createLoomMasteringDSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker,createDeluxe),createLFO,createCPU,createEQ,createMastering);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker,createDeluxe,createPedalMidi),createLFO,createCPU,createEQ,createMastering);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
@@ -1467,6 +1515,10 @@
                   this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
                     const m=e.data,serviceFrame=m.type==='serviceStart'?0:this.core.sampleClock;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
+                    if(m.type==='pedalMidiStart'||m.type==='pedalMidiStop'){
+                      try{if(m.type==='pedalMidiStart')this.core.startPedalMidi(m.settings);else if(!this.core.pedalMidi||this.core.pedalMidi.token===m.token)this.core.stopPedalMidi(m.reason);for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});this.port.postMessage({type:'pedalMidiAck',requestId:m.requestId});}
+                      catch(error){this.port.postMessage({type:'pedalMidiAck',requestId:m.requestId,error:error.message});}return;
+                    }
                     if(m.type==='diagnosticsConfig')this.core.setDiagnostics(m.config);
                     else if(m.type==='masteringAnalysis')this.core.setMasteringAnalysis(m.enabled);
                     else if(m.type==='resetMasteringMeters'){this.core.resetMasteringMeters();this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});}
@@ -1498,6 +1550,7 @@
                     else if(m.type==='recordCancel'){this.recorder.cancel();this.core.endRecording();}
                     else if(m.type==='gate'){this.core.setRecordOnly(m.track,m.value);this.port.postMessage({type:'gateAck',id:m.id});}
                     if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
+                    if(this.core.pedalMidi||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
                     if(Number.isInteger(m.epoch))this.port.postMessage({type:'clock',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});
                   };
                 }
@@ -1508,6 +1561,7 @@
                   if(!this.core.cpuProfiler?.enabled){
                     const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
                     if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
+                    if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
                     if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
                     this.recorder.capture(inputs,n,this.core);
                     if(this.core.ended&&!this.endedSent){this.endedSent=true;this.port.postMessage({type:'transportEnded',epoch:this.epoch,contextTime:currentTime+n/sampleRate,meters:this.core.getMeters()});}
@@ -1520,6 +1574,7 @@
                   const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
                   const eventsStamp=this.core.diagnosticsStart('events');
                   if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
+                    if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
                   if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
                   this.core.diagnosticsEnd('events',eventsStamp);
                   const recorderStamp=this.core.diagnosticsStart('recorder');this.recorder.capture(inputs,n,this.core);this.core.diagnosticsEnd('recorder',recorderStamp);
@@ -1556,14 +1611,14 @@
           this.merger = this.context.createChannelMerger(INPUT_COUNT * 2); this.splitters = [];
           for (let i = 0; i < INPUT_COUNT; i++) { const splitter = this.context.createChannelSplitter(2); (i < TRACK_COUNT ? this.inputs[i] : this.microphoneInput).connect(splitter); splitter.connect(this.merger, 0, i * 2); splitter.connect(this.merger, 1, i * 2 + 1); this.splitters.push(splitter); }
           this.merger.connect(this.node);
-          this.node.onaudioprocess = e => {
+          const fallbackHandler = e => {
             if (!this.core.cpuProfiler?.enabled) {
               const inputs = Array.from({ length: INPUT_COUNT }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
               const serviceFrame = this.core.sampleClock;
               this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
               if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
               if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
-              this.recorder.capture(inputs, e.outputBuffer.length, this.core);
+              this.recorder.capture(inputs, e.outputBuffer.length, this.core); this._flushPedalMidi();
               this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
               this._acceptMeters(this.core.getMeters(), this._transportEpoch, Number.isFinite(e.playbackTime) ? e.playbackTime + e.outputBuffer.length / this.context.sampleRate : this.context.currentTime);
               return;
@@ -1578,7 +1633,7 @@
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
             this.core.diagnosticsEnd('events', eventsStamp);
             const recorderStamp = this.core.diagnosticsStart('recorder');
-            this.recorder.capture(inputs, e.outputBuffer.length, this.core);
+            this.recorder.capture(inputs, e.outputBuffer.length, this.core); this._flushPedalMidi();
             this.core.diagnosticsEnd('recorder', recorderStamp);
             this._recordStage = this.recorder.active ? this.recorder.stage : 'idle';
             const metersStamp = this.core.diagnosticsStart('meters');
@@ -1587,6 +1642,8 @@
             if (profiling && this.core.diagnosticsReportDue()) { const stamp = this.core.diagnosticsStart('report'); this._message({ type: 'diagnostics', generation: this._diagnosticsGeneration, report: this.core.getDiagnostics() }); this.core.diagnosticsEnd('report', stamp); }
             } finally { if (profiling) this.core.endDiagnostics(); }
           };
+          this._fallbackAudioHandler = fallbackHandler;
+          this.node.onaudioprocess = this._pedalMidiFallbackHandler(this.node);
           this.mode = 'fallback';
         }
         this.node.connect(this.context.destination); this._send({ type: 'state', state: dspState(this.state) }); this._send({ type: 'seek', beat: this._meters.beat }); this._updateRecordHold(); this._syncAssets(); if (this._panicLatched) this._send({ type: 'panic' });
@@ -1596,7 +1653,113 @@
       return this._init;
     }
     getTrackInput(id) { if (this._audioApplying) throw Error('Finish setting up the audio interface before opening an instrument.'); if (!this.inputs.length) throw Error('Initialize GALLEY audio before opening an instrument.'); return this.inputs[this._trackIndex(id)]; }
+    _pedalMidiFallbackHandler(node) {
+      const context = this.context, core = this.core, handler = this._fallbackAudioHandler;
+      return event => { if (node === this.node && context === this.context && core === this.core) handler(event); };
+    }
+    _swapPedalMidiFallback(frames) {
+      const previous = this.node, node = this.context.createScriptProcessor(frames, INPUT_COUNT * 2, 2), previousHandler = previous.onaudioprocess;
+      node.onaudioprocess = this._pedalMidiFallbackHandler(node);
+      try {
+        this.merger.connect(node); node.connect(this.context.destination);
+        previous.onaudioprocess = null; this.merger.disconnect(previous); previous.disconnect();
+        this.node = node; this._processingFrames = node.bufferSize || frames;
+      } catch (error) {
+        node.onaudioprocess = null; try { this.merger.disconnect(node); node.disconnect(); } catch {}
+        this.node = previous; previous.onaudioprocess = previousHandler; this._processingFrames = previous.bufferSize;
+        try { this.merger.connect(previous); previous.connect(this.context.destination); } catch {}
+        throw error;
+      }
+      return node;
+    }
+    _cancelPedalMidiWarmup() { this._pedalMidiWarmup?.cancel(); }
+    async _preparePedalMidiFallback(operation) {
+      if (this.mode !== 'fallback' || !this.merger || !this._fallbackAudioHandler || !this.context?.createScriptProcessor) return;
+      const prior = this._pedalMidiBufferLease, previousFrames = prior?.node === this.node ? prior.previousFrames : this.node.bufferSize;
+      if (!prior && previousFrames >= 1024) return;
+      this._cancelPedalMidiWarmup();
+      const lease = { operation, context: this.context, core: this.core, previousFrames, node: this.node };
+      if (this.node.bufferSize < 1024) lease.node = this._swapPedalMidiFallback(1024);
+      this._pedalMidiBufferLease = lease;
+      await new Promise((resolve, reject) => {
+        let remaining = 2, settled = false;
+        const handler = this._pedalMidiFallbackHandler(lease.node);
+        const finish = error => {
+          if (settled) return; settled = true; clearTimeout(timer);
+          if (this._pedalMidiWarmup?.lease === lease) this._pedalMidiWarmup = null;
+          if (this.node === lease.node && this.context === lease.context && this.core === lease.core) lease.node.onaudioprocess = handler;
+          if (error) reject(error); else resolve();
+        };
+        const timer = setTimeout(() => finish(Error('Audio capture did not become ready. Resume audio and try again.')), 2000);
+        this._pedalMidiWarmup = { lease, cancel: () => finish(abortError()) };
+        lease.node.onaudioprocess = event => {
+          if (this.node !== lease.node || this.context !== lease.context || this.core !== lease.core || this._pedalMidiBufferLease !== lease) return;
+          handler(event); if (--remaining === 0) finish();
+        };
+      });
+    }
+    _restorePedalMidiFallback(lease = this._pedalMidiBufferLease) {
+      if (!lease || this._pedalMidiBufferLease !== lease) return;
+      if (this._pedalMidiWarmup?.lease === lease) this._cancelPedalMidiWarmup();
+      if (!this._closingAudioGraph && this.mode === 'fallback' && this.context === lease.context && this.core === lease.core && this.node === lease.node && this.context.state !== 'closed') this._swapPedalMidiFallback(lease.previousFrames);
+      this._pedalMidiBufferLease = null;
+    }
+    _queuePedalMidiRestore() {
+      const lease = this._pedalMidiBufferLease;
+      if (lease) Promise.resolve().then(() => { try { this._restorePedalMidiFallback(lease); } catch (error) { this.onStatus?.({ type: 'error', message: error.message }); } });
+    }
+    _pedalMidiOwner(state, id) { return id === 'master' ? state.master : state.tracks.find(track => track.id === id) || state.returns?.find(bus => bus.id === id); }
+    getPedalMidiTake() { return this._pedalMidiTake ? { ...this._pedalMidiTake, notes: this._pedalMidiTake.notes.map(note => ({ ...note })) } : null; }
+    subscribePedalMidi(listener) { if (typeof listener !== 'function') throw TypeError('Provide a MIDI capture listener.'); this._pedalMidiListeners.add(listener); return () => this._pedalMidiListeners.delete(listener); }
+    _notifyPedalMidi() { if (!this._pedalMidiListeners.size) return; const take = this.getPedalMidiTake(); for (const listener of this._pedalMidiListeners) try { listener(take); } catch (error) { this.onStatus?.({ type: 'error', message: error.message }); } }
+    _requestPedalMidi(type, values) {
+      return new Promise((resolve, reject) => {
+        const requestId = ++this._pedalMidiRequestId;
+        const timer = setTimeout(() => { this._pedalMidiRequests.delete(requestId); reject(Error('MIDI capture did not respond. Reopen audio and try again.')); }, 8000);
+        this._pedalMidiRequests.set(requestId, { resolve, reject, timer });
+        try { this._send({ type, ...values, requestId }); } catch (error) { clearTimeout(timer); this._pedalMidiRequests.delete(requestId); reject(error); }
+      });
+    }
+    async startPedalMidi(ownerId, slot, options = {}) {
+      if (this._audioApplying || this._deviceAccessPending || this.recordingBusy || this.getServiceState().active) throw Error('Finish recording, SERVICE or audio setup before capturing MIDI.');
+      if (this.state.master?.playback && window.LoomMasterTransform && !window.LoomMasterTransform.isNeutral(this.state.master.playback)) throw Error('Reset master Speed & Pitch before capturing live MIDI.');
+      const owner = this._pedalMidiOwner(this.state, ownerId), effect = owner?.effects?.[slot];
+      if (!owner || owner.freeze || !Number.isInteger(slot) || slot < 0 || slot >= (/^track-/.test(ownerId) ? 5 : 4) || effect?.type !== 'ferment') throw Error('Choose an unfrozen FERMENT insert for MIDI capture.');
+      if (effect.params.bypass || effect.params.mix === 0 || effect.params.mode === 'chord') throw Error('Enable FERMENT in Pitch Tracking mode and play one note at a time.');
+      const operation = ++this._pedalMidiOperation, generation = this.generation;
+      await this.stopPedalMidi('restarted'); await this.init(); await this.context.resume();
+      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect) throw abortError();
+      try { await this._preparePedalMidiFallback(operation); }
+      catch (error) { if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw error; }
+      if (operation !== this._pedalMidiOperation || generation !== this.generation || this._pedalMidiOwner(this.state, ownerId)?.effects?.[slot] !== effect || owner.freeze || effect.params.bypass || effect.params.mix === 0 || effect.params.mode === 'chord' || this.recordingBusy || this.getServiceState().active || this._audioApplying || window.LoomMasterTransform && !window.LoomMasterTransform.isNeutral(this.state.master?.playback)) {
+        if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw abortError();
+      }
+      const token = 'ferment-' + Date.now().toString(36) + '-' + operation;
+      this._pedalMidiEffect = effect; this._pedalMidiNotifyFrame = 0; this._panicLatched = false;
+      this._pedalMidiTake = { token, ownerId, slot, tempo: Math.max(40, Math.min(240, Number(options.tempo) || this.state.tempo || 120)), sampleRate: this.context.sampleRate, frames: 0, startBeat: this.getTransport().beat, notes: [], capturing: true, reason: null };
+      this._notifyPedalMidi();
+      try { await this._requestPedalMidi('pedalMidiStart', { settings: { token, ownerId, slot, tempo: this._pedalMidiTake.tempo } }); }
+      catch (error) { if (this._pedalMidiTake?.token === token) { this._pedalMidiTake.capturing = false; this._pedalMidiTake.reason = 'error'; this._notifyPedalMidi(); } if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw error; }
+      if (operation !== this._pedalMidiOperation || this._pedalMidiTake?.token !== token) { if (this._pedalMidiBufferLease?.operation === operation) this._restorePedalMidiFallback(); throw abortError(); }
+      return this.getPedalMidiTake();
+    }
+    async stopPedalMidi(reason = 'stopped') {
+      if (reason !== 'restarted') this._pedalMidiOperation++;
+      this._cancelPedalMidiWarmup();
+      const take = this._pedalMidiTake;
+      if (!take?.capturing) { this._queuePedalMidiRestore(); return this.getPedalMidiTake(); }
+      if (this.node) await this._requestPedalMidi('pedalMidiStop', { token: take.token, reason });
+      if (this._pedalMidiTake?.token === take.token) { take.capturing = false; take.reason ||= reason; this._notifyPedalMidi(); }
+      return this.getPedalMidiTake();
+    }
+    clearPedalMidiTake({ force = false } = {}) { if (this._pedalMidiTake?.capturing) { if (!force) throw Error('Stop MIDI capture before clearing the take.'); if (this.node) this._send({ type: 'pedalMidiStop', token: this._pedalMidiTake.token, reason: 'project-changed' }); } this._pedalMidiOperation++; this._cancelPedalMidiWarmup(); this._queuePedalMidiRestore(); this._pedalMidiTake = this._pedalMidiEffect = null; this._notifyPedalMidi(); }
+    _flushPedalMidi(force = false) {
+      if (!this.core || !this.core.pedalMidi && !this.core.pedalMidiBatches.length) return;
+      if (!force && this.core.pedalMidi && !this.core.pedalMidiBatches.length && ++this._pedalMidiFrames % 4) return;
+      for (const batch of this.core.drainPedalMidi()) this._message({ type: 'pedalMidi', batch });
+    }
     _send(m) {
+      if (!this._initializing && ['stop', 'seek', 'panic', 'serviceStart', 'recordStart'].includes(m.type)) { this._pedalMidiOperation++; this._cancelPedalMidiWarmup(); if (!this._pedalMidiTake?.capturing) this._queuePedalMidiRestore(); }
       if (['play', 'stop', 'seek', 'panic', 'recordStart', 'serviceStart', 'serviceStop'].includes(m.type)) m = { ...m, epoch: ++this._transportEpoch };
       if (m.type === 'recordStart') this._countInOrigin = m.schedule?.countInBeats > 0 ? { revision: this._transportEpoch, beat: this._recordTimelineStartBeat ?? this._meters.beat ?? 0 } : null;
       else if (['play', 'stop', 'seek', 'panic', 'recordStop', 'recordCancel', 'serviceStart', 'serviceStop'].includes(m.type)) this._countInOrigin = null;
@@ -1608,6 +1771,11 @@
       if (this.mode === 'worklet') { this.node.port.postMessage(m); return; }
       if (!this.core) return;
       const serviceFrame = m.type === 'serviceStart' ? 0 : this.core.sampleClock;
+      if (m.type === 'pedalMidiStart' || m.type === 'pedalMidiStop') {
+        try { if (m.type === 'pedalMidiStart') this.core.startPedalMidi(m.settings); else if (!this.core.pedalMidi || this.core.pedalMidi.token === m.token) this.core.stopPedalMidi(m.reason); this._flushPedalMidi(true); this._message({ type: 'pedalMidiAck', requestId: m.requestId }); }
+        catch (error) { this._message({ type: 'pedalMidiAck', requestId: m.requestId, error: error.message }); }
+        return;
+      }
       if (m.type === 'diagnosticsConfig') this.core.setDiagnostics(m.config);
       else if (m.type === 'masteringAnalysis') this.core.setMasteringAnalysis(m.enabled);
       else if (m.type === 'resetMasteringMeters') { this.core.resetMasteringMeters(); this._acceptMeters(this.core.getMeters(), this._transportEpoch, this.context?.currentTime || 0); }
@@ -1635,9 +1803,20 @@
       else if (m.type === 'recordCancel') { this.recorder.cancel(); this.core.endRecording(); }
       else if (m.type === 'gate') { this.core.setRecordOnly(m.track, m.value); this._message({ type: 'gateAck', id: m.id }); }
       if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(this.context?.currentTime || 0, serviceFrame)) this._message({ type: 'serviceEvent', event });
+      this._flushPedalMidi(true);
       if (Number.isInteger(m.epoch)) this._acceptMeters(this.core.getMeters(), m.epoch, this.context?.currentTime || 0);
     }
     _message(m) {
+      if (m.type === 'pedalMidiAck') { const request = this._pedalMidiRequests.get(m.requestId); if (request) { clearTimeout(request.timer); this._pedalMidiRequests.delete(m.requestId); if (m.error) request.reject(Error(m.error)); else request.resolve(); } return; }
+      if (m.type === 'pedalMidi') {
+        const batch = m.batch, take = this._pedalMidiTake;
+        if (!batch || !take || batch.token !== take.token || batch.ownerId !== take.ownerId || batch.slot !== take.slot) return;
+        const events = (batch.events || []).filter(note => Number.isInteger(note.pitch) && note.pitch >= 0 && note.pitch <= 127 && Number.isSafeInteger(note.startFrame) && Number.isSafeInteger(note.endFrame) && note.startFrame >= 0 && note.endFrame > note.startFrame && Number.isFinite(note.velocity));
+        for (const note of events.slice(0, 4096 - take.notes.length)) take.notes.push({ ...note, velocity: Math.max(0, Math.min(1, note.velocity)) });
+        take.frames = Math.max(take.frames, Number(batch.frames) || 0);
+        if (batch.done) { take.capturing = false; take.reason = batch.reason || 'stopped'; this._queuePedalMidiRestore(); }
+        if (events.length || batch.done || take.frames - this._pedalMidiNotifyFrame >= take.sampleRate / 8) { this._pedalMidiNotifyFrame = take.frames; this._notifyPedalMidi(); } return;
+      }
       if (m.type === 'diagnostics') { if (this._diagnosticsConfig.enabled && m.generation === this._diagnosticsGeneration && m.report?.revision === this._diagnosticsConfig.revision) this._diagnosticsSnapshot = m.report; return; }
       if (m.type === 'serviceEvent') {
         const event = m.event;
@@ -1701,6 +1880,10 @@
     _updateRecordHold() { this._send({ type: 'recordHold', value: this.recordingBusy }); }
     _clampBeat(beat) { return Math.max(0, Math.min(Math.max(1, Math.min(64, Number(this.state.lengthBars) || 4)) * 4, Number(beat) || 0)); }
     setState(state) {
+      if (this._pedalMidiTake?.capturing) {
+        const take = this._pedalMidiTake, owner = this._pedalMidiOwner(state, take.ownerId);
+        if (owner?.freeze || owner?.effects?.[take.slot] !== this._pedalMidiEffect) this.stopPedalMidi('target-changed').catch(error => this.onStatus?.({ type: 'error', message: error.message }));
+      }
       const frozenRate = this._frozenSampleRate(state);
       if (this.context && frozenRate && frozenRate !== this.context.sampleRate) throw Error('Reopen audio at the frozen tracks’ sample rate, or unfreeze them before changing the sample rate.');
       const old = this._clockConfiguration, changedClock = ['tempo', 'lengthBars', 'loopEnabled', 'loopStart', 'loopEnd'].some(key => old?.[key] !== state?.[key]);
@@ -1723,6 +1906,7 @@
       return { ...scene, clips: scene.clips.map(clip => clip ? { ...clip, start: 0 } : null), ...(scene.holds ? { holds: Array.from({ length: TRACK_COUNT }, (_, i) => scene.holds[i] === true) } : {}) };
     }
     async startService({ scene, performance = null, fromBeat = 0 } = {}) {
+      if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
       if (this.recordingBusy) throw Error('Finish the current recording before starting SERVICE.');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before starting SERVICE.');
       scene = this._validateServiceScene(scene);
@@ -1770,8 +1954,9 @@
         this._panicLatched = false; const beat = this._clampBeat(fromBeat); this._meters = { ...this._meters, beat, playing: true, ended: false }; this._send({ type: 'play', beat }); return true;
       } finally { this._playPending--; }
     }
-    stop(options = {}) { if (this._serviceRuntime.active) this.stopService(); if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
+    stop(options = {}) { this._pedalMidiOperation++; this._cancelPedalMidiWarmup(); if (this._serviceRuntime.active) this.stopService(); if (options.preserveMicrophoneMonitoring !== true) this._disableMicrophoneMonitoring(false, true); this._playRequest++; if (!this.isRecording) this._recordRequest++; this._meters = { ...this._meters, beat: this.getTransport().beat, playing: false }; this._send({ type: 'stop' }); }
     seek(beat) {
+      this._pedalMidiOperation++; this._cancelPedalMidiWarmup();
       if (this.recordingBusy) throw Error('Finish or cancel the current take before moving the playhead.');
       if (this._serviceRuntime.active) throw Error('Stop SERVICE before moving the arrangement playhead.');
       this._meters = { ...this._meters, beat: this._clampBeat(beat), ended: false }; this._send({ type: 'seek', beat: this._meters.beat }); return this._meters.beat;
@@ -1801,6 +1986,7 @@
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
     async startRecording(trackIds, options = {}) {
+      if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
       if (this._serviceRuntime.active) throw Error('Stop SERVICE before recording a microphone or instrument take.');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || (this._micPending && !options._microphone)) return false;
@@ -1951,6 +2137,7 @@
       this._emitMicrophoneStatus();
     }
     async startMicrophoneRecording(trackId, options = {}) {
+      if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
       const track = this._trackIndex(trackId); if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
@@ -2096,12 +2283,14 @@
     async _closeAudioGraph() {
       if (this._closingAudioGraph) return this._closingAudioGraph;
       this._closingAudioGraph = (async () => {
+        try { await this.stopPedalMidi('audio-closed'); } catch (error) { if (this._pedalMidiTake) { this._pedalMidiTake.capturing = false; this._pedalMidiTake.reason = 'audio-closed'; } }
+        for (const request of this._pedalMidiRequests.values()) { clearTimeout(request.timer); request.reject(abortError()); } this._pedalMidiRequests.clear();
         this._diagnosticsGeneration++; this._diagnosticsSnapshot = null;
         if (this.node?.port) { this.node.port.onmessage = null; this.node.port.close?.(); }
         if (this.node) this.node.onaudioprocess = null;
         for (const node of [this.node, this.merger, ...(this.splitters || []), ...this.inputs, this.microphoneInput].filter(Boolean)) try { node.disconnect(); } catch {}
         try { if (this.context && this.context.state !== 'closed') await this.context.close(); }
-        finally { this.context = null; this.node = null; this.core = null; this.recorder = null; this.inputs = []; this.microphoneInput = null; this.merger = null; this.splitters = []; this._init = null; this.mode = 'idle'; this._processingFrames = 0; }
+        finally { this.context = null; this.node = null; this.core = null; this.recorder = null; this.inputs = []; this.microphoneInput = null; this.merger = null; this.splitters = []; this._init = null; this.mode = 'idle'; this._processingFrames = 0; this._fallbackAudioHandler = this._pedalMidiBufferLease = null; }
       })().finally(() => { this._closingAudioGraph = null; });
       return this._closingAudioGraph;
     }

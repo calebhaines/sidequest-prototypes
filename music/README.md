@@ -1,15 +1,15 @@
 # Kitchen
 
-A dedicated, self-contained landing page for seventeen music instruments and the GALLEY browser studio.
+A dedicated, self-contained landing page for eighteen music instruments and the GALLEY browser studio.
 
-Current release: **Kitchen 2.25.0 · GALLEY 1.34.0**.
+Current release: **Kitchen 2.26.0 · GALLEY 1.35.0**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 
 GALLEY studio: https://calebhaines.github.io/sidequest-prototypes/music/loom/
 
 Optional A–D conventional patterns now complement ROUX, LEAVEN, SKEWER,
-STEAM, and ROTISSERIE's original sequencers. All Kitchen instruments offer
+STEAM, and ROTISSERIE's original sequencers. Many Kitchen instruments offer
 32-step sequences; sixteen-cell grids use a compact second page. Original modes
 and sounds remain the defaults. See [SEQUENCING.md](./SEQUENCING.md) for controls,
 verification, and the rollback checkpoint.
@@ -101,7 +101,7 @@ notes and sound changes. Run `npm run check:percussion` and
 
 Edit `music/index.html` to change the page. Add another instrument article to its collection for each new app, using a relative link such as `./new-app/`. Put that app's browser files in `music/new-app/`, with an `index.html` entry point. The layout adapts to additional articles.
 
-GALLEY 1.34 is a ten-track browser DAW with audio and note arrangement, all seventeen Kitchen instruments inside the studio, five effects slots per track, and nineteen native effects. SIZZLE, CLATTER, HOTPLATE and BATTER each provide two GALLEY effect inserts per drum voice, with independent processing, recipes and saved patches. Every track has a built-in four-band EQ with two mid sweep knobs, automation and flat defaults. Four master inserts and two shared effect returns provide mix processing, pre/post track sends, bus automation and separate wet stems. SCALES adds a live chromatic tuner, calibrated string guides, stereo meters, gain and phase tools, mono bass, filters, and clip protection. Audio settings select the interface, input channel, output where supported, sample rate, and Live/Balanced/Stable latency mode. Play through BROILER sets up monitoring while stopped, without replacing an occupied rack. Monitor the input through a selected track's effects while recording a dry take, with estimated automatic delay compensation and signed manual adjustment. PRESERVE adds four tape-machine characters, five speeds, three tape stocks, magnetic softening, calibrated head response and optional wow, flutter, hiss, dropouts and stereo wear behind a five-knob face. SAUTÉ adds twelve classic microphone preamp characters plus transparent gain, with deep circuit and tone customization behind folded controls. BUTTER offers eight classic analog compressor families plus the original Clean model, with program-dependent timing, harmonic colour and stereo linking. BROILER adds 22 recognizable bass and guitar amp characters, thirteen pedal models in a four-slot board, eleven cabinets, and deep valve, tone-stack, power and cabinet customization. New gain stages and critical pedal circuits use stateful, circuit-informed processing; existing stock sounds remain compatible. GLAZE supplies a complete practical and creative vocal strip with clear stage descriptions and expandable control guidance, with a microphone shortcut, cleanup, dynamics, tone, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, rhythmic motion, ducked delay and reverb. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes all seventeen instruments for offline use, including STOCK's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with GALLEY. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Kitchen studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
+GALLEY 1.35 is a ten-track browser DAW with audio and note arrangement, all eighteen Kitchen instruments inside the studio, five effects slots per track, and nineteen native effects. SIZZLE, CLATTER, HOTPLATE and BATTER each provide two GALLEY effect inserts per drum voice, with independent processing, recipes and saved patches. Every track has a built-in four-band EQ with two mid sweep knobs, automation and flat defaults. Four master inserts and two shared effect returns provide mix processing, pre/post track sends, bus automation and separate wet stems. SCALES adds a live chromatic tuner, calibrated string guides, stereo meters, gain and phase tools, mono bass, filters, and clip protection. Audio settings select the interface, input channel, output where supported, sample rate, and Live/Balanced/Stable latency mode. Play through BROILER sets up monitoring while stopped, without replacing an occupied rack. Monitor the input through a selected track's effects while recording a dry take, with estimated automatic delay compensation and signed manual adjustment. PRESERVE adds four tape-machine characters, five speeds, three tape stocks, magnetic softening, calibrated head response and optional wow, flutter, hiss, dropouts and stereo wear behind a five-knob face. SAUTÉ adds twelve classic microphone preamp characters plus transparent gain, with deep circuit and tone customization behind folded controls. BUTTER offers eight classic analog compressor families plus the original Clean model, with program-dependent timing, harmonic colour and stereo linking. BROILER adds 22 recognizable bass and guitar amp characters, thirteen pedal models in a four-slot board, eleven cabinets, and deep valve, tone-stack, power and cabinet customization. New gain stages and critical pedal circuits use stateful, circuit-informed processing; existing stock sounds remain compatible. GLAZE supplies a complete practical and creative vocal strip with clear stage descriptions and expandable control guidance, with a microphone shortcut, cleanup, dynamics, tone, pitch correction/shifting, harmonies, doubling, vowel filters, vocoder, rhythmic motion, ducked delay and reverb. Import and record audio, arrange clips, save projects, undo edits, and export stereo WAV. Its standalone HTML includes all eighteen instruments for offline use, including STOCK's full sampler interface and sample state. Future instruments can be added from an HTML file or same-site URL; the MusicLabHost v1 bridge allows compatible apps to exchange transport, project state, and audio with GALLEY. See [`loom/README.md`](../loom/README.md) for the app-hosting contract and practical integration instructions. Editable sources are in `loom/`; rebuild the standalone page and `music/loom/LOOM-source.zip` with `python loom/build.py`. The Kitchen studio feature opens it at `./loom/` or downloads the self-contained HTML. Its Help panel includes the editable source ZIP.
 
 SIZZLE's editable source remains in `grain/`. Rebuild it with `python grain/build.py` when its source changes. Its `index.html` continues to work as a standalone offline download.
 
@@ -245,3 +245,30 @@ GALLEY 1.32 expands the studio to **ten complete recording/instrument tracks**. 
 GALLEY 1.33 adds **SUNDAY**, a dedicated Deluxe Reverb AB763 amp effect with five independently formulated emulations for A–E auditioning. Shared controls, fixed comparison trims and a wide clean range retain the dynamics of guitar playing. Normal/Vibrato channels, spring reverb, tremolo, an original open-back 1 × 12, and folded circuit/speaker controls are included. The models are original circuit-informed interpretations; BROILER remains unchanged. See [the operating and research guide](../loom/DELUXE-REVERB-GUIDE.md).
 
 GALLEY 1.34 adds **master playback speed and pitch**: 25–200% speed, ±24 semitones, and pitch-preserving or tape-style timing. An altered mix is prepared from the nominal Float32 master, including effects and automation, then played from cached stereo audio. Neutral playback keeps its existing live path. Stereo master exports include the transform; track/return stems and freeze sources remain nominal. Reset before live recording, monitoring, instrument audition or SERVICE. See [the playback guide](../loom/MASTER-PLAYBACK-GUIDE.md).
+
+## CITRUS · Kitchen 2.26 / GALLEY 1.35
+
+**CITRUS** is a monophonic TB-303-inspired acid bass instrument: a continuous saw
+or square oscillator, nonlinear four-pole diode ladder, coupled accent contours
+and outgoing slides. Seven rotary controls keep the classic sound within reach;
+eight 1–16-step banks, per-step pitch/rest/accent/slide and repeatable pattern
+chains supply the bass line. Original sound recipes, keyboard/MIDI playing,
+portable projects, WAV export and exact Kitchen pattern exchange are included.
+Folded controls expose slide timing, filter drive, optional drift and 4×/2×
+oversampling. The model follows public circuit documentation and retains explicit
+modeling limits; it is not a measured replica of a particular unit.
+
+CITRUS is the eighteenth Kitchen instrument and is included in GALLEY's ten-track
+studio. See [operating notes](../citrus/README.md) and
+[circuit references](../citrus/README.md#circuit-references-and-limits). Rebuild with `python3 citrus/build.py`, then
+`python3 loom/build.py` and `npm run build`.
+Standalone: https://calebhaines.github.io/sidequest-prototypes/music/citrus/
+
+GALLEY 1.35 also adds **FERMENT note capture**. Open its folded **Capture MIDI**
+panel, play a single-note guitar or bass line in Pitch Tracking, then save a
+standard MIDI file, save a Kitchen pattern or place the notes on a chosen track.
+The take follows the input pitch before synth-register transformations and keeps
+leading silence and note timing by default. Trimming and quantization are
+explicit options. Chords and continuous pitch bends are not transcribed; the
+capture does not change FERMENT's audio processing. See
+[the FERMENT guide](../loom/FERMENT-GUIDE.md).
