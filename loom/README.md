@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Playback continuity (1.37.1)** fixes fractional source-loop interpolation reading beyond the selected audio region. It also prevents arrangement-loop smoothing from importing a discontinuous, unheard sample after the loop end, for both ordinary and frozen tracks. Resampled and rate-adjusted loops retain their timing and source interiors; effect processing and source recordings stay unchanged. The shared source-loop fix also applies to audio transfers, exports and new freezes.
+
 **CELLAR & BOARD (1.37.0)** adds five SVT-CL bass-amp interpretations with separate drive/listening controls and clean headroom, and a four-position guitar pedalboard with ten essentials. The stock BD-2 path has its own discrete-stage, passive-network and diode model. Read [CELLAR’s circuit and operating notes](CELLAR-CIRCUITS.md) and [BOARD’s pedal guide](BOARD-PEDALS.md). These original circuit/behavior models are not measured hardware captures.
 
 **Track power and CPU review (1.36.0)** adds a power switch to each track header and mixer channel. Off stops its instrument, effects, EQ, sends, clip playback and note scheduling while keeping the complete editable source. Switch it on to restore the saved sound. This release also caches redundant effect/control calculations and releases closed CPU diagnostics. Enabled audio is checked exactly against 1.35. See [the CPU review and operating notes](CPU-REVIEW-1.36.md).
@@ -168,7 +170,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.37.0.
+SERVICE is version 1.0.0; GALLEY is version 1.37.1.
 
 ## Making a piece
 

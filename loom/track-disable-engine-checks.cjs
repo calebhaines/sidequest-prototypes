@@ -4,6 +4,9 @@
  * (59a31f7), including its own effects/EQ/LFO/mastering dependencies.
  * node loom/track-disable-engine-checks.cjs --record-baseline
  * Ordinary checks use frozen hashes and also work in an extracted source ZIP.
+ * 1.37.1 intentionally repairs the loop-boundary case's discontinuous outgoing
+ * anchor. Its corrected hash is pinned separately below; the original immutable
+ * fixture file is retained and the other 16 cases still match it exactly.
  * No elapsed-time assertion or benchmark runs in this correctness suite.
  */
 const assert = require('node:assert/strict');
@@ -14,6 +17,12 @@ const { webcrypto, createHash } = require('node:crypto');
 const BASELINE = '59a31f7563ab60dff7f54cd3eb5b3bc04ec34a15';
 const ROOT = path.resolve(__dirname, '..');
 const FIXTURES = path.join(__dirname, 'track-disable-engine-fixtures.json');
+const CONTINUITY_EXPECTED = Object.freeze({
+  'loop-boundary': Object.freeze({
+    pcm: 'c9c4e082a2f17dc31ca1a5f9e0c4fd8dd8bf6d8b2b813b29ed0540f5663dbe9c',
+    meters: '8c75f085687b817f3dcff18196959559c0c09d1f32a56952639f5b44fc1eb467'
+  })
+});
 const MODULES = ['shared/pattern-schema.js', ...[
   'vocal-catalog', 'utility-catalog', 'filter-catalog', 'creative-catalog', 'preamp-catalog', 'tape-catalog', 'char-catalog', 'lofi-catalog', 'pedal-synth-catalog', 'deluxe-catalog', 'effects-catalog',
   'vocal-dsp', 'utility-dsp', 'filter-dsp', 'creative-dsp', 'broiler-pedals', 'compressor-dsp', 'preamp-dsp', 'tape-dsp', 'char-dsp', 'lofi-dsp', 'pedal-synth-tracker', 'pedal-midi-dsp', 'pedal-synth-dsp', 'deluxe-dsp', 'effects',
@@ -97,7 +106,7 @@ const DEFINITIONS = [
   { id: 'frozen-playback', kind: 'frozen' }, { id: 'solo-mute-return-solo', kind: 'solo' },
   { id: 'transport-seek-stop-countin', kind: 'transport' }, { id: 'track-ten-stem', kind: 'clips', trackId: 'track-10' }
 ];
-function render(env, definition) {
+function render(env, definition, capture = false) {
   const { core, state, frames, sr } = fixture(env, definition), outputs = [new Float32Array(frames), new Float32Array(frames)], input = signal(frames, sr), meters = createHash('sha256'), sizes = [128, 137, 251, 32, 113];
   const scene = { id: 'scene', clips: state.tracks.map(track => track.clips[0] || null) };
   if (definition.kind === 'service') { core.startService(scene, 0); core.queueService('performance', { fill: true, drops: [false, true], overrides: [{ trackId: 'track-1', target: 'pan', value: -.2 }] }, 'immediate', 1); }
@@ -125,7 +134,8 @@ function render(env, definition) {
     meters.update(JSON.stringify(core.getMeters())); at = end;
   }
   assert(outputs[0].some(value => value !== 0), definition.id + ' must exercise audible processing');
-  return { pcm: createHash('sha256').update(Buffer.from(outputs[0].buffer)).update(Buffer.from(outputs[1].buffer)).digest('hex'), meters: meters.digest('hex') };
+  const result = { pcm: createHash('sha256').update(Buffer.from(outputs[0].buffer)).update(Buffer.from(outputs[1].buffer)).digest('hex'), meters: meters.digest('hex') };
+  return capture ? { ...result, output: outputs } : result;
 }
 function feed(core, frames = 1024, sr = 48000) {
   const out = [new Float32Array(frames), new Float32Array(frames)], input = signal(frames, sr);
@@ -141,9 +151,13 @@ async function run() {
   const env = load(), { S, DSP, scope } = env;
   let passed = 0;
   const check = async (name, test) => { await test(); console.log('PASS ' + name); passed++; };
-  await check('Enabled GALLEY stereo PCM and meters match the immutable 1.35 release', () => {
+  await check('Enabled PCM and meters match 16 immutable 1.35 cases and the separately pinned 1.37.1 loop repair', () => {
     const expected = JSON.parse(fs.readFileSync(FIXTURES, 'utf8')); assert.equal(expected.baseline, BASELINE); assert.equal(expected.definitionsHash, digest(JSON.stringify(DEFINITIONS)));
-    for (const definition of DEFINITIONS) assert.deepEqual(render(env, definition), expected.expected[definition.id], definition.id);
+    for (const definition of DEFINITIONS) {
+      const corrected = CONTINUITY_EXPECTED[definition.id];
+      if (corrected) assert.notDeepEqual(corrected, expected.expected[definition.id], 'The corrected seam must retain a distinct historical reference');
+      assert.deepEqual(render(env, definition), corrected || expected.expected[definition.id], definition.id);
+    }
   });
   await check('Disabled tracks release DSP and skip clips, input, EQ, inserts, mixing, automation, sends, metering and profiling', () => {
     const state = blank(S); state.tracks[0].effects[0] = S.effect({ type: 'prism', params: {} }); state.tracks[0].sends = [.8, .8];
