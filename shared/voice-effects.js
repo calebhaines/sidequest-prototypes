@@ -41,7 +41,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP, scope.createLoomPedalMidiDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP, scope.createLoomPedalMidiDSP, scope.createLoomSVTDSP, scope.createLoomGuitarPedalsDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -117,7 +117,7 @@
   function workletSource() {
     const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP', 'createLoomCharDSP'];
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
-    const optional = ['createLoomLoFiDSP', 'createLoomPedalSynthDSP', 'createLoomPedalTrackerDSP', 'createLoomDeluxeDSP', 'createLoomPedalMidiDSP'];
+    const optional = ['createLoomLoFiDSP', 'createLoomPedalSynthDSP', 'createLoomPedalTrackerDSP', 'createLoomDeluxeDSP', 'createLoomPedalMidiDSP', 'createLoomSVTDSP', 'createLoomGuitarPedalsDSP'];
     const argumentsList = names.concat(optional.map(name => typeof scope[name] === 'function' ? name : 'null'));
     const declarations = names.concat(optional.filter(name => typeof scope[name] === 'function'));
     return declarations.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${argumentsList.join(',')});\n` + `

@@ -129,7 +129,9 @@
     "check:embedded-instruments": "node loom/embedded-instruments-checks.cjs",
     "check:track-power": "node loom/track-disable-project-checks.cjs && node loom/track-disable-engine-checks.cjs && node loom/disabled-host-checks.cjs && node loom/track-disable-integration-checks.cjs",
     "check:galley-cpu-review": "node loom/performance-2026-checks.cjs && node loom/exact-effects-cpu-checks.cjs && node loom/cpu-lifecycle-checks.cjs && npm run check:track-power",
-    "check:galley-cpu-review-browser": "GALLEY_135_REGRESSION=1 node loom/performance-2026-browser-checks.cjs"
+    "check:galley-cpu-review-browser": "GALLEY_135_REGRESSION=1 node loom/performance-2026-browser-checks.cjs",
+    "check:cellar-board": "node loom/svt-checks.cjs && node loom/guitar-pedals-checks.cjs && node loom/cellar-board-project-checks.cjs && node loom/cellar-board-checks.cjs",
+    "check:cellar-board-browser": "node loom/cellar-board-browser-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
