@@ -1,0 +1,26 @@
+/* Timeline selection stays within the existing ticket rail and toolbar. */
+#clipSelectMode { white-space: nowrap; }
+.arrange-tools #clipSelectMode[aria-pressed="true"] {
+  color: var(--acid);
+  border-color: #a77c45;
+  background: #3a2f21;
+}
+#trackLanes { position: relative; }
+#trackLanes.selection-mode { touch-action: none; user-select: none; cursor: crosshair; }
+#trackLanes.selection-mode .clip { cursor: cell; }
+#trackLanes .timeline-selection-box {
+  position: absolute;
+  z-index: 4;
+  box-sizing: border-box;
+  pointer-events: none;
+  border: 1px solid var(--acid);
+  border-radius: 2px;
+  background: #ff8d4518;
+  background: color-mix(in srgb, var(--acid) 9%, transparent);
+}
+#trackLanes .clip.selected.primary-clip {
+  box-shadow: inset 2px 0 0 var(--ink), 0 2px 4px #06090a60;
+}
+@media (max-width: 620px) {
+  #clipSelectMode { min-height: 30px; }
+}

@@ -15,6 +15,8 @@
     "second-pour:build": "npm --prefix second-pour run build && node scripts/sync-second-pour.mjs",
     "second-pour:sync": "node scripts/sync-second-pour.mjs",
     "check:loom": "node loom/checks.cjs",
+    "check:loom-selection": "node loom/timeline-selection-checks.cjs",
+    "check:loom-selection-browser": "node loom/timeline-selection-browser-checks.cjs",
     "check:loom-playback": "node loom/clip-loop-continuity-checks.cjs && node loom/playback-continuity-checks.cjs",
     "check:loom-continuity-browser": "node loom/playback-continuity-browser-checks.cjs",
     "check:loom-playback-browser": "node loom/host-node-lifecycle-checks.cjs && node loom/clatter-polyphony-checks.cjs && node tine/cancellation-checks.cjs",
