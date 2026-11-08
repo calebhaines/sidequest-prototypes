@@ -42,21 +42,22 @@ async function lifecycleChecks(url){const context=await contextFor(url),page=awa
  }finally{await close(context,page);}}
 async function artifactChecks(url){
  const context=await contextFor(url),page=await pageFor(context,url);
- try{await check('Seventeen frozen instrument payloads and released BATTER retain their expected bytes',async()=>{
-  const {effectiveInstrumentHashes,instrumentRelease}=require('./cellar-board-checks.cjs');
-  assert.equal(instrumentRelease.status,'verified-release-build','Pin the final BATTER release before browser artifact verification');
+ try{await check('Sixteen frozen instrument payloads and released BATTER/BRINE retain their expected bytes',async()=>{
+  const {effectiveInstrumentHashes,instrumentRelease,instrumentReleases}=require('./cellar-board-checks.cjs');
+  assert.equal(instrumentRelease.status,'verified-release-build','Pin final instrument releases before browser artifact verification');
   const expected=Object.fromEntries(Object.entries(effectiveInstrumentHashes).filter(([file])=>file.endsWith('index.html')&&file!=='form/index.html').map(([file,hash])=>[file==='music/form/index.html'?'form':file.split('/')[0],hash]));
-  const value=await page.evaluate(async({expected,batterVersion})=>{
+  const versions=Object.fromEntries(instrumentReleases.map(release=>[release.instrument,release.instrumentVersion]));
+  const value=await page.evaluate(async({expected,versions})=>{
    const results=[];
    for(const[id,hash]of Object.entries(expected)){
     const source=await LoomResolveEmbeddedInstrument(LoomEmbeddedInstruments[id]),bytes=new TextEncoder().encode(source),actual=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
     if(actual!==hash)throw Error(id+' bundled HTML differs from its explicit release reference');
-    if(id==='batter'&&!source.includes('<meta name="batter-version" content="'+batterVersion+'">'))throw Error('BATTER version does not match its release pin');
+    if(versions[id]&&!source.includes('<meta name="'+id+'-version" content="'+versions[id]+'">'))throw Error(id.toUpperCase()+' version does not match its release pin');
     results.push({id,bytes:bytes.length,sha256:actual});
    }
    return results;
-  },{expected,batterVersion:instrumentRelease.instrumentVersion});
-  assert.equal(value.length,18);return{instruments:value,historicalInstruments:17,updatedInstrument:{id:'batter',version:instrumentRelease.instrumentVersion}};
+  },{expected,versions});
+  assert.equal(value.length,18);return{instruments:value,historicalInstruments:16,updatedInstruments:instrumentReleases.map(release=>({id:release.instrument,version:release.instrumentVersion}))};
  });}finally{await close(context,page);}
 }
 (async()=>{try{const url=process.env.CELLAR_BOARD_URL||await serve();browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required']});for(const phase of(process.env.CELLAR_BOARD_PHASES||'ui,audio,lifecycle,artifacts').split(',')){if(phase==='ui')await uiChecks(url);else if(phase==='audio')await audioChecks(url);else if(phase==='lifecycle')await lifecycleChecks(url);else if(phase==='artifacts')await artifactChecks(url);else throw Error('Unknown phase '+phase);}assert.deepEqual(report.errors,[],'No hidden page errors');assert.deepEqual(report.external,[],'No external assets');save();console.log('CELLAR/BOARD browser:',report.passed.length,'groups passed.',artifacts);}catch(error){report.failure=error.stack||String(error);save();console.error(error);process.exitCode=1;}finally{await browser?.close();if(server)await new Promise(resolve=>server.close(resolve));save();}})();

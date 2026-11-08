@@ -74,7 +74,7 @@
   try { recovery = localStorage.getItem('loom-recovery-enabled') !== '0'; const saved = recovery && localStorage.getItem('loom-session-v1'); state = saved ? S.parseProject(saved) : S.demoState(); } catch (_) { state = S.demoState(); recoveryUnavailable=true; }
   state = S.normalize(state);
   const engine = new window.LoomAudio(state);
-  const host = new window.LoomInstrumentHost({ context: () => engine.context, transport: () => engine.getTransport(), getTrackInput: id => engine.getTrackInput(id), onStatus: (id, message, kind) => { if (id === frameTrack) $('instrumentHostStatus').textContent = message; if (kind === 'error') status(message); }, onStateChange: id => { scheduleSnapshot(id); } });
+  const host = new window.LoomInstrumentHost({ context: () => engine.context, transport: () => engine.getTransport(), getTrackInput: id => engine.getTrackInput(id), onAudioAction: requestInstrumentAudition, onStatus: (id, message, kind) => { if (id === frameTrack) $('instrumentHostStatus').textContent = message; if (kind === 'error') status(message); }, onStateChange: id => { scheduleSnapshot(id); } });
   const notePlayback = new window.LoomNotePlayback({ audio: engine, host, getState: () => state, ensureInstrument: async t => {
     const generation = lifecycle, pending = trackPowerOperations.get(t.id);
     if (pending) {
@@ -1595,6 +1595,15 @@
   function endSeek(e) { if(seekDrag?.pointer===e.pointerId){seekDrag=null;renderPlayhead();} }
   function renderAll() { $('projectName').value=state.name; $('autosaveEnabled').checked=recovery; renderArrangement(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); renderHistory(); masterPlaybackUI?.render(); automationEditor?.render(); noteWorkflow?.render(); renderFreezeState(); }
   function makeFrame(id) { let frame=frames.get(id); if(!frame){frame=document.createElement('iframe');frame.dataset.hostTrack=id;frame.title='Instrument editor for '+state.tracks.find(t=>t.id===id).name;frame.setAttribute('allow','autoplay');frame.hidden=true;$('instrumentFrames').append(frame);frames.set(id,frame);}return frame; }
+  function requestInstrumentAudition(id) {
+    const owner = state.tracks.find(track => track.id === id), frame = frames.get(id);
+    if (id !== frameTrack || !$('instrumentDialog').open || !frame || frame.hidden || document.hidden || !owner || owner.disabled || owner.freeze || host.isDisabled(id) || trackPowerOperations.has(id) || freezeBusy() || audioSettingsBusy || serviceController?.isOpen || masterPlayback?.altered()) return false;
+    try {
+      engine.resumeAudition(id);
+      if (engine.context?.state === 'suspended') engine.context.resume().catch(error => status(error.message));
+      return true;
+    } catch (_) { return false; }
+  }
   function showFrame(id) { if(frameTrack&&frameTrack!==id)engine.clearAudition(frameTrack);frameTrack=id;for(const [key,frame]of frames)frame.hidden=key!==id;$('instrumentBrowser').hidden=true;$('instrumentEditorBar').hidden=false;$('instrumentFrames').hidden=false;const t=state.tracks.find(t=>t.id===id);$('instrumentEditorName').textContent=S.instrumentName(t.instrument);$('instrumentDialogTitle').textContent=t.name+' / instrument editor';engine.resumeAudition(id); }
   function closeInstrument() { if(frameTrack)engine.clearAudition(frameTrack);frameTrack=null;$('instrumentDialog').close(); }
   function instrumentOptions() { return [...(window.LoomInstrumentManifest||host.manifest||[]),...customManifest]; }

@@ -8,7 +8,9 @@ HOOD adds fifteen reverb types beside its original algorithm, with one type sele
 
 GALLEY now has two additional group buses. Route any main track to Bus 1 or Bus 2 for shared four-slot processing, while Send A/B remain available.
 
-Current release: **Kitchen 2.32.0 · GALLEY 1.41.0**.
+BRINE 1.0.1 and GALLEY 1.41.1 restore editor auditioning after monitoring is interrupted. Fresh keys, MIDI notes and native playback can reopen the active editor’s live route without restarting the arrangement.
+
+Current release: **Kitchen 2.32.1 · GALLEY 1.41.1**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 

@@ -51,9 +51,10 @@
   }
 
   class LoomInstrumentHost {
-    constructor({ context, getTrackInput, transport, onStatus, onStateChange, baseURL, embedded } = {}) {
+    constructor({ context, getTrackInput, transport, onStatus, onStateChange, onAudioAction, baseURL, embedded } = {}) {
       if (typeof getTrackInput !== 'function') throw new TypeError('Provide getTrackInput(trackId).');
       this.context = context; this.getTrackInput = getTrackInput; this.onStatus = onStatus || (() => {}); this.onStateChange = onStateChange || (() => {});
+      this.onAudioAction = typeof onAudioAction === 'function' ? onAudioAction : () => true;
       this.baseURL = baseURL || new URL('../', document.baseURI).href;
       this.embedded = embedded || global.LoomEmbeddedInstruments || {};
       this.transport = typeof transport === 'function' ? transport : () => ({ beat: 0, tempo: this.tempo, when: this._context()?.currentTime || 0, playing: false, revision: 0 });
@@ -107,7 +108,8 @@
       return operation.promise;
     }
     _notify(record, type, value) {
-      if (!this._current(record)) return;
+      if (!this._current(record)) return false;
+      if (type === 'audio-action') return !this.isDisabled(record.trackId) && !this.disablingTracks.has(record.trackId) && this.onAudioAction(record.trackId) !== false;
       if (type === 'change') {
         clearTimeout(record.changeTimer); record.changeTimer = setTimeout(() => { if (this._current(record)) this.onStateChange(record.trackId); }, 300);
       } else if (type === 'error') this.onStatus(record.trackId, value, 'error');

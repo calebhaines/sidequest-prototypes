@@ -13,10 +13,13 @@ const frozen=JSON.parse(fs.readFileSync(path.join(__dirname,'cellar-board-legacy
 // Intentional instrument releases have narrowly scoped pins; historical captures
 // remain immutable and still protect every other standalone distribution.
 const instrumentRelease=JSON.parse(fs.readFileSync(path.join(__dirname,'instrument-release-updates.json'),'utf8'));
-const allowedInstrumentUpdates=['batter/index.html','music/batter/BATTER-source.zip'];
+const allowedInstrumentUpdates=['batter/index.html','music/batter/BATTER-source.zip','brine/index.html','music/brine/BRINE-source.zip'];
 assert.equal(instrumentRelease.version,1);assert.equal(instrumentRelease.instrument,'batter');assert.equal(instrumentRelease.instrumentVersion,'1.4.0');
 assert.equal(typeof instrumentRelease.reason,'string');assert(instrumentRelease.reason.trim());
-assert.deepEqual(Object.keys(instrumentRelease.hashes||{}).sort(),allowedInstrumentUpdates.slice().sort(),'Only BATTER HTML and source may replace historical instrument pins');
+assert.deepEqual((instrumentRelease.additionalReleases||[]).map(({instrument,instrumentVersion})=>({instrument,instrumentVersion})),[{instrument:'brine',instrumentVersion:'1.0.1'}],'Only the explicit BRINE 1.0.1 release is added');
+for(const release of instrumentRelease.additionalReleases){assert.equal(typeof release.reason,'string');assert(release.reason.trim());}
+const instrumentReleases=Object.freeze([{instrument:instrumentRelease.instrument,instrumentVersion:instrumentRelease.instrumentVersion},...instrumentRelease.additionalReleases]);
+assert.deepEqual(Object.keys(instrumentRelease.hashes||{}).sort(),allowedInstrumentUpdates.slice().sort(),'Only the explicit BATTER and BRINE HTML/source releases may replace historical instrument pins');
 for(const file of allowedInstrumentUpdates){assert(Object.hasOwn(frozen.untouchedInstruments,file));assert.match(instrumentRelease.hashes[file],/^[0-9a-f]{64}$/);}
 const effectiveInstrumentHashes=Object.freeze({...frozen.untouchedInstruments,...instrumentRelease.hashes});
 const LEGACY=modern.LEGACY_EFFECTS;
@@ -34,17 +37,17 @@ function nativeSourceFile(file){
  const id=file==='music/form/index.html'?'form':file.split('/')[0],packaged=path.join(__dirname,'instruments',id+'.html');return fs.existsSync(packaged)?packaged:null;
 }
 function artifactChecks(){
- assert.equal(instrumentRelease.status,'verified-release-build','Pin instrument-release-updates.json to the final verified BATTER 1.4.0 HTML/source build before checking artifacts');
+ assert.equal(instrumentRelease.status,'verified-release-build','Pin instrument-release-updates.json to the final verified BATTER and BRINE HTML/source builds before checking artifacts');
  let checked=0,updatedChecked=0;const missing=[],flatArchive=modern.ROOT===__dirname,nestedRequired=new Set(['MORSEL-source.zip','HEIRLOOM-source.zip','BRINE-source.zip','CITRUS-source.zip']);
  for(const[file,expected]of Object.entries(effectiveInstrumentHashes)){
   const source=nativeSourceFile(file);if(!source){assert(flatArchive,'Missing frozen site artifact: '+file);assert(file==='form/index.html'||file.endsWith('.zip')&&!nestedRequired.has(path.basename(file)),'Missing packaged canonical instrument/source: '+file);missing.push(file);continue;}
   const bytes=fs.readFileSync(source);
-  assert.equal(createHash('sha256').update(bytes).digest('hex'),expected,file+(allowedInstrumentUpdates.includes(file)?' matches the verified BATTER 1.4.0 release':' remains byte-identical to1.36'));
-  if(file==='batter/index.html')assert(bytes.toString('utf8').includes('<meta name="batter-version" content="1.4.0">'),'Updated BATTER metadata matches its explicit release');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),expected,file+(allowedInstrumentUpdates.includes(file)?' matches its separately verified instrument release':' remains byte-identical to1.36'));
+  for(const release of instrumentReleases)if(file===release.instrument+'/index.html')assert(bytes.toString('utf8').includes('<meta name="'+release.instrument+'-version" content="'+release.instrumentVersion+'">'),'Updated '+release.instrument.toUpperCase()+' metadata matches its explicit release');
   checked++;if(allowedInstrumentUpdates.includes(file))updatedChecked++;
  }
  assert.equal(checked,flatArchive?22:37,'Verify every available canonical HTML and required source archive.');
- return{checked,updatedChecked,historicalChecked:checked-updatedChecked,missing,updatedInstrument:{id:'batter',version:instrumentRelease.instrumentVersion},scope:flatArchive?'Verified17 frozen packaged HTMLs, released BATTER 1.4.0 and4 frozen required nested ZIPs; explicitly skipped14 other standalone ZIPs andFORM redirect, whose site-release hashes are checked separately.':'All37 canonical artifacts checked:35 remain byte-identical to1.36; BATTER HTML/source match the separately pinned1.4.0 release.'};
+ return{checked,updatedChecked,historicalChecked:checked-updatedChecked,missing,updatedInstruments:instrumentReleases.map(release=>({id:release.instrument,version:release.instrumentVersion})),scope:flatArchive?'Verified16 frozen packaged HTMLs, separately released BATTER/BRINE HTMLs and4 required nested ZIPs against their explicit references; skipped14 other standalone ZIPs andFORM redirect, whose site-release hashes are checked separately.':'All37 canonical artifacts checked:33 remain byte-identical to1.36; the unchanged BATTER 1.4.0 and new BRINE 1.0.1 HTML/source pairs match separately pinned release references.'};
 }
 function legacyChecks(r){assert.equal(frozen.ref,'2340fe39963a8bdf03b3afe27687e3b92ae4cd18');const expected=new Map(frozen.expected.map(e=>[e.id,e]));for(const d of frozen.definitions){const actual=modern.effectOutput(r,d),old=expected.get(d.id);assert.deepEqual(actual,{pcm:old.pcm,meters:old.meters},d.id+' preserves exact1.36 PCM/meters/tails');}for(const c of frozen.core)assert.equal(modern.hash(modern.run(r,c.name,{block:c.block})),c.sha256,c.name+'/'+c.block+' preserves whole-engine1.36 PCM');const oldSignature=r.scope.createLoomEffectsDSP(...modern.FACTORIES.slice(0,14).map(name=>r.scope['createLoom'+name+'DSP']));for(const type of LEGACY){const c={id:type+'/old-signature',type,rate:48000,frames:2048,patch:{},automated:true};assert.deepEqual(modern.effectOutput({...r,E:oldSignature},c),modern.effectOutput(r,c),type+' old14-argument signature is unchanged');}return{effectCases:frozen.definitions.length,coreCases:frozen.core.length,originalSignatureCases:LEGACY.length};}
 function catalogChecks(r){assert.deepEqual(r.scope.LoomEffectsCatalog.map(e=>e.id),[...LEGACY,'cellar','board'],'New IDs append after the untouched19');assert.deepEqual(r.E.specifications.cellar.model,MODELS);assert.deepEqual(new Set(r.E.specifications.board.pedal1Type),new Set(['none',...PEDALS]));const amp=r.scope.LoomEffectsCatalog.find(e=>e.id==='cellar'),board=r.scope.LoomEffectsCatalog.find(e=>e.id==='board'),clean=amp.presets.filter(p=>MODELS.some(model=>p.id==='clean-'+model));assert.equal(clean.length,5);const common=p=>{const value=copy(p.params);delete value.model;return value;};for(const p of clean)assert.deepEqual(common(p),common(clean[0]),'A–E comparison recipes differ only by model');const stock=board.presets.find(p=>p.id==='bd2-stock');assert(stock);assert.equal(stock.params.pedal1Type,'bluesdriver');assert.equal(stock.params.pedal1Drive,.35);assert.equal(stock.params.pedal1Tone,.5);assert.equal(stock.params.pedal1Volume,.5);assert.equal(stock.params.pedal1Level,0);assert.equal(stock.params.pedal1Mix,1);for(let n=2;n<=4;n++)assert.equal(stock.params['pedal'+n+'Type'],'none');return{catalog:21,ampModels:5,pedalModels:10,commonComparisonControls:true,stockBD2:true};}
@@ -72,7 +75,7 @@ function main(){
  if(!process.argv.includes('--bench-only')){
   check('Current 21-effect catalog and fair clean comparison recipes',()=>catalogChecks(r));
   check('Original 19 exact PCM, meters, tails and old 14-argument signature',()=>legacyChecks(r));
-  check('Historical instruments remain frozen and BATTER matches its explicit release pins',artifactChecks);
+  check('Historical instruments remain frozen and BATTER/BRINE match their explicit release pins',artifactChecks);
   check('New processors retain sample clocks and distinct circuits',()=>newSignalChecks(r));
   check('Clean headroom preserves playing ratios and crest',()=>headroomChecks(r));
   check('Track Off removes all new insert work',()=>disabledChecks(r));
@@ -81,4 +84,4 @@ function main(){
  save();console.log('CELLAR/BOARD independent checks:',report.groups.length,'groups;',output);
 }
 if(require.main===module){try{main();}catch(error){console.error(error);process.exitCode=1;}}
-module.exports={render,riff,stats,artifactChecks,legacyChecks,catalogChecks,newSignalChecks,headroomChecks,disabledChecks,benchmark,MODELS,PEDALS,frozen,effectiveInstrumentHashes,instrumentRelease};
+module.exports={render,riff,stats,artifactChecks,legacyChecks,catalogChecks,newSignalChecks,headroomChecks,disabledChecks,benchmark,MODELS,PEDALS,frozen,effectiveInstrumentHashes,instrumentRelease,instrumentReleases};

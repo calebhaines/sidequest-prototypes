@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**BRINE audition recovery (1.41.1)** restores the visible instrument editor’s live route on fresh user activity after Panic or a rebuilt audio graph. BRINE 1.0.1 also requests that route for new MIDI notes, phrase playback and note previews. Hidden, disabled and frozen tracks stay excluded; native preparation cannot undo Panic. Synthesis and printing remain unchanged.
+
 **Two group buses (1.41.0)** adds Bus 1 and Bus 2 alongside the existing ten main tracks, two returns and master. Choose an Output on any mixer channel or selected track. Each bus combines its assigned tracks and provides four inserts, level, pan, mute, solo, automation and LFO targets before Master. Frozen tracks can change output without rebuilding their source cache. Bus stems include group processing and skip the master chain. See [the group-bus guide](GROUP-BUSES.md).
 
 **HOOD spaces (1.40.0)** adds fifteen distinct reverb types alongside the unchanged Original: Room, Chamber, Hall, Cathedral, Plate, Spring, Tiled room, Ambience, Vintage digital, Modulated hall, Shimmer, Gated, Reverse, Bloom and Nonlinear. Choose **Reverb type** above the existing controls; changing type retains the knobs and briefly crossfades processors. Older projects and frozen Original tracks keep their sound. See [the HOOD guide](HOOD-GUIDE.md).

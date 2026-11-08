@@ -115,3 +115,11 @@ Acceptance covers analytic tuning/harmonics/filter response, stereo chorus behav
 voice allocation, controller ownership, sample scheduling, WAV parity, the actual
 serialized Worklet and fallback, UI/MIDI, mobile layouts and GALLEY integration.
 Source archives use stable timestamps and include the shared dependencies.
+
+
+## Hosted audition recovery · 1.0.1
+
+New keyboard, pointer and MIDI notes, phrase playback and note previews request
+the active GALLEY editor’s audition route. This restores monitoring after Panic
+or a recreated parent audio graph. Preparing or printing an instrument does not
+request audition. Standalone controls, synthesis and saved patches are unchanged.
