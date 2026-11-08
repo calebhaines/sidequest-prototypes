@@ -91,9 +91,9 @@
     },
     {
       id: 'vestige', name: 'HOOD', subtitle: 'Room for a much larger kitchen.', color: '#b7bfb6', accent: '#e2dac2', visual: 'vaults',
-      description: 'An eight-line feedback network creates a diffuse, breathing space.',
-      params: [range('size', 'Room size', 0, 1, 0.01, 0.55, ''), range('decay', 'Decay', 0.2, 12, 0.1, 2.8, 's'), range('damping', 'Damping', 800, 18000, 1, 6500, 'Hz'), range('predelay', 'Pre-delay', 0, 180, 1, 22, 'ms'), range('diffusion', 'Diffusion', 0, 1, 0.01, 0.75, ''), range('width', 'Stereo width', 0, 1, 0.01, 0.9, '')],
-      defaults: { size: 0.55, decay: 2.8, damping: 6500, predelay: 22, diffusion: 0.75, width: 0.9, mix: 0.25, bypass: false }
+      description: 'Fifteen new rooms, plates, springs and shaped tails, plus the original eight-line space. Change type to audition a new character while keeping your knobs. Decay sets the tail length; for gated, reverse and nonlinear types it sets the envelope duration.',
+      params: [select('model', 'Reverb type', 'original', [['original', 'Original · eight-line space'], ['room', 'Room'], ['chamber', 'Chamber'], ['hall', 'Hall'], ['cathedral', 'Cathedral'], ['plate', 'Plate'], ['spring', 'Spring'], ['tile', 'Tiled room'], ['ambience', 'Ambience'], ['digital', 'Vintage digital'], ['modulated', 'Modulated hall'], ['shimmer', 'Shimmer · octave up'], ['gated', 'Gated'], ['reverse', 'Reverse'], ['bloom', 'Bloom'], ['nonlinear', 'Nonlinear']]), range('size', 'Room size', 0, 1, 0.01, 0.55, ''), range('decay', 'Decay', 0.2, 12, 0.1, 2.8, 's'), range('damping', 'Damping', 800, 18000, 1, 6500, 'Hz'), range('predelay', 'Pre-delay', 0, 180, 1, 22, 'ms'), range('diffusion', 'Diffusion', 0, 1, 0.01, 0.75, ''), range('width', 'Stereo width', 0, 1, 0.01, 0.9, '')],
+      defaults: { model: 'original', size: 0.55, decay: 2.8, damping: 6500, predelay: 22, diffusion: 0.75, width: 0.9, mix: 0.25, bypass: false }
     },
     {
       id: 'halo', name: 'PROOF', subtitle: 'Leave the note somewhere warm. It rises.', color: '#d8c984', accent: '#f2e5b6', visual: 'haloes',

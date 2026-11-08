@@ -4,7 +4,9 @@ A dedicated, self-contained landing page for eighteen music instruments and the 
 
 BATTER 1.4 adds folder and subfolder sample import, recursive folder dropping, A/B lane and layer routing, cancellation and atomic batch validation. The hosted BATTER inside GALLEY includes the same controls.
 
-Current release: **Kitchen 2.30.0 · GALLEY 1.39.0**.
+HOOD adds fifteen reverb types beside its original algorithm, with one type selector and the same six sound controls.
+
+Current release: **Kitchen 2.31.0 · GALLEY 1.40.0**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 

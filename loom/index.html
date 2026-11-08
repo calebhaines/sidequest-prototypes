@@ -121,7 +121,7 @@
   global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
-</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.39.0"><meta name="galley-service-version" content="1.0.0">
+</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.40.0"><meta name="galley-service-version" content="1.0.0">
 <meta name="description" content="GALLEY is Kitchen’s ten-track browser studio. Arrange audio, play eighteen instruments, monitor microphone input through five effects per track, and align recordings. Each track has a four-band EQ with sweepable mid frequencies. Twenty-one effects include SUNDAY Deluxe Reverb studies, FERMENT guitar and bass synthesis, TIN CAN microphone and telephone colours, PRESERVE tape machines, SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
@@ -2181,7 +2181,7 @@ body {
 
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.39.0 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.40.0 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
@@ -3108,9 +3108,9 @@ body {
     },
     {
       id: 'vestige', name: 'HOOD', subtitle: 'Room for a much larger kitchen.', color: '#b7bfb6', accent: '#e2dac2', visual: 'vaults',
-      description: 'An eight-line feedback network creates a diffuse, breathing space.',
-      params: [range('size', 'Room size', 0, 1, 0.01, 0.55, ''), range('decay', 'Decay', 0.2, 12, 0.1, 2.8, 's'), range('damping', 'Damping', 800, 18000, 1, 6500, 'Hz'), range('predelay', 'Pre-delay', 0, 180, 1, 22, 'ms'), range('diffusion', 'Diffusion', 0, 1, 0.01, 0.75, ''), range('width', 'Stereo width', 0, 1, 0.01, 0.9, '')],
-      defaults: { size: 0.55, decay: 2.8, damping: 6500, predelay: 22, diffusion: 0.75, width: 0.9, mix: 0.25, bypass: false }
+      description: 'Fifteen new rooms, plates, springs and shaped tails, plus the original eight-line space. Change type to audition a new character while keeping your knobs. Decay sets the tail length; for gated, reverse and nonlinear types it sets the envelope duration.',
+      params: [select('model', 'Reverb type', 'original', [['original', 'Original · eight-line space'], ['room', 'Room'], ['chamber', 'Chamber'], ['hall', 'Hall'], ['cathedral', 'Cathedral'], ['plate', 'Plate'], ['spring', 'Spring'], ['tile', 'Tiled room'], ['ambience', 'Ambience'], ['digital', 'Vintage digital'], ['modulated', 'Modulated hall'], ['shimmer', 'Shimmer · octave up'], ['gated', 'Gated'], ['reverse', 'Reverse'], ['bloom', 'Bloom'], ['nonlinear', 'Nonlinear']]), range('size', 'Room size', 0, 1, 0.01, 0.55, ''), range('decay', 'Decay', 0.2, 12, 0.1, 2.8, 's'), range('damping', 'Damping', 800, 18000, 1, 6500, 'Hz'), range('predelay', 'Pre-delay', 0, 180, 1, 22, 'ms'), range('diffusion', 'Diffusion', 0, 1, 0.01, 0.75, ''), range('width', 'Stereo width', 0, 1, 0.01, 0.9, '')],
+      defaults: { model: 'original', size: 0.55, decay: 2.8, damping: 6500, predelay: 22, diffusion: 0.75, width: 0.9, mix: 0.25, bypass: false }
     },
     {
       id: 'halo', name: 'PROOF', subtitle: 'Leave the note somewhere warm. It rises.', color: '#d8c984', accent: '#f2e5b6', visual: 'haloes',
@@ -7576,10 +7576,315 @@ body {
   scope.createLoomGuitarPedalsDSP = createLoomGuitarPedalsDSP;
 })(typeof window === 'undefined' ? globalThis : window);
 
+/* HOOD · fifteen deterministic spaces and deliberately unnatural envelopes. */
+(function (scope) {
+  'use strict';
+  function createLoomHoodDSP() {
+    'use strict';
+    // Serialized into the audio Worklet; all dependencies stay in this factory.
+    const TAU = 2 * Math.PI;
+    const specifications = {
+      model: ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'],
+      size: [0, 1, .55], decay: [.2, 12, 2.8], damping: [800, 18000, 6500], predelay: [0, 180, 22], diffusion: [0, 1, .75], width: [0, 1, .9], mix: [0, 1, .25]
+    };
+    const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+    const safe = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const lp = (frequency, rate) => 1 - Math.exp(-TAU * Math.min(frequency, rate * .43) / rate);
+    const profiles = {
+      room:       { count: 8, scale: .56, matrix: 'house', early: .72, late: .8,  spread: .7,  highpass: 75,  motion: 0 },
+      chamber:    { count: 8, scale: .87, matrix: 'hadamard', early: .43, late: 1, spread: 1.2, highpass: 90, motion: .000025 },
+      hall:       { count: 8, scale: 1.32, matrix: 'house', early: .26, late: 1.12, spread: 1.8, highpass: 65, motion: .00006 },
+      cathedral:  { count: 16, scale: 1.8, matrix: 'hadamard', early: .38, late: 1.12, spread: 2.9, highpass: 100, motion: .000035 },
+      plate:      { count: 4, scale: .94, matrix: 'cross', early: 0, late: 1.16, spread: .5, highpass: 180, motion: .00009 },
+      spring:     { count: 2, scale: .72, matrix: 'cross', early: .12, late: .95, spread: .8, highpass: 170, motion: 0 },
+      tile:       { count: 8, scale: .43, matrix: 'house', early: .95, late: .69, spread: .42, highpass: 140, motion: 0 },
+      ambience:   { count: 8, scale: .27, matrix: 'house', early: .9, late: .42, spread: .38, highpass: 100, motion: 0 },
+      digital:    { count: 8, scale: 1.05, matrix: 'comb', early: .16, late: .95, spread: 1, highpass: 65, motion: 0 },
+      modulated:  { count: 8, scale: 1.13, matrix: 'hadamard', early: .2, late: 1.1, spread: 1.3, highpass: 80, motion: .00085 },
+      shimmer:    { count: 8, scale: 1.23, matrix: 'hadamard', early: .12, late: 1.12, spread: 1.5, highpass: 130, motion: .00021 },
+      gated:      { count: 0, scale: 1, matrix: 'fir', highpass: 90 },
+      reverse:    { count: 0, scale: 1, matrix: 'fir', highpass: 110 },
+      bloom:      { count: 8, scale: 1.4, matrix: 'hadamard', early: 0, late: 1.35, spread: 2.2, highpass: 100, motion: .00014 },
+      nonlinear:  { count: 0, scale: 1, matrix: 'fir', highpass: 150 }
+    };
+    function normalize(params) {
+      const source = params && typeof params === 'object' ? params : {}, result = {};
+      for (const key of Object.keys(specifications)) {
+        const rule = specifications[key];
+        result[key] = typeof rule[0] === 'number' ? clamp(finite(source[key], rule[2]), rule[0], rule[1]) : rule.includes(source[key]) ? source[key] : rule[0];
+      }
+      result.bypass = source.bypass === true; return result;
+    }
+    function read(buffer, write, delay) {
+      let at = write - delay;
+      if (at < 0) at += buffer.length;
+      const index = Math.floor(at), fraction = at - index, next = index + 1 === buffer.length ? 0 : index + 1;
+      return buffer[index] + (buffer[next] - buffer[index]) * fraction;
+    }
+    function allpass(length, gain) { return { buffer: new Float32Array(Math.max(2, length)), at: 0, gain }; }
+    function apSample(x, state, gain) {
+      const delayed = state.buffer[state.at], y = delayed - gain * x;
+      state.buffer[state.at] = safe(x + gain * y);
+      if (++state.at === state.buffer.length) state.at = 0;
+      return y;
+    }
+    function clearAP(state) { state.buffer.fill(0); state.at = 0; }
+    function envelopeSeconds(model, params) {
+      // The existing Decay knob displays seconds. Finite envelopes use that
+      // same duration; Size changes reflection distribution, not the time unit.
+      return params.decay;
+    }
+    function kernel(sampleRate, initial) {
+      let p = initial;
+      const sr = sampleRate, model = p.model, profile = profiles[model];
+      if (!profile) throw new Error('The original HOOD is provided by the legacy reverb processor.');
+      const count = profile.count, isFIR = profile.matrix === 'fir', spring = model === 'spring', plate = model === 'plate', bloom = model === 'bloom', shimmer = model === 'shimmer';
+      const preL = new Float32Array(Math.ceil(sr * .181) + 4), preR = new Float32Array(preL.length);
+      const earlyL = new Float32Array(Math.ceil(sr * .8) + 8), earlyR = new Float32Array(earlyL.length);
+      const diffuserTimes = spring ? [.00073, .00137, .00211, .00317] : plate ? [.00477, .00359, .01273, .00931] : [.00173, .00413, .00731, .01271];
+      const apL = diffuserTimes.map((time, i) => allpass(Math.round(sr * time), .65)), apR = diffuserTimes.map((time, i) => allpass(Math.round(sr * time * (1.07 + i * .013)), .65));
+      const base = spring ? [.0297, .0411] : plate ? [.0327, .0419, .0531, .0617] : [.0297, .0371, .0411, .0437, .0531, .0617, .0719, .0797, .0893, .0971, .1091, .1171, .1277, .1373, .1499, .1637];
+      const lines = [], lineAt = new Int32Array(count), delays = new Float64Array(count), targetDelays = new Float64Array(count), gains = new Float64Array(count), targetGains = new Float64Array(count), damp = new Float64Array(count), matrix = new Float64Array(count);
+      const offsetSin = new Float64Array(count), offsetCos = new Float64Array(count), tankDiffusers = [], dispersion = [];
+      for (let j = 0; j < count; j++) {
+        lines.push(new Float32Array(Math.ceil(sr * base[j] * profile.scale * 1.9 + sr * .002) + 8));
+        offsetSin[j] = Math.sin(j * 2.399963229728653); offsetCos[j] = Math.cos(j * 2.399963229728653);
+        if (plate || bloom) tankDiffusers.push(allpass(Math.round(sr * (.0043 + j * .00131)), .57));
+        if (spring) dispersion.push([.00029, .00043, .00071, .00103, .00137, .00179, .00217, .00271].map((time, k) => allpass(Math.round(sr * time * (j ? 1.13 : 1)), .62 + k * .032)));
+      }
+      const earlyTimes = model === 'tile' ? [.003, .006, .010, .014, .021, .028, .036, .049, .062, .081, .103, .127] : model === 'chamber' ? [.011, .019, .031, .043, .061, .079, .103, .127, .163, .191, .227, .269] : [.007, .013, .023, .037, .047, .061, .079, .101, .127, .157, .193, .239];
+      const firL = isFIR ? new Float32Array(Math.ceil(sr * 12.05) + 8) : null, firR = isFIR ? new Float32Array(firL.length) : null;
+      const tapPosition = new Float64Array(isFIR ? 64 : 0), tapSkew = new Float64Array(tapPosition.length), tapL = new Float64Array(tapPosition.length), tapR = new Float64Array(tapPosition.length);
+      if (isFIR) {
+        let normL = 0, normR = 0;
+        for (let j = 0; j < tapPosition.length; j++) {
+          const u = (j + .35 + .18 * Math.sin(j * 1.79)) / tapPosition.length;
+          tapPosition[j] = u; tapSkew[j] = Math.sin(Math.PI * u);
+          let envelope;
+          if (model === 'reverse') envelope = .005 + Math.pow(u, 2.7);
+          else if (model === 'nonlinear') envelope = .14 + .8 * Math.exp(-Math.pow((u - .19) / .075, 2)) + .6 * Math.exp(-Math.pow((u - .52) / .10, 2)) + Math.exp(-Math.pow((u - .86) / .065, 2));
+          else envelope = .55 + .45 * Math.sin(Math.PI * clamp(u * 1.7, 0, 1));
+          tapL[j] = envelope * (Math.sin(j * 12.9898 + .8) >= 0 ? 1 : -1);
+          tapR[j] = envelope * (Math.sin(j * 8.1413 + 2.1) >= 0 ? 1 : -1);
+          normL += tapL[j] * tapL[j]; normR += tapR[j] * tapR[j];
+        }
+        for (let j = 0; j < tapPosition.length; j++) { tapL[j] *= .75 / Math.sqrt(normL); tapR[j] *= .75 / Math.sqrt(normR); }
+      }
+      const pitchLength = Math.ceil(sr * .075) + 8, pitchL = shimmer ? new Float32Array(pitchLength) : null, pitchR = shimmer ? new Float32Array(pitchLength) : null;
+      const pitchWindow = sr * .06, pitchBase = sr * .003, pitchStep = 1 / pitchWindow;
+      const slew = 1 - Math.exp(-1 / (sr * .025)), slowSlew = 1 - Math.exp(-1 / (sr * .05)), peakDecay = Math.exp(-1 / (sr * .15));
+      const rotation = TAU * (model === 'modulated' ? .37 : .19) / sr, rotationSin = Math.sin(rotation), rotationCos = Math.cos(rotation);
+      const highpassCoefficient = Math.exp(-TAU * profile.highpass / sr);
+      const dcCoefficient = 1 - Math.exp(-TAU * 6 / sr);
+      let preAt = 0, earlyAt = 0, firAt = 0, pitchAt = 0, pitchPhase = .25, shiftedL = 0, shiftedR = 0;
+      let predelay = p.predelay * sr * .001, size = p.size, diffusion = p.diffusion, width = p.width, mix = p.mix, damping = lp(p.damping, sr), targetDamping = damping;
+      let mixFadeRemaining = 0, mixFadeStep = 0, mixFadeTarget = mix;
+      const mixFadeFrames = Math.max(1, Math.round(sr * .025));
+      let windowSamples = isFIR ? envelopeSeconds(model, p) * sr : 0, targetWindow = windowSamples, inputAge = Infinity, oscillatorSin = 0, oscillatorCos = 1;
+      let configured = false, quietFrames = Infinity, quietLimit = 0;
+      let hpInputL = 0, hpInputR = 0, hpOutputL = 0, hpOutputR = 0, inputPeak = 0, outputPeak = 0, dcL = 0, dcR = 0;
+      function update(next, instant) {
+        const old = p; p = next;
+        if (!configured || old.damping !== p.damping) targetDamping = lp(p.damping * (spring ? .8 : model === 'digital' ? .88 : 1), sr);
+        if (isFIR && (!configured || old.decay !== p.decay)) targetWindow = Math.min(firL.length - 4, envelopeSeconds(model, p) * sr);
+        if (!configured || old.size !== p.size || old.decay !== p.decay) {
+          const scale = .45 + p.size * 1.4;
+          for (let j = 0; j < count; j++) {
+            targetDelays[j] = Math.max(3, Math.min(lines[j].length - sr * .0019 - 3, sr * base[j] * profile.scale * scale));
+            const decay = p.decay * (model === 'ambience' ? .32 : model === 'tile' ? .72 : 1);
+            targetGains[j] = Math.exp(-6.907755278982137 * targetDelays[j] / (sr * decay)) * (shimmer ? .93 : 1);
+          }
+        }
+        if (instant) { delays.set(targetDelays); gains.set(targetGains); predelay = p.predelay * sr * .001; size = p.size; diffusion = p.diffusion; width = p.width; mix = p.mix; damping = targetDamping; windowSamples = targetWindow; }
+        quietLimit = Math.ceil(sr * (.18 + (isFIR ? p.decay + .15 : p.decay * (model === 'ambience' ? .6 : model === 'tile' ? 1.1 : 1.65) + (bloom ? 1.3 : .85))));
+        configured = true;
+      }
+      function reset() {
+        preL.fill(0); preR.fill(0); earlyL.fill(0); earlyR.fill(0); apL.forEach(clearAP); apR.forEach(clearAP); lines.forEach(line => line.fill(0)); tankDiffusers.forEach(clearAP); dispersion.forEach(stages => stages.forEach(clearAP));
+        if (firL) { firL.fill(0); firR.fill(0); }
+        if (pitchL) { pitchL.fill(0); pitchR.fill(0); }
+        lineAt.fill(0); damp.fill(0); matrix.fill(0); preAt = earlyAt = firAt = pitchAt = 0; pitchPhase = .25;
+        shiftedL = shiftedR = hpInputL = hpInputR = hpOutputL = hpOutputR = inputPeak = outputPeak = dcL = dcR = 0;
+        oscillatorSin = 0; oscillatorCos = 1; inputAge = quietFrames = Infinity; update(p, true);
+        mixFadeRemaining = 0; mixFadeStep = 0; mixFadeTarget = mix;
+      }
+      function process(left, right, frames) {
+        const n = frames === undefined ? Math.min(left.length, right.length) : frames;
+        if (p.bypass || mix === 0 && p.mix === 0) return;
+        for (let i = 0; i < n; i++) {
+          const dryL = safe(left[i]), dryR = safe(right[i]);
+          // A zero mix is a true suspension, reached by a finite sample-clocked
+          // fade. Finish the audible fade before discarding the tank history.
+          if (mixFadeRemaining > 0) {
+            mix += mixFadeStep;
+            if (--mixFadeRemaining === 0) {
+              mix = mixFadeTarget;
+              if (mix === 0) { reset(); left[i] = dryL; right[i] = dryR; continue; }
+            }
+          } else mix += slew * (p.mix - mix);
+          if (mix === 0 && p.mix === 0) { left[i] = dryL; right[i] = dryR; continue; }
+          // Idle is sample-based so a block split cannot change modulation
+          // phase at the next excitation. Settled empty returns do no tank work.
+          if (dryL === 0 && dryR === 0) {
+            if (quietFrames === Infinity) { left[i] = right[i] = 0; continue; }
+            if (++quietFrames >= quietLimit) { reset(); left[i] = right[i] = 0; continue; }
+          } else quietFrames = 0;
+          width += slew * (p.width - width); size += slowSlew * (p.size - size); diffusion += slew * (p.diffusion - diffusion); damping += slew * (targetDamping - damping); predelay += slowSlew * (p.predelay * sr * .001 - predelay);
+          preL[preAt] = dryL; preR[preAt] = dryR;
+          let exciteL = predelay < .001 ? dryL : read(preL, preAt, predelay), exciteR = predelay < .001 ? dryR : read(preR, preAt, predelay);
+          if (++preAt === preL.length) preAt = 0;
+          hpOutputL = exciteL - hpInputL + highpassCoefficient * hpOutputL; hpOutputR = exciteR - hpInputR + highpassCoefficient * hpOutputR; hpInputL = exciteL; hpInputR = exciteR;
+          inputAge = Math.abs(exciteL) + Math.abs(exciteR) > 1e-8 ? 0 : inputAge + 1;
+          const originalL = hpOutputL, originalR = hpOutputR;
+          exciteL = originalL; exciteR = originalR;
+          const apGain = .35 + .35 * diffusion;
+          for (let j = 0; j < 4; j++) { exciteL = apSample(exciteL, apL[j], apGain); exciteR = apSample(exciteR, apR[j], apGain); }
+          exciteL = originalL + diffusion * (exciteL - originalL); exciteR = originalR + diffusion * (exciteR - originalR);
+          let wetL = 0, wetR = 0;
+          if (isFIR) {
+            windowSamples += slowSlew * (targetWindow - windowSamples);
+            firL[firAt] = exciteL; firR[firAt] = exciteR;
+            for (let j = 0; j < tapPosition.length; j++) {
+              const delay = Math.max(1, (tapPosition[j] + (size - .5) * .22 * tapSkew[j]) * windowSamples);
+              const a = read(firL, firAt, delay), b = read(firR, firAt, Math.min(firR.length - 3, delay * 1.003));
+              wetL += (a * .86 + b * .14) * tapL[j]; wetR += (b * .86 + a * .14) * tapR[j];
+            }
+            if (++firAt === firL.length) firAt = 0;
+            // A finite reflection kernel plus an excitation-aware smooth end:
+            // short diffusers cannot leave a conventional decay after the gate.
+            const fade = Math.min(sr * .025, windowSamples * .12), remaining = windowSamples - inputAge;
+            const end = remaining >= fade ? 1 : remaining <= 0 ? 0 : .5 - .5 * Math.cos(Math.PI * remaining / fade);
+            wetL *= end; wetR *= end;
+          } else {
+            earlyL[earlyAt] = exciteL; earlyR[earlyAt] = exciteR;
+            let reflectionsL = 0, reflectionsR = 0;
+            if (profile.early) for (let j = 0; j < earlyTimes.length; j++) {
+              const delay = Math.min(earlyL.length - 3, sr * earlyTimes[j] * profile.spread * (.45 + size * 1.15));
+              const polarity = j % 3 === 0 ? -1 : 1, gain = polarity * (.2 - j * .0105);
+              reflectionsL += read(earlyL, earlyAt, delay) * gain;
+              reflectionsR += read(earlyR, earlyAt, Math.min(earlyR.length - 3, delay * (j & 1 ? 1.13 : .91))) * gain * (j & 1 ? -1 : 1);
+            }
+            // Bloom defers the late-field injection, instead of merely fading
+            // the output of the same immediate hall.
+            if (bloom) {
+              const buildup = sr * (.025 + size * .16);
+              exciteL = read(earlyL, earlyAt, buildup) * .45 + read(earlyR, earlyAt, buildup * 1.83) * .35 + read(earlyL, earlyAt, buildup * 2.77) * .2;
+              exciteR = read(earlyR, earlyAt, buildup * 1.09) * .45 + read(earlyL, earlyAt, buildup * 1.71) * .35 + read(earlyR, earlyAt, buildup * 2.53) * .2;
+            }
+            if (++earlyAt === earlyL.length) earlyAt = 0;
+            let sum = 0;
+            for (let j = 0; j < count; j++) {
+              delays[j] += slowSlew * (targetDelays[j] - delays[j]); gains[j] += slowSlew * (targetGains[j] - gains[j]);
+              const motion = profile.motion * sr * (oscillatorSin * offsetCos[j] + oscillatorCos * offsetSin[j]);
+              let value = read(lines[j], lineAt[j], delays[j] + motion);
+              damp[j] += damping * (value - damp[j]); value = damp[j];
+              if (spring) for (let k = 0; k < dispersion[j].length; k++) value = apSample(value, dispersion[j][k], dispersion[j][k].gain);
+              if (plate || bloom) value = apSample(value, tankDiffusers[j], .45 + diffusion * .22);
+              // Truncation has an absorbing zero. Rounding a feedback sample
+              // can otherwise sustain an audible one-quantum limit cycle.
+              if (model === 'digital') value = Math.trunc(value * 16384) / 16384;
+              matrix[j] = safe(value); sum += matrix[j];
+              wetL += value * (j & 1 ? -1 : 1); wetR += value * (j & 2 ? -1 : 1);
+            }
+            // A two-spring tank must have two independent pickup projections.
+            if (spring) { wetL = matrix[0] + matrix[1] * .43; wetR = matrix[1] - matrix[0] * .31; }
+            if (profile.matrix === 'hadamard') {
+              for (let stride = 1; stride < count; stride *= 2) for (let start = 0; start < count; start += stride * 2) for (let j = 0; j < stride; j++) {
+                const a = matrix[start + j], b = matrix[start + j + stride]; matrix[start + j] = a + b; matrix[start + j + stride] = a - b;
+              }
+              const scale = 1 / Math.sqrt(count); for (let j = 0; j < count; j++) matrix[j] *= scale;
+            } else if (profile.matrix === 'house') {
+              for (let j = 0; j < count; j++) matrix[j] -= 2 * sum / count;
+            } else if (profile.matrix === 'cross') {
+              const first = matrix[0]; for (let j = 0; j < count - 1; j++) matrix[j] = matrix[j + 1]; matrix[count - 1] = -first;
+            }
+            const mid = .5 * (exciteL + exciteR), side = .5 * (exciteL - exciteR), injection = spring ? .44 : count === 16 ? .21 : .27;
+            for (let j = 0; j < count; j++) {
+              const pitch = shimmer ? ((j & 1 ? shiftedR : shiftedL) * .035) : 0;
+              lines[j][lineAt[j]] = safe(matrix[j] * gains[j] + (mid + side * (j & 1 ? -1 : 1)) * injection + pitch);
+              if (++lineAt[j] === lines[j].length) lineAt[j] = 0;
+            }
+            const normalization = profile.late / Math.sqrt(count);
+            wetL = wetL * normalization + reflectionsL * profile.early; wetR = wetR * normalization + reflectionsR * profile.early;
+            if (shimmer) {
+              pitchL[pitchAt] = wetL; pitchR[pitchAt] = wetR;
+              const phaseB = pitchPhase < .5 ? pitchPhase + .5 : pitchPhase - .5, weight = .5 - .5 * Math.cos(TAU * pitchPhase);
+              // Decreasing delay at one sample/sample gives exactly 2x read
+              // speed. Overlapped windows remove the sawtooth splice.
+              shiftedL = read(pitchL, pitchAt, pitchBase + (1 - pitchPhase) * pitchWindow) * weight + read(pitchL, pitchAt, pitchBase + (1 - phaseB) * pitchWindow) * (1 - weight);
+              shiftedR = read(pitchR, pitchAt, pitchBase + (1 - pitchPhase) * pitchWindow) * weight + read(pitchR, pitchAt, pitchBase + (1 - phaseB) * pitchWindow) * (1 - weight);
+              wetL += shiftedL * .38; wetR += shiftedR * .38;
+              if (++pitchAt === pitchLength) pitchAt = 0;
+              pitchPhase += pitchStep; if (pitchPhase >= 1) pitchPhase -= 1;
+            }
+            const nextSin = oscillatorSin * rotationCos + oscillatorCos * rotationSin;
+            oscillatorCos = oscillatorCos * rotationCos - oscillatorSin * rotationSin; oscillatorSin = nextSin;
+          }
+          // Reject DC from long feedback structures; this has no dry-path effect.
+          // The finite modes already high-pass their excitation. A further
+          // output IIR would create a tail after their deliberate hard horizon.
+          if (!isFIR) { dcL += dcCoefficient * (wetL - dcL); dcR += dcCoefficient * (wetR - dcR); wetL -= dcL; wetR -= dcR; }
+          const wetMid = (wetL + wetR) * .5, wetSide = (wetL - wetR) * .5 * width;
+          const outL = safe(dryL + (wetMid + wetSide - dryL) * mix), outR = safe(dryR + (wetMid - wetSide - dryR) * mix);
+          left[i] = outL; right[i] = outR;
+          inputPeak = Math.max(Math.abs(dryL), Math.abs(dryR), inputPeak * peakDecay); outputPeak = Math.max(Math.abs(outL), Math.abs(outR), outputPeak * peakDecay);
+        }
+      }
+      update(p, true);
+      return { model, process, reset, setParams(next) {
+        const oldBypass = p.bypass, oldMixTarget = p.mix;
+        update(next, false);
+        if (oldBypass !== p.bypass) { reset(); return; }
+        if (oldMixTarget === 0 && p.mix > 0 && mix === 0) {
+          // A suspended return contains no useful history. Resume from dry,
+          // rather than snapping the freshly cleared tank to the new mix.
+          reset(); mix = 0;
+          mixFadeTarget = p.mix; mixFadeRemaining = mixFadeFrames; mixFadeStep = p.mix / mixFadeFrames;
+        } else if (oldMixTarget !== p.mix && (oldMixTarget === 0 || p.mix === 0 || mixFadeRemaining > 0)) {
+          // Retarget an interrupted fade from its current audible value.
+          if (p.mix === 0 && mix === 0) reset();
+          else { mixFadeTarget = p.mix; mixFadeRemaining = mixFadeFrames; mixFadeStep = (p.mix - mix) / mixFadeFrames; }
+        }
+      }, getTailTime() {
+        if (p.bypass) return 0;
+        if (p.mix === 0) return mixFadeRemaining / sr;
+        return p.predelay * .001 + (isFIR ? Math.max(targetWindow, windowSamples) / sr + .12 : p.decay * (model === 'ambience' ? .6 : model === 'tile' ? 1.1 : 1.65) + (bloom ? 1.3 : .85));
+      }, getMeters() { return { model, inputDb: 20 * Math.log10(Math.max(1e-6, inputPeak)), outputDb: 20 * Math.log10(Math.max(1e-6, outputPeak)) }; } };
+    }
+    function create(sampleRate, params) {
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
+      let p = normalize(params), current = kernel(sr, p), previous = null, fadeAt = 0;
+      const fadeFrames = Math.max(16, Math.round(sr * .04));
+      let scratchL = new Float32Array(128), scratchR = new Float32Array(128);
+      function setParams(next) {
+        const nextParams = normalize(Object.assign({}, p, next));
+        if (nextParams.model !== p.model) { previous = current; current = kernel(sr, nextParams); fadeAt = 0; }
+        else current.setParams(nextParams);
+        p = nextParams;
+      }
+      function process(left, right) {
+        const frames = Math.min(left.length, right.length);
+        if (!previous) { current.process(left, right, frames); return; }
+        if (scratchL.length < frames) { scratchL = new Float32Array(frames); scratchR = new Float32Array(frames); }
+        scratchL.set(left); scratchR.set(right); previous.process(scratchL, scratchR, frames); current.process(left, right, frames);
+        for (let i = 0; i < frames; i++) {
+          const x = Math.min(1, fadeAt++ / fadeFrames), blend = x * x * (3 - 2 * x);
+          left[i] = scratchL[i] + (left[i] - scratchL[i]) * blend; right[i] = scratchR[i] + (right[i] - scratchR[i]) * blend;
+        }
+        if (fadeAt >= fadeFrames) previous = null;
+      }
+      return { process, setParams, reset() { previous = null; fadeAt = 0; current.reset(); }, getParams() { return Object.assign({}, p); }, getMeters() { return current.getMeters(); }, getTailTime() { return Math.max(current.getTailTime(), previous ? previous.getTailTime() : 0); } };
+    }
+    return { specifications, normalize, create };
+  }
+  scope.createLoomHoodDSP = createLoomHoodDSP;
+})(typeof window === 'undefined' ? globalThis : window);
+
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory, hoodFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -7612,6 +7917,8 @@ body {
     const svt = makeSVT ? makeSVT() : null;
     const makeGuitarPedals = typeof guitarPedalsFactory === 'function' ? guitarPedalsFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomGuitarPedalsDSP === 'function' ? globalThis.createLoomGuitarPedalsDSP : null;
     const guitarPedals = makeGuitarPedals ? makeGuitarPedals() : null;
+    const makeHood = typeof hoodFactory === 'function' ? hoodFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomHoodDSP === 'function' ? globalThis.createLoomHoodDSP : null;
+    const hood = makeHood ? makeHood() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -7648,6 +7955,7 @@ body {
     if (deluxe) specifications.sunday = deluxe.specifications;
     if (svt) specifications.cellar = svt.specifications;
     if (guitarPedals) specifications.board = guitarPedals.specifications;
+    specifications.vestige.model = ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'];
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -7727,7 +8035,62 @@ body {
       return result;
     }
 
-    function create(type, sampleRate, params) {
+    // Keep the original network intact. Only a type change briefly runs two
+    // rooms, with a sample-clocked fade; a settled insert owns one processor.
+    function createHood(sampleRate, params) {
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), fadeFrames = Math.max(1, Math.round(sr * 0.03));
+      let p = normalize('vestige', params), model = p.model, active = build(p), previous = null, pending = null, remaining = 0;
+      let scratchL = null, scratchR = null;
+      function build(settings) {
+        if (settings.model === 'original') return create('vestige', sr, settings, true);
+        if (!hood) throw new Error('HOOD reverb types require createLoomHoodDSP.');
+        return hood.create(sr, settings);
+      }
+      function change(settings) {
+        const next = build(settings);
+        previous = active; active = next; model = settings.model; remaining = fadeFrames;
+        // Scratch storage is needed only while auditioning another room.
+        scratchL ||= new Float32Array(4096); scratchR ||= new Float32Array(4096);
+      }
+      return {
+        setParams(next) {
+          p = normalize('vestige', Object.assign({}, p, next && typeof next === 'object' ? next : {}));
+          if (p.model === model) { pending = null; active.setParams(p); }
+          else if (previous) pending = p;
+          else change(p);
+        },
+        process(left, right, context) {
+          if (!left || !right || left.length !== right.length) throw new Error('LOOM effects require equal stereo blocks.');
+          if (p.bypass) { for (let i = 0; i < left.length; i++) { left[i] = input(left[i]); right[i] = input(right[i]); } return; }
+          if (!previous) { active.process(left, right, context); return; }
+          for (let at = 0; at < left.length;) {
+            const count = Math.min(4096, remaining, left.length - at), l = left.subarray(at, at + count), r = right.subarray(at, at + count);
+            const oldL = scratchL.subarray(0, count), oldR = scratchR.subarray(0, count);
+            oldL.set(l); oldR.set(r); previous.process(oldL, oldR, context); active.process(l, r, context);
+            for (let i = 0; i < count; i++) {
+              const blend = (fadeFrames - remaining + 1) / fadeFrames;
+              l[i] = oldL[i] + (l[i] - oldL[i]) * blend; r[i] = oldR[i] + (r[i] - oldR[i]) * blend; remaining--;
+            }
+            at += count;
+            if (!remaining) {
+              previous = null;
+              if (pending) { const next = pending; pending = null; change(next); }
+              else { scratchL = scratchR = null; if (at < left.length) active.process(left.subarray(at), right.subarray(at), context); break; }
+            }
+          }
+        },
+        reset() {
+          previous = pending = null; remaining = 0; scratchL = scratchR = null;
+          if (p.model !== model) { active = build(p); model = p.model; }
+          else { active.setParams(p); active.reset(); }
+        },
+        getTailTime(context) { return Math.max(active.getTailTime(context), previous ? previous.getTailTime(context) : 0, pending ? pending.predelay * .001 + pending.decay * 2 + 2 : 0); },
+        getMeters() { return active.getMeters(); }
+      };
+    }
+
+    function create(type, sampleRate, params, originalHood = false) {
+      if (type === 'vestige' && !originalHood) return createHood(sampleRate, params);
       if (type === 'cellar') { if (!svt) throw new Error('CELLAR requires createLoomSVTDSP.'); return svt.create(sampleRate, params); }
       if (type === 'board') { if (!guitarPedals) throw new Error('BOARD requires createLoomGuitarPedalsDSP.'); return guitarPedals.create(sampleRate, params); }
       if (type === 'sunday') { if (!deluxe) throw new Error('SUNDAY requires createLoomDeluxeDSP.'); return deluxe.create(sampleRate, params); }
@@ -8855,7 +9218,7 @@ body {
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.39.0';
+  const VERSION = '1.40.0';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
@@ -9119,7 +9482,13 @@ body {
     // Their effect edits may remove/remap routes while this cache stays valid.
     const lfos = state.lfos?.map(lfo => ({ ...lfo, routes: (lfo.routes || []).filter(route => route.ownerId === t.id || /^lfo-[1-4]$/.test(route.ownerId)) }));
     // Global master playback transforms happen after this cached track recipe.
-    const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects: t.effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
+    // Original HOOD is the same processing as a pre-1.40 slot without a type
+    // field. Canonicalize only that equivalent spelling; never re-sign a cache.
+    const effects = t.effects.map(slot => {
+      if (slot?.type !== 'vestige' || slot.params?.model !== 'original') return slot;
+      const { model, ...params } = slot.params; return { ...slot, params };
+    });
+    const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
     if (state.service?.take !== undefined) recipe.take = state.service.take;
     return 'freeze-1-' + structureHash(recipe);
   }
@@ -9278,8 +9647,9 @@ body {
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
-  function migrateEffectFields(effects, legacyBroiler, legacyButter, legacyMultiband = false) {
+  function migrateEffectFields(effects, legacyBroiler, legacyButter, legacyMultiband = false, legacyHood = false) {
     for (const slot of Array.isArray(effects) ? effects : []) {
+      if (legacyHood && slot?.type === 'vestige' && plain(slot.params) && !Object.prototype.hasOwnProperty.call(slot.params, 'model')) slot.params.model = 'original';
       const keys = slot?.type === 'broiler' && legacyBroiler ? BROILER_WORKSHOP_KEYS : slot?.type === 'velvet' && (legacyButter || legacyMultiband) ? new Set([...(legacyButter ? BUTTER_ANALOG_KEYS : []), ...(legacyMultiband ? BUTTER_MULTIBAND_KEYS : [])]) : null;
       if (!keys || !plain(slot.params)) continue;
       const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === slot.type);
@@ -9297,14 +9667,14 @@ body {
       for (const p of lane.points) if (!plain(p) || !Number.isFinite(p.beat) || p.beat < 0 || p.beat > totalBeats || !Number.isFinite(p.value) || p.value < descriptor.min || p.value > descriptor.max) throw Error('An automation point is outside its valid range.');
     }
   }
-  function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter, legacyMultiband) {
+  function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter, legacyMultiband, legacyHood) {
     const master = index === -1, id = master ? 'master' : 'return-' + (index + 1), label = master ? 'The master bus' : 'Return ' + (index === 0 ? 'A' : 'B');
     const fields = master ? ['id', 'name', 'level', 'metronome', 'mute', 'effects', 'mastering', 'playback', 'automation'] : ['id', 'name', 'level', 'pan', 'mute', 'solo', 'effects', 'automation'];
     if (!plain(bus) || bus.id !== id || fields.some(key => !Object.prototype.hasOwnProperty.call(bus, key)) || Object.keys(bus).some(key => !fields.includes(key)) || typeof bus.name !== 'string' || !bus.name.trim() || bus.name.length > 100 || typeof bus.mute !== 'boolean' || !Array.isArray(bus.effects) || bus.effects.length !== 4) throw Error(label + ' contains invalid settings, effects slots, or unsupported routing.');
     strictNumbers(bus, master ? ['level'] : ['level', 'pan'], label + ' contains invalid mix settings.');
     if (master) { validateMastering(bus.mastering); validateMasterPlayback(bus.playback); }
     if (!master && (bus.level < 0 || bus.level > 1.5 || bus.pan < -1 || bus.pan > 1 || typeof bus.solo !== 'boolean') || master && typeof bus.metronome !== 'boolean') throw Error(label + ' contains invalid mix settings.');
-    migrateEffectFields(bus.effects, legacyBroiler, legacyButter, legacyMultiband);
+    migrateEffectFields(bus.effects, legacyBroiler, legacyButter, legacyMultiband, legacyHood);
     for (const slot of bus.effects) {
       effect(slot, true);
       if (slot === null) continue;
@@ -9326,6 +9696,7 @@ body {
     const legacyMixUpgrade = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 25);
     const legacyTenTracks = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 32);
     const legacyMasterPlayback = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 34);
+    const legacyHood = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 40);
     const sourceTrackCount = Array.isArray(s.tracks) ? s.tracks.length : 0;
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || sourceTrackCount !== TRACK_COUNT && !(legacyTenTracks && sourceTrackCount === LEGACY_TRACK_COUNT) || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain ten complete tracks; older eight-track projects are also supported.');
     if (legacyTenTracks && !Object.prototype.hasOwnProperty.call(s.master, 'mastering')) s.master.mastering = defaultMastering();
@@ -9341,9 +9712,9 @@ body {
       for (const [key, value] of Object.entries(defaultMaster())) if (!['level', 'metronome'].includes(key) && !Object.prototype.hasOwnProperty.call(s.master, key)) s.master[key] = copy(value);
       if (!Object.prototype.hasOwnProperty.call(s, 'returns')) s.returns = [defaultReturn(0), defaultReturn(1)];
     }
-    validateBus(s.master, -1, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade);
+    validateBus(s.master, -1, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood);
     if (!Array.isArray(s.returns) || s.returns.length !== 2) throw Error('A GALLEY project must contain two complete return buses.');
-    s.returns.forEach((bus, index) => validateBus(bus, index, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade));
+    s.returns.forEach((bus, index) => validateBus(bus, index, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood));
     if(s.view.follow !== undefined && typeof s.view.follow !== 'boolean') throw Error('The project contains an invalid playhead follow setting.');
     if (s.recording !== undefined) {
       if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
@@ -9379,7 +9750,7 @@ body {
       // Workshop controls were introduced in 1.14. Older projects inherit only
       // the new fields; existing controls and any supplied new values still
       // undergo the same strict validation as a current project.
-      migrateEffectFields(t.effects, legacyBroiler, legacyButter, legacyMixUpgrade);
+      migrateEffectFields(t.effects, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood);
       t.effects.forEach(e => effect(e, true));
       validateAutomation(t.automation, t, s.lengthBars * 4, 'A track');
       for (const c of t.clips) {
@@ -11558,13 +11929,14 @@ body {
               const createDeluxe=${window.createLoomDeluxeDSP ? window.createLoomDeluxeDSP.toString() : 'null'};
               const createSVT=${window.createLoomSVTDSP ? window.createLoomSVTDSP.toString() : 'null'};
               const createGuitarPedals=${window.createLoomGuitarPedalsDSP ? window.createLoomGuitarPedalsDSP.toString() : 'null'};
+              const createHood=${window.createLoomHoodDSP ? window.createLoomHoodDSP.toString() : 'null'};
               const createEffects=${window.createLoomEffectsDSP.toString()};
               const createLFO=${window.createLoomLFODSP ? window.createLoomLFODSP.toString() : 'null'};
               const createCPU=${window.createLoomCPUProfiler ? window.createLoomCPUProfiler.toString() : 'null'};
               const createEQ=${window.createLoomTrackEQDSP ? window.createLoomTrackEQDSP.toString() : 'null'};
               const createMastering=${window.createLoomMasteringDSP ? window.createLoomMasteringDSP.toString() : 'null'};
               const createEngine=${createLoomEngineDSP.toString()};
-              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker,createDeluxe,createPedalMidi,createSVT,createGuitarPedals),createLFO,createCPU,createEQ,createMastering);
+              const DSP=createEngine(()=>createEffects(createVocal,createUtility,createFilter,createCreative,createBroilerPedals,createCompressor,createPreamp,createTape,createChar,createLoFi,createPedalSynth,createPedalTracker,createDeluxe,createPedalMidi,createSVT,createGuitarPedals,createHood),createLFO,createCPU,createEQ,createMastering);
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
