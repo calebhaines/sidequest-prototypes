@@ -6,7 +6,9 @@ BATTER 1.4 adds folder and subfolder sample import, recursive folder dropping, A
 
 HOOD adds fifteen reverb types beside its original algorithm, with one type selector and the same six sound controls.
 
-Current release: **Kitchen 2.31.0 · GALLEY 1.40.0**.
+GALLEY now has two additional group buses. Route any main track to Bus 1 or Bus 2 for shared four-slot processing, while Send A/B remain available.
+
+Current release: **Kitchen 2.32.0 · GALLEY 1.41.0**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 

@@ -20,7 +20,7 @@ function check(name, run) { run(); passed++; console.log('PASS ' + name); }
 function clock(coarse = false) { let value = 0, reads = 0; return { clock: { name: coarse ? 'controlled-coarse' : 'controlled-high-resolution', resolutionMs: coarse ? 1 : .001, coarse, now: () => { reads++; return value; } }, advance: amount => value += amount, set: next => value = next, get reads() { return reads; } }; }
 const descriptor = (id, ownerId = 'track-1', slot = 0, effectType = 'cinder') => ({ id, ownerId, slot, effectType, kind: 'effect', label: id, active: true, bypassed: false });
 const near = (actual, expected, message) => assert(Math.abs(actual - expected) < 1e-9, message + ': ' + actual + ' vs ' + expected);
-function blank() { const state = S.defaultState(); state.tempo = 120; state.lengthBars = 2; state.loopEnabled = false; state.loopEnd = 8; state.recording.punchEnd = 8; for (const owner of [...state.tracks, ...state.returns, state.master]) { owner.level = .7; owner.effects.fill(null); owner.automation = []; } state.tracks.forEach(track => { track.instrumentLive = true; track.clips = []; }); return state; }
+function blank() { const state = S.defaultState(); state.tempo = 120; state.lengthBars = 2; state.loopEnabled = false; state.loopEnd = 8; state.recording.punchEnd = 8; for (const owner of [...state.tracks, ...state.returns, state.master, ...state.buses]) { owner.level = .7; owner.effects.fill(null); owner.automation = []; } state.tracks.forEach(track => { track.instrumentLive = true; track.clips = []; }); return state; }
 function fixture() {
   const state = blank(); state.name = 'CPU_QA_PRIVATE_PROJECT';
   const insert = (type, params) => S.effect({ type, params });
@@ -96,12 +96,12 @@ check('Profiled and unprofiled track, return, master, automation and LFO audio s
   }
   assert.equal(JSON.stringify(state), before);
 });
-check('All five track inserts are profiled while master and returns keep four slots', () => {
+check('All five track inserts are profiled while group buses, master and returns keep four slots', () => {
   const state = fixture(), core = new Core(state, {}, 48000, { linear: true }); core.start(0); core.setDiagnostics({ enabled: true, mode: 'deep' }); feed(core, source(512));
   const rows = core.getDiagnostics().rows;
-  assert.equal(rows.length, 106, 'Ten track owners plus returns, master and the mastering stage are represented.');
-  assert.equal(rows.filter(row => row.kind === 'effect').length, 62);
-  for (const owner of [...state.tracks, ...state.returns, state.master]) {
+  assert.equal(rows.length, 118, 'Ten tracks, two groups, two returns, master and the mastering stage are represented.');
+  assert.equal(rows.filter(row => row.kind === 'effect').length, 70);
+  for (const owner of [...state.tracks, ...state.returns, state.master, ...state.buses]) {
     const effects = rows.filter(row => row.kind === 'effect' && row.ownerId === owner.id);
     assert.equal(effects.length, owner.id.startsWith('track-') ? 5 : 4);
     assert.deepEqual(effects.map(row => row.slot), owner.id.startsWith('track-') ? [0, 1, 2, 3, 4] : [0, 1, 2, 3]);

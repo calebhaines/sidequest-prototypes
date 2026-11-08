@@ -29,6 +29,7 @@
     const next = { ...state,
       tracks: state.tracks.map(track => track.id === ownerId ? nextOwner : track),
       returns: state.returns.map(bus => bus.id === ownerId ? nextOwner : bus),
+      ...(state.buses ? { buses: state.buses.map(bus => bus.id === ownerId ? nextOwner : bus) } : {}),
       master: state.master.id === ownerId ? nextOwner : state.master,
       lfos: (state.lfos || []).map(lfo => ({ ...lfo, routes: lfo.routes.map(route => {
         if (route.ownerId !== ownerId) return route;

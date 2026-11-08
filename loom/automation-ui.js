@@ -32,6 +32,8 @@
       const state = this.getState(), index = state.tracks.findIndex(track => track.id === owner.id);
       if (index >= 0) return 'TRACK ' + String(index + 1).padStart(2, '0') + ' · ' + owner.name;
       if (owner.id === 'master') return 'MASTER · ' + owner.name;
+      const grouped = state.buses?.findIndex(bus => bus.id === owner.id) ?? -1;
+      if (grouped >= 0) return 'BUS ' + (grouped + 1) + ' · ' + owner.name;
       const returned = state.returns?.findIndex(bus => bus.id === owner.id) ?? -1;
       return (returned >= 0 ? 'RETURN ' + String.fromCharCode(65 + returned) : 'BUS') + ' · ' + owner.name;
     }

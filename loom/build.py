@@ -77,6 +77,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['service.css', 'service-schema-checks.cjs', 'service-engine-checks.cjs', 'service-note-checks.cjs', 'service-capture-checks.cjs', 'service-midi-checks.cjs', 'service-controller-checks.cjs', 'service-browser-checks.cjs', 'host-navigation-checks.cjs', 'creative-effects.css', 'filter-checks.cjs', 'creative-checks.cjs', 'creative-effects-integration-checks.cjs', 'creative-effects-browser-checks.cjs', 'tonal-print-timing-checks.cjs', 'tonal-live-timing-checks.cjs', 'tonal-fallback-clock-checks.cjs', 'transport-count-in-checks.cjs']
     sources += ['timeline-selection.css', 'timeline-selection-checks.cjs', 'timeline-selection-browser-checks.cjs']
     sources += ['hood-checks.cjs', 'hood-browser-checks.cjs', 'HOOD-GUIDE.md']
+    sources += ['group-bus-schema-checks.cjs', 'group-bus-engine-checks.cjs', 'group-bus-legacy-checks.cjs', 'group-bus-browser-checks.cjs', 'GROUP-BUSES.md']
     sources += ['clip-loop-continuity-checks.cjs', 'playback-continuity-checks.cjs', 'playback-continuity-browser-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs', 'percussion-integration-checks.cjs']
     sources += ['broiler.css', 'BROILER-MODELS.md', 'broiler-workshop-checks.cjs', 'broiler-pedal-checks.cjs', 'broiler-browser-checks.cjs', 'broiler-project-checks.cjs', 'broiler-legacy-fixtures.json']
     sources += ['compressor.css', 'BUTTER-MODELS.md', 'compressor-checks.cjs', 'compressor-browser-checks.cjs', 'compressor-project-checks.cjs', 'compressor-legacy-fixtures.json']

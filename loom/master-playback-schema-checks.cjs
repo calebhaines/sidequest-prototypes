@@ -33,7 +33,7 @@ function frozenFixture() {
   return { state, trackId: track.id, sourcePcm: original.pcm, frozenPcm: frozen.pcm };
 }
 check('Master playback defaults are neutral independent project objects and survive normal project copying', () => {
-  assert.equal(S.VERSION, '1.40.0');
+  assert.equal(S.VERSION, '1.41.0');
   assert.deepEqual(plain(S.defaultMasterPlayback()), neutral);
   const first = S.defaultState(), second = S.defaultState();
   assert.deepEqual(plain(first.master.playback), neutral);
@@ -70,7 +70,7 @@ check('Only missing playback in legacy or unversioned files inherits neutral pla
   const supplied = envelope(S.defaultState(), '1.33.0'); supplied.state.master.playback = { speed: .66, pitch: 2.75, preservePitch: false }; assert.deepEqual(plain(parse(supplied).master.playback), supplied.state.master.playback);
 });
 check('Current and future project formats reject missing playback and every supplied malformed playback record', () => {
-  for (const version of ['1.34.0', '1.34.1', '1.40.0', '2.0.0', 'not-a-version']) { const project = envelope(S.defaultState(), version); delete project.state.master.playback; assert.throws(() => parse(project), /master|playback|bus/i, version); }
+  for (const version of ['1.34.0', '1.34.1', '1.41.0', '2.0.0', 'not-a-version']) { const project = envelope(S.defaultState(), version); delete project.state.master.playback; assert.throws(() => parse(project), /master|playback|bus/i, version); }
   const invalid = [null, [], false, 'wrong', {}, { speed: 1, pitch: 0 }, { speed: 1, pitch: 0, preservePitch: true, quality: 'high' }, { speed: '1', pitch: 0, preservePitch: true }, { speed: .249999, pitch: 0, preservePitch: true }, { speed: 2.000001, pitch: 0, preservePitch: true }, { speed: 1, pitch: -24.00001, preservePitch: true }, { speed: 1, pitch: 24.00001, preservePitch: true }, { speed: 1, pitch: '0', preservePitch: true }, { speed: NaN, pitch: 0, preservePitch: true }, { speed: 1, pitch: Infinity, preservePitch: true }, { speed: 1, pitch: 0, preservePitch: 1 }, { speed: 1, pitch: 0, preservePitch: 'true' }];
   for (const version of ['1.33.0', S.VERSION]) for (const playback of invalid) { const project = envelope(S.defaultState(), version); project.state.master.playback = playback; const original = JSON.stringify(project); assert.throws(() => S.parseProject(original), /playback|speed|pitch/i, String(version) + ' ' + JSON.stringify(playback)); assert.equal(JSON.stringify(project), original); }
 });

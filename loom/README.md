@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**Two group buses (1.41.0)** adds Bus 1 and Bus 2 alongside the existing ten main tracks, two returns and master. Choose an Output on any mixer channel or selected track. Each bus combines its assigned tracks and provides four inserts, level, pan, mute, solo, automation and LFO targets before Master. Frozen tracks can change output without rebuilding their source cache. Bus stems include group processing and skip the master chain. See [the group-bus guide](GROUP-BUSES.md).
+
 **HOOD spaces (1.40.0)** adds fifteen distinct reverb types alongside the unchanged Original: Room, Chamber, Hall, Cathedral, Plate, Spring, Tiled room, Ambience, Vintage digital, Modulated hall, Shimmer, Gated, Reverse, Bloom and Nonlinear. Choose **Reverb type** above the existing controls; changing type retains the knobs and briefly crossfades processors. Older projects and frozen Original tracks keep their sound. See [the HOOD guide](HOOD-GUIDE.md).
 
 **BATTER folder imports (1.39.0)** embeds BATTER 1.4 with folder and subfolder sample import, recursive folder drops, captured A/B lane routing, atomic batch limits, Cancel and one-step Undo. The standalone drum app and the hosted instrument use the same updated sample importer. GALLEY’s audio processors are unchanged.
