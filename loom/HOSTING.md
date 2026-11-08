@@ -175,3 +175,18 @@ starting a second native sequencer. Implement `transport(clock)` to synchronize
 modulation and clear old histories on Stop or a seek; ordinary loop anchors
 retain natural tails. Scheduled notes also carry optional `beat` and `tempo`
 metadata alongside the unchanged `when` audio timestamp.
+
+
+### Fresh audio actions
+
+Hosted editors can call `MusicLabHost.requestAudition()` immediately before a
+new note, native playback or note preview. The optional synchronous method
+returns whether GALLEY accepted the active editor’s audition request. It does
+not start the arrangement. Trusted pointer and non-repeated keyboard gestures
+also request the route automatically. MIDI note handlers should request it
+explicitly, since MIDI events do not bubble through the document.
+
+The parent accepts requests only for its visible, enabled, unfrozen editor and
+keeps SERVICE, prepared master playback and busy audio changes isolated. Avoid
+requesting audition from background prepare, snapshot or offline rendering: Panic
+must remain silent until a fresh audio action.

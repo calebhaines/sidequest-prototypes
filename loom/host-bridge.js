@@ -16,7 +16,16 @@
     const abort = () => new DOMException('The instrument has been unloaded.', 'AbortError');
     const requireActive = () => { if (cancelled()) throw abort(); };
     const unwrap = value => rawNodes.get(value) || value?.__loomRawContext || value;
-    const notify = (type, value) => { if (!cancelled()) record.notify(type, value); };
+    const notify = (type, value) => cancelled() ? false : record.notify(type, value);
+    function requestAudition() {
+      // The parent decides whether this editor still owns the live audition
+      // route. A new note can restore monitoring after Panic without replaying
+      // the arrangement or reviving a hidden/disabled instrument.
+      try {
+        if (notify('audio-action', null) === false) return false;
+        window.__LoomBridge.mute(false); return true;
+      } catch (_) { return false; }
+    }
 
     // All storage lives in this DAW instance. Standalone instruments' keys are never touched.
     function makeStorage(values) {
@@ -180,6 +189,7 @@
       patternLibrary: Object.freeze({get persistent(){return parent.MusicLabPatterns?.persistent ?? false;},...Object.fromEntries(['list','get','save','remove'].map(method=>[method,(...args)=>{requireActive();const library=parent.MusicLabPatterns;if(!library?.[method])throw Error('The shared pattern library is unavailable.');return library[method](...args);}]))}),
       registerInstrument(value) { if (!value || typeof value !== 'object') throw new TypeError('Register an instrument adapter object.'); adapter = value; notify('registered', null); return publicAPI; },
       notifyStateChange() { notify('change', null); },
+      requestAudition,
       status(message) { notify('status', String(message)); }
     });
     Object.defineProperty(window, 'MusicLabHost', { value: publicAPI, writable: false });
@@ -213,7 +223,7 @@
     document.addEventListener('input', () => notify('change', null), true);
     document.addEventListener('change', () => notify('change', null), true);
     document.addEventListener('click', () => { setTimeout(() => notify('change', null), 250); }, true);
-    const userAudioAction = event => { if (event.isTrusted && !cancelled()) window.__LoomBridge.mute(false); };
+    const userAudioAction = event => { if (event.isTrusted && !event.repeat && !cancelled()) requestAudition(); };
     document.addEventListener('pointerdown', userAudioAction, true);
     document.addEventListener('keydown', userAudioAction, true);
     notify('booted', null);

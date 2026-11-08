@@ -3,9 +3,18 @@
   "instrument": "batter",
   "instrumentVersion": "1.4.0",
   "status": "verified-release-build",
-  "reason": "BATTER 1.4.0 intentionally adds recursive sample-folder import. Only BATTER HTML and its editable source archive replace the historical 1.36 artifact references; all other instrument references remain frozen. Hashes must be pinned from the final verified BATTER build before release.",
+  "reason": "Explicit post-1.36 instrument releases: BATTER 1.4.0 adds recursive sample-folder import, and BRINE 1.0.1 restores hosted live audition. Only these instruments\u2019 HTML and editable source archives replace historical artifact references; all other references remain frozen.",
   "hashes": {
     "batter/index.html": "47bd3548832fd6002e21689a56f0f1ab0233ee720e7c2f2c3efe1fd16000f9d4",
-    "music/batter/BATTER-source.zip": "38871da766d5ef25c6da755940448a260d867be7a72f2c51648b11fff2952b7e"
-  }
+    "music/batter/BATTER-source.zip": "38871da766d5ef25c6da755940448a260d867be7a72f2c51648b11fff2952b7e",
+    "brine/index.html": "16f36804f95ab8bffa6758e4dedabae406f2549f770eb2e605ef2378b59045a0",
+    "music/brine/BRINE-source.zip": "f612b8b031ebd0d6656b9a0ca239d58496c02963e9a4c483c1859b7b83f827c1"
+  },
+  "additionalReleases": [
+    {
+      "instrument": "brine",
+      "instrumentVersion": "1.0.1",
+      "reason": "Restore live audition after hosted monitoring is interrupted, while preserving synthesis and saved patches."
+    }
+  ]
 }

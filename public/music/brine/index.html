@@ -75,6 +75,12 @@
       // Lyrics are optional musical data. Omitting the field keeps existing
       // version-one serialization and fingerprints exactly unchanged.
       if (note.lyric !== undefined) result.lyric = text(note.lyric, 'Note lyric', 160);
+      // Optional mono articulation keeps every older version-one identity
+      // unchanged when absent. Older instruments safely omit these fields.
+      for (const key of ['accent', 'slide']) if (note[key] !== undefined) {
+        if (typeof note[key] !== 'boolean') throw new Error('Note ' + key + ' must be true or false.');
+        result[key] = note[key];
+      }
       return result;
     });
     const tags = input.tags === undefined ? [] : input.tags;
@@ -119,7 +125,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#25282b">
 <meta name="description" content="BRINE — six DCO voices, resonant analog character and a stereo bucket-brigade chorus. A Kitchen synthesizer inspired by the Juno family.">
-<meta name="brine-version" content="1.0.0">
+<meta name="brine-version" content="1.0.1">
 <title>BRINE · Kitchen</title>
 <style>
 :root{color-scheme:dark;--paper:#eee8d7;--paper-dim:#d7d1c0;--ink:#262a2b;--dark:#1b2024;--panel:#282f33;--deep:#1d2428;--line:#687178;--amber:#e3bd77;--blue:#7eafc4;--red:#d47b6b;--mute:#b2bbb9;--mono:var(--kk-mono,'Courier New',monospace);--sans:var(--kk-ui,Arial,sans-serif)}
@@ -548,7 +554,7 @@ body {
 /* BRINE project and control vocabulary. DSP specifications are authoritative. */
 (function (scope) {
   'use strict';
-  const VERSION = '1.0.0', LIMITS = Object.freeze({ projectBytes: 2 * 1024 * 1024, notes: 4096, maxPatternBeats: 256 });
+  const VERSION = '1.0.1', LIMITS = Object.freeze({ projectBytes: 2 * 1024 * 1024, notes: 4096, maxPatternBeats: 256 });
   const DSP = scope.createBrineDSP(), specifications = DSP.specifications;
   const copy = value => JSON.parse(JSON.stringify(value));
   const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && ['[object Object]'].includes(Object.prototype.toString.call(value));
@@ -1358,7 +1364,7 @@ body {
     if(inputs.has(key))return;
     if(inputs.size>=512){const records=[...inputs.values()],old=records.find(record=>record.source===source&&record.channel===channel)||records.find(record=>record.source===source)||records[0];if(old)endInput(old.key);}
     const record={key,pitch,source,channel,id:uid('key'),queueKey:source.startsWith('midi:')?source+':'+channel+':'+pitch:null,started:false};inputs.set(key,record);paintKeys();
-    try{await engine.init();if(inputs.get(key)!==record)return;engine.noteOn({id:record.id,pitch,velocity,source,channel});record.started=true;startMeters();}catch(error){if(inputs.get(key)===record)endInput(key);paintKeys();status(error.message||'Audio could not start.');}
+    try{scope.MusicLabHost?.requestAudition?.();await engine.init();if(inputs.get(key)!==record)return;engine.noteOn({id:record.id,pitch,velocity,source,channel});record.started=true;startMeters();}catch(error){if(inputs.get(key)===record)endInput(key);paintKeys();status(error.message||'Audio could not start.');}
   }
   function endInput(key) {const record=inputs.get(key);if(!record)return;inputs.delete(key);if(record.queueKey){const queue=midiQueues.get(record.queueKey),index=queue?.indexOf(key)??-1;if(index>=0)queue.splice(index,1);if(!queue?.length)midiQueues.delete(record.queueKey);}if(record.started)engine.noteOff(record.id,{source:record.source,channel:record.channel});paintKeys();startMeters();}
   function releaseInputs(includeMIDI=true) {finishLfoTrigger();++inputGeneration;for(const[key,record]of [...inputs])if(includeMIDI||!record.source.startsWith('midi:'))endInput(key);pointerKeys.clear();if(includeMIDI)midiQueues.clear();engine.setSustain(false);sustain=false;attr($('sustainButton'),'aria-pressed',false);setBend(0);}
@@ -1411,7 +1417,7 @@ body {
   function selectNote(id) {selectedNote=id;for(const group of noteNodes.values())toggleClass(group.querySelector('[data-note-id]'),'selected',group.dataset.noteGroup===id);renderNoteInspector();}
   function renderNoteInspector(force=false) {const note=state.pattern.notes.find(note=>note.id===selectedNote);for(const id of ['notePitch','noteBeat','noteDuration','noteVelocity','deleteNoteButton','duplicateNoteButton'])prop($(id),'disabled',!note);text($('selectedNoteLabel'),note?S.noteName(note.pitch)+' / EXACT NOTE SETTINGS':'CLICK TO ADD / DRAG TO MOVE / PULL THE RIGHT EDGE TO RESIZE');if(!note)return;for(const[id,value]of[['notePitch',note.pitch],['noteBeat',tidy(note.beat+1)],['noteDuration',tidy(note.duration)],['noteVelocity',Math.round(note.velocity*100)]])if(force||document.activeElement!==$(id))prop($(id),'value',value);attr($('noteBeat'),'max',patternLimits()+1);attr($('noteDuration'),'max',patternLimits()-note.beat);}
   function coordinates(event) {const m=noteMetrics,box=$('patternRoll').getBoundingClientRect();return{beat:(event.clientX-box.left-m.left)/m.beatWidth,pitch:clamp(m.high-Math.floor((event.clientY-box.top-m.top)/m.row),m.low,m.high)};}
-  function audition(pitch,velocity=.8) {const generation=inputGeneration;engine.init().then(()=>{if(generation!==inputGeneration)return;engine.scheduleNote({id:uid('preview'),pitch,velocity,when:engine.context.currentTime+.01,durationSeconds:.18,source:'preview'});startMeters();}).catch(error=>status(error.message));}
+  function audition(pitch,velocity=.8) {scope.MusicLabHost?.requestAudition?.();const generation=inputGeneration;engine.init().then(()=>{if(generation!==inputGeneration)return;engine.scheduleNote({id:uid('preview'),pitch,velocity,when:engine.context.currentTime+.01,durationSeconds:.18,source:'preview'});startMeters();}).catch(error=>status(error.message));}
   $('patternRoll').addEventListener('focusin',event=>{const note=event.target.closest('[data-note-id]');if(note)selectNote(note.dataset.noteId);});
   $('patternRoll').addEventListener('keydown',event=>{const target=event.target.closest('[data-note-id]');if(!target||!['Enter',' '].includes(event.key))return;event.preventDefault();event.stopPropagation();const note=state.pattern.notes.find(note=>note.id===target.dataset.noteId);if(note&&!event.repeat){selectNote(note.id);audition(note.pitch,note.velocity);}});
   $('patternRoll').addEventListener('pointerdown',event=>{if(event.button!==0||!noteMetrics)return;event.preventDefault();$('patternRoll').focus({preventScroll:true});const point=coordinates(event),handle=event.target.closest('[data-resize-note]'),body=event.target.closest('[data-note-id]'),id=handle?.dataset.resizeNote||body?.dataset.noteId;let note=state.pattern.notes.find(note=>note.id===id),created=false;
@@ -1437,7 +1443,7 @@ body {
   function paintPhrasePlayhead(){if(!$('patternDetails').open||!noteMetrics)return;const beat=((meterSnapshot?.beat||0)%patternLimits()+patternLimits())%patternLimits(),line=$('phrasePlayhead');if(line){const x=noteMetrics.left+beat*noteMetrics.beatWidth;attr(line,'x1',x);attr(line,'x2',x);}}
   function updateMeters(){if(!visible||document.hidden)return;meterSnapshot=engine.getMeters();const voices=meterSnapshot.voiceStates||[];for(let i=0;i<6;i++){const lamp=document.querySelector('[data-voice="'+i+'"]'),voice=voices[i];toggleClass(lamp,'active',Boolean(voice?.active));attr(lamp,'title','Voice '+(i+1)+(voice?.active?' / '+S.noteName(voice.pitch):' / resting'));}text($('voiceCount'),Math.min(6,meterSnapshot.voices||0)+' / 6');const rms=Math.max(0,Number(meterSnapshot.rms)||0),db=rms>1e-5?20*Math.log10(rms):-100;style($('outputLevel'),'transform','scaleX('+clamp((db+60)/60,0,1)+')');text($('outputReading'),db<=-90?'−∞ dB':db.toFixed(1)+' dB');toggleClass($('audioLamp'),'active',engine.mode!=='idle');text($('audioStatus'),engine.isPlaying?'PHRASE IN SERVICE':meterSnapshot.arpPlaying?'KEYBOARD ARPEGGIO':inputs.size?'PLAYED BY HAND':engine.mode==='idle'?'READY FOR SERVICE':'AUDIO READY');const beat=((meterSnapshot.beat||0)%patternLimits()+patternLimits())%patternLimits();text($('position'),String(Math.floor(beat/4)+1).padStart(2,'0')+' : '+String(Math.floor(beat%4)+1).padStart(2,'0'));attr($('playButton'),'aria-pressed',Boolean(engine.isPlaying));text($('playLabel'),engine.isPlaying?'Playing phrase':'Play phrase');paintKeys();paintPhrasePlayhead();if(!engine.isPlaying&&!inputs.size&&!meterSnapshot.arpPlaying&&!(meterSnapshot.voices>0)){clearInterval(meterTimer);meterTimer=0;}}
   function startMeters(){if(!visible||document.hidden)return;if(!meterTimer)meterTimer=setInterval(updateMeters,125);updateMeters();}
-  async function play(options={}) {finishPending();if(options.tempo!==undefined)setTempo(options.tempo,false);await engine.start(options);startMeters();status('The phrase is in service. Play the keyboard alongside it.');return true;}
+  async function play(options={}) {finishPending();if(options.tempo!==undefined)setTempo(options.tempo,false);scope.MusicLabHost?.requestAudition?.();await engine.start(options);startMeters();status('The phrase is in service. Play the keyboard alongside it.');return true;}
   function stop(){engine.stop();startMeters();status('Phrase stopped. Held notes remain yours.');}
   function panic(){finishPending();releaseInputs();engine.panic();meterSnapshot=null;setWheel(state.synth.modWheel||0);startMeters();status('All voices released. The recipe is unchanged.');}
   function setTempo(value,capture=true){value=clamp(Number(value)||108,30,240);if(state.tempo===value)return;if(capture)remember();state.tempo=value;state.pattern.tempo=value;engine.setState(state);prop($('tempo'),'value',value);notify();}
