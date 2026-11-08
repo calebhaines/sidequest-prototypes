@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**BATTER folder imports (1.39.0)** embeds BATTER 1.4 with folder and subfolder sample import, recursive folder drops, captured A/B lane routing, atomic batch limits, Cancel and one-step Undo. The standalone drum app and the hosted instrument use the same updated sample importer. GALLEY’s audio processors are unchanged.
+
 **Timeline groups (1.38.0)** lets you select audio and note clips across tracks, then move them together in time or between tracks. Shift/Ctrl/Command-click adds or removes clips; drag empty timeline space for a box selection. The compact Select clips toggle supports tapping on touch screens. Group movement shares one snap and boundary clamp, preserving relative timing and track spacing. Each completed move, group duplicate or group delete takes one Undo step; Escape or pointer cancellation commits nothing. Arrow keys move the selection, and Ctrl/Command+A selects all clips while the timeline has focus. Detailed clip edits remain single-clip operations.
 
 **Playback continuity (1.37.1)** fixes fractional source-loop interpolation reading beyond the selected audio region. It also prevents arrangement-loop smoothing from importing a discontinuous, unheard sample after the loop end, for both ordinary and frozen tracks. Resampled and rate-adjusted loops retain their timing and source interiors; effect processing and source recordings stay unchanged. The shared source-loop fix also applies to audio transfers, exports and new freezes.
@@ -172,7 +174,7 @@ Learn consumes the first message without playing it. MIDI only controls SERVICE
 while its desk is open. Note-off, port disconnection, focus loss, and desk closure
 release momentary pads. Unsupported browsers retain all on-screen controls.
 
-SERVICE is version 1.0.0; GALLEY is version 1.38.0.
+SERVICE is version 1.0.0; GALLEY is version 1.39.0.
 
 ## Making a piece
 

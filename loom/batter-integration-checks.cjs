@@ -333,12 +333,15 @@ async function offlineProject(browser, portable, serverURL) {
     catch (error) {
       if (!String(error).includes('ERR_BLOCKED_BY_ADMINISTRATOR')) throw error;
       // The managed test browser blocks file navigation. Exercise the exact
-      // downloaded bytes with network routes fulfilled locally instead, while
+      // downloaded bytes through the existing loopback server instead, while
       // rejecting every sample or sibling-app URL. Report that limitation.
       offlineMode = 'managed Chromium blocks file URLs; exact downloaded bytes with all external network disabled';
       await context.unroute(/^https?:/);
       await context.route(/^https?:/, route => {
-        if (route.request().url() === serverURL + '/loom/index.html' && route.request().isNavigationRequest()) return route.fulfill({ status: 200, contentType: 'text/html', body: fs.readFileSync(htmlPath) });
+        // The server returns the exact downloaded HTML. Continue this one
+        // navigation so the large page never exceeds CDP's message limit;
+        // sample and sibling-app requests remain blocked below.
+        if (route.request().url() === serverURL + '/loom/index.html' && route.request().isNavigationRequest()) return route.continue();
         if (route.request().url() === serverURL + '/index.html') return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Offline empty hub</title>' });
         httpRequests.push(route.request().url()); return route.abort('internetdisconnected');
       });
