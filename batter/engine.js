@@ -1,7 +1,7 @@
 /* BATTER · sampled acoustic drums, precise recipes, and portable ingredients. */
 (function (root) {
   'use strict';
-  const VERSION = '1.3.0', MAX_BYTES = 64 * 1024 * 1024, MAX_SECONDS = 120;
+  const VERSION = '1.4.0', MAX_BYTES = 64 * 1024 * 1024, MAX_SECONDS = 120;
   const LANE_IDS = ['kick','snare','rim','closedHat','openHat','ride','crash','tomLow','tomMid','tomHigh','clap','percussion'];
   const LANE_NAMES = ['Kick','Snare','Rim / sidestick','Closed hat','Open hat','Ride','Crash','Low tom','Mid tom','High tom','Clap','Percussion'];
   const CONDITIONS = ['always','fill','notFill','first','notFirst','every2','every3','every4'];
@@ -199,8 +199,72 @@
     async ensureSamples(ids=this.referencedIds(),{signal}={}) {const keep=[...new Set(ids)];for(const id of keep){aborted(signal);await this.loadSample(id,{signal,keep});}return true;}
     getSampleAudio(id) {const audio=this.audio.get(id);if(!audio)throw new Error('The selected sample has not loaded yet.');return audio;}
     async setKit(id,{signal}={}) {let kit=this.library.kits.find(k=>k.id===id);if(!kit)throw new Error('Choose an available acoustic kit.');if(kit.lanes.some(l=>(l.sampleIds||[l.sampleId]).some(sampleId=>!this.metadata.has(sampleId))))for(const required of kit.requires||[])if(!this.loadedBundles.has(required))await this.loadLibrary(required,{signal});kit=this.library.kits.find(k=>k.id===id);const generation=this.generation,blendIds=kit.lanes.flatMap((item,i)=>{const b=item.blend||this.state.lanes[i]?.blend;return [...(b?.sampleIds||[]),b?.sampleId].filter(Boolean);}),locks=this.state.patterns.flatMap(p=>p.lanes.flatMap(l=>l.steps.map(s=>s.sampleId).filter(Boolean)));await this.ensureSamples([...kit.lanes.flatMap(l=>l.sampleIds||[l.sampleId]).filter(Boolean),...locks,...blendIds],{signal});aborted(signal);if(this.generation!==generation)throw new Error('The instrument changed while the kit was loading. Try selecting the kit again.');this.stop();this.applyKit(kit);this.generation++;this.processed.clear();return this.getState();}
-    async importFiles(files,{laneId=this.state.lanes[0].id,mode='replace',appendLayers=true,source='a',signal}={}) {if(this.importing)throw new Error('A sample import is already in progress.');const items=Array.from(files||[]);if(!items.length)throw new Error('Choose at least one audio file.');if(items.length>128)throw new Error('Import up to 128 drum samples at once.');if(source==='b'&&mode==='lanes')throw new Error('Source B supports a single sample or a layer group.');if(mode==='replace'&&items.length>1)throw new Error('Choose Layers or Separate lanes for a batch import.');const generation=this.generation;this.importing=true;try{const assets=[];for(const file of items){aborted(signal);if(file.size>MAX_BYTES)throw new Error('An audio file exceeds the 64 MB import budget.');const bytes=await file.arrayBuffer();aborted(signal);const audio=await this.decode(bytes,file.name.replace(/\.[^.]+$/,''));aborted(signal);assets.push(encodeAsset(audio,{name:audio.name}));}if(generation!==this.generation)throw new Error('The instrument changed while samples were loading. No samples were replaced.');return this.commitImported(assets,{laneId,mode,appendLayers,source});}finally{this.importing=false;}}
-    commitImported(assets,{laneId,mode='replace',appendLayers=true,source='a'}={}) {const state=this.getState(),index=state.lanes.findIndex(l=>l.id===laneId);if(index<0)throw new Error('Choose a destination drum lane.');if(!['a','b'].includes(source))throw new Error('Choose source A or B.');if(source==='b'&&mode==='lanes')throw new Error('Source B supports a single sample or a layer group.');if(mode==='lanes'&&assets.length>12-index)throw new Error('There are not enough remaining lanes for this batch. Choose Layers or a higher lane.');state.assets.push(...assets);if(mode==='lanes')assets.forEach((a,i)=>{const l=state.lanes[index+i];l.sampleId=a.id;l.sampleIds=[a.id];l.name=a.name;l.start=0;l.end=1;l.layerMode='single';});else {const original=state.lanes[index],l=source==='b'?original.blend:original;l.sampleIds=mode==='layers'&&appendLayers?[...l.sampleIds,...assets.map(a=>a.id)]:assets.map(a=>a.id);l.sampleId=assets[0].id;l.layerMode=mode==='layers'?'roundrobin':'single';if(source==='b')l.enabled=true;else {l.start=0;l.end=1;}}return this.setState(state);}
+    importTarget(count,{laneId,mode='replace',appendLayers=true,source='a'}={}) {
+      if(this.disposed)throw new Error('The BATTER engine has been closed.');
+      if(!Number.isInteger(count)||count<1)throw new Error('Choose at least one audio file.');
+      if(count>128)throw new Error('Import up to 128 drum samples at once.');
+      if(!['replace','layers','lanes'].includes(mode))throw new Error('Choose Replace, Layers or Separate lanes for sample import.');
+      if(typeof appendLayers!=='boolean')throw new Error('Choose whether to append sample layers.');
+      const index=this.state.lanes.findIndex(l=>l.id===laneId);
+      if(index<0)throw new Error('Choose a destination drum lane.');
+      if(!['a','b'].includes(source))throw new Error('Choose source A or B.');
+      if(source==='b'&&mode==='lanes')throw new Error('Source B supports a single sample or a layer group.');
+      if(mode==='replace'&&count>1)throw new Error('Choose Layers or Separate lanes for a batch import.');
+      if(mode==='lanes'&&count>this.state.lanes.length-index)throw new Error('There are not enough remaining lanes for this batch. Choose Layers or a higher lane.');
+      const target=source==='b'?this.state.lanes[index].blend:this.state.lanes[index];
+      if(mode==='layers'&&appendLayers&&target.sampleIds.length+count>128)throw new Error('A source can hold up to 128 sample layers. Choose Replace layer group or fewer samples.');
+      if(this.state.assets.length+count>256)throw new Error('BATTER holds up to 256 imported or portable samples.');
+      return {index,target};
+    }
+    async importFiles(files,{laneId=this.state.lanes[0].id,mode='replace',appendLayers=true,source='a',signal,paths}={}) {
+      if(this.importing)throw new Error('A sample import is already in progress.');
+      aborted(signal);
+      const items=Array.from(files||[]),options={laneId,mode,appendLayers,source};
+      this.importTarget(items.length,options);
+      if(items.some(file=>!file||typeof file.name!=='string'||typeof file.arrayBuffer!=='function'||!Number.isFinite(file.size)||file.size<0))throw new Error('Choose valid audio files.');
+      if(paths!==undefined&&(!Array.isArray(paths)||paths.length!==items.length||paths.some(path=>typeof path!=='string'||!path||path.length>500||/[\u0000-\u001f\u007f]/.test(path)||/^(?:[\\/]|[a-z]:)/i.test(path)||path.replace(/\\/g,'/').split('/').some(part=>part==='..'||part==='.'))))throw new Error('Provide one valid relative sample path for each audio file.');
+      const relativePaths=paths?.map(path=>path.replace(/\\/g,'/'));
+      const names=items.map(file=>file.name.replace(/\.[^.]+$/,'')),counts=new Map();
+      for(const name of names){const key=text(name,'Imported ingredient').toLowerCase();counts.set(key,(counts.get(key)||0)+1);}
+      const generation=this.generation;
+      const current=()=>{if(this.disposed||generation!==this.generation)throw new Error('The instrument changed while samples were loading. No samples were replaced.');};
+      let decodedBytes=this.state.assets.reduce((sum,a)=>sum+a.frames*a.channels*4,0);
+      this.importing=true;
+      try {
+        const assets=[];
+        for(let i=0;i<items.length;i++) {
+          const file=items[i];aborted(signal);current();
+          if(file.size>MAX_BYTES)throw new Error('An audio file exceeds the 64 MB import budget.');
+          const bytes=await file.arrayBuffer();aborted(signal);current();
+          const path=relativePaths?.[i],name=path&&counts.get(text(names[i],'Imported ingredient').toLowerCase())>1?path.replace(/\.[^./]+$/,''):names[i];
+          const audio=await this.decode(bytes,name);aborted(signal);current();
+          const mono=audio.channels===1||!audio.right||audio.left===audio.right;
+          decodedBytes+=audio.left.length*(mono?1:2)*4;
+          if(decodedBytes>MAX_BYTES)throw new Error('The imported samples exceed BATTER’s 64 MB decoded cupboard. Choose fewer or shorter samples.');
+          assets.push(encodeAsset(audio,{name:audio.name,...(path?{originalPath:path}:{})}));
+        }
+        current();aborted(signal);
+        return this.commitImported(assets,options);
+      } finally {this.importing=false;}
+    }
+    commitImported(assets,{laneId,mode='replace',appendLayers=true,source='a'}={}) {
+      if(!Array.isArray(assets))throw new Error('Provide a complete sample batch.');
+      const {index}=this.importTarget(assets.length,{laneId,mode,appendLayers,source}),state=this.getState();
+      // A malformed direct caller must not reach setState/installAssets with an
+      // encoded payload whose actual byte count disagrees with its metadata.
+      for(const asset of assets) {
+        if(!asset||!Number.isInteger(asset.frames)||asset.frames<1||![1,2].includes(asset.channels)||typeof asset.pcm!=='string'||asset.pcm.length!==Math.ceil(asset.frames*asset.channels*2/3)*4||!/^[A-Za-z0-9+/]*={0,2}$/.test(asset.pcm)||bytesFromBase64(asset.pcm).byteLength!==asset.frames*asset.channels*2)throw new Error('A sample batch contains invalid PCM data.');
+      }
+      state.assets.push(...assets);
+      if(mode==='lanes')assets.forEach((a,i)=>{const l=state.lanes[index+i];l.sampleId=a.id;l.sampleIds=[a.id];l.name=a.name;l.start=0;l.end=1;l.layerMode='single';});
+      else {
+        const original=state.lanes[index],l=source==='b'?original.blend:original;
+        l.sampleIds=mode==='layers'&&appendLayers?[...l.sampleIds,...assets.map(a=>a.id)]:assets.map(a=>a.id);
+        l.sampleId=assets[0].id;l.layerMode=mode==='layers'?'roundrobin':'single';
+        if(source==='b')l.enabled=true;else {l.start=0;l.end=1;}
+      }
+      return this.setState(state);
+    }
     async importAudio(payload,options={}) {aborted(options.signal);const pcm=payload?.pcm,sampleRate=payload?.sampleRate;let audio;if(floatArray(pcm)||Array.isArray(pcm)){if(pcm.length%2)throw new Error('Stereo PCM must have an even sample count.');if(!pcm.length||pcm.length*4>MAX_BYTES)throw new Error('The stereo PCM sample is empty or exceeds the 64 MB decoded cupboard.');for(const value of pcm)if(typeof value!=='number'||!Number.isFinite(value))throw new Error('Imported PCM must contain finite numeric samples.');const frames=pcm.length/2,left=new Float32Array(frames),right=new Float32Array(frames);for(let i=0;i<frames;i++){left[i]=number(pcm[i*2],-1,1,0);right[i]=number(pcm[i*2+1],-1,1,0);}audio={left,right,sampleRate,name:payload.name};}else if(floatArray(payload?.left)){for(const channel of [payload.left,payload.right||payload.left])for(const value of channel)if(!Number.isFinite(value))throw new Error('Imported PCM must contain finite numeric samples.');audio=payload;}else throw new Error('The imported audio needs stereo PCM data.');if(typeof sampleRate!=='number'||!Number.isFinite(sampleRate)||sampleRate<8000||sampleRate>192000)throw new Error('Choose a valid sample rate.');const asset=encodeAsset(audio,{name:payload.name||'Shared ingredient'});aborted(options.signal);return this.commitImported([asset],{laneId:options.laneId||options.target||LANE_IDS[0],mode:options.mode||'replace',appendLayers:options.appendLayers??true,source:options.source||'a'});}
     async getProject({signal}={}) {const generation=this.generation;await this.ensureSamples(this.referencedIds(),{signal});aborted(signal);if(generation!==this.generation)throw new Error('The instrument changed while the project was being prepared. Save it again.');return {format:'batter-project',formatVersion:1,appVersion:VERSION,state:this.getState({portable:true})};}
     async exportBundle({signal}={}) {const project=await this.getProject({signal}),samples=[];for(const asset of project.state.assets){aborted(signal);const pcm=bytesFromBase64(asset.pcm),bytes=new Uint8Array(44+pcm.length),view=new DataView(bytes.buffer),put=(p,s)=>{for(let i=0;i<s.length;i++)bytes[p+i]=s.charCodeAt(i);};put(0,'RIFF');view.setUint32(4,36+pcm.length,true);put(8,'WAVE');put(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,asset.channels,true);view.setUint32(24,asset.sampleRate,true);view.setUint32(28,asset.sampleRate*asset.channels*2,true);view.setUint16(32,asset.channels*2,true);view.setUint16(34,16,true);put(36,'data');view.setUint32(40,pcm.length,true);bytes.set(pcm,44);const {pcm:ignore,...metadata}=asset;samples.push({...metadata,...this.metadata.get(asset.id),base64:base64FromBytes(bytes),mime:'audio/wav'});delete samples.at(-1).pcm;}return {format:'kitchen-batter-library',version:1,id:'batter-export-'+Date.now().toString(36),samples,kits:[{id:'saved-kit-'+Date.now().toString(36),name:project.state.name,lanes:project.state.lanes.map(l=>({name:l.name,type:l.id,sampleId:l.sampleId,sampleIds:l.sampleIds,blend:l.blend,lfo:l.lfo,galleyFx:l.galleyFx}))}],bundles:[]};}

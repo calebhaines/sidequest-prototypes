@@ -98,7 +98,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['Signalsmith-Stretch-LICENSE.txt', 'master-playback.css', 'MASTER-PLAYBACK-GUIDE.md', 'master-playback-schema-checks.cjs', 'master-playback-dsp-checks.cjs', 'master-playback-render-checks.cjs', 'master-playback-checks.cjs', 'master-playback-browser-checks.cjs']
     sources += ['pedal-midi.css', 'FERMENT-MIDI-GUIDE.md', 'pedal-midi-checks.cjs', 'pedal-midi-engine-checks.cjs', 'pedal-midi-browser-checks.cjs', 'embedded-instruments-checks.cjs']
     sources += ['CPU-REVIEW-1.36.md', 'track-disable-project-checks.cjs', 'track-disable-engine-checks.cjs', 'track-disable-engine-fixtures.json', 'track-disable-integration-checks.cjs', 'disabled-host-checks.cjs', 'cpu-lifecycle-checks.cjs', 'performance-2026-checks.cjs', 'performance-2026-fixtures.json', 'performance-2026-browser-checks.cjs', 'exact-effects-cpu-checks.cjs', 'exact-effects-cpu-fixtures.json']
-    sources += ['svt.css', 'guitar-pedals.css', 'CELLAR-CIRCUITS.md', 'BOARD-PEDALS.md', 'svt-checks.cjs', 'guitar-pedals-checks.cjs', 'cellar-board-project-checks.cjs', 'cellar-board-checks.cjs', 'cellar-board-browser-checks.cjs', 'cellar-board-legacy-fixtures.json']
+    sources += ['svt.css', 'guitar-pedals.css', 'CELLAR-CIRCUITS.md', 'BOARD-PEDALS.md', 'svt-checks.cjs', 'guitar-pedals-checks.cjs', 'cellar-board-project-checks.cjs', 'cellar-board-checks.cjs', 'cellar-board-browser-checks.cjs', 'cellar-board-legacy-fixtures.json', 'instrument-release-updates.json', 'batter-folder-browser-checks.cjs']
     files = [(name, (ROOT / name).read_bytes()) for name in sources]
     # The clock regression executes the real standalone source engines. Keep
     # those fixtures with the editable download so its checks run offline too.

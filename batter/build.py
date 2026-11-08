@@ -13,7 +13,7 @@ if manifest.get('format') != 'kitchen-batter-library' or not manifest.get('sampl
     raise ValueError('BATTER needs a recorded, playable starter library.')
 css = (root / 'styles.css').read_text()
 js = 'window.BatterLibrary=' + json.dumps(manifest, separators=(',', ':')) + ';\n'
-js += '\n'.join((root / name).read_text() for name in ['engine.js', 'app.js', 'adapters.js'])
+js += '\n'.join((root / name).read_text() for name in ['engine.js', 'folder-import.js', 'app.js', 'adapters.js'])
 js = js.replace('</script', '<\\/script')
 template = (root / 'app.html').read_text()
 credits = '<details class="sample-credits"><summary>Recorded sample credits & licenses</summary><pre>' + html_module.escape((root / 'SAMPLE-LICENSES.md').read_text()) + '</pre></details>'
@@ -32,7 +32,7 @@ print(f'Built BATTER: {len(html.encode()):,} bytes; {len(manifest["samples"])} r
 if (root.parent / 'music' / 'README.md').is_file():
     archive = root.parent / 'music' / 'batter' / 'BATTER-source.zip'
     archive.parent.mkdir(parents=True, exist_ok=True)
-    sources = ['app.html', 'styles.css', 'engine.js', 'app.js', 'adapters.js', 'build.py', 'README.md', 'SAMPLE-LICENSES.md', 'factory-samples.json']
+    sources = ['app.html', 'styles.css', 'engine.js', 'folder-import.js', 'app.js', 'adapters.js', 'build.py', 'README.md', 'SAMPLE-LICENSES.md', 'factory-samples.json']
     files = [(name, (root / name).read_bytes()) for name in sources]
     files += [(path.name, path.read_bytes()) for path in sorted(root.glob('*checks*')) if path.is_file()]
     files += [(path.relative_to(root).as_posix(), path.read_bytes()) for path in sorted(root.glob('*.txt'))]

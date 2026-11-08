@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "instrument": "batter",
+  "instrumentVersion": "1.4.0",
+  "status": "verified-release-build",
+  "reason": "BATTER 1.4.0 intentionally adds recursive sample-folder import. Only BATTER HTML and its editable source archive replace the historical 1.36 artifact references; all other instrument references remain frozen. Hashes must be pinned from the final verified BATTER build before release.",
+  "hashes": {
+    "batter/index.html": "47bd3548832fd6002e21689a56f0f1ab0233ee720e7c2f2c3efe1fd16000f9d4",
+    "music/batter/BATTER-source.zip": "38871da766d5ef25c6da755940448a260d867be7a72f2c51648b11fff2952b7e"
+  }
+}
