@@ -20,6 +20,7 @@
       // still passes the same strict validation as a current patch.
       const introduced = def.id === 'velvet' && Array.isArray(def.multibandKeys) ? def.multibandKeys : [];
       if (introduced.length && introduced.every(key => !Object.prototype.hasOwnProperty.call(source, key))) source = { ...Object.fromEntries(introduced.map(key => [key, def.defaults[key]])), ...source };
+      if (def.id === 'vestige' && !Object.prototype.hasOwnProperty.call(source, 'model')) source = { ...source, model: 'original' };
       const params = {};
       if (options.strict && Object.keys(source).some(key => !Object.prototype.hasOwnProperty.call(def.defaults, key))) throw new Error(def.name + ' contains an unknown control.');
       for (const param of def.params) {
@@ -41,7 +42,7 @@
   let mainEffects;
   function effectsDSP() {
     if (!scope.createLoomEffectsDSP) throw new Error('GALLEY voice effects have not loaded.');
-    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP, scope.createLoomPedalMidiDSP, scope.createLoomSVTDSP, scope.createLoomGuitarPedalsDSP);
+    return mainEffects ||= scope.createLoomEffectsDSP(scope.createLoomVocalDSP, scope.createLoomUtilityDSP, scope.createLoomFilterDSP, scope.createLoomCreativeDSP, scope.createLoomBroilerPedalsDSP, scope.createLoomCompressorDSP, scope.createLoomPreampDSP, scope.createLoomTapeDSP, scope.createLoomCharDSP, scope.createLoomLoFiDSP, scope.createLoomPedalSynthDSP, scope.createLoomPedalTrackerDSP, scope.createLoomDeluxeDSP, scope.createLoomPedalMidiDSP, scope.createLoomSVTDSP, scope.createLoomGuitarPedalsDSP, scope.createLoomHoodDSP);
   }
   // Self-contained and serialized into AudioWorklet. Every rack owns two DSP
   // instances, so overlapping hits share one voice's histories but never another's.
@@ -117,7 +118,7 @@
   function workletSource() {
     const names = ['createLoomVocalDSP', 'createLoomUtilityDSP', 'createLoomFilterDSP', 'createLoomCreativeDSP', 'createLoomBroilerPedalsDSP', 'createLoomCompressorDSP', 'createLoomPreampDSP', 'createLoomTapeDSP', 'createLoomCharDSP'];
     if (!scope.createLoomEffectsDSP || names.some(name => typeof scope[name] !== 'function')) throw new Error('The complete GALLEY effect library has not loaded.');
-    const optional = ['createLoomLoFiDSP', 'createLoomPedalSynthDSP', 'createLoomPedalTrackerDSP', 'createLoomDeluxeDSP', 'createLoomPedalMidiDSP', 'createLoomSVTDSP', 'createLoomGuitarPedalsDSP'];
+    const optional = ['createLoomLoFiDSP', 'createLoomPedalSynthDSP', 'createLoomPedalTrackerDSP', 'createLoomDeluxeDSP', 'createLoomPedalMidiDSP', 'createLoomSVTDSP', 'createLoomGuitarPedalsDSP', 'createLoomHoodDSP'];
     const argumentsList = names.concat(optional.map(name => typeof scope[name] === 'function' ? name : 'null'));
     const declarations = names.concat(optional.filter(name => typeof scope[name] === 'function'));
     return declarations.map(name => `const ${name}=${scope[name].toString()};`).join('\n') + `\nconst createEffects=${scope.createLoomEffectsDSP.toString()};\nconst createCore=${createVoiceEffectsCore.toString()};\nconst makeEffects=()=>createEffects(${argumentsList.join(',')});\n` + `

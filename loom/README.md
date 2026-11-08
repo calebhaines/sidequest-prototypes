@@ -2,6 +2,8 @@
 
 Kitchen’s central production station.
 
+**HOOD spaces (1.40.0)** adds fifteen distinct reverb types alongside the unchanged Original: Room, Chamber, Hall, Cathedral, Plate, Spring, Tiled room, Ambience, Vintage digital, Modulated hall, Shimmer, Gated, Reverse, Bloom and Nonlinear. Choose **Reverb type** above the existing controls; changing type retains the knobs and briefly crossfades processors. Older projects and frozen Original tracks keep their sound. See [the HOOD guide](HOOD-GUIDE.md).
+
 **BATTER folder imports (1.39.0)** embeds BATTER 1.4 with folder and subfolder sample import, recursive folder drops, captured A/B lane routing, atomic batch limits, Cancel and one-step Undo. The standalone drum app and the hosted instrument use the same updated sample importer. GALLEY’s audio processors are unchanged.
 
 **Timeline groups (1.38.0)** lets you select audio and note clips across tracks, then move them together in time or between tracks. Shift/Ctrl/Command-click adds or removes clips; drag empty timeline space for a box selection. The compact Select clips toggle supports tapping on touch screens. Group movement shares one snap and boundary clamp, preserving relative timing and track spacing. Each completed move, group duplicate or group delete takes one Undo step; Escape or pointer cancellation commits nothing. Arrow keys move the selection, and Ctrl/Command+A selects all clips while the timeline has focus. Detailed clip edits remain single-clip operations.
@@ -432,7 +434,7 @@ is unavailable, keep a WAV or packet for the next session.
 | CHAR | Saturation, diode distortion, or wavefolding |
 | DOUBLE | Stereo chorus and flanging |
 | LEFTOVERS | Tempo-synced or free ping-pong echo |
-| HOOD | Eight-line algorithmic reverb |
+| HOOD | Original eight-line reverb + fifteen room, plate, spring and shaped types |
 | PROOF | Windowed, phase-aligned pitch shifting |
 | WHISK | Tempo-locked rhythmic gating and auto-pan |
 | BROILER | Bass and guitar amp heads, power-stage dynamics, speaker cabinets, microphone position, and protected clean lows |

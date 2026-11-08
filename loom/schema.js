@@ -1,7 +1,7 @@
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.39.0';
+  const VERSION = '1.40.0';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
   const BUTTER_ANALOG_KEYS = new Set(['model', 'input', 'colour', 'timing', 'link', 'fetMode', 'thrust']);
@@ -265,7 +265,13 @@
     // Their effect edits may remove/remap routes while this cache stays valid.
     const lfos = state.lfos?.map(lfo => ({ ...lfo, routes: (lfo.routes || []).filter(route => route.ownerId === t.id || /^lfo-[1-4]$/.test(route.ownerId)) }));
     // Global master playback transforms happen after this cached track recipe.
-    const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects: t.effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
+    // Original HOOD is the same processing as a pre-1.40 slot without a type
+    // field. Canonicalize only that equivalent spelling; never re-sign a cache.
+    const effects = t.effects.map(slot => {
+      if (slot?.type !== 'vestige' || slot.params?.model !== 'original') return slot;
+      const { model, ...params } = slot.params; return { ...slot, params };
+    });
+    const recipe = { tempo: state.tempo, lengthBeats: state.lengthBars * 4, instrument: t.instrument, instrumentLive: t.instrumentLive, clips: t.clips, effects, eq: t.eq, level: t.level, pan: t.pan, sends: t.sends, sendPre: t.sendPre, automation: t.automation, lfos, assets };
     if (state.service?.take !== undefined) recipe.take = state.service.take;
     return 'freeze-1-' + structureHash(recipe);
   }
@@ -424,8 +430,9 @@
     return s;
   }
   function strictNumbers(o, keys, message) { for (const key of keys) if (typeof o?.[key] !== 'number' || !Number.isFinite(o[key])) throw Error(message); }
-  function migrateEffectFields(effects, legacyBroiler, legacyButter, legacyMultiband = false) {
+  function migrateEffectFields(effects, legacyBroiler, legacyButter, legacyMultiband = false, legacyHood = false) {
     for (const slot of Array.isArray(effects) ? effects : []) {
+      if (legacyHood && slot?.type === 'vestige' && plain(slot.params) && !Object.prototype.hasOwnProperty.call(slot.params, 'model')) slot.params.model = 'original';
       const keys = slot?.type === 'broiler' && legacyBroiler ? BROILER_WORKSHOP_KEYS : slot?.type === 'velvet' && (legacyButter || legacyMultiband) ? new Set([...(legacyButter ? BUTTER_ANALOG_KEYS : []), ...(legacyMultiband ? BUTTER_MULTIBAND_KEYS : [])]) : null;
       if (!keys || !plain(slot.params)) continue;
       const definition = (window.LoomEffectsCatalog || []).find(effect => effect.id === slot.type);
@@ -443,14 +450,14 @@
       for (const p of lane.points) if (!plain(p) || !Number.isFinite(p.beat) || p.beat < 0 || p.beat > totalBeats || !Number.isFinite(p.value) || p.value < descriptor.min || p.value > descriptor.max) throw Error('An automation point is outside its valid range.');
     }
   }
-  function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter, legacyMultiband) {
+  function validateBus(bus, index, totalBeats, legacyBroiler, legacyButter, legacyMultiband, legacyHood) {
     const master = index === -1, id = master ? 'master' : 'return-' + (index + 1), label = master ? 'The master bus' : 'Return ' + (index === 0 ? 'A' : 'B');
     const fields = master ? ['id', 'name', 'level', 'metronome', 'mute', 'effects', 'mastering', 'playback', 'automation'] : ['id', 'name', 'level', 'pan', 'mute', 'solo', 'effects', 'automation'];
     if (!plain(bus) || bus.id !== id || fields.some(key => !Object.prototype.hasOwnProperty.call(bus, key)) || Object.keys(bus).some(key => !fields.includes(key)) || typeof bus.name !== 'string' || !bus.name.trim() || bus.name.length > 100 || typeof bus.mute !== 'boolean' || !Array.isArray(bus.effects) || bus.effects.length !== 4) throw Error(label + ' contains invalid settings, effects slots, or unsupported routing.');
     strictNumbers(bus, master ? ['level'] : ['level', 'pan'], label + ' contains invalid mix settings.');
     if (master) { validateMastering(bus.mastering); validateMasterPlayback(bus.playback); }
     if (!master && (bus.level < 0 || bus.level > 1.5 || bus.pan < -1 || bus.pan > 1 || typeof bus.solo !== 'boolean') || master && typeof bus.metronome !== 'boolean') throw Error(label + ' contains invalid mix settings.');
-    migrateEffectFields(bus.effects, legacyBroiler, legacyButter, legacyMultiband);
+    migrateEffectFields(bus.effects, legacyBroiler, legacyButter, legacyMultiband, legacyHood);
     for (const slot of bus.effects) {
       effect(slot, true);
       if (slot === null) continue;
@@ -472,6 +479,7 @@
     const legacyMixUpgrade = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 25);
     const legacyTenTracks = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 32);
     const legacyMasterPlayback = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 34);
+    const legacyHood = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 40);
     const sourceTrackCount = Array.isArray(s.tracks) ? s.tracks.length : 0;
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || sourceTrackCount !== TRACK_COUNT && !(legacyTenTracks && sourceTrackCount === LEGACY_TRACK_COUNT) || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain ten complete tracks; older eight-track projects are also supported.');
     if (legacyTenTracks && !Object.prototype.hasOwnProperty.call(s.master, 'mastering')) s.master.mastering = defaultMastering();
@@ -487,9 +495,9 @@
       for (const [key, value] of Object.entries(defaultMaster())) if (!['level', 'metronome'].includes(key) && !Object.prototype.hasOwnProperty.call(s.master, key)) s.master[key] = copy(value);
       if (!Object.prototype.hasOwnProperty.call(s, 'returns')) s.returns = [defaultReturn(0), defaultReturn(1)];
     }
-    validateBus(s.master, -1, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade);
+    validateBus(s.master, -1, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood);
     if (!Array.isArray(s.returns) || s.returns.length !== 2) throw Error('A GALLEY project must contain two complete return buses.');
-    s.returns.forEach((bus, index) => validateBus(bus, index, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade));
+    s.returns.forEach((bus, index) => validateBus(bus, index, s.lengthBars * 4, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood));
     if(s.view.follow !== undefined && typeof s.view.follow !== 'boolean') throw Error('The project contains an invalid playhead follow setting.');
     if (s.recording !== undefined) {
       if (!plain(s.recording) || ![0, 1, 2].includes(s.recording.countInBars) || typeof s.recording.punchEnabled !== 'boolean') throw Error('The project contains invalid recording settings.');
@@ -525,7 +533,7 @@
       // Workshop controls were introduced in 1.14. Older projects inherit only
       // the new fields; existing controls and any supplied new values still
       // undergo the same strict validation as a current project.
-      migrateEffectFields(t.effects, legacyBroiler, legacyButter, legacyMixUpgrade);
+      migrateEffectFields(t.effects, legacyBroiler, legacyButter, legacyMixUpgrade, legacyHood);
       t.effects.forEach(e => effect(e, true));
       validateAutomation(t.automation, t, s.lengthBars * 4, 'A track');
       for (const c of t.clips) {

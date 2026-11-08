@@ -78,6 +78,8 @@
     "check:ear-training": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-ensemble-music.mjs && node scripts/check-ear-training-temperaments-music.mjs && node scripts/check-ear-training-audio.mjs && node scripts/check-ear-training-pitch.mjs && node scripts/check-ear-training-temperament-test.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs && node scripts/check-ear-training-ensemble.cjs && node scripts/check-ear-training-temperaments.cjs && node scripts/check-ear-training.cjs",
     "check:ear-training-thirds": "node scripts/check-ear-training-music.mjs && node scripts/check-ear-training-thirds-audio.cjs && node scripts/check-ear-training-thirds.cjs",
     "check:ear-training-ensemble": "node scripts/check-ear-training-ensemble-music.mjs && node scripts/check-ear-training-ensemble.cjs",
+    "check:hood": "node loom/hood-checks.cjs",
+    "check:hood-browser": "node loom/hood-browser-checks.cjs",
     "check:loom-filter": "node loom/filter-checks.cjs",
     "check:loom-creative": "node loom/creative-checks.cjs && node loom/creative-effects-integration-checks.cjs",
     "check:loom-creative-browser": "node loom/creative-effects-browser-checks.cjs",

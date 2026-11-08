@@ -1,7 +1,7 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory, hoodFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -34,6 +34,8 @@
     const svt = makeSVT ? makeSVT() : null;
     const makeGuitarPedals = typeof guitarPedalsFactory === 'function' ? guitarPedalsFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomGuitarPedalsDSP === 'function' ? globalThis.createLoomGuitarPedalsDSP : null;
     const guitarPedals = makeGuitarPedals ? makeGuitarPedals() : null;
+    const makeHood = typeof hoodFactory === 'function' ? hoodFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomHoodDSP === 'function' ? globalThis.createLoomHoodDSP : null;
+    const hood = makeHood ? makeHood() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -70,6 +72,7 @@
     if (deluxe) specifications.sunday = deluxe.specifications;
     if (svt) specifications.cellar = svt.specifications;
     if (guitarPedals) specifications.board = guitarPedals.specifications;
+    specifications.vestige.model = ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'];
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
     const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
@@ -149,7 +152,62 @@
       return result;
     }
 
-    function create(type, sampleRate, params) {
+    // Keep the original network intact. Only a type change briefly runs two
+    // rooms, with a sample-clocked fade; a settled insert owns one processor.
+    function createHood(sampleRate, params) {
+      const sr = clamp(finite(sampleRate, 48000), 8000, 192000), fadeFrames = Math.max(1, Math.round(sr * 0.03));
+      let p = normalize('vestige', params), model = p.model, active = build(p), previous = null, pending = null, remaining = 0;
+      let scratchL = null, scratchR = null;
+      function build(settings) {
+        if (settings.model === 'original') return create('vestige', sr, settings, true);
+        if (!hood) throw new Error('HOOD reverb types require createLoomHoodDSP.');
+        return hood.create(sr, settings);
+      }
+      function change(settings) {
+        const next = build(settings);
+        previous = active; active = next; model = settings.model; remaining = fadeFrames;
+        // Scratch storage is needed only while auditioning another room.
+        scratchL ||= new Float32Array(4096); scratchR ||= new Float32Array(4096);
+      }
+      return {
+        setParams(next) {
+          p = normalize('vestige', Object.assign({}, p, next && typeof next === 'object' ? next : {}));
+          if (p.model === model) { pending = null; active.setParams(p); }
+          else if (previous) pending = p;
+          else change(p);
+        },
+        process(left, right, context) {
+          if (!left || !right || left.length !== right.length) throw new Error('LOOM effects require equal stereo blocks.');
+          if (p.bypass) { for (let i = 0; i < left.length; i++) { left[i] = input(left[i]); right[i] = input(right[i]); } return; }
+          if (!previous) { active.process(left, right, context); return; }
+          for (let at = 0; at < left.length;) {
+            const count = Math.min(4096, remaining, left.length - at), l = left.subarray(at, at + count), r = right.subarray(at, at + count);
+            const oldL = scratchL.subarray(0, count), oldR = scratchR.subarray(0, count);
+            oldL.set(l); oldR.set(r); previous.process(oldL, oldR, context); active.process(l, r, context);
+            for (let i = 0; i < count; i++) {
+              const blend = (fadeFrames - remaining + 1) / fadeFrames;
+              l[i] = oldL[i] + (l[i] - oldL[i]) * blend; r[i] = oldR[i] + (r[i] - oldR[i]) * blend; remaining--;
+            }
+            at += count;
+            if (!remaining) {
+              previous = null;
+              if (pending) { const next = pending; pending = null; change(next); }
+              else { scratchL = scratchR = null; if (at < left.length) active.process(left.subarray(at), right.subarray(at), context); break; }
+            }
+          }
+        },
+        reset() {
+          previous = pending = null; remaining = 0; scratchL = scratchR = null;
+          if (p.model !== model) { active = build(p); model = p.model; }
+          else { active.setParams(p); active.reset(); }
+        },
+        getTailTime(context) { return Math.max(active.getTailTime(context), previous ? previous.getTailTime(context) : 0, pending ? pending.predelay * .001 + pending.decay * 2 + 2 : 0); },
+        getMeters() { return active.getMeters(); }
+      };
+    }
+
+    function create(type, sampleRate, params, originalHood = false) {
+      if (type === 'vestige' && !originalHood) return createHood(sampleRate, params);
       if (type === 'cellar') { if (!svt) throw new Error('CELLAR requires createLoomSVTDSP.'); return svt.create(sampleRate, params); }
       if (type === 'board') { if (!guitarPedals) throw new Error('BOARD requires createLoomGuitarPedalsDSP.'); return guitarPedals.create(sampleRate, params); }
       if (type === 'sunday') { if (!deluxe) throw new Error('SUNDAY requires createLoomDeluxeDSP.'); return deluxe.create(sampleRate, params); }

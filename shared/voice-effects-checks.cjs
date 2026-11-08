@@ -14,7 +14,7 @@ async function check(name,fn){await fn();passed.push(name);console.log('PASS '+n
 (async()=>{
 await check('The two-slot project contract includes all nineteen complete GALLEY effects and rejects malformed supplied state',()=>{
  assert.equal(fx.catalog.length,19);assert.deepEqual(fx.normalizeSlots(undefined,{strict:true}),[null,null]);
- for(const def of fx.catalog){const slots=[effect(def.id),null];assert.deepEqual(fx.normalizeSlots(slots,{strict:true}),slots);for(const key of Object.keys(def.defaults)){const invalid=clone(slots);delete invalid[0].params[key];assert.throws(()=>fx.normalizeSlots(invalid,{strict:true}),/invalid/i,def.id+'.'+key);}}
+ for(const def of fx.catalog){const slots=[effect(def.id),null];assert.deepEqual(fx.normalizeSlots(slots,{strict:true}),slots);for(const key of Object.keys(def.defaults)){const invalid=clone(slots);delete invalid[0].params[key];if(def.id==='vestige'&&key==='model'){assert.deepEqual(fx.normalizeSlots(invalid,{strict:true}),slots,'Legacy HOOD keeps Original');invalid[0].params.model='unknown';}assert.throws(()=>fx.normalizeSlots(invalid,{strict:true}),/invalid/i,def.id+'.'+key);}}
  for(const bad of [null,[],[null],[null,null,null],[{},null],[{type:'missing',params:{}},null]])assert.throws(()=>fx.normalizeSlots(bad,{strict:true}));
  const original=[effect('saute'),effect('velvet')],normalized=fx.normalizeSlots(original);normalized[0].params.input=10;assert.equal(original[0].params.input,0);
 });
