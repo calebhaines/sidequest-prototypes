@@ -30,7 +30,8 @@
       const defaultMessage = capturing ? 'Listening for single notes. Stop when your phrase is complete.' : count ? 'Take ready. Timing stays as played unless you quantize.' : value ? 'No notes captured. Try a clean line in Pitch Tracking mode.' : 'Start capture, then play a single-note line.';
       text($('fermentMidiStatus'), message && messageKey === key(value) ? message : defaultMessage);
       const owner = value?.ownerId, slot = value?.slot;
-      text($('fermentMidiOrigin'), (owner ? 'From ' + owner.replace(/^track-/, 'track ') + (Number.isInteger(slot) ? ' · insert ' + (slot + 1) : '') + '. ' : '') + 'Kept across editors. Save or place this take to keep it in a file or project.');
+      const origin = owner === 'master' ? 'master' : /^bus-[12]$/.test(owner || '') ? 'bus ' + owner.slice(4) : /^return-[12]$/.test(owner || '') ? 'return ' + (owner === 'return-1' ? 'A' : 'B') : owner?.replace(/^track-/, 'track ');
+      text($('fermentMidiOrigin'), (origin ? 'From ' + origin + (Number.isInteger(slot) ? ' · insert ' + (slot + 1) : '') + '. ' : '') + 'Kept across editors. Save or place this take to keep it in a file or project.');
     }
     function render() { if (disposed) return; $('fermentMidiTrim').checked = settings.trimLeading; $('fermentMidiSnap').value = String(settings.snap); paint(); }
     async function run(callback) {

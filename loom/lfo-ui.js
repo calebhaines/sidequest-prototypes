@@ -66,7 +66,7 @@
     targets() { return window.LoomSchema.lfoTargets?.(this.getState()) || []; }
     topologyKey() {
       const state = this.getState();
-      return [...state.tracks, ...(state.returns || []), state.master].map(owner => owner.id + ':' + owner.name + ':' + owner.effects.map(effect => effect?.type || '').join(',')).join('|');
+      return [...state.tracks, ...(state.returns || []), state.master, ...(state.buses || [])].map(owner => owner.id + ':' + owner.name + ':' + owner.effects.map(effect => effect?.type || '').join(',')).join('|');
     }
     current(gesture) { return gesture && gesture.state === this.getState() && gesture.lfo === this.lfo(); }
     notify() { this.onChange({ lfos: true }); }

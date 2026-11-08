@@ -18,10 +18,10 @@
     }
   }
   function soundKey(state) {
-    const owner = value => ({ level: value.level, pan: value.pan, mute: value.mute, solo: value.solo, eq: value.eq, sends: value.sends, sendPre: value.sendPre, effects: value.effects, automation: value.automation });
+    const owner = value => ({ level: value.level, pan: value.pan, mute: value.mute, solo: value.solo, eq: value.eq, sends: value.sends, sendPre: value.sendPre, effects: value.effects, automation: value.automation, output: value.output });
     const instrument = value => value && ({ id: value.id, url: value.url, html: value.html, snapshot: value.snapshot?.state != null ? { app: value.snapshot.app, state: value.snapshot.state } : value.snapshot });
     return JSON.stringify({ tempo: state.tempo, lengthBars: state.lengthBars, loopEnabled: state.loopEnabled, loopStart: state.loopStart, loopEnd: state.loopEnd,
-      master: { ...owner(state.master), metronome: state.master.metronome, mastering: state.master.mastering }, returns: state.returns?.map(owner), lfos: state.lfos,
+      master: { ...owner(state.master), metronome: state.master.metronome, mastering: state.master.mastering }, returns: state.returns?.map(owner), buses: state.buses?.map(owner), lfos: state.lfos,
       // Parked channels cannot contribute audio. Keep their large editable
       // recipes out of cache comparisons until the channel is enabled again.
       tracks: state.tracks.map(track => track.disabled === true ? { disabled: true } : ({ ...owner(track), clips: track.clips.map(({ origin, ...clip }) => clip), freeze: track.freeze, instrumentLive: track.instrumentLive, instrument: track.instrument && (track.instrumentLive || track.clips.some(clip => clip.type === 'notes')) ? instrument(track.instrument) : null })) });
@@ -84,7 +84,7 @@
       for (const key of ['startRecording', 'startMicrophoneRecording', 'startService', 'resumeAudition']) if (this.original[key]) engine[key] = (...args) => { if (this.altered()) throw Error(conflict); return this.original[key](...args); };
       if (this.original.setMicrophoneMonitoring) engine.setMicrophoneMonitoring = (id, options = {}) => { if (options.enabled === true && this.altered()) throw Error(conflict); return this.original.setMicrophoneMonitoring(id, options); };
       if (this.original.applyAudioSettings) engine.applyAudioSettings = async (...args) => { if (!this.altered()) return this.original.applyAudioSettings(...args); if (this.playing || this.controller) throw Error('Pause master playback before changing the audio interface.'); const result = await this.original.applyAudioSettings(...args); this.invalidate(true); return result; };
-      engine.renderWav = (state = this.getState(), assets = this.getAssets(), options = {}) => this.altered(state) && options.trackId == null && options.returnId == null ? this.renderWav(state, assets, options) : this.original.renderWav(state, assets, options);
+      engine.renderWav = (state = this.getState(), assets = this.getAssets(), options = {}) => this.altered(state) && options.trackId == null && options.returnId == null && options.busId == null ? this.renderWav(state, assets, options) : this.original.renderWav(state, assets, options);
       engine.dispose = async () => { this.dispose(); return this.original.dispose(); };
       return this;
     }
@@ -200,7 +200,7 @@
         }
         if (count) { master.rmsLeft = Math.sqrt(l / count); master.rmsRight = Math.sqrt(r / count); master.rms = Math.sqrt((l + r) / (2 * count)); }
       }
-      return { beat: clock.beat, cycle: clock.cycle, playing: clock.playing, ended: this.ended, recording: false, recordingPending: false, mode: clock.mode, countInBeatsRemaining: 0, tracks: Array.from({ length: 10 }, empty), returns: [empty(), empty()], master, effects: Array.from({ length: 10 }, () => []), returnEffects: [[], []], masterEffects: [], microphone: this.engine.getMicrophoneStatus?.(), masterPlayback: this.getStatus() };
+      return { beat: clock.beat, cycle: clock.cycle, playing: clock.playing, ended: this.ended, recording: false, recordingPending: false, mode: clock.mode, countInBeatsRemaining: 0, tracks: Array.from({ length: 10 }, empty), returns: [empty(), empty()], buses: (this.getState().buses || []).map(empty), master, effects: Array.from({ length: 10 }, () => []), returnEffects: [[], []], busEffects: (this.getState().buses || []).map(() => []), masterEffects: [], microphone: this.engine.getMicrophoneStatus?.(), masterPlayback: this.getStatus() };
     }
     async renderWav(state, assets, options) {
       const signal = options.signal, processor = new (T().Processor)(); this.engine._exportCount++;

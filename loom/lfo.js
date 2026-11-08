@@ -20,7 +20,7 @@
     const defaultLFOs = () => Array.from({ length: COUNT }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, ...Object.fromEntries(Object.entries(parameters).map(([key, d]) => [key, d.default])), retrigger: 'transport', routes: [] }));
     const logTarget = d => d.min > 0 && (d.scale === 'log' || /(?:cutoff|freq|frequency|crossover|damping|sidechain|lowcut|highcut|lowpass|highpass|tone|rate|division|wowrate|flutterrate)$/i.test(d.target.split(':').pop()));
     function targets(state, automationTargets, specifications, masteringSpecifications) {
-      const result = [], owners = [...(state?.tracks || []), ...(state?.returns || []), ...(state?.master ? [state.master] : [])];
+      const result = [], owners = [...(state?.tracks || []), ...(state?.returns || []), ...(state?.master ? [state.master] : []), ...(state?.buses || [])];
       for (const owner of owners) {
         let descriptors;
         if (typeof automationTargets === 'function') descriptors = automationTargets(owner);
@@ -44,7 +44,7 @@
             for (const [key, rule] of Object.entries(spec)) if (typeof rule[0] === 'number') descriptors.push({ target: 'fx:' + slot + ':' + key, label: (slot + 1) + ' · ' + effect.type + ' · ' + key, min: rule[0], max: rule[1], step: .001, default: rule[2], value: effect.params?.[key], effectType: effect.type });
           }
         }
-        const group = owner.id === 'master' ? 'Master' : /^return-/.test(owner.id) ? owner.name || owner.id : 'Track ' + (Number(owner.id.split('-')[1]) || 1) + ' · ' + (owner.name || '');
+        const group = owner.id === 'master' ? 'Master' : /^(?:return|bus)-/.test(owner.id) ? owner.name || owner.id : 'Track ' + (Number(owner.id.split('-')[1]) || 1) + ' · ' + (owner.name || '');
         for (const descriptor of descriptors) result.push({ ...descriptor, ownerId: owner.id, key: owner.id + '|' + descriptor.target, group, scale: logTarget(descriptor) ? 'log' : 'linear', value: clamp(descriptor.value, descriptor.min, descriptor.max, descriptor.default) });
       }
       const lfos = state?.lfos || defaultLFOs();
