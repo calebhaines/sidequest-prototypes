@@ -119,7 +119,7 @@
     "check:heirloom": "node heirloom/dsp-checks.cjs && node heirloom/checks.cjs",
     "check:heirloom-browser": "node heirloom/browser-checks.cjs",
     "brine:build": "python3 brine/build.py",
-    "check:brine": "node brine/checks.cjs",
+    "check:brine": "node brine/checks.cjs && node brine/silence-performance-checks.cjs",
     "check:brine-audition-browser": "node loom/brine-audition-browser-checks.cjs",
     "check:brine-browser": "node brine/browser-checks.cjs",
     "check:freeze": "node loom/freeze-checks.cjs",
@@ -146,7 +146,8 @@
     "check:galley-cpu-review": "node loom/performance-2026-checks.cjs && node loom/exact-effects-cpu-checks.cjs && node loom/cpu-lifecycle-checks.cjs && npm run check:track-power",
     "check:galley-cpu-review-browser": "GALLEY_135_REGRESSION=1 node loom/performance-2026-browser-checks.cjs",
     "check:cellar-board": "node loom/svt-checks.cjs && node loom/guitar-pedals-checks.cjs && node loom/cellar-board-project-checks.cjs && node loom/cellar-board-checks.cjs",
-    "check:cellar-board-browser": "node loom/cellar-board-browser-checks.cjs"
+    "check:cellar-board-browser": "node loom/cellar-board-browser-checks.cjs",
+    "check:playback-stability": "node loom/playback-stability-checks.cjs && node loom/vocal-cache-checks.cjs && node loom/offline-performance-checks.cjs && node loom/project-data-performance-checks.cjs && node loom/ui-rendering-checks.cjs && node loom/host-scheduler-performance-checks.cjs && node loom/broiler-hotpath-checks.cjs && node loom/deluxe-performance-checks.cjs && node loom/cellar-performance-checks.cjs && node loom/board-allocation-checks.cjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"

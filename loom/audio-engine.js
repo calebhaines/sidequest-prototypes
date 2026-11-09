@@ -226,8 +226,27 @@
         gain *= Math.min(1, localBeat / fadeIn, (item.length - localBeat) / fadeOut);
         if (!item.loop) gain *= Math.min(1, offset / .003, (item.span - offset) / .003);
       }
-      pair[0] = (clipSourceSample(item, position, 0) + item.loopDeltaLeft * correction) * gain;
-      pair[1] = (clipSourceSample(item, position, 1) + item.loopDeltaRight * correction) * gain;
+      const start = item.sourceStart * item.sampleRate, lastPosition = Math.max(start, item.sourceEnd * item.sampleRate - 1);
+      if (item.loop && (!item.reverse && position > lastPosition || item.reverse && position < start)) {
+        pair[0] = (clipSourceSample(item, position, 0) + item.loopDeltaLeft * correction) * gain;
+        pair[1] = (clipSourceSample(item, position, 1) + item.loopDeltaRight * correction) * gain;
+      } else {
+        // Keep ordinary interpolation in this writer. Avoiding per-sample
+        // scalar helper returns reduces realtime temporary allocation.
+        // Circular/reverse seam reads above keep their original arithmetic.
+        const left = item.left, right = item.right;
+        let a = 0, b = 0;
+        if (left && !(position < 0 || position >= left.length)) {
+          const index = Math.floor(position), fraction = position - index;
+          a = (left[index] || 0) * (1 - fraction) + (left[Math.min(index + 1, left.length - 1)] || 0) * fraction;
+        }
+        if (right && !(position < 0 || position >= right.length)) {
+          const index = Math.floor(position), fraction = position - index;
+          b = (right[index] || 0) * (1 - fraction) + (right[Math.min(index + 1, right.length - 1)] || 0) * fraction;
+        }
+        pair[0] = (a + item.loopDeltaLeft * correction) * gain;
+        pair[1] = (b + item.loopDeltaRight * correction) * gain;
+      }
     }
     class Core {
       constructor(state, assets, sampleRate = 48000, options = {}) {
@@ -619,7 +638,15 @@
       }
       _processTrackEq(index, left, right) {
         const track = this.tracks[index], eq = this.trackEq[index], lanes = this.automation[index].eq, modulation = this.modulationOwners[index];
-        if (!this.service && !modulation.dynamicEq) { eq.process(left, right); return; }
+        let staticControls = !modulation.dynamicEq;
+        if (staticControls && this.service) {
+          // SERVICE applies macro changes on the absolute 32-frame clock.
+          // Once those exact values are applied, unchanged controls need no
+          // more setter objects or sub-block views until the next change.
+          const applied = this.eqAutomationValues[index];
+          for (const key of trackEqKeys) if (applied?.[key] !== track.eq?.[key]) { staticControls = false; break; }
+        }
+        if (staticControls) { eq.process(left, right); return; }
         for (let start = 0; start < left.length;) {
           const length = Math.min(left.length - start, 32 - ((this.sampleClock + start) % 32));
           if ((this.sampleClock + start) % 32 === 0) {
@@ -1368,6 +1395,17 @@
       }
       clearMicrophoneHistory() { for (const channel of this.microphoneHistory) channel.fill(0); }
       _rememberMicrophone(input, n) {
+        if (!input?.[0] && !input?.[1]) {
+          // Preserve the rolling history and its signed compensation clock
+          // without a sample loop when the browser has no microphone input.
+          const at = this.microphoneClock % this.historyFrames;
+          if (n >= this.historyFrames) this.clearMicrophoneHistory();
+          else for (const channel of this.microphoneHistory) {
+            channel.fill(0, at, Math.min(this.historyFrames, at + n));
+            if (at + n > this.historyFrames) channel.fill(0, 0, at + n - this.historyFrames);
+          }
+          this.microphoneClock += n; return;
+        }
         for (let f = 0; f < n; f++, this.microphoneClock++) {
           const at = this.microphoneClock % this.historyFrames, a = input?.[0]?.[f], b = (input?.[1] || input?.[0])?.[f];
           this.microphoneHistory[0][at] = Number.isFinite(a) ? a : 0; this.microphoneHistory[1][at] = Number.isFinite(b) ? b : 0;
@@ -1505,9 +1543,11 @@
   }
   function writePcm(view, frame, left, right) {
     let at = 44 + frame * 4;
-    for (let i = 0; i < left.length; i++) for (const value of [left[i], right[i]]) {
-      const sample = Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0;
-      view.setInt16(at, Math.round(sample * (sample < 0 ? 32768 : 32767)), true); at += 2;
+    for (let i = 0; i < left.length; i++) {
+      const l = left[i], r = right[i], a = Number.isFinite(l) ? Math.max(-1, Math.min(1, l)) : 0;
+      view.setInt16(at, Math.round(a * (a < 0 ? 32768 : 32767)), true); at += 2;
+      const b = Number.isFinite(r) ? Math.max(-1, Math.min(1, r)) : 0;
+      view.setInt16(at, Math.round(b * (b < 0 ? 32768 : 32767)), true); at += 2;
     }
   }
 
@@ -2426,13 +2466,22 @@
       const tempo = Math.max(40, Math.min(240, state.tempo || 120)), main = Math.round((end - start) * 60 / tempo * sr), tail = Math.round(Math.max(0, Math.min(20, Number(options.tailSeconds) || 0)) * sr), total = main + tail;
       if (options.signal?.aborted) throw abortError();
       const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler, window.createLoomTrackEQDSP, window.createLoomMasteringDSP), core = new DSP.Core(dspState(state), assets, sr, { linear: true, includeMetronome: options.includeMetronome === true, trackId: options.trackId, returnId: options.returnId, busId: options.busId });
-      core.start(start); const { buffer, view } = makeWavBuffer(total, sr); let at = 0, blocks = 0;
+      core.start(start); const { buffer, view } = makeWavBuffer(total, sr), scratchLeft = new Float32Array(2048), scratchRight = new Float32Array(2048);
+      // Keep audio block boundaries exact; reuse private scratch/meter storage
+      // and share the main thread after about 10 ms of cooperative work.
+      const now = () => globalThis.performance?.now?.() ?? Date.now();
+      let at = 0, yieldAt = now() + 10;
       options.onProgress?.(0);
       while (at < total) {
         if (options.signal?.aborted) throw abortError(); if (at === main) core.stop();
-        const count = Math.min(2048, total - at, at < main ? main - at : total - at), left = new Float32Array(count), right = new Float32Array(count);
-        core.processBlock(left, right); writePcm(view, at, left, right); at += count;
-        if (++blocks % 12 === 0) { options.onProgress?.(at / total); await new Promise(resolve => setTimeout(resolve, 0)); }
+        const count = Math.min(2048, total - at, at < main ? main - at : total - at), left = count === 2048 ? scratchLeft : scratchLeft.subarray(0, count), right = count === 2048 ? scratchRight : scratchRight.subarray(0, count);
+        core.renderRealtime(left, right); writePcm(view, at, left, right); at += count;
+        if (now() >= yieldAt) {
+          options.onProgress?.(at / total);
+          if (typeof globalThis.scheduler?.yield === 'function') await globalThis.scheduler.yield();
+          else await new Promise(resolve => setTimeout(resolve, 0));
+          yieldAt = now() + 10;
+        }
       }
       if (options.signal?.aborted) throw abortError(); options.onProgress?.(1); return new Blob([buffer], { type: 'audio/wav' });
       } finally { this._exportCount--; }
@@ -2460,17 +2509,24 @@
         const core = new DSP.Core(renderState, assets, sampleRate, { linear: !previewLoop, includeMetronome: options.includeMetronome === true });
         const left = new Float32Array(frames), right = new Float32Array(frames), scratchLeft = new Float32Array(2048), scratchRight = new Float32Array(2048);
         const warmupFrames = previewLoop ? Math.ceil(nominalFrames) : 0, totalWork = warmupFrames + frames;
-        core.start(startBeat); let at = 0, blocks = 0;
+        core.start(startBeat);
+        const now = () => globalThis.performance?.now?.() ?? Date.now();
+        let at = 0, yieldAt = now() + 10;
         options.onProgress?.(0);
         while (at < totalWork) {
           if (options.signal?.aborted) throw abortError();
           if (!previewLoop && at === bodyFrames) core.stop();
           const boundary = at < warmupFrames ? warmupFrames : at < warmupFrames + bodyFrames ? warmupFrames + bodyFrames : totalWork;
-          const count = Math.min(2048, totalWork - at, boundary - at), blockLeft = scratchLeft.subarray(0, count), blockRight = scratchRight.subarray(0, count);
-          core.processBlock(blockLeft, blockRight);
+          const count = Math.min(2048, totalWork - at, boundary - at), blockLeft = count === 2048 ? scratchLeft : scratchLeft.subarray(0, count), blockRight = count === 2048 ? scratchRight : scratchRight.subarray(0, count);
+          core.renderRealtime(blockLeft, blockRight);
           if (at >= warmupFrames) { left.set(blockLeft, at - warmupFrames); right.set(blockRight, at - warmupFrames); }
           at += count;
-          if (++blocks % 12 === 0) { options.onProgress?.(at / totalWork); await new Promise(resolve => setTimeout(resolve, 0)); }
+          if (now() >= yieldAt) {
+            options.onProgress?.(at / totalWork);
+            if (typeof globalThis.scheduler?.yield === 'function') await globalThis.scheduler.yield();
+            else await new Promise(resolve => setTimeout(resolve, 0));
+            yieldAt = now() + 10;
+          }
         }
         if (options.signal?.aborted) throw abortError(); options.onProgress?.(1);
         return { left, right, sampleRate, frames, bodyFrames, startBeat, endBeat, tailFrames };
@@ -2491,15 +2547,17 @@
       this._exportCount++;
       try {
         const DSP = createLoomEngineDSP(window.createLoomEffectsDSP, window.createLoomLFODSP, window.createLoomCPUProfiler, window.createLoomTrackEQDSP, window.createLoomMasteringDSP), core = new DSP.Core(dspState(state), assets, sampleRate, { linear: true, freezeCaptureTrackId: options.trackId });
-        core.start(0); let at = 0, blocks = 0, bytes = 0, chunkStart = 0, chunkAt = 0;
+        core.start(0);
+        const scratchLeft = new Float32Array(quantum), scratchRight = new Float32Array(quantum), now = () => globalThis.performance?.now?.() ?? Date.now();
+        let at = 0, yieldAt = now() + 10, bytes = 0, chunkStart = 0, chunkAt = 0;
         const names = ['main', 'sendA', 'sendB'];
         let planes = Object.fromEntries(names.map(name => [name, { left: new Float32Array(Math.min(chunkFrames, totalFrames)), right: new Float32Array(Math.min(chunkFrames, totalFrames)) }]));
         options.onProgress?.(0);
         while (at < totalFrames) {
           if (options.signal?.aborted) throw abortError();
           if (at === bodyFrames) core.stop();
-          const count = Math.min(quantum, totalFrames - at, at < bodyFrames ? bodyFrames - at : totalFrames - at), left = new Float32Array(count), right = new Float32Array(count);
-          core.processBlock(left, right);
+          const count = Math.min(quantum, totalFrames - at, at < bodyFrames ? bodyFrames - at : totalFrames - at), left = count === quantum ? scratchLeft : scratchLeft.subarray(0, count), right = count === quantum ? scratchRight : scratchRight.subarray(0, count);
+          core.renderRealtime(left, right);
           // Feedback and modeled analog noise can outlive the retained tail.
           // Fade its final six milliseconds without changing the musical body.
           if (tailFadeFrames && at + count > totalFrames - tailFadeFrames) for (let frame = Math.max(0, totalFrames - tailFadeFrames - at); frame < count; frame++) {
@@ -2523,7 +2581,12 @@
             }
           }
           at += count;
-          if (++blocks % 96 === 0) { options.onProgress?.(at / totalFrames); await new Promise(resolve => setTimeout(resolve, 0)); }
+          if (now() >= yieldAt) {
+            options.onProgress?.(at / totalFrames);
+            if (typeof globalThis.scheduler?.yield === 'function') await globalThis.scheduler.yield();
+            else await new Promise(resolve => setTimeout(resolve, 0));
+            yieldAt = now() + 10;
+          }
         }
         if (options.signal?.aborted) throw abortError(); options.onProgress?.(1);
         return { sampleRate, bodyFrames, totalFrames, tailFrames, ...(collected ? { chunks: collected } : {}) };

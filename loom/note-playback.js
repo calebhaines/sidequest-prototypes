@@ -25,6 +25,7 @@
       this.tracks = new Map(); this.scheduled = new Map(); this.revision = -1; this.timer = null; this.refreshing = false; this.lastRefresh = 0;
       this.recordingTracks = new Set(); this.stateSignature = '';
       this.compiledPatterns = new WeakMap();
+      this.preparationKeys = new WeakMap();
       this.addingTracks = new Map(); this.prepareAbort = null;
       this.disabledTracks = new Set(this.getState().tracks.filter(track => track.disabled === true).map(track => track.id));
       this.unsubscribe = audio.subscribeTransport((clock, reason) => {
@@ -36,7 +37,15 @@
     _patternSignature(pattern, loop = true) {
       return (global.MusicLabPatternSchema?.fingerprint(pattern) || JSON.stringify(pattern)) + (loop === false ? ':once' : ':loop');
     }
-    _preparationKey(adapter, tempo) { return adapter?.preparePattern ? JSON.stringify([tempo, adapter.preparationSignature ?? null]) : null; }
+    _preparationKey(adapter, tempo, trackId) {
+      if (!adapter?.preparePattern) return null;
+      const revision = trackId == null ? null : this.host.getPatternRevision?.(trackId) ?? null;
+      const cached = revision === null ? null : this.preparationKeys.get(adapter);
+      if (cached && cached.revision === revision && cached.tempo === tempo) return cached.key;
+      const key = JSON.stringify([tempo, adapter.preparationSignature ?? null]);
+      if (revision !== null) this.preparationKeys.set(adapter, { revision, tempo, key });
+      return key;
+    }
     _enabled(track) { const current = this.getState().tracks.find(item => item.id === track?.id); return !!current && current.disabled !== true && !current.freeze; }
     async prepare() {
       if (this.disposed) throw Error('Note playback has been disposed.');
@@ -59,7 +68,7 @@
           await adapter?.prepare?.();
           if (!this._enabled(track)) return null;
           if (generation !== this.generation || this.disposed) throw abortError();
-          const preparationKey = this._preparationKey(adapter, tempo);
+          const preparationKey = this._preparationKey(adapter, tempo, track.id);
           for (const clip of noteClips) await this._prepareClip(adapter, clip, tempo, signal);
           const entry = { id: track.id, adapter, preparationKey, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
           if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) {
@@ -73,7 +82,7 @@
         })).then(values => values.filter(Boolean));
         if (generation !== this.generation || this.disposed) throw abortError();
         if (entries.some(([, entry]) => entry.adapter?.preparePattern)) {
-          const stale = () => signature !== this._signature() || tempo !== this.getState().tempo || entries.some(([id, entry]) => this.host.getPatternAdapter(id) !== entry.adapter || entry.preparationKey !== this._preparationKey(entry.adapter, this.getState().tempo));
+          const stale = () => signature !== this._signature() || tempo !== this.getState().tempo || entries.some(([id, entry]) => this.host.getPatternAdapter(id) !== entry.adapter || entry.preparationKey !== this._preparationKey(entry.adapter, this.getState().tempo, id));
           if (stale()) continue;
           let changed = false;
           for (const [id, entry] of entries) if (entry.adapter?.preparePattern && entry.live) {
@@ -128,13 +137,13 @@
     _prepareChangedTrack(entry, track, tempo = this.getState().tempo) {
       if (!this._enabled(track) || !entry.adapter?.preparePattern) return;
       entry.prepareAbort?.abort(); entry.prepareAbort = typeof AbortController === 'function' ? new AbortController() : null;
-      const signal = entry.prepareAbort?.signal, revision = entry.prepareRevision = (entry.prepareRevision || 0) + 1, generation = this.generation, preparationKey = this._preparationKey(entry.adapter, tempo);
+      const signal = entry.prepareAbort?.signal, revision = entry.prepareRevision = (entry.prepareRevision || 0) + 1, generation = this.generation, preparationKey = this._preparationKey(entry.adapter, tempo, track.id);
       entry.preparing = true;
       (async () => {
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) await this._prepareClip(entry.adapter, clip, tempo, signal);
         if (!this.active || generation !== this.generation || entry.prepareRevision !== revision || this.tracks.get(track.id) !== entry || !this._enabled(track)) return;
         const currentTempo = this.audio.getTransport().tempo ?? this.getState().tempo;
-        if (preparationKey !== this._preparationKey(entry.adapter, currentTempo)) { this._prepareChangedTrack(entry, this.getState().tracks.find(item => item.id === track.id) || track, currentTempo); return; }
+        if (preparationKey !== this._preparationKey(entry.adapter, currentTempo, track.id)) { this._prepareChangedTrack(entry, this.getState().tracks.find(item => item.id === track.id) || track, currentTempo); return; }
         entry.preparationKey = preparationKey; entry.preparing = false; entry.catchHeld = true; this._tick();
       })().catch(error => { if (this.active && generation === this.generation && entry.prepareRevision === revision && this.tracks.get(track.id) === entry && error.name !== 'AbortError') this.onStatus(error.message); });
     }
@@ -252,12 +261,12 @@
         if (!this._enabled(track) || this.addingTracks.get(track.id) !== operation) return;
         const adapter = this.host.getPatternAdapter(track.id); await adapter?.prepare?.();
         if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation || !this._enabled(track)) return;
-        const tempo = this.getState().tempo, preparationKey = this._preparationKey(adapter, tempo);
+        const tempo = this.getState().tempo, preparationKey = this._preparationKey(adapter, tempo, track.id);
         const entry = { id: track.id, adapter, preparationKey, live: null, signature: '', phaseBeat: 0, liveGeneration: 0, sources: new Set(), pending: null, continuous: !!adapter?.transport && ['bands', 'decks'].includes(adapter?.patternImport?.mode) && !adapter?.importedPattern };
         for (const clip of track.clips.filter(clip => clip.type === 'notes')) await this._prepareClip(adapter, clip, this.getState().tempo, this.prepareAbort?.signal);
         if (this._nativeLive(track) && adapter?.exportPattern && adapter?.scheduleNote && !entry.continuous) { entry.live = await this.host.exportPattern(track.id); entry.liveLoop = adapter.nativeSequenceLoop !== false; entry.signature = this._patternSignature(entry.live, entry.liveLoop); await this._prepareClip(adapter, { pattern: entry.live, voiceMap: {} }, this.getState().tempo, this.prepareAbort?.signal); }
         if (!this.active || generation !== this.generation || this.addingTracks.get(track.id) !== operation || !this.getState().tracks.some(item => item.id === track.id && item.instrument && !item.freeze && item.disabled !== true)) return;
-        if (adapter?.preparePattern && preparationKey !== this._preparationKey(adapter, this.audio.getTransport().tempo ?? this.getState().tempo)) { this._addTrack(this.getState().tracks.find(item => item.id === track.id)); return; }
+        if (adapter?.preparePattern && preparationKey !== this._preparationKey(adapter, this.audio.getTransport().tempo ?? this.getState().tempo, track.id)) { this._addTrack(this.getState().tracks.find(item => item.id === track.id)); return; }
         if (this._clockDriven(track, entry)) { this.host.command(track.id, 'stop').catch(() => {}); this.host.setClockDriven(track.id, true); }
         this.tracks.set(track.id, entry);
         if (entry.live) entry.liveSource = this._newSource(entry);
@@ -290,7 +299,7 @@
       try {
         for (const track of state.tracks) {
           const entry = this.tracks.get(track.id); if (!entry || track.freeze || track.disabled === true) continue;
-          if (entry.adapter?.preparePattern && !entry.preparing && entry.preparationKey !== this._preparationKey(entry.adapter, clock.tempo)) this._prepareChangedTrack(entry, track, clock.tempo);
+          if (entry.adapter?.preparePattern && !entry.preparing && entry.preparationKey !== this._preparationKey(entry.adapter, clock.tempo, track.id)) this._prepareChangedTrack(entry, track, clock.tempo);
           if (entry.preparing) continue;
           if (entry.adapter?.voiceEffectsClock || entry.continuous && this._nativeLive(track)) for (const segment of segments) if (segment.cycle > (clock.cycle || 0)) {
             const key = [clock.revision, segment.cycle, track.id, 'transport'].join(':');
@@ -362,6 +371,10 @@
           if (!this.active || generation !== this.generation) break;
           const track = this.getState().tracks.find(item => item.id === id);
           if (!this._enabled(track) || !this._nativeLive(track) || entry.preparing) continue;
+          const patternRevision = this.host.getPatternRevision?.(id) ?? null, tempo = this.getState().tempo;
+          // Only editors with a verified change contract can bypass polling.
+          // Unknown/legacy adapters still export on every refresh as before.
+          if (patternRevision !== null && entry.live && entry.liveRevision === patternRevision && entry.liveTempo === tempo) continue;
           const continuous = !!entry.adapter?.transport && ['bands', 'decks'].includes(entry.adapter?.patternImport?.mode) && !entry.adapter?.importedPattern;
           if (continuous !== entry.continuous) {
             entry.continuous = continuous; for (const source of entry.sources) this.host.cancelNotes(id, { source }); entry.sources.clear(); entry.live = null; entry.pending = null; entry.signature = '';
@@ -387,6 +400,11 @@
             if (!entry.live) { entry.live = pattern; entry.liveLoop = loop; entry.signature = signature; entry.liveSource = this._newSource(entry); this.catchHeld = true; }
             else this._queuePattern(entry, pattern, signature, this.audio.getTransport(), loop);
             this.host.setClockDriven(id, true);
+          }
+          // An edit during an asynchronous export/word preparation must be
+          // observed on the next poll rather than caching the older phrase.
+          if (patternRevision !== null && this.host.getPatternRevision?.(id) === patternRevision && this.host.getPatternAdapter(id) === entry.adapter) {
+            entry.liveRevision = patternRevision; entry.liveTempo = tempo;
           }
         }
       } catch (error) { if (this.active) this.onStatus(error.message); }

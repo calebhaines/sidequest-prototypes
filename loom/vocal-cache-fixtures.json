@@ -1,0 +1,609 @@
+{
+  "baseline": "5df579ee99caa7a73222f8d6a52268be4cab3c75",
+  "baselineSourceSHA256": "8fc84009623ab2509e06d52d74bc2c237123016ec8ef40e40e6a1ffad1340d4d",
+  "scenarioSHA256": "159a9d74f41324add67519a354d53b56b1f46fdd61958b9f26d2f10885ae4c25",
+  "specifications": {
+    "clean": [
+      "on",
+      "off"
+    ],
+    "input": [
+      -18,
+      24,
+      0
+    ],
+    "highpass": [
+      20,
+      400,
+      75
+    ],
+    "gate": [
+      -90,
+      -12,
+      -70
+    ],
+    "gateRange": [
+      0,
+      60,
+      45
+    ],
+    "gateRelease": [
+      20,
+      1000,
+      180
+    ],
+    "deess": [
+      "on",
+      "off"
+    ],
+    "deessFreq": [
+      2500,
+      11000,
+      6500
+    ],
+    "deessThreshold": [
+      -60,
+      -3,
+      -24
+    ],
+    "deessAmount": [
+      0,
+      1,
+      0.45
+    ],
+    "compressor": [
+      "on",
+      "off"
+    ],
+    "threshold": [
+      -48,
+      0,
+      -18
+    ],
+    "ratio": [
+      1,
+      20,
+      3
+    ],
+    "attack": [
+      0.2,
+      80,
+      5
+    ],
+    "release": [
+      20,
+      1200,
+      120
+    ],
+    "makeup": [
+      0,
+      18,
+      2
+    ],
+    "eq": [
+      "on",
+      "off"
+    ],
+    "body": [
+      -15,
+      15,
+      0
+    ],
+    "bodyFreq": [
+      100,
+      600,
+      220
+    ],
+    "mud": [
+      -15,
+      15,
+      -1
+    ],
+    "mudFreq": [
+      180,
+      1200,
+      420
+    ],
+    "presence": [
+      -15,
+      15,
+      1
+    ],
+    "presenceFreq": [
+      1200,
+      7000,
+      3200
+    ],
+    "air": [
+      -15,
+      15,
+      1.5
+    ],
+    "saturation": [
+      "off",
+      "warm",
+      "edge",
+      "fold"
+    ],
+    "drive": [
+      0,
+      30,
+      3
+    ],
+    "satMix": [
+      0,
+      1,
+      0.25
+    ],
+    "pitch": [
+      "off",
+      "shift",
+      "correct"
+    ],
+    "semitones": [
+      -24,
+      24,
+      0
+    ],
+    "fine": [
+      -100,
+      100,
+      0
+    ],
+    "key": [
+      "C",
+      "C#",
+      "D",
+      "D#",
+      "E",
+      "F",
+      "F#",
+      "G",
+      "G#",
+      "A",
+      "A#",
+      "B"
+    ],
+    "scale": [
+      "chromatic",
+      "major",
+      "minor",
+      "pentatonic",
+      "harmonic-minor"
+    ],
+    "speed": [
+      0,
+      1,
+      0.65
+    ],
+    "pitchWindow": [
+      20,
+      100,
+      50
+    ],
+    "pitchMix": [
+      0,
+      1,
+      1
+    ],
+    "harmony": [
+      "off",
+      "on"
+    ],
+    "harmonyA": [
+      -24,
+      24,
+      7
+    ],
+    "harmonyB": [
+      -24,
+      24,
+      12
+    ],
+    "harmonyMix": [
+      0,
+      1,
+      0.3
+    ],
+    "harmonyWidth": [
+      0,
+      1,
+      0.7
+    ],
+    "doubler": [
+      "off",
+      "on"
+    ],
+    "doubleAmount": [
+      0,
+      1,
+      0.3
+    ],
+    "doubleSpread": [
+      0,
+      1,
+      0.8
+    ],
+    "doubleTime": [
+      8,
+      45,
+      18
+    ],
+    "doubleDetune": [
+      0,
+      25,
+      7
+    ],
+    "vowel": [
+      "off",
+      "ah",
+      "eh",
+      "ee",
+      "oh",
+      "oo"
+    ],
+    "formant": [
+      -12,
+      12,
+      0
+    ],
+    "vowelMix": [
+      0,
+      1,
+      0.5
+    ],
+    "robot": [
+      "off",
+      "ring",
+      "vocoder"
+    ],
+    "carrier": [
+      "saw",
+      "square",
+      "pulse"
+    ],
+    "carrierNote": [
+      24,
+      84,
+      45
+    ],
+    "carrierChord": [
+      "single",
+      "fifth",
+      "minor",
+      "major"
+    ],
+    "robotMix": [
+      0,
+      1,
+      0.65
+    ],
+    "robotFreq": [
+      20,
+      2000,
+      120
+    ],
+    "delay": [
+      "off",
+      "on"
+    ],
+    "delayClock": [
+      "sync",
+      "free"
+    ],
+    "delayDivision": [
+      "1/8.",
+      "1/32",
+      "1/16",
+      "1/8",
+      "1/4",
+      "1/4.",
+      "1/2",
+      "1"
+    ],
+    "delayTime": [
+      20,
+      2000,
+      375
+    ],
+    "delayFeedback": [
+      0,
+      0.88,
+      0.35
+    ],
+    "delayTone": [
+      500,
+      14000,
+      5500
+    ],
+    "delayWidth": [
+      0,
+      1,
+      0.85
+    ],
+    "delayMix": [
+      0,
+      1,
+      0.15
+    ],
+    "delayDuck": [
+      0,
+      1,
+      0.5
+    ],
+    "reverb": [
+      "off",
+      "on"
+    ],
+    "reverbSize": [
+      0,
+      1,
+      0.45
+    ],
+    "reverbDecay": [
+      0.2,
+      10,
+      2.4
+    ],
+    "predelay": [
+      0,
+      150,
+      18
+    ],
+    "reverbTone": [
+      800,
+      14000,
+      6500
+    ],
+    "reverbWidth": [
+      0,
+      1,
+      0.8
+    ],
+    "reverbMix": [
+      0,
+      1,
+      0.18
+    ],
+    "reverbDuck": [
+      0,
+      1,
+      0.5
+    ],
+    "chop": [
+      "off",
+      "on"
+    ],
+    "chopDivision": [
+      "1/16",
+      "1/32",
+      "1/8",
+      "1/8.",
+      "1/4",
+      "1/4.",
+      "1/2",
+      "1",
+      "2"
+    ],
+    "chopDepth": [
+      0,
+      1,
+      1
+    ],
+    "chopDuty": [
+      0.05,
+      0.95,
+      0.5
+    ],
+    "chopSmooth": [
+      0.2,
+      40,
+      3
+    ],
+    "guard": [
+      "on",
+      "off"
+    ],
+    "ceiling": [
+      -12,
+      0,
+      -0.5
+    ],
+    "output": [
+      -24,
+      12,
+      0
+    ],
+    "mix": [
+      0,
+      1,
+      1
+    ]
+  },
+  "cases": {
+    "control/clean/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/clean/off": "c3773c6bb858a5b63b588d30897f42aa5b9f4370d9bc8878c8b3ec4066c92e0f",
+    "control/input/12.66": "b511ef4d7da49a2abe0fb3851822005f22723e7c3baff1977c0998cabac455e1",
+    "control/highpass/297.4": "1f1e9d8d41352ebe77c99269b4b4fc064393d678fc8b31b12f5bab8b8ad21905",
+    "control/gate/-33.06": "e18f6b532f95837d0128357b281aac3df7b914769dbe4ba9ea610d6f06181965",
+    "control/gateRange/43.8": "57c55b1ac51d03634572b6337cbe77e5c2f227c49854e9f6e5673b799f375ab7",
+    "control/gateRelease/735.4": "3c3d8d308de0693975f2a4a556a40a39d912ec1a68b257ea74f6777dc3c3e9d9",
+    "control/deess/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/deess/off": "b93357333d941ab3712f7bdab0a1545f67be84b69ba6a036bbbec90005345f7c",
+    "control/deessFreq/8705": "f9c909850d87a3746c1374f15eb528732b5bfd44474e019a44070ff02ffc669e",
+    "control/deessThreshold/-18.39": "dbe47ec65044621c73d836f400b6ca65e33bbb7b687171cc907fceaa4d1d7b0c",
+    "control/deessAmount/0.73": "1cca6824a9794ab1f32a361fbedff9fc8e4280d8e87f4e215a7a6aa48de23641",
+    "control/compressor/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/compressor/off": "20f67898ce64b3147a45f07e9be80d16c25d58de22207770597924f8e43c6aa0",
+    "control/threshold/-12.96": "ae95a8f1a6ddf8e4baa5930111facd28441f4998c63f06a85c1a45fb5cda3dc2",
+    "control/ratio/14.87": "6b143dca24c67db4f44145cfbd53750ef48907b37e3555008df1c8541438c275",
+    "control/attack/58.454": "0c0d1702d22dcd30a5667d4d991c85d6b6b42945f3d2762a162b2a507a5589a3",
+    "control/release/881.4": "3c2786a58f50780543ed4ae2a6e9a6fb01a4b3ea5c88574796dc3ca2c0b4076d",
+    "control/makeup/13.14": "1d74145fa413f25181c44c869b43d2ca96e72b2b9ebec4e0acbe5e6da76e04be",
+    "control/eq/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/eq/off": "d7ef7ac10c464431c1ad1b98bcf66bd6ff69cc3b2961a0c4f8adf0c5cb6d0c2b",
+    "control/body/6.899999999999999": "ccced54bad685486c217a25123705693b66c910857ab528cd96ecb27323019e8",
+    "control/bodyFreq/465": "328cd8a56fe4285526b149bf6d1978757f4e237578aba31fc838ec92dfcabe30",
+    "control/mud/6.899999999999999": "999cb816cf90d595294f9e9bf1e10c249bdf16021562a1d16e399bb05febed85",
+    "control/mudFreq/924.6": "8b90f1cce88cefdd70f33f078026bc24d66a1ce42e3366d251d531b0af0b3f8c",
+    "control/presence/6.899999999999999": "77f389413fff13629f6b1e09587633d20e203a262031aae9c1cc50a3e355c4ed",
+    "control/presenceFreq/5434": "d63c1230f8f7b8119e06dfbddd9f091660ac4bec5674c68287149b21edc67b03",
+    "control/air/6.899999999999999": "05c542f72cec0530ad10465abf8067e6d01c8fe3e1915b53f27dc56408c869cb",
+    "control/saturation/off": "f5c88cb537c3f48848e9db198304f09bf14bb2495ac90cd0c73e4bc34d01e8c7",
+    "control/saturation/warm": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/saturation/edge": "8ae0da9bc2f4c01e1c3defd56874ee70f7819d5a98f661fedf0e66f908766f53",
+    "control/saturation/fold": "6830fbfe5cc2c13acd60b00e89af22d4b82648f7e17d0cc0e4cfc2a0a149c4dc",
+    "control/drive/21.9": "b237107fdaa0745193e49e99d67be5ce748d8ad0574a4ea159e1984681da57f3",
+    "control/satMix/0.73": "791b77e7728f94231003e7160b1a10631fed27b43c94dd27cd1268191c4cf97d",
+    "control/pitch/off": "bc5b9298d0105c51f5059f9c82dc7c7016d6d7e6bf77cc1724251261659df38a",
+    "control/pitch/shift": "fd1341c7ee424418d276ddf0b7e9a7e7609448b38880eccd17f39794ddd8469c",
+    "control/pitch/correct": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/semitones/11.04": "477ea7eaf862e4b63800ff58a35887c00c228656ddc40c3f0ad7649c34bcf67d",
+    "control/fine/46": "2bd4ad04a9a4e20a0511ba77033782a9721f73b7f1ad838f16f70e9a863a3ca3",
+    "control/key/C": "92063fa3a05bb2fe0fb9f3f6bb88a9276324f1e9405b07990849de59671b4d82",
+    "control/key/C#": "e979567957d4cdf9da6a611198e98657308b06e5a850ad21232285e2c29726d4",
+    "control/key/D": "41e2974742246aaaba13036017517d7def26297f9602b9ac5ce47a650ffa60b4",
+    "control/key/D#": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/key/E": "0acd7e32da2386b2ba3070a47fabc1c6d4a1c14c3e484b36078433a8325a2f13",
+    "control/key/F": "22dd78f71829099449761f9868606af5ced5d0ca614360a62f272735d6ce6a0d",
+    "control/key/F#": "5c1de2420089b72c550aef1cebcd9c1e4f5dfe164aafc6263513e07323a0e82f",
+    "control/key/G": "3ff1067fe360477a0f5a393b44d8f6baff32185bfaf62f95aadcda1f83cb1644",
+    "control/key/G#": "1afd2ff4e95f9805e1c808b86a1dbd98ad8d4658a48fae3b7d1a7f63bb2bb4ce",
+    "control/key/A": "7bc1fe979e9054c220f7b6b1f61401c8a900328c22aaa2bdf8cb9e4dd2ea0e6d",
+    "control/key/A#": "31c9f96f190adc369eaf615043bcaaa1364aa95a6734979cb64ef36645a7bb4a",
+    "control/key/B": "2117c6213a2785321de902738d2dc0784b349e01b4ed61640e25d9d301d23a01",
+    "control/scale/chromatic": "09a2b76d0c2a2a84b94ca5ffc1ff3b34d92c3b694f5cade2020ec499f43f325a",
+    "control/scale/major": "ef393a2a2a880d2ec9ac29c66767192c4aa3cfdfa504fad22d7aad92921c7e0a",
+    "control/scale/minor": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/scale/pentatonic": "074b52c76d2723e94fb06a47ea12a93f15c38b07d1d43ddd452173d3945a34bc",
+    "control/scale/harmonic-minor": "912142eb2918544a51de8b68340c19a6c789a643c5cbba936ce9e3f0792aef68",
+    "control/speed/0.73": "ee6536cc085c0585d0d0b0e4b2e8d83139992e39b178bb5e1dc06581dd32da67",
+    "control/pitchWindow/78.4": "e1a791da66ab1f8dcbc2e4e680e17b1ce1b870c3aa56e833cdbde496d4813d11",
+    "control/pitchMix/0.73": "908ead034835094b342ef83b80ba6f7b1cf2d19fa0e4c89703317a84b637f509",
+    "control/harmony/off": "ca03fbdf393dc14192f91628ea9c7bb2dca8996c4572bb36c6e16dded84b159d",
+    "control/harmony/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/harmonyA/11.04": "bb4a25fde6a8c5af828ac4e98b5db0c97aab1dd9f38376fd95ef5cb0ebb79735",
+    "control/harmonyB/11.04": "4478735a91d43da2ca8d68c0d4e2ab6206c6d07eacb3e0ab35262c6071a85857",
+    "control/harmonyMix/0.73": "6a32e9b41aad31c612f8175a22a041affb0c92dad2c927fda6436a374eeb1ba9",
+    "control/harmonyWidth/0.73": "6f8200f9fd9e4fd28ab6c6a9b120087c76f5581c44743ddf533a1e50cd8bc625",
+    "control/doubler/off": "8c7368fcc32d69c67a38fe670cf6370ef7e421b5dba4c43e9541746819201d3a",
+    "control/doubler/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/doubleAmount/0.73": "bef129022d73e48ae44d2428a2a429fa7b4435067236e86bf4953004ca074ced",
+    "control/doubleSpread/0.73": "b7d5fa1bc0582582650ba4deb1d2ecf4a79788a7ea5dc052a7e107fd8093fbbb",
+    "control/doubleTime/35.01": "9b1ac004fe5a0b0a7bb9adafe7dcb4e7ac12fe117db7784413303a98d732d51c",
+    "control/doubleDetune/18.25": "fa71528dfa780ff7c7a3e9349aca6c2c88808d3a4d9d1a40bac27104e92b4386",
+    "control/vowel/off": "6d73e935dd89d93adea50d0b83fac5ce4e68faa374137f3048f059925a7cd5ac",
+    "control/vowel/ah": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/vowel/eh": "960c217740520fdd2dc566f321de8b5b792e442dedbe9937e2fe02d6900def35",
+    "control/vowel/ee": "4fe25b9075af4e9d6cf174341e7923f13b4980d9077129958dd2f5eb7f628a46",
+    "control/vowel/oh": "f3cd1da398f74318beaed1b5831d676aa37638712cff40045ef11f201de689dc",
+    "control/vowel/oo": "cdefd8548c04bb60fe16fbf40ede6954a715ec908cacb20c37ad1c5fa863f8f9",
+    "control/formant/5.52": "edb9702557e9b867b8de352325832ba7e75d7fb67ece17820064494aafe5ab41",
+    "control/vowelMix/0.73": "01dca24d7e57570c86afe3e088a25c5a456facd05defaa04ba0d09dadf79efe2",
+    "control/robot/off": "7f5a3ddf7086716e53c6633a455b8d571ed2675c92005ab2d14e8e395742e0ab",
+    "control/robot/ring": "18ce76dfebf0421d5fd31431add8cdb6e35091cacaf40712ae3e7c7e2d92a995",
+    "control/robot/vocoder": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/carrier/saw": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/carrier/square": "370c2e9be42fd2a8fa81bef2f7b624b695e788d6b85a9ff169e3a0e28eeb5a48",
+    "control/carrier/pulse": "a65ebaff7c73d3b51ad4265165890d169bc4c421d584ffd7c012c8be31694753",
+    "control/carrierNote/67.8": "f1b6c33ee62d6bb1d7916f566e462931168972616ca9d979986eba25031f3888",
+    "control/carrierChord/single": "8ccd51677eb14071c278bdf8f920e18fd59173fa148a8ea766aa47c06b84ad7e",
+    "control/carrierChord/fifth": "a0a1ceee9be9d361e5beef58052bc061e53737d1673310f41502cbfd9a4f5837",
+    "control/carrierChord/minor": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/carrierChord/major": "50a74c3c11171e682294f2f51247c1e17752995b26717210973fb96210fa2392",
+    "control/robotMix/0.73": "f27c2c5dfdcdaf90d360ed65c9ef9763870ab84caea6821739bc00d783c16941",
+    "control/robotFreq/1465.3999999999999": "cd0601034d0dbbec01645df1a107723b65c03cce82c763d3453eb8645ab3dcb3",
+    "control/delay/off": "358480ccfd56d69d73861abe3c072c2e1643fe6a837910297316847dd86e6415",
+    "control/delay/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/delayClock/sync": "eb88d0306e527842bf8d7d2b929c7f2e7f694cbe25155f5db7b5f1b6f312b7a4",
+    "control/delayClock/free": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/delayDivision/1/8.": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/delayDivision/1/32": "4b79889c2b0acbf0877bd33d66b1a7b30f3ddd96df236522f4947c2bd64fa55e",
+    "control/delayDivision/1/16": "4cdc6fa5c85a6a8c42ec227a1024488a1c951d98f0afa11a0ecd772f50f64077",
+    "control/delayDivision/1/8": "cc328e922948e38ad12ee1cc7216866bc082e60fc6710cb31f2a412263346800",
+    "control/delayDivision/1/4": "9dd5ed84d792a387474b2bc06d080cc73bb79f90b342a53d57b0ce1069986f4b",
+    "control/delayDivision/1/4.": "d6690c44990d5c61ad8557229f051a0f4390b58cd88628f7d7946035e0e32e44",
+    "control/delayDivision/1/2": "2beae788ede8f19b225c2a71081475accf773f9ab01a7bae7d3e5fa4ba1119e7",
+    "control/delayDivision/1": "e5d06926bd05756a36abac5a9650c80de34dbd7f1838ebf0b63e54621f4346ca",
+    "control/delayTime/21": "7e7604c978221ec6c5df147171c4e049c29adc487f76dd36d04c6c51ded4e514",
+    "control/delayFeedback/0.6424": "563f17a6b71a27afd8337c4e3e7e72d92a0aa1a11cfcc35459d07b814dddf425",
+    "control/delayTone/10355": "ea52c98c3b1a344652f90a3475eaa9dfef4363531824ba627596db482eda9b50",
+    "control/delayWidth/0.73": "355e2846f21c9549801b44d48132474f5593250e77b64e1429a4cbfd09190b1f",
+    "control/delayMix/0.73": "cf58d811e3bc229caf06d7e83f4b5632f739b4c9b1e757661bf1209ea54f4570",
+    "control/delayDuck/0.73": "76ef6ee192afca844304beb4f27aa880a0131819d9eb598457a10c42698ab5d9",
+    "control/reverb/off": "d836c5f1212b52f1038ef017bdf78d43b418d7b68b2e7be1dbb0563f0501bc22",
+    "control/reverb/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/reverbSize/0.73": "4b461a625522e07eb42ad9075b88f3624e63ae8d62f66b2d5973ba61ac346522",
+    "control/reverbDecay/7.354": "34deed776a3077932d3c34c80e02b6469be05fc40eb7f8a04213a781737ed727",
+    "control/predelay/109.5": "7188fb28c90b3f026f86688f7f0bf3d0dd9dd83e5b9226cac02b8511d792e549",
+    "control/reverbTone/10436": "29b4b19f5281b19efff775fd70fafcd4eb0fff8ed556b26465752bd9e6794dea",
+    "control/reverbWidth/0.73": "1b10c1a06bc2cb2fa708add6fbfd6bda0f145921eaec17b27c6fb76bc975518d",
+    "control/reverbMix/0.73": "ebd4ce8174d8883bfb6c70af85642a75ee6efade8ea9be1e0f07922df582df66",
+    "control/reverbDuck/0.73": "550f14dfb101117cc934f50b0a5fc5bfdf1653c75afde616b5894fbecc64918e",
+    "control/chop/off": "2f08466aa00d19072f0b4203658bdc42ef9301eede825d7f4d0405d53ceee9e5",
+    "control/chop/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/chopDivision/1/16": "084ec3f5a7b25a114933f52679f48250ea2466f6c3e46399b051a1706129114b",
+    "control/chopDivision/1/32": "bb71f4327a0321f92791a3065afc21a8dd0b0bdf86caf8c8b84367784e6eca17",
+    "control/chopDivision/1/8": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/chopDivision/1/8.": "6861bc4a75ebdfaff3f892e591cb7f57a38805ab95ce5e380e0993a1f58f3d36",
+    "control/chopDivision/1/4": "565ccb8ea52d6d602fc45efeec9ad44b2edabae3d83d4ec2f92ab3a117ee401e",
+    "control/chopDivision/1/4.": "10101e5993bbd73bc09608c1e83deff1010b4971959a460d7cd82c53dacf15c8",
+    "control/chopDivision/1/2": "205e1c8806a50cc077dd1960d8aa1e0d7e99d6607af2a940e5f4b35295a62a7b",
+    "control/chopDivision/1": "edd2768ef9c71446ac8f30ce0bc1e0d35055b9d2d32288e73449708505f9a4fd",
+    "control/chopDivision/2": "51c710d5b3137d565ddaff2e091de7da243a8edb20a38bd5dcb594a6744abdc3",
+    "control/chopDepth/0.73": "e5be400dfd3d483ee3a0b57e4307760157496180056baaebb4ea18b046734bce",
+    "control/chopDuty/0.707": "5ced20ec1f181b29822581d3a86c73228bb5860501571ad707a6f74f7757eae4",
+    "control/chopSmooth/29.253999999999998": "6c90c75517b1c0132e261dc67a8ebf2cc03763e977dbdac4a707e5e58e23843b",
+    "control/guard/on": "c8a3976323f1def9af30d283a7ecd49672394ff50316e1466166c721c226bc8e",
+    "control/guard/off": "b31d3c1386eb42c8b99c4013d8a1052a0f6b32bd9dad76b372df197a933284a7",
+    "control/ceiling/-3.24": "6820fe792b36b1fb81e32ab806dfb40eb451e163de0568e688c5855725e86636",
+    "control/output/2.280000000000001": "497b382b47d9617407b4b9e49a61f962765a18c4d2e46995303b84974aea8879",
+    "control/mix/0.73": "94bdedacd718187be2893b9da88ac3bf3f700fa114446d014c518cad9aeb7e78",
+    "combined/8000": "4a590f2241e3d29333462f10d19394302bb9a0df320e53b4b6989056f679f6e8",
+    "harmony-off-pitch-reset/8000": "0c28bd718ec9ef55ab5e641d704b67d357ed6322351620c023d81883de6cd737",
+    "combined/44100": "24721d0430e75f9e05e07ce1f50d529211c31bddfbf68388afc846022abb447a",
+    "harmony-off-pitch-reset/44100": "c0ad5e39a637179649bd73cd426240fab318a8b4d83f7091237d0f5811d73fa5",
+    "combined/48000": "55fcf81b1a47118240b39793f31f25be758aa88890539f3fe1d852ba5873d35b",
+    "harmony-off-pitch-reset/48000": "c3d11efce63a85e07fa6ff2dbe4c966a1f87074dfc35f020da3b709bd7efad11",
+    "combined/96000": "17cb1c4ef56cdb4477f065cd17ec9abe0cb9d517d67bdfa42c332ed648d8b521",
+    "harmony-off-pitch-reset/96000": "d6e849e70684876b5f6d8cd42bd30d566cc40cffa893bd01996ab83678b70c62",
+    "combined/192000": "3d9082f5790cc294fbefe73f937d6ebc82d8cd16836a98ae8e92309c9fcc8214",
+    "harmony-off-pitch-reset/192000": "875b613cb8f449199a4da2661c2c476608dc80501c8fbc93986294d1493a619a",
+    "deess-live-shelf": "f34974ec3acd6626dd35b276c7cc0052a6dedd964411dd9abc5efed0335e0e2e",
+    "same-rounded-reverb-length": "cf3fd7d6a49562240bad0c622c06452391e44bb298e54423b638b20ca25ad2a1",
+    "normalization-and-aliases": "b69fd871e5a09214032c4925873b47cd8e0af8f6114419a2bf8ea1f58148965b",
+    "all-controls-automation": "4f6b5ab3caa7ae37ceab1a92101d9562de6f6efa36d85b461b300c87b9aa8be5"
+  },
+  "counters": {
+    "unchanged": {
+      "Object.assign": 64,
+      "Object.keys": 64,
+      "Math.pow": 1664,
+      "Math.cos": 704,
+      "Math.sin": 704,
+      "new Float64Array": 640,
+      "Math.sqrt": 256,
+      "Math.exp": 1408
+    },
+    "ceiling": {
+      "Object.assign": 64,
+      "Object.keys": 64,
+      "Math.pow": 1664,
+      "Math.cos": 704,
+      "Math.sin": 704,
+      "new Float64Array": 640,
+      "Math.sqrt": 256,
+      "Math.exp": 1408
+    },
+    "allControls": {
+      "Object.assign": 80,
+      "Object.keys": 80,
+      "Math.pow": 2080,
+      "Math.cos": 880,
+      "Math.sin": 880,
+      "new Float64Array": 800,
+      "Math.sqrt": 320,
+      "Math.exp": 1760
+    }
+  }
+}

@@ -125,29 +125,6 @@
       }
       function biquadSample(x, channel, c, state, band) { const ci = band * 5, zi = channel * (state === toneState ? 12 : 8) + band * 2, y = c[ci] * x + state[zi]; state[zi] = c[ci + 1] * x - c[ci + 3] * y + state[zi + 1]; state[zi + 1] = c[ci + 2] * x - c[ci + 4] * y; return y; }
       function toneSample(x, channel, bands) { const mask = toneMask & bands; for (let i = 0; i < 6; i++) if (mask & (1 << i)) x = biquadSample(x, channel, coefficients, toneState, i); return x; }
-      function jamesSample(x, channel) {
-        // Read one immutable history vector for this network step. Keep the
-        // original multiply/add order while avoiding repeated indexed loads.
-        const h = channel * 6, h0 = jamesHistory[h], h1 = jamesHistory[h + 1], h2 = jamesHistory[h + 2], h3 = jamesHistory[h + 3], h4 = jamesHistory[h + 4], h5 = jamesHistory[h + 5];
-        let y = james[42] * x;
-        y += james[43] * h0; y += james[44] * h1; y += james[45] * h2;
-        y += james[46] * h3; y += james[47] * h4; y += james[48] * h5;
-        for (let row = 0; row < 6; row++) {
-          const at = row * 7; let v = james[at] * x;
-          v += james[at + 1] * h0; v += james[at + 2] * h1; v += james[at + 3] * h2;
-          v += james[at + 4] * h3; v += james[at + 5] * h4; v += james[at + 6] * h5;
-          jamesNext[row] = v;
-        }
-        for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row];
-        return y * 20;
-      }
-      function nodeSample(u, channel, stage, threshold, a, b) {
-        const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
-        if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; return safe(y * threshold); }
-        let x = midpoint;
-        if (model === 1) { const conduction = Math.max(0, (stage === 3 ? Math.abs(x) : x) - .55); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? chargeAttack : chargeRelease); cathode[at] += (Math.max(0, x * x - .16) - cathode[at]) * cathodeRate; x = (x - charge[at] * .22 * (stage === 3 ? Math.sign(x) : 1)) / (1 + cathode[at] * .04); }
-        return threshold * solvePlate(x, a, b);
-      }
       function powerSample(x, channel) {
         const n = clamp(x / actualHead, -24, 24); flux[channel] += (n - flux[channel]) * fluxRate; load[channel] += (n - load[channel]) * loadRate;
         let y;
@@ -164,7 +141,14 @@
           // The added state vanishes at the linear operating point.
           const reactive = p.speakerLoad * .06 * (n - load[channel]) * Math.max(0, Math.abs(midpoint) - .4), current = midpoint - p.transformer * .12 * magnet[channel] + reactive;
           y = actualHead * solvePlate(current, powerA, powerB * (1 + p.transformer * .5 * excess));
-        } else y = nodeSample(x, channel, 3, actualHead, powerA, powerB);
+        } else { const nodeInput = x, nodeThreshold = actualHead, nodeA = powerA, nodeB = powerB; let nodeValue; nodeStage3: { const u = nodeInput, stage = 3, threshold = nodeThreshold, a = nodeA, b = nodeB;
+        const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
+        if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; nodeValue = safe(y * threshold); break nodeStage3; }
+        let x = midpoint;
+        if (model === 1) { const conduction = Math.max(0, (stage === 3 ? Math.abs(x) : x) - .55); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? chargeAttack : chargeRelease); cathode[at] += (Math.max(0, x * x - .16) - cathode[at]) * cathodeRate; x = (x - charge[at] * .22 * (stage === 3 ? Math.sign(x) : 1)) / (1 + cathode[at] * .04); }
+        nodeValue = threshold * solvePlate(x, a, b); break nodeStage3;
+
+              } y = nodeValue; }
         // Common transformer curvature, referenced to one fixed voltage scale.
         // No signal-following gain, RMS normalizer or clean-signal compressor.
         const normalized = y / actualHead, bend = p.transformer * .025 * normalized * normalized; y /= 1 + bend;
@@ -196,12 +180,50 @@
             if (jamesRemaining && --jamesRemaining === 0) james.set(jamesTarget); else if (jamesRemaining) for (let i = 0; i < 49; i++) james[i] += jamesStep[i];
             for (let channel = 0; channel < (mono ? 1 : 2); channel++) {
               const interpolated = upSamples[channel * 4 + sub];
-              inputDc[channel] += (interpolated - inputDc[channel]) * couplingRate; let v = nodeSample(interpolated - inputDc[channel], channel, 0, preHead, preA, .12);
+              inputDc[channel] += (interpolated - inputDc[channel]) * couplingRate; let v; { const nodeInput = interpolated - inputDc[channel], nodeThreshold = preHead, nodeA = preA, nodeB = .12; let nodeValue; nodeStage0: { const u = nodeInput, stage = 0, threshold = nodeThreshold, a = nodeA, b = nodeB;
+        const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
+        if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; nodeValue = safe(y * threshold); break nodeStage0; }
+        let x = midpoint;
+        if (model === 1) { const conduction = Math.max(0, (stage === 3 ? Math.abs(x) : x) - .55); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? chargeAttack : chargeRelease); cathode[at] += (Math.max(0, x * x - .16) - cathode[at]) * cathodeRate; x = (x - charge[at] * .22 * (stage === 3 ? Math.sign(x) : 1)) / (1 + cathode[at] * .04); }
+        nodeValue = threshold * solvePlate(x, a, b); break nodeStage0;
+
+              } v = nodeValue; }
               // Verified CL order: stage1 → UltraLo/Gain → stage2 → James
               // bass/treble and selectable-mid stage → Master/buffer/driver.
               // The mid branch is a linear equivalent of the feedback network.
-              v = toneSample(v, channel, 24) * gain; v = nodeSample(v, channel, 1, preHead * .75, preA * .65, .16);
-              v = jamesSample(v, channel); v = toneSample(v, channel, 39); v = nodeSample(v, channel, 2, preHead * .85, preA * .55, .12) * master;
+              v = toneSample(v, channel, 24) * gain; { const nodeInput = v, nodeThreshold = preHead * .75, nodeA = preA * .65, nodeB = .16; let nodeValue; nodeStage1: { const u = nodeInput, stage = 1, threshold = nodeThreshold, a = nodeA, b = nodeB;
+        const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
+        if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; nodeValue = safe(y * threshold); break nodeStage1; }
+        let x = midpoint;
+        if (model === 1) { const conduction = Math.max(0, (stage === 3 ? Math.abs(x) : x) - .55); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? chargeAttack : chargeRelease); cathode[at] += (Math.max(0, x * x - .16) - cathode[at]) * cathodeRate; x = (x - charge[at] * .22 * (stage === 3 ? Math.sign(x) : 1)) / (1 + cathode[at] * .04); }
+        nodeValue = threshold * solvePlate(x, a, b); break nodeStage1;
+
+              } v = nodeValue; }
+              {
+                // Keep the network in its caller to avoid a floating-point
+                // helper argument/return at every oversampled channel step.
+                // Read the same immutable history vector, in the same order.
+                const x = v, h = channel * 6, h0 = jamesHistory[h], h1 = jamesHistory[h + 1], h2 = jamesHistory[h + 2], h3 = jamesHistory[h + 3], h4 = jamesHistory[h + 4], h5 = jamesHistory[h + 5];
+                let y = james[42] * x;
+                y += james[43] * h0; y += james[44] * h1; y += james[45] * h2;
+                y += james[46] * h3; y += james[47] * h4; y += james[48] * h5;
+                for (let row = 0; row < 6; row++) {
+                  const at = row * 7; let next = james[at] * x;
+                  next += james[at + 1] * h0; next += james[at + 2] * h1; next += james[at + 3] * h2;
+                  next += james[at + 4] * h3; next += james[at + 5] * h4; next += james[at + 6] * h5;
+                  jamesNext[row] = next;
+                }
+                for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row];
+                v = y * 20;
+              }
+              v = toneSample(v, channel, 39); { const nodeInput = v, nodeThreshold = preHead * .85, nodeA = preA * .55, nodeB = .12; let nodeValue; nodeStage2: { const u = nodeInput, stage = 2, threshold = nodeThreshold, a = nodeA, b = nodeB;
+        const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
+        if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; nodeValue = safe(y * threshold); break nodeStage2; }
+        let x = midpoint;
+        if (model === 1) { const conduction = Math.max(0, (stage === 3 ? Math.abs(x) : x) - .55); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? chargeAttack : chargeRelease); cathode[at] += (Math.max(0, x * x - .16) - cathode[at]) * cathodeRate; x = (x - charge[at] * .22 * (stage === 3 ? Math.sign(x) : 1)) / (1 + cathode[at] * .04); }
+        nodeValue = threshold * solvePlate(x, a, b); break nodeStage2;
+
+              } v = nodeValue; } v *= master;
               v = powerSample(v, channel); bandwidth[channel] += (v - bandwidth[channel]) * bandwidthRate;
               if (os === 4) { decimA[channel].push(bandwidth[channel]); if ((sub & 1) === 0) decimB[channel].push(decimA[channel].read()); } else decimB[channel].push(bandwidth[channel]);
               if (sub === 0) { if (channel === 0) wetL = decimB[channel].read(); else wetR = decimB[channel].read(); }

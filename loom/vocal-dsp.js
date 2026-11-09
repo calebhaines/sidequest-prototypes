@@ -72,15 +72,16 @@
     }
     function create(sampleRate, params) {
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000);
-      let p = normalize(params), coefficients = [], gateEnvelope = 0, gateGain = 1, compEnvelope = 0, deessEnvelope = 0, duckEnvelope = 0;
+      let p = normalize(params), gateEnvelope = 0, gateGain = 1, compEnvelope = 0, deessEnvelope = 0, duckEnvelope = 0;
+      const coefficients = Array.from({ length: 6 }, () => new Float64Array(5)), deessCoefficient = new Float64Array(5), vowelCoefficients = Array.from({ length: 3 }, () => new Float64Array(5));
       const states = Array.from({ length: 6 }, () => new Float64Array(4)), deessState = new Float64Array(4), deessToneState = new Float64Array(4), deessShelf = new Float64Array(5), vowelStates = Array.from({ length: 3 }, () => new Float64Array(4));
       let deessCounter = 0, deessShelfDb = 0;
-      let vowelCoefficients = [], trim = 1, makeup = 1, level = 1, ceiling = 1, drive = 1, driveNormalization = 1;
+      let trim = 1, makeup = 1, level = 1, ceiling = 1, drive = 1, driveNormalization = 1;
       let gateRelease = 1, gateAttack = 1, gateSmooth = 1, attack = 1, release = 1, deessAttack = 1, deessRelease = 1, duckAttack = 1, duckRelease = 1;
       let threshold = 0, gateFloor = 0, deessThreshold = 0, chopCoefficient = 1, reverbCoefficient = 1, delayCoefficient = 1;
       const pitchLength = Math.ceil(sr * 0.16) + 8, pitchBuffers = [new Float32Array(pitchLength), new Float32Array(pitchLength)], pitchPhases = new Float64Array([0.25, 0.31, 0.73]);
       const pitchRatios = new Float64Array([1, Math.pow(2, 7 / 12), 2]);
-      let pitchWrite = 0, nominalWindow = 1, grainWindow = 1, targetWindow = 1, ratio = 1, targetRatio = 1, ratioSlew = 1, windowSlew = 1, shiftBase = sr * 0.004, seen = 0;
+      let pitchWrite = 0, nominalWindow = 1, grainWindow = 1, targetWindow = 1, ratio = 1, targetRatio = 1, ratioSlew = 1, windowSlew = 1, shiftBase = sr * 0.004, seen = 0, basePitchRatio = 1;
       const analysisStride = Math.max(1, Math.round(sr / 12000)), analysisRate = sr / analysisStride, analysisLength = 1024;
       const analysisBuffer = new Float64Array(analysisLength), analysisScratch = new Float64Array(768), differences = new Float64Array(256);
       const analysisSpan = 512, minLag = Math.max(2, Math.floor(analysisRate / 950)), maxLag = Math.min(250, Math.ceil(analysisRate / 65));
@@ -98,33 +99,66 @@
       const apLengths = [Math.max(3, Math.round(sr * 0.0047)), Math.max(3, Math.round(sr * 0.0017)), Math.max(3, Math.round(sr * 0.0051)), Math.max(3, Math.round(sr * 0.0019))], apLines = apLengths.map(length => new Float32Array(length)), apPositions = new Int32Array(4);
       let chopPhase = 0, chopGain = 1, inputPeak = 0, outputPeak = 0, quietFrames = Infinity;
       const meter = { reductionDb: 0, deessDb: 0, gateReductionDb: 0, limiterReductionDb: 0, inputDb: -120, outputDb: -120, detectedHz: 0, confidence: 0, tuningCents: 0, pitchLatencyMs: 0, pitchMinLatencyMs: 0, pitchMaxLatencyMs: 0, coreLatencyMs: 0 };
-      function update() {
-        trim = db(p.input); makeup = db(p.makeup); level = db(p.output); ceiling = db(p.ceiling); drive = db(p.drive); driveNormalization = 1 / Math.pow(drive, 0.55);
-        coefficients = [biquad('highpass', p.highpass, 0.707, 0, sr), biquad('peak', p.bodyFreq, 0.8, p.body, sr), biquad('peak', p.mudFreq, 0.95, p.mud, sr), biquad('peak', p.presenceFreq, 0.8, p.presence, sr), biquad('high', 8500, 0.707, p.air, sr)];
-        coefficients[5] = biquad('highpass', 12, 0.707, 0, sr);
-        deessCoefficient = biquad('highpass', p.deessFreq * 0.72, 0.707, 0, sr);
-        biquad('high', p.deessFreq, 0.707, deessShelfDb, sr, deessShelf);
-        gateRelease = slew(p.gateRelease, sr); gateAttack = slew(1, sr); gateSmooth = 1 - slew(0.5, sr); threshold = db(p.gate); gateFloor = db(-p.gateRange);
-        attack = slew(p.attack, sr); release = slew(p.release, sr); deessAttack = slew(0.6, sr); deessRelease = slew(55, sr); deessThreshold = db(p.deessThreshold); duckAttack = slew(4, sr); duckRelease = slew(220, sr);
-        ratioSlew = 1 - slew(2 + (1 - p.speed) * 170, sr); windowSlew = 1 - slew(25, sr);
-        const nextWindow = sr * p.pitchWindow * 0.001;
-        if (nextWindow !== nominalWindow) grainWindow = targetWindow = nominalWindow = nextWindow;
-        pitchRatios[1] = Math.pow(2, p.harmonyA / 12); pitchRatios[2] = Math.pow(2, p.harmonyB / 12);
-        if (p.pitch !== 'correct') targetRatio = Math.pow(2, (p.semitones + p.fine / 100) / 12);
+      function update(old) {
+        const initial = !old;
+        // Each group owns only coefficients/constants: histories and control
+        // clocks remain live. Reuse the coefficient storage across all edits.
+        if (initial || !Object.is(old.input, p.input)) trim = db(p.input);
+        if (initial || !Object.is(old.makeup, p.makeup)) makeup = db(p.makeup);
+        if (initial || !Object.is(old.output, p.output)) level = db(p.output);
+        if (initial || !Object.is(old.ceiling, p.ceiling)) ceiling = db(p.ceiling);
+        if (initial || !Object.is(old.drive, p.drive)) { drive = db(p.drive); driveNormalization = 1 / Math.pow(drive, 0.55); }
+        if (initial || !Object.is(old.highpass, p.highpass)) biquad('highpass', p.highpass, 0.707, 0, sr, coefficients[0]);
+        if (initial || !Object.is(old.bodyFreq, p.bodyFreq) || !Object.is(old.body, p.body)) biquad('peak', p.bodyFreq, 0.8, p.body, sr, coefficients[1]);
+        if (initial || !Object.is(old.mudFreq, p.mudFreq) || !Object.is(old.mud, p.mud)) biquad('peak', p.mudFreq, 0.95, p.mud, sr, coefficients[2]);
+        if (initial || !Object.is(old.presenceFreq, p.presenceFreq) || !Object.is(old.presence, p.presence)) biquad('peak', p.presenceFreq, 0.8, p.presence, sr, coefficients[3]);
+        if (initial || !Object.is(old.air, p.air)) biquad('high', 8500, 0.707, p.air, sr, coefficients[4]);
+        if (initial) biquad('highpass', 12, 0.707, 0, sr, coefficients[5]);
+        if (initial || !Object.is(old.deessFreq, p.deessFreq)) {
+          biquad('highpass', p.deessFreq * 0.72, 0.707, 0, sr, deessCoefficient);
+          biquad('high', p.deessFreq, 0.707, deessShelfDb, sr, deessShelf);
+        }
+        if (initial || !Object.is(old.gateRelease, p.gateRelease)) gateRelease = slew(p.gateRelease, sr);
+        if (initial) { gateAttack = slew(1, sr); gateSmooth = 1 - slew(0.5, sr); }
+        if (initial || !Object.is(old.gate, p.gate)) threshold = db(p.gate);
+        if (initial || !Object.is(old.gateRange, p.gateRange)) gateFloor = db(-p.gateRange);
+        if (initial || !Object.is(old.attack, p.attack)) attack = slew(p.attack, sr);
+        if (initial || !Object.is(old.release, p.release)) release = slew(p.release, sr);
+        if (initial) { deessAttack = slew(0.6, sr); deessRelease = slew(55, sr); }
+        if (initial || !Object.is(old.deessThreshold, p.deessThreshold)) deessThreshold = db(p.deessThreshold);
+        if (initial) { duckAttack = slew(4, sr); duckRelease = slew(220, sr); }
+        if (initial || !Object.is(old.speed, p.speed)) ratioSlew = 1 - slew(2 + (1 - p.speed) * 170, sr);
+        if (initial) windowSlew = 1 - slew(25, sr);
+        if (initial || !Object.is(old.pitchWindow, p.pitchWindow)) {
+          const nextWindow = sr * p.pitchWindow * 0.001;
+          if (nextWindow !== nominalWindow) grainWindow = targetWindow = nominalWindow = nextWindow;
+        }
+        if (initial || !Object.is(old.harmonyA, p.harmonyA)) pitchRatios[1] = Math.pow(2, p.harmonyA / 12);
+        if (initial || !Object.is(old.harmonyB, p.harmonyB)) pitchRatios[2] = Math.pow(2, p.harmonyB / 12);
+        if (initial || !Object.is(old.semitones, p.semitones) || !Object.is(old.fine, p.fine)) basePitchRatio = Math.pow(2, (p.semitones + p.fine / 100) / 12);
+        // These assignments are intentional setter side effects, even on an
+        // unchanged edit: harmony can keep the analyzer/ratio running while
+        // the main pitch voice is off. Preserve its original reset boundary.
+        if (p.pitch !== 'correct') targetRatio = basePitchRatio;
         if (p.pitch === 'off') ratio = targetRatio = 1;
-        const frequencies = vowels[p.vowel] || vowels.ah, formantRatio = Math.pow(2, p.formant / 12);
-        vowelCoefficients = frequencies.map((hz, i) => biquad('bandpass', hz * formantRatio, [5, 7, 9][i], 0, sr));
-        const chord = p.carrierChord === 'major' ? [0, 4, 7] : p.carrierChord === 'minor' ? [0, 3, 7] : p.carrierChord === 'fifth' ? [0, 7] : [0]; carrierCount = chord.length;
-        for (let i = 0; i < carrierCount; i++) carrierSteps[i] = Math.min(0.35, 440 * Math.pow(2, (p.carrierNote + chord[i] - 69) / 12) / sr);
-        delayCoefficient = lp(p.delayTone, sr); reverbCoefficient = lp(p.reverbTone, sr); chopCoefficient = 1 - slew(p.chopSmooth, sr);
-        for (let i = 0; i < 8; i++) {
+        if (initial || old.vowel !== p.vowel || !Object.is(old.formant, p.formant)) {
+          const frequencies = vowels[p.vowel] || vowels.ah, formantRatio = Math.pow(2, p.formant / 12);
+          for (let i = 0; i < 3; i++) biquad('bandpass', frequencies[i] * formantRatio, [5, 7, 9][i], 0, sr, vowelCoefficients[i]);
+        }
+        if (initial || old.carrierChord !== p.carrierChord || !Object.is(old.carrierNote, p.carrierNote)) {
+          const chord = p.carrierChord === 'major' ? [0, 4, 7] : p.carrierChord === 'minor' ? [0, 3, 7] : p.carrierChord === 'fifth' ? [0, 7] : [0]; carrierCount = chord.length;
+          for (let i = 0; i < carrierCount; i++) carrierSteps[i] = Math.min(0.35, 440 * Math.pow(2, (p.carrierNote + chord[i] - 69) / 12) / sr);
+        }
+        if (initial || !Object.is(old.delayTone, p.delayTone)) delayCoefficient = lp(p.delayTone, sr);
+        if (initial || !Object.is(old.reverbTone, p.reverbTone)) reverbCoefficient = lp(p.reverbTone, sr);
+        if (initial || !Object.is(old.chopSmooth, p.chopSmooth)) chopCoefficient = 1 - slew(p.chopSmooth, sr);
+        if (initial || !Object.is(old.reverbSize, p.reverbSize) || !Object.is(old.reverbDecay, p.reverbDecay)) for (let i = 0; i < 8; i++) {
           const length = clamp(Math.round(sr * combBase[i] * (0.65 + p.reverbSize)), 3, combLines[i].length);
           if (combLengths[i] !== length) { combLines[i].fill(0); combPositions[i] = 0; combDamp[i] = 0; }
           combLengths[i] = length; combFeedback[i] = Math.exp(-6.907755 * length / (p.reverbDecay * sr));
         }
         updateLatency();
       }
-      let deessCoefficient;
       function updateLatency() {
         const active = (p.pitch !== 'off' && p.pitchMix > 0) || (p.harmony === 'on' && p.harmonyMix > 0);
         meter.pitchMinLatencyMs = active ? 4 : 0;
@@ -337,7 +371,16 @@
         updateLatency();
       }
       function setParams(next) {
-        const old = p; p = normalize(Object.assign({}, p, next && typeof next === 'object' ? next : {}));
+        const old = p;
+        // Normalize only supplied controls; unchanged setters allocate neither
+        // a replacement parameter object nor coefficient arrays.
+        if (next && typeof next === 'object') for (const key in next) {
+          if (!Object.prototype.hasOwnProperty.call(next, key) || key !== 'bypass' && !Object.prototype.hasOwnProperty.call(specifications, key)) continue;
+          const source = next[key], rule = specifications[key], value = key === 'bypass' ? source === true : typeof rule[0] === 'number' ? clamp(finite(source, rule[2]), rule[0], rule[1]) : rule.includes(source) ? source : rule[0];
+          if (Object.is(p[key], value)) continue;
+          if (p === old) p = Object.assign({}, old);
+          p[key] = value;
+        }
         const oldPitch = old.pitch !== 'off' || old.harmony === 'on', newPitch = p.pitch !== 'off' || p.harmony === 'on';
         if (!newPitch) meter.detectedHz = meter.confidence = meter.tuningCents = 0;
         if (!oldPitch && newPitch) { analysisWrite = analysisSamples = analysisDecimation = analysisCounter = analysisLow = analysisLow2 = 0; analysisBuffer.fill(0); meter.detectedHz = meter.confidence = meter.tuningCents = 0; }
@@ -345,7 +388,7 @@
         if (old.delay !== p.delay) { delayBuffers.forEach(buffer => buffer.fill(0)); delayDamp.fill(0); delayWrite = 0; delayPrimed = false; }
         if (old.reverb !== p.reverb) { combLines.forEach(buffer => buffer.fill(0)); combDamp.fill(0); combPositions.fill(0); apLines.forEach(buffer => buffer.fill(0)); apPositions.fill(0); preBuffers.forEach(buffer => buffer.fill(0)); preWrite = 0; }
         if (old.robot !== p.robot) { vocoderInput.fill(0); vocoderCarrier.fill(0); vocoderEnvelopes.fill(0); carrierPhases.fill(0); robotPhase = 0; }
-        update();
+        update(old);
       }
       function getTailTime(context) {
         if (p.bypass) return 0;

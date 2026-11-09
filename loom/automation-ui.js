@@ -140,9 +140,31 @@
         for (let i = 0; i < points.length; i++) path += lane.interpolation === 'hold' ? `H${x(points[i].beat)}V${y(points[i].value)}` : `L${x(points[i].beat)},${y(points[i].value)}`;
         path += `H${x(total)}`; fill = path + `L${x(total)},${m.bottom}L${x(0)},${m.bottom}Z`;
       }
+      const geometry = [m.width, m.height, m.left, m.top, m.bottom, m.ppb, d.target, d.min, d.max, total, lane?.enabled, lane?.interpolation, this.getState().loopEnabled, this.getState().loopStart, this.getState().loopEnd].join('|');
+      if (lane?.points.length && this.pointSVG === svg && this.drawLane === lane && this.pointGeometry === geometry && this.paintPointNodes(lane, m, d)) {
+        const curve = svg.querySelector('.auto-curve'), area = svg.querySelector('.auto-area');
+        if (curve.getAttribute('d') !== path) curve.setAttribute('d', path); if (area.getAttribute('d') !== fill) area.setAttribute('d', fill); return;
+      }
       const loop = this.getState().loopEnabled ? `<rect class="auto-loop-area" x="${x(this.getState().loopStart)}" y="25" width="${Math.max(0,(this.getState().loopEnd-this.getState().loopStart)*m.ppb)}" height="${m.bottom-25}"/>` : '';
       svg.setAttribute('width', m.width); svg.setAttribute('height', m.height); svg.setAttribute('viewBox', `0 0 ${m.width} ${m.height}`);
       svg.innerHTML = `<defs><linearGradient id="loomAutoFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff8d45" stop-opacity=".16"/><stop offset="1" stop-color="#ff8d45" stop-opacity="0"/></linearGradient></defs>${loop}${grid.join('')}<text class="auto-axis" x="7" y="${m.top + 4}">${escape(this.axisLabel(d,d.max))}</text><text class="auto-axis" x="7" y="${m.bottom + 3}">${escape(this.axisLabel(d,d.min))}</text>${path ? `<path class="auto-area" d="${fill}"/><path class="auto-curve ${lane.enabled ? '' : 'inactive'}" d="${path}"/>${lane.points.map((p,i) => `<g class="auto-point ${i === this.point ? 'selected' : ''}" data-auto-point="${i}" tabindex="0" role="slider" aria-label="Point ${i+1}, beat ${(p.beat+1).toFixed(3)}" aria-valuemin="${d.min}" aria-valuemax="${d.max}" aria-valuenow="${p.value}" aria-valuetext="${escape(this.label(d,p.value))}, beat ${p.beat+1}"><circle class="auto-point-hit" cx="${x(p.beat)}" cy="${y(p.value)}" r="12"/><circle class="auto-point-dot" cx="${x(p.beat)}" cy="${y(p.value)}" r="${i === this.point ? 5 : 3.5}"/></g>`).join('')}` : `<path class="auto-ghost-curve" d="M${x(0)},135 C${x(total*.18)},135 ${x(total*.2)},70 ${x(total*.34)},70 S${x(total*.52)},159 ${x(total*.66)},159 S${x(total*.83)},106 ${x(total)},106"/><text class="auto-empty-title" x="${Math.min(m.width/2,m.viewport/2)}" y="102" text-anchor="middle">${lane ? 'The timer awaits its first instruction.' : 'Give this parameter a little movement.'}</text><text class="auto-empty-caption" x="${Math.min(m.width/2,m.viewport/2)}" y="126" text-anchor="middle">${lane ? 'Click anywhere to place a point.' : 'Click the graph or + to add a lane.'}</text>`}<line class="auto-playhead" data-auto-playhead x1="${x(this.getBeat()||0)}" x2="${x(this.getBeat()||0)}" y1="25" y2="${m.bottom}"/><text class="auto-time-label" x="${m.left}" y="221">BARS / BEATS</text>`;
+      this.pointSVG = svg; this.drawLane = lane; this.pointGeometry = geometry; const nodes = [...svg.querySelectorAll('[data-auto-point]')]; this.pointNodes = new Map((lane?.points || []).map((point, index) => [point, nodes[index]]));
+      this.paintPointNodes(lane, m, d);
+    }
+    paintPointNodes(lane, m, d) {
+      if (!this.pointNodes || !lane?.points.length || lane.points.some(point => !this.pointNodes.get(point))) return false;
+      const points = new Set(lane.points);
+      for (const [point, node] of this.pointNodes) if (!points.has(point)) { node.remove(); this.pointNodes.delete(point); }
+      const svg = this.element.querySelector('.auto-canvas'); let next = svg.querySelector('[data-auto-point]');
+      for (let index = 0; index < lane.points.length; index++) {
+        const point = lane.points[index], node = this.pointNodes.get(point); if (node !== next) svg.insertBefore(node, next); next = node.nextElementSibling;
+        const selected = index === this.point, key = [index, point.beat, point.value, selected].join('|'); if (node._loomPointPaint === key) continue; node._loomPointPaint = key;
+        const set = (element, name, value) => { const text = String(value); if (element.getAttribute(name) !== text) element.setAttribute(name, text); };
+        set(node, 'data-auto-point', index); set(node, 'aria-label', 'Point ' + (index + 1) + ', beat ' + (point.beat + 1).toFixed(3)); set(node, 'aria-valuenow', point.value); set(node, 'aria-valuetext', this.label(d, point.value) + ', beat ' + (point.beat + 1)); node.classList.toggle('selected', selected);
+        for (const circle of node.querySelectorAll('circle')) { set(circle, 'cx', m.left + point.beat * m.ppb); set(circle, 'cy', m.bottom - (point.value - d.min) / (d.max - d.min || 1) * (m.bottom - m.top)); }
+        set(node.querySelector('.auto-point-dot'), 'r', selected ? 5 : 3.5);
+      }
+      return true;
     }
     axisLabel(d, value) { if (d.target === 'level') return Math.round(value*100)+'%'; if (d.target === 'pan') return value < 0 ? 'L' : 'R'; if(Math.abs(value)>=1000)return round(value/1000)+'k'; return round(value); }
     renderPoint(preserveControls = false) {
@@ -192,7 +214,7 @@
       this.remember(); const updated = this.normalizePoint({ beat: field === 'point-beat' ? Number(e.target.value)-1 : point.beat, value: field === 'point-value' ? Number(e.target.value) : point.value }, d, false);
       lane.points.splice(this.point, 1); this.point = this.putPoint(lane, updated); this.notify(); this.draw(); this.renderPoint(true);
     }
-    coordinate(e) { const svg = this.element.querySelector('.auto-canvas'), rect = svg.getBoundingClientRect(), m = this.metrics(), d = this.definition(); return this.normalizePoint({ beat:(e.clientX-rect.left-m.left)/m.ppb, value:d.max-(e.clientY-rect.top-m.top)/(m.bottom-m.top)*(d.max-d.min) },d); }
+    coordinate(e) { const svg = this.element.querySelector('.auto-canvas'), rect = svg.getBoundingClientRect(), m = this.drawMetrics || this.metrics(), d = this.definition(); return this.normalizePoint({ beat:(e.clientX-rect.left-m.left)/m.ppb, value:d.max-(e.clientY-rect.top-m.top)/(m.bottom-m.top)*(d.max-d.min) },d); }
     pointerDown(e) {
       if (this.syncOwner()) { this.render(); return; }
       if (e.button !== 0 || !e.target.closest('.auto-canvas') || !this.definition()) return;
@@ -201,7 +223,7 @@
       if (!pointElement) this.remember(); const lane = existing || this.createLane(d, false); if (!lane) return;
       let selected = pointElement ? Number(pointElement.dataset.autoPoint) : this.putPoint(lane,this.coordinate(e)); if (selected < 0) return;
       this.point = selected;
-      this.drag = { pointer: e.pointerId, lane, track: this.track(), point: lane.points[selected], moved: !pointElement, remembered: !pointElement, lastNotify: stamp() };
+      this.drag = { pointer: e.pointerId, lane, track: this.track(), point: lane.points[selected], moved: !pointElement, remembered: !pointElement, createdLane: !existing, lastNotify: stamp() };
       this.element.setPointerCapture(e.pointerId); this.draw(); this.renderPoint();
       if (!existing) { const add = this.element.querySelector('[data-auto-action="add"]'); if(add)add.disabled=true; }
     }
@@ -220,11 +242,16 @@
     pointerEnd(e) {
       if (this.syncOwner()) { this.render(); return; }
       if (!this.drag || e.pointerId !== this.drag.pointer) return;
-      const pointer = this.drag.pointer, moved = this.drag.moved; this.drag = null; if(this.element.hasPointerCapture(pointer))this.element.releasePointerCapture(pointer);
+      const pointer = this.drag.pointer, moved = this.drag.moved, createdLane = this.drag.createdLane; this.drag = null; if(this.element.hasPointerCapture(pointer))this.element.releasePointerCapture(pointer);
       if (this.drawFrame) { cancelAnimationFrame(this.drawFrame); this.drawFrame = 0; }
-      if(moved)this.notify(); this.render(); this.element.querySelector(`[data-auto-point="${this.point}"]`)?.focus({preventScroll:true});
+      if(moved)this.notify();
+      if (createdLane) { this.render(); this.element.querySelector(`[data-auto-point="${this.point}"]`)?.focus({preventScroll:true}); return; }
+      this.draw(); this.renderPoint(true);
+      const lane = this.lane(), row = [...this.element.querySelectorAll('[data-auto-lane]')].find(element => element.dataset.autoLane === this.target), caption = row?.querySelector('small'); if (caption && lane) caption.textContent = lane.points.length + ' point' + (lane.points.length === 1 ? '' : 's') + ' · ' + (lane.enabled ? 'Read' : 'Off');
+      const clear = this.element.querySelector('[data-auto-action="clear"]'); if (clear) clear.disabled = !lane?.points.length;
+      this.element.querySelector(`[data-auto-point="${this.point}"]`)?.focus({preventScroll:true});
     }
-    queueDraw() { if(this.drawFrame)return; this.drawFrame = requestAnimationFrame(()=>{this.drawFrame=0;this.draw();this.renderPoint();}); }
+    queueDraw() { if(this.drawFrame)return; this.drawFrame = requestAnimationFrame(()=>{this.drawFrame=0;this.draw();this.renderPoint(true);}); }
     deletePoint() {
       const lane = this.lane(); if(!lane || this.point < 0 || !lane.points[this.point])return;
       this.remember(); lane.points.splice(this.point,1); this.point = Math.min(this.point,lane.points.length-1); this.notify(); this.render(); (this.element.querySelector(`[data-auto-point="${this.point}"]`)||this.element.querySelector('.auto-canvas'))?.focus({preventScroll:true});

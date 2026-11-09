@@ -48,7 +48,7 @@
     // Trapezoidal companion models preserve every coupling-capacitor charge.
     // -1 is AC ground; -2 is the low-impedance stage driving the network.
     class PassiveNetwork {
-      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.capacitors = capacitors; this.capacitorA = Int32Array.from(capacitors, part => part[0]); this.capacitorB = Int32Array.from(capacitors, part => part[1]); this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.historyGain = Float64Array.from(this.g, g => -2 * g); this.diodeNode = diodeNode; this.configure(resistors); }
+      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.io = new Float64Array(1); this.capacitors = capacitors; this.capacitorA = Int32Array.from(capacitors, part => part[0]); this.capacitorB = Int32Array.from(capacitors, part => part[1]); this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.historyGain = Float64Array.from(this.g, g => -2 * g); this.diodeNode = diodeNode; this.configure(resistors); }
       configure(resistors, rampFrames = 0) {
         this.resistors = resistors; const n = this.count, matrix = new Float64Array(n * n); this.source = new Float64Array(n);
         const stamp = (a, b, g) => { if (a >= 0) { matrix[a * n + a] += g; if (b >= 0) matrix[a * n + b] -= g; else if (b === -2) this.source[a] += g; } if (b >= 0) { matrix[b * n + b] += g; if (a >= 0) matrix[b * n + a] -= g; else if (a === -2) this.source[b] += g; } };
@@ -60,7 +60,9 @@
       }
       advance() { if (this.rampRemaining) { for (let i = 0; i < this.inv.length; i++) this.inv[i] += this.invStep[i]; if (--this.rampRemaining === 0) this.inv.set(this.invTarget); } }
       state() { return { h: new Float64Array(this.capacitors.length), rhs: new Float64Array(this.count), volts: new Float64Array(this.count) }; }
-      process(input, state, output) {
+      process(input, state, output) { this.io[0] = input; this.tickBuffer(this.io, state, output); return this.io[0]; }
+      tickBuffer(io, state, output) {
+        const input = io[0];
         const n = this.count, rhs = state.rhs, volts = state.volts, capacitorA = this.capacitorA, capacitorB = this.capacitorB;
         for (let i = 0; i < n; i++) rhs[i] = this.source[i] * input;
         for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], h = state.h[i]; if (a >= 0) rhs[a] -= h; if (b >= 0) rhs[b] += h; }
@@ -84,7 +86,7 @@
         }
         if (this.diodeNode >= 0) { const node = this.diodeNode, change = (tableDiode(volts[node], this.table) - volts[node]) / this.resistance; for (let i = 0; i < n; i++) volts[i] += this.inv[i * n + node] * change; }
         for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], va = a >= 0 ? volts[a] : a === -2 ? input : 0, vb = b >= 0 ? volts[b] : b === -2 ? input : 0; state.h[i] = safe(this.historyGain[i] * (va - vb) - state.h[i]); }
-        return volts[output];
+        io[0] = volts[output];
       }
     }
     class RC {
@@ -99,10 +101,12 @@
     // remain in the implicit loop. The finite gain and rail law are estimates;
     // this is not a full transistor SPICE model or a hardware measurement fit.
     class DiscreteStage {
-      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.groundCap = 1 + ground * this.cg; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.set(.35); }
+      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.groundCap = 1 + ground * this.cg; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.io = new Float64Array(1); this.set(.35); }
       set(drive, immediate = false) { this.targetRf = this.base + 250000 * taper(drive); if (this.rf === undefined || immediate) this.rf = this.targetRf; this.remaining = this.rf === this.targetRf ? 0 : Math.max(1, Math.round(this.rate * .004)); this.rfStep = this.remaining ? (this.targetRf - this.rf) / this.remaining : 0; this.configure(); }
       configure() { const sum = 1 / this.rf + this.cf, yg = this.cg / this.groundCap; this.alpha = sum / (sum + yg); this.scale = 1 / (sum + yg); this.yg = yg; }
-      process(x) {
+      process(x) { this.io[0] = x; this.tickBuffer(this.io); return this.io[0]; }
+      tickBuffer(io) {
+        const x = io[0];
         if (this.remaining) { this.rf += this.rfStep; if (--this.remaining === 0) this.rf = this.targetRf; this.configure(); }
         const h = this.hg / this.groundCap, beta = -(this.hf + h) * this.scale, u = x - beta, magnitude = Math.abs(u), rail = u < 0 ? 4 : 3.8, a = this.alpha;
         // +8 V supply/+4 V reference, PNP sourcing stage and2k2 pull-down:
@@ -112,7 +116,7 @@
         const b = magnitude + a * rail + rail / 1600, determinant = Math.max(0, b * b - 4 * a * magnitude * rail);
         const y = (u < 0 ? -1 : 1) * 2 * magnitude * rail / Math.max(1e-30, b + Math.sqrt(determinant));
         const v = a * y + beta, current = this.yg * v + h, capacitor = v - this.ground * current;
-        this.hg = -2 * this.cg * capacitor - this.hg; this.hf = -2 * this.cf * (v - y) - this.hf; return y;
+        this.hg = -2 * this.cg * capacitor - this.hg; this.hf = -2 * this.cf * (v - y) - this.hf; io[0] = y;
       }
     }
     function bassCoefficients(rate) {
@@ -128,7 +132,7 @@
     }
     class BlueDriver {
       constructor(rate, controls) {
-        this.rate = rate;
+        this.rate = rate; this.io = new Float64Array(1);
         this.inter = new PassiveNetwork(rate, 5, [[-2, 0, 100000], [4, 1, 330000], [1, 2, 1e6], [2, -1, 15000], [3, -1, 1e6]], [[-2, 4, 220e-12], [0, 1, 100e-9], [0, 2, 47e-9], [1, 3, 2.2e-9]], 1);
         this.tone = new PassiveNetwork(rate, 6, [[-2, 0, 5600], [1, 3, 5000], [3, 2, 5000], [3, 4, 90000], [4, -1, 10000], [5, -1, 470000]], [[-2, 0, 6.8e-9], [0, -1, 5.6e-9], [0, 1, 18e-9], [2, -1, 18e-9], [4, 5, 47e-9]]);
         this.bass = bassCoefficients(rate);
@@ -145,11 +149,12 @@
           this.tone.configure([[-2, 0, 5600], [1, 3, Math.max(1, 10000 * (1 - tone))], [3, 2, Math.max(1, 10000 * tone)], [3, 4, Math.max(1, 100000 * (1 - position))], [4, -1, Math.max(1, 100000 * position)], [5, -1, 470000]], this.initialized ? Math.max(1, Math.round(this.rate * .004)) : 0);
         }
       }
-      sample(x, channel) {
-        const s = this.states[channel]; let y = s.first.process(s.couple.high(s.input.high(x)));
-        y = this.inter.process(y, s.inter, 3); y = s.second.process(y); y = this.tone.process(y, s.tone, 5);
+      sample(x, channel) { this.io[0] = x; this.tickBuffer(this.io, channel); return this.io[0]; }
+      tickBuffer(io, channel) {
+        const s = this.states[channel]; io[0] = s.couple.high(s.input.high(io[0])); s.first.tickBuffer(io);
+        this.inter.tickBuffer(io, s.inter, 3); s.second.tickBuffer(io); this.tone.tickBuffer(io, s.tone, 5); const y = io[0];
         const b = this.bass.b, a = this.bass.a, z = s.bass, out = b[0] * y + z[0]; z[0] = b[1] * y - a[1] * out + z[1]; z[1] = b[2] * y - a[2] * out + z[2]; z[2] = b[3] * y - a[3] * out;
-        const result = s.out.high(clamp(out, -2.9, 2.9)); return this.volumeZero ? 0 : result;
+        const result = s.out.high(clamp(out, -2.9, 2.9)); io[0] = this.volumeZero ? 0 : result;
       }
     }
 
@@ -195,9 +200,13 @@
           for (let channel = 0; channel < channels; channel++) {
           const s = this.states[channel], input = channel === 0 ? left : right, previous = channel === 0 ? leftPrevious : rightPrevious;
           if (!this.blue && s.amount !== this.amount) { s.amount += this.gainSlew * (this.amount - s.amount); if (Math.abs(s.amount - this.amount) < 1e-10) s.amount = this.amount; }
-          let x = previous + (input - previous) * sub / this.os; for (let i = 0; i < 2; i++) x = filter(x, this.pre[i], s.pre, i * 2);
+          let x = previous + (input - previous) * sub / this.os; for (let i = 0; i < 2; i++) {
+            const coefficients = this.pre[i], at = i * 2, value = coefficients[0] * x + s.pre[at];
+            s.pre[at] = coefficients[1] * x - coefficients[3] * value + s.pre[at + 1];
+            s.pre[at + 1] = coefficients[2] * x - coefficients[4] * value; x = value;
+          }
           let y;
-          if (this.blue) y = this.blue.sample(x, channel);
+          if (this.blue) { this.blue.io[0] = x; this.blue.tickBuffer(this.blue.io, channel); y = this.blue.io[0]; }
           else if (this.type === 'screamer') { const high = s.high.high(x), clipped = tableDiode(high * s.amount, this.diode) * .5; y = s.low.low((x + clipped) * .65); }
           else if (this.type === 'rodent') { const high = s.high.high(x), target = clamp(high * s.amount, -3.4, 3.4), coefficient = 1 - Math.exp(-TAU * Math.min(18000, 2e6 / s.amount) / this.osr); s.rail += coefficient * (target - s.rail); y = s.low.low(tableDiode(s.rail, this.diode) * .65); }
           else {
@@ -207,7 +216,11 @@
             const charge = s.memory.low(Math.abs(first)), bias = .18 + .28 * charge, second = Math.tanh(first * (2 + s.amount * .18) - bias) + Math.tanh(bias); s.transistor = second;
             y = s.low.low(second * .38);
           }
-          for (let i = 0; i < 3; i++) y = filter(y, this.post[i], s.post, i * 2); result[channel] = safe(y);
+          for (let i = 0; i < 3; i++) {
+            const coefficients = this.post[i], at = i * 2, value = coefficients[0] * y + s.post[at];
+            s.post[at] = coefficients[1] * y - coefficients[3] * value + s.post[at + 1];
+            s.post[at + 1] = coefficients[2] * y - coefficients[4] * value; y = value;
+          } result[channel] = safe(y);
           }
         }
         if (mono) result[1] = result[0];

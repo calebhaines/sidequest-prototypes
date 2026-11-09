@@ -59,10 +59,11 @@
     // exactly linear; a playing envelope never sets its gain or threshold.
     function knee(x) { const a = Math.abs(x); return a <= .5 ? x : Math.sign(x) * (1.5 - 1 / (a + .5)); }
     function area(x) { const a = Math.abs(x); if (a <= .5) return .5 * a * a; const t = a - .5; return .125 + 1.5 * t - Math.log1p(t); }
-    function node(x, strength, asymmetry) {
+    function node(io, strength, asymmetry) {
+      const x = io[0];
       let y = x / (1 + strength * x * x * .45);
       for (let i = 0; i < 3; i++) { const y2 = y * y, f = y + strength * y * y2 + asymmetry * y2 / (1 + y2) - x, d = 1 + 3 * strength * y2 + 2 * asymmetry * y / ((1 + y2) * (1 + y2)); y = clamp(y - f / d, -6, 6); }
-      return y;
+      io[0] = y;
     }
     function create(sampleRate, values) {
       const sr = clamp(finite(sampleRate, 48000), 8000, 192000); let p = normalize(values), os = p.quality === 'high' ? 4 : 2, subRate = sr * os;
@@ -71,6 +72,7 @@
       let threshold = 1, preThreshold = 4, matched = 1, brightAmount = 0, brightTarget = 0, revAmount = 0, revTarget = 0, tremAmount = 0, tremTarget = 0, tremHz = 4, tremPhase = 0;
       let supplyState = 0, demand = 0, actualHead = 1, sagDepth = 0, quiet = 0, sleeping = false, peakIn = 0, peakOut = 0, energyIn = 0, energyOut = 0, powerPeak = 0, lastPowerPeak = 0, powerMeterPeak = 0;
       const tone = new Float64Array(24), toneTarget = new Float64Array(24), toneStep = new Float64Array(24), toneHistory = new Float64Array(6), toneV = new Float64Array(6); let capG = new Float64Array(3), toneRemaining = 0;
+      const stageIO = new Float64Array(1);
       const previousInput = new Float64Array(2), previousPower = new Float64Array(2), preDown = new Float64Array(8), powerDown = new Float64Array(8), brightLow = new Float64Array(2), dcIn = new Float64Array(2), dcOut = new Float64Array(2);
       const charge = new Float64Array(8), cathode = new Float64Array(8), adaaPrevious = new Float64Array(8), load = new Float64Array(2), flux = new Float64Array(2), pairMemory = new Float64Array(2);
       const cabinet = [makeFilter(), makeFilter(), makeFilter(), makeFilter()], room = [new Float64Array(Math.ceil(sr * .025) + 2), new Float64Array(Math.ceil(sr * .025) + 2)]; let roomAt = 0;
@@ -142,32 +144,32 @@
           }
         }
       }
-      function toneSample(x, channel) {
-        const h = channel * 3;
+      function toneSample(channel) {
+        const x = stageIO[0], h = channel * 3;
         for (let row = 0; row < 6; row++) { const at = row * 4; toneV[row] = tone[at] * x + tone[at + 1] * toneHistory[h] + tone[at + 2] * toneHistory[h + 1] + tone[at + 3] * toneHistory[h + 2]; }
         toneHistory[h] = -2 * capG[0] * (toneV[0] - toneV[2]) - toneHistory[h]; toneHistory[h + 1] = -2 * capG[1] * (toneV[1] - toneV[3]) - toneHistory[h + 1]; toneHistory[h + 2] = -2 * capG[2] * (toneV[1] - toneV[4]) - toneHistory[h + 2];
-        return toneV[5] * 12;
+        stageIO[0] = toneV[5] * 12;
       }
-      function valve(x, channel, stage) {
-        const at = channel * 4 + stage, head = stage ? preLaterHead : preThreshold * 1, n = clamp(x / head, -20, 20), asym = preAsymmetry;
-        if (model === 0) return head * node(n, .11, asym);
+      function valve(channel, stage) {
+        const x = stageIO[0], at = channel * 4 + stage, head = stage ? preLaterHead : preThreshold * 1, n = clamp(x / head, -20, 20), asym = preAsymmetry;
+        if (model === 0) { stageIO[0] = n; node(stageIO, .11, asym); stageIO[0] = head * stageIO[0]; return; }
         if (model === 1) {
           const conduction = Math.max(0, n - .65); charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? .035 : couplingCoefficient);
           cathode[at] += (n * n - cathode[at]) * cathodeCoefficient;
-          const shifted = n - charge[at] * .19; return head * knee(shifted) / (1 + Math.min(2, cathode[at]) * .018);
+          const shifted = n - charge[at] * .19; stageIO[0] = head * knee(shifted) / (1 + Math.min(2, cathode[at]) * .018); return;
         }
-        if (model === 2) { const u = n + asym * n * n / (1 + n * n); return head * (Math.atan(u * .66) / .66); }
-        if (model === 3) { const previous = adaaPrevious[at], difference = n - previous; adaaPrevious[at] = n; const y = Math.abs(difference) < 1e-7 ? knee((n + previous) * .5) : (area(n) - area(previous)) / difference; return head * y; }
+        if (model === 2) { const u = n + asym * n * n / (1 + n * n); stageIO[0] = head * (Math.atan(u * .66) / .66); return; }
+        if (model === 3) { const previous = adaaPrevious[at], difference = n - previous; adaaPrevious[at] = n; const y = Math.abs(difference) < 1e-7 ? knee((n + previous) * .5) : (area(n) - area(previous)) / difference; stageIO[0] = head * y; return; }
         cathode[at] += (n - cathode[at]) * cathodeCoefficient;
         const conductance = 1 + .16 * Math.max(0, Math.abs(n) - .35), shift = n - cathode[at] * .025;
-        return head * node(shift / conductance, .065, reactiveAsymmetry);
+        stageIO[0] = shift / conductance; node(stageIO, .065, reactiveAsymmetry); stageIO[0] = head * stageIO[0];
       }
-      function powerSample(x, channel) {
-        const feedback = powerFeedback, h = actualHead * powerHeadScale, asym = powerAsymmetry;
+      function powerSample(channel) {
+        const x = stageIO[0], feedback = powerFeedback, h = actualHead * powerHeadScale, asym = powerAsymmetry;
         let n = clamp(x / h, -32, 32), y;
         load[channel] += (n - load[channel]) * loadCoefficient;
         n += loadAmount * (n - load[channel]);
-        if (model === 0) { const a = node(n * feedbackGain + asym, .20, .018), b = node(-n * feedbackGain + asym, .20, .018); y = .5 * (a - b) / feedbackDenominator; }
+        if (model === 0) { stageIO[0] = n * feedbackGain + asym; node(stageIO, .20, .018); const a = stageIO[0]; stageIO[0] = -n * feedbackGain + asym; node(stageIO, .20, .018); const b = stageIO[0]; y = .5 * (a - b) / feedbackDenominator; }
         else if (model === 1) {
           const conduction = Math.max(0, Math.abs(n) - .7), at = channel * 4 + 3; charge[at] += (conduction - charge[at]) * (conduction > charge[at] ? .04 : couplingCoefficient);
           const v = n / (1 + charge[at] * .16); y = v / Math.pow(1 + Math.pow(Math.abs(v), 6), 1 / 6);
@@ -180,26 +182,26 @@
         } else {
           flux[channel] += (n - flux[channel]) * fluxCoefficient;
           const current = n + reactiveLoadAmount * (n - load[channel]), stiffness = 1 + .09 * Math.max(0, Math.abs(flux[channel]) - .3);
-          y = node(current / stiffness, reactiveStrength, asym) + loadAmount * (n - load[channel]);
+          stageIO[0] = current / stiffness; node(stageIO, reactiveStrength, asym); y = stageIO[0] + loadAmount * (n - load[channel]);
         }
         if (model === 1 || model === 3 || model === 4) y += powerBiasAmount * n * n / (1 + n * n);
         // Individual formulations have unity static gain at their rest point.
         if (model === 0) y *= feedbackNormalization;
-        const result = safe(y * h); powerPeak = Math.max(powerPeak, Math.abs(result)); return result;
+        const result = safe(y * h); powerPeak = Math.max(powerPeak, Math.abs(result)); stageIO[0] = result;
       }
-      function downSample(state, x, channel) {
-        const at = channel * 4; state[at] += (x - state[at]) * aa; state[at + 1] += (state[at] - state[at + 1]) * aa; state[at + 2] += (state[at + 1] - state[at + 2]) * aa; state[at + 3] += (state[at + 2] - state[at + 3]) * aa; return state[at + 3];
+      function downSample(state, channel) {
+        const x = stageIO[0], at = channel * 4; state[at] += (x - state[at]) * aa; state[at + 1] += (state[at] - state[at + 1]) * aa; state[at + 2] += (state[at + 1] - state[at + 2]) * aa; state[at + 3] += (state[at + 2] - state[at + 3]) * aa; stageIO[0] = state[at + 3];
       }
       const preampOutput = new Float64Array(2);
-      function preampPair(xL, xR) {
-        const lastL = previousInput[0], lastR = previousInput[1];
+      function preampPair() {
+        const xL = preampOutput[0], xR = preampOutput[1], lastL = previousInput[0], lastR = previousInput[1];
         for (let step = 1; step <= os; step++) {
           if (toneRemaining) { if (--toneRemaining === 0) tone.set(toneTarget); else for (let i = 0; i < 24; i++) tone[i] += toneStep[i]; }
           for (let channel = 0; channel < (p.stereo === 'mono' ? 1 : 2); channel++) {
             const x = channel ? xR : xL, last = channel ? lastR : lastL;
-            let v = valve(last + (x - last) * step / os, channel, 0); v = toneSample(v, channel); brightLow[channel] += (v - brightLow[channel]) * brightCoefficient; v += (v - brightLow[channel]) * brightAmount; v *= volumeGain;
-            v = valve(v, channel, 1); if (p.channel === 'vibrato') v = valve(v * 1.035, channel, 2) / 1.035;
-            preampOutput[channel] = downSample(preDown, v, channel);
+            stageIO[0] = last + (x - last) * step / os; valve(channel, 0); toneSample(channel); let v = stageIO[0]; brightLow[channel] += (v - brightLow[channel]) * brightCoefficient; v += (v - brightLow[channel]) * brightAmount; v *= volumeGain;
+            stageIO[0] = v; valve(channel, 1); v = stageIO[0]; if (p.channel === 'vibrato') { stageIO[0] = v * 1.035; valve(channel, 2); v = stageIO[0] / 1.035; }
+            stageIO[0] = v; downSample(preDown, channel); preampOutput[channel] = stageIO[0];
           }
         }
         if (p.stereo === 'mono') preampOutput[1] = preampOutput[0];
@@ -230,7 +232,7 @@
           sleeping = false;
           inputGain += (inputTarget - inputGain) * slew; volumeGain += (volumeTarget - volumeGain) * slew; outGain += (outTarget - outGain) * slew; brightAmount += (brightTarget - brightAmount) * slew; revAmount += (revTarget - revAmount) * slew; tremAmount += (tremTarget - tremAmount) * slew;
           const xL = (p.stereo === 'mono' ? (a + b) * .5 : a) * inputGain, xR = (p.stereo === 'mono' ? (a + b) * .5 : b) * inputGain;
-          preampPair(xL, xR); l = preampOutput[0]; r = preampOutput[1];
+          preampOutput[0] = xL; preampOutput[1] = xR; preampPair(); l = preampOutput[0]; r = preampOutput[1];
           if (revAmount > 1e-6 || revTarget > 0) { l += spring(l, 0) * revAmount; if (p.stereo === 'mono') r = l; else r += spring(r, 1) * revAmount; }
           const trem = tremAmount === 0 ? 1 : 1 - tremAmount * (.5 + .5 * Math.sin(TAU * tremPhase)); tremPhase += tremStep; if (tremPhase >= 1) tremPhase -= 1;
           l *= trem; r *= trem;
@@ -239,7 +241,7 @@
           const excessive = Math.max(0, lastPowerPeak / safeThreshold - .55), desired = Math.min(1.5, excessive * excessive);
           supplyState += (desired - supplyState) * (desired > supplyState ? sagAttack : sagRelease); sagDepth = p.sag * supplyState * .22; actualHead = threshold / (1 + sagDepth);
           powerPeak = 0; let wetL = 0, wetR = 0;
-          for (let step = 1; step <= os; step++) { wetL = downSample(powerDown, powerSample(previousPower[0] + (l - previousPower[0]) * step / os, 0), 0); if (p.stereo === 'mono') wetR = wetL; else wetR = downSample(powerDown, powerSample(previousPower[1] + (r - previousPower[1]) * step / os, 1), 1); }
+          for (let step = 1; step <= os; step++) { stageIO[0] = previousPower[0] + (l - previousPower[0]) * step / os; powerSample(0); downSample(powerDown, 0); wetL = stageIO[0]; if (p.stereo === 'mono') wetR = wetL; else { stageIO[0] = previousPower[1] + (r - previousPower[1]) * step / os; powerSample(1); downSample(powerDown, 1); wetR = stageIO[0]; } }
           previousPower[0] = l; previousPower[1] = r; lastPowerPeak = powerPeak;
           // Display a short held power peak. The instantaneous physical demand
           // above remains the ONLY source of sag; this meter never sets gain.

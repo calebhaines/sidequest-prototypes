@@ -81,6 +81,8 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['brine-audition-browser-checks.cjs']
     sources += ['cabinet.css', 'cabinet-checks.cjs', 'cabinet-browser-checks.cjs', 'cabinet-legacy-checks.cjs', 'CUPBOARD-GUIDE.md', 'CUPBOARD-REFERENCES.md']
     sources += ['performance-142-checks.cjs', 'performance-142-browser-checks.cjs', 'CPU-REVIEW-1.42.1.md']
+    sources += ['playback-stability-checks.cjs', 'vocal-cache-checks.cjs', 'vocal-cache-fixtures.json', 'offline-performance-checks.cjs', 'project-data-performance-checks.cjs', 'ui-rendering-checks.cjs', 'ui-rendering-fixtures.json', 'host-scheduler-performance-checks.cjs', 'CPU-REVIEW-1.42.2.md']
+    sources += ['broiler-hotpath-checks.cjs', 'broiler-hotpath-fixtures.json', 'deluxe-performance-checks.cjs', 'deluxe-performance-fixtures.json', 'cellar-performance-checks.cjs', 'cellar-performance-fixtures.json', 'board-allocation-checks.cjs']
     sources += ['clip-loop-continuity-checks.cjs', 'playback-continuity-checks.cjs', 'playback-continuity-browser-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs', 'percussion-integration-checks.cjs']
     sources += ['broiler.css', 'BROILER-MODELS.md', 'broiler-workshop-checks.cjs', 'broiler-pedal-checks.cjs', 'broiler-browser-checks.cjs', 'broiler-project-checks.cjs', 'broiler-legacy-fixtures.json']
     sources += ['compressor.css', 'BUTTER-MODELS.md', 'compressor-checks.cjs', 'compressor-browser-checks.cjs', 'compressor-project-checks.cjs', 'compressor-legacy-fixtures.json']

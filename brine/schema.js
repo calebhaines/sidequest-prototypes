@@ -1,7 +1,7 @@
 /* BRINE project and control vocabulary. DSP specifications are authoritative. */
 (function (scope) {
   'use strict';
-  const VERSION = '1.0.1', LIMITS = Object.freeze({ projectBytes: 2 * 1024 * 1024, notes: 4096, maxPatternBeats: 256 });
+  const VERSION = '1.0.2', LIMITS = Object.freeze({ projectBytes: 2 * 1024 * 1024, notes: 4096, maxPatternBeats: 256 });
   const DSP = scope.createBrineDSP(), specifications = DSP.specifications;
   const copy = value => JSON.parse(JSON.stringify(value));
   const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && ['[object Object]'].includes(Object.prototype.toString.call(value));

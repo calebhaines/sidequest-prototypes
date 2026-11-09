@@ -1,0 +1,31 @@
+{
+  "baseline": "5df579ee99caa7a73222f8d6a52268be4cab3c75",
+  "method": "Recorded Canvas drawing commands from released source; numeric geometry and alpha/order included.",
+  "previews": [
+    {
+      "name": "audio-loop",
+      "hash": "9efbb2bf55d3c639230a0c09626326ac75124d67a45616083e5993b01cce3d8c",
+      "commands": 1027
+    },
+    {
+      "name": "audio-reverse-fades",
+      "hash": "f4b951d733d960ec032d8161f54f547e8b416d0d80a8deae28c2102cfb03f9f4",
+      "commands": 577
+    },
+    {
+      "name": "audio-one-pass-offset",
+      "hash": "fe910abc156c4e7b8f3e3f7ae1439463bb0d7ff82612ec996af62695b302d7a5",
+      "commands": 437
+    },
+    {
+      "name": "notes-overlap-offset",
+      "hash": "7b3a8645612b3681b822afbea643ea22a60a2dbb9fbafdcee766732dc114aa3b",
+      "commands": 21
+    },
+    {
+      "name": "notes-long-loop-alpha-order",
+      "hash": "b5c6e5ab982143d02115045bc2deadc0b1b999bcb5b939c7da5d757e1197ee3c",
+      "commands": 8188
+    }
+  ]
+}

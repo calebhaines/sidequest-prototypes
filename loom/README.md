@@ -1,6 +1,6 @@
 # GALLEY
 
-Playback performance changes and exact-audio verification are documented in [the 1.42.1 performance review](CPU-REVIEW-1.42.1.md).
+Playback continuity improvements and exact-audio verification are documented in [the 1.42.2 performance review](CPU-REVIEW-1.42.2.md). The [previous review](CPU-REVIEW-1.42.1.md) retains its original baseline and measurements.
 
 Kitchen’s central production station.
 
