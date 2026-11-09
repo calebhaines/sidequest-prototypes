@@ -2273,7 +2273,7 @@
     const instrument=e.target.closest('[data-instrument]');if(instrument){openExisting(Number(instrument.dataset.instrument));return;}
     const fx=e.target.closest('[data-effect-track]');if(fx){selectEffect(Number(fx.dataset.effectSlot),Number(fx.dataset.effectTrack));return;}
     const header=e.target.closest('.track-header');if(header){selectedTrack(Number(header.dataset.track));return;}
-    const channel=e.target.closest('[data-channel]');if(channel&&!e.target.closest('input,button')){selectedTrack(Number(channel.dataset.channel));return;}
+    const channel=e.target.closest('[data-channel]');if(channel&&!e.target.closest('input,button,select,textarea,label')){selectedTrack(Number(channel.dataset.channel));return;}
     const slot=e.target.closest('[data-slot]');if(slot){selectEffect(Number(slot.dataset.slot));return;}
     const add=e.target.closest('[data-add-effect]');if(add){remember();clearEffectAutomation(effectOwner(),selectedSlot);const params=clone(effectById(add.dataset.addEffect).defaults);if(rackTarget.startsWith('return-'))params.mix=1;effectOwner().effects[selectedSlot]={type:add.dataset.addEffect,params};$('effectDialog').close();changed({arrangement:true,mixer:true,rack:true});renderEffectEditor();automationEditor?.render();revealEffectEditor();return;}
     const app=e.target.closest('[data-app]');if(app){const descriptor=instrumentOptions()[Number(app.dataset.app)],index=browserTrack??state.selectedTrack;selectedTrack(index);ensureInstrument(track(),{open:true,replace:true,descriptor:{id:descriptor.id,name:descriptor.name,url:descriptor.url}}).catch(e=>status(e.message));return;}

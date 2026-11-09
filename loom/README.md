@@ -1,5 +1,7 @@
 # GALLEY
 
+GALLEY 1.42.3 fixes mixer bus output menus closing on click. Dropdowns and their labels keep native focus, and keyboard routing and Undo/Redo remain available.
+
 Playback continuity improvements and exact-audio verification are documented in [the 1.42.2 performance review](CPU-REVIEW-1.42.2.md). The [previous review](CPU-REVIEW-1.42.1.md) retains its original baseline and measurements.
 
 Kitchen’s central production station.
