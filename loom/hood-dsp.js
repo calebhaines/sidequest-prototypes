@@ -11,7 +11,7 @@
     };
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-    const safe = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const safe = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
     const lp = (frequency, rate) => 1 - Math.exp(-TAU * Math.min(frequency, rate * .43) / rate);
     const profiles = {
       room:       { count: 8, scale: .56, matrix: 'house', early: .72, late: .8,  spread: .7,  highpass: 75,  motion: 0 },

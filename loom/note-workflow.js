@@ -35,7 +35,7 @@
     editable(track) { if (track?.freeze) throw Error('Unfreeze this track before editing its clips or instrument.'); }
     active(track) { if (track?.disabled) throw Error('Enable ' + track.name + ' before using its instrument or rendering its sound.'); }
     voices(trackId) { return this.host.getPatternAdapter?.(trackId)?.notes?.voices || []; }
-    render() {
+    render(options = {}) {
       const location = this.location(), clip = location?.clip, notes = clip?.type === 'notes', source = !!clip?.origin;
       if (this.sourceEdit && (!source || this.sourceEdit.id !== clip.id)) {
         const draft = this.sourceEdit, generation = this.getGeneration(); this.sourceEdit = null;
@@ -47,7 +47,7 @@
       const cancel = document.getElementById('cancelNoteRenderButton'); if (cancel) cancel.hidden = !this.controller;
       const sourcePattern = document.getElementById('sourcePatternButton'); if (sourcePattern) { sourcePattern.hidden = !(source && this.sourceEdit?.id === clip.id); sourcePattern.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled; }
       for (const [action, visible] of [['notes', notes], ['print', notes], ['source', source], ['update', source]]) for (const button of document.querySelectorAll('[data-clip-action="' + action + '"]')) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled && action !== 'notes'; }
-      this.piano?.render();
+      if (options.notes !== false) this.piano?.render();
     }
     getEditableClip() {
       const location = this.location(); if (!location) return null;

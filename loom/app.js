@@ -28,7 +28,7 @@
   let trackFreezeStatus = { busy: false };
   // Share one read-only meter snapshot during a paint. Scheduling and recording
   // continue to read the audio engine directly outside this presentation pass.
-  let visualMeterSnapshot = null, visualPanelObserver = null, visualSizeObserver = null, timelineViewportWidth = 0;
+  let visualMeterSnapshot = null, visualPanelObserver = null, visualSizeObserver = null, timelineViewportWidth = 0, effectMeterDetailKey;
   const visualPanels = new Map();
   const visualMeters = () => visualMeterSnapshot || engine.getMeters();
   const panelVisible = id => visualPanels.get(id) !== false;
@@ -412,7 +412,24 @@
   function remember({instruments=false}={}) { const entry=clone(state); if(instruments)instrumentHistory.add(entry); history.push(entry); if (history.length > 40) history.shift(); future = []; renderHistory(); }
   function renderHistory() { $('undoButton').disabled = !history.length || !!trackPowerOperations.size; $('redoButton').disabled = !future.length || !!trackPowerOperations.size; }
   function decodeAssets() { const next = {}; for (const asset of [...state.assets, ...(state.freezeAssets || [])]) { next[asset.id] = assetMap[asset.id] || (asset.encoding === 'float32le' ? S.decodeFreezeAsset(asset) : S.decodeAsset(asset)); } assetMap = next; engine.setAssets(assetMap); }
-  function changed(options = {}) { cancelTimelineGesture(); engine.setState(state); if (!options.deferNotes) notePlayback.setState(state); renderHistory(); if (options.arrangement) renderArrangement(); if (options.mixer) renderMixer(); if (options.rack) renderRack(); if (options.inspector) renderClipInspector(); if(options.automation) automationEditor?.render(); if(options.notes) pianoRoll?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
+  function changed(options = {}) {
+    cancelTimelineGesture(); engine.setState(state);
+    const refreshNotes = options.arrangement || options.inspector || options.notes || options.notePlayback;
+    // Fader, EQ and insert movements do not change the score. Avoid hashing all
+    // note clips and rebuilding an open piano-roll SVG for every pointer move.
+    if (!options.deferNotes && refreshNotes) notePlayback.setState(state);
+    renderHistory();
+    if (options.arrangement) renderArrangement();
+    if (options.mixer) renderMixer();
+    if (options.rack) renderRack();
+    if (options.inspector) renderClipInspector();
+    if (options.automation) automationEditor?.render();
+    if (refreshNotes) {
+      if (noteWorkflow) noteWorkflow.render(); else if (options.notes) pianoRoll?.render();
+      renderFreezeState();
+    }
+    scheduleAutosave();
+  }
   function recoveryInfo(message){$('recoveryStatus').hidden=!message;$('recoveryStatus').textContent=message||'';if(message&&!recoveryWarned){recoveryWarned=true;status(message);}}
   function scheduleAutosave(){clearTimeout(autosaveTimer);if(!recovery){recoveryInfo('Browser recovery is off. Save a project to keep this session.');return;}autosaveTimer=setTimeout(()=>{try{const recoveryLimit=8*1024*1024,encodedSize=[...state.assets,...(state.freezeAssets||[])].reduce((n,a)=>n+(a.pcm?.length||0),0)+state.tracks.reduce((n,t)=>n+(t.instrument?.html?.length||0),0);if(encodedSize>=recoveryLimit){localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');return;}const serialized=S.serializeProject(state);if(serialized.length<8*1024*1024){localStorage.setItem('loom-session-v1',serialized);recoveryUnavailable=false;recoveryInfo('');}else{localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');}}catch(_){recoveryUnavailable=true;recoveryInfo('Browser recovery is unavailable or full. Save a project to keep this session.');}},1600);}
   const snapshotTimers = new Map();
@@ -1565,7 +1582,7 @@
     $('loopSelectionButton').disabled=locked||!clipLocation();
     $('ruler').setAttribute('aria-disabled',String(locked));
     $('playhead').setAttribute('aria-disabled',String(locked));
-    renderRecordingSetup();renderMicrophone();renderMarkers();renderClipActions();
+    renderRecordingSetup();renderMicrophone();renderMarkers();renderClipActions({notes:false});
     renderPlayhead(); renderFreezeState();
   }
   function renderPlayhead(meters = visualMeters()) {
@@ -2304,7 +2321,7 @@
   $('instrumentBackButton').addEventListener('click',()=>openInstrumentBrowser(browserTrack??state.selectedTrack));
   $('unloadInstrumentButton').addEventListener('click',()=>{const id=frameTrack,t=state.tracks.find(t=>t.id===id);if(!t||!allowTrackEdit(t))return;remember();host.unload(id);engine.clearAudition(id);frames.get(id)?.remove();frames.delete(id);openedApps.delete(id);loadOperations.set(id,(loadOperations.get(id)||0)+1);t.instrument=null;t.instrumentLive=false;frameTrack=null;changed({arrangement:true,rack:true});openInstrumentBrowser(state.tracks.indexOf(t));status('Instrument unloaded. Its recorded clips remain in the arrangement.');});
   $('trackName').addEventListener('change',()=>{remember();track().name=$('trackName').value.trim().slice(0,80)||'Track '+(state.selectedTrack+1);changed({arrangement:true,mixer:true,rack:true});});$('trackColor').addEventListener('change',()=>{remember();track().color=$('trackColor').value;changed({arrangement:true,mixer:true,rack:true});});
-  $('instrumentLive').addEventListener('change',()=>{if(!allowTrackEdit(track()))return;remember();track().instrumentLive=$('instrumentLive').checked;changed();if(engine.getMeters().playing&&track().instrument){if(track().instrumentLive){const t=track(),generation=lifecycle;ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing){await host.command(t.id,'prepare');if(generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}else fireCommand(track().id,'stop');}});
+  $('instrumentLive').addEventListener('change',()=>{if(!allowTrackEdit(track()))return;remember();track().instrumentLive=$('instrumentLive').checked;changed({notePlayback:true});if(engine.getMeters().playing&&track().instrument){if(track().instrumentLive){const t=track(),generation=lifecycle;ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing){await host.command(t.id,'prepare');if(generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}else fireCommand(track().id,'stop');}});
   $('uploadAppButton').addEventListener('click',()=>{$('appFile').value='';$('appFile').click();});$('appFile').addEventListener('change',async()=>{const file=$('appFile').files[0];if(!file)return;if(file.size>S.LIMITS.appHtmlBytes){status('Choose a self-contained instrument HTML smaller than 36 MiB.');return;}const generation=lifecycle;try{const html=await file.text();if(generation!==lifecycle)return;const id='custom-'+S.uid('app').slice(-24).replace(/[^a-z0-9_-]/gi,'');selectedTrack(browserTrack??state.selectedTrack);await ensureInstrument(track(),{open:true,replace:true,descriptor:{id,name:file.name.replace(/\.html?$/i,''),html}});}catch(e){status(e.message);}});
   $('loadAppUrlButton').addEventListener('click',()=>{try{const url=new URL($('customAppUrl').value,location.href);if(location.protocol==='file:'||url.origin!==location.origin||!['http:','https:'].includes(url.protocol))throw Error('Choose an instrument URL on this same site. For offline apps, upload its HTML.');selectedTrack(browserTrack??state.selectedTrack);const id='custom-'+S.uid('app').slice(-24).replace(/[^a-z0-9_-]/gi,'');ensureInstrument(track(),{open:true,replace:true,descriptor:{id,name:url.pathname.split('/').filter(Boolean).pop()||'New instrument',url:url.href}}).catch(e=>status(e.message));}catch(e){status(e.message);}});
   $('closeEffect').addEventListener('click',()=>$('effectDialog').close());$('exportButton').addEventListener('click',()=>{$('exportSummary').textContent='Stereo PCM WAV · 48 kHz · 16 bit';$('exportDialog').showModal();});$('closeExport').addEventListener('click',()=>$('exportDialog').close());$('renderButton').addEventListener('click',renderExport);$('cancelExport').addEventListener('click',()=>exportAbort?.abort());$('exportDialog').addEventListener('cancel',e=>{if(exportAbort){e.preventDefault();exportAbort.abort();}});
@@ -2338,9 +2355,21 @@
   $('playhead').addEventListener('keydown',e=>{
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();seekTo((engine.getMeters().beat||0)+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?4:state.view.snap||.25));}
   });
+  function syncEffectMeterDetail(visible) {
+    const owner = visible ? effectOwner() : null, slot = owner?.effects?.[selectedSlot];
+    const key = slot ? owner.id + ':' + selectedSlot : '';
+    if (key === effectMeterDetailKey) return;
+    effectMeterDetailKey = key;
+    // Rich insert readings are consumed by one editor. Keep every other insert
+    // out of the audio-thread meter snapshot and its structured-clone message.
+    engine.setMeterDetail?.(slot ? { ownerId: owner.id, slot: selectedSlot } : null);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncEffectMeterDetail(false); });
   function animate(now) {
     const dialogOpen = !document.hidden && !!document.querySelector('dialog[open]');
-    cabinetUI?.setVisible(!serviceController?.isOpen && !document.hidden && !$('effectEditor').hidden && panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze);
+    const effectVisible = !serviceController?.isOpen && !document.hidden && !dialogOpen && !$('effectEditor').hidden && panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze;
+    syncEffectMeterDetail(effectVisible);
+    cabinetUI?.setVisible(effectVisible);
     cpuInspector?.setVisible(!serviceController?.isOpen && !document.hidden && (!cpuInspector.element.open || !dialogOpen));
     masteringUI?.setVisible(!serviceController?.isOpen && !document.hidden && !dialogOpen && panelVisible('masteringSection'));
     if(serviceController?.isOpen || document.hidden){requestAnimationFrame(animate);return;}
@@ -2353,7 +2382,7 @@
       renderPlayhead(m);
       if (panelVisible('mixer')) renderTrackEqState(m);
       if (panelVisible('micInputPanel') || $('audioSettingsDialog').open) renderMicrophone(m.microphone);
-      if (panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));svtUI?.paint(effectReading(m));guitarPedalsUI?.paint(effectReading(m));cabinetUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
+      if (effectVisible) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));svtUI?.paint(effectReading(m));guitarPedalsUI?.paint(effectReading(m));cabinetUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
       if (panelVisible('busChannels') || panelVisible('groupBusChannels')) renderBusMeters(m);
       if (panelVisible('masteringSection')) masteringUI?.paint(m.mastering);
       if (panelVisible('masterPlaybackSection')) masterPlaybackUI?.paint(masterPlayback.getStatus());
@@ -2571,7 +2600,7 @@
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
   }
   engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='audio-settings-changed'){renderMicrophone();if($('audioSettingsDialog').open)renderAudioDiagnostics();}else if(event.type==='audio-device-change'){if($('audioSettingsDialog').open)refreshAudioDevices();renderMicrophone();}else if(event.type==='error'||event.type==='microphone-disconnected'){status(event.message);if($('audioSettingsDialog').open)interfaceMessage(event.message,true);}};
-  function renderClipActions() {
+  function renderClipActions(options = {}) {
     const selected = clipLocation(), multiple = selectedClips.size > 1, rows = T.entries(state, selectedClips);
     const blocked = !rows.length || recordFinishing || trackPowerOperations.size || rows.some(row => trackLocked(row.track));
     for (const id of ['clipDuplicateQuick', 'clipDeleteQuick', 'duplicateButton', 'deleteClipButton']) $(id).disabled = blocked;
@@ -2584,7 +2613,7 @@
       const action = button.dataset.clipAction;
       button.disabled = action === 'loop' ? !rows.length || transportLocked() : blocked || multiple && !['duplicate', 'delete'].includes(action);
     }
-    noteWorkflow?.render();
+    noteWorkflow?.render(options);
   }
   function editSelectedClip(){if(selectedClips.size!==1||!clipLocation())return;$('clipInspector').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});$('clip-name')?.focus({preventScroll:true});}
   function renderMarkers(){

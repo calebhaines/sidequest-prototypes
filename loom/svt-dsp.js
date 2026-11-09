@@ -125,7 +125,22 @@
       }
       function biquadSample(x, channel, c, state, band) { const ci = band * 5, zi = channel * (state === toneState ? 12 : 8) + band * 2, y = c[ci] * x + state[zi]; state[zi] = c[ci + 1] * x - c[ci + 3] * y + state[zi + 1]; state[zi + 1] = c[ci + 2] * x - c[ci + 4] * y; return y; }
       function toneSample(x, channel, bands) { const mask = toneMask & bands; for (let i = 0; i < 6; i++) if (mask & (1 << i)) x = biquadSample(x, channel, coefficients, toneState, i); return x; }
-      function jamesSample(x, channel) { const h = channel * 6; let y = james[42] * x; for (let j = 0; j < 6; j++) y += james[43 + j] * jamesHistory[h + j]; for (let row = 0; row < 6; row++) { const at = row * 7; let v = james[at] * x; for (let j = 0; j < 6; j++) v += james[at + 1 + j] * jamesHistory[h + j]; jamesNext[row] = v; } for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row]; return y * 20; }
+      function jamesSample(x, channel) {
+        // Read one immutable history vector for this network step. Keep the
+        // original multiply/add order while avoiding repeated indexed loads.
+        const h = channel * 6, h0 = jamesHistory[h], h1 = jamesHistory[h + 1], h2 = jamesHistory[h + 2], h3 = jamesHistory[h + 3], h4 = jamesHistory[h + 4], h5 = jamesHistory[h + 5];
+        let y = james[42] * x;
+        y += james[43] * h0; y += james[44] * h1; y += james[45] * h2;
+        y += james[46] * h3; y += james[47] * h4; y += james[48] * h5;
+        for (let row = 0; row < 6; row++) {
+          const at = row * 7; let v = james[at] * x;
+          v += james[at + 1] * h0; v += james[at + 2] * h1; v += james[at + 3] * h2;
+          v += james[at + 4] * h3; v += james[at + 5] * h4; v += james[at + 6] * h5;
+          jamesNext[row] = v;
+        }
+        for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row];
+        return y * 20;
+      }
       function nodeSample(u, channel, stage, threshold, a, b) {
         const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
         if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; return safe(y * threshold); }

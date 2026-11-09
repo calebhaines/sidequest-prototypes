@@ -1,5 +1,7 @@
 # GALLEY
 
+Playback performance changes and exact-audio verification are documented in [the 1.42.1 performance review](CPU-REVIEW-1.42.1.md).
+
 Kitchen’s central production station.
 
 **CUPBOARD (1.42.0)** adds twenty original cabinet, unusual-speaker and resonant-body IR models with up to four virtual microphones. Choose from ten microphone families, position them in Top or Face view, then set height, bearing, level, pan and polarity. Natural or aligned arrival times, solo, folded tone/room controls and presets make multi-mic blends easy to audition. The same processor runs on tracks, groups, returns and Master, and in exports and frozen tracks. See [the CUPBOARD guide](CUPBOARD-GUIDE.md).
