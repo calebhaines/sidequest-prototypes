@@ -93,6 +93,39 @@ async function close(context, page) { try { await page.evaluate(async () => { if
 async function ui(url) {
   const { context, page } = await open(url);
   try {
+    await check('Native bus menus and their labels keep their DOM and focus on selected and unselected tracks', async () => {
+      const opened = [];
+      for (const playing of [false, true]) {
+        await page.evaluate(() => { const state = groupQA.blank(); state.loopEnabled = true; return groupQA.load(state); });
+        if (playing) assert(await page.evaluate(() => LoomApp.engine.play(0)), 'Playback starts');
+        for (const index of [0, 7]) {
+          for (const viaLabel of [false, true]) {
+            const select = await page.locator('[data-track-output="' + index + '"]').elementHandle();
+            const firstOption = await select.$('option');
+            if (viaLabel) await page.locator('label[for="output-' + index + '"] > span').click();
+            else await select.click();
+            assert(await select.evaluate(element => element.isConnected), 'Opening the menu must not replace its select');
+            assert(await firstOption.evaluate(element => element.isConnected), 'Opening the menu must not replace its options');
+            assert(await select.evaluate(element => document.activeElement === element), 'The native select keeps keyboard focus');
+            assert.equal(await page.evaluate(() => LoomApp.getState().selectedTrack), 0, 'Using a mixer control must not select/rebuild its channel');
+            await page.keyboard.press('Escape');
+            assert.equal(await page.evaluate(() => LoomApp.engine.getMeters().playing), playing, 'Menu Escape does not change transport');
+            opened.push({ track: index + 1, viaLabel, playing });
+          }
+        }
+        await page.evaluate(() => LoomApp.engine.stop());
+      }
+      const select = page.locator('[data-track-output="7"]');
+      await select.focus(); await page.keyboard.press('ArrowDown');
+      assert.equal(await page.evaluate(() => LoomApp.getState().tracks[7].output), 'bus-1');
+      await page.locator('#undoButton').click();
+      assert.equal(await page.evaluate(() => LoomApp.getState().tracks[7].output), 'master');
+      await page.locator('#redoButton').click();
+      assert.equal(await page.evaluate(() => LoomApp.getState().tracks[7].output), 'bus-1');
+      await page.locator('[data-channel="7"] .channel-name').click();
+      assert.equal(await page.evaluate(() => LoomApp.getState().selectedTrack), 7, 'Channel background selection still works');
+      return { opened, keyboardRouting: true, undoRedo: true, channelSelection: true };
+    });
     await check('All ten tracks route to either group or master through mixer controls, with Undo and prepared-mix invalidation', async () => {
       await page.evaluate(() => groupQA.load(groupQA.blank()));
       assert.equal(await page.locator('#mixer [data-track-output]').count(), 10);
