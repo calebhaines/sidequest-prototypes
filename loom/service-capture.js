@@ -68,7 +68,7 @@
     next.tracks.forEach(track => { if (track.disabled) { for (const clip of track.clips) allIds.add(clip.id); return; } track.clips = []; track.automation = []; track.instrumentLive = false; });
     const active = { clips: Array(TRACK_COUNT).fill(null), sceneStarts: Array(TRACK_COUNT).fill(0), padBeats: Array(TRACK_COUNT).fill(0), phaseOrigins: Array(TRACK_COUNT).fill(0), tempo: state.tempo, performance: blankPerformance() };
     let boundary = 0, sceneCount = 0, slices = 0, generatedAssets = 0;
-    let pcmBytes = next.assets.reduce((sum, asset) => sum + asset.frames * asset.channels * 2, 0);
+    let availablePcmBytes = S.audioCapacity(next).sourceAvailableBytes;
     const lanes = next.tracks.map(() => new Map()), everTargets = next.tracks.map(() => new Set()), pieceOrigins = new Map();
     for (const event of take.events) if (event.kind === 'performance') {
       event.overrides.forEach(item => everTargets[state.tracks.findIndex(track => track.id === item.trackId)].add(item.target));
@@ -113,7 +113,7 @@
         let audio = decoded.get(original.id);
         if (!audio) { audio = S.decodeAsset(original); decoded.set(original.id, audio); }
         const sampleRate = audio.sampleRate, frames = Math.ceil(periodSeconds * sampleRate) + 1;
-        if (pcmBytes + frames * 4 > S.LIMITS.pcmBytes) fail('a fast source loop would exceed the 64 MB audio budget. Remove unused source audio or apply a shorter take.');
+        if (frames * 4 > availablePcmBytes) fail('a fast source loop would exceed the shared audio budget. Open Recordings to remove unused audio, release a frozen render or apply a shorter take.');
         const left = new Float32Array(frames), right = new Float32Array(frames), span = source.sourceEnd - source.sourceStart;
         const fadeIn = Math.min(geometry.length / 2, Math.max(.003 * active.tempo / 60, geometry.fadeIn || 0)), fadeOut = Math.min(geometry.length / 2, Math.max(.003 * active.tempo / 60, geometry.fadeOut || 0));
         for (let frame = 0; frame < frames; frame++) {
@@ -132,7 +132,7 @@
         }
         const name = active.performance.stutterBeats ? 'stutter cycle' : active.performance.fill ? 'fill cycle' : 'capture cycle';
         asset = S.encodeAsset({ left, right, sampleRate, name: source.name + ' · ' + name, id: S.uid('service-audio') });
-        next.assets.push(asset); pcmBytes += asset.frames * asset.channels * 2; stutterAssets.set(key, asset); generatedAssets++;
+        next.assets.push(asset); availablePcmBytes -= asset.frames * asset.channels * 2; stutterAssets.set(key, asset); generatedAssets++;
       }
       const name = active.performance.stutterBeats ? 'stutter' : active.performance.fill ? 'fill loop' : 'capture loop';
       const clip = { id: newId(source), name: source.name + ' · ' + name, type: 'audio', assetId: asset.id, start, length: end - start, sourceStart: 0, sourceEnd: periodSeconds, sourceOffset: modulo((start - geometry.start) * 60 / active.tempo, periodSeconds), rate: 1, reverse: false, loop: true, gain: source.gain, fadeIn: 0, fadeOut: 0 };

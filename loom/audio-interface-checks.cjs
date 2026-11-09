@@ -49,6 +49,40 @@ async function check(name, run) { await run(); passed.push(name); }
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
 
 (async () => {
+  await check('Ten-track recording uses available project space instead of the old 32/64 MiB take ceilings', async () => {
+    const f = fixture(); await f.engine.init();
+    const tracks = Array.from({ length: 10 }, (_, i) => 'track-' + (i + 1));
+    assert.equal(await f.engine.startRecording(tracks, { maxSeconds: 120 }), true);
+    assert.equal(f.engine.recorder.maxFrames, 48000 * 120, 'An empty project can hold ten full two-minute takes');
+    f.engine.cancelRecording();
+    assert.equal(await f.engine.startRecording(tracks, { maxSeconds: 120, budgetBytes: 128 * 1024 * 1024 }), true);
+    assert.equal(f.engine.recorder.maxFrames, Math.floor(128 * 1024 * 1024 / 40), 'Caller may still impose a smaller aggregate take budget');
+    assert.equal(f.engine._recordCapReason, 'budget');
+    await f.engine.dispose();
+  });
+  await check('Source and frozen audio constrain recording even when the caller supplies an oversized budget', async () => {
+    const f = fixture(); await f.engine.init();
+    // Capacity admission reads metadata, not PCM. The separate schema/browser
+    // checks validate real payloads; avoid allocating 256 MiB for this edge.
+    f.state.assets = [{ frames: (64 * 1024 * 1024 - 4096) / 4, channels: 2 }];
+    f.state.freezeAssets = [{ frames: 192 * 1024 * 1024 / 8, channels: 2 }];
+    assert.equal(await f.engine.startRecording(['track-1'], { budgetBytes: Infinity }), true);
+    assert.equal(f.engine.recorder.maxFrames, 1024);
+    f.engine.cancelRecording();
+    f.state.assets[0].frames += 1024;
+    await assert.rejects(f.engine.startRecording(['track-1'], { budgetBytes: 256 * 1024 * 1024 }), /Open Recordings/);
+    assert.equal(f.engine.isRecording, false); assert.equal(f.engine.recordingBusy, false);
+    await assert.rejects(f.engine.startMicrophoneRecording('track-1'), /Open Recordings/);
+    assert.equal(f.requests.length, 0, 'A full project must not request microphone permission');
+    assert.equal(f.engine.getMicrophoneStatus().active, false);
+    await f.engine.dispose();
+  });
+  await check('An undersized multitrack budget rejects before starting an empty unusable take', async () => {
+    const f = fixture(); await f.engine.init();
+    await assert.rejects(f.engine.startRecording(['track-1', 'track-2'], { budgetBytes: 128 * 4 }), /Open Recordings/);
+    assert.equal(f.engine.isRecording, false); assert.equal(f.engine._chunks.size, 0);
+    await f.engine.dispose();
+  });
   await check('Automatic rate avoids forced resampling; Live requests low latency and uses a 256-frame fallback', async () => {
     const f = fixture(); await f.engine.init(); const settings = f.engine.getAudioSettings();
     assert.equal(settings.sampleRate, 'auto'); assert.equal(settings.latencyProfile, 'live'); assert.equal(settings.inputChannel, 'stereo');
@@ -122,7 +156,11 @@ function plain(value) { return JSON.parse(JSON.stringify(value)); }
     await assert.rejects(f.engine.applyAudioSettings({ sampleRate: 96000 }), /wait|operation|interface/i); await assert.rejects(f.engine.play(0), /setting|interface/i); release(); await apply; assert.equal(f.engine.context.sampleRate, 44100); assert.equal(f.engine.getTransport().playing, false); await f.engine.dispose();
   });
   await check('Asynchronous export protects the live graph and releases its lock after cancellation', async () => {
-    const f = fixture(); await f.engine.init(); const abort = new AbortController(), exportPromise = f.engine.renderWav(f.state, f.engine.assets, { endBeat: 8, signal: abort.signal });
+    const f = fixture(); await f.engine.init();
+    // Force the production cooperative-render work budget to yield. A frozen
+    // fixture clock otherwise allows this short export to finish synchronously.
+    let now = 10000; f.scope.performance.now = () => now += 11;
+    const abort = new AbortController(), exportPromise = f.engine.renderWav(f.state, f.engine.assets, { endBeat: 8, signal: abort.signal });
     assert.equal(f.engine.getAudioDiagnostics().exportBusy, true); await assert.rejects(f.engine.applyAudioSettings({ sampleRate: 44100 }), /finish.*export/i); abort.abort(); await assert.rejects(exportPromise, /abort/i); assert.equal(f.engine.getAudioDiagnostics().exportBusy, false); await f.engine.applyAudioSettings({ sampleRate: 44100 }); assert.equal(f.engine.context.sampleRate, 44100); await f.engine.dispose();
   });
   await check('Unsupported output routing is explicit while default playback remains usable', async () => {

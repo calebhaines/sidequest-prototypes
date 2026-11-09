@@ -1,5 +1,7 @@
 # GALLEY
 
+GALLEY 1.42.4 removes the old 64 MiB recording/import ceiling. Source recordings can use up to 256 MiB of PCM, sharing that pool with frozen renders while keeping the 448 MiB portable file cap. Recording, importing, printing and freezing use the same remaining-space calculation; Recordings shows available space and keeps explicit cleanup controls.
+
 GALLEY 1.42.3 fixes mixer bus output menus closing on click. Dropdowns and their labels keep native focus, and keyboard routing and Undo/Redo remain available.
 
 Playback continuity improvements and exact-audio verification are documented in [the 1.42.2 performance review](CPU-REVIEW-1.42.2.md). The [previous review](CPU-REVIEW-1.42.1.md) retains its original baseline and measurements.

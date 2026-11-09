@@ -1,7 +1,7 @@
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.42.3';
+  const VERSION = '1.42.4';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const TRACK_OUTPUTS = Object.freeze(['master', 'bus-1', 'bus-2']);
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
@@ -57,7 +57,16 @@
   const defaultLFOs = () => lfoModule ? lfoModule.defaultLFOs() : Array.from({ length: 4 }, (_, index) => ({ id: 'lfo-' + (index + 1), enabled: false, wave: 'sine', sync: true, rate: 1, division: 4, depth: 1, offset: 0, phase: 0, symmetry: .5, smoothing: 10, retrigger: 'transport', routes: [] }));
   const lfoTargets = state => lfoModule ? lfoModule.targets(state, automationTargets) : [];
   const COLORS = ['#ee7948', '#d7c98f', '#aab4af', '#90b6bd', '#ce9a75', '#e0b15e', '#abb394', '#bcc6cb', '#c78d9e', '#7ba59a'];
-  const LIMITS = Object.freeze({ tracks: TRACK_COUNT, returns: 2, buses: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 64 * 1024 * 1024, freezePcmBytes: 192 * 1024 * 1024, freezeAssets: 2048, freezeChunkSeconds: 10, freezeSampleRate: 192000, projectBytes: 448 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  const LIMITS = Object.freeze({ tracks: TRACK_COUNT, returns: 2, buses: 2, slots: 5, trackSlots: 5, busSlots: 4, bars: 64, clipsPerTrack: 128, automationLanes: 64, automationPoints: 4096, lfos: 4, lfoRoutes: 16, markers: 128, assetSeconds: 120, pcmBytes: 256 * 1024 * 1024, freezePcmBytes: 192 * 1024 * 1024, totalPcmBytes: 256 * 1024 * 1024, freezeAssets: 2048, freezeChunkSeconds: 10, freezeSampleRate: 192000, projectBytes: 448 * 1024 * 1024, appHtmlBytes: 36 * 1024 * 1024, snapshotBytes: 96 * 1024 * 1024 });
+  // Source Int16 and frozen Float32 audio share the original total PCM budget.
+  // Count loaded assets, including unused recordings; deleting a timeline clip
+  // does not permanently delete its source from the Recordings browser.
+  function audioCapacity(state) {
+    const sourceBytes = (state.assets || []).reduce((sum, asset) => sum + asset.frames * asset.channels * 2, 0);
+    const freezeBytes = (state.freezeAssets || []).reduce((sum, asset) => sum + asset.frames * asset.channels * 4, 0);
+    const totalBytes = sourceBytes + freezeBytes, shared = Math.max(0, LIMITS.totalPcmBytes - totalBytes);
+    return { sourceBytes, freezeBytes, totalBytes, sourceAvailableBytes: Math.max(0, Math.min(LIMITS.pcmBytes - sourceBytes, shared)), freezeAvailableBytes: Math.max(0, Math.min(LIMITS.freezePcmBytes - freezeBytes, shared)) };
+  }
   const BUILT_INS = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine', 'citrus'];
   // Display branding is independent of legacy IDs, project formats and storage.
   const INSTRUMENT_NAMES = Object.freeze({ grain: 'SIZZLE', form: 'HOTPLATE', tine: 'CLATTER', mire: 'REDUCE', spool: 'ROTISSERIE', haze: 'STEAM', bower: 'SKEWER', ravel: 'DICER', fable: 'STOCK', roux: 'ROUX', batter: 'BATTER', proof: 'LEAVEN', marinade: 'MARINADE', picnic: 'PICNIC', morsel: 'MORSEL', heirloom: 'HEIRLOOM', brine: 'BRINE', citrus: 'CITRUS' });
@@ -399,7 +408,7 @@
       const cached = sourceAssetHashes.get(a); if (cached && cached.pcm === a.pcm) sourceAssetHashes.set(normalized, cached);
       ids.add(a.id); assets.push(normalized);
     }
-    if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds GALLEY’s 64 MB audio budget. Remove unused audio or shorten a take.');
+    if (pcmBytes > LIMITS.pcmBytes) throw Error('This session exceeds GALLEY’s 256 MiB source audio budget. Open Recordings to remove unused audio or shorten a take.');
     if (raw.freezeAssets !== undefined && (!Array.isArray(raw.freezeAssets) || raw.freezeAssets.length > LIMITS.freezeAssets)) throw Error('This session contains too many or invalid frozen audio assets.');
     const freezeAssets = []; let freezeBytes = 0;
     for (const a of raw.freezeAssets || []) {
@@ -409,6 +418,7 @@
       if (ids.has(a.id)) throw Error('Audio and freeze asset IDs must be unique.');
       ids.add(a.id); freezeAssets.push(canonicalFreezeAsset(a));
     }
+    if (pcmBytes + freezeBytes > LIMITS.totalPcmBytes) throw Error('Source and frozen audio exceed GALLEY’s shared 256 MiB audio budget. Open Recordings to remove unused audio, or unfreeze a track.');
     const assetMap = new Map(assets.map(a => [a.id, a]));
     const s = { version: 1, name: text(raw.name, d.name), tempo: number(raw.tempo, 40, 240, d.tempo), lengthBars: totalBeats / 4, loopEnabled: bool(raw.loopEnabled, true), loopStart: number(raw.loopStart, 0, totalBeats - 0.25, 0), loopEnd: number(raw.loopEnd, 0.25, totalBeats, Math.min(totalBeats, 16)), master: { id: 'master', name: text(raw.master?.name, 'Master'), level: number(raw.master?.level, 0, 1.5, 0.8), metronome: bool(raw.master?.metronome), mute: bool(raw.master?.mute), effects: Array.from({ length: 4 }, (_, slot) => effect(raw.master?.effects?.[slot])), mastering: normalizeMastering(raw.master?.mastering), playback: normalizeMasterPlayback(raw.master?.playback), automation: [] }, returns: [], buses: [], selectedTrack: integer(raw.selectedTrack, 0, TRACK_COUNT - 1, 0), view: { zoom: number(raw.view?.zoom, 4, 120, 48), snap: [0, 0.0625, 0.125, 0.25, 0.5, 1, 4].includes(raw.view?.snap) ? raw.view.snap : 0.25, tab: ['arrange', 'mixer'].includes(raw.view?.tab) ? raw.view.tab : 'arrange', follow: bool(raw.view?.follow, true) }, tracks: [], assets };
     if (freezeAssets.length) s.freezeAssets = freezeAssets;
@@ -764,5 +774,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, audioCapacity, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();
