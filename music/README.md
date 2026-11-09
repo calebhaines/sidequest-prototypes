@@ -10,7 +10,9 @@ GALLEY now has two additional group buses. Route any main track to Bus 1 or Bus 
 
 BRINE 1.0.1 and GALLEY 1.41.1 restore editor auditioning after monitoring is interrupted. Fresh keys, MIDI notes and native playback can reopen the active editor’s live route without restarting the arrangement.
 
-Current release: **Kitchen 2.32.1 · GALLEY 1.41.1**.
+CUPBOARD adds twenty cabinet, unusual-speaker and resonant-body responses with four individually placed and blended virtual microphones.
+
+Current release: **Kitchen 2.33.0 · GALLEY 1.42.0**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 

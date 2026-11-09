@@ -44,9 +44,9 @@ EXCHANGE_FILES = [
 # carry a frozen copy under shared/galley-effects; repository builds read loom/.
 VOICE_EFFECT_FILES = [
     'vocal-catalog.js', 'utility-catalog.js', 'filter-catalog.js',
-    'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'svt-catalog.js', 'guitar-pedals-catalog.js', 'effects-catalog.js',
+    'creative-catalog.js', 'preamp-catalog.js', 'tape-catalog.js', 'char-catalog.js', 'lofi-catalog.js', 'pedal-synth-catalog.js', 'deluxe-catalog.js', 'svt-catalog.js', 'guitar-pedals-catalog.js', 'cabinet-catalog.js', 'effects-catalog.js',
     'vocal-dsp.js', 'utility-dsp.js', 'filter-dsp.js', 'creative-dsp.js',
-    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-midi-dsp.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'svt-dsp.js', 'guitar-pedals-dsp.js', 'hood-dsp.js', 'effects.js',
+    'broiler-pedals.js', 'compressor-dsp.js', 'preamp-dsp.js', 'tape-dsp.js', 'char-dsp.js', 'lofi-dsp.js', 'pedal-synth-tracker.js', 'pedal-midi-dsp.js', 'pedal-synth-dsp.js', 'deluxe-dsp.js', 'svt-dsp.js', 'guitar-pedals-dsp.js', 'hood-dsp.js', 'cabinet-dsp.js', 'effects.js',
 ]
 PERCUSSION_APPS = {'grain', 'tine', 'form', 'batter'}
 
