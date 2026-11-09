@@ -131,7 +131,12 @@ function render(env, definition, capture = false) {
     if (block === 8 && definition.kind === 'service') core.queueService('performance', { stutterBeats: .125, overrides: [{ trackId: 'track-10', target: 'eq:lowMidFreq', value: 777 }] }, 'immediate', 2);
     const end = Math.min(frames, at + sizes[block++ % sizes.length]), channels = input.map(channel => channel.subarray(at, end));
     core.processBlock(outputs[0].subarray(at, end), outputs[1].subarray(at, end), Array.from({ length: 11 }, () => channels));
-    meters.update(JSON.stringify(core.getMeters())); at = end;
+    // These immutable 1.35/1.37.1 hashes predate group buses. Compare their
+    // historical meter shape without rewriting the reference fixtures. The
+    // full public snapshots, including buses and busEffects, remain available
+    // to every functional check and the current-release preservation suite.
+    const { buses, busEffects, ...historicalMeters } = core.getMeters();
+    meters.update(JSON.stringify(historicalMeters)); at = end;
   }
   assert(outputs[0].some(value => value !== 0), definition.id + ' must exercise audible processing');
   const result = { pcm: createHash('sha256').update(Buffer.from(outputs[0].buffer)).update(Buffer.from(outputs[1].buffer)).digest('hex'), meters: meters.digest('hex') };

@@ -25,7 +25,7 @@
     }
     const keys = Object.keys(specifications), clamp = (x,a,b) => Math.max(a,Math.min(b,x));
     const finite = (x,fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
-    const clean = x => Number.isFinite(x) ? clamp(x,-8,8) : 0;
+    const clean = x => x >= -8 && x <= 8 ? x : Number.isFinite(x) ? clamp(x,-8,8) : 0;
     const db = x => Math.pow(10,x/20), dbRead = x => 20*Math.log10(Math.max(1e-6,x));
     const lowpass = (hz,sr) => 1-Math.exp(-TAU*Math.min(hz,sr*.43)/sr);
     function normalize(value) {
@@ -135,7 +135,7 @@
       function next(){if(!ir.parts.length)return;sum(0);for(let i=0;i<HOP;i++){tail[i]=re[i]+overlap[i];overlap[i]=re[i+HOP];}}
       function prime(){if(!ir.parts.length||!source.filled)return;sum(1);for(let i=0;i<HOP;i++)overlap[i]=re[i+HOP];next();}
       if(prewarm)prime();
-      return {tick(){const r=source.ring[ch];let value=tail[source.phase],at=source.at;for(let j=0;j<HOP;j++){value+=ir.head[j]*r[at];if(--at<0)at=HOP-1;}return value;},next,reset(){tail.fill(0);overlap.fill(0);re.fill(0);im.fill(0);}};
+      return {tick(){const r=source.ring[ch],head=ir.head;let value=tail[source.phase],j=0;for(let at=source.at;at>=0;at--)value+=head[j++]*r[at];for(let at=HOP-1;j<HOP;at--)value+=head[j++]*r[at];return value;},next,reset(){tail.fill(0);overlap.fill(0);re.fill(0);im.fill(0);}};
     }
     function body(ir,source,stereo,prewarm=true){const l=convolver(ir,source,stereo==='mono'?2:0,prewarm),r=stereo==='split'?convolver(ir,source,1,prewarm):null;return {ir,stereo,l,r,next(){l.next();r?.next();},reset(){l.reset();r?.reset();}};}
     function read(buffer,at,delay){let where=at-delay;while(where<0)where+=buffer.length;const i=Math.floor(where),f=where-i,j=i+1===buffer.length?0:i+1;return buffer[i]+(buffer[j]-buffer[i])*f;}
@@ -145,9 +145,10 @@
       const ringLength=Math.ceil(sr*.065)+8,bodyL=new Float64Array(ringLength),bodyR=new Float64Array(ringLength),hpState=new Float64Array(4),lpState=new Float64Array(2);
       let ringAt=0,inputGain=db(p.input),outputGain=db(p.output),targetInput=inputGain,targetOutput=outputGain,wetMix=p.bypass?0:p.mix,mixFrames=0,mixStep=0,mixTarget=wetMix,room=p.room;
       let hpCoefficient=Math.exp(-TAU*p.lowCut/sr),lpCoefficient=lowpass(p.highCut,sr),targetHP=hpCoefficient,targetLP=lpCoefficient;
-      let inputPeak=0,outputPeak=0,renderedFrames=0,convolvedFrames=0,quietFrames=Infinity,idle=true,lastBodyL=0,lastBodyR=0;
+      let inputPeak=0,outputPeak=0,renderedFrames=0,convolvedFrames=0,quietFrames=Infinity,idle=true,lastBodyL=0,lastBodyR=0,globalMoving=0,bodyMirrored=true;
       const bassCut=lowpass(180,sr);
-      const mics=Array.from({length:4},(_,i)=>({index:i,key:'mic'+(i+1),state:new Float64Array(4),coeff:new Float64Array(5),targetCoeff:new Float64Array(5),hp:new Float64Array(4),tone:new Float64Array(2),bass:new Float64Array(2),gain:0,targetGain:0,levelGain:1,acousticGain:0,panL:1,panR:1,targetPanL:1,targetPanR:1,gainFrames:0,gainStep:0,delay:0,targetDelay:0,cut:1,targetCut:1,proximity:0,targetProximity:0,hpf:0,targetHPF:0,pan:0,x:0,y:0,distance:.08,angle:0}));
+      const mics=Array.from({length:4},(_,i)=>({index:i,key:'mic'+(i+1),state:new Float64Array(4),coeff:new Float64Array(5),targetCoeff:new Float64Array(5),hp:new Float64Array(4),tone:new Float64Array(2),bass:new Float64Array(2),gain:0,targetGain:0,levelGain:1,acousticGain:0,panL:1,panR:1,targetPanL:1,targetPanR:1,gainFrames:0,gainStep:0,delay:0,targetDelay:0,cut:1,targetCut:1,proximity:0,targetProximity:0,hpf:0,targetHPF:0,pan:0,targetPan:0,x:0,targetX:0,y:0,targetY:0,distance:.08,targetDistance:.08,angle:0,targetAngle:0,contact:false,moving:0}));
+      let workMics=[];
       function selected(next){return next.model!==current.ir.model||next.stereo!==current.stereo;}
       function acceptResponse(nextIR){
         const next=body(nextIR,source,p.stereo,false);
@@ -170,32 +171,35 @@
           const polar=type[5]==='omni'||contact?1:type[5]==='figure8'?incidence:type[5]==='hyper'?.25+.75*incidence:.5+.5*incidence;
           const cone=Math.min(1.8,Math.hypot(x,y)*.6),rotation=type[5]==='omni'||contact?0:Math.abs(Math.sin(angle))*.4;
           const maxCut=Math.min(sr*.43,type[1]*(1-.34*Math.min(1.8,cone+rotation))/(1+(contact?0:distance*.04)));
-          m.targetCut=lowpass(Math.max(500,maxCut),sr);m.targetHPF=Math.exp(-TAU*Math.min(type[0],sr*.2)/sr);
-          m.targetProximity=contact?0:type[6]*Math.exp(-distance/.18);
-          m.targetDelay=contact||next.alignment==='aligned'?0:path/343*sr;
+          const cut=lowpass(Math.max(500,maxCut),sr),hpf=Math.exp(-TAU*Math.min(type[0],sr*.2)/sr),proximity=contact?0:type[6]*Math.exp(-distance/.18),delay=contact||next.alignment==='aligned'?0:path/343*sr;
+          if(cut!==m.targetCut){m.targetCut=cut;m.moving|=4;}if(hpf!==m.targetHPF){m.targetHPF=hpf;m.moving|=16;}
+          if(proximity!==m.targetProximity){m.targetProximity=proximity;m.moving|=8;}if(delay!==m.targetDelay){m.targetDelay=delay;m.moving|=2;}m.contact=contact;
           const distanceGain=contact?.9/(1+.25*(x*x+y*y)):.18/(.1+path);
           m.acousticGain=type[7]*distanceGain*polar;
-          if(instant||old[k+'Type']!==next[k+'Type'])m.targetCoeff.set(biquad('peak',type[2],type[4],type[3],sr));
+          if(instant||old[k+'Type']!==next[k+'Type']){m.targetCoeff.set(biquad('peak',type[2],type[4],type[3],sr));m.moving|=32;}
         }
         if(instant||old[k+'Level']!==next[k+'Level'])m.levelGain=db(next[k+'Level']);
         const on=next[k+'Enabled']==='on'&&(!next._solo||next[k+'Solo']==='on'),gain=on?m.levelGain*m.acousticGain*(next[k+'Polarity']==='invert'?-1:1):0;
         if(gain!==m.targetGain){m.targetGain=gain;m.gainFrames=fadeFrames;m.gainStep=(gain-m.gain)/fadeFrames;}
-        if(instant||old[k+'Pan']!==next[k+'Pan']){const angle=(next[k+'Pan']+1)*PI*.25;m.targetPanL=Math.cos(angle)*Math.SQRT2;m.targetPanR=Math.sin(angle)*Math.SQRT2;}
-        if(instant){m.gain=m.targetGain;m.gainFrames=0;m.coeff.set(m.targetCoeff);m.delay=m.targetDelay;m.cut=m.targetCut;m.proximity=m.targetProximity;m.hpf=m.targetHPF;m.pan=next[k+'Pan'];m.panL=m.targetPanL;m.panR=m.targetPanR;m.x=next[k+'X'];m.y=next[k+'Y'];m.distance=next[k+'Distance'];m.angle=next[k+'Angle'];}
+        if(instant||old[k+'Pan']!==next[k+'Pan']){const angle=(next[k+'Pan']+1)*PI*.25;m.targetPan=next[k+'Pan'];m.targetPanL=Math.cos(angle)*Math.SQRT2;m.targetPanR=Math.sin(angle)*Math.SQRT2;m.moving|=1;}
+        if(instant||old[k+'X']!==next[k+'X']||old[k+'Y']!==next[k+'Y']||old[k+'Distance']!==next[k+'Distance']||old[k+'Angle']!==next[k+'Angle']){m.targetX=next[k+'X'];m.targetY=next[k+'Y'];m.targetDistance=next[k+'Distance'];m.targetAngle=next[k+'Angle'];m.moving|=64;}
+        if(instant){m.gain=m.targetGain;m.gainFrames=0;m.coeff.set(m.targetCoeff);m.delay=m.targetDelay;m.cut=m.targetCut;m.proximity=m.targetProximity;m.hpf=m.targetHPF;m.pan=next[k+'Pan'];m.panL=m.targetPanL;m.panR=m.targetPanR;m.x=next[k+'X'];m.y=next[k+'Y'];m.distance=next[k+'Distance'];m.angle=next[k+'Angle'];m.moving=0;}
       }
       function update(next,instant){
         const old=p;p=next;
-        if(instant||old.lowCut!==p.lowCut)targetHP=Math.exp(-TAU*p.lowCut/sr);
-        if(instant||old.highCut!==p.highCut)targetLP=lowpass(p.highCut,sr);
-        if(instant||old.input!==p.input)targetInput=db(p.input);
-        if(instant||old.output!==p.output)targetOutput=db(p.output);
+        if(instant||old.lowCut!==p.lowCut){targetHP=Math.exp(-TAU*p.lowCut/sr);globalMoving|=8;}
+        if(instant||old.highCut!==p.highCut){targetLP=lowpass(p.highCut,sr);globalMoving|=16;}
+        if(instant||old.input!==p.input){targetInput=db(p.input);globalMoving|=1;}
+        if(instant||old.output!==p.output){targetOutput=db(p.output);globalMoving|=2;}
+        if(instant||old.room!==p.room)globalMoving|=4;
         p._solo=mics.some(m=>p[m.key+'Enabled']==='on'&&p[m.key+'Solo']==='on');
         for(const m of mics)acoustic(m,p,instant,old);
+        workMics=mics.filter(m=>m.gain!==0||m.targetGain!==0||m.gainFrames>0);
         const target=p.bypass?0:p.mix;
-        if(instant){wetMix=mixTarget=target;mixFrames=0;inputGain=targetInput;outputGain=targetOutput;room=p.room;hpCoefficient=targetHP;lpCoefficient=targetLP;}
+        if(instant){wetMix=mixTarget=target;mixFrames=0;inputGain=targetInput;outputGain=targetOutput;room=p.room;hpCoefficient=targetHP;lpCoefficient=targetLP;globalMoving=0;}
         else if(target!==mixTarget){mixTarget=target;mixFrames=fadeFrames;mixStep=(target-wetMix)/fadeFrames;}
       }
-      function clearHistory(){source.reset();current.reset();previous=warming=null;bodyFade=0;bodyL.fill(0);bodyR.fill(0);hpState.fill(0);lpState.fill(0);for(const m of mics){m.state.fill(0);m.hp.fill(0);m.tone.fill(0);m.bass.fill(0);}ringAt=0;quietFrames=Infinity;idle=true;lastBodyL=lastBodyR=0;}
+      function clearHistory(){source.reset();current.reset();previous=warming=null;bodyFade=0;bodyL.fill(0);bodyR.fill(0);hpState.fill(0);lpState.fill(0);for(const m of mics){m.state.fill(0);m.hp.fill(0);m.tone.fill(0);m.bass.fill(0);}ringAt=0;quietFrames=Infinity;idle=true;lastBodyL=lastBodyR=0;bodyMirrored=true;}
       function effectiveCount(){return mics.filter(m=>p[m.key+'Enabled']==='on'&&(!p._solo||p[m.key+'Solo']==='on')).length;}
       function tailSeconds(){return Math.max(current.ir.seconds,previous?.ir.seconds||0,profiles[p.model][10])+.065+.16;}
       update(p,true);
@@ -214,24 +218,52 @@
             // Every settled-dry sample must skip the same control work, not
             // merely callbacks that happened to begin after the fade ended.
             if(wetMix===0&&mixTarget===0&&mixFrames===0){left[i]=dryL;right[i]=dryR;outputPeak=Math.max(Math.abs(dryL),Math.abs(dryR),outputPeak*meterDecay);continue;}
-            inputGain+=slew*(targetInput-inputGain);outputGain+=slew*(targetOutput-outputGain);room+=slew*(p.room-room);hpCoefficient+=slew*(targetHP-hpCoefficient);lpCoefficient+=slew*(targetLP-lpCoefficient);
+            // A settled value either equals its target or its next floating-point
+            // addition is too small to change it. Skipping only those stalled
+            // updates preserves the old recurrence exactly, without snapping.
+            if(globalMoving&1){const before=inputGain;inputGain+=slew*(targetInput-inputGain);if(inputGain===before)globalMoving&=~1;}
+            if(globalMoving&2){const before=outputGain;outputGain+=slew*(targetOutput-outputGain);if(outputGain===before)globalMoving&=~2;}
+            if(globalMoving&4){const before=room;room+=slew*(p.room-room);if(room===before)globalMoving&=~4;}
+            if(globalMoving&8){const before=hpCoefficient;hpCoefficient+=slew*(targetHP-hpCoefficient);if(hpCoefficient===before)globalMoving&=~8;}
+            if(globalMoving&16){const before=lpCoefficient;lpCoefficient+=slew*(targetLP-lpCoefficient);if(lpCoefficient===before)globalMoving&=~16;}
             if(mixFrames>0){wetMix+=mixStep;if(--mixFrames===0){wetMix=mixTarget;if(wetMix===0)clearHistory();}}
-            else {wetMix+=slew*(mixTarget-wetMix);if(Math.abs(wetMix-mixTarget)<1e-12)wetMix=mixTarget;}
+            else if(wetMix!==mixTarget){wetMix+=slew*(mixTarget-wetMix);if(Math.abs(wetMix-mixTarget)<1e-12)wetMix=mixTarget;}
             let live=false;
-            for(const m of mics){if(m.gainFrames>0){m.gain+=m.gainStep;if(--m.gainFrames===0)m.gain=m.targetGain;}if(m.gain===0&&m.targetGain===0)continue;m.pan+=slew*(p[m.key+'Pan']-m.pan);m.panL+=slew*(m.targetPanL-m.panL);m.panR+=slew*(m.targetPanR-m.panR);m.delay+=slew*(m.targetDelay-m.delay);m.cut+=slew*(m.targetCut-m.cut);m.proximity+=slew*(m.targetProximity-m.proximity);m.hpf+=slew*(m.targetHPF-m.hpf);m.x+=slew*(p[m.key+'X']-m.x);m.y+=slew*(p[m.key+'Y']-m.y);m.distance+=slew*(p[m.key+'Distance']-m.distance);m.angle+=slew*(p[m.key+'Angle']-m.angle);for(let j=0;j<5;j++)m.coeff[j]+=slew*(m.targetCoeff[j]-m.coeff[j]);if(m.gain!==0||m.targetGain!==0)live=true;}
+            for(const m of workMics){
+              if(m.gainFrames>0){m.gain+=m.gainStep;if(--m.gainFrames===0)m.gain=m.targetGain;}
+              if(m.gain===0&&m.targetGain===0)continue;
+              if(m.moving&1){const a=m.pan,b=m.panL,c=m.panR;m.pan+=slew*(m.targetPan-m.pan);m.panL+=slew*(m.targetPanL-m.panL);m.panR+=slew*(m.targetPanR-m.panR);if(m.pan===a&&m.panL===b&&m.panR===c)m.moving&=~1;}
+              if(m.moving&2){const before=m.delay;m.delay+=slew*(m.targetDelay-m.delay);if(m.delay===before)m.moving&=~2;}
+              if(m.moving&4){const before=m.cut;m.cut+=slew*(m.targetCut-m.cut);if(m.cut===before)m.moving&=~4;}
+              if(m.moving&8){const before=m.proximity;m.proximity+=slew*(m.targetProximity-m.proximity);if(m.proximity===before)m.moving&=~8;}
+              if(m.moving&16){const before=m.hpf;m.hpf+=slew*(m.targetHPF-m.hpf);if(m.hpf===before)m.moving&=~16;}
+              if(m.moving&64){const a=m.x,b=m.y,c=m.distance,d=m.angle;m.x+=slew*(m.targetX-m.x);m.y+=slew*(m.targetY-m.y);m.distance+=slew*(m.targetDistance-m.distance);m.angle+=slew*(m.targetAngle-m.angle);if(m.x===a&&m.y===b&&m.distance===c&&m.angle===d)m.moving&=~64;}
+              if(m.moving&32){let changed=false;for(let j=0;j<5;j++){const before=m.coeff[j];m.coeff[j]+=slew*(m.targetCoeff[j]-m.coeff[j]);if(m.coeff[j]!==before)changed=true;}if(!changed)m.moving&=~32;}
+              live=true;
+            }
             if(wetMix===0&&mixTarget===0){left[i]=dryL;right[i]=dryR;outputPeak=Math.max(Math.abs(dryL),Math.abs(dryR),outputPeak*meterDecay);continue;}
             let wetL=0,wetR=0;
             if(live){
               if(dryL===0&&dryR===0){if(!idle&&++quietFrames>=quietLimit)clearHistory();}else{quietFrames=0;idle=false;}
               if(!idle){
-                renderedFrames++;source.push(dryL*inputGain,dryR*inputGain);let a=current.l.tick(),b=current.r?current.r.tick():a;convolvedFrames+=current.r?2:1;
+                renderedFrames++;if(current.r||previous?.r)bodyMirrored=false;source.push(dryL*inputGain,dryR*inputGain);let a=current.l.tick(),b=current.r?current.r.tick():a;convolvedFrames+=current.r?2:1;
                 if(previous){const oldL=previous.l.tick(),oldR=previous.r?previous.r.tick():oldL,x=(fadeFrames-bodyFade+1)/fadeFrames;a=oldL+(a-oldL)*x;b=oldR+(b-oldR)*x;convolvedFrames+=previous.r?2:1;if(--bodyFade===0)previous=null;}
                 bodyL[ringAt]=a;bodyR[ringAt]=b;lastBodyL=a;lastBodyR=b;
-                for(const m of mics){if(m.gain===0&&m.targetGain===0)continue;
-                  let a=m.delay<1e-6?lastBodyL:read(bodyL,ringAt,m.delay),b=m.delay<1e-6?lastBodyR:read(bodyR,ringAt,m.delay);
-                  if(room>1e-8&&p[m.key+'Type']!=='contact'){a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);b+=room*(read(bodyR,ringAt,m.delay+sr*.009)*.19-read(bodyL,ringAt,m.delay+sr*.017)*.13+read(bodyR,ringAt,m.delay+sr*.031)*.09);}
-                  const hpA=a-m.hp[0]+m.hpf*m.hp[2],hpB=b-m.hp[1]+m.hpf*m.hp[3];m.hp[0]=a;m.hp[1]=b;m.hp[2]=hpA;m.hp[3]=hpB;
-                  a=filter(hpA,m.coeff,m.state,0);b=filter(hpB,m.coeff,m.state,2);m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]+=bassCut*(b-m.bass[1]);a+=m.bass[0]*m.proximity;b+=m.bass[1]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]+=m.cut*(b-m.tone[1]);
+                for(const m of workMics){if(m.gain===0&&m.targetGain===0)continue;
+                  let a=m.delay<1e-6?lastBodyL:read(bodyL,ringAt,m.delay);
+                  if(bodyMirrored){
+                    // A mono body has identical ring and mic-filter histories.
+                    // Mirror the exact left recurrence, including signed zero.
+                    // Once split audio has run, retain both paths until reset.
+                    if(room>1e-8&&!m.contact)a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);
+                    const hpA=a-m.hp[0]+m.hpf*m.hp[2];m.hp[0]=m.hp[1]=a;m.hp[2]=m.hp[3]=hpA;
+                    a=filter(hpA,m.coeff,m.state,0);m.state[2]=m.state[0];m.state[3]=m.state[1];m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]=m.bass[0];a+=m.bass[0]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]=m.tone[0];
+                  }else{
+                    let b=m.delay<1e-6?lastBodyR:read(bodyR,ringAt,m.delay);
+                    if(room>1e-8&&!m.contact){a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);b+=room*(read(bodyR,ringAt,m.delay+sr*.009)*.19-read(bodyL,ringAt,m.delay+sr*.017)*.13+read(bodyR,ringAt,m.delay+sr*.031)*.09);}
+                    const hpA=a-m.hp[0]+m.hpf*m.hp[2],hpB=b-m.hp[1]+m.hpf*m.hp[3];m.hp[0]=a;m.hp[1]=b;m.hp[2]=hpA;m.hp[3]=hpB;
+                    a=filter(hpA,m.coeff,m.state,0);b=filter(hpB,m.coeff,m.state,2);m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]+=bassCut*(b-m.bass[1]);a+=m.bass[0]*m.proximity;b+=m.bass[1]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]+=m.cut*(b-m.tone[1]);
+                  }
                   wetL+=m.tone[0]*m.gain*m.panL;wetR+=m.tone[1]*m.gain*m.panR;
                 }
                 if(++ringAt===ringLength)ringAt=0;

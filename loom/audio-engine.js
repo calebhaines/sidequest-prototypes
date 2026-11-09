@@ -125,6 +125,17 @@
     const disabledMeter = Object.freeze(emptyMeter());
     const idleBusMeters = Object.freeze([disabledMeter, disabledMeter]);
     const disabledEffectMeters = Object.freeze(Array(5).fill(null));
+    const emptyBusEffectMeters = Object.freeze(Array(4).fill(null));
+    const writeMeter = (target, peak, powerL, powerR, frames) => {
+      const meter = target || {};
+      meter.peak = peak; meter.rms = Math.sqrt((powerL + powerR) / (2 * frames)); meter.rmsLeft = Math.sqrt(powerL / frames); meter.rmsRight = Math.sqrt(powerR / frames);
+      return meter;
+    };
+    const sameSuppliedParams = (current, next) => {
+      if (!current) return false;
+      for (const key of Object.keys(next)) if (!Object.prototype.hasOwnProperty.call(current, key) || current[key] !== next[key]) return false;
+      return true;
+    };
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
     const sampleData = (data, position) => {
       if (!data || position < 0 || position >= data.length) return 0;
@@ -250,6 +261,10 @@
         this.microphoneMonitor = { track: -1, enabled: false };
         this.microphonePeak = 0;
         this.slots = Array.from({ length: TRACK_COUNT }, () => Array(5).fill(null));
+        this._automationCompileCache = new Map(); this._clipAssetsRevision = 0; this._clipCompileKey = null;
+        this._clipCandidates = Array.from({ length: TRACK_COUNT }, () => []);
+        this._meterPool = { tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: Array.from({ length: 2 }, emptyMeter), master: emptyMeter(), trackRows: Array(TRACK_COUNT).fill(disabledMeter), returnRows: Array(2).fill(disabledMeter), busRows: Array(2).fill(disabledMeter), block: {} };
+        this._reuseMeters = false; this._metersPooled = false;
         this.buffers = [];
         this.trackEq = Array.from({ length: TRACK_COUNT }, () => null);
         this.eqAutomationValues = Array(TRACK_COUNT).fill(null);
@@ -334,7 +349,8 @@
         if (this.masteringDSP) {
           const values = { ...params };
           for (const key of this.masteringControlKeys || []) if (this.masteringAutomationValues && Object.prototype.hasOwnProperty.call(this.masteringAutomationValues, key)) values[key] = this.masteringAutomationValues[key];
-          this.masteringDSP.setParams(values); this.masteringDSP.setAnalysis(this.masteringAnalysis);
+          if (!sameSuppliedParams(this._masteringAppliedParams, values)) { this.masteringDSP.setParams(values); Object.assign(this._masteringAppliedParams || (this._masteringAppliedParams = {}), values); }
+          this.masteringDSP.setAnalysis(this.masteringAnalysis);
         }
         this.masteringSettings = params;
       }
@@ -369,19 +385,19 @@
           const ownerId = index < TRACK_COUNT ? 'track-' + (index + 1) : index < MASTER_INDEX ? 'return-' + (index - RETURN_OFFSET + 1) : index === MASTER_INDEX ? 'master' : 'bus-' + (index - BUS_OFFSET + 1);
           const label = owner.name || (index < TRACK_COUNT ? 'Track ' + (index + 1) : index < MASTER_INDEX ? 'Return ' + (index === RETURN_OFFSET ? 'A' : 'B') : index === MASTER_INDEX ? 'Master' : 'Bus ' + (index - BUS_OFFSET + 1));
           const busActive = index < BUS_OFFSET || this.busRouteCounts[index - BUS_OFFSET] > 0 || this.busTailFrames[index - BUS_OFFSET] > 0;
-          const disabled = index < TRACK_COUNT && owner.disabled === true, frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects, owner.eq, frozen, disabled]);
+          const disabled = index < TRACK_COUNT && owner.disabled === true, frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects?.map(effect => effect?.type || null), frozen, disabled]);
           rows.push({ id: ownerId, kind: 'owner', ownerId, label, identity, active: !disabled && busActive, disabled });
           for (let slot = 0; slot < racks[index].length; slot++) {
             const effect = owner.effects?.[slot], dsp = racks[index][slot], id = ownerId + ':fx:' + slot;
             if (dsp) dsp.diagnosticsId = id;
-            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify([effect || null, disabled]), active: !!effect && !frozen && !disabled && busActive, disabled, bypassed: disabled || frozen || effect?.params?.bypass === true || dsp?.bypass === true });
+            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify([effect?.type || null, disabled]), active: !!effect && !frozen && !disabled && busActive, disabled, bypassed: disabled || frozen || effect?.params?.bypass === true || dsp?.bypass === true });
           }
           const mix = ownerId + ':mix', eq = ownerId + ':eq';
           rows.push({ id: mix, kind: 'mix', ownerId, label: index === MASTER_INDEX ? 'Output, metronome and limiter' : 'Pan, level, sends and metering', identity: String(disabled), active: !disabled && busActive, disabled });
-          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: JSON.stringify([owner.eq, disabled]), active: !frozen && !disabled, disabled });
+          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: String(disabled), active: !frozen && !disabled, disabled });
           return { owner: ownerId, mix, eq };
         });
-        rows.push({ id: 'master:mastering', kind: 'mix', ownerId: 'master', label: 'Mastering tools and analysis', identity: JSON.stringify(this.master.mastering || null), active: !!this.masteringDSP?.isActive() || this.masteringAnalysis });
+        rows.push({ id: 'master:mastering', kind: 'mix', ownerId: 'master', label: 'Mastering tools and analysis', identity: 'mastering', active: !!this.masteringDSP?.isActive() || this.masteringAnalysis });
         rows.push(...[
           ['engine', 'GALLEY engine including inserts'], ['clips', 'Clip, input and timeline preparation'], ['modulation', 'LFO modulation'], ['recorder', 'Recording and input history'], ['events', 'Transport and SERVICE events'], ['meters', 'Live meter reports'], ['report', 'Diagnostics report preparation']
         ].map(([id, label]) => ({ id, kind: 'stage', label, active: true })));
@@ -398,14 +414,21 @@
       diagnosticsReportDue() { return this.cpuProfiler?.enabled && this.cpuProfiler.consumeReportDue(); }
       setAssets(assets) {
         this.assets = assets instanceof Map ? assets : new Map(Object.entries(assets || {}));
+        this._clipAssetsRevision++;
         if (this.tracks) this._compileClips();
       }
       updateAssets(additions, removals = []) {
         for (const id of removals) this.assets.delete(id);
         for (const [id, asset] of additions instanceof Map ? additions : Object.entries(additions || {})) this.assets.set(id, asset);
+        this._clipAssetsRevision++;
         if (this.tracks) this._compileClips();
       }
       _compileClips() {
+        // Mixer gestures send fresh project objects. Only source geometry,
+        // freeze metadata, enabled lanes or decoded assets can change a read.
+        // Capture values rather than object identity: callers can edit in place.
+        const compileKey = JSON.stringify([this._clipAssetsRevision, this.tracks.map(track => [track.id, track.disabled === true, track.freeze || null, track.clips || []])]);
+        if (compileKey === this._clipCompileKey) return;
         // A freeze owns only lightweight routing metadata and decoded Float32
         // chunks. The original clips stay in the song for immediate unfreezing.
         const hadFrozen = this.hasFrozen, previousFlags = this.frozen.map(Boolean);
@@ -435,6 +458,7 @@
           this.freezeTail = false; this.freezeContinuation = null;
         }
         this.clipLists = this.tracks.map((track, index) => track.disabled === true || this.frozen[index] || this.options.freezeCaptureTrackId != null && index !== indexFor(this.options.freezeCaptureTrackId, this.tracks) ? [] : (track.clips || []).map(clip => compileClip(clip, this.assets.get(clip.assetId))).filter(item => item.left?.length && item.span > 0));
+        this._clipCompileKey = compileKey;
       }
       setState(state) {
         if (this.service) { this.service.baseState = state || {}; this._setState(this._serviceState()); }
@@ -482,11 +506,11 @@
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus, 4));
         this.busAutomation = this.buses.map(bus => this._compileAutomation(bus, 4));
         this.masterAutomation = this._compileAutomation(this.master, 4);
-        if (lfoDSP) { const definitions = lfoDSP.targets(this.state, null, effects.specifications, masteringModule?.specifications).filter(target => {
+        if (lfoDSP) { const definitions = ((this.state.lfos || []).some(lfo => lfo?.routes?.length) || this.modulation?.entries.size) ? lfoDSP.targets(this.state, null, effects.specifications, masteringModule?.specifications).filter(target => {
           if (target.ownerId.startsWith('lfo-')) return true;
           const index = indexFor(target.ownerId, this.tracks);
           return this.freezeCaptureIndex >= 0 ? index === this.freezeCaptureIndex : index < 0 || this.tracks[index].disabled !== true && !this.frozen[index];
-        }); if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
+        }) : []; if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
         this._compileModulationHandles();
         this._configureMastering();
         for (let t = 0; t < TRACK_COUNT; t++) {
@@ -528,8 +552,15 @@
         this.masteringControlKeys = masteringKeys.filter(key => this.masterAutomation.mastering[key] || this.modulationOwners[MASTER_INDEX].mastering[key]);
       }
       _compileAutomation(owner, slots = effectSlotCount(owner)) {
+        const source = owner.automation || [], effectInputs = [];
+        for (const lane of source) {
+          const match = /^fx:([0-4]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(lane.target || '');
+          if (match) { const spec = owner.effects?.[Number(match[1])]; effectInputs.push([spec?.type, typeof spec?.params?.[match[2]]]); }
+        }
+        const cacheId = (owner.id || 'empty') + ':' + slots, compileKey = JSON.stringify([source, effectInputs]), cached = this._automationCompileCache.get(cacheId);
+        if (cached?.key === compileKey) return cached.value;
         const result = { level: null, pan: null, mastering: {}, sends: [null, null], eq: Object.fromEntries(trackEqKeys.map(key => [key, null])), effects: Array.from({ length: slots }, () => []) };
-        for (const lane of owner.automation || []) {
+        for (const lane of source) {
           if (lane.enabled === false || !lane.points?.length) continue;
           const compiled = { ...lane, points: lane.points.filter(p => Number.isFinite(p.beat) && Number.isFinite(p.value)).slice().sort((a, b) => a.beat - b.beat) };
           if (!compiled.points.length) continue;
@@ -542,6 +573,7 @@
             if (spec && (!lane.effectType || lane.effectType === spec.type) && typeof spec.params?.[match[2]] === 'number') result.effects[index].push({ key: match[2], lane: compiled });
           }
         }
+        this._automationCompileCache.set(cacheId, { key: compileKey, value: result });
         return result;
       }
       _updateRack(owner, row, automation = null) {
@@ -551,9 +583,11 @@
           if (old && old.type === spec.type) {
             let retained = null;
             if (automation && old.automationValues) for (const key of new Set([...automation.effects[slot].map(item => item.key), ...(this.modulation?.effectKeys(owner.id, slot) || [])])) if (Object.prototype.hasOwnProperty.call(old.automationValues, key)) { if (!retained) retained = {}; retained[key] = old.automationValues[key]; }
-            old.dsp.setParams(retained ? { ...spec.params, ...retained } : spec.params || {}); old.bypass = spec.bypass === true; old.automationValues = retained;
+            const values = retained ? { ...spec.params, ...retained } : spec.params || {};
+            if (!sameSuppliedParams(old.appliedParams, values)) { old.dsp.setParams(values); Object.assign(old.appliedParams || (old.appliedParams = {}), values); }
+            old.bypass = spec.bypass === true; old.automationValues = retained;
           }
-          else { if (old) old.dsp.reset(); const dsp = effects.create(spec.type, this.sampleRate, spec.params || {}); row[slot] = dsp ? { type: spec.type, dsp, bypass: spec.bypass === true } : null; }
+          else { if (old) old.dsp.reset(); const dsp = effects.create(spec.type, this.sampleRate, spec.params || {}); row[slot] = dsp ? { type: spec.type, dsp, bypass: spec.bypass === true, appliedParams: { ...spec.params } } : null; }
         }
       }
       _processRack(owner, row, automation, left, right, blockBeat, blockPlaying, modulation) {
@@ -575,7 +609,7 @@
               // Every production effect merges partial parameter updates. The
               // manual base was already applied by _updateRack; only changed
               // automation values need to cross the 32-sample control boundary.
-              if (changed) { slot.dsp.setParams(changed); slot.automationValues = values; }
+              if (changed) { slot.dsp.setParams(changed); Object.assign(slot.appliedParams || (slot.appliedParams = {}), changed); slot.automationValues = values; }
             }
             slot.dsp.process(left.subarray(start, start + length), right.subarray(start, start + length), { tempo: this.tempo, beat, playing: this.timelinePlaying[start] === 1 && this.timelineCountIn[start] === 0 });
             start += length;
@@ -609,7 +643,7 @@
           if ((this.sampleClock + start) % 32 === 0) {
             const values = {};
             for (const key of keys) values[key] = this._lfoValue(modulation[key], start, automationValue(lanes[key], this.timelineBeats[start], this.master.mastering?.[key]));
-            processor.setParams(values); this.masteringAutomationValues = values;
+            processor.setParams(values); Object.assign(this._masteringAppliedParams || (this._masteringAppliedParams = {}), values); this.masteringAutomationValues = values;
           }
           processor.process(left.subarray(start, start + length), right.subarray(start, start + length), masteringAudioOptions);
           start += length;
@@ -702,9 +736,20 @@
         this._resetBuses();
         this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: emptyMeter() };
       }
+      setMeterDetail(value) {
+        this._meterDetail = value === undefined ? undefined : value && typeof value.ownerId === 'string' && Number.isInteger(value.slot) && value.slot >= 0 && value.slot < 5 ? { ownerId: value.ownerId, slot: value.slot } : null;
+      }
       getMeters() {
-        const rackMeters = (owner, row) => row.map((slot, insert) => slot ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || owner.effects?.[insert]?.params?.bypass === true } : null);
-        return { ...this.meters, mastering: this.masteringDSP?.getMeters() || null, lfos: this.modulation?.getMeters((ownerId, target) => {
+        const detail = this._meterDetail;
+        const rackMeters = (owner, row) => {
+          if (detail !== undefined && (!detail || detail.ownerId !== owner.id)) return row.length === 5 ? disabledEffectMeters : emptyBusEffectMeters;
+          return row.map((slot, insert) => slot && (detail === undefined || detail.slot === insert) ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || owner.effects?.[insert]?.params?.bypass === true } : null);
+        };
+        const meters = this.meters;
+        // Realtime hosts ignore processBlock's return value. Their private
+        // working rows can be reused, but every exposed snapshot owns its rows.
+        const levels = this._metersPooled ? { tracks: meters.tracks.map(row => ({ ...row })), returns: meters.returns.map(row => ({ ...row })), buses: meters.buses.map(row => ({ ...row })), master: { ...meters.master } } : null;
+        return { ...meters, ...levels, mastering: this.masteringDSP?.getMeters() || null, lfos: this.modulation?.getMeters((ownerId, target) => {
           const index = /^track-/.test(ownerId) ? indexFor(ownerId, this.tracks) : -1, returnIndex = this.returns.findIndex(owner => owner.id === ownerId), owner = index >= 0 ? this.tracks[index] : returnIndex >= 0 ? this.returns[returnIndex] : this.buses.find(bus => bus.id === ownerId) || this.master;
           const lane = owner.automation?.find(lane => lane.target === target), parts = target.split(':'), base = target === 'level' || target === 'pan' ? owner[target] : parts[0] === 'send' ? owner.sends?.[Number(parts[1])] : parts[0] === 'eq' ? owner.eq?.[parts[1]] : parts[0] === 'fx' ? owner.effects?.[Number(parts[1])]?.params?.[parts[2]] : parts[0] === 'mastering' ? owner.mastering?.[parts[1]] : 0;
           return automationValue(lane, this.beat, base);
@@ -831,6 +876,22 @@
           return result;
         });
       }
+      renderRealtime(left, right, inputs = []) {
+        this._reuseMeters = true;
+        try { this.processBlock(left, right, inputs); }
+        finally { this._reuseMeters = false; }
+      }
+      _publishMeters(value) {
+        this._metersPooled = this._reuseMeters;
+        if (this._reuseMeters) {
+          const block = this._meterPool.block;
+          if (!('cycle' in value)) delete block.cycle;
+          if (!('microphonePeak' in value)) delete block.microphonePeak;
+          if (!('countInBeatsRemaining' in value)) delete block.countInBeatsRemaining;
+          this.meters = Object.assign(block, value);
+        } else this.meters = value;
+        return this.meters;
+      }
       processBlock(left, right, inputs = []) {
         const profiler = this.cpuProfiler;
         if (!profiler?.enabled) return this._renderBlock(left, right, inputs);
@@ -878,7 +939,7 @@
           values[plane * 2 + channel] = a + (b - a) * fraction;
         }
       }
-      _processFrozen(index, left, right, audible, trackStem, slew) {
+      _processFrozen(index, left, right, audible, trackStem, slew, meter = null) {
         const frozen = this.frozen[index], rate = frozen.spec.sampleRate / this.sampleRate, n = left.length;
         let peak = 0, powerL = 0, powerR = 0;
         for (let frame = 0; frame < n; frame++) {
@@ -910,7 +971,7 @@
           if (!trackStem) for (let bus = 0; bus < 2; bus++) { this.returnBuffers[bus][0][frame] += frozen.last[2 + bus * 2] * gain; this.returnBuffers[bus][1][frame] += frozen.last[3 + bus * 2] * gain; }
           peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
-        return { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+        return writeMeter(meter, peak, powerL, powerR, n);
       }
       _routeGroup(track, frame, a, b, left, right, dry) {
         const route = this.outputRoutes[track], target = this.outputTargets[track], slew = this.mixSlew;
@@ -931,7 +992,7 @@
       }
       _processGroups(left, right, blockBeat, blockPlaying, anySolo, trackStem, returnStem, selectedBus, cpu) {
         if (trackStem || !this.groupRoutingPresent) return idleBusMeters;
-        const meters = [disabledMeter, disabledMeter], n = left.length, slew = this.mixSlew;
+        const meters = this._reuseMeters ? this._meterPool.busRows.fill(disabledMeter) : [disabledMeter, disabledMeter], n = left.length, slew = this.mixSlew;
         for (let bus = 0; bus < 2; bus++) {
           const moving = this.outputRoutes.some((route, track) => this.tracks[track].disabled !== true && route[bus + 1] !== 0);
           if (!(this.busRouteCounts[bus] || moving || this.busTailFrames[bus]) || !this.busBuffers[bus]) continue;
@@ -967,7 +1028,7 @@
             this._updateRack({}, this.busSlots[bus]);
             if (this.cpuProfiler?.enabled) this._syncDiagnosticsTopology();
           }
-          meters[bus] = { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+          meters[bus] = writeMeter(this._reuseMeters ? this._meterPool.buses[bus] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, start); }
         }
         if (!this.busRouteCounts.some(Boolean) && !this.busTailFrames.some(Boolean) && !this.outputRoutes.some((route, t) => this.tracks[t].disabled !== true && (route[1] !== 0 || route[2] !== 0))) this.groupRoutingPresent = false;
@@ -979,7 +1040,7 @@
         left.fill(0); right.fill(0);
         const microphone = inputs[TRACK_COUNT]; this.microphonePeak = 0;
         if (microphone?.[0]) for (let f = 0; f < n; f++) this.microphonePeak = Math.max(this.microphonePeak, Math.abs(microphone[0][f] || 0), Math.abs((microphone[1] || microphone[0])[f] || 0));
-        if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: emptyMeter() }; return this.meters; }
+        if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); return this._publishMeters({ beat: this.beat, playing: false, ended: this.ended, tracks: this._reuseMeters ? this._meterPool.trackRows.fill(disabledMeter) : Array.from({ length: TRACK_COUNT }, emptyMeter), returns: this._reuseMeters ? this._meterPool.returnRows.fill(disabledMeter) : Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: this._reuseMeters ? disabledMeter : emptyMeter() }); }
         for (const t of this.activeTrackIndices) if (this.buffers[t]?.[0].length !== n) this.buffers[t] = [new Float32Array(n), new Float32Array(n)];
         if (!this.returnBuffers.length || this.returnBuffers[0][0].length !== n) this.returnBuffers = Array.from({ length: 2 }, () => [new Float32Array(n), new Float32Array(n)]);
         else for (const pair of this.returnBuffers) { pair[0].fill(0); pair[1].fill(0); }
@@ -1009,13 +1070,18 @@
         let playingFrames = this.playing ? n : 0;
         const blockEnd = blockBeat + advance * n, wraps = loop && blockEnd >= loopEnd - 1e-10, wholeLoop = loop && advance * n >= loopEnd - loopStart;
         const wrappedEnd = wraps ? loopStart + Math.max(0, blockEnd - loopEnd) % (loopEnd - loopStart) : loopStart;
-        const candidates = Array(TRACK_COUNT).fill(emptyModulation);
-        for (const t of this.activeTrackIndices) if (this.playing && this.clipLists[t].length) candidates[t] = this.clipLists[t].filter(item => {
-          const end = item.start + item.length;
-          if (wholeLoop) return (item.start < loopEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
-          if (wraps) return (item.start < loopEnd && end > blockBeat) || (item.start <= wrappedEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
-          return item.start <= blockEnd && end > blockBeat;
-        });
+        const candidates = this._clipCandidates;
+        for (const t of this.activeTrackIndices) {
+          const list = candidates[t]; let count = 0;
+          if (this.playing) for (const item of this.clipLists[t]) {
+            const end = item.start + item.length;
+            const overlaps = wholeLoop ? (item.start < loopEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat)
+              : wraps ? (item.start < loopEnd && end > blockBeat) || (item.start <= wrappedEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat)
+                : item.start <= blockEnd && end > blockBeat;
+            if (overlaps) list[count++] = item;
+          }
+          list.length = count;
+        }
         const minimumFade = .003 / secondsPerBeat;
         for (const t of this.activeTrackIndices) for (const item of candidates[t]) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
         for (const t of this.activeTrackIndices) {
@@ -1122,7 +1188,7 @@
           return target === 'level' || /^send:[01]$/.test(target) && this.tracks[index].sendPre?.[Number(target.slice(5))] === true ? 0 : 1;
         } : null);
         if (cpu) cpu.endStage('modulation', modulationStart);
-        const trackMeters = Array(TRACK_COUNT).fill(disabledMeter), slew = this.mixSlew;
+        const trackMeters = this._reuseMeters ? this._meterPool.trackRows.fill(disabledMeter) : Array(TRACK_COUNT).fill(disabledMeter), slew = this.mixSlew;
         if (!this.dryMixGains || this.dryMixGains.length !== n) this.dryMixGains = new Float64Array(n);
         const dryGoal = dryAudible ? 1 : 0;
         for (let frame = 0; frame < n; frame++) {
@@ -1132,7 +1198,7 @@
         }
         for (const t of this.activeTrackIndices) {
           const [l, r] = this.buffers[t], track = this.tracks[t], modulation = this.modulationOwners[t], panCurve = this.panCurves[t], keys = cpu ? this._cpuKeys[t] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
-          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters[t] = this._processFrozen(t, left, right, audible[t], trackStem, slew); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
+          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters[t] = this._processFrozen(t, left, right, audible[t], trackStem, slew, this._reuseMeters ? this._meterPool.tracks[t] : null); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
           if (this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) continue;
           this._processRack(track, this.slots[t], this.automation[t], l, r, blockBeat, blockPlaying, modulation);
           const eqStart = cpu ? cpu.start(keys.eq) : NaN;
@@ -1173,7 +1239,7 @@
             }
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
           }
-          trackMeters[t] = { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+          trackMeters[t] = writeMeter(this._reuseMeters ? this._meterPool.tracks[t] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         if (this.freezeCaptureIndex >= 0) {
@@ -1182,11 +1248,10 @@
           this.freezeCapture.sendA[0].set(this.returnBuffers[0][0]); this.freezeCapture.sendA[1].set(this.returnBuffers[0][1]);
           this.freezeCapture.sendB[0].set(this.returnBuffers[1][0]); this.freezeCapture.sendB[1].set(this.returnBuffers[1][1]);
           left.set(this.freezeCapture.main[0]); right.set(this.freezeCapture.main[1]); this.sampleClock += n;
-          this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, returns: [emptyMeter(), emptyMeter()], buses: idleBusMeters, master: trackMeters[this.freezeCaptureIndex] };
-          return this.meters;
+          return this._publishMeters({ beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, returns: this._reuseMeters ? this._meterPool.returnRows.fill(disabledMeter) : [emptyMeter(), emptyMeter()], buses: idleBusMeters, master: trackMeters[this.freezeCaptureIndex] });
         }
         const busMeters = this._processGroups(left, right, blockBeat, blockPlaying, anySolo, trackStem, returnStem, selectedBus, cpu);
-        const returnMeters = [];
+        const returnMeters = this._reuseMeters ? this._meterPool.returnRows : [];
         for (let bus = 0; bus < 2; bus++) {
           const owner = this.returns[bus], [l, r] = this.returnBuffers[bus], gain = this.returnGains[bus], modulation = this.modulationOwners[RETURN_OFFSET + bus], panCurve = this.panCurves[RETURN_OFFSET + bus], keys = cpu ? this._cpuKeys[RETURN_OFFSET + bus] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
           if (!trackStem && !busStem) this._processRack(owner, this.returnSlots[bus], this.returnAutomation[bus], l, r, blockBeat, blockPlaying, modulation);
@@ -1203,7 +1268,7 @@
             if (a !== 0) left[frame] += a; if (b !== 0) right[frame] += b;
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a*a; powerR += b*b;
           }
-          returnMeters.push({ peak, rms: Math.sqrt((powerL + powerR)/(2*n)), rmsLeft: Math.sqrt(powerL/n), rmsRight: Math.sqrt(powerR/n) });
+          returnMeters[bus] = writeMeter(this._reuseMeters ? this._meterPool.returns[bus] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         const masterKeys = cpu ? this._cpuKeys[MASTER_INDEX] : null, masterStart = cpu ? cpu.start(masterKeys.owner) : NaN;
@@ -1273,8 +1338,7 @@
         }
         if (cpu) cpu.endStage(masterKeys.owner, masterStart);
         this.sampleClock += n;
-        this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, returns: returnMeters, buses: busMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
-        return this.meters;
+        return this._publishMeters({ beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, returns: returnMeters, buses: busMeters, master: writeMeter(this._reuseMeters ? this._meterPool.master : null, peak, powerL, powerR, n) });
       }
     }
 
@@ -1494,6 +1558,7 @@
       this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
       this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
       this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 }; this._diagnosticsGeneration = 0; this._diagnosticsSnapshot = null; this._diagnosticsReleased = true; this._masteringAnalysis = false;
+      this._meterDetail = null;
       this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
       if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
     }
@@ -1503,6 +1568,11 @@
       this._masteringAnalysis = active; this._send({ type: 'masteringAnalysis', enabled: active });
     }
     resetMasteringMeters() { this._send({ type: 'resetMasteringMeters' }); }
+    setMeterDetail(value) {
+      const detail = value && typeof value.ownerId === 'string' && Number.isInteger(value.slot) && value.slot >= 0 && value.slot < 5 ? { ownerId: value.ownerId, slot: value.slot } : null;
+      if (detail?.ownerId === this._meterDetail?.ownerId && detail?.slot === this._meterDetail?.slot) return;
+      this._meterDetail = detail; this._send({ type: 'meterDetail', detail });
+    }
     setDiagnostics(value = {}) {
       const previous = this._diagnosticsConfig, mode = ['light', 'balanced', 'deep'].includes(value.mode) ? value.mode : previous.mode;
       const enabled = typeof value.enabled === 'boolean' ? value.enabled : previous.enabled;
@@ -1677,7 +1747,7 @@
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
-                  this.diagnosticsGeneration=options.processorOptions.diagnosticsGeneration||0;this.core.setDiagnostics(options.processorOptions.diagnostics||{enabled:false});this.core.setMasteringAnalysis(options.processorOptions.masteringAnalysis===true);
+                  this.diagnosticsGeneration=options.processorOptions.diagnosticsGeneration||0;this.core.setDiagnostics(options.processorOptions.diagnostics||{enabled:false});this.core.setMasteringAnalysis(options.processorOptions.masteringAnalysis===true);this.core.setMeterDetail(options.processorOptions.meterDetail||null);
                   this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
                     const m=e.data,serviceFrame=m.type==='serviceStart'?0:this.core.sampleClock;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
@@ -1686,6 +1756,7 @@
                       catch(error){this.port.postMessage({type:'pedalMidiAck',requestId:m.requestId,error:error.message});}return;
                     }
                     if(m.type==='diagnosticsConfig')this.core.setDiagnostics(m.config);
+                    else if(m.type==='meterDetail')this.core.setMeterDetail(m.detail);
                     else if(m.type==='masteringAnalysis')this.core.setMasteringAnalysis(m.enabled);
                     else if(m.type==='resetMasteringMeters'){this.core.resetMasteringMeters();this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});}
                     else if(m.type==='diagnosticsReset')this.core.resetDiagnostics(m.revision);
@@ -1725,7 +1796,7 @@
                   // The normal audio callback does not enter profiling helpers.
                   // Keep transport, capture and meter timing identical in both paths.
                   if(!this.core.cpuProfiler?.enabled){
-                    const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                    const serviceFrame=this.core.sampleClock;this.core.renderRealtime(out[0],out[1]||out[0],inputs);
                     if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                     if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
                     if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
@@ -1737,7 +1808,7 @@
                   }
                   const profiling=this.core.beginDiagnostics(n);
                   try {
-                  const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  const serviceFrame=this.core.sampleClock;this.core.renderRealtime(out[0],out[1]||out[0],inputs);
                   const eventsStamp=this.core.diagnosticsStart('events');
                   if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                     if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
@@ -1758,7 +1829,7 @@
               }
               registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
-            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: INPUT_COUNT, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch, diagnostics: this._diagnosticsConfig, diagnosticsGeneration: this._diagnosticsGeneration, masteringAnalysis: this._masteringAnalysis } });
+            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: INPUT_COUNT, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch, diagnostics: this._diagnosticsConfig, diagnosticsGeneration: this._diagnosticsGeneration, masteringAnalysis: this._masteringAnalysis, meterDetail: this._meterDetail } });
             this.node.port.onmessage = e => this._message(e.data);
             for (let i = 0; i < TRACK_COUNT; i++) this.inputs[i].connect(this.node, 0, i);
             this.microphoneInput.connect(this.node, 0, TRACK_COUNT);
@@ -1771,6 +1842,7 @@
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
           this.core.setDiagnostics(this._diagnosticsConfig);
           this.core.setMasteringAnalysis(this._masteringAnalysis);
+          this.core.setMeterDetail(this._meterDetail);
           this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
           this.node = this.context.createScriptProcessor(AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames, INPUT_COUNT * 2, 2);
           this._processingFrames = this.node.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames;
@@ -1781,7 +1853,7 @@
             if (!this.core.cpuProfiler?.enabled) {
               const inputs = Array.from({ length: INPUT_COUNT }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
               const serviceFrame = this.core.sampleClock;
-              this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+              this.core.renderRealtime(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
               if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
               if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
               this.recorder.capture(inputs, e.outputBuffer.length, this.core); this._flushPedalMidi();
@@ -1793,7 +1865,7 @@
             try {
             const inputs = Array.from({ length: INPUT_COUNT }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
             const serviceFrame = this.core.sampleClock;
-            this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            this.core.renderRealtime(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
             const eventsStamp = this.core.diagnosticsStart('events');
             if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
@@ -1943,6 +2015,7 @@
         return;
       }
       if (m.type === 'diagnosticsConfig') this.core.setDiagnostics(m.config);
+      else if (m.type === 'meterDetail') this.core.setMeterDetail(m.detail);
       else if (m.type === 'masteringAnalysis') this.core.setMasteringAnalysis(m.enabled);
       else if (m.type === 'resetMasteringMeters') { this.core.resetMasteringMeters(); this._acceptMeters(this.core.getMeters(), this._transportEpoch, this.context?.currentTime || 0); }
       else if (m.type === 'diagnosticsReset') this.core.resetDiagnostics(m.revision);

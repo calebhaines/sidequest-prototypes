@@ -121,7 +121,7 @@
   global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
-</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.42.0"><meta name="galley-service-version" content="1.0.0">
+</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.42.1"><meta name="galley-service-version" content="1.0.0">
 <meta name="description" content="GALLEY is Kitchen’s ten-track browser studio. Arrange audio, play eighteen instruments, monitor microphone input through five effects per track, and align recordings. Each track has a four-band EQ with sweepable mid frequencies. Twenty-one effects include SUNDAY Deluxe Reverb studies, FERMENT guitar and bass synthesis, TIN CAN microphone and telephone colours, PRESERVE tape machines, SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
@@ -2332,7 +2332,7 @@ body {
 
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.42.0 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.42.1 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
@@ -5335,8 +5335,8 @@ body {
     };
     const finite = (x, fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
     const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-    const bound = x => Number.isFinite(x) ? clamp(x, -8, 8) : 0;
-    const safe = x => Number.isFinite(x) ? clamp(x, -65536, 65536) : 0;
+    const bound = x => typeof x === 'number' && x >= -8 && x <= 8 ? x : Number.isFinite(x) ? clamp(x, -8, 8) : 0;
+    const safe = x => typeof x === 'number' && x >= -65536 && x <= 65536 ? x : Number.isFinite(x) ? clamp(x, -65536, 65536) : 0;
     const db = x => Math.pow(10, x / 20);
     const levelDb = x => 20 * Math.log10(Math.max(x, 1e-12));
     function normalize(params) {
@@ -7376,7 +7376,22 @@ body {
       }
       function biquadSample(x, channel, c, state, band) { const ci = band * 5, zi = channel * (state === toneState ? 12 : 8) + band * 2, y = c[ci] * x + state[zi]; state[zi] = c[ci + 1] * x - c[ci + 3] * y + state[zi + 1]; state[zi + 1] = c[ci + 2] * x - c[ci + 4] * y; return y; }
       function toneSample(x, channel, bands) { const mask = toneMask & bands; for (let i = 0; i < 6; i++) if (mask & (1 << i)) x = biquadSample(x, channel, coefficients, toneState, i); return x; }
-      function jamesSample(x, channel) { const h = channel * 6; let y = james[42] * x; for (let j = 0; j < 6; j++) y += james[43 + j] * jamesHistory[h + j]; for (let row = 0; row < 6; row++) { const at = row * 7; let v = james[at] * x; for (let j = 0; j < 6; j++) v += james[at + 1 + j] * jamesHistory[h + j]; jamesNext[row] = v; } for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row]; return y * 20; }
+      function jamesSample(x, channel) {
+        // Read one immutable history vector for this network step. Keep the
+        // original multiply/add order while avoiding repeated indexed loads.
+        const h = channel * 6, h0 = jamesHistory[h], h1 = jamesHistory[h + 1], h2 = jamesHistory[h + 2], h3 = jamesHistory[h + 3], h4 = jamesHistory[h + 4], h5 = jamesHistory[h + 5];
+        let y = james[42] * x;
+        y += james[43] * h0; y += james[44] * h1; y += james[45] * h2;
+        y += james[46] * h3; y += james[47] * h4; y += james[48] * h5;
+        for (let row = 0; row < 6; row++) {
+          const at = row * 7; let v = james[at] * x;
+          v += james[at + 1] * h0; v += james[at + 2] * h1; v += james[at + 3] * h2;
+          v += james[at + 4] * h3; v += james[at + 5] * h4; v += james[at + 6] * h5;
+          jamesNext[row] = v;
+        }
+        for (let row = 0; row < 6; row++) jamesHistory[h + row] = jamesNext[row];
+        return y * 20;
+      }
       function nodeSample(u, channel, stage, threshold, a, b) {
         const at = channel * 4 + stage, n = clamp(u / threshold, -24, 24), previous = previousNode[at], midpoint = (n + previous) * .5; previousNode[at] = n;
         if (model === 3) { if (previousA[at] !== a || previousB[at] !== b) { previousArea[at] = plateArea(solvePlate(previous, a, b), a, b); previousA[at] = a; previousB[at] = b; } const v = solvePlate(n, a, b), integral = plateArea(v, a, b), difference = n - previous; let y = Math.abs(difference) < 1e-5 * (1 + Math.abs(n) + Math.abs(previous)) ? solvePlate(midpoint, a, b) : (integral - previousArea[at]) / difference; previousArea[at] = integral; return safe(y * threshold); }
@@ -7481,7 +7496,7 @@ body {
     const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
     const finite = (x, otherwise) => typeof x === 'number' && Number.isFinite(x) ? x : otherwise;
     const db = x => Math.pow(10, x / 20), dbfs = x => Math.max(-120, 20 * Math.log10(Math.max(1e-6, x)));
-    const safe = x => Number.isFinite(x) ? clamp(x, -64, 64) : 0;
+    const safe = x => typeof x === 'number' && x >= -64 && x <= 64 ? x : Number.isFinite(x) ? clamp(x, -64, 64) : 0;
     const specifications = { input: [-24, 24, 0], output: [-24, 12, 0], quality: ['high', 'eco'], mix: [0, 1, 1] };
     const localRules = { Type: TYPES, Enabled: ['on', 'off'], Drive: [0, 1, .35], Tone: [0, 1, .5], Volume: [0, 1, .5], Level: [-24, 18, 0], Mix: [0, 1, 1], Rate: [.05, 12, 1], Depth: [0, 1, .5], Time: [20, 1500, 350], Feedback: [0, .92, .35], Value: [0, 1, .5], ChorusDelay: [2, 30, 12], WahMode: ['manual', 'auto'], PhaserStages: ['4', '6'], DelayMode: ['analog', 'digital'], Clock: ['free', 'sync'], Division: ['1/4', '1/8', '1/8.', '1/16', '1/2', '1', '2'], ReverbMode: ['spring', 'room'], Attack: [.5, 50, 8], Release: [20, 800, 160], Predelay: [0, 180, 20], Decay: [.2, 8, 2] };
     for (let index = 1; index <= 4; index++) for (const key of Object.keys(localRules)) specifications['pedal' + index + key] = key === 'Type' && index === 1 ? ['bluesdriver', ...TYPES.filter(type => type !== 'bluesdriver')] : localRules[key];
@@ -7521,7 +7536,7 @@ body {
     // Trapezoidal companion models preserve every coupling-capacitor charge.
     // -1 is AC ground; -2 is the low-impedance stage driving the network.
     class PassiveNetwork {
-      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.capacitors = capacitors; this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.diodeNode = diodeNode; this.configure(resistors); }
+      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.capacitors = capacitors; this.capacitorA = Int32Array.from(capacitors, part => part[0]); this.capacitorB = Int32Array.from(capacitors, part => part[1]); this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.historyGain = Float64Array.from(this.g, g => -2 * g); this.diodeNode = diodeNode; this.configure(resistors); }
       configure(resistors, rampFrames = 0) {
         this.resistors = resistors; const n = this.count, matrix = new Float64Array(n * n); this.source = new Float64Array(n);
         const stamp = (a, b, g) => { if (a >= 0) { matrix[a * n + a] += g; if (b >= 0) matrix[a * n + b] -= g; else if (b === -2) this.source[a] += g; } if (b >= 0) { matrix[b * n + b] += g; if (a >= 0) matrix[b * n + a] -= g; else if (a === -2) this.source[b] += g; } };
@@ -7534,12 +7549,29 @@ body {
       advance() { if (this.rampRemaining) { for (let i = 0; i < this.inv.length; i++) this.inv[i] += this.invStep[i]; if (--this.rampRemaining === 0) this.inv.set(this.invTarget); } }
       state() { return { h: new Float64Array(this.capacitors.length), rhs: new Float64Array(this.count), volts: new Float64Array(this.count) }; }
       process(input, state, output) {
-        const n = this.count, rhs = state.rhs, volts = state.volts;
+        const n = this.count, rhs = state.rhs, volts = state.volts, capacitorA = this.capacitorA, capacitorB = this.capacitorB;
         for (let i = 0; i < n; i++) rhs[i] = this.source[i] * input;
-        for (let i = 0; i < this.capacitors.length; i++) { const [a, b] = this.capacitors[i], h = state.h[i]; if (a >= 0) rhs[a] -= h; if (b >= 0) rhs[b] += h; }
-        for (let i = 0; i < n; i++) { let sum = 0; for (let j = 0; j < n; j++) sum += this.inv[i * n + j] * rhs[j]; volts[i] = sum; }
+        for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], h = state.h[i]; if (a >= 0) rhs[a] -= h; if (b >= 0) rhs[b] += h; }
+        const inv = this.inv;
+        if (n === 5) {
+          const r0 = rhs[0], r1 = rhs[1], r2 = rhs[2], r3 = rhs[3], r4 = rhs[4];
+          for (let i = 0; i < 5; i++) {
+            const at = i * 5; let sum = 0;
+            sum += inv[at] * r0; sum += inv[at + 1] * r1; sum += inv[at + 2] * r2;
+            sum += inv[at + 3] * r3; sum += inv[at + 4] * r4; volts[i] = sum;
+          }
+        } else if (n === 6) {
+          const r0 = rhs[0], r1 = rhs[1], r2 = rhs[2], r3 = rhs[3], r4 = rhs[4], r5 = rhs[5];
+          for (let i = 0; i < 6; i++) {
+            const at = i * 6; let sum = 0;
+            sum += inv[at] * r0; sum += inv[at + 1] * r1; sum += inv[at + 2] * r2;
+            sum += inv[at + 3] * r3; sum += inv[at + 4] * r4; sum += inv[at + 5] * r5; volts[i] = sum;
+          }
+        } else {
+          for (let i = 0; i < n; i++) { let sum = 0; for (let j = 0; j < n; j++) sum += inv[i * n + j] * rhs[j]; volts[i] = sum; }
+        }
         if (this.diodeNode >= 0) { const node = this.diodeNode, change = (tableDiode(volts[node], this.table) - volts[node]) / this.resistance; for (let i = 0; i < n; i++) volts[i] += this.inv[i * n + node] * change; }
-        for (let i = 0; i < this.capacitors.length; i++) { const [a, b] = this.capacitors[i], va = a >= 0 ? volts[a] : a === -2 ? input : 0, vb = b >= 0 ? volts[b] : b === -2 ? input : 0; state.h[i] = safe(-2 * this.g[i] * (va - vb) - state.h[i]); }
+        for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], va = a >= 0 ? volts[a] : a === -2 ? input : 0, vb = b >= 0 ? volts[b] : b === -2 ? input : 0; state.h[i] = safe(this.historyGain[i] * (va - vb) - state.h[i]); }
         return volts[output];
       }
     }
@@ -7555,12 +7587,12 @@ body {
     // remain in the implicit loop. The finite gain and rail law are estimates;
     // this is not a full transistor SPICE model or a hardware measurement fit.
     class DiscreteStage {
-      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.set(.35); }
+      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.groundCap = 1 + ground * this.cg; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.set(.35); }
       set(drive, immediate = false) { this.targetRf = this.base + 250000 * taper(drive); if (this.rf === undefined || immediate) this.rf = this.targetRf; this.remaining = this.rf === this.targetRf ? 0 : Math.max(1, Math.round(this.rate * .004)); this.rfStep = this.remaining ? (this.targetRf - this.rf) / this.remaining : 0; this.configure(); }
-      configure() { const sum = 1 / this.rf + this.cf, yg = this.cg / (1 + this.ground * this.cg); this.alpha = sum / (sum + yg); this.scale = 1 / (sum + yg); this.yg = yg; }
+      configure() { const sum = 1 / this.rf + this.cf, yg = this.cg / this.groundCap; this.alpha = sum / (sum + yg); this.scale = 1 / (sum + yg); this.yg = yg; }
       process(x) {
         if (this.remaining) { this.rf += this.rfStep; if (--this.remaining === 0) this.rf = this.targetRf; this.configure(); }
-        const h = this.hg / (1 + this.ground * this.cg), beta = -(this.hf + h) * this.scale, u = x - beta, magnitude = Math.abs(u), rail = u < 0 ? 4 : 3.8, a = this.alpha;
+        const h = this.hg / this.groundCap, beta = -(this.hf + h) * this.scale, u = x - beta, magnitude = Math.abs(u), rail = u < 0 ? 4 : 3.8, a = this.alpha;
         // +8 V supply/+4 V reference, PNP sourcing stage and2k2 pull-down:
         // nominal .2 V PNP saturation leaves +3.8/−4 V available swing.
         // These are circuit-informed estimates, not measured device curves.
@@ -7614,9 +7646,26 @@ body {
         this.type = type; this.os = quality === 'eco' ? 2 : 4; this.rate = rate; this.osr = rate * this.os; this.gainSlew = 1 - Math.exp(-1 / (this.osr * .004));
         const hz = Math.min(20000, rate * .44); this.pre = [.5411961001, 1.306562965].map(q => lowpass(this.osr, hz, q)); this.post = [.51763809, .7071067812, 1.931851653].map(q => lowpass(this.osr, hz, q));
         this.states = [0, 1].map(() => ({ previous: 0, pre: new Float64Array(4), post: new Float64Array(6), high: new RC(this.osr, 80), low: new RC(this.osr, 5000), memory: new RC(this.osr, 25), feedback: new RC(this.osr, 8), rail: 0, transistor: 0 }));
-        this.result = new Float64Array(2); this.blue = type === 'bluesdriver' ? new BlueDriver(this.osr, p) : null; if (this.blue) this.p = { ...p }; else this.set(p);
+        this.result = new Float64Array(2); this.mono = true; this.blue = type === 'bluesdriver' ? new BlueDriver(this.osr, p) : null; if (this.blue) this.p = { ...p }; else this.set(p);
+      }
+      synchronizeRight() {
+        // While the inputs have identical histories there is one circuit to
+        // solve. Materialize the second history before controls or stereo
+        // input can cause the two channels to take different paths.
+        const left = this.states[0], right = this.states[1];
+        right.previous = left.previous; right.pre.set(left.pre); right.post.set(left.post);
+        for (const key of ['high', 'low', 'memory', 'feedback']) { right[key].z = left[key].z; right[key].g = left[key].g; }
+        for (const key of ['rail', 'transistor', 'amount']) right[key] = left[key];
+        if (this.blue) {
+          const a = this.blue.states[0], b = this.blue.states[1];
+          for (const key of ['input', 'couple', 'out']) { b[key].z = a[key].z; b[key].g = a[key].g; }
+          for (const key of ['first', 'second']) for (const field of ['hf', 'hg', 'rf', 'remaining', 'rfStep', 'alpha', 'scale', 'yg']) b[key][field] = a[key][field];
+          for (const key of ['inter', 'tone']) { b[key].h.set(a[key].h); b[key].rhs.set(a[key].rhs); b[key].volts.set(a[key].volts); }
+          b.bass.set(a.bass);
+        }
       }
       set(p, changed = null) {
+        if (this.mono) this.synchronizeRight();
         this.p = { ...p }; if (this.blue) { this.blue.set(p, changed); return; }
         if (changed && !changed.has('Drive') && !changed.has('Tone')) return;
         const type = this.type; this.amount = type === 'screamer' ? (51000 + 500000 * taper(p.Drive)) / 4700 : type === 'rodent' ? 8 + 250 * p.Drive * p.Drive : 4 + 100 * p.Drive * p.Drive;
@@ -7626,10 +7675,12 @@ body {
         for (const s of this.states) { if (s.amount === undefined) s.amount = this.amount; s.high.set(this.osr, hp); s.low.set(this.osr, Math.min(lp, this.rate * .43)); }
       }
       pair(left, right) {
-        const result = this.result, leftPrevious = this.states[0].previous, rightPrevious = this.states[1].previous;
+        const mono = this.mono && Object.is(left, right);
+        if (this.mono && !mono) { this.synchronizeRight(); this.mono = false; }
+        const result = this.result, leftPrevious = this.states[0].previous, rightPrevious = this.states[1].previous, channels = mono ? 1 : 2;
         for (let sub = 1; sub <= this.os; sub++) {
           if (this.blue) this.blue.tone.advance();
-          for (let channel = 0; channel < 2; channel++) {
+          for (let channel = 0; channel < channels; channel++) {
           const s = this.states[channel], input = channel === 0 ? left : right, previous = channel === 0 ? leftPrevious : rightPrevious;
           if (!this.blue && s.amount !== this.amount) { s.amount += this.gainSlew * (this.amount - s.amount); if (Math.abs(s.amount - this.amount) < 1e-10) s.amount = this.amount; }
           let x = previous + (input - previous) * sub / this.os; for (let i = 0; i < 2; i++) x = filter(x, this.pre[i], s.pre, i * 2);
@@ -7647,6 +7698,7 @@ body {
           for (let i = 0; i < 3; i++) y = filter(y, this.post[i], s.post, i * 2); result[channel] = safe(y);
           }
         }
+        if (mono) result[1] = result[0];
         this.states[0].previous = left; this.states[1].previous = right; return result;
       }
     }
@@ -7780,11 +7832,15 @@ body {
         process(left, right, context = {}) {
           if (!left || !right || left.length !== right.length) throw Error('BOARD requires equal stereo buffers.');
           if (blend === 0 && blendTarget === 0 && !blendRemaining) return;
-          const hasModels = slots.some(slot => slot.model); if (!hasModels && !blendRemaining && input === 1 && output === 1 && inputTarget === 1 && outputTarget === 1) return;
+          let hasModels = false;
+          for (let i = 0; i < slots.length; i++) if (slots[i].model) { hasModels = true; break; }
+          if (!hasModels && !blendRemaining && input === 1 && output === 1 && inputTarget === 1 && outputTarget === 1) return;
           let firstFrame = 0;
           if (idle) { while (firstFrame < left.length && left[firstFrame] === 0 && right[firstFrame] === 0) firstFrame++; if (firstFrame === left.length) return; }
           const tempo = clamp(finite(context.tempo, 120), 40, 300); for (const slot of slots) if (slot.model?.type === 'delay' && tempo !== slot.model.tempo) slot.model.setTempo(tempo);
-          const idleAfter = Math.ceil(sr * Math.max(.5, ...slots.filter(slot => slot.model).map(slot => slot.model.tail())));
+          let maximumTail = .5;
+          for (let i = 0; i < slots.length; i++) if (slots[i].model) maximumTail = Math.max(maximumTail, slots[i].model.tail());
+          const idleAfter = Math.ceil(sr * maximumTail);
           for (let frame = firstFrame; frame < left.length; frame++) {
             if (idle && left[frame] === 0 && right[frame] === 0) continue;
             idle = false;
@@ -7825,7 +7881,7 @@ body {
     };
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-    const safe = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const safe = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
     const lp = (frequency, rate) => 1 - Math.exp(-TAU * Math.min(frequency, rate * .43) / rate);
     const profiles = {
       room:       { count: 8, scale: .56, matrix: 'house', early: .72, late: .8,  spread: .7,  highpass: 75,  motion: 0 },
@@ -8144,7 +8200,7 @@ body {
     }
     const keys = Object.keys(specifications), clamp = (x,a,b) => Math.max(a,Math.min(b,x));
     const finite = (x,fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
-    const clean = x => Number.isFinite(x) ? clamp(x,-8,8) : 0;
+    const clean = x => x >= -8 && x <= 8 ? x : Number.isFinite(x) ? clamp(x,-8,8) : 0;
     const db = x => Math.pow(10,x/20), dbRead = x => 20*Math.log10(Math.max(1e-6,x));
     const lowpass = (hz,sr) => 1-Math.exp(-TAU*Math.min(hz,sr*.43)/sr);
     function normalize(value) {
@@ -8254,7 +8310,7 @@ body {
       function next(){if(!ir.parts.length)return;sum(0);for(let i=0;i<HOP;i++){tail[i]=re[i]+overlap[i];overlap[i]=re[i+HOP];}}
       function prime(){if(!ir.parts.length||!source.filled)return;sum(1);for(let i=0;i<HOP;i++)overlap[i]=re[i+HOP];next();}
       if(prewarm)prime();
-      return {tick(){const r=source.ring[ch];let value=tail[source.phase],at=source.at;for(let j=0;j<HOP;j++){value+=ir.head[j]*r[at];if(--at<0)at=HOP-1;}return value;},next,reset(){tail.fill(0);overlap.fill(0);re.fill(0);im.fill(0);}};
+      return {tick(){const r=source.ring[ch],head=ir.head;let value=tail[source.phase],j=0;for(let at=source.at;at>=0;at--)value+=head[j++]*r[at];for(let at=HOP-1;j<HOP;at--)value+=head[j++]*r[at];return value;},next,reset(){tail.fill(0);overlap.fill(0);re.fill(0);im.fill(0);}};
     }
     function body(ir,source,stereo,prewarm=true){const l=convolver(ir,source,stereo==='mono'?2:0,prewarm),r=stereo==='split'?convolver(ir,source,1,prewarm):null;return {ir,stereo,l,r,next(){l.next();r?.next();},reset(){l.reset();r?.reset();}};}
     function read(buffer,at,delay){let where=at-delay;while(where<0)where+=buffer.length;const i=Math.floor(where),f=where-i,j=i+1===buffer.length?0:i+1;return buffer[i]+(buffer[j]-buffer[i])*f;}
@@ -8264,9 +8320,10 @@ body {
       const ringLength=Math.ceil(sr*.065)+8,bodyL=new Float64Array(ringLength),bodyR=new Float64Array(ringLength),hpState=new Float64Array(4),lpState=new Float64Array(2);
       let ringAt=0,inputGain=db(p.input),outputGain=db(p.output),targetInput=inputGain,targetOutput=outputGain,wetMix=p.bypass?0:p.mix,mixFrames=0,mixStep=0,mixTarget=wetMix,room=p.room;
       let hpCoefficient=Math.exp(-TAU*p.lowCut/sr),lpCoefficient=lowpass(p.highCut,sr),targetHP=hpCoefficient,targetLP=lpCoefficient;
-      let inputPeak=0,outputPeak=0,renderedFrames=0,convolvedFrames=0,quietFrames=Infinity,idle=true,lastBodyL=0,lastBodyR=0;
+      let inputPeak=0,outputPeak=0,renderedFrames=0,convolvedFrames=0,quietFrames=Infinity,idle=true,lastBodyL=0,lastBodyR=0,globalMoving=0,bodyMirrored=true;
       const bassCut=lowpass(180,sr);
-      const mics=Array.from({length:4},(_,i)=>({index:i,key:'mic'+(i+1),state:new Float64Array(4),coeff:new Float64Array(5),targetCoeff:new Float64Array(5),hp:new Float64Array(4),tone:new Float64Array(2),bass:new Float64Array(2),gain:0,targetGain:0,levelGain:1,acousticGain:0,panL:1,panR:1,targetPanL:1,targetPanR:1,gainFrames:0,gainStep:0,delay:0,targetDelay:0,cut:1,targetCut:1,proximity:0,targetProximity:0,hpf:0,targetHPF:0,pan:0,x:0,y:0,distance:.08,angle:0}));
+      const mics=Array.from({length:4},(_,i)=>({index:i,key:'mic'+(i+1),state:new Float64Array(4),coeff:new Float64Array(5),targetCoeff:new Float64Array(5),hp:new Float64Array(4),tone:new Float64Array(2),bass:new Float64Array(2),gain:0,targetGain:0,levelGain:1,acousticGain:0,panL:1,panR:1,targetPanL:1,targetPanR:1,gainFrames:0,gainStep:0,delay:0,targetDelay:0,cut:1,targetCut:1,proximity:0,targetProximity:0,hpf:0,targetHPF:0,pan:0,targetPan:0,x:0,targetX:0,y:0,targetY:0,distance:.08,targetDistance:.08,angle:0,targetAngle:0,contact:false,moving:0}));
+      let workMics=[];
       function selected(next){return next.model!==current.ir.model||next.stereo!==current.stereo;}
       function acceptResponse(nextIR){
         const next=body(nextIR,source,p.stereo,false);
@@ -8289,32 +8346,35 @@ body {
           const polar=type[5]==='omni'||contact?1:type[5]==='figure8'?incidence:type[5]==='hyper'?.25+.75*incidence:.5+.5*incidence;
           const cone=Math.min(1.8,Math.hypot(x,y)*.6),rotation=type[5]==='omni'||contact?0:Math.abs(Math.sin(angle))*.4;
           const maxCut=Math.min(sr*.43,type[1]*(1-.34*Math.min(1.8,cone+rotation))/(1+(contact?0:distance*.04)));
-          m.targetCut=lowpass(Math.max(500,maxCut),sr);m.targetHPF=Math.exp(-TAU*Math.min(type[0],sr*.2)/sr);
-          m.targetProximity=contact?0:type[6]*Math.exp(-distance/.18);
-          m.targetDelay=contact||next.alignment==='aligned'?0:path/343*sr;
+          const cut=lowpass(Math.max(500,maxCut),sr),hpf=Math.exp(-TAU*Math.min(type[0],sr*.2)/sr),proximity=contact?0:type[6]*Math.exp(-distance/.18),delay=contact||next.alignment==='aligned'?0:path/343*sr;
+          if(cut!==m.targetCut){m.targetCut=cut;m.moving|=4;}if(hpf!==m.targetHPF){m.targetHPF=hpf;m.moving|=16;}
+          if(proximity!==m.targetProximity){m.targetProximity=proximity;m.moving|=8;}if(delay!==m.targetDelay){m.targetDelay=delay;m.moving|=2;}m.contact=contact;
           const distanceGain=contact?.9/(1+.25*(x*x+y*y)):.18/(.1+path);
           m.acousticGain=type[7]*distanceGain*polar;
-          if(instant||old[k+'Type']!==next[k+'Type'])m.targetCoeff.set(biquad('peak',type[2],type[4],type[3],sr));
+          if(instant||old[k+'Type']!==next[k+'Type']){m.targetCoeff.set(biquad('peak',type[2],type[4],type[3],sr));m.moving|=32;}
         }
         if(instant||old[k+'Level']!==next[k+'Level'])m.levelGain=db(next[k+'Level']);
         const on=next[k+'Enabled']==='on'&&(!next._solo||next[k+'Solo']==='on'),gain=on?m.levelGain*m.acousticGain*(next[k+'Polarity']==='invert'?-1:1):0;
         if(gain!==m.targetGain){m.targetGain=gain;m.gainFrames=fadeFrames;m.gainStep=(gain-m.gain)/fadeFrames;}
-        if(instant||old[k+'Pan']!==next[k+'Pan']){const angle=(next[k+'Pan']+1)*PI*.25;m.targetPanL=Math.cos(angle)*Math.SQRT2;m.targetPanR=Math.sin(angle)*Math.SQRT2;}
-        if(instant){m.gain=m.targetGain;m.gainFrames=0;m.coeff.set(m.targetCoeff);m.delay=m.targetDelay;m.cut=m.targetCut;m.proximity=m.targetProximity;m.hpf=m.targetHPF;m.pan=next[k+'Pan'];m.panL=m.targetPanL;m.panR=m.targetPanR;m.x=next[k+'X'];m.y=next[k+'Y'];m.distance=next[k+'Distance'];m.angle=next[k+'Angle'];}
+        if(instant||old[k+'Pan']!==next[k+'Pan']){const angle=(next[k+'Pan']+1)*PI*.25;m.targetPan=next[k+'Pan'];m.targetPanL=Math.cos(angle)*Math.SQRT2;m.targetPanR=Math.sin(angle)*Math.SQRT2;m.moving|=1;}
+        if(instant||old[k+'X']!==next[k+'X']||old[k+'Y']!==next[k+'Y']||old[k+'Distance']!==next[k+'Distance']||old[k+'Angle']!==next[k+'Angle']){m.targetX=next[k+'X'];m.targetY=next[k+'Y'];m.targetDistance=next[k+'Distance'];m.targetAngle=next[k+'Angle'];m.moving|=64;}
+        if(instant){m.gain=m.targetGain;m.gainFrames=0;m.coeff.set(m.targetCoeff);m.delay=m.targetDelay;m.cut=m.targetCut;m.proximity=m.targetProximity;m.hpf=m.targetHPF;m.pan=next[k+'Pan'];m.panL=m.targetPanL;m.panR=m.targetPanR;m.x=next[k+'X'];m.y=next[k+'Y'];m.distance=next[k+'Distance'];m.angle=next[k+'Angle'];m.moving=0;}
       }
       function update(next,instant){
         const old=p;p=next;
-        if(instant||old.lowCut!==p.lowCut)targetHP=Math.exp(-TAU*p.lowCut/sr);
-        if(instant||old.highCut!==p.highCut)targetLP=lowpass(p.highCut,sr);
-        if(instant||old.input!==p.input)targetInput=db(p.input);
-        if(instant||old.output!==p.output)targetOutput=db(p.output);
+        if(instant||old.lowCut!==p.lowCut){targetHP=Math.exp(-TAU*p.lowCut/sr);globalMoving|=8;}
+        if(instant||old.highCut!==p.highCut){targetLP=lowpass(p.highCut,sr);globalMoving|=16;}
+        if(instant||old.input!==p.input){targetInput=db(p.input);globalMoving|=1;}
+        if(instant||old.output!==p.output){targetOutput=db(p.output);globalMoving|=2;}
+        if(instant||old.room!==p.room)globalMoving|=4;
         p._solo=mics.some(m=>p[m.key+'Enabled']==='on'&&p[m.key+'Solo']==='on');
         for(const m of mics)acoustic(m,p,instant,old);
+        workMics=mics.filter(m=>m.gain!==0||m.targetGain!==0||m.gainFrames>0);
         const target=p.bypass?0:p.mix;
-        if(instant){wetMix=mixTarget=target;mixFrames=0;inputGain=targetInput;outputGain=targetOutput;room=p.room;hpCoefficient=targetHP;lpCoefficient=targetLP;}
+        if(instant){wetMix=mixTarget=target;mixFrames=0;inputGain=targetInput;outputGain=targetOutput;room=p.room;hpCoefficient=targetHP;lpCoefficient=targetLP;globalMoving=0;}
         else if(target!==mixTarget){mixTarget=target;mixFrames=fadeFrames;mixStep=(target-wetMix)/fadeFrames;}
       }
-      function clearHistory(){source.reset();current.reset();previous=warming=null;bodyFade=0;bodyL.fill(0);bodyR.fill(0);hpState.fill(0);lpState.fill(0);for(const m of mics){m.state.fill(0);m.hp.fill(0);m.tone.fill(0);m.bass.fill(0);}ringAt=0;quietFrames=Infinity;idle=true;lastBodyL=lastBodyR=0;}
+      function clearHistory(){source.reset();current.reset();previous=warming=null;bodyFade=0;bodyL.fill(0);bodyR.fill(0);hpState.fill(0);lpState.fill(0);for(const m of mics){m.state.fill(0);m.hp.fill(0);m.tone.fill(0);m.bass.fill(0);}ringAt=0;quietFrames=Infinity;idle=true;lastBodyL=lastBodyR=0;bodyMirrored=true;}
       function effectiveCount(){return mics.filter(m=>p[m.key+'Enabled']==='on'&&(!p._solo||p[m.key+'Solo']==='on')).length;}
       function tailSeconds(){return Math.max(current.ir.seconds,previous?.ir.seconds||0,profiles[p.model][10])+.065+.16;}
       update(p,true);
@@ -8333,24 +8393,52 @@ body {
             // Every settled-dry sample must skip the same control work, not
             // merely callbacks that happened to begin after the fade ended.
             if(wetMix===0&&mixTarget===0&&mixFrames===0){left[i]=dryL;right[i]=dryR;outputPeak=Math.max(Math.abs(dryL),Math.abs(dryR),outputPeak*meterDecay);continue;}
-            inputGain+=slew*(targetInput-inputGain);outputGain+=slew*(targetOutput-outputGain);room+=slew*(p.room-room);hpCoefficient+=slew*(targetHP-hpCoefficient);lpCoefficient+=slew*(targetLP-lpCoefficient);
+            // A settled value either equals its target or its next floating-point
+            // addition is too small to change it. Skipping only those stalled
+            // updates preserves the old recurrence exactly, without snapping.
+            if(globalMoving&1){const before=inputGain;inputGain+=slew*(targetInput-inputGain);if(inputGain===before)globalMoving&=~1;}
+            if(globalMoving&2){const before=outputGain;outputGain+=slew*(targetOutput-outputGain);if(outputGain===before)globalMoving&=~2;}
+            if(globalMoving&4){const before=room;room+=slew*(p.room-room);if(room===before)globalMoving&=~4;}
+            if(globalMoving&8){const before=hpCoefficient;hpCoefficient+=slew*(targetHP-hpCoefficient);if(hpCoefficient===before)globalMoving&=~8;}
+            if(globalMoving&16){const before=lpCoefficient;lpCoefficient+=slew*(targetLP-lpCoefficient);if(lpCoefficient===before)globalMoving&=~16;}
             if(mixFrames>0){wetMix+=mixStep;if(--mixFrames===0){wetMix=mixTarget;if(wetMix===0)clearHistory();}}
-            else {wetMix+=slew*(mixTarget-wetMix);if(Math.abs(wetMix-mixTarget)<1e-12)wetMix=mixTarget;}
+            else if(wetMix!==mixTarget){wetMix+=slew*(mixTarget-wetMix);if(Math.abs(wetMix-mixTarget)<1e-12)wetMix=mixTarget;}
             let live=false;
-            for(const m of mics){if(m.gainFrames>0){m.gain+=m.gainStep;if(--m.gainFrames===0)m.gain=m.targetGain;}if(m.gain===0&&m.targetGain===0)continue;m.pan+=slew*(p[m.key+'Pan']-m.pan);m.panL+=slew*(m.targetPanL-m.panL);m.panR+=slew*(m.targetPanR-m.panR);m.delay+=slew*(m.targetDelay-m.delay);m.cut+=slew*(m.targetCut-m.cut);m.proximity+=slew*(m.targetProximity-m.proximity);m.hpf+=slew*(m.targetHPF-m.hpf);m.x+=slew*(p[m.key+'X']-m.x);m.y+=slew*(p[m.key+'Y']-m.y);m.distance+=slew*(p[m.key+'Distance']-m.distance);m.angle+=slew*(p[m.key+'Angle']-m.angle);for(let j=0;j<5;j++)m.coeff[j]+=slew*(m.targetCoeff[j]-m.coeff[j]);if(m.gain!==0||m.targetGain!==0)live=true;}
+            for(const m of workMics){
+              if(m.gainFrames>0){m.gain+=m.gainStep;if(--m.gainFrames===0)m.gain=m.targetGain;}
+              if(m.gain===0&&m.targetGain===0)continue;
+              if(m.moving&1){const a=m.pan,b=m.panL,c=m.panR;m.pan+=slew*(m.targetPan-m.pan);m.panL+=slew*(m.targetPanL-m.panL);m.panR+=slew*(m.targetPanR-m.panR);if(m.pan===a&&m.panL===b&&m.panR===c)m.moving&=~1;}
+              if(m.moving&2){const before=m.delay;m.delay+=slew*(m.targetDelay-m.delay);if(m.delay===before)m.moving&=~2;}
+              if(m.moving&4){const before=m.cut;m.cut+=slew*(m.targetCut-m.cut);if(m.cut===before)m.moving&=~4;}
+              if(m.moving&8){const before=m.proximity;m.proximity+=slew*(m.targetProximity-m.proximity);if(m.proximity===before)m.moving&=~8;}
+              if(m.moving&16){const before=m.hpf;m.hpf+=slew*(m.targetHPF-m.hpf);if(m.hpf===before)m.moving&=~16;}
+              if(m.moving&64){const a=m.x,b=m.y,c=m.distance,d=m.angle;m.x+=slew*(m.targetX-m.x);m.y+=slew*(m.targetY-m.y);m.distance+=slew*(m.targetDistance-m.distance);m.angle+=slew*(m.targetAngle-m.angle);if(m.x===a&&m.y===b&&m.distance===c&&m.angle===d)m.moving&=~64;}
+              if(m.moving&32){let changed=false;for(let j=0;j<5;j++){const before=m.coeff[j];m.coeff[j]+=slew*(m.targetCoeff[j]-m.coeff[j]);if(m.coeff[j]!==before)changed=true;}if(!changed)m.moving&=~32;}
+              live=true;
+            }
             if(wetMix===0&&mixTarget===0){left[i]=dryL;right[i]=dryR;outputPeak=Math.max(Math.abs(dryL),Math.abs(dryR),outputPeak*meterDecay);continue;}
             let wetL=0,wetR=0;
             if(live){
               if(dryL===0&&dryR===0){if(!idle&&++quietFrames>=quietLimit)clearHistory();}else{quietFrames=0;idle=false;}
               if(!idle){
-                renderedFrames++;source.push(dryL*inputGain,dryR*inputGain);let a=current.l.tick(),b=current.r?current.r.tick():a;convolvedFrames+=current.r?2:1;
+                renderedFrames++;if(current.r||previous?.r)bodyMirrored=false;source.push(dryL*inputGain,dryR*inputGain);let a=current.l.tick(),b=current.r?current.r.tick():a;convolvedFrames+=current.r?2:1;
                 if(previous){const oldL=previous.l.tick(),oldR=previous.r?previous.r.tick():oldL,x=(fadeFrames-bodyFade+1)/fadeFrames;a=oldL+(a-oldL)*x;b=oldR+(b-oldR)*x;convolvedFrames+=previous.r?2:1;if(--bodyFade===0)previous=null;}
                 bodyL[ringAt]=a;bodyR[ringAt]=b;lastBodyL=a;lastBodyR=b;
-                for(const m of mics){if(m.gain===0&&m.targetGain===0)continue;
-                  let a=m.delay<1e-6?lastBodyL:read(bodyL,ringAt,m.delay),b=m.delay<1e-6?lastBodyR:read(bodyR,ringAt,m.delay);
-                  if(room>1e-8&&p[m.key+'Type']!=='contact'){a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);b+=room*(read(bodyR,ringAt,m.delay+sr*.009)*.19-read(bodyL,ringAt,m.delay+sr*.017)*.13+read(bodyR,ringAt,m.delay+sr*.031)*.09);}
-                  const hpA=a-m.hp[0]+m.hpf*m.hp[2],hpB=b-m.hp[1]+m.hpf*m.hp[3];m.hp[0]=a;m.hp[1]=b;m.hp[2]=hpA;m.hp[3]=hpB;
-                  a=filter(hpA,m.coeff,m.state,0);b=filter(hpB,m.coeff,m.state,2);m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]+=bassCut*(b-m.bass[1]);a+=m.bass[0]*m.proximity;b+=m.bass[1]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]+=m.cut*(b-m.tone[1]);
+                for(const m of workMics){if(m.gain===0&&m.targetGain===0)continue;
+                  let a=m.delay<1e-6?lastBodyL:read(bodyL,ringAt,m.delay);
+                  if(bodyMirrored){
+                    // A mono body has identical ring and mic-filter histories.
+                    // Mirror the exact left recurrence, including signed zero.
+                    // Once split audio has run, retain both paths until reset.
+                    if(room>1e-8&&!m.contact)a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);
+                    const hpA=a-m.hp[0]+m.hpf*m.hp[2];m.hp[0]=m.hp[1]=a;m.hp[2]=m.hp[3]=hpA;
+                    a=filter(hpA,m.coeff,m.state,0);m.state[2]=m.state[0];m.state[3]=m.state[1];m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]=m.bass[0];a+=m.bass[0]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]=m.tone[0];
+                  }else{
+                    let b=m.delay<1e-6?lastBodyR:read(bodyR,ringAt,m.delay);
+                    if(room>1e-8&&!m.contact){a+=room*(read(bodyL,ringAt,m.delay+sr*.009)*.19-read(bodyR,ringAt,m.delay+sr*.017)*.13+read(bodyL,ringAt,m.delay+sr*.031)*.09);b+=room*(read(bodyR,ringAt,m.delay+sr*.009)*.19-read(bodyL,ringAt,m.delay+sr*.017)*.13+read(bodyR,ringAt,m.delay+sr*.031)*.09);}
+                    const hpA=a-m.hp[0]+m.hpf*m.hp[2],hpB=b-m.hp[1]+m.hpf*m.hp[3];m.hp[0]=a;m.hp[1]=b;m.hp[2]=hpA;m.hp[3]=hpB;
+                    a=filter(hpA,m.coeff,m.state,0);b=filter(hpB,m.coeff,m.state,2);m.bass[0]+=bassCut*(a-m.bass[0]);m.bass[1]+=bassCut*(b-m.bass[1]);a+=m.bass[0]*m.proximity;b+=m.bass[1]*m.proximity;m.tone[0]+=m.cut*(a-m.tone[0]);m.tone[1]+=m.cut*(b-m.tone[1]);
+                  }
                   wetL+=m.tone[0]*m.gain*m.panL;wetR+=m.tone[1]*m.gain*m.panR;
                 }
                 if(++ringAt===ringLength)ringAt=0;
@@ -8452,8 +8540,8 @@ body {
     specifications.vestige.model = ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'];
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-    const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
-    const input = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const bounded = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const input = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
     const output = (dry, wet, mix) => bounded(dry + (wet - dry) * mix);
     const db = value => Math.pow(10, value / 20);
     const lowpass = (freq, sr) => 1 - Math.exp(-TAU * Math.min(freq, sr * 0.45) / sr);
@@ -9121,14 +9209,28 @@ body {
         tail = () => Math.min(6, 0.08 * (1 + Math.log(0.001) / Math.log(Math.max(0.001, Math.abs(p.feedback)))));
       } else if (type === 'parallax') {
         const length = Math.ceil(sr * 6) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);
-        let write = 0, dampL = 0, dampR = 0, hpL = 0, hpR = 0, prevL = 0, prevR = 0, delay = -1, coefficient = 1;
+        let write = 0, dampL = 0, dampR = 0, hpL = 0, hpR = 0, prevL = 0, prevR = 0, delay = -1, coefficient = 1, neverExcited = true;
         const slew = 1 - Math.exp(-1 / (sr * 0.04)), hp = Math.exp(-TAU * 18 / sr);
         const seconds = context => p.clock === 'free' ? p.time * 0.001 : divisions[p.division] * 60 / tempoOf(context);
         update = () => { coefficient = lowpass(p.damping, sr); };
         run = (left, right, context) => {
           const targetDelay = clamp(seconds(context) * sr, 1, length - 3), mix = p.mix, spread = p.spread;
           if (delay < 0) delay = targetDelay;
-          for (let i = 0; i < left.length; i++) {
+          let firstFrame = 0;
+          if (neverExcited) {
+            // Empty delay lines cannot produce a tail. Retain the exact
+            // sample-clocked delay slew and cursor before the first input.
+            for (; firstFrame < left.length; firstFrame++) {
+              const dryL = input(left[firstFrame]), dryR = input(right[firstFrame]);
+              if (dryL !== 0 || dryR !== 0) break;
+              delay += slew * (targetDelay - delay);
+              left[firstFrame] = output(dryL, 0, mix); right[firstFrame] = output(dryR, 0, mix);
+            }
+            write = (write + firstFrame) % length;
+            if (firstFrame === left.length) return;
+            neverExcited = false;
+          }
+          for (let i = firstFrame; i < left.length; i++) {
             const dryL = input(left[i]), dryR = input(right[i]);
             delay += slew * (targetDelay - delay);
             const delayedL = read(bufferL, write, delay), delayedR = read(bufferR, write, delay);
@@ -9141,14 +9243,14 @@ body {
             if (++write === length) write = 0;
           }
         };
-        reset = () => { clear(bufferL); clear(bufferR); write = 0; dampL = dampR = hpL = hpR = prevL = prevR = 0; delay = -1; };
+        reset = () => { clear(bufferL); clear(bufferR); write = 0; dampL = dampR = hpL = hpR = prevL = prevR = 0; delay = -1; neverExcited = true; };
         tail = context => Math.min(60, seconds(context) * (1 + Math.log(0.001) / Math.log(Math.max(0.001, p.feedback))));
       } else if (type === 'vestige') {
         const primes = [1493, 1601, 1747, 1867, 1999, 2131, 2281, 2411], lines = [], positions = new Int32Array(8), lengths = new Int32Array(8), gains = new Float64Array(8), damp = new Float64Array(8), matrix = new Float64Array(8);
         for (let j = 0; j < 8; j++) lines.push(new Float32Array(Math.ceil(primes[j] * 2.2 * sr / 48000) + 4));
         const preLength = Math.ceil(sr * 0.18) + 4, preL = new Float32Array(preLength), preR = new Float32Array(preLength);
         const apLengths = [Math.round(sr * 0.0037), Math.round(sr * 0.0109)], apL = apLengths.map(length => new Float32Array(Math.max(2, length))), apR = apLengths.map(length => new Float32Array(Math.max(2, length + 7))), apPositionL = new Int32Array(2), apPositionR = new Int32Array(2);
-        let preWrite = 0, preDelay = 0, coefficient = 1;
+        let preWrite = 0, preDelay = 0, coefficient = 1, neverExcited = true;
         update = () => {
           const scale = (0.7 + p.size * 1.5) * sr / 48000;
           for (let j = 0; j < 8; j++) { lengths[j] = Math.max(2, Math.round(primes[j] * scale)); positions[j] %= lengths[j]; gains[j] = Math.pow(10, -3 * lengths[j] / (sr * p.decay)); }
@@ -9156,7 +9258,22 @@ body {
         };
         run = (left, right) => {
           const mix = p.mix, diffusion = p.diffusion * 0.7, normalization = 1 / Math.sqrt(8);
-          for (let i = 0; i < left.length; i++) {
+          let firstFrame = 0;
+          if (neverExcited) {
+            // Preserve every empty-ring cursor without running the allpasses
+            // and feedback matrix before this room has received any audio.
+            for (; firstFrame < left.length; firstFrame++) {
+              const dryL = input(left[firstFrame]), dryR = input(right[firstFrame]);
+              if (dryL !== 0 || dryR !== 0) break;
+              left[firstFrame] = output(dryL, 0, mix); right[firstFrame] = output(dryR, 0, mix);
+            }
+            preWrite = (preWrite + firstFrame) % preLength;
+            if (diffusion > 0) for (let j = 0; j < 2; j++) { apPositionL[j] = (apPositionL[j] + firstFrame) % apL[j].length; apPositionR[j] = (apPositionR[j] + firstFrame) % apR[j].length; }
+            for (let j = 0; j < 8; j++) positions[j] = (positions[j] + firstFrame) % lengths[j];
+            if (firstFrame === left.length) return;
+            neverExcited = false;
+          }
+          for (let i = firstFrame; i < left.length; i++) {
             const dryL = input(left[i]), dryR = input(right[i]);
             preL[preWrite] = dryL; preR[preWrite] = dryR;
             let diffuseL = preDelay > 0 ? read(preL, preWrite, preDelay) : dryL, diffuseR = preDelay > 0 ? read(preR, preWrite, preDelay) : dryR;
@@ -9188,7 +9305,7 @@ body {
             left[i] = output(dryL, wetMid + wetSide, mix); right[i] = output(dryR, wetMid - wetSide, mix);
           }
         };
-        reset = () => { lines.forEach(clear); apL.forEach(clear); apR.forEach(clear); clear(preL); clear(preR); positions.fill(0); apPositionL.fill(0); apPositionR.fill(0); damp.fill(0); matrix.fill(0); preWrite = 0; };
+        reset = () => { lines.forEach(clear); apL.forEach(clear); apR.forEach(clear); clear(preL); clear(preR); positions.fill(0); apPositionL.fill(0); apPositionR.fill(0); damp.fill(0); matrix.fill(0); preWrite = 0; neverExcited = true; };
         tail = () => p.predelay * 0.001 + p.decay + 0.25;
       } else if (type === 'halo') {
         const length = Math.ceil(sr * 0.15) + 8, bufferL = new Float32Array(length), bufferR = new Float32Array(length), baseDelay = sr * 0.004;
@@ -9714,7 +9831,7 @@ body {
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.42.0';
+  const VERSION = '1.42.1';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const TRACK_OUTPUTS = Object.freeze(['master', 'bus-1', 'bus-2']);
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
@@ -11001,6 +11118,17 @@ body {
     const disabledMeter = Object.freeze(emptyMeter());
     const idleBusMeters = Object.freeze([disabledMeter, disabledMeter]);
     const disabledEffectMeters = Object.freeze(Array(5).fill(null));
+    const emptyBusEffectMeters = Object.freeze(Array(4).fill(null));
+    const writeMeter = (target, peak, powerL, powerR, frames) => {
+      const meter = target || {};
+      meter.peak = peak; meter.rms = Math.sqrt((powerL + powerR) / (2 * frames)); meter.rmsLeft = Math.sqrt(powerL / frames); meter.rmsRight = Math.sqrt(powerR / frames);
+      return meter;
+    };
+    const sameSuppliedParams = (current, next) => {
+      if (!current) return false;
+      for (const key of Object.keys(next)) if (!Object.prototype.hasOwnProperty.call(current, key) || current[key] !== next[key]) return false;
+      return true;
+    };
     const indexFor = (id, tracks) => typeof id === 'number' ? Math.floor(id) : tracks.findIndex(t => t.id === id);
     const sampleData = (data, position) => {
       if (!data || position < 0 || position >= data.length) return 0;
@@ -11126,6 +11254,10 @@ body {
         this.microphoneMonitor = { track: -1, enabled: false };
         this.microphonePeak = 0;
         this.slots = Array.from({ length: TRACK_COUNT }, () => Array(5).fill(null));
+        this._automationCompileCache = new Map(); this._clipAssetsRevision = 0; this._clipCompileKey = null;
+        this._clipCandidates = Array.from({ length: TRACK_COUNT }, () => []);
+        this._meterPool = { tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: Array.from({ length: 2 }, emptyMeter), master: emptyMeter(), trackRows: Array(TRACK_COUNT).fill(disabledMeter), returnRows: Array(2).fill(disabledMeter), busRows: Array(2).fill(disabledMeter), block: {} };
+        this._reuseMeters = false; this._metersPooled = false;
         this.buffers = [];
         this.trackEq = Array.from({ length: TRACK_COUNT }, () => null);
         this.eqAutomationValues = Array(TRACK_COUNT).fill(null);
@@ -11210,7 +11342,8 @@ body {
         if (this.masteringDSP) {
           const values = { ...params };
           for (const key of this.masteringControlKeys || []) if (this.masteringAutomationValues && Object.prototype.hasOwnProperty.call(this.masteringAutomationValues, key)) values[key] = this.masteringAutomationValues[key];
-          this.masteringDSP.setParams(values); this.masteringDSP.setAnalysis(this.masteringAnalysis);
+          if (!sameSuppliedParams(this._masteringAppliedParams, values)) { this.masteringDSP.setParams(values); Object.assign(this._masteringAppliedParams || (this._masteringAppliedParams = {}), values); }
+          this.masteringDSP.setAnalysis(this.masteringAnalysis);
         }
         this.masteringSettings = params;
       }
@@ -11245,19 +11378,19 @@ body {
           const ownerId = index < TRACK_COUNT ? 'track-' + (index + 1) : index < MASTER_INDEX ? 'return-' + (index - RETURN_OFFSET + 1) : index === MASTER_INDEX ? 'master' : 'bus-' + (index - BUS_OFFSET + 1);
           const label = owner.name || (index < TRACK_COUNT ? 'Track ' + (index + 1) : index < MASTER_INDEX ? 'Return ' + (index === RETURN_OFFSET ? 'A' : 'B') : index === MASTER_INDEX ? 'Master' : 'Bus ' + (index - BUS_OFFSET + 1));
           const busActive = index < BUS_OFFSET || this.busRouteCounts[index - BUS_OFFSET] > 0 || this.busTailFrames[index - BUS_OFFSET] > 0;
-          const disabled = index < TRACK_COUNT && owner.disabled === true, frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects, owner.eq, frozen, disabled]);
+          const disabled = index < TRACK_COUNT && owner.disabled === true, frozen = index < TRACK_COUNT && !!this.frozen[index], identity = JSON.stringify([owner.effects?.map(effect => effect?.type || null), frozen, disabled]);
           rows.push({ id: ownerId, kind: 'owner', ownerId, label, identity, active: !disabled && busActive, disabled });
           for (let slot = 0; slot < racks[index].length; slot++) {
             const effect = owner.effects?.[slot], dsp = racks[index][slot], id = ownerId + ':fx:' + slot;
             if (dsp) dsp.diagnosticsId = id;
-            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify([effect || null, disabled]), active: !!effect && !frozen && !disabled && busActive, disabled, bypassed: disabled || frozen || effect?.params?.bypass === true || dsp?.bypass === true });
+            rows.push({ id, kind: 'effect', ownerId, slot, effectType: effect?.type || null, label: effect?.type || 'Empty slot', identity: JSON.stringify([effect?.type || null, disabled]), active: !!effect && !frozen && !disabled && busActive, disabled, bypassed: disabled || frozen || effect?.params?.bypass === true || dsp?.bypass === true });
           }
           const mix = ownerId + ':mix', eq = ownerId + ':eq';
           rows.push({ id: mix, kind: 'mix', ownerId, label: index === MASTER_INDEX ? 'Output, metronome and limiter' : 'Pan, level, sends and metering', identity: String(disabled), active: !disabled && busActive, disabled });
-          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: JSON.stringify([owner.eq, disabled]), active: !frozen && !disabled, disabled });
+          if (index < TRACK_COUNT) rows.push({ id: eq, kind: 'eq', ownerId, label: 'Four-band channel EQ', identity: String(disabled), active: !frozen && !disabled, disabled });
           return { owner: ownerId, mix, eq };
         });
-        rows.push({ id: 'master:mastering', kind: 'mix', ownerId: 'master', label: 'Mastering tools and analysis', identity: JSON.stringify(this.master.mastering || null), active: !!this.masteringDSP?.isActive() || this.masteringAnalysis });
+        rows.push({ id: 'master:mastering', kind: 'mix', ownerId: 'master', label: 'Mastering tools and analysis', identity: 'mastering', active: !!this.masteringDSP?.isActive() || this.masteringAnalysis });
         rows.push(...[
           ['engine', 'GALLEY engine including inserts'], ['clips', 'Clip, input and timeline preparation'], ['modulation', 'LFO modulation'], ['recorder', 'Recording and input history'], ['events', 'Transport and SERVICE events'], ['meters', 'Live meter reports'], ['report', 'Diagnostics report preparation']
         ].map(([id, label]) => ({ id, kind: 'stage', label, active: true })));
@@ -11274,14 +11407,21 @@ body {
       diagnosticsReportDue() { return this.cpuProfiler?.enabled && this.cpuProfiler.consumeReportDue(); }
       setAssets(assets) {
         this.assets = assets instanceof Map ? assets : new Map(Object.entries(assets || {}));
+        this._clipAssetsRevision++;
         if (this.tracks) this._compileClips();
       }
       updateAssets(additions, removals = []) {
         for (const id of removals) this.assets.delete(id);
         for (const [id, asset] of additions instanceof Map ? additions : Object.entries(additions || {})) this.assets.set(id, asset);
+        this._clipAssetsRevision++;
         if (this.tracks) this._compileClips();
       }
       _compileClips() {
+        // Mixer gestures send fresh project objects. Only source geometry,
+        // freeze metadata, enabled lanes or decoded assets can change a read.
+        // Capture values rather than object identity: callers can edit in place.
+        const compileKey = JSON.stringify([this._clipAssetsRevision, this.tracks.map(track => [track.id, track.disabled === true, track.freeze || null, track.clips || []])]);
+        if (compileKey === this._clipCompileKey) return;
         // A freeze owns only lightweight routing metadata and decoded Float32
         // chunks. The original clips stay in the song for immediate unfreezing.
         const hadFrozen = this.hasFrozen, previousFlags = this.frozen.map(Boolean);
@@ -11311,6 +11451,7 @@ body {
           this.freezeTail = false; this.freezeContinuation = null;
         }
         this.clipLists = this.tracks.map((track, index) => track.disabled === true || this.frozen[index] || this.options.freezeCaptureTrackId != null && index !== indexFor(this.options.freezeCaptureTrackId, this.tracks) ? [] : (track.clips || []).map(clip => compileClip(clip, this.assets.get(clip.assetId))).filter(item => item.left?.length && item.span > 0));
+        this._clipCompileKey = compileKey;
       }
       setState(state) {
         if (this.service) { this.service.baseState = state || {}; this._setState(this._serviceState()); }
@@ -11358,11 +11499,11 @@ body {
         this.returnAutomation = this.returns.map(bus => this._compileAutomation(bus, 4));
         this.busAutomation = this.buses.map(bus => this._compileAutomation(bus, 4));
         this.masterAutomation = this._compileAutomation(this.master, 4);
-        if (lfoDSP) { const definitions = lfoDSP.targets(this.state, null, effects.specifications, masteringModule?.specifications).filter(target => {
+        if (lfoDSP) { const definitions = ((this.state.lfos || []).some(lfo => lfo?.routes?.length) || this.modulation?.entries.size) ? lfoDSP.targets(this.state, null, effects.specifications, masteringModule?.specifications).filter(target => {
           if (target.ownerId.startsWith('lfo-')) return true;
           const index = indexFor(target.ownerId, this.tracks);
           return this.freezeCaptureIndex >= 0 ? index === this.freezeCaptureIndex : index < 0 || this.tracks[index].disabled !== true && !this.frozen[index];
-        }); if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
+        }) : []; if (this.modulation) this.modulation.setState(this.state, definitions); else this.modulation = new lfoDSP.Runtime(this.sampleRate, this.state, definitions); }
         this._compileModulationHandles();
         this._configureMastering();
         for (let t = 0; t < TRACK_COUNT; t++) {
@@ -11404,8 +11545,15 @@ body {
         this.masteringControlKeys = masteringKeys.filter(key => this.masterAutomation.mastering[key] || this.modulationOwners[MASTER_INDEX].mastering[key]);
       }
       _compileAutomation(owner, slots = effectSlotCount(owner)) {
+        const source = owner.automation || [], effectInputs = [];
+        for (const lane of source) {
+          const match = /^fx:([0-4]):([a-zA-Z][a-zA-Z0-9]*)$/.exec(lane.target || '');
+          if (match) { const spec = owner.effects?.[Number(match[1])]; effectInputs.push([spec?.type, typeof spec?.params?.[match[2]]]); }
+        }
+        const cacheId = (owner.id || 'empty') + ':' + slots, compileKey = JSON.stringify([source, effectInputs]), cached = this._automationCompileCache.get(cacheId);
+        if (cached?.key === compileKey) return cached.value;
         const result = { level: null, pan: null, mastering: {}, sends: [null, null], eq: Object.fromEntries(trackEqKeys.map(key => [key, null])), effects: Array.from({ length: slots }, () => []) };
-        for (const lane of owner.automation || []) {
+        for (const lane of source) {
           if (lane.enabled === false || !lane.points?.length) continue;
           const compiled = { ...lane, points: lane.points.filter(p => Number.isFinite(p.beat) && Number.isFinite(p.value)).slice().sort((a, b) => a.beat - b.beat) };
           if (!compiled.points.length) continue;
@@ -11418,6 +11566,7 @@ body {
             if (spec && (!lane.effectType || lane.effectType === spec.type) && typeof spec.params?.[match[2]] === 'number') result.effects[index].push({ key: match[2], lane: compiled });
           }
         }
+        this._automationCompileCache.set(cacheId, { key: compileKey, value: result });
         return result;
       }
       _updateRack(owner, row, automation = null) {
@@ -11427,9 +11576,11 @@ body {
           if (old && old.type === spec.type) {
             let retained = null;
             if (automation && old.automationValues) for (const key of new Set([...automation.effects[slot].map(item => item.key), ...(this.modulation?.effectKeys(owner.id, slot) || [])])) if (Object.prototype.hasOwnProperty.call(old.automationValues, key)) { if (!retained) retained = {}; retained[key] = old.automationValues[key]; }
-            old.dsp.setParams(retained ? { ...spec.params, ...retained } : spec.params || {}); old.bypass = spec.bypass === true; old.automationValues = retained;
+            const values = retained ? { ...spec.params, ...retained } : spec.params || {};
+            if (!sameSuppliedParams(old.appliedParams, values)) { old.dsp.setParams(values); Object.assign(old.appliedParams || (old.appliedParams = {}), values); }
+            old.bypass = spec.bypass === true; old.automationValues = retained;
           }
-          else { if (old) old.dsp.reset(); const dsp = effects.create(spec.type, this.sampleRate, spec.params || {}); row[slot] = dsp ? { type: spec.type, dsp, bypass: spec.bypass === true } : null; }
+          else { if (old) old.dsp.reset(); const dsp = effects.create(spec.type, this.sampleRate, spec.params || {}); row[slot] = dsp ? { type: spec.type, dsp, bypass: spec.bypass === true, appliedParams: { ...spec.params } } : null; }
         }
       }
       _processRack(owner, row, automation, left, right, blockBeat, blockPlaying, modulation) {
@@ -11451,7 +11602,7 @@ body {
               // Every production effect merges partial parameter updates. The
               // manual base was already applied by _updateRack; only changed
               // automation values need to cross the 32-sample control boundary.
-              if (changed) { slot.dsp.setParams(changed); slot.automationValues = values; }
+              if (changed) { slot.dsp.setParams(changed); Object.assign(slot.appliedParams || (slot.appliedParams = {}), changed); slot.automationValues = values; }
             }
             slot.dsp.process(left.subarray(start, start + length), right.subarray(start, start + length), { tempo: this.tempo, beat, playing: this.timelinePlaying[start] === 1 && this.timelineCountIn[start] === 0 });
             start += length;
@@ -11485,7 +11636,7 @@ body {
           if ((this.sampleClock + start) % 32 === 0) {
             const values = {};
             for (const key of keys) values[key] = this._lfoValue(modulation[key], start, automationValue(lanes[key], this.timelineBeats[start], this.master.mastering?.[key]));
-            processor.setParams(values); this.masteringAutomationValues = values;
+            processor.setParams(values); Object.assign(this._masteringAppliedParams || (this._masteringAppliedParams = {}), values); this.masteringAutomationValues = values;
           }
           processor.process(left.subarray(start, start + length), right.subarray(start, start + length), masteringAudioOptions);
           start += length;
@@ -11578,9 +11729,20 @@ body {
         this._resetBuses();
         this.meters = { beat: this.beat, playing: false, ended: false, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: emptyMeter() };
       }
+      setMeterDetail(value) {
+        this._meterDetail = value === undefined ? undefined : value && typeof value.ownerId === 'string' && Number.isInteger(value.slot) && value.slot >= 0 && value.slot < 5 ? { ownerId: value.ownerId, slot: value.slot } : null;
+      }
       getMeters() {
-        const rackMeters = (owner, row) => row.map((slot, insert) => slot ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || owner.effects?.[insert]?.params?.bypass === true } : null);
-        return { ...this.meters, mastering: this.masteringDSP?.getMeters() || null, lfos: this.modulation?.getMeters((ownerId, target) => {
+        const detail = this._meterDetail;
+        const rackMeters = (owner, row) => {
+          if (detail !== undefined && (!detail || detail.ownerId !== owner.id)) return row.length === 5 ? disabledEffectMeters : emptyBusEffectMeters;
+          return row.map((slot, insert) => slot && (detail === undefined || detail.slot === insert) ? { type: slot.type, ...slot.dsp.getMeters(), bypass: slot.bypass || owner.effects?.[insert]?.params?.bypass === true } : null);
+        };
+        const meters = this.meters;
+        // Realtime hosts ignore processBlock's return value. Their private
+        // working rows can be reused, but every exposed snapshot owns its rows.
+        const levels = this._metersPooled ? { tracks: meters.tracks.map(row => ({ ...row })), returns: meters.returns.map(row => ({ ...row })), buses: meters.buses.map(row => ({ ...row })), master: { ...meters.master } } : null;
+        return { ...meters, ...levels, mastering: this.masteringDSP?.getMeters() || null, lfos: this.modulation?.getMeters((ownerId, target) => {
           const index = /^track-/.test(ownerId) ? indexFor(ownerId, this.tracks) : -1, returnIndex = this.returns.findIndex(owner => owner.id === ownerId), owner = index >= 0 ? this.tracks[index] : returnIndex >= 0 ? this.returns[returnIndex] : this.buses.find(bus => bus.id === ownerId) || this.master;
           const lane = owner.automation?.find(lane => lane.target === target), parts = target.split(':'), base = target === 'level' || target === 'pan' ? owner[target] : parts[0] === 'send' ? owner.sends?.[Number(parts[1])] : parts[0] === 'eq' ? owner.eq?.[parts[1]] : parts[0] === 'fx' ? owner.effects?.[Number(parts[1])]?.params?.[parts[2]] : parts[0] === 'mastering' ? owner.mastering?.[parts[1]] : 0;
           return automationValue(lane, this.beat, base);
@@ -11707,6 +11869,22 @@ body {
           return result;
         });
       }
+      renderRealtime(left, right, inputs = []) {
+        this._reuseMeters = true;
+        try { this.processBlock(left, right, inputs); }
+        finally { this._reuseMeters = false; }
+      }
+      _publishMeters(value) {
+        this._metersPooled = this._reuseMeters;
+        if (this._reuseMeters) {
+          const block = this._meterPool.block;
+          if (!('cycle' in value)) delete block.cycle;
+          if (!('microphonePeak' in value)) delete block.microphonePeak;
+          if (!('countInBeatsRemaining' in value)) delete block.countInBeatsRemaining;
+          this.meters = Object.assign(block, value);
+        } else this.meters = value;
+        return this.meters;
+      }
       processBlock(left, right, inputs = []) {
         const profiler = this.cpuProfiler;
         if (!profiler?.enabled) return this._renderBlock(left, right, inputs);
@@ -11754,7 +11932,7 @@ body {
           values[plane * 2 + channel] = a + (b - a) * fraction;
         }
       }
-      _processFrozen(index, left, right, audible, trackStem, slew) {
+      _processFrozen(index, left, right, audible, trackStem, slew, meter = null) {
         const frozen = this.frozen[index], rate = frozen.spec.sampleRate / this.sampleRate, n = left.length;
         let peak = 0, powerL = 0, powerR = 0;
         for (let frame = 0; frame < n; frame++) {
@@ -11786,7 +11964,7 @@ body {
           if (!trackStem) for (let bus = 0; bus < 2; bus++) { this.returnBuffers[bus][0][frame] += frozen.last[2 + bus * 2] * gain; this.returnBuffers[bus][1][frame] += frozen.last[3 + bus * 2] * gain; }
           peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
         }
-        return { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+        return writeMeter(meter, peak, powerL, powerR, n);
       }
       _routeGroup(track, frame, a, b, left, right, dry) {
         const route = this.outputRoutes[track], target = this.outputTargets[track], slew = this.mixSlew;
@@ -11807,7 +11985,7 @@ body {
       }
       _processGroups(left, right, blockBeat, blockPlaying, anySolo, trackStem, returnStem, selectedBus, cpu) {
         if (trackStem || !this.groupRoutingPresent) return idleBusMeters;
-        const meters = [disabledMeter, disabledMeter], n = left.length, slew = this.mixSlew;
+        const meters = this._reuseMeters ? this._meterPool.busRows.fill(disabledMeter) : [disabledMeter, disabledMeter], n = left.length, slew = this.mixSlew;
         for (let bus = 0; bus < 2; bus++) {
           const moving = this.outputRoutes.some((route, track) => this.tracks[track].disabled !== true && route[bus + 1] !== 0);
           if (!(this.busRouteCounts[bus] || moving || this.busTailFrames[bus]) || !this.busBuffers[bus]) continue;
@@ -11843,7 +12021,7 @@ body {
             this._updateRack({}, this.busSlots[bus]);
             if (this.cpuProfiler?.enabled) this._syncDiagnosticsTopology();
           }
-          meters[bus] = { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+          meters[bus] = writeMeter(this._reuseMeters ? this._meterPool.buses[bus] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, start); }
         }
         if (!this.busRouteCounts.some(Boolean) && !this.busTailFrames.some(Boolean) && !this.outputRoutes.some((route, t) => this.tracks[t].disabled !== true && (route[1] !== 0 || route[2] !== 0))) this.groupRoutingPresent = false;
@@ -11855,7 +12033,7 @@ body {
         left.fill(0); right.fill(0);
         const microphone = inputs[TRACK_COUNT]; this.microphonePeak = 0;
         if (microphone?.[0]) for (let f = 0; f < n; f++) this.microphonePeak = Math.max(this.microphonePeak, Math.abs(microphone[0][f] || 0), Math.abs((microphone[1] || microphone[0])[f] || 0));
-        if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); this.meters = { beat: this.beat, playing: false, ended: this.ended, tracks: Array.from({ length: TRACK_COUNT }, emptyMeter), returns: Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: emptyMeter() }; return this.meters; }
+        if (this.silent) { if (cpu) cpu.endStage('clips', clipsStart); return this._publishMeters({ beat: this.beat, playing: false, ended: this.ended, tracks: this._reuseMeters ? this._meterPool.trackRows.fill(disabledMeter) : Array.from({ length: TRACK_COUNT }, emptyMeter), returns: this._reuseMeters ? this._meterPool.returnRows.fill(disabledMeter) : Array.from({ length: 2 }, emptyMeter), buses: idleBusMeters, master: this._reuseMeters ? disabledMeter : emptyMeter() }); }
         for (const t of this.activeTrackIndices) if (this.buffers[t]?.[0].length !== n) this.buffers[t] = [new Float32Array(n), new Float32Array(n)];
         if (!this.returnBuffers.length || this.returnBuffers[0][0].length !== n) this.returnBuffers = Array.from({ length: 2 }, () => [new Float32Array(n), new Float32Array(n)]);
         else for (const pair of this.returnBuffers) { pair[0].fill(0); pair[1].fill(0); }
@@ -11885,13 +12063,18 @@ body {
         let playingFrames = this.playing ? n : 0;
         const blockEnd = blockBeat + advance * n, wraps = loop && blockEnd >= loopEnd - 1e-10, wholeLoop = loop && advance * n >= loopEnd - loopStart;
         const wrappedEnd = wraps ? loopStart + Math.max(0, blockEnd - loopEnd) % (loopEnd - loopStart) : loopStart;
-        const candidates = Array(TRACK_COUNT).fill(emptyModulation);
-        for (const t of this.activeTrackIndices) if (this.playing && this.clipLists[t].length) candidates[t] = this.clipLists[t].filter(item => {
-          const end = item.start + item.length;
-          if (wholeLoop) return (item.start < loopEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
-          if (wraps) return (item.start < loopEnd && end > blockBeat) || (item.start <= wrappedEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat);
-          return item.start <= blockEnd && end > blockBeat;
-        });
+        const candidates = this._clipCandidates;
+        for (const t of this.activeTrackIndices) {
+          const list = candidates[t]; let count = 0;
+          if (this.playing) for (const item of this.clipLists[t]) {
+            const end = item.start + item.length;
+            const overlaps = wholeLoop ? (item.start < loopEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat)
+              : wraps ? (item.start < loopEnd && end > blockBeat) || (item.start <= wrappedEnd && end > loopStart) || (item.start <= blockBeat && end > blockBeat)
+                : item.start <= blockEnd && end > blockBeat;
+            if (overlaps) list[count++] = item;
+          }
+          list.length = count;
+        }
         const minimumFade = .003 / secondsPerBeat;
         for (const t of this.activeTrackIndices) for (const item of candidates[t]) { item.blockFadeIn = Math.min(item.length * .5, Math.max(minimumFade, item.fadeIn)); item.blockFadeOut = Math.min(item.length * .5, Math.max(minimumFade, item.fadeOut)); }
         for (const t of this.activeTrackIndices) {
@@ -11998,7 +12181,7 @@ body {
           return target === 'level' || /^send:[01]$/.test(target) && this.tracks[index].sendPre?.[Number(target.slice(5))] === true ? 0 : 1;
         } : null);
         if (cpu) cpu.endStage('modulation', modulationStart);
-        const trackMeters = Array(TRACK_COUNT).fill(disabledMeter), slew = this.mixSlew;
+        const trackMeters = this._reuseMeters ? this._meterPool.trackRows.fill(disabledMeter) : Array(TRACK_COUNT).fill(disabledMeter), slew = this.mixSlew;
         if (!this.dryMixGains || this.dryMixGains.length !== n) this.dryMixGains = new Float64Array(n);
         const dryGoal = dryAudible ? 1 : 0;
         for (let frame = 0; frame < n; frame++) {
@@ -12008,7 +12191,7 @@ body {
         }
         for (const t of this.activeTrackIndices) {
           const [l, r] = this.buffers[t], track = this.tracks[t], modulation = this.modulationOwners[t], panCurve = this.panCurves[t], keys = cpu ? this._cpuKeys[t] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
-          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters[t] = this._processFrozen(t, left, right, audible[t], trackStem, slew); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
+          if (this.frozen[t]) { const mixStart = cpu ? cpu.start(keys.mix) : NaN; trackMeters[t] = this._processFrozen(t, left, right, audible[t], trackStem, slew, this._reuseMeters ? this._meterPool.tracks[t] : null); if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); } continue; }
           if (this.freezeCaptureIndex >= 0 && t !== this.freezeCaptureIndex) continue;
           this._processRack(track, this.slots[t], this.automation[t], l, r, blockBeat, blockPlaying, modulation);
           const eqStart = cpu ? cpu.start(keys.eq) : NaN;
@@ -12049,7 +12232,7 @@ body {
             }
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a * a; powerR += b * b;
           }
-          trackMeters[t] = { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) };
+          trackMeters[t] = writeMeter(this._reuseMeters ? this._meterPool.tracks[t] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         if (this.freezeCaptureIndex >= 0) {
@@ -12058,11 +12241,10 @@ body {
           this.freezeCapture.sendA[0].set(this.returnBuffers[0][0]); this.freezeCapture.sendA[1].set(this.returnBuffers[0][1]);
           this.freezeCapture.sendB[0].set(this.returnBuffers[1][0]); this.freezeCapture.sendB[1].set(this.returnBuffers[1][1]);
           left.set(this.freezeCapture.main[0]); right.set(this.freezeCapture.main[1]); this.sampleClock += n;
-          this.meters = { beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, returns: [emptyMeter(), emptyMeter()], buses: idleBusMeters, master: trackMeters[this.freezeCaptureIndex] };
-          return this.meters;
+          return this._publishMeters({ beat: this.beat, playing: this.playing, ended: this.ended, tracks: trackMeters, returns: this._reuseMeters ? this._meterPool.returnRows.fill(disabledMeter) : [emptyMeter(), emptyMeter()], buses: idleBusMeters, master: trackMeters[this.freezeCaptureIndex] });
         }
         const busMeters = this._processGroups(left, right, blockBeat, blockPlaying, anySolo, trackStem, returnStem, selectedBus, cpu);
-        const returnMeters = [];
+        const returnMeters = this._reuseMeters ? this._meterPool.returnRows : [];
         for (let bus = 0; bus < 2; bus++) {
           const owner = this.returns[bus], [l, r] = this.returnBuffers[bus], gain = this.returnGains[bus], modulation = this.modulationOwners[RETURN_OFFSET + bus], panCurve = this.panCurves[RETURN_OFFSET + bus], keys = cpu ? this._cpuKeys[RETURN_OFFSET + bus] : null, ownerStart = cpu ? cpu.start(keys.owner) : NaN;
           if (!trackStem && !busStem) this._processRack(owner, this.returnSlots[bus], this.returnAutomation[bus], l, r, blockBeat, blockPlaying, modulation);
@@ -12079,7 +12261,7 @@ body {
             if (a !== 0) left[frame] += a; if (b !== 0) right[frame] += b;
             peak = Math.max(peak, Math.abs(a), Math.abs(b)); powerL += a*a; powerR += b*b;
           }
-          returnMeters.push({ peak, rms: Math.sqrt((powerL + powerR)/(2*n)), rmsLeft: Math.sqrt(powerL/n), rmsRight: Math.sqrt(powerR/n) });
+          returnMeters[bus] = writeMeter(this._reuseMeters ? this._meterPool.returns[bus] : null, peak, powerL, powerR, n);
           if (cpu) { cpu.endStage(keys.mix, mixStart); cpu.endStage(keys.owner, ownerStart); }
         }
         const masterKeys = cpu ? this._cpuKeys[MASTER_INDEX] : null, masterStart = cpu ? cpu.start(masterKeys.owner) : NaN;
@@ -12149,8 +12331,7 @@ body {
         }
         if (cpu) cpu.endStage(masterKeys.owner, masterStart);
         this.sampleClock += n;
-        this.meters = { beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, returns: returnMeters, buses: busMeters, master: { peak, rms: Math.sqrt((powerL + powerR) / (2 * n)), rmsLeft: Math.sqrt(powerL / n), rmsRight: Math.sqrt(powerR / n) } };
-        return this.meters;
+        return this._publishMeters({ beat: this.beat, cycle: this.transportCycle, playing: this.playing, ended: this.ended, microphonePeak: this.microphonePeak, countInBeatsRemaining: this.countInRemaining * advance, tracks: trackMeters, returns: returnMeters, buses: busMeters, master: writeMeter(this._reuseMeters ? this._meterPool.master : null, peak, powerL, powerR, n) });
       }
     }
 
@@ -12370,6 +12551,7 @@ body {
       this._audioSettings = readAudioSettings(); this._processingFrames = 0; this._exportCount = 0; this._audioApplying = false; this._deviceAccessPending = false; this._playPending = 0; this._initializing = false;
       this._sampleRateFallback = false; this._sinkFallback = false; this._devicePermission = 'unknown';
       this._diagnosticsConfig = { enabled: false, mode: 'light', revision: 0 }; this._diagnosticsGeneration = 0; this._diagnosticsSnapshot = null; this._diagnosticsReleased = true; this._masteringAnalysis = false;
+      this._meterDetail = null;
       this._deviceChangeListener = () => this.onStatus?.({ type: 'audio-device-change', diagnostics: this.getAudioDiagnostics() });
       if (typeof navigator !== 'undefined') navigator.mediaDevices?.addEventListener?.('devicechange', this._deviceChangeListener);
     }
@@ -12379,6 +12561,11 @@ body {
       this._masteringAnalysis = active; this._send({ type: 'masteringAnalysis', enabled: active });
     }
     resetMasteringMeters() { this._send({ type: 'resetMasteringMeters' }); }
+    setMeterDetail(value) {
+      const detail = value && typeof value.ownerId === 'string' && Number.isInteger(value.slot) && value.slot >= 0 && value.slot < 5 ? { ownerId: value.ownerId, slot: value.slot } : null;
+      if (detail?.ownerId === this._meterDetail?.ownerId && detail?.slot === this._meterDetail?.slot) return;
+      this._meterDetail = detail; this._send({ type: 'meterDetail', detail });
+    }
     setDiagnostics(value = {}) {
       const previous = this._diagnosticsConfig, mode = ['light', 'balanced', 'deep'].includes(value.mode) ? value.mode : previous.mode;
       const enabled = typeof value.enabled === 'boolean' ? value.enabled : previous.enabled;
@@ -12553,7 +12740,7 @@ body {
               class LoomProcessor extends AudioWorkletProcessor {
                 constructor(options) {
                   super();this.core=new DSP.Core(options.processorOptions.state,{},sampleRate,{includeMetronome:true});this.count=0;this.endedSent=false;this.epoch=options.processorOptions.epoch||0;
-                  this.diagnosticsGeneration=options.processorOptions.diagnosticsGeneration||0;this.core.setDiagnostics(options.processorOptions.diagnostics||{enabled:false});this.core.setMasteringAnalysis(options.processorOptions.masteringAnalysis===true);
+                  this.diagnosticsGeneration=options.processorOptions.diagnosticsGeneration||0;this.core.setDiagnostics(options.processorOptions.diagnostics||{enabled:false});this.core.setMasteringAnalysis(options.processorOptions.masteringAnalysis===true);this.core.setMeterDetail(options.processorOptions.meterDetail||null);
                   this.recorder=new DSP.Recorder(sampleRate,m=>this.port.postMessage({type:'chunk',...m},[m.left.buffer,m.right.buffer]),m=>this.port.postMessage({type:m.stopId===undefined?'limit':'recordStopped',...m}));
                   this.port.onmessage=e=>{
                     const m=e.data,serviceFrame=m.type==='serviceStart'?0:this.core.sampleClock;if(Number.isInteger(m.epoch))this.epoch=m.epoch;
@@ -12562,6 +12749,7 @@ body {
                       catch(error){this.port.postMessage({type:'pedalMidiAck',requestId:m.requestId,error:error.message});}return;
                     }
                     if(m.type==='diagnosticsConfig')this.core.setDiagnostics(m.config);
+                    else if(m.type==='meterDetail')this.core.setMeterDetail(m.detail);
                     else if(m.type==='masteringAnalysis')this.core.setMasteringAnalysis(m.enabled);
                     else if(m.type==='resetMasteringMeters'){this.core.resetMasteringMeters();this.port.postMessage({type:'meters',epoch:this.epoch,contextTime:currentTime,meters:this.core.getMeters()});}
                     else if(m.type==='diagnosticsReset')this.core.resetDiagnostics(m.revision);
@@ -12601,7 +12789,7 @@ body {
                   // The normal audio callback does not enter profiling helpers.
                   // Keep transport, capture and meter timing identical in both paths.
                   if(!this.core.cpuProfiler?.enabled){
-                    const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                    const serviceFrame=this.core.sampleClock;this.core.renderRealtime(out[0],out[1]||out[0],inputs);
                     if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                     if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
                     if(this.core.countInEnded&&this.recorder.active)this.port.postMessage({type:'countInEnd',id:this.recorder.id,startBeat:this.recorder.startBeat});
@@ -12613,7 +12801,7 @@ body {
                   }
                   const profiling=this.core.beginDiagnostics(n);
                   try {
-                  const serviceFrame=this.core.sampleClock;this.core.processBlock(out[0],out[1]||out[0],inputs);
+                  const serviceFrame=this.core.sampleClock;this.core.renderRealtime(out[0],out[1]||out[0],inputs);
                   const eventsStamp=this.core.diagnosticsStart('events');
                   if(this.core.serviceEvents.length)for(const event of this.core.drainServiceEvents(currentTime,serviceFrame))this.port.postMessage({type:'serviceEvent',event});
                     if((this.core.pedalMidi&&this.count%8===0)||this.core.pedalMidiBatches.length)for(const batch of this.core.drainPedalMidi())this.port.postMessage({type:'pedalMidi',batch});
@@ -12634,7 +12822,7 @@ body {
               }
               registerProcessor('loom-eight-track',LoomProcessor);`;
             url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); await this.context.audioWorklet.addModule(url);
-            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: INPUT_COUNT, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch, diagnostics: this._diagnosticsConfig, diagnosticsGeneration: this._diagnosticsGeneration, masteringAnalysis: this._masteringAnalysis } });
+            this.node = new AudioWorkletNode(this.context, 'loom-eight-track', { numberOfInputs: INPUT_COUNT, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: 'explicit', processorOptions: { state: dspState(this.state), epoch: this._transportEpoch, diagnostics: this._diagnosticsConfig, diagnosticsGeneration: this._diagnosticsGeneration, masteringAnalysis: this._masteringAnalysis, meterDetail: this._meterDetail } });
             this.node.port.onmessage = e => this._message(e.data);
             for (let i = 0; i < TRACK_COUNT; i++) this.inputs[i].connect(this.node, 0, i);
             this.microphoneInput.connect(this.node, 0, TRACK_COUNT);
@@ -12647,6 +12835,7 @@ body {
           this.core = new DSP.Core(dspState(this.state), this.assets, this.context.sampleRate, { includeMetronome: true });
           this.core.setDiagnostics(this._diagnosticsConfig);
           this.core.setMasteringAnalysis(this._masteringAnalysis);
+          this.core.setMeterDetail(this._meterDetail);
           this.recorder = new DSP.Recorder(this.context.sampleRate, m => this._message({ type: 'chunk', ...m }), m => this._message({ type: m.stopId === undefined ? 'limit' : 'recordStopped', ...m }));
           this.node = this.context.createScriptProcessor(AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames, INPUT_COUNT * 2, 2);
           this._processingFrames = this.node.bufferSize || AUDIO_PROFILES[this._audioSettings.latencyProfile].fallbackFrames;
@@ -12657,7 +12846,7 @@ body {
             if (!this.core.cpuProfiler?.enabled) {
               const inputs = Array.from({ length: INPUT_COUNT }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
               const serviceFrame = this.core.sampleClock;
-              this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+              this.core.renderRealtime(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
               if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
               if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
               this.recorder.capture(inputs, e.outputBuffer.length, this.core); this._flushPedalMidi();
@@ -12669,7 +12858,7 @@ body {
             try {
             const inputs = Array.from({ length: INPUT_COUNT }, (_, i) => [e.inputBuffer.getChannelData(i * 2), e.inputBuffer.getChannelData(i * 2 + 1)]);
             const serviceFrame = this.core.sampleClock;
-            this.core.processBlock(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
+            this.core.renderRealtime(e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1), inputs);
             const eventsStamp = this.core.diagnosticsStart('events');
             if (this.core.serviceEvents.length) for (const event of this.core.drainServiceEvents(Number.isFinite(e.playbackTime) ? e.playbackTime : this.context.currentTime, serviceFrame)) this._message({ type: 'serviceEvent', event });
             if (this.core.countInEnded && this.recorder.active) this._message({ type: 'countInEnd', id: this.recorder.id, startBeat: this.recorder.startBeat });
@@ -12819,6 +13008,7 @@ body {
         return;
       }
       if (m.type === 'diagnosticsConfig') this.core.setDiagnostics(m.config);
+      else if (m.type === 'meterDetail') this.core.setMeterDetail(m.detail);
       else if (m.type === 'masteringAnalysis') this.core.setMasteringAnalysis(m.enabled);
       else if (m.type === 'resetMasteringMeters') { this.core.resetMasteringMeters(); this._acceptMeters(this.core.getMeters(), this._transportEpoch, this.context?.currentTime || 0); }
       else if (m.type === 'diagnosticsReset') this.core.resetDiagnostics(m.revision);
@@ -16014,7 +16204,7 @@ body {
     editable(track) { if (track?.freeze) throw Error('Unfreeze this track before editing its clips or instrument.'); }
     active(track) { if (track?.disabled) throw Error('Enable ' + track.name + ' before using its instrument or rendering its sound.'); }
     voices(trackId) { return this.host.getPatternAdapter?.(trackId)?.notes?.voices || []; }
-    render() {
+    render(options = {}) {
       const location = this.location(), clip = location?.clip, notes = clip?.type === 'notes', source = !!clip?.origin;
       if (this.sourceEdit && (!source || this.sourceEdit.id !== clip.id)) {
         const draft = this.sourceEdit, generation = this.getGeneration(); this.sourceEdit = null;
@@ -16026,7 +16216,7 @@ body {
       const cancel = document.getElementById('cancelNoteRenderButton'); if (cancel) cancel.hidden = !this.controller;
       const sourcePattern = document.getElementById('sourcePatternButton'); if (sourcePattern) { sourcePattern.hidden = !(source && this.sourceEdit?.id === clip.id); sourcePattern.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled; }
       for (const [action, visible] of [['notes', notes], ['print', notes], ['source', source], ['update', source]]) for (const button of document.querySelectorAll('[data-clip-action="' + action + '"]')) { button.hidden = !visible; button.disabled = !!this.controller || !!location?.track.freeze || !!location?.track.disabled && action !== 'notes'; }
-      this.piano?.render();
+      if (options.notes !== false) this.piano?.render();
     }
     getEditableClip() {
       const location = this.location(); if (!location) return null;
@@ -19551,7 +19741,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   let trackFreezeStatus = { busy: false };
   // Share one read-only meter snapshot during a paint. Scheduling and recording
   // continue to read the audio engine directly outside this presentation pass.
-  let visualMeterSnapshot = null, visualPanelObserver = null, visualSizeObserver = null, timelineViewportWidth = 0;
+  let visualMeterSnapshot = null, visualPanelObserver = null, visualSizeObserver = null, timelineViewportWidth = 0, effectMeterDetailKey;
   const visualPanels = new Map();
   const visualMeters = () => visualMeterSnapshot || engine.getMeters();
   const panelVisible = id => visualPanels.get(id) !== false;
@@ -19935,7 +20125,24 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   function remember({instruments=false}={}) { const entry=clone(state); if(instruments)instrumentHistory.add(entry); history.push(entry); if (history.length > 40) history.shift(); future = []; renderHistory(); }
   function renderHistory() { $('undoButton').disabled = !history.length || !!trackPowerOperations.size; $('redoButton').disabled = !future.length || !!trackPowerOperations.size; }
   function decodeAssets() { const next = {}; for (const asset of [...state.assets, ...(state.freezeAssets || [])]) { next[asset.id] = assetMap[asset.id] || (asset.encoding === 'float32le' ? S.decodeFreezeAsset(asset) : S.decodeAsset(asset)); } assetMap = next; engine.setAssets(assetMap); }
-  function changed(options = {}) { cancelTimelineGesture(); engine.setState(state); if (!options.deferNotes) notePlayback.setState(state); renderHistory(); if (options.arrangement) renderArrangement(); if (options.mixer) renderMixer(); if (options.rack) renderRack(); if (options.inspector) renderClipInspector(); if(options.automation) automationEditor?.render(); if(options.notes) pianoRoll?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
+  function changed(options = {}) {
+    cancelTimelineGesture(); engine.setState(state);
+    const refreshNotes = options.arrangement || options.inspector || options.notes || options.notePlayback;
+    // Fader, EQ and insert movements do not change the score. Avoid hashing all
+    // note clips and rebuilding an open piano-roll SVG for every pointer move.
+    if (!options.deferNotes && refreshNotes) notePlayback.setState(state);
+    renderHistory();
+    if (options.arrangement) renderArrangement();
+    if (options.mixer) renderMixer();
+    if (options.rack) renderRack();
+    if (options.inspector) renderClipInspector();
+    if (options.automation) automationEditor?.render();
+    if (refreshNotes) {
+      if (noteWorkflow) noteWorkflow.render(); else if (options.notes) pianoRoll?.render();
+      renderFreezeState();
+    }
+    scheduleAutosave();
+  }
   function recoveryInfo(message){$('recoveryStatus').hidden=!message;$('recoveryStatus').textContent=message||'';if(message&&!recoveryWarned){recoveryWarned=true;status(message);}}
   function scheduleAutosave(){clearTimeout(autosaveTimer);if(!recovery){recoveryInfo('Browser recovery is off. Save a project to keep this session.');return;}autosaveTimer=setTimeout(()=>{try{const recoveryLimit=8*1024*1024,encodedSize=[...state.assets,...(state.freezeAssets||[])].reduce((n,a)=>n+(a.pcm?.length||0),0)+state.tracks.reduce((n,t)=>n+(t.instrument?.html?.length||0),0);if(encodedSize>=recoveryLimit){localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');return;}const serialized=S.serializeProject(state);if(serialized.length<8*1024*1024){localStorage.setItem('loom-session-v1',serialized);recoveryUnavailable=false;recoveryInfo('');}else{localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');}}catch(_){recoveryUnavailable=true;recoveryInfo('Browser recovery is unavailable or full. Save a project to keep this session.');}},1600);}
   const snapshotTimers = new Map();
@@ -21088,7 +21295,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     $('loopSelectionButton').disabled=locked||!clipLocation();
     $('ruler').setAttribute('aria-disabled',String(locked));
     $('playhead').setAttribute('aria-disabled',String(locked));
-    renderRecordingSetup();renderMicrophone();renderMarkers();renderClipActions();
+    renderRecordingSetup();renderMicrophone();renderMarkers();renderClipActions({notes:false});
     renderPlayhead(); renderFreezeState();
   }
   function renderPlayhead(meters = visualMeters()) {
@@ -21827,7 +22034,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   $('instrumentBackButton').addEventListener('click',()=>openInstrumentBrowser(browserTrack??state.selectedTrack));
   $('unloadInstrumentButton').addEventListener('click',()=>{const id=frameTrack,t=state.tracks.find(t=>t.id===id);if(!t||!allowTrackEdit(t))return;remember();host.unload(id);engine.clearAudition(id);frames.get(id)?.remove();frames.delete(id);openedApps.delete(id);loadOperations.set(id,(loadOperations.get(id)||0)+1);t.instrument=null;t.instrumentLive=false;frameTrack=null;changed({arrangement:true,rack:true});openInstrumentBrowser(state.tracks.indexOf(t));status('Instrument unloaded. Its recorded clips remain in the arrangement.');});
   $('trackName').addEventListener('change',()=>{remember();track().name=$('trackName').value.trim().slice(0,80)||'Track '+(state.selectedTrack+1);changed({arrangement:true,mixer:true,rack:true});});$('trackColor').addEventListener('change',()=>{remember();track().color=$('trackColor').value;changed({arrangement:true,mixer:true,rack:true});});
-  $('instrumentLive').addEventListener('change',()=>{if(!allowTrackEdit(track()))return;remember();track().instrumentLive=$('instrumentLive').checked;changed();if(engine.getMeters().playing&&track().instrument){if(track().instrumentLive){const t=track(),generation=lifecycle;ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing){await host.command(t.id,'prepare');if(generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}else fireCommand(track().id,'stop');}});
+  $('instrumentLive').addEventListener('change',()=>{if(!allowTrackEdit(track()))return;remember();track().instrumentLive=$('instrumentLive').checked;changed({notePlayback:true});if(engine.getMeters().playing&&track().instrument){if(track().instrumentLive){const t=track(),generation=lifecycle;ensureInstrument(t).then(async ready=>{if(ready&&generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing){await host.command(t.id,'prepare');if(generation===lifecycle&&t.instrumentLive&&engine.getMeters().playing)fireCommand(t.id,'start');}}).catch(e=>status(e.message));}else fireCommand(track().id,'stop');}});
   $('uploadAppButton').addEventListener('click',()=>{$('appFile').value='';$('appFile').click();});$('appFile').addEventListener('change',async()=>{const file=$('appFile').files[0];if(!file)return;if(file.size>S.LIMITS.appHtmlBytes){status('Choose a self-contained instrument HTML smaller than 36 MiB.');return;}const generation=lifecycle;try{const html=await file.text();if(generation!==lifecycle)return;const id='custom-'+S.uid('app').slice(-24).replace(/[^a-z0-9_-]/gi,'');selectedTrack(browserTrack??state.selectedTrack);await ensureInstrument(track(),{open:true,replace:true,descriptor:{id,name:file.name.replace(/\.html?$/i,''),html}});}catch(e){status(e.message);}});
   $('loadAppUrlButton').addEventListener('click',()=>{try{const url=new URL($('customAppUrl').value,location.href);if(location.protocol==='file:'||url.origin!==location.origin||!['http:','https:'].includes(url.protocol))throw Error('Choose an instrument URL on this same site. For offline apps, upload its HTML.');selectedTrack(browserTrack??state.selectedTrack);const id='custom-'+S.uid('app').slice(-24).replace(/[^a-z0-9_-]/gi,'');ensureInstrument(track(),{open:true,replace:true,descriptor:{id,name:url.pathname.split('/').filter(Boolean).pop()||'New instrument',url:url.href}}).catch(e=>status(e.message));}catch(e){status(e.message);}});
   $('closeEffect').addEventListener('click',()=>$('effectDialog').close());$('exportButton').addEventListener('click',()=>{$('exportSummary').textContent='Stereo PCM WAV · 48 kHz · 16 bit';$('exportDialog').showModal();});$('closeExport').addEventListener('click',()=>$('exportDialog').close());$('renderButton').addEventListener('click',renderExport);$('cancelExport').addEventListener('click',()=>exportAbort?.abort());$('exportDialog').addEventListener('cancel',e=>{if(exportAbort){e.preventDefault();exportAbort.abort();}});
@@ -21861,9 +22068,21 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
   $('playhead').addEventListener('keydown',e=>{
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();seekTo((engine.getMeters().beat||0)+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?4:state.view.snap||.25));}
   });
+  function syncEffectMeterDetail(visible) {
+    const owner = visible ? effectOwner() : null, slot = owner?.effects?.[selectedSlot];
+    const key = slot ? owner.id + ':' + selectedSlot : '';
+    if (key === effectMeterDetailKey) return;
+    effectMeterDetailKey = key;
+    // Rich insert readings are consumed by one editor. Keep every other insert
+    // out of the audio-thread meter snapshot and its structured-clone message.
+    engine.setMeterDetail?.(slot ? { ownerId: owner.id, slot: selectedSlot } : null);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncEffectMeterDetail(false); });
   function animate(now) {
     const dialogOpen = !document.hidden && !!document.querySelector('dialog[open]');
-    cabinetUI?.setVisible(!serviceController?.isOpen && !document.hidden && !$('effectEditor').hidden && panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze);
+    const effectVisible = !serviceController?.isOpen && !document.hidden && !dialogOpen && !$('effectEditor').hidden && panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze;
+    syncEffectMeterDetail(effectVisible);
+    cabinetUI?.setVisible(effectVisible);
     cpuInspector?.setVisible(!serviceController?.isOpen && !document.hidden && (!cpuInspector.element.open || !dialogOpen));
     masteringUI?.setVisible(!serviceController?.isOpen && !document.hidden && !dialogOpen && panelVisible('masteringSection'));
     if(serviceController?.isOpen || document.hidden){requestAnimationFrame(animate);return;}
@@ -21876,7 +22095,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       renderPlayhead(m);
       if (panelVisible('mixer')) renderTrackEqState(m);
       if (panelVisible('micInputPanel') || $('audioSettingsDialog').open) renderMicrophone(m.microphone);
-      if (panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));svtUI?.paint(effectReading(m));guitarPedalsUI?.paint(effectReading(m));cabinetUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
+      if (effectVisible) { renderVocalMeters(m);renderBroilerMeters(m);renderCompressorMeters(m);renderPreampMeters(m);renderTapeMeters(m);renderLoFiMeters(m);renderPedalSynthMeters(m);deluxeUI?.paint(effectReading(m));svtUI?.paint(effectReading(m));guitarPedalsUI?.paint(effectReading(m));cabinetUI?.paint(effectReading(m));renderUtilityMeters(m);renderCreativeMeters(m); }
       if (panelVisible('busChannels') || panelVisible('groupBusChannels')) renderBusMeters(m);
       if (panelVisible('masteringSection')) masteringUI?.paint(m.mastering);
       if (panelVisible('masterPlaybackSection')) masterPlaybackUI?.paint(masterPlayback.getStatus());
@@ -22094,7 +22313,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
     }catch(e){if(operation===microphoneOperation&&generation===lifecycle){renderMicrophone();status(e.name==='NotAllowedError'?'Microphone access was denied. Allow access in your browser to monitor or record.':e.message);}}
   }
   engine.onStatus=event=>{if(event.type==='microphone-status')renderMicrophone(event);else if(event.type==='audio-settings-changed'){renderMicrophone();if($('audioSettingsDialog').open)renderAudioDiagnostics();}else if(event.type==='audio-device-change'){if($('audioSettingsDialog').open)refreshAudioDevices();renderMicrophone();}else if(event.type==='error'||event.type==='microphone-disconnected'){status(event.message);if($('audioSettingsDialog').open)interfaceMessage(event.message,true);}};
-  function renderClipActions() {
+  function renderClipActions(options = {}) {
     const selected = clipLocation(), multiple = selectedClips.size > 1, rows = T.entries(state, selectedClips);
     const blocked = !rows.length || recordFinishing || trackPowerOperations.size || rows.some(row => trackLocked(row.track));
     for (const id of ['clipDuplicateQuick', 'clipDeleteQuick', 'duplicateButton', 'deleteClipButton']) $(id).disabled = blocked;
@@ -22107,7 +22326,7 @@ window.LoomDemoTemplate={"version":1,"name":"The first service has a few questio
       const action = button.dataset.clipAction;
       button.disabled = action === 'loop' ? !rows.length || transportLocked() : blocked || multiple && !['duplicate', 'delete'].includes(action);
     }
-    noteWorkflow?.render();
+    noteWorkflow?.render(options);
   }
   function editSelectedClip(){if(selectedClips.size!==1||!clipLocation())return;$('clipInspector').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});$('clip-name')?.focus({preventScroll:true});}
   function renderMarkers(){

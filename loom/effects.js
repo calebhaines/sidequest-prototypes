@@ -78,8 +78,8 @@
     specifications.vestige.model = ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'];
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-    const bounded = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
-    const input = value => Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const bounded = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
+    const input = value => typeof value === 'number' && value >= -8 && value <= 8 ? value : Number.isFinite(value) ? clamp(value, -8, 8) : 0;
     const output = (dry, wet, mix) => bounded(dry + (wet - dry) * mix);
     const db = value => Math.pow(10, value / 20);
     const lowpass = (freq, sr) => 1 - Math.exp(-TAU * Math.min(freq, sr * 0.45) / sr);
@@ -747,14 +747,28 @@
         tail = () => Math.min(6, 0.08 * (1 + Math.log(0.001) / Math.log(Math.max(0.001, Math.abs(p.feedback)))));
       } else if (type === 'parallax') {
         const length = Math.ceil(sr * 6) + 4, bufferL = new Float32Array(length), bufferR = new Float32Array(length);
-        let write = 0, dampL = 0, dampR = 0, hpL = 0, hpR = 0, prevL = 0, prevR = 0, delay = -1, coefficient = 1;
+        let write = 0, dampL = 0, dampR = 0, hpL = 0, hpR = 0, prevL = 0, prevR = 0, delay = -1, coefficient = 1, neverExcited = true;
         const slew = 1 - Math.exp(-1 / (sr * 0.04)), hp = Math.exp(-TAU * 18 / sr);
         const seconds = context => p.clock === 'free' ? p.time * 0.001 : divisions[p.division] * 60 / tempoOf(context);
         update = () => { coefficient = lowpass(p.damping, sr); };
         run = (left, right, context) => {
           const targetDelay = clamp(seconds(context) * sr, 1, length - 3), mix = p.mix, spread = p.spread;
           if (delay < 0) delay = targetDelay;
-          for (let i = 0; i < left.length; i++) {
+          let firstFrame = 0;
+          if (neverExcited) {
+            // Empty delay lines cannot produce a tail. Retain the exact
+            // sample-clocked delay slew and cursor before the first input.
+            for (; firstFrame < left.length; firstFrame++) {
+              const dryL = input(left[firstFrame]), dryR = input(right[firstFrame]);
+              if (dryL !== 0 || dryR !== 0) break;
+              delay += slew * (targetDelay - delay);
+              left[firstFrame] = output(dryL, 0, mix); right[firstFrame] = output(dryR, 0, mix);
+            }
+            write = (write + firstFrame) % length;
+            if (firstFrame === left.length) return;
+            neverExcited = false;
+          }
+          for (let i = firstFrame; i < left.length; i++) {
             const dryL = input(left[i]), dryR = input(right[i]);
             delay += slew * (targetDelay - delay);
             const delayedL = read(bufferL, write, delay), delayedR = read(bufferR, write, delay);
@@ -767,14 +781,14 @@
             if (++write === length) write = 0;
           }
         };
-        reset = () => { clear(bufferL); clear(bufferR); write = 0; dampL = dampR = hpL = hpR = prevL = prevR = 0; delay = -1; };
+        reset = () => { clear(bufferL); clear(bufferR); write = 0; dampL = dampR = hpL = hpR = prevL = prevR = 0; delay = -1; neverExcited = true; };
         tail = context => Math.min(60, seconds(context) * (1 + Math.log(0.001) / Math.log(Math.max(0.001, p.feedback))));
       } else if (type === 'vestige') {
         const primes = [1493, 1601, 1747, 1867, 1999, 2131, 2281, 2411], lines = [], positions = new Int32Array(8), lengths = new Int32Array(8), gains = new Float64Array(8), damp = new Float64Array(8), matrix = new Float64Array(8);
         for (let j = 0; j < 8; j++) lines.push(new Float32Array(Math.ceil(primes[j] * 2.2 * sr / 48000) + 4));
         const preLength = Math.ceil(sr * 0.18) + 4, preL = new Float32Array(preLength), preR = new Float32Array(preLength);
         const apLengths = [Math.round(sr * 0.0037), Math.round(sr * 0.0109)], apL = apLengths.map(length => new Float32Array(Math.max(2, length))), apR = apLengths.map(length => new Float32Array(Math.max(2, length + 7))), apPositionL = new Int32Array(2), apPositionR = new Int32Array(2);
-        let preWrite = 0, preDelay = 0, coefficient = 1;
+        let preWrite = 0, preDelay = 0, coefficient = 1, neverExcited = true;
         update = () => {
           const scale = (0.7 + p.size * 1.5) * sr / 48000;
           for (let j = 0; j < 8; j++) { lengths[j] = Math.max(2, Math.round(primes[j] * scale)); positions[j] %= lengths[j]; gains[j] = Math.pow(10, -3 * lengths[j] / (sr * p.decay)); }
@@ -782,7 +796,22 @@
         };
         run = (left, right) => {
           const mix = p.mix, diffusion = p.diffusion * 0.7, normalization = 1 / Math.sqrt(8);
-          for (let i = 0; i < left.length; i++) {
+          let firstFrame = 0;
+          if (neverExcited) {
+            // Preserve every empty-ring cursor without running the allpasses
+            // and feedback matrix before this room has received any audio.
+            for (; firstFrame < left.length; firstFrame++) {
+              const dryL = input(left[firstFrame]), dryR = input(right[firstFrame]);
+              if (dryL !== 0 || dryR !== 0) break;
+              left[firstFrame] = output(dryL, 0, mix); right[firstFrame] = output(dryR, 0, mix);
+            }
+            preWrite = (preWrite + firstFrame) % preLength;
+            if (diffusion > 0) for (let j = 0; j < 2; j++) { apPositionL[j] = (apPositionL[j] + firstFrame) % apL[j].length; apPositionR[j] = (apPositionR[j] + firstFrame) % apR[j].length; }
+            for (let j = 0; j < 8; j++) positions[j] = (positions[j] + firstFrame) % lengths[j];
+            if (firstFrame === left.length) return;
+            neverExcited = false;
+          }
+          for (let i = firstFrame; i < left.length; i++) {
             const dryL = input(left[i]), dryR = input(right[i]);
             preL[preWrite] = dryL; preR[preWrite] = dryR;
             let diffuseL = preDelay > 0 ? read(preL, preWrite, preDelay) : dryL, diffuseR = preDelay > 0 ? read(preR, preWrite, preDelay) : dryR;
@@ -814,7 +843,7 @@
             left[i] = output(dryL, wetMid + wetSide, mix); right[i] = output(dryR, wetMid - wetSide, mix);
           }
         };
-        reset = () => { lines.forEach(clear); apL.forEach(clear); apR.forEach(clear); clear(preL); clear(preR); positions.fill(0); apPositionL.fill(0); apPositionR.fill(0); damp.fill(0); matrix.fill(0); preWrite = 0; };
+        reset = () => { lines.forEach(clear); apL.forEach(clear); apR.forEach(clear); clear(preL); clear(preR); positions.fill(0); apPositionL.fill(0); apPositionR.fill(0); damp.fill(0); matrix.fill(0); preWrite = 0; neverExcited = true; };
         tail = () => p.predelay * 0.001 + p.decay + 0.25;
       } else if (type === 'halo') {
         const length = Math.ceil(sr * 0.15) + 8, bufferL = new Float32Array(length), bufferR = new Float32Array(length), baseDelay = sr * 0.004;

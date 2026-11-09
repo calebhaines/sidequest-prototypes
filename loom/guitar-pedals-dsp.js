@@ -8,7 +8,7 @@
     const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
     const finite = (x, otherwise) => typeof x === 'number' && Number.isFinite(x) ? x : otherwise;
     const db = x => Math.pow(10, x / 20), dbfs = x => Math.max(-120, 20 * Math.log10(Math.max(1e-6, x)));
-    const safe = x => Number.isFinite(x) ? clamp(x, -64, 64) : 0;
+    const safe = x => typeof x === 'number' && x >= -64 && x <= 64 ? x : Number.isFinite(x) ? clamp(x, -64, 64) : 0;
     const specifications = { input: [-24, 24, 0], output: [-24, 12, 0], quality: ['high', 'eco'], mix: [0, 1, 1] };
     const localRules = { Type: TYPES, Enabled: ['on', 'off'], Drive: [0, 1, .35], Tone: [0, 1, .5], Volume: [0, 1, .5], Level: [-24, 18, 0], Mix: [0, 1, 1], Rate: [.05, 12, 1], Depth: [0, 1, .5], Time: [20, 1500, 350], Feedback: [0, .92, .35], Value: [0, 1, .5], ChorusDelay: [2, 30, 12], WahMode: ['manual', 'auto'], PhaserStages: ['4', '6'], DelayMode: ['analog', 'digital'], Clock: ['free', 'sync'], Division: ['1/4', '1/8', '1/8.', '1/16', '1/2', '1', '2'], ReverbMode: ['spring', 'room'], Attack: [.5, 50, 8], Release: [20, 800, 160], Predelay: [0, 180, 20], Decay: [.2, 8, 2] };
     for (let index = 1; index <= 4; index++) for (const key of Object.keys(localRules)) specifications['pedal' + index + key] = key === 'Type' && index === 1 ? ['bluesdriver', ...TYPES.filter(type => type !== 'bluesdriver')] : localRules[key];
@@ -48,7 +48,7 @@
     // Trapezoidal companion models preserve every coupling-capacitor charge.
     // -1 is AC ground; -2 is the low-impedance stage driving the network.
     class PassiveNetwork {
-      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.capacitors = capacitors; this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.diodeNode = diodeNode; this.configure(resistors); }
+      constructor(rate, count, resistors, capacitors, diodeNode = -1) { this.rate = rate; this.count = count; this.capacitors = capacitors; this.capacitorA = Int32Array.from(capacitors, part => part[0]); this.capacitorB = Int32Array.from(capacitors, part => part[1]); this.g = Float64Array.from(capacitors, part => 2 * rate * part[2]); this.historyGain = Float64Array.from(this.g, g => -2 * g); this.diodeNode = diodeNode; this.configure(resistors); }
       configure(resistors, rampFrames = 0) {
         this.resistors = resistors; const n = this.count, matrix = new Float64Array(n * n); this.source = new Float64Array(n);
         const stamp = (a, b, g) => { if (a >= 0) { matrix[a * n + a] += g; if (b >= 0) matrix[a * n + b] -= g; else if (b === -2) this.source[a] += g; } if (b >= 0) { matrix[b * n + b] += g; if (a >= 0) matrix[b * n + a] -= g; else if (a === -2) this.source[b] += g; } };
@@ -61,12 +61,29 @@
       advance() { if (this.rampRemaining) { for (let i = 0; i < this.inv.length; i++) this.inv[i] += this.invStep[i]; if (--this.rampRemaining === 0) this.inv.set(this.invTarget); } }
       state() { return { h: new Float64Array(this.capacitors.length), rhs: new Float64Array(this.count), volts: new Float64Array(this.count) }; }
       process(input, state, output) {
-        const n = this.count, rhs = state.rhs, volts = state.volts;
+        const n = this.count, rhs = state.rhs, volts = state.volts, capacitorA = this.capacitorA, capacitorB = this.capacitorB;
         for (let i = 0; i < n; i++) rhs[i] = this.source[i] * input;
-        for (let i = 0; i < this.capacitors.length; i++) { const [a, b] = this.capacitors[i], h = state.h[i]; if (a >= 0) rhs[a] -= h; if (b >= 0) rhs[b] += h; }
-        for (let i = 0; i < n; i++) { let sum = 0; for (let j = 0; j < n; j++) sum += this.inv[i * n + j] * rhs[j]; volts[i] = sum; }
+        for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], h = state.h[i]; if (a >= 0) rhs[a] -= h; if (b >= 0) rhs[b] += h; }
+        const inv = this.inv;
+        if (n === 5) {
+          const r0 = rhs[0], r1 = rhs[1], r2 = rhs[2], r3 = rhs[3], r4 = rhs[4];
+          for (let i = 0; i < 5; i++) {
+            const at = i * 5; let sum = 0;
+            sum += inv[at] * r0; sum += inv[at + 1] * r1; sum += inv[at + 2] * r2;
+            sum += inv[at + 3] * r3; sum += inv[at + 4] * r4; volts[i] = sum;
+          }
+        } else if (n === 6) {
+          const r0 = rhs[0], r1 = rhs[1], r2 = rhs[2], r3 = rhs[3], r4 = rhs[4], r5 = rhs[5];
+          for (let i = 0; i < 6; i++) {
+            const at = i * 6; let sum = 0;
+            sum += inv[at] * r0; sum += inv[at + 1] * r1; sum += inv[at + 2] * r2;
+            sum += inv[at + 3] * r3; sum += inv[at + 4] * r4; sum += inv[at + 5] * r5; volts[i] = sum;
+          }
+        } else {
+          for (let i = 0; i < n; i++) { let sum = 0; for (let j = 0; j < n; j++) sum += inv[i * n + j] * rhs[j]; volts[i] = sum; }
+        }
         if (this.diodeNode >= 0) { const node = this.diodeNode, change = (tableDiode(volts[node], this.table) - volts[node]) / this.resistance; for (let i = 0; i < n; i++) volts[i] += this.inv[i * n + node] * change; }
-        for (let i = 0; i < this.capacitors.length; i++) { const [a, b] = this.capacitors[i], va = a >= 0 ? volts[a] : a === -2 ? input : 0, vb = b >= 0 ? volts[b] : b === -2 ? input : 0; state.h[i] = safe(-2 * this.g[i] * (va - vb) - state.h[i]); }
+        for (let i = 0; i < capacitorA.length; i++) { const a = capacitorA[i], b = capacitorB[i], va = a >= 0 ? volts[a] : a === -2 ? input : 0, vb = b >= 0 ? volts[b] : b === -2 ? input : 0; state.h[i] = safe(this.historyGain[i] * (va - vb) - state.h[i]); }
         return volts[output];
       }
     }
@@ -82,12 +99,12 @@
     // remain in the implicit loop. The finite gain and rail law are estimates;
     // this is not a full transistor SPICE model or a hardware measurement fit.
     class DiscreteStage {
-      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.set(.35); }
+      constructor(rate, base, ground, cap, feedbackCap) { this.rate = rate; this.base = base; this.ground = ground; this.cg = 2 * rate * cap; this.groundCap = 1 + ground * this.cg; this.cf = 2 * rate * feedbackCap; this.hf = this.hg = 0; this.set(.35); }
       set(drive, immediate = false) { this.targetRf = this.base + 250000 * taper(drive); if (this.rf === undefined || immediate) this.rf = this.targetRf; this.remaining = this.rf === this.targetRf ? 0 : Math.max(1, Math.round(this.rate * .004)); this.rfStep = this.remaining ? (this.targetRf - this.rf) / this.remaining : 0; this.configure(); }
-      configure() { const sum = 1 / this.rf + this.cf, yg = this.cg / (1 + this.ground * this.cg); this.alpha = sum / (sum + yg); this.scale = 1 / (sum + yg); this.yg = yg; }
+      configure() { const sum = 1 / this.rf + this.cf, yg = this.cg / this.groundCap; this.alpha = sum / (sum + yg); this.scale = 1 / (sum + yg); this.yg = yg; }
       process(x) {
         if (this.remaining) { this.rf += this.rfStep; if (--this.remaining === 0) this.rf = this.targetRf; this.configure(); }
-        const h = this.hg / (1 + this.ground * this.cg), beta = -(this.hf + h) * this.scale, u = x - beta, magnitude = Math.abs(u), rail = u < 0 ? 4 : 3.8, a = this.alpha;
+        const h = this.hg / this.groundCap, beta = -(this.hf + h) * this.scale, u = x - beta, magnitude = Math.abs(u), rail = u < 0 ? 4 : 3.8, a = this.alpha;
         // +8 V supply/+4 V reference, PNP sourcing stage and2k2 pull-down:
         // nominal .2 V PNP saturation leaves +3.8/−4 V available swing.
         // These are circuit-informed estimates, not measured device curves.
@@ -141,9 +158,26 @@
         this.type = type; this.os = quality === 'eco' ? 2 : 4; this.rate = rate; this.osr = rate * this.os; this.gainSlew = 1 - Math.exp(-1 / (this.osr * .004));
         const hz = Math.min(20000, rate * .44); this.pre = [.5411961001, 1.306562965].map(q => lowpass(this.osr, hz, q)); this.post = [.51763809, .7071067812, 1.931851653].map(q => lowpass(this.osr, hz, q));
         this.states = [0, 1].map(() => ({ previous: 0, pre: new Float64Array(4), post: new Float64Array(6), high: new RC(this.osr, 80), low: new RC(this.osr, 5000), memory: new RC(this.osr, 25), feedback: new RC(this.osr, 8), rail: 0, transistor: 0 }));
-        this.result = new Float64Array(2); this.blue = type === 'bluesdriver' ? new BlueDriver(this.osr, p) : null; if (this.blue) this.p = { ...p }; else this.set(p);
+        this.result = new Float64Array(2); this.mono = true; this.blue = type === 'bluesdriver' ? new BlueDriver(this.osr, p) : null; if (this.blue) this.p = { ...p }; else this.set(p);
+      }
+      synchronizeRight() {
+        // While the inputs have identical histories there is one circuit to
+        // solve. Materialize the second history before controls or stereo
+        // input can cause the two channels to take different paths.
+        const left = this.states[0], right = this.states[1];
+        right.previous = left.previous; right.pre.set(left.pre); right.post.set(left.post);
+        for (const key of ['high', 'low', 'memory', 'feedback']) { right[key].z = left[key].z; right[key].g = left[key].g; }
+        for (const key of ['rail', 'transistor', 'amount']) right[key] = left[key];
+        if (this.blue) {
+          const a = this.blue.states[0], b = this.blue.states[1];
+          for (const key of ['input', 'couple', 'out']) { b[key].z = a[key].z; b[key].g = a[key].g; }
+          for (const key of ['first', 'second']) for (const field of ['hf', 'hg', 'rf', 'remaining', 'rfStep', 'alpha', 'scale', 'yg']) b[key][field] = a[key][field];
+          for (const key of ['inter', 'tone']) { b[key].h.set(a[key].h); b[key].rhs.set(a[key].rhs); b[key].volts.set(a[key].volts); }
+          b.bass.set(a.bass);
+        }
       }
       set(p, changed = null) {
+        if (this.mono) this.synchronizeRight();
         this.p = { ...p }; if (this.blue) { this.blue.set(p, changed); return; }
         if (changed && !changed.has('Drive') && !changed.has('Tone')) return;
         const type = this.type; this.amount = type === 'screamer' ? (51000 + 500000 * taper(p.Drive)) / 4700 : type === 'rodent' ? 8 + 250 * p.Drive * p.Drive : 4 + 100 * p.Drive * p.Drive;
@@ -153,10 +187,12 @@
         for (const s of this.states) { if (s.amount === undefined) s.amount = this.amount; s.high.set(this.osr, hp); s.low.set(this.osr, Math.min(lp, this.rate * .43)); }
       }
       pair(left, right) {
-        const result = this.result, leftPrevious = this.states[0].previous, rightPrevious = this.states[1].previous;
+        const mono = this.mono && Object.is(left, right);
+        if (this.mono && !mono) { this.synchronizeRight(); this.mono = false; }
+        const result = this.result, leftPrevious = this.states[0].previous, rightPrevious = this.states[1].previous, channels = mono ? 1 : 2;
         for (let sub = 1; sub <= this.os; sub++) {
           if (this.blue) this.blue.tone.advance();
-          for (let channel = 0; channel < 2; channel++) {
+          for (let channel = 0; channel < channels; channel++) {
           const s = this.states[channel], input = channel === 0 ? left : right, previous = channel === 0 ? leftPrevious : rightPrevious;
           if (!this.blue && s.amount !== this.amount) { s.amount += this.gainSlew * (this.amount - s.amount); if (Math.abs(s.amount - this.amount) < 1e-10) s.amount = this.amount; }
           let x = previous + (input - previous) * sub / this.os; for (let i = 0; i < 2; i++) x = filter(x, this.pre[i], s.pre, i * 2);
@@ -174,6 +210,7 @@
           for (let i = 0; i < 3; i++) y = filter(y, this.post[i], s.post, i * 2); result[channel] = safe(y);
           }
         }
+        if (mono) result[1] = result[0];
         this.states[0].previous = left; this.states[1].previous = right; return result;
       }
     }
@@ -307,11 +344,15 @@
         process(left, right, context = {}) {
           if (!left || !right || left.length !== right.length) throw Error('BOARD requires equal stereo buffers.');
           if (blend === 0 && blendTarget === 0 && !blendRemaining) return;
-          const hasModels = slots.some(slot => slot.model); if (!hasModels && !blendRemaining && input === 1 && output === 1 && inputTarget === 1 && outputTarget === 1) return;
+          let hasModels = false;
+          for (let i = 0; i < slots.length; i++) if (slots[i].model) { hasModels = true; break; }
+          if (!hasModels && !blendRemaining && input === 1 && output === 1 && inputTarget === 1 && outputTarget === 1) return;
           let firstFrame = 0;
           if (idle) { while (firstFrame < left.length && left[firstFrame] === 0 && right[firstFrame] === 0) firstFrame++; if (firstFrame === left.length) return; }
           const tempo = clamp(finite(context.tempo, 120), 40, 300); for (const slot of slots) if (slot.model?.type === 'delay' && tempo !== slot.model.tempo) slot.model.setTempo(tempo);
-          const idleAfter = Math.ceil(sr * Math.max(.5, ...slots.filter(slot => slot.model).map(slot => slot.model.tail())));
+          let maximumTail = .5;
+          for (let i = 0; i < slots.length; i++) if (slots[i].model) maximumTail = Math.max(maximumTail, slots[i].model.tail());
+          const idleAfter = Math.ceil(sr * maximumTail);
           for (let frame = firstFrame; frame < left.length; frame++) {
             if (idle && left[frame] === 0 && right[frame] === 0) continue;
             idle = false;

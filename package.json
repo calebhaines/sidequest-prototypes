@@ -80,6 +80,8 @@
     "check:ear-training-ensemble": "node scripts/check-ear-training-ensemble-music.mjs && node scripts/check-ear-training-ensemble.cjs",
     "check:group-buses": "node loom/group-bus-schema-checks.cjs && node loom/group-bus-engine-checks.cjs && node loom/group-bus-legacy-checks.cjs",
     "check:group-buses-browser": "node loom/group-bus-browser-checks.cjs",
+    "check:realtime-performance": "node loom/performance-142-checks.cjs",
+    "check:realtime-performance-browser": "node loom/performance-142-browser-checks.cjs",
     "check:cabinet": "node loom/cabinet-checks.cjs && node loom/cabinet-legacy-checks.cjs",
     "check:cabinet-browser": "node loom/cabinet-browser-checks.cjs",
     "check:hood": "node loom/hood-checks.cjs",

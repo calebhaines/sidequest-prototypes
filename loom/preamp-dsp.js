@@ -13,8 +13,8 @@
     };
     const finite = (x, fallback) => typeof x === 'number' && Number.isFinite(x) ? x : fallback;
     const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-    const bound = x => Number.isFinite(x) ? clamp(x, -8, 8) : 0;
-    const safe = x => Number.isFinite(x) ? clamp(x, -65536, 65536) : 0;
+    const bound = x => typeof x === 'number' && x >= -8 && x <= 8 ? x : Number.isFinite(x) ? clamp(x, -8, 8) : 0;
+    const safe = x => typeof x === 'number' && x >= -65536 && x <= 65536 ? x : Number.isFinite(x) ? clamp(x, -65536, 65536) : 0;
     const db = x => Math.pow(10, x / 20);
     const levelDb = x => 20 * Math.log10(Math.max(x, 1e-12));
     function normalize(params) {

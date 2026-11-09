@@ -80,6 +80,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['group-bus-schema-checks.cjs', 'group-bus-engine-checks.cjs', 'group-bus-legacy-checks.cjs', 'group-bus-browser-checks.cjs', 'GROUP-BUSES.md']
     sources += ['brine-audition-browser-checks.cjs']
     sources += ['cabinet.css', 'cabinet-checks.cjs', 'cabinet-browser-checks.cjs', 'cabinet-legacy-checks.cjs', 'CUPBOARD-GUIDE.md', 'CUPBOARD-REFERENCES.md']
+    sources += ['performance-142-checks.cjs', 'performance-142-browser-checks.cjs', 'CPU-REVIEW-1.42.1.md']
     sources += ['clip-loop-continuity-checks.cjs', 'playback-continuity-checks.cjs', 'playback-continuity-browser-checks.cjs', 'host-node-lifecycle-checks.cjs', 'clatter-polyphony-checks.cjs', 'percussion-integration-checks.cjs']
     sources += ['broiler.css', 'BROILER-MODELS.md', 'broiler-workshop-checks.cjs', 'broiler-pedal-checks.cjs', 'broiler-browser-checks.cjs', 'broiler-project-checks.cjs', 'broiler-legacy-fixtures.json']
     sources += ['compressor.css', 'BUTTER-MODELS.md', 'compressor-checks.cjs', 'compressor-browser-checks.cjs', 'compressor-project-checks.cjs', 'compressor-legacy-fixtures.json']
