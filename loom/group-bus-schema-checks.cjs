@@ -44,7 +44,7 @@ function run() {
   }
 
   check('Two neutral group buses supplement ten tracks and the two existing returns', () => {
-    const s = S.defaultState(); assert.equal(S.VERSION, '1.41.1'); assert.equal(S.LIMITS.buses, 2); assert.equal(s.tracks.length, 10); assert.equal(s.returns.length, 2);
+    const s = S.defaultState(); assert.equal(S.VERSION, '1.42.0'); assert.equal(S.LIMITS.buses, 2); assert.equal(s.tracks.length, 10); assert.equal(s.returns.length, 2);
     assert.deepEqual(S.TRACK_OUTPUTS, ['master', 'bus-1', 'bus-2']); assert(Object.isFrozen(S.TRACK_OUTPUTS));
     assert.deepEqual(s.buses, [0, 1].map(index => ({ id: 'bus-' + (index + 1), name: 'Bus ' + (index + 1), level: 1, pan: 0, mute: false, solo: false, effects: [null, null, null, null], automation: [] })));
     assert(s.tracks.every(track => track.output === 'master' && track.sends.length === 2 && track.effects.length === 5));

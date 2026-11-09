@@ -33,7 +33,7 @@ function frozenFixture() {
   return { state, trackId: track.id, sourcePcm: original.pcm, frozenPcm: frozen.pcm };
 }
 check('Master playback defaults are neutral independent project objects and survive normal project copying', () => {
-  assert.equal(S.VERSION, '1.41.1');
+  assert.equal(S.VERSION, '1.42.0');
   assert.deepEqual(plain(S.defaultMasterPlayback()), neutral);
   const first = S.defaultState(), second = S.defaultState();
   assert.deepEqual(plain(first.master.playback), neutral);

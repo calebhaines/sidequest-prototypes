@@ -1,7 +1,7 @@
 /* LOOM · deterministic stereo insert DSP, shared by Worklet and offline render. */
 (function (scope) {
   'use strict';
-  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory, hoodFactory) {
+  function createLoomEffectsDSP(vocalFactory, utilityFactory, filterFactory, creativeFactory, broilerPedalsFactory, compressorFactory, preampFactory, tapeFactory, charFactory, lofiFactory, pedalFactory, trackerFactory, deluxeFactory, pedalMidiFactory, svtFactory, guitarPedalsFactory, hoodFactory, cabinetFactory) {
     'use strict';
     // Keep every Worklet dependency explicit: this factory is also serialized.
     const makeVocal = typeof vocalFactory === 'function' ? vocalFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomVocalDSP === 'function' ? globalThis.createLoomVocalDSP : null;
@@ -36,6 +36,8 @@
     const guitarPedals = makeGuitarPedals ? makeGuitarPedals() : null;
     const makeHood = typeof hoodFactory === 'function' ? hoodFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomHoodDSP === 'function' ? globalThis.createLoomHoodDSP : null;
     const hood = makeHood ? makeHood() : null;
+    const makeCabinet = typeof cabinetFactory === 'function' ? cabinetFactory : typeof globalThis !== 'undefined' && typeof globalThis.createLoomCabinetDSP === 'function' ? globalThis.createLoomCabinetDSP : null;
+    const cabinet = makeCabinet ? makeCabinet() : null;
     const PI = Math.PI, TAU = 2 * PI, SQRT_HALF = Math.SQRT1_2;
     const divisions = { '1/32': 0.125, '1/16': 0.25, '1/8': 0.5, '1/8.': 0.75, '1/4': 1, '1/4.': 1.5, '1/2': 2, '1': 4, '2': 8 };
     const specifications = {
@@ -72,6 +74,7 @@
     if (deluxe) specifications.sunday = deluxe.specifications;
     if (svt) specifications.cellar = svt.specifications;
     if (guitarPedals) specifications.board = guitarPedals.specifications;
+    if (cabinet) specifications.cupboard = cabinet.specifications;
     specifications.vestige.model = ['original', 'room', 'chamber', 'hall', 'cathedral', 'plate', 'spring', 'tile', 'ambience', 'digital', 'modulated', 'shimmer', 'gated', 'reverse', 'bloom', 'nonlinear'];
     const finite = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -84,6 +87,7 @@
     const clear = array => array.fill(0);
 
     function normalize(type, params) {
+      if (type === 'cupboard') { if (!cabinet) throw new Error('CUPBOARD requires createLoomCabinetDSP.'); return cabinet.normalize(params); }
       if (type === 'cellar') { if (!svt) throw new Error('CELLAR requires createLoomSVTDSP.'); return svt.normalize(params); }
       if (type === 'board') { if (!guitarPedals) throw new Error('BOARD requires createLoomGuitarPedalsDSP.'); return guitarPedals.normalize(params); }
       if (type === 'sunday') { if (!deluxe) throw new Error('SUNDAY requires createLoomDeluxeDSP.'); return deluxe.normalize(params); }
@@ -207,6 +211,7 @@
     }
 
     function create(type, sampleRate, params, originalHood = false) {
+      if (type === 'cupboard') { if (!cabinet) throw new Error('CUPBOARD requires createLoomCabinetDSP.'); return cabinet.create(sampleRate, params); }
       if (type === 'vestige' && !originalHood) return createHood(sampleRate, params);
       if (type === 'cellar') { if (!svt) throw new Error('CELLAR requires createLoomSVTDSP.'); return svt.create(sampleRate, params); }
       if (type === 'board') { if (!guitarPedals) throw new Error('BOARD requires createLoomGuitarPedalsDSP.'); return guitarPedals.create(sampleRate, params); }
