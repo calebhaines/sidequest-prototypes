@@ -44,11 +44,21 @@ Shared Kitchen samples and other projects are independent of this browser.
 
 Portable `.loom.json` files can now be up to **448 MiB** (469,762,048 bytes).
 Opening and saving count actual UTF-8 bytes, including Unicode names and settings.
-Older projects still open normally. Source audio, frozen audio and instrument
-snapshots keep their existing budgets: 64 MiB source PCM, 192 MiB frozen Float32
-PCM and 96 MiB of instrument/note/source snapshots. Individual audio clips still
-retain up to two minutes. Raising the file limit does not change these budgets,
-timing, sample precision or effect processing.
+Older projects still open normally. As of GALLEY 1.42.4, recordings and imports
+can use up to **256 MiB of source PCM**, replacing the old 64 MiB cap. Sources
+and frozen renders share a **256 MiB total PCM pool**; frozen renders also retain
+their individual 192 MiB cap. This keeps the original combined audio allowance
+while allowing unused freeze capacity to hold more recordings. The instrument,
+note and saved-source snapshot allowance remains 96 MiB. Individual source clips
+still retain up to two minutes, with unchanged timing, sample precision and effects.
+
+Recording, audio imports, instrument prints, SERVICE generated audio and freezes
+all check the same remaining shared space. The engine also caps simultaneous
+recordings to the available space across every armed track, finishing before that
+space is exceeded. Recordings shows the source space available after frozen audio
+is counted. At full capacity, open Recordings to review unused takes or release
+frozen renders; no recording is deleted automatically. Deleting a timeline clip
+alone keeps its original audio in Recordings until it is explicitly removed.
 
 Audio is stored inside JSON as base64, which adds about one third to its raw
 size. The browser also keeps decoded audio and temporary working copies. A
@@ -64,6 +74,11 @@ send feeds count toward storage even though the browser previews the main track.
 ## Checks
 
 `npm run check:recordings` runs UTF-8 boundary and deletion-model checks.
+`npm run check:source-capacity-large` checks a real source-only project above
+the old 64 MiB cap, including exact PCM and stereo endpoint preservation.
+`npm run check:recording-capacity-browser` checks actual microphone recording
+in a project above 64 MiB, Save/Open, and a full-budget rejection without accessing
+the microphone or changing existing audio.
 `npm run check:project-capacity-large` performs an optional real project
 round-trip above the former 256 MiB limit; run it without other memory-heavy work.
 `RECORDINGS_QA_BUILT=1 npm run check:recordings-browser` checks the packaged app’s

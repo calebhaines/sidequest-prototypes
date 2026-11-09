@@ -99,7 +99,7 @@ if (ROOT.parent / 'music' / 'README.md').exists():
     sources += ['freeze.css', 'FREEZE-GUIDE.md', 'freeze-checks.cjs', 'freeze-browser-checks.cjs']
     sources += ['lofi.css', 'TIN-CAN-GUIDE.md', 'lofi-checks.cjs', 'lofi-project-checks.cjs', 'lofi-browser-checks.cjs']
     sources += ['pedal-synth.css', 'FERMENT-GUIDE.md', 'pedal-synth-checks.cjs', 'pedal-synth-project-checks.cjs', 'pedal-synth-browser-checks.cjs']
-    sources += ['recordings.css', 'RECORDINGS-GUIDE.md', 'recordings-checks.cjs', 'recordings-browser-checks.cjs', 'project-capacity-checks.cjs']
+    sources += ['recordings.css', 'RECORDINGS-GUIDE.md', 'recordings-checks.cjs', 'recordings-browser-checks.cjs', 'recording-capacity-browser-checks.cjs', 'project-capacity-checks.cjs']
     sources += ['mastering.css', 'MASTERING-GUIDE.md', 'mastering-checks.cjs', 'ten-track-checks.cjs', 'mastering-browser-checks.cjs']
     sources += ['deluxe.css', 'DELUXE-REVERB-GUIDE.md', 'deluxe-checks.cjs', 'deluxe-project-checks.cjs', 'deluxe-browser-checks.cjs']
     sources += ['Signalsmith-Stretch-LICENSE.txt', 'master-playback.css', 'MASTER-PLAYBACK-GUIDE.md', 'master-playback-schema-checks.cjs', 'master-playback-dsp-checks.cjs', 'master-playback-render-checks.cjs', 'master-playback-checks.cjs', 'master-playback-browser-checks.cjs']

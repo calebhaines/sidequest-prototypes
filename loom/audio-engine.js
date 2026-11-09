@@ -2268,6 +2268,10 @@
       this._recordStage = this._recordSchedule.punchEnabled && this._recordTimelineStartBeat < this._recordSchedule.punchStart ? 'waiting' : 'recording';
       this.onRecordingTransportStart?.({ trackIds: this._recordTrackIds.slice(), startBeat: this._recordTimelineStartBeat, countInBars: this._recordSchedule.countInBeats / 4 });
     }
+    _recordingBudget(options = {}) {
+      const available = window.LoomSchema.audioCapacity(this.state).sourceAvailableBytes;
+      return options.budgetBytes == null ? available : Math.min(available, Math.max(0, Number(options.budgetBytes) || 0));
+    }
     async startRecording(trackIds, options = {}) {
       const tracks = [...new Set((Array.isArray(trackIds) ? trackIds : [trackIds]).map(id => this._assertTrackEnabled(this._trackIndex(id))))]; if (!tracks.length) throw Error('Arm a track before recording.');
       if (this._pedalMidiTake?.capturing || this._pedalMidiWarmup) await this.stopPedalMidi('audio-operation');
@@ -2284,9 +2288,9 @@
         if (punchEnabled && (punchEnd - punchStart < .25 - 1e-8 || this._meters.beat >= punchEnd - 1e-10 || settings.startTransport === false)) throw Error('Set a punch range ahead of the playhead before recording.');
         const schedule = { countInBeats: countInBars * 4, punchEnabled, punchStart, punchEnd, startTransport: settings.startTransport !== false, requireTransport: settings.startTransport !== false, ...(options._microphone ? { microphone: { inputIndex: TRACK_COUNT, compensationFrames: this._recordMicrophone?.compensationFrames || 0 } } : {}) };
         const maxSeconds = Math.min(120, Math.max(.01, Number(options.maxSeconds) || 120));
-        const budget = Math.min(64 * 1024 * 1024, options.budgetBytes == null ? 32 * 1024 * 1024 : Math.max(0, Number(options.budgetBytes) || 0));
+        const budget = this._recordingBudget(options);
         const durationFrames = Math.floor(this.context.sampleRate * maxSeconds), budgetFrames = Math.floor(budget / (tracks.length * 4)), maxFrames = Math.min(durationFrames, budgetFrames);
-        if (maxFrames < 1) throw Error('The project audio budget is full. Remove unused audio before recording.');
+        if (budgetFrames < 128) throw Error('Project audio space is full. Open Recordings to remove unused takes or release frozen audio.');
         this._recordCapReason = budgetFrames < durationFrames ? 'budget' : 'duration';
         this._chunks = new Map(tracks.map(t => [t, []])); this._recordFrames = 0; this._recordStartBeat = this._meters.beat; this._recordId++; this.isRecording = true;
         this._recordTimelineStartBeat = this._meters.beat; this._recordSchedule = schedule; this._recordTrackIds = tracks.map(i => this.state.tracks[i].id); this._recordTransportStarted = false;
@@ -2427,6 +2431,7 @@
       if (this._audioApplying || this._deviceAccessPending) throw Error('Finish setting up the audio interface before recording.');
       if (this.isRecording || this._recordPreparing || this._stopPromise || this._chunks.size || this._micPending) return false;
       if (this._micEnabled && this._micTrack !== track) throw Error('Move live microphone monitoring to this track before recording it.');
+      if (this._recordingBudget(options) < 128 * 4) throw Error('Project audio space is full. Open Recordings to remove unused takes or release frozen audio.');
       const generation = this.generation, request = ++this._micRequest;
       try {
         if (!await this._acquireMicrophone(track, options.micInputGainDb ?? this.state.recording?.micInputGainDb ?? 0, 'record', generation, request)) return false;

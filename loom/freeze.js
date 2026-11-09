@@ -79,8 +79,8 @@
         if (captured.descriptor) sourceTrack.instrument = copy(captured.descriptor);
         const fingerprint = S.freezeFingerprint(source, trackId), renderState = copy(source), renderTrack = renderState.tracks.find(track => track.id === trackId);
         if (captured.pattern) renderTrack.clips.push(S.noteClip({ id: S.uid('freeze-notes'), name: 'Instrument pattern', type: 'notes', pattern: captured.pattern, voiceMap: {}, start: 0, length: source.lengthBars * 4, sourceOffset: 0, rate: 1, loop: captured.loop, gain: 1, fadeIn: 0, fadeOut: 0, transpose: 0 }, source.lengthBars * 4));
-        const sampleRate = Math.round(this.engine.context?.sampleRate || 48000), existing = (source.freezeAssets || []).reduce((sum, asset) => sum + asset.frames * asset.channels * 4, 0), maxBytes = S.LIMITS.freezePcmBytes - existing;
-        if (maxBytes <= 0) throw Error('The frozen audio cache is full. Unfreeze another track first.');
+        const sampleRate = Math.round(this.engine.context?.sampleRate || 48000), maxBytes = S.audioCapacity(source).freezeAvailableBytes;
+        if (maxBytes <= 0) throw Error('The shared audio cache is full. Open Recordings to remove unused audio, or unfreeze another track first.');
         this._notify('Rendering instrument', .04);
         // Render one finite native performance so overlapping clips share voices
         // and releases continue after their note gates. Ordinary exports keep

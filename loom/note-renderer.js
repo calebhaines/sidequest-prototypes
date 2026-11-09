@@ -306,14 +306,14 @@
       if (track.disabled === true || this.host?.isDisabled?.(track.id)) throw Error('Enable this track before printing its instrument.');
       if (track.freeze) throw Error('Unfreeze this track before printing or editing its source.');
       const captured = this._capture(state, track, clip, options);
-      const used = (state.assets || []).reduce((sum, value) => sum + value.frames * value.channels * 2, 0);
+      const available = global.LoomSchema.audioCapacity(state).sourceAvailableBytes;
       const session = this._session(options.signal, [track.id]);
       try {
         options.onProgress?.(0); const { audio } = await this._render(session, captured, options); this._active(options.signal);
         const encodedBytes = Math.floor(audio.left.length * Math.min(48000, audio.sampleRate) / audio.sampleRate) * 4;
-        if (used + encodedBytes > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed GALLEY’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
+        if (encodedBytes > available) throw Error('This print would exceed the shared project audio budget. Open Recordings to remove unused audio, release a frozen render or shorten the pattern.');
         const asset = global.LoomSchema.encodeAsset({ ...audio, name: options.name || captured.sourceClip.name || captured.packet.name });
-        if (used + asset.frames * asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This print would exceed GALLEY’s 64 MiB audio budget. Remove unused audio or shorten the pattern.');
+        if (asset.frames * asset.channels * 2 > available) throw Error('This print would exceed the shared project audio budget. Open Recordings to remove unused audio, release a frozen render or shorten the pattern.');
         let origin = { format: 'loom-render-source', version: 1, instrument: captured.instrument, pattern: captured.packet, voiceMap: captured.voiceMap, tempo: captured.tempo, tailSeconds: captured.tailSeconds, sourceClip: captured.sourceClip, renderedAt: Date.now() };
         if (global.LoomSchema.renderSource) origin = global.LoomSchema.renderSource(origin);
         const audioClip = { id: captured.sourceClip.id, name: captured.sourceClip.name, type: 'audio', assetId: asset.id, start: captured.sourceClip.start, length: captured.sourceClip.length, sourceStart: 0, sourceEnd: asset.duration, sourceOffset: captured.sourceClip.sourceOffset * 60 / captured.renderTempo, rate: 1, reverse: false, loop: captured.sourceClip.loop === true, gain: captured.sourceClip.gain, fadeIn: captured.sourceClip.fadeIn, fadeOut: captured.sourceClip.fadeOut, origin };
@@ -339,8 +339,8 @@
         const frames = Math.ceil(geometry.sourceEnd * result.audio.sampleRate), left = new Float32Array(frames), right = new Float32Array(frames);
         left.set(result.audio.left); right.set(result.audio.right); result.audio = { left, right, sampleRate: result.audio.sampleRate };
         result.asset = global.LoomSchema.encodeAsset({ ...result.audio, id: result.asset.id, name: result.asset.name });
-        const used = snapshot.assets.reduce((sum, value) => sum + value.frames * value.channels * 2, 0);
-        if (used + result.asset.frames * result.asset.channels * 2 > global.LoomSchema.LIMITS.pcmBytes) throw Error('This update would exceed GALLEY’s 64 MiB audio budget.');
+        const available = global.LoomSchema.audioCapacity(snapshot).sourceAvailableBytes;
+        if (result.asset.frames * result.asset.channels * 2 > available) throw Error('This update would exceed the shared project audio budget. Open Recordings to remove unused audio or release a frozen render.');
       }
       result.clip = { ...geometry, assetId: result.asset.id, origin: result.origin };
       this._active(options.signal); return result;

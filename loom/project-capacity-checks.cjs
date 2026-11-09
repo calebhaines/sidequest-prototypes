@@ -1,7 +1,8 @@
 'use strict';
 /* Portable project capacity, exact UTF-8 boundaries and an optional real large
  * frozen project. Run the normal checks with node loom/project-capacity-checks.cjs.
- * Run --large alone in an exclusive window; it uses about 1–2 GiB of heap.
+ * Run --large or --source-large alone in an exclusive window; large portable
+ * round-trips can use about 1–2 GiB of heap.
  */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -10,14 +11,21 @@ const vm = require('node:vm');
 const { webcrypto, createHash } = require('node:crypto');
 const MiB = 1024 * 1024;
 const source = fs.readFileSync(path.join(__dirname, 'schema.js'), 'utf8');
-function loadSchema(limit) {
+function loadSchema(limit, audioLimits = {}) {
   const scope = { Blob, console, crypto: webcrypto, btoa: value => Buffer.from(value, 'binary').toString('base64'), atob: value => Buffer.from(value, 'base64').toString('binary') };
   scope.window = scope; scope.globalThis = scope; vm.createContext(scope);
   // Scale only the capacity constant for exact boundary regressions. Executing
   // the production parser/serializer avoids allocating 448 MiB for each edge.
   const field = 'projectBytes: 448 * 1024 * 1024';
   assert.equal(source.split(field).length, 2, 'The test patches only the file-size constant');
-  vm.runInContext(limit === undefined ? source : source.replace(field, 'projectBytes: ' + limit), scope, { filename: 'schema.js' });
+  let script = limit === undefined ? source : source.replace(field, 'projectBytes: ' + limit);
+  for (const [key, value] of Object.entries(audioLimits)) {
+    const original = key + ': ' + ({ pcmBytes: 256, freezePcmBytes: 192, totalPcmBytes: 256 }[key]) + ' * 1024 * 1024';
+    assert.equal(script.split(original).length, 2, 'The test patches only the requested PCM constant');
+    assert(Number.isSafeInteger(value) && value > 0);
+    script = script.replace(original, key + ': ' + value);
+  }
+  vm.runInContext(script, scope, { filename: 'schema.js' });
   return { S: scope.LoomSchema, scope };
 }
 const { S } = loadSchema();
@@ -31,12 +39,50 @@ function musicalState(schema = S) {
   return state;
 }
 function lightChecks() {
-  check('The portable cap is 448 MiB while decoded audio and snapshot budgets stay unchanged', () => {
+  check('256 MiB source capacity shares the original total audio pool without raising the portable or snapshot caps', () => {
     assert.equal(S.LIMITS.projectBytes, 448 * MiB);
-    assert.equal(S.LIMITS.pcmBytes, 64 * MiB);
+    assert.equal(S.LIMITS.pcmBytes, 256 * MiB);
     assert.equal(S.LIMITS.freezePcmBytes, 192 * MiB);
+    assert.equal(S.LIMITS.totalPcmBytes, 256 * MiB);
     assert.equal(S.LIMITS.snapshotBytes, 96 * MiB);
     assert.equal(S.LIMITS.assetSeconds, 120);
+  });
+  check('Shared audio accounting counts unused sources and frozen caches without decoding or modifying PCM', () => {
+    const state = S.defaultState();
+    state.assets = [sourceAsset('first', 3), sourceAsset('unused', 5)];
+    state.freezeAssets = [freezeAsset('cached', 7)];
+    const before = JSON.stringify(state), original = state.assets[0].pcm;
+    const { S: isolated, scope } = loadSchema(); scope.atob = () => { throw Error('Capacity accounting must not decode PCM'); };
+    const value = isolated.audioCapacity(state), totalBytes = 32 + 56;
+    assert.equal(value.sourceBytes, 32); assert.equal(value.freezeBytes, 56); assert.equal(value.totalBytes, totalBytes);
+    assert.equal(value.sourceAvailableBytes, 256 * MiB - totalBytes);
+    assert.equal(value.freezeAvailableBytes, 192 * MiB - 56);
+    assert.equal(JSON.stringify(state), before); assert.equal(state.assets[0].pcm, original);
+  });
+  check('Scaled source and shared PCM boundaries are inclusive and both growth paths consume one pool', () => {
+    const schema = loadSchema(undefined, { pcmBytes: 80, freezePcmBytes: 64, totalPcmBytes: 80 }).S;
+    const sourceOnly = schema.defaultState(); sourceOnly.assets = [sourceAsset('full', 20)];
+    assert.equal(schema.normalize(sourceOnly).assets[0].frames, 20);
+    assert.equal(schema.audioCapacity(sourceOnly).sourceAvailableBytes, 0);
+    assert.equal(schema.audioCapacity(sourceOnly).freezeAvailableBytes, 0);
+    sourceOnly.assets = [sourceAsset('over', 21)];
+    assert.throws(() => schema.normalize(sourceOnly), /source audio budget/);
+    assert.equal(schema.audioCapacity(sourceOnly).sourceAvailableBytes, 0);
+    const shared = schema.defaultState(); shared.assets = [sourceAsset('source', 8)]; shared.freezeAssets = [freezeAsset('cache', 6)];
+    assert.equal(schema.normalize(shared).freezeAssets.length, 1);
+    assert.equal(schema.audioCapacity(shared).totalBytes, 80);
+    assert.equal(schema.audioCapacity(shared).sourceAvailableBytes, 0);
+    assert.equal(schema.audioCapacity(shared).freezeAvailableBytes, 0);
+    shared.assets.push(sourceAsset('one-source-frame', 1));
+    assert.throws(() => schema.normalize(shared), /shared 256 MiB audio budget/);
+    shared.assets.pop(); shared.freezeAssets.push(freezeAsset('one-frozen-frame', 1));
+    assert.throws(() => schema.normalize(shared), /shared 256 MiB audio budget/);
+    shared.freezeAssets = [freezeAsset('freeze-full', 8)]; shared.assets = [];
+    assert.equal(schema.normalize(shared).freezeAssets.length, 1);
+    assert.equal(schema.audioCapacity(shared).freezeAvailableBytes, 0);
+    assert.equal(schema.audioCapacity(shared).sourceAvailableBytes, 16);
+    shared.freezeAssets.push(freezeAsset('over-freeze-cap', 1));
+    assert.throws(() => schema.normalize(shared), /freeze budget/);
   });
   check('Exact UTF-8 sizing matches actual downloaded Blob sizes for ASCII Unicode and surrogate edges', () => {
     const values = ['', 'plain ASCII\n\0', 'éø\u07ff', '漢\u0800\uffff', '🍳🎚️', '\ud800', '\udfff', '\ud800x\udfff', '\ud800\ud800\udfff\udfff', 'A'.repeat(2 * MiB)];
@@ -81,6 +127,28 @@ function lightChecks() {
   });
 }
 function zeroBase64(bytes) { return 'A'.repeat(Math.floor(bytes / 3) * 4) + ['', 'AA==', 'AAA='][bytes % 3]; }
+function sourceAsset(id, frames) { return { id, name: id, sampleRate: 48000, channels: 2, frames, duration: frames / 48000, pcm: zeroBase64(frames * 4) }; }
+function freezeAsset(id, frames) { return { id, name: id, encoding: 'float32le', sampleRate: 48000, channels: 2, frames, duration: frames / 48000, pcm: zeroBase64(frames * 8) }; }
+function sourceLargeCheck() {
+  check('A real 80 MiB source recording project saves and reopens with every PCM byte unchanged', () => {
+    const state = S.defaultState(), frames = 4 * MiB, bytes = Buffer.alloc(frames * 4);
+    bytes.writeInt16LE(12345, 0); bytes.writeInt16LE(-23456, 2); bytes.writeInt16LE(3210, bytes.length - 4); bytes.writeInt16LE(-4321, bytes.length - 2);
+    const pcm = bytes.toString('base64');
+    for (let index = 0; index < 5; index++) {
+      const asset = { id: 'source-' + index, name: 'Recorded source ' + (index + 1), sampleRate: 48000, channels: 2, frames, duration: frames / 48000, pcm }; state.assets.push(asset);
+      state.tracks[index].clips = [{ id: 'source-clip-' + index, name: asset.name, type: 'audio', assetId: asset.id, start: 0, length: 4, sourceStart: 0, sourceEnd: asset.duration, sourceOffset: 0, rate: 1, reverse: false, loop: false, gain: 1, fadeIn: 0, fadeOut: 0 }];
+    }
+    assert.equal(S.audioCapacity(state).sourceBytes, 80 * MiB);
+    const json = S.serializeProject(state), reopened = S.parseProject(json);
+    assert.equal(reopened.assets.length, 5); assert(S.projectByteLength(json) < S.LIMITS.projectBytes);
+    for (const asset of reopened.assets) assert.equal(asset.pcm, pcm);
+    assert.deepEqual(reopened.tracks.slice(0, 5).map(track => track.clips[0].assetId), state.tracks.slice(0, 5).map(track => track.clips[0].assetId));
+    const decoded = S.decodeAsset(reopened.assets[0]);
+    assert.equal(decoded.left[0], 12345 / 32768); assert.equal(decoded.right[0], -23456 / 32768);
+    assert.equal(decoded.left.at(-1), 3210 / 32768); assert.equal(decoded.right.at(-1), -4321 / 32768);
+    console.log('SOURCE LARGE ' + JSON.stringify({ sourcePcmBytes: S.audioCapacity(reopened).sourceBytes, projectBytes: S.projectByteLength(json), sourceAssets: reopened.assets.length, pcmSHA256: createHash('sha256').update(pcm).digest('hex') }));
+  });
+}
 function largeFixture(schema = S) {
   const state = schema.defaultState(), sampleRate = 48000, sourceFrames = 2 * MiB;
   state.name = 'Large frozen recording project'; state.tempo = 120; state.lengthBars = 64; state.loopEnd = 256;
@@ -117,7 +185,7 @@ function largeCheck() {
   });
 }
 if (require.main === module) {
-  try { if (process.argv.includes('--large')) largeCheck(); else lightChecks(); console.log(passed.length + ' project capacity groups passed.'); }
+  try { if (process.argv.includes('--large')) largeCheck(); else if (process.argv.includes('--source-large')) sourceLargeCheck(); else lightChecks(); console.log(passed.length + ' project capacity groups passed.'); }
   catch (error) { console.error(error); process.exitCode = 1; }
 }
 module.exports = { loadSchema, largeFixture };
