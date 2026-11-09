@@ -1,0 +1,545 @@
+{
+  "baseline": "5df579ee99caa7a73222f8d6a52268be4cab3c75",
+  "sourceSHA256": "f33ce0c8720868e318e79c4d50c5d56548fa8f3950201a3018f9ab0d04c5125c",
+  "scenarioSHA256": "ed47c2bf151f1d7804c202e941f020e14d87b0370dc1f1b0cc207b1131e822f5",
+  "specifications": {
+    "model": [
+      "nodal",
+      "charge",
+      "feedback",
+      "adaa",
+      "reactive"
+    ],
+    "input": [
+      -24,
+      18,
+      0
+    ],
+    "volume": [
+      0,
+      10,
+      3
+    ],
+    "bass": [
+      0,
+      10,
+      5
+    ],
+    "treble": [
+      0,
+      10,
+      5
+    ],
+    "reverb": [
+      0,
+      10,
+      2
+    ],
+    "speed": [
+      1,
+      10,
+      4
+    ],
+    "intensity": [
+      0,
+      10,
+      0
+    ],
+    "output": [
+      -30,
+      12,
+      0
+    ],
+    "mix": [
+      0,
+      1,
+      1
+    ],
+    "channel": [
+      "vibrato",
+      "normal"
+    ],
+    "jack": [
+      "high",
+      "low"
+    ],
+    "headroom": [
+      -12,
+      12,
+      0
+    ],
+    "mid": [
+      0,
+      10,
+      5
+    ],
+    "bright": [
+      "stock",
+      "off",
+      "on"
+    ],
+    "supply": [
+      0.8,
+      1.2,
+      1
+    ],
+    "bias": [
+      -0.5,
+      0.5,
+      0
+    ],
+    "sag": [
+      0,
+      1,
+      0.2
+    ],
+    "feedback": [
+      0,
+      1,
+      0.5
+    ],
+    "speakerDrive": [
+      0,
+      1,
+      0
+    ],
+    "speakerLoad": [
+      0,
+      1,
+      0.5
+    ],
+    "cabinet": [
+      "open112",
+      "di"
+    ],
+    "mic": [
+      0,
+      1,
+      0.45
+    ],
+    "distance": [
+      0,
+      1,
+      0.2
+    ],
+    "air": [
+      0,
+      1,
+      0.2
+    ],
+    "stereo": [
+      "mono",
+      "stereo"
+    ],
+    "trim": [
+      "matched",
+      "raw"
+    ],
+    "quality": [
+      "high",
+      "eco"
+    ]
+  },
+  "cases": {
+    "nodal/high/mono/8000": {
+      "pcm": "5157e8bdf6841fd52939e9bea43c93e79570f375ba94fcf0a68cd225b5a2bfb4",
+      "state": "19ba418f02dd056095e49533cca78dc80005472f9d8583a8d087338081b3681e"
+    },
+    "nodal/high/mono/44100": {
+      "pcm": "9c36b7d33eb79c2cfcc1f8c5a7d13f3bb762103f7b1583c56afb34ac3eef7ada",
+      "state": "4542aa0d5720f6313d3c83665ae14572f3b99d20fe2ef15b6195180c3061b859"
+    },
+    "nodal/high/mono/48000": {
+      "pcm": "d59c4c2592a3bac01a12bdc926c02c0a01f9b8a68f3b1beeefe8db0f51ff33c2",
+      "state": "ead9269dd9af5968a4cfddc0d5a7640d5629bc6f5f5833b74185deb6817cc976"
+    },
+    "nodal/high/mono/96000": {
+      "pcm": "4a894e68dd548434b35d53d2c3c11b995717a13f47c7f6e2c49a28f02cbc8e40",
+      "state": "94f22f4ef158c04da6689134605fc5373fed903e114e516c7d5a01cfca4146b2"
+    },
+    "nodal/high/mono/192000": {
+      "pcm": "8a766ad35996dc97ff12a968d9b5034c07bfa7aedbab4bbf4462631eacbf0413",
+      "state": "c4f9bf6c6a0c225ee8b0571bde6f60c069dff1290a356f6e9922b12faab3ffac"
+    },
+    "nodal/high/stereo/8000": {
+      "pcm": "d58b48b39cf77503fb538e737206641d3ce987cb5e1017c531728011c90ecdf1",
+      "state": "7f476a7c170757814fa7d1fa68dd92a8be4d00d22c9434f211bfc2f3b6bd8282"
+    },
+    "nodal/high/stereo/44100": {
+      "pcm": "fbf87746cc3b82ddf923fc917583bfd94196b3d408dbb61ee4b9fd5a6d091571",
+      "state": "0c13bfb7d5c585305224b36dcb744540e5a190a8aff327297ed11f20766bb2d0"
+    },
+    "nodal/high/stereo/48000": {
+      "pcm": "32ee1421ab3ffc71a939f571029e82d855b466e1913714da11a82a61c1cc90c5",
+      "state": "06c40930de1ef68ad79e374aa8ffa7605d62c753476dea929a68c30459c56ba3"
+    },
+    "nodal/high/stereo/96000": {
+      "pcm": "3998a537d7c270b08560600e36db82a0299256c6ad9d20488a75c73ae5b277a6",
+      "state": "352fb60cfe66e48dfdce01ac9e5b97dea5731299a1ef882fc06241427b7eada1"
+    },
+    "nodal/high/stereo/192000": {
+      "pcm": "84624860fdde158e8d4709944b3ea0b73c2db7cdb5c4d8f795a36c0c983adbe5",
+      "state": "e20693eebab4d9f5cbedef57b41e999cf0db5d7e154f03dd9e50a0b0856fd984"
+    },
+    "nodal/eco/mono/8000": {
+      "pcm": "7e8090713608a0b6f3b4a7b8be1f83991e04423c2938127c1a7c874bdc38ec70",
+      "state": "1a4c7c5c78173ffc608a53eebdb86961990e84613f316ca5931a3861c83cf70e"
+    },
+    "nodal/eco/mono/44100": {
+      "pcm": "ee6aea38ad944ecbe94fbaefb9810212cf0afefaccb4243127b41874045a6ce6",
+      "state": "4b428022b15e029c0d6afc050d3f64344e19156ec43ce6a9e494b2e5d8f80476"
+    },
+    "nodal/eco/mono/48000": {
+      "pcm": "d8b2fc3870bc104ec8624695526f72db7814725a9d9eff8ec6c9fd1d1c48079b",
+      "state": "62cc9f2c49ac92b39a58b38cdcfca1b6af078e195efa46917a1d739e9e953069"
+    },
+    "nodal/eco/mono/96000": {
+      "pcm": "98958a4770d29c31f76ee5482b938ec366f316d204816a2798c51ec57362241f",
+      "state": "1169bff418e61000716d0b552399a2c58db702e1798d0c31879dd35797f237f5"
+    },
+    "nodal/eco/mono/192000": {
+      "pcm": "43697394f098061c81bf93d00272074e30d1741bae108c79ac9f8fdeebe78847",
+      "state": "9e0b0562ee81cff2956b1062f1bfc8f3ccd4e458cc9a9343e8bfedf3a71155d7"
+    },
+    "nodal/eco/stereo/8000": {
+      "pcm": "6bf7d7dae592be23ed6d667cc5d64851209f87d2d2723ef4751058ead1a7ecff",
+      "state": "ee0d56708b5eabd755b51ab2f7e72320c649c39c3bb48bc51f46b027dd6185ae"
+    },
+    "nodal/eco/stereo/44100": {
+      "pcm": "e16a0205ef317db571b8cc9e0236aa7a427086d3dab35c34682e432c6b75f013",
+      "state": "df3f3a0510abe664a4f6357fb335cae11595f6dc351592b6726ddc80d5ca9a94"
+    },
+    "nodal/eco/stereo/48000": {
+      "pcm": "f28aa1a3ee1729871949f3fc3ea1cd00f41943faa97f0fb381f91cedc3478095",
+      "state": "6b03fa461f330b0634002681d20762805c9b30dd390b0337fcf1e895b60dcf87"
+    },
+    "nodal/eco/stereo/96000": {
+      "pcm": "e35c99c11fe8f6d37b367feb8f30a703040fd463ae7e29527d27f054fd0daf49",
+      "state": "9ecfcc170ff69cccbe97f1629b568bca98bc3879e9c77d5cb4368855c916ec13"
+    },
+    "nodal/eco/stereo/192000": {
+      "pcm": "98f8926fa9ee9301614e74ce59d3871181ffa88487880fdbc6ffe8ba5280623d",
+      "state": "026e5be29dfa89589b833f9b97312a4f230a489a9fa639e1e52836ea2276cfc9"
+    },
+    "charge/high/mono/8000": {
+      "pcm": "35b2a55941f59edc15000dc7a00a54e5cf6c64a6fa8066c8f3c7597df082c8cd",
+      "state": "5b297218d41dc4eb53a0ced3b31c185d24ada8541741c329e1a3cbbaf8c2bb89"
+    },
+    "charge/high/mono/44100": {
+      "pcm": "afbde3558654a3934c942f880a588978cc5e4dd4489e1eacb6b3e3906c5406e5",
+      "state": "f2311ab6c09e7fce78700494c19e5cd0016cbaa25dbf3ef302088ad3aafad8d0"
+    },
+    "charge/high/mono/48000": {
+      "pcm": "fa88cbe7569613407eb6f978f20d1cb490b902cf4ad8e28f0ff4919f1672265a",
+      "state": "512372f10156a9defdb8998767f44d0cf706f12542e26dd92eed2cd3307a02c8"
+    },
+    "charge/high/mono/96000": {
+      "pcm": "ff59f1d932ae1a3924b717952d6b2d5fcff078590177e86ca05debeb47ff5846",
+      "state": "af15f5941dcd4fef2ce7dc95fbee80985f10d180d30b24e618bbfc0bb39023e9"
+    },
+    "charge/high/mono/192000": {
+      "pcm": "2aacb8df2c495a5d825febd30c70b109de7b27bbe44f3904903e8f5e2fdd0c0a",
+      "state": "3ffa19d603bd4dd2b6c462bd64533b47970669346cf33c4d2688734a5fbd432a"
+    },
+    "charge/high/stereo/8000": {
+      "pcm": "ab3a5e5d2f24a82da5e45ba42a0bc077fb645b0c62fd65521c3e1f8ec30cceca",
+      "state": "7b096d9d65e71e828ccf66ec7cf1d97bdcbb394fc76102dc739fd070f47210d8"
+    },
+    "charge/high/stereo/44100": {
+      "pcm": "c160eb22afeb1707921a0700460697c399a9e5271fc5283756f4dc20d9a17a54",
+      "state": "419105b8cb2c7dcdd46d6c375fa9d77edc5f2e4a136edeb54ec14c54d28f854a"
+    },
+    "charge/high/stereo/48000": {
+      "pcm": "e7ae90cd005d3606d6d19ceaf81de23bf703a12bb68dc231acf6d0294fce124d",
+      "state": "4d96452ed4d2ef0056a4565e304a5df3f15d20cc55a18390b31c17bef51414e9"
+    },
+    "charge/high/stereo/96000": {
+      "pcm": "ba1b387b195ce41a11fe1b19021054262376d52eb8b6aa1c27746b9eabc0751a",
+      "state": "9242456439f718ddbbe49e7479583f647e05db69ec20e454f621216973f0de22"
+    },
+    "charge/high/stereo/192000": {
+      "pcm": "e1039ce32b43d04ae5f51d2a0bf6fc24c32d2ccd412c5d78bb31643ddfd75a8f",
+      "state": "1489482051db9e085263cd8da5f64565f58df811cd410aac9ccf34bcb320f837"
+    },
+    "charge/eco/mono/8000": {
+      "pcm": "7924fc3b17dc3853e446395642038808c3a9dbfaf63c5427945593bcb00ff5c0",
+      "state": "66889ad54518968a6c64b98aab70a68e90a452e2a334e7e6816728edc6d5fd18"
+    },
+    "charge/eco/mono/44100": {
+      "pcm": "e2b6df8b1c65ba12266d9e507edd001e8a02074ab6564433df9c88b7bd7c758a",
+      "state": "587258caa1941c18c36c9cd96cf3283b165f29d1435f14d8d7cbe51aefe5d4c7"
+    },
+    "charge/eco/mono/48000": {
+      "pcm": "9ad54edd9987ff93cc6d184f1ac5471034332beea43e22e4d575b8817c61800a",
+      "state": "3e6dff3908c5a8f3686c7faa5437d36b073bd10932fc728e2cded38c7651d5cc"
+    },
+    "charge/eco/mono/96000": {
+      "pcm": "ed6701328f7cb15230a2684fd3732d8f08472e7143363b727ebc4871f9a378ad",
+      "state": "5b00253c02405f2411bcc26016b9941be0fa61cf847f3fafe6835021009d14d2"
+    },
+    "charge/eco/mono/192000": {
+      "pcm": "8ed493fec25b1fca4776f6de84fed37585a98eee150373fc7ad2332419efd3bc",
+      "state": "ce7dfa70baf76542bd620a204a3c65f2afd19f24d86a5ff1de55ec47b840d961"
+    },
+    "charge/eco/stereo/8000": {
+      "pcm": "baefa158abc4bfeadf126c355b36fff1a3ebb4aa708c0d4377fac1c5cc82e512",
+      "state": "064cac2653fecb3274f2a96b02d641f3143b033ec893c1aa66959c6c53ff6698"
+    },
+    "charge/eco/stereo/44100": {
+      "pcm": "a5a17457237b0eb9cec7a4e90b57969d6eac1007b630869de5d823929e9a3cab",
+      "state": "fc153d29631425b55fae0e3cea9553bfd3c9c4a0223c9bb4118e0a5185c6dc17"
+    },
+    "charge/eco/stereo/48000": {
+      "pcm": "77308454f792dd903f889361b3ee4ebe5721cc95b623fdc48230527fe5bcbb06",
+      "state": "041c57319b7dcfbf1e2c7f67dbee31ace76da542e5936c90ee26b26c448d3d05"
+    },
+    "charge/eco/stereo/96000": {
+      "pcm": "5c4b42f18f004ddf461096bad3d26631da932f84fff1415e725e63130c0dd7f7",
+      "state": "9fe6a218f0a433cf3d4a54ad6141339709f76c2ba5e2c923987931f88483a449"
+    },
+    "charge/eco/stereo/192000": {
+      "pcm": "cb9337e0ab9274591d5280a7f795ac45f13a1c92a813284a9f9736d2384f4eca",
+      "state": "a2880787cf88c0e5246e433f061222d673254e035bad7b156f35b59a0f4e2726"
+    },
+    "feedback/high/mono/8000": {
+      "pcm": "698e514ba5ef9333c2801f2ecb9dcbd55b16fc0ef00366bd786a3c30c7bba882",
+      "state": "7ceadcc474743ff2cf56976cc297b8daa2d5313af73f113278d7213f8c3324e9"
+    },
+    "feedback/high/mono/44100": {
+      "pcm": "9bd0058575bcd70e79d0f80bcf9454a176471b1ba0a1e93584efc1c7b831b215",
+      "state": "234b49df7391898e51e625cf00e7e064ae3d5c994cbdb138cabc480ec5ca91e5"
+    },
+    "feedback/high/mono/48000": {
+      "pcm": "cc2222663592f9e987430ca75af62656c9f3edd293046bbb2960ba40188340fa",
+      "state": "28d5da40dcc688794dba22c9b1d23cf6f820a906345850c6e198e30e8c8f869a"
+    },
+    "feedback/high/mono/96000": {
+      "pcm": "76a56c7b5b4bab075d02fbf30e7252fa979563e159d0dc1963c913f47133d9c8",
+      "state": "3aaf573f1ad35af7eb59d64d25b0591cf6014594633cdc805fbc82732cf33ee8"
+    },
+    "feedback/high/mono/192000": {
+      "pcm": "76c5a7a2cf64b5040510bb0834a2f1778be71c6e820f4a441bfdf3ff97d8bee1",
+      "state": "cd8b4ae23394c892c588f3d35be91d42f25db0797938720c9d0c45acaa8afe1d"
+    },
+    "feedback/high/stereo/8000": {
+      "pcm": "815a65642e40a5ce865f0b44ae54160b9c188c5e554696ac92b7a829c7369842",
+      "state": "f65a3083c0ae64eb19e5670e2c3dda7cf9eb126ed6cf7bfe99dd41d6da62198f"
+    },
+    "feedback/high/stereo/44100": {
+      "pcm": "e74ee9f18140e86dea600a2aa2c4dbc5ae45f81e3533563b2a13dada2dbb0842",
+      "state": "306b69789afdc9299bb0c888bd25f5a80655ca318855ac566f67b1278bea5df6"
+    },
+    "feedback/high/stereo/48000": {
+      "pcm": "2edaa3baaa72f868d178c83d06596a179a43d1a82412ad1295861139447f21b5",
+      "state": "2d837f7bd7c6d90790a02a7923d0e45ed72383a4ed11555ae7b996efdf5a6519"
+    },
+    "feedback/high/stereo/96000": {
+      "pcm": "8094cd9fcc0470b505f5d1097fdfc0d6a77373c0352385495f0ac00da21640e6",
+      "state": "85a86c6539d7d1e3a1ee23feb9877b8860e803ddb46877225c7d2232081413e0"
+    },
+    "feedback/high/stereo/192000": {
+      "pcm": "352daca7570f1cf4804f1706861c7df0c5464ae197ede37819594c5cfdc560eb",
+      "state": "38c73b1186f453d2946a6a910e3f8e847a76a08b3ecf742917d34e2ce231a14e"
+    },
+    "feedback/eco/mono/8000": {
+      "pcm": "cd18f8cb96fcdc0dd0f154a782b90e0dc223e1e9be087b70e0801d20a57a50ef",
+      "state": "61b11af1b60d552a1184fee5ac118a5ad46a4e511bef69b7c839e6c98d9e41d4"
+    },
+    "feedback/eco/mono/44100": {
+      "pcm": "d5389589dedde7c43bfc9413bc656d18df44dca81bc266bdb624b88e954cc58e",
+      "state": "9461cf8a9776589c318d0cfdf5c5383751189f6b28a06f131a897a658ee2419b"
+    },
+    "feedback/eco/mono/48000": {
+      "pcm": "79767c302fc576a1b9e974afad8dfe235d0556e527640d94556ddcf33ce83267",
+      "state": "bc75806dc228a40262ad4d3af33a7157e125072302606f2b1a25f1a4ba991b11"
+    },
+    "feedback/eco/mono/96000": {
+      "pcm": "6f89d5c4f84c4b8f3fc0f8f05e312c729a6e93bf2a69a18909e5d34650b34241",
+      "state": "95aee809e4d8890873495a2d1e3b4e8e82f4601b33cd3966a3a363e5088bd9a0"
+    },
+    "feedback/eco/mono/192000": {
+      "pcm": "2a9023206433d2253da457a505daed3b4fcc04ee3211cf0ffff6a26483e5845c",
+      "state": "b911a08f10f91adcd5edbcd9ebd8a24ca20af0d426c012c50ef7b384e0eecb2a"
+    },
+    "feedback/eco/stereo/8000": {
+      "pcm": "f67971f40aa6f24b2eec2ba3af65bffce7f031120eee90be85408d5b56c699cb",
+      "state": "429a5a156d09235b3d5c0e4823f4ca97bb0e0d7b7b2dff18596422daa6122dbe"
+    },
+    "feedback/eco/stereo/44100": {
+      "pcm": "4a6103567d84aae3d5fe4899175071ee060e1f403effb4490a9f019e6fcaec8e",
+      "state": "91fefc856d630608ea5a317ee1bb7ead689fa1b34c6b2980c0e147262138091e"
+    },
+    "feedback/eco/stereo/48000": {
+      "pcm": "2e28ff495edbc90af2d9cc87f32c8109ff829bf058401b926e9e258aff940950",
+      "state": "c9e5900c72d98fa9af67c4355e8abd65198e0f3b9009b42e8d830c5976316a05"
+    },
+    "feedback/eco/stereo/96000": {
+      "pcm": "f2a859a442b13a78bcb736ed050765f4831651771459cfa5fe5af466a57f0bd5",
+      "state": "cc843b11df3a637f00b09a801117c1bdf7bcf4b19dcf5f54e26882ec23430a66"
+    },
+    "feedback/eco/stereo/192000": {
+      "pcm": "6c1fbb3ced62faa75e4b1a239bb82410427b689a6352f2fa5e07dc8535ac4469",
+      "state": "64c3dcf51fce429160fb22aaea2e1c6aa56faad1ef9185426b231203ca1feaae"
+    },
+    "adaa/high/mono/8000": {
+      "pcm": "1890569ad73b52bd21c5ede96da718fa31449a2d5cf46a94a14811e4bcbb2e68",
+      "state": "d97133670d6539f65e9065ee2d23f23e81f43aa4cd67d3347deb82c6e01dfa2a"
+    },
+    "adaa/high/mono/44100": {
+      "pcm": "7588a4dfb5acaa75c455dc8e1f2fed2e4caf1f34f6d034ab29df4f80b6a0a796",
+      "state": "9e39ede36ed6605c7d6df99708cca4eafd74d6b8164e8bc4aaecd3b349b2e0ab"
+    },
+    "adaa/high/mono/48000": {
+      "pcm": "c52b7e6b5161fbd69fab6a48f00f41e9ec11cf2db6ae2a9ad22191ff10680eb3",
+      "state": "d49da48b2021a6428091ca24602d73ae8a15585b8e5661036a3bf87d7887eb2e"
+    },
+    "adaa/high/mono/96000": {
+      "pcm": "3d1df49a567c15c9d8e0bd0f38e195c4f9435bbb0aa4fc45a8647840c03fe450",
+      "state": "abb6f72eb7f190afb8a8e57d708f9766160e97ffa642b7713084fc401dbbcb4a"
+    },
+    "adaa/high/mono/192000": {
+      "pcm": "87edd553d77c90501992d17cba1144eb17fac6bf438c679ad19fd7291d41f26f",
+      "state": "0c3d61f7d0e59ec3e6f74c9379aa7b486fbda4ed4a0a47506576e91e3107ce80"
+    },
+    "adaa/high/stereo/8000": {
+      "pcm": "6ed7a888f53be2a4d2621f9f4356149748deccfd1612f855b584c1cf662bd138",
+      "state": "4c621c13688238cd9f1888fb98b95da1b29b85c47903028559138dd35c097815"
+    },
+    "adaa/high/stereo/44100": {
+      "pcm": "c524fa008497c66fa0befa9ba017fbdb02141af9278cf2286084b4f87e68f445",
+      "state": "5bea2645b8e11db3a37fad66bd51897129e0474e72db4193d70e5548d473d827"
+    },
+    "adaa/high/stereo/48000": {
+      "pcm": "a242926f7c1c366b084588f0c8299e232859734978bff4a797d1e5450c56a7f0",
+      "state": "2c6df3f33044b826b657e32e3bb8e65ff8cb27f3b222e707ace6859aed6bc7d9"
+    },
+    "adaa/high/stereo/96000": {
+      "pcm": "dc154363b981cfce3c4266d05ce7bfdd981f46890f50e54a31e634632786dfa6",
+      "state": "1c8d72b8fff7f6c615d3fcfae461b89f9851148654a6d6454d5dbea8c5f07589"
+    },
+    "adaa/high/stereo/192000": {
+      "pcm": "3a361f737745e7f600434a7bd99eee84e3b898f40f02eef09087326b17665db2",
+      "state": "3d828f2d1b95feaecabc2161bdbe6b36a55473b4625e268ceb5541ba0b72903e"
+    },
+    "adaa/eco/mono/8000": {
+      "pcm": "2b2af7f88ff7d5af943f5a67ae2bbfc17db250368c81392722dcbf1e80f15e1d",
+      "state": "6dd81c95c30b8490d1f5e083756de7a13f7d4fc8f9773de50797cefa6a0a36e1"
+    },
+    "adaa/eco/mono/44100": {
+      "pcm": "b6ec42820b94301815a1f63da1fbe84da09fe4c47c8378b5a40c92b29de494ef",
+      "state": "a5c17a95598a5b3f7979d19a9caea781cbde15805738906e0fe92099983ffc86"
+    },
+    "adaa/eco/mono/48000": {
+      "pcm": "06f7545b7596abeb9fa14c883f01d88a1567c76309c0d87725532d8f240ab4ff",
+      "state": "e419e36a0c34832ac5f64411f09847e2b1a97f832ad36ab5c059b938ad0c2790"
+    },
+    "adaa/eco/mono/96000": {
+      "pcm": "03c74979c2179621badc9f230d94af2c79fc49756f4db26fc9f3233b9f099c91",
+      "state": "bf5a0bca02d6d314403bed10427dd1d555388792b0d0ab5edb121c516a9275b1"
+    },
+    "adaa/eco/mono/192000": {
+      "pcm": "b9eb415f66cb94cdf5400ad61d9bb5710224c3704e1349dc173f40c3945753ac",
+      "state": "b17495213fdcfef1fdc24dba90700e74f53b5f72112735c35e2a3c8d6bd3c004"
+    },
+    "adaa/eco/stereo/8000": {
+      "pcm": "dd7eb13e7ae6c42a4cee724c087c872d4a2da657033c153d1cb74483c301c4ba",
+      "state": "b36097d5ee2e2a12f04ec97e332471607d2810bcdd64dd6930ebecfbab802435"
+    },
+    "adaa/eco/stereo/44100": {
+      "pcm": "dbbebd244c5f169689ab5ed1682cefdef789a5b508f3799c1d6a333102709ac8",
+      "state": "180729e043b43af523094348df7a549181a10f02226f98561cd3a6a79e33d013"
+    },
+    "adaa/eco/stereo/48000": {
+      "pcm": "d83246ba266534a363c557486e91d0eb9560013c8b9b3bd5c0314fbcdf54ab09",
+      "state": "4b6e5a6309efd59a88447ea029c5f2d2be880d06e7cd264ee079edc2436d4fa9"
+    },
+    "adaa/eco/stereo/96000": {
+      "pcm": "0fd4035929f3c014fe4be24dae8508197385cea5429d6cdb109cbfd1c50d7a43",
+      "state": "8d5cbb8f93451d5df8c6cf1d9ad822f14dbe107047a7068a5868d14a8b40d84b"
+    },
+    "adaa/eco/stereo/192000": {
+      "pcm": "66ffa9a2645ae43cd264eefde36cde8a0de0130a47eec7c68634beb0f9f3f3a7",
+      "state": "79d21cd3cfef26e07ee783e5644b188194f477d07880e5f87f8502dee217983d"
+    },
+    "reactive/high/mono/8000": {
+      "pcm": "cfc68e5b9d08f2cc5c39ef3679d4eafbd351073e217146a31b05af74251b1f2b",
+      "state": "296b4f50e46e09a90a684516ffddeaa58746d86784be2f736151bdfe04d03e45"
+    },
+    "reactive/high/mono/44100": {
+      "pcm": "13a26217002904bf2e676f0905bac639984f8a1ea5b15649588926891a9a649e",
+      "state": "e984c82e11f4daa72fdec91a969baceda6892020c8e785ff34674d332ffab24d"
+    },
+    "reactive/high/mono/48000": {
+      "pcm": "a39185b35c1ea04824224abb0ec41811d14a6e1d453b7b048da56a167a0158fc",
+      "state": "13c940128595acb3df13a8ecb92d86dd03e441492c74e003115268002d0048b2"
+    },
+    "reactive/high/mono/96000": {
+      "pcm": "156659caa6688e5ab719cc793865f4506f9fdb9c8f527a93aa945dea9850f404",
+      "state": "37c588cd96d0971b03d44a540f1fd6d16f9a94a225aef5a2278d63ac87e7641b"
+    },
+    "reactive/high/mono/192000": {
+      "pcm": "19efcf061c315ee77e9d9c210d313128e3808e03159b4a34de0797e0eb614326",
+      "state": "a8f75d85771b71e2e47104c83dda93bb5f3355727a07214d11252a2573237796"
+    },
+    "reactive/high/stereo/8000": {
+      "pcm": "a95c5f4673e7d3a4c835b196ee0933c7d0c891b763fa3b6aef33acd5a8fabe3c",
+      "state": "db24d82ee1ce726ab129bf6b40b4ed913e4c3dea04a06c7a418a6a0866483afb"
+    },
+    "reactive/high/stereo/44100": {
+      "pcm": "33b49032e182355ef466a61ea1f3f6830758faa740a1b3c185d771cbf8cf1813",
+      "state": "ade16da4a5ad1d4a41786c3aecf4cddf90f076a319c06ebb4810fdba16f3e0e4"
+    },
+    "reactive/high/stereo/48000": {
+      "pcm": "a428bdfac1044a8cab236a21020a60d81b3fc06332f54ceb0743fd229265c1a4",
+      "state": "4cc05f3e23bab015131314efb28629543b93225b3bf05f89a58baee032faef28"
+    },
+    "reactive/high/stereo/96000": {
+      "pcm": "2ae38c717313a101ab9719d2e395e569c672f58cfc0b7d0f2ed42395c7d82a96",
+      "state": "74612185d7506fe7633eb39827b8ca14cfa24cb26d041e43543071a70cf069ae"
+    },
+    "reactive/high/stereo/192000": {
+      "pcm": "ea7e3df43aadd59faa9cbd6f7c24b9e4ded939f3ae7f6254ac49c1cd4f156825",
+      "state": "6b70978490147c08b7e4ba60d5fe60874dc6b0a10bc0dbd849a62680463a8af1"
+    },
+    "reactive/eco/mono/8000": {
+      "pcm": "9ca38f21b7a650dd8b4db4882fe4b9e9308e07763f0b465cbf34a6dd76e54d2a",
+      "state": "6f03a1845c8d48b4f0544b970b91b928226ef3366f7b2f4d4d27a76a4b1bd812"
+    },
+    "reactive/eco/mono/44100": {
+      "pcm": "adf834807b48b69c6f155fe7ecf072ce5dbdac2c1dc4865e0d4a69b563c8c7cc",
+      "state": "efa867cfb73993386edbe1dd25b9808bb5c54f1d46ca6363259eb2e7eaec6177"
+    },
+    "reactive/eco/mono/48000": {
+      "pcm": "4476c572858a84b4725b650c33915770bf530747de20fbfbbc4c4f57185f3434",
+      "state": "078c854d7209e6e7ab4b0f450a0b1f1c69224216cb1f7f301059cdc7b962b41d"
+    },
+    "reactive/eco/mono/96000": {
+      "pcm": "f65c470fc9dd770a9823e411d5e891405405b06851fcb33d899b7da7bab904df",
+      "state": "5658750dbcfdb0dbac725a0cda506e3fb825440a90255a2f0163803a81344bff"
+    },
+    "reactive/eco/mono/192000": {
+      "pcm": "ae67b7f3b0a926a4d55d412439b60d456c37d0d02eed07bc87a822d6bc609c43",
+      "state": "b90fb6e93ecf85c5d830baeacd7d2b44580f38046849f1404408fc9c0b775824"
+    },
+    "reactive/eco/stereo/8000": {
+      "pcm": "ab0d394d15ebbb88f41d9c13e64b04b687c8d71357df087b4ec8c5a6532fbd55",
+      "state": "3a5d438275220b2479567deaf49bc48eed7606a5e54c1e61e730553145d73b99"
+    },
+    "reactive/eco/stereo/44100": {
+      "pcm": "10a5f3fed4866568aabaf64b0524d7bf05b1bcc25f61077e8d6dc19b9027b94a",
+      "state": "fdd04156a35148471b79cffb202d3562929e7debee3121f739b9e6572b8bb4d8"
+    },
+    "reactive/eco/stereo/48000": {
+      "pcm": "c6156b955c96c68d412a6a910c276f79656df318d081f57c9a6513e929457c12",
+      "state": "205bc18ca20a7f9c14b966b8f7adea0362859cabecccb59a18a8fd39c3c7d494"
+    },
+    "reactive/eco/stereo/96000": {
+      "pcm": "d9277940dd85fa15e8c16b868c1fc87b467354a63b19f2715169d060e5ee67e6",
+      "state": "f8c48935b0bdab138d86e9f523258428f057d15fa194350e05f346bbce44d559"
+    },
+    "reactive/eco/stereo/192000": {
+      "pcm": "050015a0effba67a100916149553a7ec875cb65848ff94a6145a46f7d189eb19",
+      "state": "fbd34170f65ada079fc6d3084b31b2eeae3381c78b0906fd7323eb26e7ea4f28"
+    }
+  }
+}

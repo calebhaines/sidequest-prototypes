@@ -22,6 +22,9 @@
   let clipSelectionMode = false, marquee = null;
   let recoveryWarned=false,recoveryUnavailable=false;
   let assetMap = {}, waveformFrame = 0, fitInitial = true, drag = null, frameTrack = null, browserTrack = null, discoveryDone = false, customManifest = [], meterTime = 0;
+  let timelinePreviewFrame = 0, notePreviewRevision = 0;
+  const timelineClipNodes = new Map(), previewCanvases = new Map();
+  let paintedClipSelection = new Set(), paintedPrimaryClip = null;
   let seekDrag = null, followUntil = 0, markerEditing = null, transferOperation = 0, transferAbort = null, transferSpec = null, microphoneOperation = 0;
   let automationEditor, pianoRoll, noteWorkflow, serviceController, cpuInspector, freezeController, recordingsBrowser, masteringUI, deluxeUI, masterPlayback, masterPlaybackUI, pedalMidiUI, svtUI, guitarPedalsUI, cabinetUI;
   let recordingsCommitting = false, projectReadBusy = 0;
@@ -145,18 +148,26 @@
     host.scheduleNote(t.id, { ...event, voice: target, id: S.uid('audition'), when: engine.context.currentTime + .015, source: 'loom-audition' });
     setTimeout(() => { if (!engine.getMeters().playing && frameTrack !== t.id) engine.clearAudition(t.id); }, Math.min(10000, ((event.durationSeconds || .3) + 3) * 1000));
   }
-  function drawNotePreview(el, clip) {
-    const canvas = el.querySelector('canvas'), width = Math.max(1, Math.min(2400, el.clientWidth)), scale = Math.min(2, devicePixelRatio || 1); canvas.width = width * scale; canvas.height = 32 * scale;
-    const ctx = canvas.getContext('2d'); ctx.scale(scale, scale); ctx.fillStyle = state.tracks[Number(el.dataset.track)].color;
-    const pitches = clip.pattern.notes.map(n => n.pitch), low = Math.min(48, ...pitches), high = Math.max(72, ...pitches), span = Math.max(12, high - low);
+  function drawNotePreview(el, clip, width, dpr) {
+    const canvas = el.querySelector('canvas'); canvas.width = width * dpr; canvas.height = 32 * dpr;
+    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.fillStyle = state.tracks[Number(el.dataset.track)].color;
+    const notes = clip.pattern.notes, pitches = notes.map(n => n.pitch), low = Math.min(48, ...pitches), high = Math.max(72, ...pitches), span = Math.max(12, high - low);
     const patternLength = clip.pattern.lengthBeats, start = clip.sourceOffset || 0, end = start + clip.length * clip.rate;
     const first = clip.loop ? Math.floor(start / patternLength) : 0, last = clip.loop ? Math.min(first + 256, Math.ceil(end / patternLength)) : 1;
-    for (let cycle = first; cycle < last; cycle++) for (const n of clip.pattern.notes) {
-      const beat = (n.beat + cycle * patternLength - start) / clip.rate, finish = beat + n.duration / clip.rate;
-      if (finish <= 0 || beat >= clip.length) continue; const x = Math.max(0, beat / clip.length * width), right = Math.min(width, finish / clip.length * width);
-      ctx.globalAlpha = .35 + n.velocity * .65; ctx.fillRect(x, 27 - (n.pitch - low) / span * 24, Math.max(2, right - x), 2.5);
-    }
+    let cycle = first, index = 0;
+    // Preserve every mark and its alpha/order, yielding between small batches.
+    return { step(deadline) {
+      let checked = 0;
+      while (cycle < last && notes.length) {
+        const n = notes[index++], beat = (n.beat + cycle * patternLength - start) / clip.rate, finish = beat + n.duration / clip.rate;
+        if (finish > 0 && beat < clip.length) { const x = Math.max(0, beat / clip.length * width), right = Math.min(width, finish / clip.length * width); ctx.globalAlpha = .35 + n.velocity * .65; ctx.fillRect(x, 27 - (n.pitch - low) / span * 24, Math.max(2, right - x), 2.5); }
+        if (index === notes.length) { index = 0; cycle++; }
+        if (++checked % 256 === 0 && performance.now() >= deadline) return false;
+      }
+      return true;
+    } };
   }
+
   function status(message) { $('status').textContent = message; }
   function trackPowerButton(t, index) {
     const label = (t.disabled ? 'Enable ' : 'Disable ') + t.name;
@@ -362,8 +373,7 @@
     for (const id of selectedClips) if (!available.has(id)) selectedClips.delete(id);
     if (!selectedClips.has(selectedClip)) selectedClip = selectedClips.values().next().value || null;
   }
-  function setClipSelection(ids, primary = selectedClip) {
-    const available = new Set(state.tracks.flatMap(t => t.clips.map(c => c.id)));
+  function setClipSelection(ids, primary = selectedClip, available = new Set(state.tracks.flatMap(t => t.clips.map(c => c.id)))) {
     selectedClips.clear(); for (const id of ids) if (available.has(id)) selectedClips.add(id);
     selectedClip = selectedClips.has(primary) ? primary : selectedClips.values().next().value || null;
   }
@@ -373,11 +383,16 @@
     return location ? location.clip.name + ' · ' + location.track.name + ' · ' + location.clip.length.toFixed(2) + ' beats' : 'Shift-click to add clips. Drag empty space to select a group.';
   }
   function paintTimelineSelection() {
-    for (const el of $('trackLanes').querySelectorAll('.clip')) {
-      const active = selectedClips.has(el.dataset.clip);
-      updateClass(el, 'selected', active); updateClass(el, 'primary-clip', active && el.dataset.clip === selectedClip);
+    const changed = new Set([paintedPrimaryClip, selectedClip]);
+    for (const id of selectedClips) if (!paintedClipSelection.has(id)) changed.add(id);
+    for (const id of paintedClipSelection) if (!selectedClips.has(id)) changed.add(id);
+    for (const id of changed) {
+      const el = timelineClipNodes.get(id); if (!el) continue;
+      const active = selectedClips.has(id);
+      updateClass(el, 'selected', active); updateClass(el, 'primary-clip', active && id === selectedClip);
       updateAttribute(el, 'aria-pressed', active);
     }
+    paintedClipSelection = new Set(selectedClips); paintedPrimaryClip = selectedClip;
     updateText($('selectionSummary'), selectionDescription());
     updateAttribute($('clipSelectMode'), 'aria-pressed', clipSelectionMode);
     updateClass($('trackLanes'), 'selection-mode', clipSelectionMode);
@@ -414,6 +429,7 @@
   function decodeAssets() { const next = {}; for (const asset of [...state.assets, ...(state.freezeAssets || [])]) { next[asset.id] = assetMap[asset.id] || (asset.encoding === 'float32le' ? S.decodeFreezeAsset(asset) : S.decodeAsset(asset)); } assetMap = next; engine.setAssets(assetMap); }
   function changed(options = {}) {
     cancelTimelineGesture(); engine.setState(state);
+    if (options.notes) notePreviewRevision++;
     const refreshNotes = options.arrangement || options.inspector || options.notes || options.notePlayback;
     // Fader, EQ and insert movements do not change the score. Avoid hashing all
     // note clips and rebuilding an open piano-roll SVG for every pointer move.
@@ -423,20 +439,20 @@
     if (options.mixer) renderMixer();
     if (options.rack) renderRack();
     if (options.inspector) renderClipInspector();
-    if (options.automation) automationEditor?.render();
+    if (options.automation && !options.arrangement) automationEditor?.render();
     if (refreshNotes) {
-      if (noteWorkflow) noteWorkflow.render(); else if (options.notes) pianoRoll?.render();
+      if (!options.inspector) { if (noteWorkflow) noteWorkflow.render(); else if (options.notes) pianoRoll?.render(); }
       renderFreezeState();
     }
     scheduleAutosave();
   }
   function recoveryInfo(message){$('recoveryStatus').hidden=!message;$('recoveryStatus').textContent=message||'';if(message&&!recoveryWarned){recoveryWarned=true;status(message);}}
-  function scheduleAutosave(){clearTimeout(autosaveTimer);if(!recovery){recoveryInfo('Browser recovery is off. Save a project to keep this session.');return;}autosaveTimer=setTimeout(()=>{try{const recoveryLimit=8*1024*1024,encodedSize=[...state.assets,...(state.freezeAssets||[])].reduce((n,a)=>n+(a.pcm?.length||0),0)+state.tracks.reduce((n,t)=>n+(t.instrument?.html?.length||0),0);if(encodedSize>=recoveryLimit){localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');return;}const serialized=S.serializeProject(state);if(serialized.length<8*1024*1024){localStorage.setItem('loom-session-v1',serialized);recoveryUnavailable=false;recoveryInfo('');}else{localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');}}catch(_){recoveryUnavailable=true;recoveryInfo('Browser recovery is unavailable or full. Save a project to keep this session.');}},1600);}
+  function scheduleAutosave(){clearTimeout(autosaveTimer);if(!recovery){recoveryInfo('Browser recovery is off. Save a project to keep this session.');return;}autosaveTimer=setTimeout(()=>{try{const recoveryLimit=8*1024*1024;if(S.recoveryPayloadExceeds(state,recoveryLimit)){localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');return;}const serialized=S.serializeProject(state);if(serialized.length<recoveryLimit){localStorage.setItem('loom-session-v1',serialized);recoveryUnavailable=false;recoveryInfo('');}else{localStorage.removeItem('loom-session-v1');recoveryInfo('This session is too large for browser recovery. Save a project to keep your work.');}}catch(_){recoveryUnavailable=true;recoveryInfo('Browser recovery is unavailable or full. Save a project to keep this session.');}},1600);}
   const snapshotTimers = new Map();
   function scheduleSnapshot(id) { clearTimeout(snapshotTimers.get(id)); if (state.tracks.find(t => t.id === id)?.freeze || state.tracks.find(t => t.id === id)?.disabled || trackPowerOperations.has(id) || freezeBusy()) return; const generation = lifecycle; snapshotTimers.set(id, setTimeout(async () => { try { const snapshot = await host.snapshot(id); if (generation !== lifecycle || freezeBusy()) return; const t = state.tracks.find(t => t.id === id); if (t && !t.disabled && !t.freeze && t.instrument && snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(id, snapshot); if(masterPlayback?.altered())engine.setState(state); scheduleAutosave(); } } catch (_) {} }, 900)); }
   async function snapshotAll() { await Promise.all([...trackPowerOperations.values()].map(operation => operation.promise)); for (const t of state.tracks) if (!t.disabled && !t.freeze && t.instrument && frames.has(t.id)) { try { const snapshot = await host.snapshot(t.id); if (snapshot) { t.instrument.snapshot = snapshot; noteWorkflow?.captureSnapshot(t.id, snapshot); } } catch (e) { status('The audio project is safe; one instrument could not provide its current settings. ' + e.message); } } }
   function snap(value) { const step = state.view.snap; return step ? Math.round(value / step) * step : Math.round(value * 1000) / 1000; }
-  function selectedTrack(index, options = {}) { rackTarget = 'track'; state.selectedTrack = index; cancelTimelineGesture(); if (!options.keepClip) selectOnlyClip(null); if (selectedSlot !== null && !effectOwner().effects[selectedSlot]) selectedSlot = null; renderTrackHeaders(); renderLanes(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); automationEditor?.render(); noteWorkflow?.render(); renderFreezeState(); scheduleAutosave(); }
+  function selectedTrack(index, options = {}) { rackTarget = 'track'; state.selectedTrack = index; cancelTimelineGesture(); if (!options.keepClip) selectOnlyClip(null); if (selectedSlot !== null && !effectOwner().effects[selectedSlot]) selectedSlot = null; renderTrackHeaders(); renderLanes(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); automationEditor?.render(); renderFreezeState(); scheduleAutosave(); }
   function panLabel(value) { return Math.abs(value) < .01 ? 'C' : Math.round(Math.abs(value) * 100) + (value < 0 ? ' L' : ' R'); }
   function levelLabel(value) { return value <= .0001 ? '−∞ dB' : (20 * Math.log10(value)).toFixed(1) + ' dB'; }
   function effectArt(def, compact = false) {
@@ -492,11 +508,84 @@
   function renderArrangement() { cancelTimelineGesture({ render: false }); renderTrackHeaders(); $('zoom').value = state.view.zoom; $('snap').value = state.view.snap; $('lengthBars').value = state.lengthBars; $('loopStart').value = state.loopStart / 4 + 1; $('loopEnd').value = state.loopEnd / 4 + 1; const width = timelineWidth(); $('timeline').style.width = width + 'px'; $('timeline').style.setProperty('--bar-width', state.view.zoom*4 + 'px'); $('timeline').style.setProperty('--beat-width', state.view.zoom + 'px'); $('ruler').innerHTML = Array.from({length:state.lengthBars},(_,i)=>`<span class="ruler-label" style="left:${i*4*state.view.zoom}px">${String(i+1).padStart(2,'0')}</span>`).join(''); renderMarkers(); $('loopStrip').innerHTML = state.loopEnabled ? `<div class="loop-region" style="left:${state.loopStart*state.view.zoom}px;width:${(state.loopEnd-state.loopStart)*state.view.zoom}px"></div>` : ''; if(state.recording.punchEnabled)$('loopStrip').insertAdjacentHTML('beforeend',`<div class="punch-region" style="left:${state.recording.punchStart*state.view.zoom}px;width:${(state.recording.punchEnd-state.recording.punchStart)*state.view.zoom}px"></div>`); renderLanes(); renderPlayhead(); automationEditor?.render(); }
   function renderLanes() {
     pruneClipSelection();
-    $('trackLanes').innerHTML = state.tracks.map((t, i) => `<div class="track-lane ${t.freeze ? 'is-frozen' : ''} ${i === state.selectedTrack ? 'selected' : ''}" data-lane="${i}" style="--track:${escape(t.color)}">${!t.clips.length ? '<span class="lane-empty">IMPORT AUDIO OR RECORD A TAKE</span>' : ''}${t.clips.map(c => `<div class="clip ${selectedClips.has(c.id) ? 'selected' : ''} ${c.id === selectedClip ? 'primary-clip' : ''} ${c.type === 'notes' ? 'clip-notes' : ''} ${c.origin ? 'clip-printed' : ''}" data-clip="${escape(c.id)}" data-track="${i}" role="button" tabindex="0" aria-pressed="${selectedClips.has(c.id)}" aria-label="${escape(c.name)} on track ${i + 1}, starts at beat ${c.start + 1}, length ${c.length} beats. Shift-click adds to selection. Arrows move selected clips; Shift arrows trim one clip." style="left:${c.start * state.view.zoom}px;width:${Math.max(5, c.length * state.view.zoom)}px"><span class="clip-label">${c.type === 'notes' ? '♪ ' : c.origin ? '↪ ' : ''}${escape(c.name)}${c.reverse ? ' ↶' : ''}${c.loop ? ' ⟳' : ''}</span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i></div>`).join('')}</div>`).join('');
+    const holder = $('trackLanes'), old = new Map(timelineClipNodes); timelineClipNodes.clear();
+    for (let i = 0; i < state.tracks.length; i++) {
+      const t = state.tracks[i]; let lane = holder.querySelector('[data-lane="' + i + '"]');
+      if (!lane) { lane = document.createElement('div'); lane.className = 'track-lane'; lane.dataset.lane = i; holder.append(lane); }
+      updateClass(lane, 'is-frozen', !!t.freeze); updateClass(lane, 'selected', i === state.selectedTrack); if (lane.style.getPropertyValue('--track') !== t.color) lane.style.setProperty('--track', t.color);
+      let empty = lane.querySelector('.lane-empty');
+      if (!t.clips.length && !empty) { empty = document.createElement('span'); empty.className = 'lane-empty'; empty.textContent = 'IMPORT AUDIO OR RECORD A TAKE'; lane.append(empty); }
+      if (t.clips.length && empty) empty.remove();
+      let previous = null;
+      for (const c of t.clips) {
+        let el = old.get(c.id); old.delete(c.id);
+        if (!el) { el = document.createElement('div'); el.className = 'clip'; el.dataset.clip = c.id; el.setAttribute('role', 'button'); el.tabIndex = 0; el.innerHTML = '<span class="clip-label"></span><canvas aria-hidden="true"></canvas><i class="clip-edge left" data-edge="left"></i><i class="clip-edge right" data-edge="right"></i>'; }
+        updateAttribute(el, 'data-track', i); updateClass(el, 'selected', selectedClips.has(c.id)); updateClass(el, 'primary-clip', c.id === selectedClip); updateClass(el, 'clip-notes', c.type === 'notes'); updateClass(el, 'clip-printed', !!c.origin);
+        updateAttribute(el, 'aria-pressed', selectedClips.has(c.id)); updateAttribute(el, 'aria-label', c.name + ' on track ' + (i + 1) + ', starts at beat ' + (c.start + 1) + ', length ' + c.length + ' beats. Shift-click adds to selection. Arrows move selected clips; Shift arrows trim one clip.');
+        updateText(el.querySelector('.clip-label'), (c.type === 'notes' ? '♪ ' : c.origin ? '↪ ' : '') + c.name + (c.reverse ? ' ↶' : '') + (c.loop ? ' ⟳' : ''));
+        updateStyle(el, 'left', c.start * state.view.zoom + 'px'); updateStyle(el, 'width', Math.max(5, c.length * state.view.zoom) + 'px');
+        updateStyle(el, 'transform', ''); updateStyle(el, 'cursor', ''); updateStyle(el, 'zIndex', '');
+        const next = previous ? previous.nextElementSibling : lane.firstElementChild;
+        if (next !== el) lane.insertBefore(el, next); previous = el;
+        timelineClipNodes.set(c.id, el);
+      }
+    }
+    for (const el of old.values()) { const canvas = el.querySelector('canvas'); previewCanvases.delete(canvas); canvas.width = canvas.height = 1; el.remove(); }
+    paintedClipSelection = new Set(selectedClips); paintedPrimaryClip = selectedClip;
     paintTimelineSelection(); queueWaveforms();
   }
-  function queueWaveforms() { if (waveformFrame) return; waveformFrame = requestAnimationFrame(() => { waveformFrame = 0; drawWaveforms(); }); }
-  function drawWaveforms() { for (const el of $('trackLanes').querySelectorAll('.clip')) { const found = state.tracks[Number(el.dataset.track)].clips.find(c=>c.id===el.dataset.clip), pcm = found && assetMap[found.assetId]; if (found?.type === 'notes') { drawNotePreview(el, found); continue; } if (!found || !pcm) continue; const canvas = el.querySelector('canvas'), width = Math.max(1,Math.min(2400,Math.floor(el.clientWidth))), height = 32, dpr = Math.min(2,devicePixelRatio || 1); canvas.width = Math.min(8192,width*dpr); canvas.height = height*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.strokeStyle = state.tracks[Number(el.dataset.track)].color; ctx.lineWidth = 1; const duration = pcm.left.length / pcm.sampleRate, sourceSpan = Math.max(.0001,found.sourceEnd-found.sourceStart), secondsPerBeat = 60/state.tempo; ctx.beginPath(); const step = Math.max(1,Math.ceil(width/1200)); for (let x=0;x<width;x+=step) { let seconds = x/width * found.length * secondsPerBeat * found.rate; seconds += found.sourceOffset || 0; if (!found.loop && seconds >= sourceSpan) continue; seconds = found.loop ? seconds % sourceSpan : seconds; const position = found.reverse ? found.sourceEnd-seconds : found.sourceStart+seconds; const index = Math.max(0,Math.min(pcm.left.length-1,Math.floor(position*pcm.sampleRate))); const samples = Math.max(1,Math.ceil(pcm.sampleRate*found.length*secondsPerBeat*found.rate/width)); let peak = 0; for (let k=0;k<Math.min(96,samples);k++) { const n = Math.min(pcm.left.length-1,index+Math.floor(k*samples/Math.min(96,samples))); peak = Math.max(peak,Math.abs(pcm.left[n]),Math.abs(pcm.right[n])); } const fade = Math.min(1,(x/width*found.length)/Math.max(.0001,found.fadeIn),((1-x/width)*found.length)/Math.max(.0001,found.fadeOut)), amp = Math.min(1,peak*found.gain)*13*fade; ctx.moveTo(x,16-amp); ctx.lineTo(x,16+amp); } ctx.stroke(); } }
+  function queueWaveforms() { if (waveformFrame || document.hidden) return; waveformFrame = requestAnimationFrame(() => { waveformFrame = 0; drawWaveforms(); }); }
+  function audioPreview(el, found, pcm, width, dpr) {
+    const canvas = el.querySelector('canvas'); canvas.width = width * dpr; canvas.height = 32 * dpr;
+    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.strokeStyle = state.tracks[Number(el.dataset.track)].color; ctx.lineWidth = 1; ctx.beginPath();
+    const sourceSpan = Math.max(.0001, found.sourceEnd - found.sourceStart), secondsPerBeat = 60 / state.tempo, step = Math.max(1, Math.ceil(width / 1200)); let x = 0;
+    return { step(deadline) {
+      let checked = 0;
+      for (; x < width; x += step) {
+        let seconds = x / width * found.length * secondsPerBeat * found.rate + (found.sourceOffset || 0);
+        if (!found.loop && seconds >= sourceSpan) continue;
+        seconds = found.loop ? seconds % sourceSpan : seconds;
+        const position = found.reverse ? found.sourceEnd - seconds : found.sourceStart + seconds, index = Math.max(0, Math.min(pcm.left.length - 1, Math.floor(position * pcm.sampleRate))), samples = Math.max(1, Math.ceil(pcm.sampleRate * found.length * secondsPerBeat * found.rate / width)); let peak = 0;
+        for (let k = 0; k < Math.min(96, samples); k++) { const n = Math.min(pcm.left.length - 1, index + Math.floor(k * samples / Math.min(96, samples))); peak = Math.max(peak, Math.abs(pcm.left[n]), Math.abs(pcm.right[n])); }
+        const fade = Math.min(1, (x / width * found.length) / Math.max(.0001, found.fadeIn), ((1 - x / width) * found.length) / Math.max(.0001, found.fadeOut)), amp = Math.min(1, peak * found.gain) * 13 * fade;
+        ctx.moveTo(x, 16 - amp); ctx.lineTo(x, 16 + amp);
+        if (++checked % 16 === 0 && performance.now() >= deadline) { x += step; return false; }
+      }
+      ctx.stroke(); return true;
+    } };
+  }
+  function drawWaveforms() {
+    if (document.hidden) return;
+    const view = $('timelineScroll'), rect = view.getBoundingClientRect(), margin = 100;
+    if (rect.bottom < -margin || rect.top > innerHeight + margin) return;
+    const left = view.scrollLeft - 200, right = view.scrollLeft + view.clientWidth + 200, dpr = Math.min(2, devicePixelRatio || 1), visible = [], visibleCanvases = new Set();
+    // Collect geometry before changing any backing stores. Offscreen clips keep
+    // their DOM/keyboard semantics without allocating full-size pixel buffers.
+    for (const lane of $('trackLanes').querySelectorAll('[data-lane]')) {
+      const bounds = lane.getBoundingClientRect(); if (bounds.bottom < -margin || bounds.top > innerHeight + margin) continue;
+      for (const found of state.tracks[Number(lane.dataset.lane)].clips) {
+        if (found.start * state.view.zoom > right || (found.start + found.length) * state.view.zoom < left) continue;
+        const el = timelineClipNodes.get(found.id), canvas = el?.querySelector('canvas'), pcm = assetMap[found.assetId]; if (!canvas || found.type !== 'notes' && !pcm) continue;
+        const boxWidth = el.style.width; if (canvas._loomBoxWidth !== boxWidth) { canvas._loomBoxWidth = boxWidth; canvas._loomWidth = Math.max(1, Math.min(2400, el.clientWidth)); }
+        const width = canvas._loomWidth, source = found.type === 'notes' ? found.pattern : pcm, key = [found.type, width, dpr, state.tempo, state.tracks[Number(lane.dataset.lane)].color, found.length, found.sourceStart, found.sourceEnd, found.sourceOffset, found.rate, found.reverse, found.loop, found.gain, found.fadeIn, found.fadeOut, found.type === 'notes' ? notePreviewRevision : 0].join('|');
+        visible.push({ el, canvas, found, pcm, width, source, key }); visibleCanvases.add(canvas);
+      }
+    }
+    const deadline = performance.now() + 5; let pending = false;
+    for (const item of visible) {
+      const { el, canvas, found, pcm, width, source, key } = item;
+      if (canvas._loomPreview?.source !== source || canvas._loomPreview?.key !== key) {
+        if (performance.now() >= deadline) { pending = true; continue; }
+        canvas._loomPreview = { source, key }; canvas._loomJob = found.type === 'notes' ? drawNotePreview(el, found, width, dpr) : audioPreview(el, found, pcm, width, dpr);
+      }
+      if (canvas._loomJob) { if (performance.now() < deadline && canvas._loomJob.step(deadline)) canvas._loomJob = null; else pending = true; }
+      previewCanvases.delete(canvas); previewCanvases.set(canvas, canvas.width * canvas.height * 4);
+    }
+    let bytes = 0; for (const size of previewCanvases.values()) bytes += size;
+    for (const [canvas, size] of previewCanvases) { if (bytes <= 24 * 1024 * 1024) break; if (visibleCanvases.has(canvas)) continue; canvas.width = canvas.height = 1; canvas._loomPreview = canvas._loomJob = null; previewCanvases.delete(canvas); bytes -= size; }
+    if (pending) queueWaveforms();
+  }
+
   const trackEqGain = value => Math.round(num(value, -12, 12) * 10) / 10 || 0;
   const trackEqLabel = value => (value > 0 ? '+' : value < 0 ? '−' : '') + Math.abs(value).toFixed(1);
   const trackEqFrequency = value => value >= 1000 ? Number((value / 1000).toFixed(2)) + ' kHz' : Math.round(value) + ' Hz';
@@ -641,7 +730,7 @@
   function controlMarkup(key,label,value,options={}) { const attrs = options.min !== undefined ? `min="${options.min}" max="${options.max}" step="${options.step||.001}"` : ''; if (options.type==='checkbox') return `<div class="control check-control"><label><input data-clip-param="${key}" type="checkbox" ${value?'checked':''}>${label}</label></div>`; return `<div class="control"><label for="clip-${key}">${label}</label><input id="clip-${key}" data-clip-param="${key}" type="${options.type||'number'}" ${attrs} value="${escape(value)}" ${options.maxlength?'maxlength="'+options.maxlength+'"':''}></div>`; }
   function renderClipInspector() { renderClipInspectorContents(); renderFreezeState(); }
   function renderClipInspectorContents() {
-    pruneClipSelection(); const location = selectedClips.size === 1 ? clipLocation() : null; renderClipActions(); $('clipInspector').hidden = !location;
+    pruneClipSelection(); const location = selectedClips.size === 1 ? clipLocation() : null; renderClipActions({notes:false}); $('clipInspector').hidden = !location;
     if (!location) { $('selectionSummary').textContent = selectionDescription(); noteWorkflow?.render(); return; }
     const c = location.clip, notes = c.type === 'notes', asset = assetMap[c.assetId], duration = asset ? asset.left.length / asset.sampleRate : 120;
     $('selectionSummary').textContent = c.name + ' · ' + location.track.name + ' · ' + c.length.toFixed(2) + ' beats' + (notes ? ' · editable notes' : c.origin ? ' · source retained' : '');
@@ -1634,7 +1723,7 @@
     seekTo(snap((e.clientX-$('timeline').getBoundingClientRect().left)/state.view.zoom),{reveal:false});
   }
   function endSeek(e) { if(seekDrag?.pointer===e.pointerId){seekDrag=null;renderPlayhead();} }
-  function renderAll() { $('projectName').value=state.name; $('autosaveEnabled').checked=recovery; renderArrangement(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); renderHistory(); masterPlaybackUI?.render(); automationEditor?.render(); noteWorkflow?.render(); renderFreezeState(); }
+  function renderAll() { $('projectName').value=state.name; $('autosaveEnabled').checked=recovery; renderArrangement(); renderMixer(); renderRack(); renderClipInspector(); renderEffectEditor(); renderTransport(); renderHistory(); masterPlaybackUI?.render(); renderFreezeState(); }
   function makeFrame(id) { let frame=frames.get(id); if(!frame){frame=document.createElement('iframe');frame.dataset.hostTrack=id;frame.title='Instrument editor for '+state.tracks.find(t=>t.id===id).name;frame.setAttribute('allow','autoplay');frame.hidden=true;$('instrumentFrames').append(frame);frames.set(id,frame);}return frame; }
   function requestInstrumentAudition(id) {
     const owner = state.tracks.find(track => track.id === id), frame = frames.get(id);
@@ -1859,6 +1948,7 @@
     if (gesture && lanes.hasPointerCapture?.(gesture.pointer)) lanes.releasePointerCapture(gesture.pointer);
   }
   function cancelTimelineGesture({ render = true } = {}) {
+    if (timelinePreviewFrame) { cancelAnimationFrame(timelinePreviewFrame); timelinePreviewFrame = 0; }
     if (!drag && !marquee) return false;
     const active = drag || marquee;
     if (marquee) setClipSelection(marquee.before, marquee.primaryBefore);
@@ -1928,7 +2018,18 @@
     Object.assign(marquee.box.style, { left: left + 'px', top: top + 'px', width: Math.max(1, right - left) + 'px', height: Math.max(1, bottom - top) + 'px' });
     const ids = new Set(marquee.additive ? marquee.before : []);
     for (const clip of marquee.clips) if (clip.right >= left && clip.left <= right && clip.bottom >= top && clip.top <= bottom) ids.add(clip.id);
-    setClipSelection(ids, marquee.primaryBefore); paintTimelineSelection();
+    setClipSelection(ids, marquee.primaryBefore, marquee.available); paintTimelineSelection();
+  }
+  function queueTimelinePreview(e) {
+    const active = drag || marquee; if (!active || e.pointerId !== active.pointer) return;
+    active.last = { clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId };
+    if (!timelinePreviewFrame) timelinePreviewFrame = requestAnimationFrame(() => { timelinePreviewFrame = 0; flushTimelinePreview(); });
+  }
+  function flushTimelinePreview(e) {
+    if (timelinePreviewFrame) { cancelAnimationFrame(timelinePreviewFrame); timelinePreviewFrame = 0; }
+    const active = drag || marquee; if (!active) return;
+    if (e && e.pointerId === active.pointer) active.last = { clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId };
+    if (active.last) { if (drag) previewTimelineDrag(active.last); else previewMarquee(active.last); }
   }
   $('clipSelectMode').addEventListener('click', () => {
     cancelTimelineGesture(); clipSelectionMode = !clipSelectionMode; paintTimelineSelection();
@@ -1942,7 +2043,7 @@
       const lane = e.target.closest('[data-lane]'); if (!lane) return;
       if (e.pointerType !== 'touch' || clipSelectionMode) e.preventDefault();
       marquee = { pointer: e.pointerId, start: timelinePoint(e), before: [...selectedClips], primaryBefore: selectedClip, additive, lane: Number(lane.dataset.lane), laneHeight, moved: false,
-        clips: state.tracks.flatMap((t, i) => t.clips.map(c => ({ id: c.id, left: c.start * state.view.zoom, right: c.start * state.view.zoom + Math.max(5, c.length * state.view.zoom), top: i * laneHeight + 8, bottom: i * laneHeight + laneHeight - 8 }))) };
+        available: new Set(state.tracks.flatMap(t => t.clips.map(c => c.id))), clips: state.tracks.flatMap((t, i) => t.clips.map(c => ({ id: c.id, left: c.start * state.view.zoom, right: c.start * state.view.zoom + Math.max(5, c.length * state.view.zoom), top: i * laneHeight + 8, bottom: i * laneHeight + laneHeight - 8 }))) };
       $('trackLanes').setPointerCapture(e.pointerId); return;
     }
     e.preventDefault();
@@ -1956,9 +2057,11 @@
       elements: T.entries(state, selectedClips).map(row => ({ id: row.clip.id, start: row.clip.start, length: row.clip.length, element: elements.get(row.clip.id) })) };
     el.focus({ preventScroll: true }); $('trackLanes').setPointerCapture(e.pointerId);
   });
-  $('trackLanes').addEventListener('pointermove', e => { if (drag) previewTimelineDrag(e); else if (marquee) previewMarquee(e); });
-  $('timelineScroll').addEventListener('scroll', () => { if (drag?.last) previewTimelineDrag(drag.last); else if (marquee?.last) previewMarquee(marquee.last); }, { passive: true });
+  $('trackLanes').addEventListener('pointermove', queueTimelinePreview);
+  $('timelineScroll').addEventListener('scroll', () => { if ((drag || marquee)?.last) queueTimelinePreview((drag || marquee).last); queueWaveforms(); }, { passive: true });
+  window.addEventListener('scroll', queueWaveforms, { passive: true, capture: true });
   $('trackLanes').addEventListener('pointerup', e => {
+    if ((drag || marquee)?.pointer === e.pointerId) flushTimelinePreview(e);
     if (marquee && e.pointerId === marquee.pointer) {
       const completed = marquee; marquee = null; completed.box?.remove(); releaseTimelinePointer(completed);
       if (completed.moved) { renderClipSelection(); $('trackLanes').focus({ preventScroll: true }); }
@@ -2364,7 +2467,7 @@
     // out of the audio-thread meter snapshot and its structured-clone message.
     engine.setMeterDetail?.(slot ? { ownerId: owner.id, slot: selectedSlot } : null);
   }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) syncEffectMeterDetail(false); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) syncEffectMeterDetail(false); else queueWaveforms(); });
   function animate(now) {
     const dialogOpen = !document.hidden && !!document.querySelector('dialog[open]');
     const effectVisible = !serviceController?.isOpen && !document.hidden && !dialogOpen && !$('effectEditor').hidden && panelVisible('effectEditor') && !effectOwner().disabled && !effectOwner().freeze;
@@ -2736,7 +2839,7 @@
   synchronizeTrackPower();host.setTempo(state.tempo);decodeAssets();renderAll();observeVisualPanels();if(recoveryUnavailable)recoveryInfo('Browser recovery is unavailable. Save a project to keep this session.');requestAnimationFrame(()=>{fitTimeline();requestAnimationFrame(animate);});let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(fitInitial)fitTimeline();else renderArrangement();},100);});
   const releaseInputOnExit=()=>{++microphoneOperation;engine.panic();};window.addEventListener('beforeunload',releaseInputOnExit);
   if(location.protocol==='file:'){const home='https://calebhaines.github.io/sidequest-prototypes/music/';$('musicHome').href=home;$('downloadHtml').href=home+'loom/index.html';$('downloadSource').href=home+'loom/LOOM-source.zip';$('downloadApi').href='https://github.com/calebhaines/sidequest-prototypes/blob/main/loom/HOSTING.md';}
-  window.addEventListener('pagehide',()=>{freezeController?.dispose();visualPanelObserver?.disconnect();visualSizeObserver?.disconnect();++microphoneOperation;notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
+  window.addEventListener('pagehide',()=>{if(waveformFrame)cancelAnimationFrame(waveformFrame);waveformFrame=0;cancelTimelineGesture({render:false});freezeController?.dispose();visualPanelObserver?.disconnect();visualSizeObserver?.disconnect();++microphoneOperation;notePlayback.dispose();noteWorkflow.dispose();pianoRoll.dispose();engine.panic();host.dispose();});
   let serviceReturnStatus='';
   const serviceNoteRenderer=new window.LoomServiceNoteRenderer({host,context:()=>engine.context});
   serviceController=new window.LoomServiceController({
@@ -2785,5 +2888,5 @@
   document.addEventListener('keydown',event=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&event.code==='KeyP'&&!event.repeat&&!event.target.closest('input,select,textarea,[contenteditable=true]')){event.preventDefault();serviceController.isOpen?serviceController.close():!document.querySelector('dialog[open]')&&serviceController.open();}},true);
   window.addEventListener('pagehide',()=>{serviceController.destroy();serviceNoteRenderer.dispose();});
   const openServiceHash=()=>{if(location.hash==='#service'&&!document.querySelector('dialog[open]'))serviceController.open();};window.addEventListener('hashchange',openServiceHash);if(location.hash==='#service')requestAnimationFrame(openServiceHash);
-  window.LoomApp=Object.freeze({setTrackDisabled,setTrackOutput,get trackPowerBusy(){return [...trackPowerOperations.keys()];},get automation(){return automationEditor;},get svt(){return svtUI;},get guitarPedals(){return guitarPedalsUI;},get pedalMidi(){return pedalMidiUI;},placePedalMidiPattern,get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get cabinet(){return cabinetUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){cancelTimelineGesture();selectOnlyClip(id);renderClipSelection();return true;}return false;},selectClips:(ids,{primary}={})=>{cancelTimelineGesture();setClipSelection(typeof ids==='string'?[ids]:ids||[],primary);renderClipSelection();return [...selectedClips];},get selectedClips(){return [...selectedClips];},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(selectedClips.size===1&&clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
+  window.LoomApp=Object.freeze({setTrackDisabled,setTrackOutput,get previewPending(){return !!waveformFrame;},get trackPowerBusy(){return [...trackPowerOperations.keys()];},get automation(){return automationEditor;},get svt(){return svtUI;},get guitarPedals(){return guitarPedalsUI;},get pedalMidi(){return pedalMidiUI;},placePedalMidiPattern,get masterPlayback(){return masterPlayback;},get masterPlaybackUI(){return masterPlaybackUI;},get deluxe(){return deluxeUI;},get cabinet(){return cabinetUI;},get mastering(){return masteringUI;},openRecordings:()=>recordingsBrowser.open(),get recordings(){return recordingsBrowser;},freezeTrack,unfreezeTrack,unfreezeAll,cancelFreeze:()=>freezeController?.cancel(),get freezeStatus(){return freezeController?.getStatus()||{busy:false};},get selectedEffectOwner(){return effectOwner().id;},get selectedEffectSlot(){return selectedSlot;},selectBus:focusBus,selectEffect:(slot,id=track().id)=>{if(!Number.isInteger(slot)||slot<0||slot>=S.effectSlotCount(S.automationOwner(state,id)))return false;const index=state.tracks.findIndex(t=>t.id===id);if(index>=0){selectEffect(slot,index);return true;}return selectBusEffect(slot,id);},get service(){return serviceController;},get cpuInspector(){return cpuInspector;},get notePlayback(){return notePlayback;},get noteRenderer(){return noteRenderer;},get noteWorkflow(){return noteWorkflow;},selectClip:id=>{for(const t of state.tracks)if(t.clips.some(c=>c.id===id)){cancelTimelineGesture();selectOnlyClip(id);renderClipSelection();return true;}return false;},selectClips:(ids,{primary}={})=>{cancelTimelineGesture();setClipSelection(typeof ids==='string'?[ids]:ids||[],primary);renderClipSelection();return [...selectedClips];},get selectedClips(){return [...selectedClips];},importPattern:request=>noteWorkflow.importPattern(request),exportPattern:request=>noteWorkflow.exportPattern(request),getState:()=>clone(state),loadState:next=>{const normalized=S.normalize(next);checkFreezeSampleRate(normalized);serviceController.reset();return replaceState(normalized,{message:'Session loaded.'});},get engine(){return engine;},get host(){return host;},get assets(){return assetMap;},selectTrack:index=>selectedTrack(num(index,0,S.LIMITS.tracks-1)),get selectedClip(){return selectedClip;},importAudio:receiveLibraryAudio,exportAudio:exportLibraryAudio,get audioImport(){return {maxSeconds:120,channels:2,targets:state.tracks.map(t=>({id:t.id,name:t.name+' · append clip',occupied:false}))};},get audioExport(){return {defaultBars:1,maxBars:16,scopes:[...(selectedClips.size===1&&clipLocation()?[{id:'clip',label:'Selected clip / edited audio',usesBars:false}]:[]),{id:'mix',label:'Arrangement mix'},{id:'instrument',label:'Selected track instrument'}]};}});
 })();

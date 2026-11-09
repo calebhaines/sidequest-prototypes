@@ -7,6 +7,7 @@
   const pitchName = pitch => ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][pitch % 12] + (Math.floor(pitch / 12) - 1);
   const black = pitch => [1, 3, 6, 8, 10].includes(pitch % 12);
   const MIN_DURATION = 1 / 1024;
+  const paintAttribute = (node, name, value) => { const text = String(value); if (node && node.getAttribute(name) !== text) node.setAttribute(name, text); };
   class LoomPianoRollEditor {
     constructor({ element, getState, getClip, remember = () => {}, onChange = () => {}, status = () => {}, onAudition = () => {}, getBeat = () => 0, getVoices = () => [] }) {
       this.element = element; this.getState = getState; this.getClip = getClip; this.remember = remember; this.onChange = onChange; this.status = status; this.onAudition = onAudition; this.getBeat = getBeat; this.getVoices = getVoices;
@@ -30,7 +31,7 @@
     targetVoices() { try { const voices = this.getVoices(this.location()?.trackIndex); return Array.isArray(voices) ? voices.slice(0, 256) : []; } catch { return []; } }
     open() { if (!this.location()) return; this.opened = true; this.element.hidden = false; this.render(); this.element.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'nearest' }); }
     close() { this.opened = false; this.element.hidden = true; this.drag = null; this.element.classList.remove('is-panning'); }
-    notify() { this.onChange({ notes: true, arrangement: true, inspector: true }); }
+    notify() { this.notifying = true; try { this.onChange({ notes: true, arrangement: true, inspector: true }); } finally { this.notifying = false; } }
     noteSelection() { return (this.pattern()?.notes || []).filter(note => this.selected.has(note.id)); }
     hasLyrics() { const location = this.location(); return this.getState().tracks[location?.trackIndex]?.instrument?.id === 'morsel' || (this.pattern()?.notes || []).some(note => note.lyric !== undefined); }
     fitPitches() {
@@ -39,7 +40,7 @@
       this.lowPitch = clamp(Math.floor((min - 5) / 12) * 12, 0, 92); this.highPitch = clamp(Math.max(this.lowPitch + 35, max + 5), this.lowPitch + 11, 127);
     }
     render() {
-      if (this.drag) return;
+      if (this.drag || this.notifying) return;
       const location = this.location();
       if (!location) { this.element.hidden = true; this.clipId = null; this.selected.clear(); return; }
       if (!this.opened) { this.element.hidden = true; return; }
@@ -85,7 +86,37 @@
       const box = this.drag?.mode === 'box' ? `<rect class="piano-selection-box" x="${Math.min(this.drag.x, this.drag.currentX)}" y="${Math.min(this.drag.y, this.drag.currentY)}" width="${Math.abs(this.drag.currentX - this.drag.x)}" height="${Math.abs(this.drag.currentY - this.drag.y)}"/>` : '';
       svg.setAttribute('width', m.width); svg.setAttribute('height', m.height); svg.setAttribute('viewBox', `0 0 ${m.width} ${m.height}`);
       svg.innerHTML = `<rect class="piano-ruler" x="0" y="0" width="${m.width}" height="${m.top}"/>${rows.join('')}${grid.join('')}<line class="piano-pattern-end" x1="${x(pattern.lengthBeats)}" x2="${x(pattern.lengthBeats)}" y1="0" y2="${m.height}"/>${empty}${notes}${box}<g data-piano-keys>${keys.join('')}</g><line class="piano-playhead" data-piano-playhead x1="${m.left}" x2="${m.left}" y1="0" y2="${m.height}"/><g data-piano-ruler><rect class="piano-ruler" x="0" y="0" width="${m.width}" height="${m.top}"/>${labels.join('')}</g>`;
+      this.drawMetrics = m; this.noteElements = new Map([...svg.querySelectorAll('[data-piano-note]')].map(node => [node.dataset.pianoNote, node])); this.paintedSelected = new Set(this.selected);
       this.pinAxes(); this.tick();
+    }
+    paintGesture() {
+      const drag = this.drag, svg = this.element.querySelector('.piano-canvas'), m = this.drawMetrics;
+      if (!drag || drag.mode === 'pan' || !svg || !m || !this.noteElements) return;
+      if (drag.mode !== 'box') for (const { item } of drag.notes) {
+        const row = this.rowFor(item), node = this.noteElements.get(item.id);
+        if (!node) { if (row >= 0 && row < m.rows) { this.draw(); return; } continue; }
+        node.style.display = row < 0 || row >= m.rows ? 'none' : '';
+        const x = m.left + item.beat * m.ppb, y = m.top + row * m.rowHeight + 3, width = Math.max(5, item.duration * m.ppb - 1), height = m.rowHeight - 6;
+        const rect = node.querySelector('.piano-note-body'), velocity = node.querySelector('.piano-note-velocity'), edge = node.querySelector('[data-piano-edge]');
+        for (const [key, value] of Object.entries({ x, y, width, height })) paintAttribute(rect, key, value);
+        for (const [key, value] of Object.entries({ x: x + 2, y: y + height - 2, width: Math.max(1, (width - 4) * item.velocity) })) paintAttribute(velocity, key, value);
+        paintAttribute(node.querySelector('.piano-note-edge-mark'), 'd', `M${x + width - 4} ${y + 3}v${Math.max(2, height - 6)}`);
+        for (const [key, value] of Object.entries({ x: x + width - Math.min(10, Math.max(2, width * .35)), y, width: Math.min(10, Math.max(2, width * .35)), height })) paintAttribute(edge, key, value);
+        let text = node.querySelector('text');
+        if (width > 35) {
+          if (!text) { text = document.createElementNS('http://www.w3.org/2000/svg', 'text'); node.insertBefore(text, node.querySelector('.piano-note-edge-mark')); }
+          const label = item.lyric || pitchName(item.pitch), letters = Math.max(1, Math.floor((width - 10) / 4.5)), shown = item.lyric !== undefined && label.length > letters ? label.slice(0, Math.max(1, letters - 1)) + '…' : label;
+          paintAttribute(text, 'x', x + 5); paintAttribute(text, 'y', y + height * .73); if (text.textContent !== shown) text.textContent = shown;
+        } else text?.remove();
+        paintAttribute(node, 'aria-label', `${pitchName(item.pitch)}, beat ${round(item.beat + 1)}, duration ${round(item.duration)} beats, velocity ${Math.round(item.velocity * 127)}, ${this.pattern().voices.find(voice => voice.id === item.voice)?.name || item.voice}${item.lyric === undefined ? '' : ', word ' + item.lyric}`);
+      }
+      const previous = this.paintedSelected || new Set(), changed = new Set([...previous, ...this.selected]);
+      for (const id of changed) if (previous.has(id) !== this.selected.has(id)) { const node = this.noteElements.get(id); if (node) { node.classList.toggle('selected', this.selected.has(id)); paintAttribute(node, 'aria-pressed', this.selected.has(id)); } }
+      this.paintedSelected = new Set(this.selected);
+      if (drag.mode === 'box') {
+        let box = svg.querySelector('.piano-selection-box'); if (!box) { box = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); box.classList.add('piano-selection-box'); svg.append(box); }
+        for (const [key, value] of Object.entries({ x: Math.min(drag.x, drag.currentX), y: Math.min(drag.y, drag.currentY), width: Math.abs(drag.currentX - drag.x), height: Math.abs(drag.currentY - drag.y) })) paintAttribute(box, key, value);
+      }
     }
     pinAxes() {
       const scroll = this.element.querySelector('.piano-canvas-scroll'); if (!scroll) return;
@@ -106,12 +137,12 @@
     }
     tick() {
       const clip = this.clip(), line = this.element.querySelector('[data-piano-playhead]'); if (!clip || !line) return;
-      const m = this.metrics(), relative = (this.getBeat() - clip.start) * clip.rate + clip.sourceOffset, within = this.getBeat() >= clip.start && this.getBeat() <= clip.start + clip.length;
+      const m = this.drawMetrics || this.metrics(), relative = (this.getBeat() - clip.start) * clip.rate + clip.sourceOffset, within = this.getBeat() >= clip.start && this.getBeat() <= clip.start + clip.length;
       const beat = clip.loop ? ((relative % clip.pattern.lengthBeats) + clip.pattern.lengthBeats) % clip.pattern.lengthBeats : relative;
       const display = within && beat >= 0 && beat <= clip.pattern.lengthBeats ? '' : 'none', x = String(m.left + beat * m.ppb); if (line.style.display !== display) line.style.display = display; if (line.getAttribute('x1') !== x) line.setAttribute('x1', x); if (line.getAttribute('x2') !== x) line.setAttribute('x2', x);
     }
-    point(event) {
-      const svg = this.element.querySelector('.piano-canvas'), rect = svg.getBoundingClientRect(), m = this.metrics(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+    point(event, m = this.drawMetrics || this.metrics()) {
+      const svg = this.element.querySelector('.piano-canvas'), rect = svg.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
       const rawBeat = (x - m.left) / m.ppb, beat = this.snap ? Math.round(rawBeat / this.snap) * this.snap : round(rawBeat), row = clamp(Math.floor((y - m.top) / m.rowHeight), 0, m.rows - 1);
       return { x, y, beat: clamp(round(beat), 0, this.pattern().lengthBeats - MIN_DURATION), row, pitch: this.mode === 'drums' ? (this.pattern().voices[row].pitch ?? 60) : this.highPitch - row, voice: this.mode === 'drums' ? this.pattern().voices[row].id : this.voice };
     }
@@ -130,7 +161,7 @@
       }
       if (event.target.closest('[data-piano-ruler]')) return;
       const key = event.target.closest('[data-piano-key]'); if (key) { event.preventDefault(); event.stopPropagation(); this.audition({ pitch: Number(key.dataset.pianoKey), voice: key.dataset.pianoVoice || this.voice, velocity: this.velocity }); return; }
-      const p = this.point(event), m = this.metrics(); if (p.x < m.left || p.y < m.top) return;
+      const m = this.drawMetrics || this.metrics(), p = this.point(event, m); if (p.x < m.left || p.y < m.top) return;
       event.preventDefault(); event.stopPropagation(); const el = event.target.closest('[data-piano-note]'), note = el && this.pattern().notes.find(note => note.id === el.dataset.pianoNote);
       if (note) {
         if (event.shiftKey) { if (this.selected.has(note.id)) this.selected.delete(note.id); else this.selected.add(note.id); this.draw(); this.renderSelection(); return; }
@@ -143,7 +174,7 @@
         const added = this.addNote(p); if (!added) return;
         this.drag = { mode: 'resize-new', pointer: event.pointerId, x: p.x, y: p.y, anchor: added, notes: [{ item: added, original: { ...added } }], remembered: true, moved: true };
       }
-      this.element.setPointerCapture(event.pointerId); this.draw(); this.renderSelection();
+      this.element.setPointerCapture(event.pointerId); this.paintGesture(); this.renderSelection();
     }
     pointerMove(event) {
       const drag = this.drag; if (!drag || drag.pointer !== event.pointerId || !this.pattern()) return;
@@ -151,7 +182,7 @@
         event.preventDefault(); const scroll = this.element.querySelector('.piano-canvas-scroll');
         scroll.scrollLeft = Math.max(0, drag.scrollLeft + drag.x - event.clientX); scroll.scrollTop = Math.max(0, drag.scrollTop + drag.y - event.clientY); this.pinAxes(); return;
       }
-      event.preventDefault(); const p = this.point(event), m = this.metrics();
+      event.preventDefault(); const m = this.drawMetrics || this.metrics(), p = this.point(event, m);
       if (drag.mode === 'box') {
         drag.currentX = p.x; drag.currentY = p.y; const x1 = Math.min(drag.x, p.x), x2 = Math.max(drag.x, p.x), y1 = Math.min(drag.y, p.y), y2 = Math.max(drag.y, p.y);
         this.selected = new Set(drag.initial);
@@ -174,11 +205,12 @@
       }
       drag.moved = true; this.queueDraw();
     }
-    queueDraw() { if (this.frame) return; this.frame = requestAnimationFrame(() => { this.frame = 0; this.draw(); this.renderSelection(); }); }
+    queueDraw() { if (this.frame) return; this.frame = requestAnimationFrame(() => { this.frame = 0; this.paintGesture(); this.renderSelection(); }); }
     pointerEnd(event) {
       const drag = this.drag; if (!drag || drag.pointer !== event.pointerId) return;
-      this.drag = null; this.element.classList.remove('is-panning'); if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId); if (this.frame) { cancelAnimationFrame(this.frame); this.frame = 0; }
-      if (drag.moved) this.notify(); this.render(); this.element.querySelector('.piano-canvas')?.focus({ preventScroll: true });
+      if (this.frame) { cancelAnimationFrame(this.frame); this.frame = 0; } this.paintGesture();
+      this.drag = null; this.element.querySelector('.piano-selection-box')?.remove(); this.element.classList.remove('is-panning'); if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId);
+      if (drag.moved) this.notify(); this.renderSelection(); this.tick(); this.element.querySelector('.piano-canvas')?.focus({ preventScroll: true });
     }
     click(event) {
       const action = event.target.closest('[data-piano-action]')?.dataset.pianoAction; if (!action || !this.pattern()) return;

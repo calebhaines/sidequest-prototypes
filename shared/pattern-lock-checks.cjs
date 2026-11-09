@@ -99,7 +99,7 @@ function fixture(id, withHook = true) {
   await check('GALLEY forwards independent lock snapshots and finite Live chains only once per host cycle', () => {
     const scope = realm(); load(scope, 'shared/pattern-schema.js'); load(scope, 'loom/note-playback.js');
     const events = [], host = { scheduleNote(track, note) { events.push(note); }, cancelNotes() {} }, audio = { getTransport: () => ({ playing: false }), subscribeTransport: () => () => {} };
-    const playback = new scope.LoomNotePlayback({ audio, host, getState: () => ({ tracks: [] }) });
+    const playback = new scope.LoomNotePlayback({ audio, host, getState: () => ({ tracks: [{ id: 'track-1' }] }) });
     const p = packet(); p.notes[0].locks = { cutoff: 730, pan: .2 }; const entry = { adapter: { notes: { voices: p.voices } } }, track = { id: 'track-1' };
     const clock = { revision: 1, tempo: 120, contextTime: 10, endBeat: 32, cycle: 0, loopEnabled: false, loopStart: 0, loopEnd: 16 };
     playback._liveClip(track, entry, p, 'live', 0, { start: 0, end: .2, boundary: 32, when: 10, cycle: 0 }, clock, false);

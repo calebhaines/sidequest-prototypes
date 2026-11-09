@@ -1,0 +1,274 @@
+{
+  "baseline": "5df579ee99caa7a73222f8d6a52268be4cab3c75",
+  "definitionsSHA256": "bfec59d4527a24e1ac71a19e289b28b8bdd2702759f6cc961de0d787ac587f2d",
+  "sourceHashes": {
+    "broiler-pedals.js": "1627c303b7109186f5fe1f0e71f35d070565aa3130d3fef6402aae6f5510d05c",
+    "effects.js": "3afb6f2706e3560cb61244de76a82d703d869964e96623487b190641dcf536f1"
+  },
+  "expected": {
+    "stock/clean-bass/8000": {
+      "pcm": "5db1194a31753cfe7a8aa7cdfc434b89a4d1fff50e55a71c196e5ca4c15a9344",
+      "state": "6be15f26b88d5abd6050d4dd5c21d3cd69423c9cdfc1843af369c3156fcca38e"
+    },
+    "stock/clean-bass/48000": {
+      "pcm": "6791a2846ba5dbeadaa47d1754a5631d8b788d159284fe793fcbaf437dde6204",
+      "state": "59a2394ae995735d7008c9bed44e5fb27e44087efc7a0ac169041377522c8d96"
+    },
+    "stock/flip-top/8000": {
+      "pcm": "fbb9f86c42e690557c76818cfb73b316ed0d751ece0b05f92f4174ce8f1d2d02",
+      "state": "8bb88b7fb5b29a93c4b93f730802c77b76ad86832f2dace79e5f9db021406662"
+    },
+    "stock/flip-top/48000": {
+      "pcm": "7722514c191363cdefb44fb0d2a47a0c914a03deab4ec2de4a57f2eed9e68e05",
+      "state": "dc5609d33c4ef030fb2857e959215bbdf9efdcdba4ae91bf4d00a469eff52bc1"
+    },
+    "stock/valve-stack/8000": {
+      "pcm": "0fd0d75cbe7765ad0f356e4b75420554bf0e5cf6016cec14bb31d57185f33838",
+      "state": "2e2084260e5b9cc5dd983e9cd752464eccf7793b9717ea436d850d3d8d87eb7e"
+    },
+    "stock/valve-stack/48000": {
+      "pcm": "1fc7ea1160ad1407d5367b6255ed89c3da2a119c2a3be6b82951651b3cf662e7",
+      "state": "9fc04f40403ecd5651e884b3a511205f02013eab09f9a65716f5420bbc04fceb"
+    },
+    "stock/modern-grind/8000": {
+      "pcm": "38ffd387b480f55e5953f2662765664bdaf2d2834a7d14224717b148130aa855",
+      "state": "7d6f9656d98d4a0c5effce9e067ec831735b755eab865ccdaf628b9d7eab9514"
+    },
+    "stock/modern-grind/48000": {
+      "pcm": "7df0fc68f81f2452fa386bc201df7d6328685380cfd6a0e5f399b230e0bda6c3",
+      "state": "56d2bcf8ce8fce4e9de23574502ac741883c823c454311cc457475803af2a4e3"
+    },
+    "stock/doom-fuzz/8000": {
+      "pcm": "eaec2dcf32c619e936ac92244b64ae8669e5eb18570e7f489c69017ada399186",
+      "state": "c8a948a6356bf86fa665cb37a5b548976f3047a0c82b364bd425517324331000"
+    },
+    "stock/doom-fuzz/48000": {
+      "pcm": "f1634002f16189699e258e9227d6a5809c08726f9869904c2b00e2a534f9a403",
+      "state": "7429484c0e500de0e03954887220b0dd9effed9174eda20ba0765ea583074c28"
+    },
+    "stock/american-clean/8000": {
+      "pcm": "b0b671195bd3c14b6750d86d48e3bbbad55a34fae6986c149b9cc969838f7dd5",
+      "state": "930d61410bf3e118a13b613ca02910d6b7d570943caad82fef4705956040e669"
+    },
+    "stock/american-clean/48000": {
+      "pcm": "6579310a499e9d6bf822bb3f0ed415906fa49e2f984008be4daa7b22051b61b4",
+      "state": "a791ac469c38044c4e7816aac5d1f837d2feae7cf297703d23a125a73a781149"
+    },
+    "stock/british-crunch/8000": {
+      "pcm": "9a09db424488428ab320df6f355ef09473fe3e3b1169d982325263518c197764",
+      "state": "cacc3a4e355ca9997220ab3a3582a67ea775112c66cb31b14a590b06787edf84"
+    },
+    "stock/british-crunch/48000": {
+      "pcm": "dc0f9f1239412a89fa9c683c8eb8c569f98b8ce7671550739026c2fd972a95ec",
+      "state": "067100a0489da0128164c1811b5075d58e8a836e96bb9418134d32b948f7a73d"
+    },
+    "stock/high-gain/8000": {
+      "pcm": "8a9d2005349b2fc59fd17c2234503051f3983bca96be1fcce3b98e0a14b8612d",
+      "state": "daae9d2ced4b02605a21a26cd38d6624f79a0ea20f0eb216892bc1d2538d76b4"
+    },
+    "stock/high-gain/48000": {
+      "pcm": "896590e9a55a2973673cdab59469fde5e98376118d54a7d451df54c0f501a98b",
+      "state": "176816070a4870328d0cf5dc2d28d92197771f1400ad502adcc2ac76cc05c368"
+    },
+    "stock/portaflex-64/8000": {
+      "pcm": "4bdf16073a7ca05426cf0fb32e8f7dde081e463f9c32711dfca106763e614478",
+      "state": "c97260d633f8e3943c807b3ce7e0f1c80471f18416b43f0d78e245d355c4071a"
+    },
+    "stock/portaflex-64/48000": {
+      "pcm": "35042716f5e9592c3339e3f0245362568cc0ec3a78f96d7d5a2458e9485be810",
+      "state": "afd6d40e905c8d88f6730e79e5741bd825e8f6f22989ba7d817defc8843a0bd9"
+    },
+    "stock/svt-69/8000": {
+      "pcm": "b03eb8512db933e9ff6243d2dc79f069c87cae38b12a66e0482f16b9b700858b",
+      "state": "b4787bdf08687bc448b5264d54355b654f92a63a9ad04842c617dd0736796144"
+    },
+    "stock/svt-69/48000": {
+      "pcm": "f4929f0a3e858976f9cd6584536045388de595ef859b92b28306d9f3364db474",
+      "state": "bcd4fbaa8e02865eeb5d08666ff24b406b5b4072c481198facddc754ba6af177"
+    },
+    "stock/v4b-71/8000": {
+      "pcm": "87e94ce32f3acba5507954e625c29bc092b39c6d3fd0149af568b05817841be3",
+      "state": "0528c0a83910dc9c19db04fe5ebb4e2a37c1e8eea44e334819d1fdd57581ff6c"
+    },
+    "stock/v4b-71/48000": {
+      "pcm": "1ad5c4b73370b8664b2edbb4a613ea1187a259cbdcea003090512282e07fb048",
+      "state": "42f55800ce80e59748b813b7c5d7ee529ff56647ab51118e6498d77032bb56c8"
+    },
+    "stock/svt-pro/8000": {
+      "pcm": "9108991d2f563f8d61d94e70a4ec21c62e5b3926441f0cbbdc70ba6c6614d18d",
+      "state": "3da455fc185a34f69b24dd717304e181fa279c5da8d3a9dca18ede966dc1d981"
+    },
+    "stock/svt-pro/48000": {
+      "pcm": "a6309c8c317dc31f1ed72ed0fdfbdd899db68f05026222d6c19090ec92308850",
+      "state": "c2c44382312b4f3a8323b8de6d4726fb5e99228011abe2a2776fb975082933cb"
+    },
+    "stock/tweed-55/8000": {
+      "pcm": "966a86e428545a27cd504c8a02415bf539c49cad81a26123f883f7141969211d",
+      "state": "8a30efa899fbd97b3da4b8ca7eed73a15327b66f7e5e561c73398a955fe476d4"
+    },
+    "stock/tweed-55/48000": {
+      "pcm": "29e4920ea5e831f2b16292ce3c8143196e05ffa956bf7672e184f50d31f721ad",
+      "state": "e40d1dc098e660857f0bf85376cf3d751dea15fc9c3fbca2230416e7ee6a819d"
+    },
+    "stock/black-panel-65/8000": {
+      "pcm": "cb54553e830f96816f9bc5c215471500bf73b8764c374a5eb2aea3360cd1719a",
+      "state": "cf0a34ab21bd6c820f411326dee4f136f3ced0a448797e8cab29be9555080b2c"
+    },
+    "stock/black-panel-65/48000": {
+      "pcm": "92806018dc673536f8b8cfd9c89ed29306636639a4f6b0e87aa46d3b41c79342",
+      "state": "23ed50fcf2f98960da924d5407e4ffe8c51e0f44698ec1650e0d40d4fb9b83c5"
+    },
+    "stock/copper-30/8000": {
+      "pcm": "ca651bb318daff6344442eb165e3433146dd22868b41d8bb43c38a4fa6cf8861",
+      "state": "539fb849991649cec7c30d11ff89a97b5b957d7da2befb4b11653665d781ca52"
+    },
+    "stock/copper-30/48000": {
+      "pcm": "a3667d7c3a1f524c907f0d0e515fa5e061fc1114f33c49a7761428a922286fee",
+      "state": "1cf0229716179c4894f4ec8f647bcfa58e9a7c7ed49c6c404ee2fb6b5d225101"
+    },
+    "stock/royal-68/8000": {
+      "pcm": "6c9c63fc3909d8b7e8d0d86be229679c8d016834477250a8a8e532019fb82683",
+      "state": "07fee99e2e2596f8ddfae1339a8316cd6d2caac9aafef4c9f71ab0c256ab38a0"
+    },
+    "stock/royal-68/48000": {
+      "pcm": "32318bd8c4006dfb2e1dc3ff7591e23d10dc4efe167939adca6bb6e91f5429d6",
+      "state": "e2ab2fd9dbb1c2cbf38fbd302233b98cdd36ea15689934fa2859c794facb30ea"
+    },
+    "stock/iron-800/8000": {
+      "pcm": "0cb3c92bbf0233a0354361ddb366487fef51942cb813b885344eb971e6344a5b",
+      "state": "91dbc73fd314bc5fa3843c6f2a764c9db3f8f17760079d962c929e59bd9702e3"
+    },
+    "stock/iron-800/48000": {
+      "pcm": "79f0b844f2e1f790780b5a357d886a985f143a6da9b7e4d68300ae431a20364e",
+      "state": "9d6e2caca62855e394bfe9e7147dcd1fe67dbf3c6565d4f2d5574b6d879e8ab2"
+    },
+    "stock/dual-red-92/8000": {
+      "pcm": "94604ce7a12df9e9a65594cc996bbfe688f88e0d567cb648e75c9c6b26660202",
+      "state": "d106569fb3537d14fcb4101f29ed30564494c166e18ae1706e7fb43b914cf684"
+    },
+    "stock/dual-red-92/48000": {
+      "pcm": "141b4890935b76f800512c1fbaa9bc8b1463c55fc8fbb7c1b2b7395b1f61a3b2",
+      "state": "01d841a682d2cb9466698d5bd14a7003bbb0b39bfaa4a29e3b793a5bffaa204c"
+    },
+    "stock/cali-iv/8000": {
+      "pcm": "08439bf3e2549e65e5e9a55387c9c2edcfd4745d5f0fa18bd7a1257b6c2a84d7",
+      "state": "41d939855856d60328ccafcb13dd22002f8398db1c3fbb45a4c8617af3f302f9"
+    },
+    "stock/cali-iv/48000": {
+      "pcm": "e6ae5c5e3ab57e1cb4f6fd57be9b8c4987ca58fd36c45f754bd37e260c02b692",
+      "state": "bd8ec5594b4ee76639f60b4e65cae0d7e80f3fb7aa5c66f381c9ca350cb052ad"
+    },
+    "stock/fifty-one/8000": {
+      "pcm": "21194aa6b30003ef1a44bd92e7bb89d773968d1f1147f763e017488b597dc659",
+      "state": "3f6408906823b9c352c2c55748f8c0e49210681782b9215ae0dda0d26c50895c"
+    },
+    "stock/fifty-one/48000": {
+      "pcm": "7a9878ec2c8c123453fdebdfc0067e84a4fa0f84e5af8e6fa27793e27021ecf9",
+      "state": "563fc8818022cfaff3a39b51dda0b98f6206696df8022cf4a3e1bfbd757b9fcf"
+    },
+    "stock/citrus-verb/8000": {
+      "pcm": "3cc9ae73d7e73bdce30280e36e89db376984eefb547f5be0c72f30e150f1ae9d",
+      "state": "2598b5c70b73a4ea5be1486f369bc585248b8189e9aa47abeb22f5e453bbd316"
+    },
+    "stock/citrus-verb/48000": {
+      "pcm": "5b12202fe80cceb653c8e245c574aa28517eaade2758e0a8ed5f570d692fe0e7",
+      "state": "0a65589faaed7c4a111cfbaa7127a26a3c442479719deddbd9d3918e9d986ade"
+    },
+    "stock/jazz-120/8000": {
+      "pcm": "d4e0c3dd1014b4e311441dfdb30500fc7c1e404839613d8c5424ee5a7b385365",
+      "state": "54ceabf069d87c37223a1222afbcf1525d1f80b6dc5742ed04a455078f5d4a9e"
+    },
+    "stock/jazz-120/48000": {
+      "pcm": "e4048ac6d08a2ee593ba346f59228e48f724e42ccdafb3bb72ea08db398cc79b",
+      "state": "22d6ce57dda6d670c498120ed97543ccbb03464d48d3f5d0cfe78ce9c82ded70"
+    },
+    "edits/clean-bass/8000": {
+      "pcm": "38a4f623cb1fea7da55b3eb9aa4456ea71f0bca28e96791cd2fe2128c87e9d98",
+      "state": "f0c2dfb4adec57b4040df8c6252770574d9e65c6218abad2592fd3dfc2b06550"
+    },
+    "edits/clean-bass/48000": {
+      "pcm": "3df83f91af26cda61c8246dfcc6f5e00e06060080a216cb1a4186cccfa5c3f2e",
+      "state": "68774123df2e639e0d8315c5f8dc984b507d34fbd123813cc05f319f1e85eccf"
+    },
+    "edits/clean-bass/192000": {
+      "pcm": "2680ed677260913fcb369c9a7dfdbc864aed910a7576d558ac227d97149d151a",
+      "state": "9f724a366d341f2bb32dbf2798eb3a5e403f61d91bf1717e4d6f32db83a432d7"
+    },
+    "edits/svt-69/8000": {
+      "pcm": "840db0ecac09a31003a5b1759dec7f6e665b69887c7c1e39d83212c3546360fa",
+      "state": "ff32acad062e8a3ba719996c0d3e9a88f8490126b88ef52356e09c58ba08c8ee"
+    },
+    "edits/svt-69/48000": {
+      "pcm": "52d6cd594d7b707af6fd361f49b734df48fcd8a855e03f65a8bc1717b8cd6414",
+      "state": "7ac42ad1e902d7cf2c79fee175bc5d28a0bf10a2c3631d7076fddb4ac3add40c"
+    },
+    "edits/svt-69/192000": {
+      "pcm": "b2f1ec6303c065bfa57b4fa1fc1e7689d36fa0650c3e495b498f4e846ee882e3",
+      "state": "f08331a2405dca1f937988e0c0f41dec3993a6bac6e5a7ccb23830e5e54d9593"
+    },
+    "edits/iron-800/8000": {
+      "pcm": "9944548e35f24e5d356f7a58c3ce7670ee64270ab80035bc18158a3d82107ad7",
+      "state": "82734c859434bf101a619233a4a9b524d2e80d2993c87f2a8609085af728a01f"
+    },
+    "edits/iron-800/48000": {
+      "pcm": "721d9b7018374f4470938ccb2f626e43dee981ec9e263f3033b150f7a19ac22d",
+      "state": "7eea386a2a3650f0d1a16c597c0105f5a24f34629f7819102d78735cc6921edd"
+    },
+    "edits/iron-800/192000": {
+      "pcm": "5419a8cdd77352374f3ec9db091eeb95c9f6c5340512fe59f1a3a57663a29f99",
+      "state": "e978ee6ed1c6a89e01156f2a7211e2f906ba553eb9ee1f1f01f0b3e3286add9f"
+    },
+    "edits/citrus-verb/8000": {
+      "pcm": "c80372c4798065402f9d7fb5510c943fb0afb96e6cbfba16421ee7255ea65e96",
+      "state": "749b335a058a1d4a5e00b4449dbfe1abaf12fa4d2fc24ae5ff1d31a5b0459372"
+    },
+    "edits/citrus-verb/48000": {
+      "pcm": "d5c0f61ce6237803c534a8a942cd3e1d8a21a0d15da5292f2ba0f67ff626490c",
+      "state": "d6e8da7d0e36cfb308e3b5dd15a28196339c1c1bb16566ee30fded3f3ee0179d"
+    },
+    "edits/citrus-verb/192000": {
+      "pcm": "724d7f6f90d5e8b3ef0b19805f2dcc0822c1abb7cd674ac927b7b40c183c6988",
+      "state": "864c73612042434f8b96680fbe76f407fcc0642882d8a480dd9243a1a9407945"
+    },
+    "tubes/6v6": {
+      "pcm": "6a2c61656feed2d666f8020c4d5d0e8abb337a7d28210234cb91b7d9d4aac9fd",
+      "state": "6fc720fee7372d316eed0d0e13a2a21d405daed6af124277419e0780fd5352bc"
+    },
+    "tubes/6l6": {
+      "pcm": "0fcad596d24d995ee1cc6de9361c682d95884ca0d761ab9262ebee7675c87e19",
+      "state": "d3866df3afa05ff64a07df6058bc3b5991aaf480f21aae13f4e0b568857305d4"
+    },
+    "tubes/el34": {
+      "pcm": "7eaf80fd18639c2661df8d5615aed7c23673ef6ece8adf3338f18c9dc26c537e",
+      "state": "2fe750418ab7535ed37e3e4b85e60b3ed3aec72e80b24c81ec54df30de453e7f"
+    },
+    "tubes/el84": {
+      "pcm": "adfb72c848ab1fc962d29d0ea6287105c908736ffb1deeb4f16676b07f6a97be",
+      "state": "044d86a6463ef9e2c404a2b0d1fc11fa9dca92da8ef1b1416829be9280090891"
+    },
+    "tubes/kt88": {
+      "pcm": "70c9e124d3e26fea9a3740b17659232b4b3af85d0cb1b76f3d879476719a0607",
+      "state": "6c97a594fbd6eac087652018a525636745c41b00ed4daae46452a4211231177b"
+    },
+    "tubes/solid": {
+      "pcm": "24d3b23279546615fcb9c6fe6b932f7f05429b711f1292f8572db9a6a6e55067",
+      "state": "3f8a039604b944c1746425d34c136b33d1c51378ad8809769120c448147645f8"
+    },
+    "cabinet-only/8000/mono": {
+      "pcm": "952cb9971380f94581815936c41c7bd50618dea010836d62fd46eed1c7f97375",
+      "state": "f27c6022374cf7858c1f495d0a2120911881d90a03ca40e0fea293b3370b2fc4"
+    },
+    "cabinet-only/8000/stereo": {
+      "pcm": "343a31a4016297fe50c889a3bd50eeb169af4216830183147f1294b86ff29f04",
+      "state": "40b1a7c813d78dec121252487fcba4a54365b23d4879c749ebf172babb12ee76"
+    },
+    "cabinet-only/48000/mono": {
+      "pcm": "b38939dd4cd88ae8a90d65d40e2d9897f3cf83ead37ba533e41bc42de082de7b",
+      "state": "99a342cfbd5f5b91e8be4d42486bd33785a3626154796589f28ae0ca2a93d894"
+    },
+    "cabinet-only/48000/stereo": {
+      "pcm": "f396247d0e86d46468e3afbcb75f854581caea0c8612ff8dc63c38c3904dd1f4",
+      "state": "4766913e842a64438121705219eaba5a68c3f807c9b2a183aa8c4f4330fe6cb6"
+    }
+  }
+}

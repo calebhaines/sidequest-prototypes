@@ -1,7 +1,7 @@
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.42.1';
+  const VERSION = '1.42.2';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const TRACK_OUTPUTS = Object.freeze(['master', 'bus-1', 'bus-2']);
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
@@ -88,7 +88,28 @@
     }
     return bytes;
   }
-  const immutableFreezeAssets = new WeakSet(), checkedFreezeAssets = new WeakMap(), sourceAssetHashes = new WeakMap(), structureHashes = new WeakMap();
+  const immutableFreezeAssets = new WeakSet(), checkedFreezeAssets = new WeakMap(), checkedSourceAssets = new WeakMap(), sourceAssetHashes = new WeakMap(), structureHashes = new WeakMap();
+  const copyArrayMap = Array.prototype.map;
+  const SOURCE_ASSET_KEYS = ['id', 'name', 'sampleRate', 'channels', 'frames', 'duration', 'pcm'];
+  // Only ordinary data records can carry a validation proof. Accessors and
+  // unusual prototypes retain the uncached validator's behavior.
+  function sourceAssetFields(asset) {
+    if (!asset || typeof asset !== 'object') return null;
+    const prototype = Object.getPrototypeOf(asset);
+    if (prototype !== Object.prototype && prototype !== null) return null;
+    const fields = {};
+    for (const key of SOURCE_ASSET_KEYS) {
+      const descriptor = Object.getOwnPropertyDescriptor(asset, key);
+      if (!descriptor) { if (key !== 'duration' || prototype === Object.prototype && Object.prototype.hasOwnProperty.call(prototype, key)) return null; fields[key] = undefined; }
+      else { if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) return null; fields[key] = descriptor.value; }
+    }
+    return fields;
+  }
+  const sameSourceFields = (fields, checked) => !!fields && SOURCE_ASSET_KEYS.every(key => fields[key] === checked[key]);
+  function carrySourceValidation(source, target) {
+    const checked = checkedSourceAssets.get(source);
+    if (checked && sameSourceFields(sourceAssetFields(source), checked) && sameSourceFields(sourceAssetFields(target), checked)) checkedSourceAssets.set(target, checked);
+  }
   // PCM strings are immutable. Structural copies share their storage during Undo.
   function copy(v) {
     if (immutableFreezeAssets.has(v)) return v;
@@ -96,6 +117,7 @@
     if (plain(v)) {
       const result = {};
       for (const key of Object.keys(v)) if (!['__proto__', 'constructor', 'prototype'].includes(key)) result[key] = copy(v[key]);
+      carrySourceValidation(v, result);
       const cached = sourceAssetHashes.get(v); if (cached && cached.pcm === result.pcm) sourceAssetHashes.set(result, cached);
       const structure = structureHashes.get(v); if (structure) structureHashes.set(result, structure);
       return result;
@@ -194,6 +216,8 @@
     return { type: definition.id, params };
   }
   function validateAsset(a) {
+    const fields = sourceAssetFields(a), checked = checkedSourceAssets.get(a);
+    if (checked && sameSourceFields(fields, checked)) return checked.bytes;
     if (!plain(a) || typeof a.id !== 'string' || !a.id || a.id.length > 100 || typeof a.name !== 'string') throw Error('An audio asset has invalid metadata.');
     for (const key of ['sampleRate', 'frames', 'channels']) if (!Number.isInteger(a[key])) throw Error('An audio asset has invalid ' + key + '.');
     if (a.sampleRate < 8000 || a.sampleRate > 48000 || ![1, 2].includes(a.channels) || a.frames < 1 || a.frames > LIMITS.assetSeconds * a.sampleRate) throw Error('Audio assets must contain up to 120 seconds at 8–48 kHz.');
@@ -202,6 +226,7 @@
     const bytes = a.pcm.length / 4 * 3 - padding;
     if (bytes !== a.frames * a.channels * 2) throw Error('An audio asset’s sample count does not match its PCM data.');
     if (a.duration !== undefined && (typeof a.duration !== 'number' || !Number.isFinite(a.duration) || Math.abs(a.duration - a.frames / a.sampleRate) > 1 / a.sampleRate)) throw Error('An audio asset has invalid duration metadata.');
+    if (fields) checkedSourceAssets.set(a, { ...fields, bytes });
     return bytes;
   }
   const FREEZE_ASSET_KEYS = ['id', 'name', 'encoding', 'sampleRate', 'channels', 'frames', 'duration', 'pcm'];
@@ -367,6 +392,10 @@
       pcmBytes += validateAsset(a);
       if (ids.has(a.id)) throw Error('Audio asset IDs must be unique.');
       const normalized = { id: a.id, name: text(a.name, 'Audio'), sampleRate: a.sampleRate, channels: a.channels, frames: a.frames, duration: a.frames / a.sampleRate, pcm: a.pcm };
+      // The source was just fully validated (or matched its proof); these two
+      // normalized metadata values are known valid without rescanning PCM.
+      const checked = checkedSourceAssets.get(a);
+      if (checked && sameSourceFields(sourceAssetFields(a), checked)) checkedSourceAssets.set(normalized, { ...checked, name: normalized.name, duration: normalized.duration });
       const cached = sourceAssetHashes.get(a); if (cached && cached.pcm === a.pcm) sourceAssetHashes.set(normalized, cached);
       ids.add(a.id); assets.push(normalized);
     }
@@ -581,6 +610,98 @@
     if (frozen.length) s.freezeAssets = frozen; else delete s.freezeAssets;
     return s;
   }
+  // A conservative size proof for browser recovery, not a replacement for the
+  // normalized serializer's final limit check. Count only payloads retained by
+  // Save, without copying or scanning the contents of large immutable strings.
+  // Escaping can only make their JSON representation longer. Borderline or
+  // unusual values deliberately fall through to ordinary validation/Save.
+  function recoveryPayloadExceeds(state, limit) {
+    if (!Number.isSafeInteger(limit) || limit < 1) throw new TypeError('Recovery needs a positive character budget.');
+    const ordinaryArray = value => Array.isArray(value) && Object.getPrototypeOf(value) === Array.prototype && !Object.prototype.hasOwnProperty.call(value, 'map') && !Object.prototype.hasOwnProperty.call(value, 'constructor');
+    if (!plain(state) || !ordinaryArray(state.tracks) || !ordinaryArray(state.assets) || state.freezeAssets !== undefined && !ordinaryArray(state.freezeAssets) || Array.prototype.map !== copyArrayMap || Array.prototype.constructor !== Array || Array[Symbol.species] !== Array || typeof Object.prototype.toJSON === 'function' || typeof Array.prototype.toJSON === 'function') return false;
+    for (const track of state.tracks) if (Array.isArray(track?.clips) && !ordinaryArray(track.clips) || Array.isArray(track?.freeze?.chunks) && !ordinaryArray(track.freeze.chunks)) return false;
+    let size = 0;
+    const addString = value => { if (typeof value === 'string') size += value.length + 2; };
+    function dataSize(value, remaining, visiting) {
+      if (value === null) return 4;
+      if (typeof value === 'string') return value.length + 2;
+      if (typeof value === 'number') return 1; // Every JSON number/null needs at least one character.
+      if (typeof value === 'boolean') return value ? 4 : 5;
+      if (!value || typeof value !== 'object') return null;
+      const array = Array.isArray(value), prototype = Object.getPrototypeOf(value);
+      if (array ? !ordinaryArray(value) : prototype !== Object.prototype && prototype !== null) return null;
+      const customJSON = Object.getOwnPropertyDescriptor(value, 'toJSON');
+      if (customJSON && (!Object.prototype.hasOwnProperty.call(customJSON, 'value') || typeof customJSON.value === 'function')) return null;
+      if (visiting.has(value)) return null;
+      visiting.add(value);
+      let count = 2, entries = 0;
+      if (array) {
+        // Even unknown array entries occupy a value and a separating comma.
+        count += value.length ? value.length * 2 - 1 : 0;
+        // Do not add a full JavaScript walk of a large numeric/sample array
+        // near the limit. Its structural minimum is still a safe size proof;
+        // uncertain remainder is left to the existing serializer.
+        if (count < remaining && value.length <= 4096) for (let index = 0; index < value.length; index++) {
+          const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+          if (!descriptor) continue;
+          if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) { count = null; break; }
+          const child = dataSize(descriptor.value, remaining - count + 1, visiting);
+          if (child === null) { count = null; break; }
+          count += Math.max(0, child - 1);
+          if (count >= remaining) break;
+        }
+      } else for (const key of Object.keys(value)) {
+        if (['__proto__', 'constructor', 'prototype'].includes(key)) continue; // schema.copy omits these.
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, 'value')) { count = null; break; }
+        if (['undefined', 'function', 'symbol'].includes(typeof descriptor.value)) continue;
+        const child = dataSize(descriptor.value, remaining - count, visiting);
+        if (child === null) { count = null; break; }
+        count += key.length + 3 + child + (entries++ ? 1 : 0);
+        if (count >= remaining) break;
+      }
+      visiting.delete(value); return count;
+    }
+    function instrumentPayload(value) {
+      if (!plain(value)) return;
+      addString(value.html);
+      const snapshot = value.snapshot;
+      if (!plain(snapshot) || snapshot.format !== 'loom-instrument-state' || snapshot.version !== 1 || snapshot.app !== value.id || (!plain(snapshot.state) && !Array.isArray(snapshot.state) && snapshot.state !== null) || snapshot.storage != null && !plain(snapshot.storage)) return;
+      const count = dataSize(snapshot, limit - size, new Set());
+      if (count !== null) size += count;
+    }
+    function patternPayload(packet) {
+      // A normalized note always has these seven fields. This minimum avoids
+      // cloning/rendering a large score merely to prove it cannot be recovered.
+      if (!plain(packet) || packet.format !== 'musiclab-pattern' || packet.version !== 1 || !ordinaryArray(packet.notes) || packet.notes.length > 4096) return;
+      let count = packet.notes.length ? packet.notes.length + 1 : 2;
+      for (let index = 0; index < packet.notes.length; index++) {
+        const descriptor = Object.getOwnPropertyDescriptor(packet.notes, String(index));
+        if (!descriptor) count += 4; // A sparse map slot serializes as null.
+        else { if (!Object.prototype.hasOwnProperty.call(descriptor, 'value') || !plain(descriptor.value)) return; count += 83; }
+      }
+      size += count;
+    }
+    const sourceIds = new Set(), freezeIds = new Set(), existingIds = new Set(state.assets.map(asset => asset?.id));
+    for (const track of state.tracks) for (const clip of Array.isArray(track?.clips) ? track.clips : []) if (clip?.type !== 'notes') sourceIds.add(clip?.assetId);
+    for (const track of state.tracks) for (const chunk of Array.isArray(track?.freeze?.chunks) ? track.freeze.chunks : []) for (const plane of ['main', 'sendA', 'sendB']) if (typeof chunk?.[plane] === 'string') freezeIds.add(chunk[plane]);
+    for (const asset of state.assets) if (sourceIds.has(asset?.id)) { addString(asset?.pcm); if (size >= limit) return true; }
+    for (const asset of state.freezeAssets || []) if (freezeIds.has(asset?.id)) { addString(asset?.pcm); if (size >= limit) return true; }
+    // pruneAssets sees all raw asset references before normalize truncates the
+    // stations/clips. Snapshot and score payloads, however, only survive within
+    // the canonical ten-station/128-clips bounds.
+    for (const track of state.tracks.slice(0, TRACK_COUNT)) {
+      instrumentPayload(track?.instrument); if (size >= limit) return true;
+      for (const clip of (Array.isArray(track?.clips) ? track.clips : []).slice(0, LIMITS.clipsPerTrack)) {
+        if (clip?.type === 'notes') patternPayload(clip.pattern);
+        else if (existingIds.has(clip?.assetId) && plain(clip?.origin) && clip.origin.format === 'loom-render-source' && clip.origin.version === 1) {
+          instrumentPayload(clip.origin.instrument); patternPayload(clip.origin.pattern); patternPayload(clip.origin.sourceClip?.pattern);
+        }
+        if (size >= limit) return true;
+      }
+    }
+    return false;
+  }
   function serializeProject(state) {
     const portable = { format: 'loom-project', formatVersion: 1, appVersion: VERSION, state: normalize(pruneAssets(state)) };
     let json;
@@ -643,5 +764,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, projectByteLength, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

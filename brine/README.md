@@ -123,3 +123,15 @@ New keyboard, pointer and MIDI notes, phrase playback and note previews request
 the active GALLEY editor’s audition route. This restores monitoring after Panic
 or a recreated parent audio graph. Preparing or printing an instrument does not
 request audition. Standalone controls, synthesis and saved patches are unchanged.
+
+## Silent processing · 1.0.2
+
+BRINE avoids reconstructing BBD output-filter coefficients when its input and
+all five filter states are exactly positive zero at supported rates. Bucket
+clocks, oscillator/LFO phases, noise seeds, envelopes and modulation continue
+on their original sample clock. Any nonzero or negative-zero state follows
+the original reconstruction path, retaining the complete chorus tail and
+next-note response. The existing low-rate path is unchanged.
+
+`node silence-performance-checks.cjs` verifies the optimization against
+immutable released PCM and state fixtures.

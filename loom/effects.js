@@ -568,7 +568,21 @@
               } else value = (saturate(stageValue/rail+bias)-saturate(bias))*rail;
               interLP[index] += wsStageCoefficient*(value-interLP[index]); value = interLP[index];
               couplingOut[index] = value-couplingPrevious[index]+wsTightRC*couplingOut[index]; couplingPrevious[index] = value; value = couplingOut[index];
-              if (stage === wsStackAfter) { for (let band = 0; band < wsTone.length; band++) value = ampFilter(value, wsTone[band], wsToneState[band], stateOffset); value *= wsInsertion; }
+              if (stage === wsStackAfter) {
+                // Keep the 4x-rate biquad result in this numeric dataflow.
+                // Scalar helper returns can box across a Worklet call boundary;
+                // these are the same three bounded operations, in the same order.
+                for (let band = 0; band < wsTone.length; band++) {
+                  const c = wsTone[band], state = wsToneState[band], x = value;
+                  const raw = c[0]*x+state[stateOffset], y = raw > 8 ? 8 : raw < -8 ? -8 : raw === raw ? raw : 0;
+                  let next = c[1]*x-c[3]*y+state[stateOffset+1];
+                  state[stateOffset] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+                  next = c[2]*x-c[4]*y;
+                  state[stateOffset+1] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+                  value = y;
+                }
+                value *= wsInsertion;
+              }
             }
             value *= preNormalization;
             wsFeedbackLow[channel] += wsFeedbackLowCoefficient*(wsFeedback[channel]-wsFeedbackLow[channel]);
@@ -586,7 +600,16 @@
               wsCore[channel] += wsCoreCoefficient*(value-wsCore[channel]); value += transformer*.35*(wsCore[channel]-value);
             }
             if (cabinet && p.speakerDrive > 0) value = saturate(value*speakerGain)*speakerNormalization;
-            value = ampFilter(value, decimationFilters[0], antiAlias, offset); value = ampFilter(value, decimationFilters[1], antiAlias, offset+2); decimated[channel] = value;
+            for (let section = 0; section < 2; section++) {
+              const c = decimationFilters[section], stateOffset = offset+section*2, x = value;
+              const raw = c[0]*x+antiAlias[stateOffset], y = raw > 8 ? 8 : raw < -8 ? -8 : raw === raw ? raw : 0;
+              let next = c[1]*x-c[3]*y+antiAlias[stateOffset+1];
+              antiAlias[stateOffset] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+              next = c[2]*x-c[4]*y;
+              antiAlias[stateOffset+1] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+              value = y;
+            }
+            decimated[channel] = value;
           }
           previous[channel] = head;
           let wet = decimated[channel];
@@ -626,8 +649,15 @@
             value *= preNormalization;
             value = (powerShape(value * powerGain * supply + model.powerBias) - powerZero) * powerNormalization;
             if (cabinet && p.speakerDrive > 0) value = saturate(value * speakerGain) * speakerNormalization;
-            value = ampFilter(value, decimationFilters[0], antiAlias, offset);
-            value = ampFilter(value, decimationFilters[1], antiAlias, offset + 2);
+            for (let section = 0; section < 2; section++) {
+              const c = decimationFilters[section], stateOffset = offset+section*2, x = value;
+              const raw = c[0]*x+antiAlias[stateOffset], y = raw > 8 ? 8 : raw < -8 ? -8 : raw === raw ? raw : 0;
+              let next = c[1]*x-c[3]*y+antiAlias[stateOffset+1];
+              antiAlias[stateOffset] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+              next = c[2]*x-c[4]*y;
+              antiAlias[stateOffset+1] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+              value = y;
+            }
             decimated[channel] = value;
           }
           previous[channel] = head;
@@ -657,8 +687,16 @@
               const prior = previous[channel];
               for (let sub = 1; sub <= 4; sub++) {
                 let sample = saturate((prior+(value-prior)*sub*.25)*speakerGain)*speakerNormalization;
-                sample = ampFilter(sample, decimationFilters[0], antiAlias, offset);
-                sample = ampFilter(sample, decimationFilters[1], antiAlias, offset+2); decimated[channel] = sample;
+                for (let section = 0; section < 2; section++) {
+                  const c = decimationFilters[section], stateOffset = offset+section*2, x = sample;
+                  const raw = c[0]*x+antiAlias[stateOffset], y = raw > 8 ? 8 : raw < -8 ? -8 : raw === raw ? raw : 0;
+                  let next = c[1]*x-c[3]*y+antiAlias[stateOffset+1];
+                  antiAlias[stateOffset] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+                  next = c[2]*x-c[4]*y;
+                  antiAlias[stateOffset+1] = next > 8 ? 8 : next < -8 ? -8 : next === next ? next : 0;
+                  sample = y;
+                }
+                decimated[channel] = sample;
               }
               previous[channel] = value; value = decimated[channel];
             }

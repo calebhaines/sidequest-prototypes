@@ -21,6 +21,9 @@
     { id: 'brine', name: 'BRINE', description: 'Six-voice Juno-inspired DCO synth and stereo BBD chorus', facade: 'BrineApp', storageKey: 'brine-project-v1', color: '#e0a16e' },
     { id: 'citrus', name: 'CITRUS', description: 'Monophonic acid bass with accent and slide', facade: 'CitrusApp', storageKey: 'citrus-project-v1', color: '#d4b45c' }
   ].map(item => Object.freeze({ ...item, url: '../' + item.id + '/index.html' })));
+  // These bundled editors notify the host for both UI and programmatic edits.
+  // Older editors and uploaded instruments keep the polling contract.
+  const revisionedPatterns = new Set(['proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine', 'citrus']);
   const clone = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
   const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
   const cancelledError = () => new DOMException('This instrument operation was cancelled.', 'AbortError');
@@ -58,12 +61,20 @@
       this.baseURL = baseURL || new URL('../', document.baseURI).href;
       this.embedded = embedded || global.LoomEmbeddedInstruments || {};
       this.transport = typeof transport === 'function' ? transport : () => ({ beat: 0, tempo: this.tempo, when: this._context()?.currentTime || 0, playing: false, revision: 0 });
-      this.records = new Map(); this.disabledTracks = new Set(); this.disablingTracks = new Map(); this.generation = 0; this.tempo = 120; this.disposed = false;
+      this.records = new Map(); this.disabledTracks = new Set(); this.disablingTracks = new Map(); this.generation = 0; this.changeRevision = 0; this.tempo = 120; this.disposed = false;
       global.__LoomHostRegistry ||= Object.create(null);
     }
     get manifest() { return manifest; }
     _context() { return typeof this.context === 'function' ? this.context() : this.context; }
     _current(record) { return record.active && this.records.get(record.trackId) === record && !this.disposed; }
+    _patternChanged(record) { if (record.patternChangeTracked) record.patternRevision = ++this.changeRevision; }
+    getPatternRevision(trackId) {
+      const record = this.records.get(trackId);
+      if (!record?.patternChangeTracked || !record.initialized || !this._current(record) || this.isDisabled(trackId) || record.importing || record.patternImporting || record.restoring) return null;
+      const adapter = this._patternAdapter(record);
+      if (adapter !== record.revisionAdapter) { record.revisionAdapter = adapter; this._patternChanged(record); }
+      return adapter ? record.patternRevision : null;
+    }
     isDisabled(trackId) { return this.disabledTracks.has(trackId); }
     setDisabled(trackId, value) {
       if (value !== true) { this.disabledTracks.delete(trackId); return Promise.resolve(null); }
@@ -111,6 +122,7 @@
       if (!this._current(record)) return false;
       if (type === 'audio-action') return !this.isDisabled(record.trackId) && !this.disablingTracks.has(record.trackId) && this.onAudioAction(record.trackId) !== false;
       if (type === 'change') {
+        this._patternChanged(record);
         clearTimeout(record.changeTimer); record.changeTimer = setTimeout(() => { if (this._current(record)) this.onStateChange(record.trackId); }, 300);
       } else if (type === 'error') this.onStatus(record.trackId, value, 'error');
       else if (type === 'status') this.onStatus(record.trackId, value, 'info');
@@ -132,7 +144,10 @@
         storage[definition.storageKey] = JSON.stringify(primed);
       }
       const key = 'loom-' + Date.now().toString(36) + '-' + (++this.generation) + '-' + Math.random().toString(36).slice(2);
-      const record = { key, trackId, id, definition, iframe, descriptor: { ...descriptor }, storage, active: true, loaded: false, initialized: false, soundEnabled: false, tempo: this.tempo, abortController: new AbortController(), operation: 0 };
+      // The loader prefers a bundled entry to descriptor.url. Real instrument
+      // cards retain their manifest URL even when this canonical HTML wins.
+      const patternChangeTracked = revisionedPatterns.has(id) && !!global.LoomEmbeddedInstruments && this.embedded === global.LoomEmbeddedInstruments && !descriptor.html && !!this.embedded[id];
+      const record = { key, trackId, id, definition, iframe, descriptor: { ...descriptor }, storage, active: true, loaded: false, initialized: false, soundEnabled: false, tempo: this.tempo, abortController: new AbortController(), operation: 0, patternChangeTracked, patternRevision: ++this.changeRevision };
       record.getContext = () => { if (!this._current(record)) throw cancelledError(); return this._context(); };
       record.getInput = () => { if (!this._current(record)) throw cancelledError(); return this.getTrackInput(trackId); };
       record.getTransport = () => { if (!this._current(record)) throw cancelledError(); return this.transport(); };
@@ -222,7 +237,9 @@
       if (typeof adapter.exportPattern !== 'function') throw Error('This instrument cannot export patterns.');
       const value = await adapter.exportPattern(options);
       if (!this._current(record) || options.signal?.aborted) throw cancelledError();
-      return global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(clone(value)) : clone(value);
+      // The validator already copies every supported array, note, lock and
+      // metadata field. Trusted bundled exports need no JSON round trip first.
+      return global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(record.patternChangeTracked ? value : clone(value)) : clone(value);
     }
     async importPattern(trackId, pattern, options = {}) {
       const normalized = global.MusicLabPatternSchema ? global.MusicLabPatternSchema.normalize(clone(pattern)) : clone(pattern);
@@ -347,7 +364,9 @@
     }
     async _tempo(record, value) {
       if (!Number.isFinite(Number(value))) return false;
-      const tempo = Math.max(40, Math.min(240, Number(value))); record.tempo = tempo;
+      const tempo = Math.max(40, Math.min(240, Number(value)));
+      if (tempo !== record.tempo) this._patternChanged(record);
+      record.tempo = tempo;
       const { child, bridge, app } = this._parts(record); bridge?.setTempo(tempo);
       if (bridge?.adapter?.tempo) { await bridge.command('tempo', tempo); return true; }
       if (app?.setTempo) { app.setTempo(tempo); await delay(0); return true; }
@@ -368,7 +387,12 @@
       const { bridge, app } = this._parts(record);
       const state = await (bridge.adapter?.getState ? bridge.command('getState') : app?.getProject ? app.getProject() : app?.getState ? app.getState() : null);
       if (!this._current(record)) throw cancelledError();
-      return { format: 'loom-instrument-state', version: 1, app: record.id, state: clone(state), storage: clone(bridge.storage) };
+      // The bridge already detaches its string-valued storage. Copy its keys
+      // into this parent realm without serializing large strings again; never
+      // retain a child-realm object's prototype in the saved project.
+      const stored = bridge.storage, entries = Object.entries(stored);
+      const storage = entries.every(entry => typeof entry[1] === 'string') ? Object.fromEntries(entries) : clone(stored);
+      return { format: 'loom-instrument-state', version: 1, app: record.id, state: clone(state), storage };
     }
     async restore(trackId, value) {
       if (this.isDisabled(trackId)) return false;
@@ -380,17 +404,20 @@
     }
     async _restore(record, state) {
       if (state === undefined || state === null) return true;
-      const { child, bridge, app } = this._parts(record);
-      if (bridge.adapter?.setState) { await bridge.command('setState', clone(state)); return true; }
-      if (app?.loadState) { await app.loadState(clone(state)); await delay(0); return true; }
-      if (record.id === 'grain' || record.id === 'tine') {
-        const input = child.document.getElementById('project-file');
-        if (!input) throw new Error('The instrument project loader is unavailable.');
-        const transfer = new child.DataTransfer(); transfer.items.add(new child.File([JSON.stringify(state)], record.id + '-host-project.json', { type: 'application/json' }));
-        input.files = transfer.files; input.dispatchEvent(new child.Event('change', { bubbles: true }));
-        await delay(80); if (!this._current(record)) throw cancelledError(); return true;
-      }
-      return false;
+      record.restoring = true; this._patternChanged(record);
+      try {
+        const { child, bridge, app } = this._parts(record);
+        if (bridge.adapter?.setState) { await bridge.command('setState', clone(state)); return true; }
+        if (app?.loadState) { await app.loadState(clone(state)); await delay(0); return true; }
+        if (record.id === 'grain' || record.id === 'tine') {
+          const input = child.document.getElementById('project-file');
+          if (!input) throw new Error('The instrument project loader is unavailable.');
+          const transfer = new child.DataTransfer(); transfer.items.add(new child.File([JSON.stringify(state)], record.id + '-host-project.json', { type: 'application/json' }));
+          input.files = transfer.files; input.dispatchEvent(new child.Event('change', { bubbles: true }));
+          await delay(80); if (!this._current(record)) throw cancelledError(); return true;
+        }
+        return false;
+      } finally { record.restoring = false; this._patternChanged(record); }
     }
     unload(trackId) {
       const record = this.records.get(trackId); if (!record) return;

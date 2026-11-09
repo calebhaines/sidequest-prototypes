@@ -83,7 +83,11 @@
           if (typeof value !== 'function') return value;
           return (...args) => {
             if (property === 'connect' || property === 'start') requireActive();
-            const result = value.apply(target, args.map(unwrap));
+            // Rest arguments already belong to this call. Unwrap them in
+            // place instead of allocating a second array for every native
+            // note's connect/start/stop/disconnect and analyser read.
+            for (let index = 0; index < args.length; index++) args[index] = unwrap(args[index]);
+            const result = value.apply(target, args);
             if (property === 'connect' || property === 'start') retainNode(target, facade);
             // Partial disconnects can leave other outputs connected. A full
             // disconnect releases processors; running sources stay until ended.
@@ -150,7 +154,7 @@
           if (property in target) return Reflect.get(target, property, target);
           const value = Reflect.get(raw, property, raw);
           if (typeof value !== 'function') return value;
-          return (...args) => { requireActive(); if (closed) throw new DOMException('This context is closed.', 'InvalidStateError'); return wrapNode(value.apply(raw, args.map(unwrap)), proxy); };
+          return (...args) => { requireActive(); if (closed) throw new DOMException('This context is closed.', 'InvalidStateError'); for (let index = 0; index < args.length; index++) args[index] = unwrap(args[index]); return wrapNode(value.apply(raw, args), proxy); };
         },
         set(target, property, value) { target[property] = value; return true; }
       });
@@ -195,7 +199,13 @@
     Object.defineProperty(window, 'MusicLabHost', { value: publicAPI, writable: false });
     Object.defineProperty(window, '__LoomBridge', { value: Object.freeze({
       get adapter() { return adapter; },
-      get storage() { return clone(local.data); },
+      get storage() {
+        const entries = Object.entries(local.data);
+        // Web Storage values are strings. Detach the small key map without
+        // serializing sample/project strings; retain legacy snapshot handling
+        // if an imported storage object contains other JSON values.
+        return entries.every(entry => typeof entry[1] === 'string') ? Object.fromEntries(entries) : clone(local.data);
+      },
       get contexts() { return contexts.size; },
       setTempo(value) { tempo = value; },
       mute(value) { record.soundEnabled = !value; contexts.forEach(context => { try { context.destination.gain.setValueAtTime(value ? 0 : 1, context.currentTime); } catch (_) {} }); },

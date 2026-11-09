@@ -3,18 +3,18 @@
   "instrument": "batter",
   "instrumentVersion": "1.4.0",
   "status": "verified-release-build",
-  "reason": "Explicit post-1.36 instrument releases: BATTER 1.4.0 adds recursive sample-folder import, and BRINE 1.0.1 restores hosted live audition. Only these instruments\u2019 HTML and editable source archives replace historical artifact references; all other references remain frozen.",
+  "reason": "Explicit post-1.36 releases: BATTER 1.4.0 sample-folder import and BRINE 1.0.2 silent BBD processing maintenance. Only their HTML and editable source archives replace historical references; all other instrument references remain frozen.",
   "hashes": {
     "batter/index.html": "47bd3548832fd6002e21689a56f0f1ab0233ee720e7c2f2c3efe1fd16000f9d4",
     "music/batter/BATTER-source.zip": "38871da766d5ef25c6da755940448a260d867be7a72f2c51648b11fff2952b7e",
-    "brine/index.html": "16f36804f95ab8bffa6758e4dedabae406f2549f770eb2e605ef2378b59045a0",
-    "music/brine/BRINE-source.zip": "f612b8b031ebd0d6656b9a0ca239d58496c02963e9a4c483c1859b7b83f827c1"
+    "brine/index.html": "21160cdfedb708d736d1f8b8b79c669dee170e3ac2287977aab9884d48bf5bd6",
+    "music/brine/BRINE-source.zip": "12f40f5ac9a41f284725deec841b0a7c03f93440b30f05c0531e4d57ea05443f"
   },
   "additionalReleases": [
     {
       "instrument": "brine",
-      "instrumentVersion": "1.0.1",
-      "reason": "Restore live audition after hosted monitoring is interrupted, while preserving synthesis and saved patches."
+      "instrumentVersion": "1.0.2",
+      "reason": "Avoid exact-zero BBD reconstruction work while retaining every clock, random seed, state and future note response; includes the prior hosted audition recovery."
     }
   ]
 }
