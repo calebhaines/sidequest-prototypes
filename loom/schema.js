@@ -1,7 +1,7 @@
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.42.4';
+  const VERSION = '1.43.0';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const TRACK_OUTPUTS = Object.freeze(['master', 'bus-1', 'bus-2']);
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
@@ -39,13 +39,14 @@
   function validateMastering(raw) {
     if (!plain(raw) || Object.keys(raw).length !== MASTERING_FLAGS.length + Object.keys(MASTERING_NUMERIC).length || MASTERING_FLAGS.some(key => typeof raw[key] !== 'boolean') || Object.entries(MASTERING_NUMERIC).some(([key, rule]) => typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < rule[0] || raw[key] > rule[1])) throw Error('The master contains invalid mastering tools or values.');
   }
-  const MASTER_PLAYBACK_KEYS = Object.freeze(['speed', 'pitch', 'preservePitch']);
-  const defaultMasterPlayback = () => ({ speed: 1, pitch: 0, preservePitch: true });
+  const MASTER_STRETCH_ALGORITHMS = Object.freeze(['signalsmith', 'wsola', 'phase-vocoder', 'granular']);
+  const MASTER_PLAYBACK_KEYS = Object.freeze(['speed', 'pitch', 'preservePitch', 'algorithm']);
+  const defaultMasterPlayback = () => ({ speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' });
   function normalizeMasterPlayback(raw) {
-    return { speed: number(raw?.speed, .25, 2, 1), pitch: number(raw?.pitch, -24, 24, 0), preservePitch: bool(raw?.preservePitch, true) };
+    return { speed: number(raw?.speed, .25, 2, 1), pitch: number(raw?.pitch, -24, 24, 0), preservePitch: bool(raw?.preservePitch, true), algorithm: MASTER_STRETCH_ALGORITHMS.includes(raw?.algorithm) ? raw.algorithm : 'signalsmith' };
   }
   function validateMasterPlayback(raw) {
-    if (!plain(raw) || Object.keys(raw).length !== MASTER_PLAYBACK_KEYS.length || MASTER_PLAYBACK_KEYS.some(key => !Object.prototype.hasOwnProperty.call(raw, key)) || typeof raw.speed !== 'number' || !Number.isFinite(raw.speed) || raw.speed < .25 || raw.speed > 2 || typeof raw.pitch !== 'number' || !Number.isFinite(raw.pitch) || raw.pitch < -24 || raw.pitch > 24 || typeof raw.preservePitch !== 'boolean') throw Error('The master contains invalid playback speed or pitch settings.');
+    if (!plain(raw) || Object.keys(raw).length !== MASTER_PLAYBACK_KEYS.length || MASTER_PLAYBACK_KEYS.some(key => !Object.prototype.hasOwnProperty.call(raw, key)) || typeof raw.speed !== 'number' || !Number.isFinite(raw.speed) || raw.speed < .25 || raw.speed > 2 || typeof raw.pitch !== 'number' || !Number.isFinite(raw.pitch) || raw.pitch < -24 || raw.pitch > 24 || typeof raw.preservePitch !== 'boolean' || !MASTER_STRETCH_ALGORITHMS.includes(raw.algorithm)) throw Error('The master contains invalid playback speed, pitch or stretch algorithm settings.');
   }
   const defaultTrackEq = () => ({ low: 0, lowMid: 0, highMid: 0, high: 0, lowMidFreq: 400, highMidFreq: 2500 });
   const trackEq = raw => ({ ...Object.fromEntries(TRACK_EQ_BANDS.map(band => [band.key, number(raw?.[band.key], -12, 12, 0)])), ...Object.fromEntries(TRACK_EQ_SWEEPS.map(sweep => [sweep.key, number(raw?.[sweep.key], sweep.min, sweep.max, sweep.default)])) });
@@ -531,12 +532,16 @@
     const legacyMixUpgrade = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 25);
     const legacyTenTracks = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 32);
     const legacyMasterPlayback = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 34);
+    const legacyMasterAlgorithm = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 43);
     const legacyHood = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 40);
     const legacyGroupBuses = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 41);
     const sourceTrackCount = Array.isArray(s.tracks) ? s.tracks.length : 0;
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || sourceTrackCount !== TRACK_COUNT && !(legacyTenTracks && sourceTrackCount === LEGACY_TRACK_COUNT) || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain ten complete tracks; older eight-track projects are also supported.');
     if (legacyTenTracks && !Object.prototype.hasOwnProperty.call(s.master, 'mastering')) s.master.mastering = defaultMastering();
     if (legacyMasterPlayback && !Object.prototype.hasOwnProperty.call(s.master, 'playback')) s.master.playback = defaultMasterPlayback();
+    // The old master renderer is Signalsmith. Inherit only the absent selector;
+    // malformed supplied records still pass through the strict bus validator.
+    if (legacyMasterAlgorithm && plain(s.master.playback) && !Object.prototype.hasOwnProperty.call(s.master.playback, 'algorithm')) s.master.playback.algorithm = 'signalsmith';
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack >= sourceTrackCount || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
@@ -774,5 +779,5 @@
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, audioCapacity, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, MASTER_STRETCH_ALGORITHMS, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, audioCapacity, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();

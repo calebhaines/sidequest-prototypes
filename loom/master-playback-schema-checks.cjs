@@ -11,7 +11,8 @@ const scope = { Blob, console, crypto: webcrypto, btoa: value => Buffer.from(val
 scope.window = scope; scope.globalThis = scope; vm.createContext(scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'schema.js'), 'utf8'), scope, { filename: 'schema.js' });
 const S = scope.LoomSchema, plain = value => JSON.parse(JSON.stringify(value));
-const neutral = { speed: 1, pitch: 0, preservePitch: true }, passed = [];
+const neutral = { speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' }, passed = [];
+const playbackSettings = patch => ({ ...neutral, ...patch });
 function check(name, run) { run(); passed.push(name); console.log('PASS ' + name); }
 function envelope(state = S.defaultState(), version = S.VERSION) {
   const project = { format: 'loom-project', formatVersion: 1, state: S.copy(state) };
@@ -33,25 +34,29 @@ function frozenFixture() {
   return { state, trackId: track.id, sourcePcm: original.pcm, frozenPcm: frozen.pcm };
 }
 check('Master playback defaults are neutral independent project objects and survive normal project copying', () => {
-  assert.equal(S.VERSION, '1.42.1');
+  assert.deepEqual(plain(S.MASTER_STRETCH_ALGORITHMS), ['signalsmith', 'wsola', 'phase-vocoder', 'granular']);
+  assert(Object.isFrozen(S.MASTER_STRETCH_ALGORITHMS));
   assert.deepEqual(plain(S.defaultMasterPlayback()), neutral);
   const first = S.defaultState(), second = S.defaultState();
   assert.deepEqual(plain(first.master.playback), neutral);
   first.master.playback.speed = .5; assert.deepEqual(plain(second.master.playback), neutral);
   const history = S.copy(first); first.master.playback.pitch = 7; first.master.playback.preservePitch = false;
-  assert.deepEqual(plain(history.master.playback), { speed: .5, pitch: 0, preservePitch: true });
+  assert.deepEqual(plain(history.master.playback), playbackSettings({ speed: .5 }));
   assert.deepEqual(plain(S.copy(history).master.playback), plain(history.master.playback));
 });
 check('Tolerant normalization clamps finite numbers and safely defaults malformed values without mutating input', () => {
   const input = { speed: -10, pitch: 80, preservePitch: false, unused: true }, before = plain(input);
-  assert.deepEqual(plain(S.normalizeMasterPlayback(input)), { speed: .25, pitch: 24, preservePitch: false }); assert.deepEqual(plain(input), before);
-  assert.deepEqual(plain(S.normalizeMasterPlayback({ speed: 50, pitch: -80 })), { speed: 2, pitch: -24, preservePitch: true });
+  assert.deepEqual(plain(S.normalizeMasterPlayback(input)), playbackSettings({ speed: .25, pitch: 24, preservePitch: false })); assert.deepEqual(plain(input), before);
+  assert.deepEqual(plain(S.normalizeMasterPlayback({ speed: 50, pitch: -80 })), playbackSettings({ speed: 2, pitch: -24 }));
   for (const bad of [undefined, null, [], 'wrong', { speed: NaN, pitch: Infinity, preservePitch: 'false' }, { speed: '1.5', pitch: null, preservePitch: 0 }]) assert.deepEqual(plain(S.normalizeMasterPlayback(bad)), neutral);
   const normalized = S.normalize({ master: { playback: { speed: .75, pitch: -3.5, preservePitch: false, unrelated: 'discard' } } });
-  assert.deepEqual(plain(normalized.master.playback), { speed: .75, pitch: -3.5, preservePitch: false });
+  assert.deepEqual(plain(normalized.master.playback), playbackSettings({ speed: .75, pitch: -3.5, preservePitch: false }));
+  for (const algorithm of S.MASTER_STRETCH_ALGORITHMS) assert.deepEqual(plain(S.normalizeMasterPlayback({ algorithm })), playbackSettings({ algorithm }));
+  for (const algorithm of [undefined, null, false, 1, [], {}, 'wrong', 'Signalsmith']) assert.deepEqual(plain(S.normalizeMasterPlayback({ algorithm })), neutral);
 });
 check('Complete playback settings including exact endpoints and fractional values round-trip in saved projects', () => {
-  for (const playback of [{ speed: .25, pitch: -24, preservePitch: false }, { speed: 2, pitch: 24, preservePitch: true }, { speed: .73125, pitch: 3.125, preservePitch: false }, neutral]) {
+  for (const algorithm of S.MASTER_STRETCH_ALGORITHMS) for (const values of [{ speed: .25, pitch: -24, preservePitch: false }, { speed: 2, pitch: 24 }, { speed: .73125, pitch: 3.125, preservePitch: false }, neutral]) {
+    const playback = playbackSettings({ ...values, algorithm });
     const state = S.defaultState(); state.name = 'Tempo / pitch — 音楽'; state.master.playback = { ...playback }; state.master.level = .42; state.tracks[9].pan = -.31;
     const json = S.serializeProject(state), reopened = S.parseProject(json);
     assert.deepEqual(plain(reopened.master.playback), playback); assert.equal(reopened.master.level, .42); assert.equal(reopened.tracks[9].pan, -.31); assert.equal(reopened.name, state.name);
@@ -67,7 +72,32 @@ check('Only missing playback in legacy or unversioned files inherits neutral pla
   }
   const oldEight = envelope(S.defaultState(), '1.31.0'); oldEight.state.tracks.length = 8; oldEight.state.selectedTrack = 7; delete oldEight.state.master.playback; delete oldEight.state.master.mastering;
   const restored = parse(oldEight); assert.equal(restored.tracks.length, 10); assert.equal(restored.selectedTrack, 7); assert.deepEqual(plain(restored.master.playback), neutral);
-  const supplied = envelope(S.defaultState(), '1.33.0'); supplied.state.master.playback = { speed: .66, pitch: 2.75, preservePitch: false }; assert.deepEqual(plain(parse(supplied).master.playback), supplied.state.master.playback);
+  const supplied = envelope(S.defaultState(), '1.33.0'); supplied.state.master.playback = { speed: .66, pitch: 2.75, preservePitch: false }; assert.deepEqual(plain(parse(supplied).master.playback), playbackSettings(supplied.state.master.playback));
+});
+check('Older and unversioned playback inherits only the absent Signalsmith algorithm with all musical settings intact', () => {
+  const existing = { speed: .673, pitch: -3.25, preservePitch: false };
+  for (const version of ['0.9.0', '1.13.0', '1.33.0', '1.34.0', '1.41.0', '1.42.4', null]) {
+    const project = envelope(S.defaultState(), version || S.VERSION); if (version === null) delete project.appVersion;
+    project.state.master.playback = { ...existing }; project.state.master.level = .39;
+    const before = JSON.stringify(project), restored = parse(project);
+    assert.deepEqual(plain(restored.master.playback), playbackSettings(existing), String(version));
+    assert.equal(restored.master.level, .39); assert.equal(JSON.stringify(project), before);
+    for (const algorithm of S.MASTER_STRETCH_ALGORITHMS) {
+      project.state.master.playback = { ...existing, algorithm };
+      assert.deepEqual(plain(parse(project).master.playback), { ...existing, algorithm });
+    }
+  }
+});
+check('Current and future files require the selector and malformed legacy selectors never silently fall back', () => {
+  for (const version of ['1.43.0', '1.43.1', '2.0.0', 'not-a-version']) {
+    const project = envelope(S.defaultState(), version); delete project.state.master.playback.algorithm;
+    assert.throws(() => parse(project), /playback|algorithm/i, version);
+  }
+  for (const version of ['1.33.0', '1.42.4', S.VERSION, null]) for (const algorithm of [null, false, 1, [], {}, 'wrong', 'Signalsmith']) {
+    const project = envelope(S.defaultState(), version || S.VERSION); if (version === null) delete project.appVersion;
+    project.state.master.playback.algorithm = algorithm;
+    assert.throws(() => parse(project), /playback|algorithm/i, String(version) + ': ' + String(algorithm));
+  }
 });
 check('Current and future project formats reject missing playback and every supplied malformed playback record', () => {
   for (const version of ['1.34.0', '1.34.1', '1.41.0', '2.0.0', 'not-a-version']) { const project = envelope(S.defaultState(), version); delete project.state.master.playback; assert.throws(() => parse(project), /master|playback|bus/i, version); }
@@ -76,17 +106,21 @@ check('Current and future project formats reject missing playback and every supp
 });
 check('Playback fields stay master-only and cannot be saved as real-time automation targets', () => {
   const state = S.defaultState();
-  assert(!S.automationTargets(state.master).some(target => /playback|preservePitch|^speed$|^pitch$/.test(target.target)));
-  for (const target of ['playback:speed', 'playback:pitch', 'masterPlayback:speed', 'speed', 'pitch']) { const project = envelope(state); project.state.master.automation = [{ target, enabled: true, interpolation: 'linear', points: [{ beat: 0, value: 1 }] }]; assert.throws(() => parse(project), /automation/i, target); }
+  assert(!S.automationTargets(state.master).some(target => /playback|preservePitch|^speed$|^pitch$|^algorithm$/.test(target.target)));
+  for (const target of ['playback:speed', 'playback:pitch', 'playback:algorithm', 'masterPlayback:speed', 'speed', 'pitch', 'algorithm']) { const project = envelope(state); project.state.master.automation = [{ target, enabled: true, interpolation: 'linear', points: [{ beat: 0, value: 1 }] }]; assert.throws(() => parse(project), /automation/i, target); }
   const returned = envelope(state); returned.state.returns[0].playback = { ...neutral }; assert.throws(() => parse(returned), /Return A|routing|settings/i);
 });
 check('Master playback edits preserve valid frozen recipes and exact original and baked audio through save/open', () => {
   const fixture = frozenFixture(), state = fixture.state, fingerprint = S.freezeFingerprint(state, fixture.trackId);
-  for (const playback of [{ speed: .25, pitch: 24, preservePitch: false }, { speed: 2, pitch: -24, preservePitch: true }, neutral]) {
+  for (const algorithm of S.MASTER_STRETCH_ALGORITHMS) for (const values of [{ speed: .25, pitch: 24, preservePitch: false }, { speed: 2, pitch: -24 }, neutral]) {
+    const playback = playbackSettings({ ...values, algorithm });
     state.master.playback = { ...playback }; assert.equal(S.freezeFingerprint(state, fixture.trackId), fingerprint); assert(S.freezeValid(state, fixture.trackId));
     const reopened = S.parseProject(S.serializeProject(state)); assert(S.freezeValid(reopened, fixture.trackId)); assert.equal(S.freezeFingerprint(reopened, fixture.trackId), fingerprint); assert.equal(reopened.assets[0].pcm, fixture.sourcePcm); assert.equal(reopened.freezeAssets[0].pcm, fixture.frozenPcm); assert.deepEqual(plain(reopened.master.playback), playback);
   }
   const oldProject = envelope(state, '1.33.0'); delete oldProject.state.master.playback; const migrated = parse(oldProject); assert(S.freezeValid(migrated, fixture.trackId)); assert.deepEqual(plain(migrated.master.playback), neutral);
+  const previous = envelope(state, '1.42.4'); previous.state.master.playback = { speed: .75, pitch: -2, preservePitch: true };
+  const inherited = parse(previous); assert(S.freezeValid(inherited, fixture.trackId)); assert.equal(S.freezeFingerprint(inherited, fixture.trackId), fingerprint); assert.equal(inherited.assets[0].pcm, fixture.sourcePcm); assert.equal(inherited.freezeAssets[0].pcm, fixture.frozenPcm);
+  assert.deepEqual(plain(inherited.master.playback), playbackSettings(previous.state.master.playback));
   const stale = S.copy(state); stale.tracks[8].level = .99; assert(!S.freezeValid(stale, fixture.trackId)); assert.throws(() => S.serializeProject(stale), /stale freeze/i);
 });
 console.log(passed.length + ' master playback schema groups passed.');

@@ -121,7 +121,7 @@
   global.MusicLabPatternSchema = Object.freeze({ VERSION, MAX_NOTES, MAX_VOICES, MAX_BEATS, MAX_BYTES, LOCK_RANGES, normalizeLocks, normalize, parse, serialize, clone, fingerprint, durationSeconds });
 })(typeof window === 'object' ? window : globalThis);
 
-</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.42.4"><meta name="galley-service-version" content="1.0.0">
+</script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#121210"><meta name="loom-version" content="1.43.0"><meta name="galley-service-version" content="1.0.0">
 <meta name="description" content="GALLEY is Kitchen’s ten-track browser studio. Arrange audio, play eighteen instruments, monitor microphone input through five effects per track, and align recordings. Each track has a four-band EQ with sweepable mid frequencies. Twenty-one effects include SUNDAY Deluxe Reverb studies, FERMENT guitar and bass synthesis, TIN CAN microphone and telephone colours, PRESERVE tape machines, SAUTÉ microphone preamps, STRAINER envelope filtering, SWIRL stereo phasing, CRUMBLE digital texture, BROILER amps, GLAZE vocal finishing, and SCALES signal utilities.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='4' fill='%23121210'/%3E%3Cpath d='M11 17h42M15 24h10v28H15zm24 0h10v28H39zM30 24h4v28h-4z' fill='none' stroke='%23f2e8d2' stroke-width='3'/%3E%3Cpath d='M12 11h40' stroke='%23f36b36' stroke-width='4'/%3E%3C/svg%3E">
 <title>GALLEY — Kitchen</title>
@@ -1885,7 +1885,7 @@ button.tape-knob:hover,button.tape-knob:active{border:0;background:transparent}
 @media(prefers-reduced-motion:reduce){.deluxe-meters b,.deluxe-folds summary>span:last-child{transition:none}}
 
 /* GALLEY · a small master playback station. */
-.master-playback{min-width:0;margin:0 20px 20px;padding:20px 22px;border:1px solid #8c8d65;border-radius:6px;background:linear-gradient(125deg,#303e30,#26382e);color:#dce2c5}.mp-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}.mp-heading .eyebrow{font-size:6px;letter-spacing:.13em;color:#bcbf98}.mp-heading h3{font:26px/1.2 var(--kk-serif,'Loom Serif',Georgia,serif);letter-spacing:-.035em;color:#eee1ba;margin:6px 0 0}.mp-heading>button{min-height:34px;padding:7px 12px;color:#d8d9b8;background:#263629;border-color:#89916c;font-size:10px}.mp-heading>button:disabled{opacity:.4}.mp-body{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);gap:25px;min-width:0;align-items:center}.mp-knobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding:19px 24px;border:1px solid #b9b88c;border-radius:5px;background:linear-gradient(135deg,#ede4c5,#d5d0ac);color:#456749;min-width:0}.mp-control{display:grid;align-content:start;justify-items:center;gap:8px;min-width:0}.mp-control>label{font-size:11px;font-weight:600;color:#58754f}.mp-knob{display:block;width:100%;max-width:77px;aspect-ratio:1;padding:0;border:0;background:transparent;box-shadow:none;touch-action:none;cursor:ns-resize;line-height:1}.mp-knob svg{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}.mp-ring{fill:none;stroke:#a3b080;stroke-width:1.5}.mp-shadow{fill:#263d2222}.mp-cap{fill:#e5e0bf;stroke:#82996c;stroke-width:1}.mp-inner{fill:#ced6ae;stroke:#b3c28f;stroke-width:1}.mp-pointer{fill:none;stroke:#466e49;stroke-width:2.8;stroke-linecap:round;transform-origin:42px 42px}.mp-knob:hover,.mp-knob.is-adjusting{background:transparent}.mp-knob:hover .mp-cap,.mp-knob.is-adjusting .mp-cap{fill:#f5edcf;stroke:#4e7c4f}.mp-knob:focus-visible{outline:2px solid #66854f;outline-offset:2px;border-radius:50%}.mp-exact{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;color:#71845b;font:8px var(--kk-mono,monospace)}.mp-exact input[type=number]{width:65px;max-width:100%;min-width:0;min-height:31px;padding:6px 3px;text-align:center;background:#f3ecd3;border:1px solid #a3b284;border-radius:3px;color:#426b49;font:11px var(--kk-mono,monospace)}.mp-options{display:grid;gap:12px;min-width:0}.mp-preserve{display:flex;gap:9px;align-items:center;color:#e2debd;font-size:12px;line-height:1.7}.mp-preserve input{width:16px;height:16px;flex-shrink:0;accent-color:#cbd49e}.mp-options>p{font-size:10px;line-height:1.8;color:#aebe9f;margin:0}.mp-readings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:12px 0;border-block:1px solid #a2a77544}.mp-readings>div{display:grid;gap:7px;min-width:0}.mp-readings span{font-size:8px;color:#aabb98}.mp-readings output{font:16px var(--kk-mono,monospace);font-variant-numeric:tabular-nums;color:#ded4a4;white-space:nowrap;letter-spacing:-.035em}.mp-status{min-width:0;font-size:10px;line-height:1.8;color:#b8c5a4}.mp-status>span{font-weight:600;color:#ded8b1}.mp-status>p{margin:3px 0 0;color:#a9ba99;overflow-wrap:anywhere}.mp-has-error .mp-status>span,.mp-has-error .mp-status>p{color:#edb68e}.mp-preparation{display:flex;gap:12px;align-items:center;min-width:0}.mp-preparation[hidden]{display:none}.mp-preparation progress{flex:1;width:100%;min-width:0;height:7px;accent-color:#c8c58f}.mp-preparation button{flex-shrink:0;min-height:33px;padding:7px 10px;font-size:10px;color:#e0ceb0;background:#4a4430;border-color:#a48d5e}.mp-note{margin:18px 0 0;padding-top:14px;border-top:1px solid #a2ac7944;font-size:9px;line-height:1.9;color:#a7b697}.master-playback button:focus-visible,.master-playback input:focus-visible{outline:2px solid #ded6a9;outline-offset:3px}
+.master-playback{min-width:0;margin:0 20px 20px;padding:20px 22px;border:1px solid #8c8d65;border-radius:6px;background:linear-gradient(125deg,#303e30,#26382e);color:#dce2c5}.mp-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}.mp-heading .eyebrow{font-size:6px;letter-spacing:.13em;color:#bcbf98}.mp-heading h3{font:26px/1.2 var(--kk-serif,'Loom Serif',Georgia,serif);letter-spacing:-.035em;color:#eee1ba;margin:6px 0 0}.mp-heading>button{min-height:34px;padding:7px 12px;color:#d8d9b8;background:#263629;border-color:#89916c;font-size:10px}.mp-heading>button:disabled{opacity:.4}.mp-body{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);gap:25px;min-width:0;align-items:center}.mp-knobs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding:19px 24px;border:1px solid #b9b88c;border-radius:5px;background:linear-gradient(135deg,#ede4c5,#d5d0ac);color:#456749;min-width:0}.mp-control{display:grid;align-content:start;justify-items:center;gap:8px;min-width:0}.mp-control>label{font-size:11px;font-weight:600;color:#58754f}.mp-knob{display:block;width:100%;max-width:77px;aspect-ratio:1;padding:0;border:0;background:transparent;box-shadow:none;touch-action:none;cursor:ns-resize;line-height:1}.mp-knob svg{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}.mp-ring{fill:none;stroke:#a3b080;stroke-width:1.5}.mp-shadow{fill:#263d2222}.mp-cap{fill:#e5e0bf;stroke:#82996c;stroke-width:1}.mp-inner{fill:#ced6ae;stroke:#b3c28f;stroke-width:1}.mp-pointer{fill:none;stroke:#466e49;stroke-width:2.8;stroke-linecap:round;transform-origin:42px 42px}.mp-knob:hover,.mp-knob.is-adjusting{background:transparent}.mp-knob:hover .mp-cap,.mp-knob.is-adjusting .mp-cap{fill:#f5edcf;stroke:#4e7c4f}.mp-knob:focus-visible{outline:2px solid #66854f;outline-offset:2px;border-radius:50%}.mp-exact{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;color:#71845b;font:8px var(--kk-mono,monospace)}.mp-exact input[type=number]{width:65px;max-width:100%;min-width:0;min-height:31px;padding:6px 3px;text-align:center;background:#f3ecd3;border:1px solid #a3b284;border-radius:3px;color:#426b49;font:11px var(--kk-mono,monospace)}.mp-options{display:grid;gap:12px;min-width:0}.mp-preserve{display:flex;gap:9px;align-items:center;color:#e2debd;font-size:12px;line-height:1.7}.mp-preserve input{width:16px;height:16px;flex-shrink:0;accent-color:#cbd49e}.mp-options>p{font-size:10px;line-height:1.8;color:#aebe9f;margin:0}.mp-algorithm{display:grid;gap:7px;min-width:0}.mp-algorithm>label{font-size:9px;color:#c1c9a7}.mp-algorithm>select{display:block;width:100%;max-width:100%;min-width:0;min-height:36px;padding:7px 9px;border:1px solid #89916c;border-radius:4px;background:#223329;color:#e5dec0;color-scheme:dark;font:11px var(--kk-sans,'Loom Sans',sans-serif);text-overflow:ellipsis}.mp-algorithm>p{margin:0;font-size:9px;line-height:1.75;color:#aebe9f}.mp-readings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:12px 0;border-block:1px solid #a2a77544}.mp-readings>div{display:grid;gap:7px;min-width:0}.mp-readings span{font-size:8px;color:#aabb98}.mp-readings output{font:16px var(--kk-mono,monospace);font-variant-numeric:tabular-nums;color:#ded4a4;white-space:nowrap;letter-spacing:-.035em}.mp-status{min-width:0;font-size:10px;line-height:1.8;color:#b8c5a4}.mp-status>span{font-weight:600;color:#ded8b1}.mp-status>p{margin:3px 0 0;color:#a9ba99;overflow-wrap:anywhere}.mp-has-error .mp-status>span,.mp-has-error .mp-status>p{color:#edb68e}.mp-preparation{display:flex;gap:12px;align-items:center;min-width:0}.mp-preparation[hidden]{display:none}.mp-preparation progress{flex:1;width:100%;min-width:0;height:7px;accent-color:#c8c58f}.mp-preparation button{flex-shrink:0;min-height:33px;padding:7px 10px;font-size:10px;color:#e0ceb0;background:#4a4430;border-color:#a48d5e}.mp-note{margin:18px 0 0;padding-top:14px;border-top:1px solid #a2ac7944;font-size:9px;line-height:1.9;color:#a7b697}.master-playback button:focus-visible,.master-playback input:focus-visible,.master-playback select:focus-visible{outline:2px solid #ded6a9;outline-offset:3px}
 @media(max-width:900px){.master-playback{margin:0 18px 18px;padding:19px}.mp-body{grid-template-columns:minmax(215px,.8fr) minmax(0,1.2fr);gap:20px}.mp-knobs{padding:18px 15px;gap:17px}.mp-preserve{font-size:11px}.mp-readings{gap:15px}.mp-readings output{font-size:14px}}
 @media(max-width:650px){.master-playback{margin:0 13px 13px;padding:17px 14px}.mp-heading{margin-bottom:15px}.mp-heading h3{font-size:24px}.mp-body{grid-template-columns:minmax(0,1fr);gap:18px}.mp-knobs{gap:26px;padding:18px 22px}.mp-knob{max-width:73px}.mp-control>label{font-size:11px}.mp-options{gap:11px}.mp-preserve{font-size:11px}.mp-options>p{font-size:10px}.mp-readings output{font-size:17px}.mp-preparation{gap:9px}.mp-preparation button{font-size:9px;padding:7px 9px}.mp-note{font-size:9px;margin-top:16px;padding-top:13px}}
 
@@ -2332,7 +2332,7 @@ body {
 
 <section id="effectEditor" class="panel effect-editor" hidden aria-label="Selected effect controls"></section>
 </main>
-<footer><span>GALLEY / 1.42.4 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
+<footer><span>GALLEY / 1.43.0 / 10 × 5</span><span>THE SPECIALS REMAIN UNEXPLAINED.</span><button id="footerHelp" class="text-button">Instructions & downloads ↗</button></footer>
 </div>
 <div id="status" class="status" role="status" aria-live="polite">The prep is ready. Press Play. Service is going strangely well.</div>
 <dialog id="audioSettingsDialog" class="audio-settings-dialog" aria-labelledby="audioSettingsTitle" aria-describedby="audioSettingsIntro">
@@ -9949,7 +9949,7 @@ body {
 /* GALLEY projects. Ten stations, with portable legacy-session migration. */
 (() => {
   'use strict';
-  const VERSION = '1.42.4';
+  const VERSION = '1.43.0';
   const TRACK_COUNT = 10, LEGACY_TRACK_COUNT = 8;
   const TRACK_OUTPUTS = Object.freeze(['master', 'bus-1', 'bus-2']);
   const isTrackId = value => typeof value === 'string' && /^track-(?:[1-9]|10)$/.test(value);
@@ -9987,13 +9987,14 @@ body {
   function validateMastering(raw) {
     if (!plain(raw) || Object.keys(raw).length !== MASTERING_FLAGS.length + Object.keys(MASTERING_NUMERIC).length || MASTERING_FLAGS.some(key => typeof raw[key] !== 'boolean') || Object.entries(MASTERING_NUMERIC).some(([key, rule]) => typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < rule[0] || raw[key] > rule[1])) throw Error('The master contains invalid mastering tools or values.');
   }
-  const MASTER_PLAYBACK_KEYS = Object.freeze(['speed', 'pitch', 'preservePitch']);
-  const defaultMasterPlayback = () => ({ speed: 1, pitch: 0, preservePitch: true });
+  const MASTER_STRETCH_ALGORITHMS = Object.freeze(['signalsmith', 'wsola', 'phase-vocoder', 'granular']);
+  const MASTER_PLAYBACK_KEYS = Object.freeze(['speed', 'pitch', 'preservePitch', 'algorithm']);
+  const defaultMasterPlayback = () => ({ speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' });
   function normalizeMasterPlayback(raw) {
-    return { speed: number(raw?.speed, .25, 2, 1), pitch: number(raw?.pitch, -24, 24, 0), preservePitch: bool(raw?.preservePitch, true) };
+    return { speed: number(raw?.speed, .25, 2, 1), pitch: number(raw?.pitch, -24, 24, 0), preservePitch: bool(raw?.preservePitch, true), algorithm: MASTER_STRETCH_ALGORITHMS.includes(raw?.algorithm) ? raw.algorithm : 'signalsmith' };
   }
   function validateMasterPlayback(raw) {
-    if (!plain(raw) || Object.keys(raw).length !== MASTER_PLAYBACK_KEYS.length || MASTER_PLAYBACK_KEYS.some(key => !Object.prototype.hasOwnProperty.call(raw, key)) || typeof raw.speed !== 'number' || !Number.isFinite(raw.speed) || raw.speed < .25 || raw.speed > 2 || typeof raw.pitch !== 'number' || !Number.isFinite(raw.pitch) || raw.pitch < -24 || raw.pitch > 24 || typeof raw.preservePitch !== 'boolean') throw Error('The master contains invalid playback speed or pitch settings.');
+    if (!plain(raw) || Object.keys(raw).length !== MASTER_PLAYBACK_KEYS.length || MASTER_PLAYBACK_KEYS.some(key => !Object.prototype.hasOwnProperty.call(raw, key)) || typeof raw.speed !== 'number' || !Number.isFinite(raw.speed) || raw.speed < .25 || raw.speed > 2 || typeof raw.pitch !== 'number' || !Number.isFinite(raw.pitch) || raw.pitch < -24 || raw.pitch > 24 || typeof raw.preservePitch !== 'boolean' || !MASTER_STRETCH_ALGORITHMS.includes(raw.algorithm)) throw Error('The master contains invalid playback speed, pitch or stretch algorithm settings.');
   }
   const defaultTrackEq = () => ({ low: 0, lowMid: 0, highMid: 0, high: 0, lowMidFreq: 400, highMidFreq: 2500 });
   const trackEq = raw => ({ ...Object.fromEntries(TRACK_EQ_BANDS.map(band => [band.key, number(raw?.[band.key], -12, 12, 0)])), ...Object.fromEntries(TRACK_EQ_SWEEPS.map(sweep => [sweep.key, number(raw?.[sweep.key], sweep.min, sweep.max, sweep.default)])) });
@@ -10479,12 +10480,16 @@ body {
     const legacyMixUpgrade = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 25);
     const legacyTenTracks = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 32);
     const legacyMasterPlayback = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 34);
+    const legacyMasterAlgorithm = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 43);
     const legacyHood = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 40);
     const legacyGroupBuses = p.appVersion === undefined || savedVersion && (Number(savedVersion[1]) < 1 || Number(savedVersion[1]) === 1 && Number(savedVersion[2]) < 41);
     const sourceTrackCount = Array.isArray(s.tracks) ? s.tracks.length : 0;
     if (s.version !== 1 || typeof s.name !== 'string' || !Array.isArray(s.tracks) || sourceTrackCount !== TRACK_COUNT && !(legacyTenTracks && sourceTrackCount === LEGACY_TRACK_COUNT) || !Array.isArray(s.assets) || !plain(s.master) || !plain(s.view)) throw Error('A GALLEY project must contain ten complete tracks; older eight-track projects are also supported.');
     if (legacyTenTracks && !Object.prototype.hasOwnProperty.call(s.master, 'mastering')) s.master.mastering = defaultMastering();
     if (legacyMasterPlayback && !Object.prototype.hasOwnProperty.call(s.master, 'playback')) s.master.playback = defaultMasterPlayback();
+    // The old master renderer is Signalsmith. Inherit only the absent selector;
+    // malformed supplied records still pass through the strict bus validator.
+    if (legacyMasterAlgorithm && plain(s.master.playback) && !Object.prototype.hasOwnProperty.call(s.master.playback, 'algorithm')) s.master.playback.algorithm = 'signalsmith';
     strictNumbers(s, ['tempo', 'lengthBars', 'loopStart', 'loopEnd', 'selectedTrack'], 'The project contains invalid transport settings.');
     if (!Number.isInteger(s.lengthBars) || s.lengthBars < 1 || s.lengthBars > 64 || s.tempo < 40 || s.tempo > 240 || s.loopStart < 0 || s.loopEnd > s.lengthBars * 4 || s.loopEnd <= s.loopStart || !Number.isInteger(s.selectedTrack) || s.selectedTrack < 0 || s.selectedTrack >= sourceTrackCount || typeof s.loopEnabled !== 'boolean') throw Error('The project’s transport range is invalid.');
     strictNumbers(s.master, ['level'], 'The project contains invalid master settings.');
@@ -10722,7 +10727,7 @@ body {
   }
   const beatsToSeconds = (beats, tempo) => beats * 60 / tempo;
   const formatTime = seconds => { const s = Math.max(0, Number(seconds) || 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, audioCapacity, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
+  window.LoomSchema = Object.freeze({ VERSION, TRACK_COUNT, isTrackId, defaultTrack: track, MASTERING_FLAGS, MASTERING_NUMERIC, defaultMastering, normalizeMastering, MASTER_STRETCH_ALGORITHMS, defaultMasterPlayback, normalizeMasterPlayback, COLORS, LIMITS, audioCapacity, projectByteLength, recoveryPayloadExceeds, effectSlotCount, defaultLFOs, lfoTargets, TRACK_EQ_BANDS, TRACK_EQ_SWEEPS, defaultTrackEq, BUILT_INS, INSTRUMENT_NAMES, instrumentName, copy, uid, defaultState, defaultMaster, defaultReturn, defaultBus, TRACK_OUTPUTS, demoState, normalize, effect, automationOwner, automationTargets, automationValue, parseProject, serializeProject, encodeAsset, decodeAsset, decodeAssets, encodeFreezeAsset, decodeFreezeAsset, validateFreezeAsset, freezeFingerprint, freezeValid, pruneAssets, beatsToSeconds, formatTime, validateAsset, pattern, voiceMap, noteClip, renderSource });
 })();
 
 /* GALLEY: sampled audio callback timing. A budget share, not system CPU usage. */
@@ -18906,11 +18911,18 @@ body {
 (function (scope) {
   'use strict';
   const MAX_PCM_BYTES = 384 * 1024 * 1024;
+  const ALGORITHMS = Object.freeze([
+    { id: 'signalsmith', name: 'Signalsmith · Original', description: 'Balanced, detailed stretching for complete mixes. The original GALLEY engine.' },
+    { id: 'wsola', name: 'Rhythmic · WSOLA', description: 'Stereo-linked waveform alignment keeps rhythmic and percussive material focused.' },
+    { id: 'phase-vocoder', name: 'Spectral · Phase vocoder', description: 'Classic frequency-domain stretching for sustained chords, pads and smooth spectral color.' },
+    { id: 'granular', name: 'Texture · Granular', description: 'Overlapping short grains add a deliberately grainy, shimmering texture at larger speed changes.' }
+  ].map(Object.freeze));
+  const algorithmIds = new Set(ALGORITHMS.map(value => value.id));
   const abortError = message => Object.assign(new Error(message || 'Master preparation cancelled.'), { name: 'AbortError' });
   const finite = (v, fallback) => (typeof v === 'number' || typeof v === 'string' && v.trim()) && Number.isFinite(Number(v)) ? Number(v) : fallback;
   function normalize(value) {
     const s = value && typeof value === 'object' ? value : {};
-    return { speed: Math.max(.25, Math.min(2, finite(s.speed, 1))), pitch: Math.max(-24, Math.min(24, finite(s.pitch, 0))), preservePitch: typeof s.preservePitch === 'boolean' ? s.preservePitch : true };
+    return { speed: Math.max(.25, Math.min(2, finite(s.speed, 1))), pitch: Math.max(-24, Math.min(24, finite(s.pitch, 0))), preservePitch: typeof s.preservePitch === 'boolean' ? s.preservePitch : true, algorithm: algorithmIds.has(s.algorithm) ? s.algorithm : 'signalsmith' };
   }
   function pitchSemitones(value) { const s = normalize(value); return s.pitch + (s.preservePitch ? 0 : 12 * Math.log2(s.speed)); }
   function isNeutral(value) { const s = normalize(value); return s.speed === 1 && s.pitch === 0; }
@@ -18943,12 +18955,187 @@ body {
     let module, busy = false;
     const pause = () => new Promise(resolve => setTimeout(resolve, 0));
     const send = (type, id, extra, transfer) => self.postMessage(Object.assign({ type, id }, extra), transfer || []);
+    // The three JavaScript engines write directly to the final output grid.
+    // Pitch is applied while reading virtual grains or FFT analysis windows; no
+    // full-length expanded pitch intermediate is allocated.
+    function makeReader(left, right, pitch) {
+      let l = 0, r = 0;
+      const size = left.length, phases = 256;
+      const taps = pitch > 1.000001 ? 2 * Math.ceil(12 + 4 * pitch) : 0, half = taps / 2;
+      const coefficients = taps ? new Float64Array(phases * taps) : null;
+      if (coefficients) for (let phase = 0; phase < phases; phase++) {
+        const fraction = phase / phases, cutoff = 1 / pitch; let sum = 0;
+        for (let tap = 0; tap < taps; tap++) {
+          const x = tap - half + 1 - fraction, angle = Math.PI * cutoff * x;
+          const sinc = Math.abs(angle) < 1e-12 ? 1 : Math.sin(angle) / angle;
+          const window = .42 + .5 * Math.cos(Math.PI * x / half) + .08 * Math.cos(2 * Math.PI * x / half);
+          const value = cutoff * sinc * window;
+          coefficients[phase * taps + tap] = value; sum += value;
+        }
+        for (let tap = 0; tap < taps; tap++) coefficients[phase * taps + tap] /= sum;
+      }
+      function linear(position) {
+        const at = Math.floor(position), fraction = position - at;
+        const aL = at >= 0 && at < size ? left[at] : 0, aR = at >= 0 && at < size ? right[at] : 0;
+        const bL = at + 1 >= 0 && at + 1 < size ? left[at + 1] : 0, bR = at + 1 >= 0 && at + 1 < size ? right[at + 1] : 0;
+        l = aL + (bL - aL) * fraction; r = aR + (bR - aR) * fraction;
+      }
+      function read(position) {
+        if (!coefficients) { linear(position); return; }
+        const at = Math.floor(position), phase = Math.min(phases - 1, Math.floor((position - at) * phases));
+        const base = phase * taps, first = at - half + 1;
+        l = r = 0;
+        for (let tap = 0; tap < taps; tap++) {
+          const index = first + tap;
+          if (index >= 0 && index < size) { const gain = coefficients[base + tap]; l += left[index] * gain; r += right[index] * gain; }
+        }
+      }
+      return { read, linear, get left() { return l; }, get right() { return r; } };
+    }
+    async function resampled(left, right, frames, pitch, id) {
+      const reader = makeReader(left, right, pitch), outL = new Float32Array(frames), outR = new Float32Array(frames);
+      const ratio = left.length / frames;
+      for (let at = 0; at < frames; at++) {
+        reader.read(at * ratio); outL[at] = reader.left; outR[at] = reader.right;
+        if (!Number.isFinite(outL[at]) || !Number.isFinite(outR[at])) throw new Error('The stretch engine produced invalid audio.');
+        if ((at & 32767) === 32767) { send('progress', id, { progress: Math.min(.99, (at + 1) / frames) }); await pause(); }
+      }
+      return { left: outL, right: outR };
+    }
+    function grainWindow(sampleRate, algorithm) {
+      const length = Math.max(64, Math.round(sampleRate * (algorithm === 'wsola' ? .04 : .128) / 4) * 4);
+      const window = new Float64Array(length);
+      for (let j = 0; j < length; j++) window[j] = .5 + .5 * Math.cos(2 * Math.PI * (j - length / 2) / length);
+      return window;
+    }
+    async function grains(left, right, frames, sampleRate, pitch, algorithm, id) {
+      const window = grainWindow(sampleRate, algorithm), length = window.length, half = length / 2, hop = algorithm === 'granular' ? length / 2 : length / 4;
+      const outL = new Float32Array(frames), outR = new Float32Array(frames), weight = new Float32Array(frames);
+      const reader = makeReader(left, right, pitch), ratio = left.length / frames;
+      const search = Math.min(hop, Math.round(sampleRate * .008 / Math.max(1, pitch))), stride = Math.max(1, Math.floor(length / 96));
+      let center = 0, batch = 0;
+      while (true) {
+        const nominal = center * ratio; let shift = 0;
+        if (algorithm === 'wsola' && center > 0 && center < frames - 1) {
+          const first = Math.max(0, center - half), end = Math.min(frames, center), coarse = Math.max(1, Math.floor(search / 32));
+          let best = -Infinity, reference = 0;
+          for (let at = first; at < end; at += stride) if (weight[at] > 1e-8) { const l = outL[at] / weight[at], r = outR[at] / weight[at]; reference += l * l + r * r; }
+          function score(offset) {
+            let dot = 0, energy = 0;
+            for (let at = first; at < end; at += stride) if (weight[at] > 1e-8) {
+              reader.linear(nominal + (at - center + offset) * pitch);
+              const l = outL[at] / weight[at], r = outR[at] / weight[at];
+              dot += l * reader.left + r * reader.right; energy += reader.left * reader.left + reader.right * reader.right;
+            }
+            if (energy < 1e-16) return -Infinity;
+            return dot / Math.sqrt(energy * reference) - .002 * Math.abs(offset) / Math.max(1, search);
+          }
+          if (reference > 1e-16) {
+            best = score(0);
+            for (let candidate = -search; candidate <= search; candidate += coarse) { const value = score(candidate); if (value > best + 1e-12) { best = value; shift = candidate; } }
+            const around = shift;
+            for (let candidate = Math.max(-search, around - coarse); candidate <= Math.min(search, around + coarse); candidate++) { const value = score(candidate); if (value > best + 1e-12) { best = value; shift = candidate; } }
+          }
+        }
+        const inputCenter = center === frames - 1 ? left.length - 1 : nominal + shift * pitch;
+        for (let j = Math.max(0, half - center); j < Math.min(length, frames - center + half); j++) {
+          const at = center + j - half, gain = window[j];
+          reader.read(inputCenter + (j - half) * pitch);
+          outL[at] += reader.left * gain; outR[at] += reader.right * gain; weight[at] += gain;
+        }
+        if (center === frames - 1) break;
+        center = Math.min(frames - 1, center + hop);
+        if (++batch === 8) { batch = 0; send('progress', id, { progress: Math.min(.99, center / frames) }); await pause(); }
+      }
+      for (let at = 0; at < frames; at++) {
+        if (weight[at] > 1e-12) { outL[at] /= weight[at]; outR[at] /= weight[at]; }
+        if (!Number.isFinite(outL[at]) || !Number.isFinite(outR[at])) throw new Error('The stretch engine produced invalid audio.');
+        if ((at & 262143) === 262143) await pause();
+      }
+      return { left: outL, right: outR };
+    }
+    function fftPlan(size) {
+      const reverse = new Uint32Array(size), cosine = new Float64Array(size / 2), sine = new Float64Array(size / 2);
+      let bits = 0; while ((1 << bits) < size) bits++;
+      for (let i = 0; i < size; i++) { let x = i, value = 0; for (let bit = 0; bit < bits; bit++) { value = value * 2 + (x & 1); x >>>= 1; } reverse[i] = value; }
+      for (let i = 0; i < size / 2; i++) { cosine[i] = Math.cos(2 * Math.PI * i / size); sine[i] = Math.sin(2 * Math.PI * i / size); }
+      return function fft(real, imaginary, inverse) {
+        for (let i = 0; i < size; i++) if (reverse[i] > i) { const j = reverse[i], re = real[i], im = imaginary[i]; real[i] = real[j]; imaginary[i] = imaginary[j]; real[j] = re; imaginary[j] = im; }
+        for (let length = 2; length <= size; length *= 2) {
+          const half = length / 2, step = size / length;
+          for (let start = 0; start < size; start += length) for (let j = 0; j < half; j++) {
+            const angle = j * step, c = cosine[angle], s = inverse ? sine[angle] : -sine[angle];
+            const a = start + j, b = a + half, re = real[b] * c - imaginary[b] * s, im = real[b] * s + imaginary[b] * c;
+            real[b] = real[a] - re; imaginary[b] = imaginary[a] - im; real[a] += re; imaginary[a] += im;
+          }
+        }
+        if (inverse) for (let i = 0; i < size; i++) { real[i] /= size; imaginary[i] /= size; }
+      };
+    }
+    async function spectral(left, right, frames, sampleRate, pitch, id) {
+      let size = 512; while (size < sampleRate * .046 && size < 8192) size *= 2;
+      const half = size / 2, bins = half + 1, fft = fftPlan(size), ratio = left.length / frames;
+      const hop = Math.max(1, Math.floor(size / 4 * Math.min(1, pitch / ratio)));
+      const window = new Float64Array(size), previous = Array.from({ length: 4 }, () => new Float64Array(bins)), rotation = new Float64Array(bins);
+      const power = new Float64Array(bins), peaks = new Uint32Array(bins);
+      const reL = new Float64Array(size), imL = new Float64Array(size), reR = new Float64Array(size), imR = new Float64Array(size);
+      const resultReL = new Float64Array(size), resultImL = new Float64Array(size), resultReR = new Float64Array(size), resultImR = new Float64Array(size);
+      const outL = new Float32Array(frames), outR = new Float32Array(frames), weight = new Float32Array(frames), reader = makeReader(left, right, pitch);
+      for (let j = 0; j < size; j++) window[j] = Math.sqrt(.5 + .5 * Math.cos(2 * Math.PI * (j - half) / size));
+      const principal = angle => angle - 2 * Math.PI * Math.round(angle / (2 * Math.PI));
+      let center = 0, previousCenter = 0, first = true, batch = 0;
+      while (true) {
+        const analysisCenter = center * ratio, advance = (center - previousCenter) * ratio / pitch;
+        for (let j = 0; j < size; j++) { reader.read(analysisCenter + (j - half) * pitch); reL[j] = reader.left * window[j]; reR[j] = reader.right * window[j]; imL[j] = imR[j] = 0; }
+        fft(reL, imL, false); fft(reR, imR, false);
+        resultReL.fill(0); resultImL.fill(0); resultReR.fill(0); resultImR.fill(0);
+        for (let k = 0; k < bins; k++) {
+          const crossRe = previous[0][k] * reL[k] + previous[1][k] * imL[k] + previous[2][k] * reR[k] + previous[3][k] * imR[k];
+          const crossIm = previous[0][k] * imL[k] - previous[1][k] * reL[k] + previous[2][k] * imR[k] - previous[3][k] * reR[k];
+          const omega = 2 * Math.PI * k / size;
+          if (first) rotation[k] = 0;
+          else if (advance > 0 && Math.abs(crossRe) + Math.abs(crossIm) > 1e-20) {
+            const expected = omega * advance, delta = expected + principal(Math.atan2(crossIm, crossRe) - expected);
+            rotation[k] = principal(rotation[k] + delta * ((center - previousCenter) / advance - 1));
+          }
+          previous[0][k] = reL[k]; previous[1][k] = imL[k]; previous[2][k] = reR[k]; previous[3][k] = imR[k];
+          power[k] = reL[k] * reL[k] + imL[k] * imL[k] + reR[k] * reR[k] + imR[k] * imR[k];
+        }
+        // Identity phase locking keeps neighboring bins of one partial in
+        // phase. The shared rotation still preserves each bin's stereo ratio;
+        // summing channel waveforms here would cancel opposite-polarity audio.
+        let peakCount = 0;
+        for (let k = 0; k < bins; k++) if ((k === 0 || power[k] >= power[k - 1]) && (k === half || power[k] > power[k + 1])) peaks[peakCount++] = k;
+        if (!peakCount) peaks[peakCount++] = 0;
+        let peakIndex = 0;
+        for (let k = 0; k < bins; k++) {
+          while (peakIndex + 1 < peakCount && k > (peaks[peakIndex] + peaks[peakIndex + 1]) / 2) peakIndex++;
+          const bin = k, angle = rotation[peaks[peakIndex]];
+          const c = Math.cos(angle), s = Math.sin(angle), lRe = reL[k] * c - imL[k] * s, lIm = reL[k] * s + imL[k] * c, rRe = reR[k] * c - imR[k] * s, rIm = reR[k] * s + imR[k] * c;
+          resultReL[bin] = lRe; resultImL[bin] = lIm; resultReR[bin] = rRe; resultImR[bin] = rIm;
+        }
+        resultImL[0] = resultImR[0] = resultImL[half] = resultImR[half] = 0;
+        for (let k = 1; k < half; k++) { resultReL[size - k] = resultReL[k]; resultImL[size - k] = -resultImL[k]; resultReR[size - k] = resultReR[k]; resultImR[size - k] = -resultImR[k]; }
+        fft(resultReL, resultImL, true); fft(resultReR, resultImR, true);
+        for (let j = Math.max(0, half - center); j < Math.min(size, frames - center + half); j++) { const at = center + j - half, gain = window[j]; outL[at] += resultReL[j] * gain; outR[at] += resultReR[j] * gain; weight[at] += gain * gain; }
+        previousCenter = center; first = false;
+        if (center === frames - 1) break;
+        center = Math.min(frames - 1, center + hop);
+        if (++batch === 8) { batch = 0; send('progress', id, { progress: Math.min(.99, center / frames) }); await pause(); }
+      }
+      for (let at = 0; at < frames; at++) {
+        if (weight[at] > 1e-12) { outL[at] /= weight[at]; outR[at] /= weight[at]; }
+        if (!Number.isFinite(outL[at]) || !Number.isFinite(outR[at])) throw new Error('The stretch engine produced invalid audio.');
+        if ((at & 262143) === 262143) await pause();
+      }
+      return { left: outL, right: outR };
+    }
     self.onmessage = async event => {
       const data = event.data;
       if (data.type === 'boot') {
         try {
-          const factory = new Function(data.core + '\nreturn SignalsmithStretch;')();
-          module = await factory(); module._main(); send('ready', 0);
+          if (data.core) { const factory = new Function(data.core + '\nreturn SignalsmithStretch;')(); module = await factory(); module._main(); }
+          send('ready', 0);
         } catch (error) { send('error', 0, { message: error.message || String(error) }); }
         return;
       }
@@ -18962,6 +19149,15 @@ body {
           const end = Math.min(inputFrames, offset + 262144);
           for (let i = offset; i < end; ++i) if (!Number.isFinite(left[i]) || !Number.isFinite(right[i])) throw new Error('Master audio contains non-finite samples.');
           if (end < inputFrames) await pause();
+        }
+        if (data.algorithm && data.algorithm !== 'signalsmith') {
+          const pitch = Math.pow(2, data.pitch / 12), ratio = inputFrames / frames;
+          let output;
+          if (inputFrames < 32 || data.pureTape || Math.abs(pitch - ratio) < 1e-12) output = await resampled(left, right, frames, ratio, id);
+          else if (data.algorithm === 'phase-vocoder') output = await spectral(left, right, frames, sampleRate, pitch, id);
+          else output = await grains(left, right, frames, sampleRate, pitch, data.algorithm, id);
+          send('result', id, { left: output.left.buffer, right: output.right.buffer, sampleRate, frames }, [output.left.buffer, output.right.buffer]);
+          return;
         }
         module._presetDefault(2, sampleRate); module._reset();
         module._setTransposeSemitones(data.pitch, 0); module._setFormantSemitones(0, false);
@@ -19019,7 +19215,7 @@ body {
       const o = options || {};
       this._assets = o.assets || null; this._workerFactory = o.workerFactory || null;
       this._maxBytes = Math.min(MAX_PCM_BYTES, Math.max(0, finite(o.maxPcmBytes, MAX_PCM_BYTES)));
-      this._worker = null; this._boot = null; this._job = null; this._serial = 0; this._disposed = false;
+      this._worker = null; this._workerKind = null; this._boot = null; this._job = null; this._serial = 0; this._disposed = false;
     }
     _finish(error, result) {
       const job = this._job;
@@ -19029,20 +19225,21 @@ body {
       if (error) job.reject(error); else { if (job.onProgress) { try { job.onProgress(1); } catch (_) {} } job.resolve(result); }
     }
     _stop(error) {
-      if (this._worker) { this._worker.terminate(); this._worker = null; }
+      if (this._worker) { this._worker.terminate(); this._worker = null; this._workerKind = null; }
       if (this._boot) { clearTimeout(this._boot.timer); if (this._boot.url) URL.revokeObjectURL(this._boot.url); this._boot.reject(error); this._boot = null; }
       this._finish(error);
     }
-    _ensureWorker() {
+    _ensureWorker(algorithm) {
+      const kind = algorithm === 'signalsmith' ? 'signalsmith' : 'javascript';
       if (this._boot) return this._boot.promise;
       if (this._worker) return Promise.resolve();
-      const assets = this._assets || embeddedAssets();
-      if (!assets || typeof assets.core !== 'string' || !assets.core.includes('SignalsmithStretch') || !assets.core.includes('WebAssembly')) throw new Error('The bundled Signalsmith engine is invalid.');
+      const assets = kind === 'signalsmith' ? this._assets || embeddedAssets() : null;
+      if (kind === 'signalsmith' && (!assets || typeof assets.core !== 'string' || !assets.core.includes('SignalsmithStretch') || !assets.core.includes('WebAssembly'))) throw new Error('The bundled Signalsmith engine is invalid.');
       const source = '(' + workerProgram.toString() + ')();';
       let url = null, worker;
       if (this._workerFactory) worker = this._workerFactory(source);
       else { url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' })); try { worker = new Worker(url); } catch (error) { URL.revokeObjectURL(url); throw error; } }
-      this._worker = worker;
+      this._worker = worker; this._workerKind = kind;
       let resolve, reject;
       const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
       const boot = this._boot = { promise, resolve, reject, url, timer: null };
@@ -19066,7 +19263,7 @@ body {
         }
       };
       worker.onerror = event => { if (this._worker === worker) this._stop(new Error(event.message || 'The master playback worker failed.')); };
-      try { worker.postMessage({ type: 'boot', core: assets.core }); } catch (error) { this._stop(error); }
+      try { worker.postMessage({ type: 'boot', core: assets ? assets.core : null }); } catch (error) { this._stop(error); }
       return promise;
     }
     async process(input, value, options) {
@@ -19077,7 +19274,8 @@ body {
       const sampleRate = input.sampleRate;
       if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000) throw new RangeError('Unsupported master sample rate.');
       const frames = durationFrames(input.left.length, s), neutral = isNeutral(s);
-      const inputBytes = input.left.length * 8, bytes = neutral ? inputBytes : inputBytes * 2 + frames * 8;
+      const inputBytes = input.left.length * 8, extraBytes = !input.left.length || s.algorithm === 'signalsmith' ? 0 : frames * 4 + 2 * 1024 * 1024;
+      const bytes = neutral ? inputBytes : inputBytes * 2 + frames * 8 + extraBytes;
       if (bytes > this._maxBytes) throw new RangeError('Master speed preparation exceeds the 384 MiB PCM budget. Use a shorter song or render range.');
       if (this._job) this._stop(abortError('A newer master preparation replaced this one.'));
       if (neutral || !input.left.length) {
@@ -19091,29 +19289,32 @@ body {
         if (o.onProgress) { try { o.onProgress(1); } catch (_) {} }
         return { left: input.left, right: input.right, sampleRate, frames };
       }
+      const kind = s.algorithm === 'signalsmith' ? 'signalsmith' : 'javascript';
+      if (this._worker && this._workerKind !== kind) this._stop(abortError('A different stretch engine replaced this worker.'));
       return new Promise((resolve, reject) => {
         const job = this._job = { id: ++this._serial, frames, resolve, reject, signal, onProgress: o.onProgress, abort: () => this._stop(abortError()) };
         if (signal) signal.addEventListener('abort', job.abort, { once: true });
         (async () => {
           try {
-            await this._ensureWorker();
+            await this._ensureWorker(s.algorithm);
             if (this._job !== job) return;
             if (signal && signal.aborted) { this._stop(abortError()); return; }
             const left = input.left.slice(), right = input.right.slice();
-            this._worker.postMessage({ type: 'process', id: job.id, left: left.buffer, right: right.buffer, frames, sampleRate, pitch: pitchSemitones(s) }, [left.buffer, right.buffer]);
+            this._worker.postMessage({ type: 'process', id: job.id, left: left.buffer, right: right.buffer, frames, sampleRate, pitch: pitchSemitones(s), algorithm: s.algorithm, pureTape: !s.preservePitch && s.pitch === 0 }, [left.buffer, right.buffer]);
           } catch (error) { if (this._job === job) this._stop(error); }
         })();
       });
     }
     dispose() { this._disposed = true; this._stop(abortError('The master processor has been disposed.')); this._assets = null; this._workerFactory = null; }
   }
-  scope.LoomMasterTransform = Object.freeze({ normalize, isNeutral, durationFrames, pitchSemitones, Processor, MAX_PCM_BYTES });
+  scope.LoomMasterTransform = Object.freeze({ normalize, isNeutral, durationFrames, pitchSemitones, Processor, MAX_PCM_BYTES, ALGORITHMS });
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* GALLEY · reversible, prepared master speed and pitch. Neutral stays on the live engine. */
 (function (scope) {
   'use strict';
   const T = () => scope.LoomMasterTransform;
+  const algorithmName = settings => T().ALGORITHMS?.find(item => item.id === settings.algorithm)?.name || settings.algorithm || 'Signalsmith';
   const copy = value => scope.LoomSchema.copy(value);
   const aborted = () => new DOMException('Master preparation canceled.', 'AbortError');
   const empty = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
@@ -19260,12 +19461,13 @@ body {
           const { audio } = this.sourceCache, outputFrames = T().durationFrames(audio.frames, settings);
           if (audio.frames * 16 + outputFrames * 16 > 512 * 1024 * 1024) throw Error('This speed needs too much preview memory. Choose a shorter loop or increase Speed.');
           this.processor ||= new (T().Processor)();
-          this._status('stretching', 0, 'Preparing pitch and speed…');
-          const transformed = await this.processor.process(audio, settings, { signal, onProgress: p => this._status('stretching', p, 'Preparing pitch and speed…') }); active();
+          const message = 'Preparing ' + algorithmName(settings) + ' speed and pitch…';
+          this._status('stretching', 0, message);
+          const transformed = await this.processor.process(audio, settings, { signal, onProgress: p => this._status('stretching', p, message) }); active();
           if (range.loop) closeLoop(transformed);
           const buffer = this.engine.context.createBuffer(2, transformed.left.length, transformed.sampleRate);
           buffer.copyToChannel(transformed.left, 0); buffer.copyToChannel(transformed.right, 1);
-          this.cache = { buffer, range, speed: settings.speed, tempo: state.tempo, bodyFrames: T().durationFrames(audio.bodyFrames, settings), frames: transformed.left.length, sampleRate: transformed.sampleRate };
+          this.cache = { buffer, range, speed: settings.speed, algorithm: settings.algorithm, tempo: state.tempo, bodyFrames: T().durationFrames(audio.bodyFrames, settings), frames: transformed.left.length, sampleRate: transformed.sampleRate };
           this.processor.dispose(); this.processor = null;
         }
         active(); this.controller = null;
@@ -19344,10 +19546,12 @@ body {
     if (!element) throw Error('Master playback needs a panel.');
     let disposed=false,pointer=null,keyboard=null,generation=getGeneration();
     const $=id=>element.querySelector('#'+id);
-    const settings=()=>getState().master?.playback||{speed:1,pitch:0,preservePitch:true};
+    const algorithms=scope.LoomMasterTransform?.ALGORITHMS||[{id:'signalsmith',name:'Original · Signalsmith',description:'Balanced stretching for complete mixes.'}];
+    const settings=()=>getState().master?.playback||{speed:1,pitch:0,preservePitch:true,algorithm:'signalsmith'};
     const setText=(node,value)=>{const text=String(value);if(node.textContent!==text)node.textContent=text;};
     const signed=value=>(value>0?'+':'')+Number(value.toFixed(2))+' st';
-    element.innerHTML='<section class="master-playback" aria-labelledby="masterPlaybackTitle"><div class="mp-heading"><div><span class="eyebrow">MASTER / ANOTHER PACE</span><h3 id="masterPlaybackTitle">Speed &amp; pitch</h3></div><button type="button" id="masterPlaybackReset">Reset</button></div><div class="mp-body"><div class="mp-knobs">'+controls.map(d=>'<div class="mp-control"><label id="mp-label-'+d.key+'">'+d.label+'</label><button type="button" class="mp-knob" role="slider" data-mp-knob="'+d.key+'" aria-labelledby="mp-label-'+d.key+'" aria-valuemin="'+d.min+'" aria-valuemax="'+d.max+'" aria-valuenow="'+d.value+'"><svg viewBox="0 0 84 84" aria-hidden="true"><path class="mp-ring" d="M17 65a32 32 0 1 1 50 0"/><circle class="mp-shadow" cx="42" cy="45" r="26"/><circle class="mp-cap" cx="42" cy="42" r="26"/><circle class="mp-inner" cx="42" cy="42" r="21"/><path class="mp-pointer" d="M42 42V23"/></svg></button><div class="mp-exact"><input type="number" data-mp-number="'+d.key+'" aria-label="'+d.label+' exact value" min="'+d.min*d.scale+'" max="'+d.max*d.scale+'" step="'+d.step*d.scale+'"><span>'+d.unit+'</span></div></div>').join('')+'</div><div class="mp-options"><label class="mp-preserve"><input type="checkbox" id="masterPlaybackPreserve"> Preserve pitch when changing speed</label><p id="masterPlaybackMode"></p><div class="mp-readings"><div><span>Effective tempo</span><output id="masterPlaybackBpm">—</output></div><div><span>Net pitch change</span><output id="masterPlaybackNetPitch">—</output></div></div><div class="mp-status" role="status" aria-live="polite"><span id="masterPlaybackPhase">Original playback</span><p id="masterPlaybackMessage"></p></div><div class="mp-preparation" id="masterPlaybackPreparation" hidden><progress id="masterPlaybackProgress" max="1" aria-label="Preparing master playback"></progress><button type="button" id="masterPlaybackCancel">Cancel preparation</button></div></div></div><p class="mp-note">Altered playback prepares a stereo master. Preview follows the arrangement loop when enabled. Edits pause or refresh it; reset before recording, live input or SERVICE. Stereo mix exports include these settings. Individual stems keep their original speed and pitch.</p></section>';
+    element.innerHTML='<section class="master-playback" aria-labelledby="masterPlaybackTitle"><div class="mp-heading"><div><span class="eyebrow">MASTER / ANOTHER PACE</span><h3 id="masterPlaybackTitle">Speed &amp; pitch</h3></div><button type="button" id="masterPlaybackReset">Reset</button></div><div class="mp-body"><div class="mp-knobs">'+controls.map(d=>'<div class="mp-control"><label id="mp-label-'+d.key+'">'+d.label+'</label><button type="button" class="mp-knob" role="slider" data-mp-knob="'+d.key+'" aria-labelledby="mp-label-'+d.key+'" aria-valuemin="'+d.min+'" aria-valuemax="'+d.max+'" aria-valuenow="'+d.value+'"><svg viewBox="0 0 84 84" aria-hidden="true"><path class="mp-ring" d="M17 65a32 32 0 1 1 50 0"/><circle class="mp-shadow" cx="42" cy="45" r="26"/><circle class="mp-cap" cx="42" cy="42" r="26"/><circle class="mp-inner" cx="42" cy="42" r="21"/><path class="mp-pointer" d="M42 42V23"/></svg></button><div class="mp-exact"><input type="number" data-mp-number="'+d.key+'" aria-label="'+d.label+' exact value" min="'+d.min*d.scale+'" max="'+d.max*d.scale+'" step="'+d.step*d.scale+'"><span>'+d.unit+'</span></div></div>').join('')+'</div><div class="mp-options"><label class="mp-preserve"><input type="checkbox" id="masterPlaybackPreserve"> Preserve pitch when changing speed</label><div class="mp-algorithm"><label for="masterPlaybackAlgorithm">Stretch algorithm</label><select id="masterPlaybackAlgorithm" aria-describedby="masterPlaybackAlgorithmHelp"></select><p id="masterPlaybackAlgorithmHelp"></p></div><p id="masterPlaybackMode"></p><div class="mp-readings"><div><span>Effective tempo</span><output id="masterPlaybackBpm">—</output></div><div><span>Net pitch change</span><output id="masterPlaybackNetPitch">—</output></div></div><div class="mp-status" role="status" aria-live="polite"><span id="masterPlaybackPhase">Original playback</span><p id="masterPlaybackMessage"></p></div><div class="mp-preparation" id="masterPlaybackPreparation" hidden><progress id="masterPlaybackProgress" max="1" aria-label="Preparing master playback"></progress><button type="button" id="masterPlaybackCancel">Cancel preparation</button></div></div></div><p class="mp-note">Altered playback prepares a stereo master. Preview follows the arrangement loop when enabled. Edits pause or refresh it; reset before recording, live input or SERVICE. Stereo mix exports include these settings. Individual stems keep their original speed and pitch.</p></section>';
+    for(const algorithm of algorithms){const option=document.createElement('option');option.value=algorithm.id;option.textContent=algorithm.name;$('masterPlaybackAlgorithm').append(option);}
     function valid(active){return active&&active.generation===getGeneration();}
     function end(active){if(valid(active)&&active.remembered)onChange({},{key:active.key,first:false,phase:'end'});}
     function cancelGesture(){if(pointer){pointer.element.classList.remove('is-adjusting');if(pointer.element.hasPointerCapture?.(pointer.id))pointer.element.releasePointerCapture(pointer.id);}pointer=keyboard=null;}
@@ -19368,10 +19572,13 @@ body {
         if(force||document.activeElement!==number)number.value=fixed(value*d.scale);
       }
       $('masterPlaybackPreserve').checked=p.preservePitch!==false;
+      const algorithm=algorithms.find(value=>value.id===(p.algorithm||'signalsmith'))||algorithms[0],selector=$('masterPlaybackAlgorithm');
+      if(selector.value!==algorithm.id)selector.value=algorithm.id;
+      setText($('masterPlaybackAlgorithmHelp'),p.preservePitch===false&&pitch===0&&speed!==1&&algorithm.id!=='signalsmith'?'This mode uses tape-speed playback here. Turn on Preserve pitch or adjust Pitch to hear its stretching.':algorithm.description);
       setText($('masterPlaybackMode'),p.preservePitch!==false?'Speed changes duration while Pitch sets the transposition.':'Tape behavior: speed also changes pitch; the Pitch knob adds its own shift.');
       setText($('masterPlaybackBpm'),fixed((Number(getState().tempo)||120)*speed)+' BPM');
       setText($('masterPlaybackNetPitch'),signed(pitch+(p.preservePitch===false?12*Math.log2(speed):0)));
-      $('masterPlaybackReset').disabled=speed===1&&pitch===0&&p.preservePitch!==false;
+      $('masterPlaybackReset').disabled=speed===1&&pitch===0&&p.preservePitch!==false&&algorithm.id==='signalsmith';
       paint();
     }
     function paint(status=getStatus()){
@@ -19399,8 +19606,8 @@ body {
       pointerdown:event=>{pointerDown(event);event.stopPropagation();},pointermove:pointerMove,pointerup:pointerEnd,pointercancel:pointerEnd,
       keydown:event=>{keyDown(event);event.stopPropagation();},keyup:event=>{end(keyboard);keyboard=null;event.stopPropagation();},
       focusout:()=>{end(keyboard);keyboard=null;render();},
-      change:event=>{const number=event.target.closest('[data-mp-number]');if(number){const d=byKey.get(number.dataset.mpNumber);if(number.value!=='')change(d.key,Number(number.value)/d.scale);number.value=fixed(settings()[d.key]*d.scale);}if(event.target.id==='masterPlaybackPreserve')emit({preservePitch:event.target.checked},{key:'preservePitch',first:true,phase:'single'});event.stopPropagation();},
-      click:event=>{if(event.target.closest('#masterPlaybackReset'))emit({speed:1,pitch:0,preservePitch:true},{key:null,first:true,phase:'single'});if(event.target.closest('#masterPlaybackCancel')){try{onCancel();}catch(error){onStatus(error.message);}paint();}event.stopPropagation();}
+      change:event=>{const number=event.target.closest('[data-mp-number]');if(number){const d=byKey.get(number.dataset.mpNumber);if(number.value!=='')change(d.key,Number(number.value)/d.scale);number.value=fixed(settings()[d.key]*d.scale);}if(event.target.id==='masterPlaybackPreserve')emit({preservePitch:event.target.checked},{key:'preservePitch',first:true,phase:'single'});if(event.target.id==='masterPlaybackAlgorithm'&&algorithms.some(algorithm=>algorithm.id===event.target.value)&&event.target.value!==(settings().algorithm||'signalsmith'))emit({algorithm:event.target.value},{key:'algorithm',first:true,phase:'single'});event.stopPropagation();},
+      click:event=>{if(event.target.closest('#masterPlaybackReset'))emit({speed:1,pitch:0,preservePitch:true,algorithm:'signalsmith'},{key:null,first:true,phase:'single'});if(event.target.closest('#masterPlaybackCancel')){try{onCancel();}catch(error){onStatus(error.message);}paint();}event.stopPropagation();}
     };
     for(const [event,handler]of Object.entries(handlers))element.addEventListener(event,handler);render();
     return{render,paint,dispose(){if(disposed)return;disposed=true;cancelGesture();for(const[event,handler]of Object.entries(handlers))element.removeEventListener(event,handler);element.innerHTML='';}};
