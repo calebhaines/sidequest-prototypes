@@ -3,15 +3,17 @@
 **Speed & pitch** in the master area changes playback of the finished stereo
 arrangement. **Speed** runs from **25% to 200%**; **Pitch** runs from **−24 to
 +24 semitones**. The original clips, notes, tempo and effect settings remain
-editable. **Reset** returns to 100% speed, zero transpose and pitch preservation.
+editable. **Reset** returns to 100% speed, zero transpose, pitch preservation
+and the original Signalsmith algorithm.
 
 The neutral setting uses GALLEY’s normal live audio path. It does not prepare a
 second mix, start a stretch worker or add time-stretch processing to playback.
 
 ## Listen at another speed or pitch
 
-1. Set Speed or Pitch. Leave **Preserve pitch when changing speed** checked to
-   change timing without the ordinary tape-speed tuning change.
+1. Set Speed or Pitch and choose a **Stretch algorithm**. Leave **Preserve pitch
+   when changing speed** checked to change timing without the ordinary
+   tape-speed tuning change.
 2. Press **Play**. GALLEY first prepares the normal Float32 stereo master,
    including notes, frozen tracks, effects, sends, mastering and their existing
    automation, then transforms that mix in a background worker.
@@ -38,6 +40,29 @@ an extra release tail. The loop must be at least a quarter beat long. With
 looping off, preparation covers the full arrangement
 from its beginning plus an eight-second nominal release tail. That tail is
 transformed along with the mix.
+
+## Choose a stretch algorithm
+
+The selector adds three distinct processing options beside the original engine:
+
+| Algorithm | Processing and useful starting points |
+|---|---|
+| Signalsmith | The original modern spectral engine; use it as the reference when comparing a full mix. |
+| WSOLA | Aligns overlapping waveform segments using stereo-linked correlation. Try rhythmic material, guitars and moderate speed changes. |
+| Classic phase vocoder | FFT analysis and phase propagation produce a different spectral stretch. Try sustained tones, pads and long reverberation. |
+| Granular | Overlaps short grains for a more textured treatment. Try deliberate grain and modulation effects at slower speeds. |
+
+All choices retain the same Speed and Pitch controls, exact output duration and
+stereo source clock. Changing algorithm pauses altered playback and discards the
+previous transformed result. Its original prepared master can be reused, so
+comparison does not need to re-render the track effects. Press Play to prepare
+the newly selected result. Compare several choices on the same passage; their
+artifacts and best uses depend on the source.
+
+At 100% Speed and zero Pitch, every algorithm uses normal live playback without
+starting a stretch worker. With pitch preservation off and zero Pitch, the three
+new algorithms use band-limited tape-style resampling; the stretch choice is most
+audible with pitch preservation on or an additional Pitch shift.
 
 ## Pitch preservation and tape behavior
 
@@ -86,16 +111,20 @@ processing and automation. Changing master Speed or Pitch does not invalidate
 that freeze. The frozen audio joins the rest of the nominal master before the
 global transform, and Reset restores normal playback without unfreezing.
 
-Projects and Undo retain Speed, Pitch and Preserve pitch along with the original
-arrangement. Prepared stereo buffers are working data, not a replacement for
+Projects and Undo retain the algorithm, Speed, Pitch and Preserve pitch along
+with the original arrangement. Prepared stereo buffers are working data, not a replacement for
 those sources. A newly opened project may need to prepare its altered playback
-again. Older projects inherit 100%, zero transpose and pitch preservation.
+again. Older projects keep their saved Speed and Pitch and use the original
+Signalsmith algorithm. Projects from before master playback controls receive
+100%, zero transpose and pitch preservation.
 
 ## Memory, quality and timing
 
 Preparation holds stereo Float32 audio and a transformed playback buffer; slow
 speeds produce more output frames. Nominal capture is bounded at 128 MiB. The
-transform's owned-copy budget is 384 MiB for two input copies plus its output;
+transform's working-audio budget is 384 MiB for source copies and processed
+buffers; the new algorithms also reserve their grain weights, filters and FFT
+scratch within that limit;
 preview's larger check allows 512 MiB for two input and two output copies before
 creating its AudioBuffer. These are working-audio limits, separate from the
 portable project file limit and the audio already loaded by the session.
@@ -119,10 +148,12 @@ clips samples that exceed full scale.
 
 ## Processor and source
 
-The worker reuses the vendored **Signalsmith Stretch 1.3.2** processor already
-used by MORSEL. It is MIT licensed, copyright Geraint Luff / Signalsmith Audio
+The Signalsmith choice reuses the vendored **Signalsmith Stretch 1.3.2** processor
+already used by MORSEL. It is MIT licensed, copyright Geraint Luff / Signalsmith Audio
 Ltd. The official release’s embedded WebAssembly and license travel with the
 offline app; no commercial service or runtime model download is required.
+WSOLA, Classic phase vocoder and Granular are local JavaScript implementations
+in the dedicated preparation worker and do not load the Signalsmith WASM module.
 
 - [Official package 1.3.2](https://www.npmjs.com/package/signalsmith-stretch/v/1.3.2)
 - [Official release archive](https://registry.npmjs.org/signalsmith-stretch/-/signalsmith-stretch-1.3.2.tgz)

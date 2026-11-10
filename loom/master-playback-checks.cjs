@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const q = require('./deluxe-checks.cjs');
 const project = require('./deluxe-project-checks.cjs');
-const NEUTRAL = Object.freeze({ speed: 1, pitch: 0, preservePitch: true });
+const NEUTRAL = Object.freeze({ speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' });
 const plain = q.plain;
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -45,8 +45,8 @@ function loadController(release, transform) {
 function controllerFixture({ settings = { speed: .5, pitch: 0, preservePitch: true }, loop = true, block = null } = {}) {
   const release = q.load(), { S } = release;
   let state = project.blank(release), generation = 0, assets = new Map([['source', { left: new Float32Array(16), right: new Float32Array(16), sampleRate: 8000 }]]);
-  Object.assign(state, { loopEnabled: loop, loopStart: loop ? 1 : 0, loopEnd: loop ? 3 : 4 }); state.master.playback = { ...settings };
-  const calls = { init: 0, prepare: 0, render: 0, process: 0, processors: 0, processorDisposals: 0, buffers: 0, sources: [], original: {}, notifications: [], onPause: 0 }, entered = deferred(), gate = deferred();
+  Object.assign(state, { loopEnabled: loop, loopStart: loop ? 1 : 0, loopEnd: loop ? 3 : 4 }); state.master.playback = S.normalizeMasterPlayback(settings);
+  const calls = { init: 0, prepare: 0, render: 0, process: 0, transformSettings: [], processors: 0, processorDisposals: 0, buffers: 0, sources: [], original: {}, notifications: [], onPause: 0 }, entered = deferred(), gate = deferred();
   const sourceData = [0, 1].map(c => Float32Array.from({ length: 8000 }, (_, i) => .08 * Math.sin(2 * Math.PI * (c ? 660 : 440) * i / 8000)));
   const count = name => { calls.original[name] = (calls.original[name] || 0) + 1; };
   const context = {
@@ -73,7 +73,7 @@ function controllerFixture({ settings = { speed: .5, pitch: 0, preservePitch: tr
     durationFrames: (frames, value) => Math.max(1, Math.round(frames / value.speed)),
     Processor: class {
       constructor() { calls.processors++; }
-      async process(audio, settings, options) { calls.process++; if (block === 'transform') { entered.resolve(); await gate.promise; } if (options.signal?.aborted) throw new DOMException('Canceled', 'AbortError'); const frames = transform.durationFrames(audio.frames, settings), left = new Float32Array(frames), right = left.slice(); for (let i = 0; i < frames; i++) { left[i] = audio.left[Math.min(audio.frames - 1, Math.floor(i * settings.speed))]; right[i] = audio.right[Math.min(audio.frames - 1, Math.floor(i * settings.speed))]; } return { left, right, frames, sampleRate: audio.sampleRate }; }
+      async process(audio, settings, options) { calls.process++; calls.transformSettings.push({ ...settings }); if (block === 'transform') { entered.resolve(); await gate.promise; } if (options.signal?.aborted) throw new DOMException('Canceled', 'AbortError'); const frames = transform.durationFrames(audio.frames, settings), left = new Float32Array(frames), right = left.slice(); for (let i = 0; i < frames; i++) { left[i] = audio.left[Math.min(audio.frames - 1, Math.floor(i * settings.speed))]; right[i] = audio.right[Math.min(audio.frames - 1, Math.floor(i * settings.speed))]; } return { left, right, frames, sampleRate: audio.sampleRate }; }
       dispose() { calls.processorDisposals++; }
     }
   };
@@ -121,6 +121,36 @@ async function controllerChecks({ check, evidence }) {
     assert.equal(h.engine.getMeters().playing, false); await h.engine.play(); assert.equal(h.calls.render, 2, 'Tempo changes require new nominal audio'); h.controller.dispose();
     const sameTempo = controllerFixture(); await sameTempo.engine.play(1); sameTempo.context.currentTime = .75; sameTempo.edit(state => { state.master.playback.speed = .8; state.master.playback.pitch = 5; });
     assert(Math.abs(sameTempo.engine.getTransport().beat - 1.75) < 1e-10); await sameTempo.engine.play(); assert.equal(sameTempo.calls.render, 1); assert.equal(sameTempo.calls.process, 2); sameTempo.controller.dispose();
+  });
+  await check('Every algorithm remains on live playback at neutral speed and pitch without creating a worker or buffer', async () => {
+    for (const algorithm of ['signalsmith', 'wsola', 'phase-vocoder', 'granular']) {
+      const h = controllerFixture({ settings: { ...NEUTRAL, algorithm } });
+      assert.equal(await h.engine.play(1), true); assert.strictEqual(h.engine.getMeters(), h.meter);
+      assert.equal(h.engine.startRecording(), 'recording');
+      assert.equal(h.calls.prepare, 0); assert.equal(h.calls.processors, 0); assert.equal(h.calls.buffers, 0);
+      h.controller.dispose();
+    }
+  });
+  await check('Algorithm changes discard transformed audio but reuse nominal PCM and preserve the audible source beat', async () => {
+    const h = controllerFixture(); await h.engine.play(1); h.context.currentTime = .75;
+    const source = h.controller.sourceCache, beat = h.engine.getTransport().beat;
+    for (const algorithm of ['wsola', 'phase-vocoder', 'granular', 'signalsmith']) {
+      h.edit(state => { state.master.playback.algorithm = algorithm; });
+      assert.equal(h.engine.getMeters().playing, false); assert.equal(h.controller.cache, null);
+      assert.strictEqual(h.controller.sourceCache, source); assert(Math.abs(h.engine.getTransport().beat - beat) < 1e-10);
+      await h.engine.play();
+      assert.equal(h.controller.cache.algorithm, algorithm); assert.equal(h.calls.transformSettings.at(-1).algorithm, algorithm);
+      assert.equal(h.calls.render, 1); assert.equal(h.controller.source.playbackRate.value, 1);
+    }
+    h.controller.dispose();
+  });
+  await check('Changing algorithm during a pending transform cannot start audio from the superseded choice', async () => {
+    const h = controllerFixture({ block: 'transform' }), pending = h.engine.play(1); await h.entered.promise;
+    h.edit(state => { state.master.playback.algorithm = 'granular'; }); h.gate.resolve();
+    assert.equal(await pending, false); assert.equal(h.calls.sources.length, 0);
+    assert.equal(await h.engine.play(1), true); assert.equal(h.controller.cache.algorithm, 'granular');
+    assert.equal(h.calls.render, 1); assert.equal(h.calls.transformSettings.at(-1).algorithm, 'granular');
+    h.controller.dispose();
   });
   await check('View edits preserve playback but audio edits pause it and invalidate the prepared master', async () => {
     const h = controllerFixture(); await h.engine.play(1); const source = h.controller.source, buffer = h.controller.cache.buffer;
@@ -187,7 +217,7 @@ async function run() {
     assert.deepEqual(plain(S.normalizeMasterPlayback({ speed: Infinity, pitch: '12', preservePitch: 'yes' })), NEUTRAL);
     for (const settings of [NEUTRAL, { speed: .25, pitch: -24, preservePitch: false }, { speed: 2, pitch: 24, preservePitch: true }, { speed: .673, pitch: 3.25, preservePitch: false }]) {
       const s = S.defaultState(); s.master.playback = { ...settings };
-      assert.deepEqual(plain(S.parseProject(S.serializeProject(s)).master.playback), settings);
+      assert.deepEqual(plain(S.parseProject(S.serializeProject(s)).master.playback), plain(S.normalizeMasterPlayback(settings)));
     }
     const saved = JSON.parse(S.serializeProject(S.defaultState())); saved.appVersion = '1.33.0'; delete saved.state.master.playback;
     assert.deepEqual(plain(S.parseProject(JSON.stringify(saved)).master.playback), NEUTRAL);

@@ -1,5 +1,7 @@
 # GALLEY
 
+GALLEY 1.43.0 adds a Stretch algorithm selector to master Speed & pitch: the original Signalsmith engine plus WSOLA, Classic phase vocoder and Granular. The selected algorithm is stored with the project and applies to prepared playback and stereo master exports. Existing projects retain Signalsmith. See [the master playback guide](MASTER-PLAYBACK-GUIDE.md).
+
 GALLEY 1.42.4 removes the old 64 MiB recording/import ceiling. Source recordings can use up to 256 MiB of PCM, sharing that pool with frozen renders while keeping the 448 MiB portable file cap. Recording, importing, printing and freezing use the same remaining-space calculation; Recordings shows available space and keeps explicit cleanup controls.
 
 GALLEY 1.42.3 fixes mixer bus output menus closing on click. Dropdowns and their labels keep native focus, and keyboard routing and Undo/Redo remain available.

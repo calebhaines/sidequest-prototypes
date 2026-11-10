@@ -51,10 +51,11 @@ async function pageFor(url) {
   await page.goto(url, { waitUntil: 'load' }); await page.waitForFunction(() => window.LoomApp?.masterPlayback && window.LoomMasterTransform);
   await page.evaluate(() => { const S = LoomSchema; window.mpQA = {
     blank() { const s = S.defaultState(); s.tempo = 120; s.lengthBars = 1; s.loopEnabled = false; s.loopStart = 0; s.loopEnd = 4; s.recording.punchEnd = 4; for (const o of [...s.tracks, ...s.returns, s.master]) { o.effects.fill(null); o.automation = []; o.level = 1; o.mute = false; if ('pan' in o) o.pan = 0; } for (const t of s.tracks) { t.clips = []; t.instrumentLive = false; t.sends = [0, 0]; } s.lfos.forEach(l => { l.enabled = false; l.routes = []; }); return s; },
-    fixture(settings = { speed: .5, pitch: 0, preservePitch: true }, loop = true) { const s = this.blank(), rate = 48000, frames = rate * 2, channels = [440, 660].map(hz => Float32Array.from({ length: frames }, (_, i) => .05 * Math.sin(2 * Math.PI * hz * i / rate))), a = S.encodeAsset({ id: 'master-speed-tone', name: 'Stereo master pitch reference', sampleRate: rate, left: channels[0], right: channels[1] }); s.assets = [a]; s.master.playback = settings; s.loopEnabled = loop; s.tracks[8].clips = [{ id: 'master-speed-clip', name: a.name, type: 'audio', assetId: a.id, start: 0, length: 4, sourceStart: 0, sourceEnd: 2, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: 1, fadeIn: 0, fadeOut: 0 }]; return s; },
+    fixture(settings = { speed: .5, pitch: 0, preservePitch: true }, loop = true) { const s = this.blank(), rate = 48000, frames = rate * 2, channels = [440, 660].map(hz => Float32Array.from({ length: frames }, (_, i) => .05 * Math.sin(2 * Math.PI * hz * i / rate))), a = S.encodeAsset({ id: 'master-speed-tone', name: 'Stereo master pitch reference', sampleRate: rate, left: channels[0], right: channels[1] }); s.assets = [a]; s.master.playback = { algorithm: 'signalsmith', ...settings }; s.loopEnabled = loop; s.tracks[8].clips = [{ id: 'master-speed-clip', name: a.name, type: 'audio', assetId: a.id, start: 0, length: 4, sourceStart: 0, sourceEnd: 2, sourceOffset: 0, rate: 1, reverse: false, loop: true, gain: 1, fadeIn: 0, fadeOut: 0 }]; return s; },
     settings() { return LoomApp.getState().master.playback; },
     difference(a, b) { if (a.length !== b.length) throw Error('Audio lengths differ'); let max = 0, power = 0; for (let i = 0; i < a.length; i++) { if (!Number.isFinite(a[i]) || !Number.isFinite(b[i])) throw Error('Non-finite audio'); const d = a[i] - b[i]; max = Math.max(max, Math.abs(d)); power += d * d; } return { max, rms: Math.sqrt(power / Math.max(1, a.length)) }; },
-    projection(data, hz, rate) { const start = Math.floor(data.length * .25), end = Math.floor(data.length * .75); let real = 0, imag = 0; for (let i = start; i < end; i++) { const angle = 2 * Math.PI * hz * i / rate; real += data[i] * Math.cos(angle); imag += data[i] * Math.sin(angle); } return 2 * Math.hypot(real, imag) / Math.max(1, end - start); }
+    projection(data, hz, rate) { const start = Math.floor(data.length * .25), end = Math.floor(data.length * .75); let real = 0, imag = 0; for (let i = start; i < end; i++) { const angle = 2 * Math.PI * hz * i / rate; real += data[i] * Math.cos(angle); imag += data[i] * Math.sin(angle); } return 2 * Math.hypot(real, imag) / Math.max(1, end - start); },
+    bandPeak(data, target, rate, spread = 8) { const start = Math.floor(data.length * .25), end = Math.floor(data.length * .75); let best = { frequency: target, amplitude: 0 }; for (let hz = target - spread; hz <= target + spread; hz += .5) { let real = 0, imag = 0, count = 0; for (let i = start; i < end; i += 8) { const angle = 2 * Math.PI * hz * i / rate; real += data[i] * Math.cos(angle); imag += data[i] * Math.sin(angle); count++; } const amplitude = 2 * Math.hypot(real, imag) / Math.max(1, count); if (amplitude > best.amplitude) best = { frequency: hz, amplitude }; } return { ...best, centsError: 1200 * Math.log2(best.frequency / target) }; }
   }; }); return { context, page };
 }
 const panel = page => page.locator('.master-playback');
@@ -65,10 +66,29 @@ async function uiChecks(page) {
     await page.evaluate(() => LoomApp.loadState(mpQA.blank())); await reveal(page);
     assert.deepEqual(await page.locator('[data-mp-knob]').evaluateAll(nodes => nodes.map(e => e.dataset.mpKnob)), ['speed', 'pitch']);
     for (const key of ['speed', 'pitch']) assert.equal(await page.locator('[data-mp-knob="' + key + '"]').getAttribute('role'), 'slider');
-    await setNumber(page, 'speed', 50); await setNumber(page, 'pitch', 3.5); assert.deepEqual(await page.evaluate(() => mpQA.settings()), { speed: .5, pitch: 3.5, preservePitch: true });
+    await setNumber(page, 'speed', 50); await setNumber(page, 'pitch', 3.5); assert.deepEqual(await page.evaluate(() => mpQA.settings()), { speed: .5, pitch: 3.5, preservePitch: true, algorithm: 'signalsmith' });
     assert.equal(await page.locator('#masterPlaybackBpm').textContent(), '60 BPM'); assert.equal(await page.locator('#masterPlaybackNetPitch').textContent(), '+3.5 st');
     await page.locator('#masterPlaybackPreserve').uncheck(); assert.equal(await page.locator('#masterPlaybackNetPitch').textContent(), '-8.5 st');
-    await page.locator('#masterPlaybackReset').click(); assert.deepEqual(await page.evaluate(() => mpQA.settings()), { speed: 1, pitch: 0, preservePitch: true }); return { knobs: 2, speedPercent: true, independentAndTapePitch: true };
+    await page.locator('#masterPlaybackReset').click(); assert.deepEqual(await page.evaluate(() => mpQA.settings()), { speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' }); return { knobs: 2, speedPercent: true, independentAndTapePitch: true };
+  });
+  await check('The native stretch selector retains focus and supports one-step Undo Redo and Reset', async () => {
+    await page.evaluate(() => LoomApp.loadState(mpQA.blank())); await reveal(page);
+    const selector = page.locator('#masterPlaybackAlgorithm'), element = await selector.elementHandle(), option = await element.$('option');
+    assert.deepEqual(await selector.locator('option').evaluateAll(nodes => nodes.map(node => node.value)), ['signalsmith', 'wsola', 'phase-vocoder', 'granular']);
+    await element.click();
+    assert(await element.evaluate(node => node.isConnected && document.activeElement === node), 'Opening the native menu retains its element and focus');
+    assert(await option.evaluate(node => node.isConnected), 'Opening the menu does not rebuild its options');
+    await page.keyboard.press('Escape');
+    await selector.selectOption('wsola');
+    assert.equal(await page.evaluate(() => mpQA.settings().algorithm), 'wsola');
+    assert(await element.evaluate(node => node.isConnected), 'Changing algorithm retains the select');
+    assert((await page.locator('#masterPlaybackAlgorithmHelp').textContent()).trim().length > 20);
+    await page.locator('#undoButton').click(); assert.equal(await page.evaluate(() => mpQA.settings().algorithm), 'signalsmith');
+    await page.locator('#redoButton').click(); assert.equal(await page.evaluate(() => mpQA.settings().algorithm), 'wsola');
+    assert.equal(await page.locator('#masterPlaybackReset').isDisabled(), false, 'An algorithm-only edit can be reset');
+    await reveal(page); await page.locator('#masterPlaybackReset').click();
+    assert.deepEqual(await page.evaluate(() => mpQA.settings()), { speed: 1, pitch: 0, preservePitch: true, algorithm: 'signalsmith' });
+    return { algorithms: 4, nativeFocus: true, retainedControl: true, undoRedo: true, reset: true };
   });
   await check('Pointer keyboard and numeric master edits each undo as one gesture and reset restores neutral playback', async () => {
     const before = await page.evaluate(() => mpQA.settings()), knob = page.locator('[data-mp-knob="speed"]'); await knob.focus(); await page.keyboard.down('ArrowUp'); await page.keyboard.down('ArrowUp'); await page.keyboard.up('ArrowUp'); await knob.press('Tab');
@@ -77,13 +97,13 @@ async function uiChecks(page) {
     await reveal(page); const box = await knob.boundingBox(), x = box.x + box.width / 2, y = box.y + box.height / 2; assert(await knob.evaluate((e, p) => document.elementFromPoint(p.x, p.y)?.closest('[data-mp-knob]') === e, { x, y })); await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y - 24, { steps: 4 }); await page.mouse.up(); assert.notEqual(await page.evaluate(() => mpQA.settings().speed), 1); await page.locator('#undoButton').click(); assert.deepEqual(await page.evaluate(() => mpQA.settings()), before); return { pointerHit: true, singleGestureUndo: true };
   });
   await check('Save and Open retain master playback settings without serializing prepared sample buffers', async () => {
-    await page.evaluate(() => LoomApp.loadState(mpQA.fixture({ speed: .673, pitch: -3.25, preservePitch: false })));
+    await page.evaluate(() => LoomApp.loadState(mpQA.fixture({ speed: .673, pitch: -3.25, preservePitch: false, algorithm: 'granular' })));
     const saved = await page.evaluate(() => LoomApp.getState()), pending = page.waitForEvent('download'); await page.locator('#saveButton').click(); const download = await pending, bytes = fs.readFileSync(await download.path()), json = JSON.parse(bytes);
-    assert.deepEqual(json.state, saved); assert.deepEqual(json.state.master.playback, { speed: .673, pitch: -3.25, preservePitch: false }); assert(!Object.keys(json.state.master.playback).some(key => /cache|left|right|pcm/i.test(key)));
+    assert.deepEqual(json.state, saved); assert.deepEqual(json.state.master.playback, { speed: .673, pitch: -3.25, preservePitch: false, algorithm: 'granular' }); assert(!Object.keys(json.state.master.playback).some(key => /cache|left|right|pcm/i.test(key)));
     fs.writeFileSync(path.join(artifacts, 'master-speed-pitch.loom.json'), bytes); await page.evaluate(() => LoomApp.loadState(mpQA.blank())); await page.locator('#projectFile').setInputFiles({ name: 'master-speed-pitch.loom.json', mimeType: 'application/json', buffer: bytes }); await page.waitForFunction(() => mpQA.settings().speed === .673); assert.deepEqual(await page.evaluate(() => LoomApp.getState()), saved); return { savedBytes: bytes.length, portableSettingsExact: true };
   });
   await check('The master speed and pitch panel fits phone tablet and desktop widths', async () => {
-    for (const width of [390, 768, 1440]) { await page.setViewportSize({ width, height: 1100 }); await reveal(page); const overflow = await panel(page).evaluate(element => [...element.querySelectorAll('button,input,output')].filter(e => { const r = e.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1); }).map(e => e.id || e.dataset.mpKnob)); assert.deepEqual(overflow, []); await panel(page).screenshot({ path: path.join(artifacts, 'master-playback-' + width + '.png') }); } await page.setViewportSize({ width: 1440, height: 1100 }); return { widths: [390, 768, 1440] };
+    for (const width of [390, 768, 1440]) { await page.setViewportSize({ width, height: 1100 }); await reveal(page); const overflow = await panel(page).evaluate(element => [...element.querySelectorAll('button,input,select,output')].filter(e => { const r = e.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1); }).map(e => e.id || e.dataset.mpKnob)); assert.deepEqual(overflow, []); await panel(page).screenshot({ path: path.join(artifacts, 'master-playback-' + width + '.png') }); } await page.setViewportSize({ width: 1440, height: 1100 }); return { widths: [390, 768, 1440] };
   });
 }
 async function audioChecks(page) {
@@ -115,9 +135,43 @@ async function audioChecks(page) {
     const invalidated = await page.evaluate(() => ({ playing: LoomApp.engine.getMeters().playing, cache: !!LoomApp.masterPlayback.cache, sourceCache: !!LoomApp.masterPlayback.sourceCache, phase: LoomApp.masterPlayback.getStatus().phase }));
     assert.equal(invalidated.playing, false); assert.equal(invalidated.cache, false); assert.equal(invalidated.sourceCache, false); assert.equal(invalidated.phase, 'stale'); await page.evaluate(() => mpRestore()); return { paused, invalidated };
   });
-  await check('Stereo mix WAV exports use the same Float32 transform once and individual stems retain nominal speed and pitch', async () => {
-    const result = await page.evaluate(async () => {
-      const state = mpQA.fixture({ speed: .5, pitch: 12, preservePitch: true }, false); await LoomApp.loadState(state); const engine = LoomApp.engine, assets = LoomApp.assets, options = { startBeat: 0, endBeat: 4, tailSeconds: 0 }, pcm = await engine.renderMasterPCM(state, assets, options), processor = new LoomMasterTransform.Processor();
+  await check('All additional algorithms prepare finite stereo pitch-preserved audio with the same exact duration and source clock', async () => {
+    const rows = [];
+    for (const algorithm of ['wsola', 'phase-vocoder', 'granular']) {
+      const result = await page.evaluate(async algorithm => {
+        await LoomApp.loadState(mpQA.fixture({ speed: .5, pitch: 0, preservePitch: true, algorithm }));
+        if (!await LoomApp.engine.play(0)) throw Error('Algorithm preparation did not start: ' + algorithm);
+        const controller = LoomApp.masterPlayback, cache = controller.cache, left = cache.buffer.getChannelData(0), right = cache.buffer.getChannelData(1);
+        const stats = data => { let energy = 0, peak = 0; for (const sample of data) { if (!Number.isFinite(sample)) throw Error('Non-finite stretched audio'); peak = Math.max(peak, Math.abs(sample)); energy += sample * sample; } return { rms: Math.sqrt(energy / data.length), peak }; };
+        return { algorithm: LoomApp.getState().master.playback.algorithm, frames: cache.frames, bodyFrames: cache.bodyFrames, sampleRate: cache.sampleRate, sourceRate: controller.source.playbackRate.value, first: LoomApp.engine.getTransport(controller.started + 1.25), wrapped: LoomApp.engine.getTransport(controller.started + 4.25), left: stats(left), right: stats(right), leftPitch: mpQA.bandPeak(left, 440, cache.sampleRate, algorithm === 'granular' ? 12 : 4), rightPitch: mpQA.bandPeak(right, 660, cache.sampleRate, algorithm === 'granular' ? 12 : 4), wrongLeft220: mpQA.projection(left, 220, cache.sampleRate), wrongRight330: mpQA.projection(right, 330, cache.sampleRate), leftCrossfeed: mpQA.projection(left, 660, cache.sampleRate), rightCrossfeed: mpQA.projection(right, 440, cache.sampleRate) };
+      }, algorithm);
+      assert.equal(result.algorithm, algorithm); assert.equal(result.frames, 192000); assert.equal(result.bodyFrames, 192000); assert.equal(result.sampleRate, 48000); assert.equal(result.sourceRate, 1);
+      assert(Math.abs(result.first.beat - 1.25) < 1e-7); assert.equal(result.first.tempo, 60); assert.equal(result.wrapped.cycle, 1); assert(Math.abs(result.wrapped.beat - .25) < 1e-7);
+      assert(result.left.rms > .01 && result.right.rms > .01); assert(result.left.peak < .15 && result.right.peak < .15);
+      // Granular mode deliberately distributes partial energy across grain-rate
+      // sidebands. Measure its dominant band rather than exact-bin cancellation.
+      const cents = algorithm === 'granular' ? 45 : 12;
+      for (const pitch of [result.leftPitch, result.rightPitch]) { assert(Math.abs(pitch.centsError) < cents, JSON.stringify(result)); assert(pitch.amplitude > .005, JSON.stringify(result)); }
+      assert(result.leftPitch.amplitude > result.wrongLeft220 * 4 && result.rightPitch.amplitude > result.wrongRight330 * 4, JSON.stringify(result));
+      assert(result.leftCrossfeed < .005 && result.rightCrossfeed < .005, JSON.stringify(result));
+      rows.push(result);
+    }
+    return rows;
+  });
+  await check('Choosing another algorithm pauses the old master and refreshes its transformed cache while retaining the source mix', async () => {
+    await page.evaluate(async () => { if (!LoomApp.masterPlayback.cache || mpQA.settings().algorithm !== 'granular') { await LoomApp.loadState(mpQA.fixture({ speed: .5, pitch: 0, preservePitch: true, algorithm: 'granular' })); await LoomApp.engine.play(0); } window.mpPreviousSource = LoomApp.masterPlayback.sourceCache; window.mpPreviousBuffer = LoomApp.masterPlayback.cache.buffer; });
+    await reveal(page); await page.locator('#masterPlaybackAlgorithm').selectOption('wsola');
+    const invalidated = await page.evaluate(() => ({ playing: LoomApp.engine.getMeters().playing, cache: !!LoomApp.masterPlayback.cache, sameSource: LoomApp.masterPlayback.sourceCache === mpPreviousSource, algorithm: mpQA.settings().algorithm }));
+    assert.deepEqual(invalidated, { playing: false, cache: false, sameSource: true, algorithm: 'wsola' });
+    const prepared = await page.evaluate(async () => ({ started: await LoomApp.engine.play(0), sameSource: LoomApp.masterPlayback.sourceCache === mpPreviousSource, newBuffer: LoomApp.masterPlayback.cache.buffer !== mpPreviousBuffer, algorithm: mpQA.settings().algorithm }));
+    assert.deepEqual(prepared, { started: true, sameSource: true, newBuffer: true, algorithm: 'wsola' });
+    return { invalidated, prepared };
+  });
+  await check('Stereo mix WAV exports honor both original and selected additional algorithms while individual stems retain nominal speed and pitch', async () => {
+    const rows = [];
+    for (const algorithm of ['signalsmith', 'wsola']) {
+    const result = await page.evaluate(async algorithm => {
+      const state = mpQA.fixture({ speed: .5, pitch: 12, preservePitch: true, algorithm }, false); await LoomApp.loadState(state); const engine = LoomApp.engine, assets = LoomApp.assets, options = { startBeat: 0, endBeat: 4, tailSeconds: 0 }, pcm = await engine.renderMasterPCM(state, assets, options), processor = new LoomMasterTransform.Processor();
       let expected; try { expected = await processor.process(pcm, state.master.playback); } finally { processor.dispose(); }
       const blob = await engine.renderWav(state, assets, options), bytes = await blob.arrayBuffer(), view = new DataView(bytes), frames = (bytes.byteLength - 44) / 4, channels = [new Float32Array(frames), new Float32Array(frames)];
       for (let i = 0; i < frames; i++) for (let c = 0; c < 2; c++) channels[c][i] = view.getInt16(44 + (i * 2 + c) * 2, true) / 32768;
@@ -125,12 +179,14 @@ async function audioChecks(page) {
       const nominalStem = new Uint8Array(await (await engine.renderWav(neutral, assets, { ...options, trackId: 'track-9' })).arrayBuffer());
       const near = (data, target) => { let best = { frequency: 0, amplitude: 0 }; for (let hz = target - 5; hz <= target + 5; hz += .25) { const amplitude = mpQA.projection(data, hz, 48000); if (amplitude > best.amplitude) best = { frequency: hz, amplitude }; } let crossings = 0; const start = Math.floor(data.length * .25), end = Math.floor(data.length * .75); for (let i = start + 1; i < end; i++) if (data[i - 1] <= 0 && data[i] > 0) crossings++; return { ...best, centsError: 1200 * Math.log2(best.frequency / target), zeroCrossingHz: crossings * 48000 / (end - start) }; };
       return { frames, expectedFrames: expected.left.length, rate: view.getUint32(24, true), bits: view.getUint16(34, true), left: mpQA.difference(channels[0], expected.left), right: mpQA.difference(channels[1], expected.right), left880: mpQA.projection(channels[0], 880, 48000), right1320: mpQA.projection(channels[1], 1320, 48000), leftSpectrum: near(channels[0], 880), rightSpectrum: near(channels[1], 1320), nominalStemExact: alteredStem.length === nominalStem.length && alteredStem.every((v, i) => v === nominalStem[i]), stemFrames: (alteredStem.length - 44) / 4, exportBusy: engine.getAudioDiagnostics().exportBusy };
-    });
+    }, algorithm);
     assert.equal(result.frames, 192000); assert.equal(result.frames, result.expectedFrames); assert.equal(result.rate, 48000); assert.equal(result.bits, 16); assert(result.left.max <= 1 / 32768 + 1e-7 && result.right.max <= 1 / 32768 + 1e-7);
     // Pitch processing can shift the strongest partial by a few cents. Verify
     // its measured frequency explicitly instead of requiring exact-bin phase.
     for (const spectrum of [result.leftSpectrum, result.rightSpectrum]) { assert(Math.abs(spectrum.centsError) <= 5, JSON.stringify(result)); assert(spectrum.amplitude > .02, JSON.stringify(result)); }
-    assert(result.nominalStemExact); assert.equal(result.stemFrames, 96000); assert.equal(result.exportBusy, false); return result;
+    assert(result.nominalStemExact); assert.equal(result.stemFrames, 96000); assert.equal(result.exportBusy, false); rows.push({ algorithm, ...result });
+    }
+    return rows;
   });
   await check('Prepared mode rejects public recording microphone monitoring SERVICE and audition without opening live input', async () => {
     await page.evaluate(() => LoomApp.loadState(mpQA.fixture()));

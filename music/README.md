@@ -12,7 +12,7 @@ BRINE 1.0.1 and GALLEY 1.41.1 restore editor auditioning after monitoring is int
 
 CUPBOARD adds twenty cabinet, unusual-speaker and resonant-body responses with four individually placed and blended virtual microphones.
 
-Current release: **Kitchen 2.33.4 · GALLEY 1.42.4**.
+Current release: **Kitchen 2.34.0 · GALLEY 1.43.0**.
 
 Live: https://calebhaines.github.io/sidequest-prototypes/music/
 

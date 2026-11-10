@@ -2,6 +2,7 @@
 (function (scope) {
   'use strict';
   const T = () => scope.LoomMasterTransform;
+  const algorithmName = settings => T().ALGORITHMS?.find(item => item.id === settings.algorithm)?.name || settings.algorithm || 'Signalsmith';
   const copy = value => scope.LoomSchema.copy(value);
   const aborted = () => new DOMException('Master preparation canceled.', 'AbortError');
   const empty = () => ({ peak: 0, rms: 0, rmsLeft: 0, rmsRight: 0 });
@@ -148,12 +149,13 @@
           const { audio } = this.sourceCache, outputFrames = T().durationFrames(audio.frames, settings);
           if (audio.frames * 16 + outputFrames * 16 > 512 * 1024 * 1024) throw Error('This speed needs too much preview memory. Choose a shorter loop or increase Speed.');
           this.processor ||= new (T().Processor)();
-          this._status('stretching', 0, 'Preparing pitch and speed…');
-          const transformed = await this.processor.process(audio, settings, { signal, onProgress: p => this._status('stretching', p, 'Preparing pitch and speed…') }); active();
+          const message = 'Preparing ' + algorithmName(settings) + ' speed and pitch…';
+          this._status('stretching', 0, message);
+          const transformed = await this.processor.process(audio, settings, { signal, onProgress: p => this._status('stretching', p, message) }); active();
           if (range.loop) closeLoop(transformed);
           const buffer = this.engine.context.createBuffer(2, transformed.left.length, transformed.sampleRate);
           buffer.copyToChannel(transformed.left, 0); buffer.copyToChannel(transformed.right, 1);
-          this.cache = { buffer, range, speed: settings.speed, tempo: state.tempo, bodyFrames: T().durationFrames(audio.bodyFrames, settings), frames: transformed.left.length, sampleRate: transformed.sampleRate };
+          this.cache = { buffer, range, speed: settings.speed, algorithm: settings.algorithm, tempo: state.tempo, bodyFrames: T().durationFrames(audio.bodyFrames, settings), frames: transformed.left.length, sampleRate: transformed.sampleRate };
           this.processor.dispose(); this.processor = null;
         }
         active(); this.controller = null;
