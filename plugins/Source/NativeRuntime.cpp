@@ -25,6 +25,14 @@ JSValueRef property(JSContextRef ctx, JSObjectRef object, const char* name) { JS
 void fail(JSContextRef ctx, JSValueRef* exception, const juce::String& message) {
     if (exception != nullptr) { auto value = stringValue(ctx, message); *exception = JSObjectMakeError(ctx, 1, &value, nullptr); }
 }
+float* floatArrayData(JSContextRef ctx, JSObjectRef array, JSValueRef* exception) {
+    if (JSValueGetTypedArrayType(ctx, array, exception) != kJSTypedArrayTypeFloat32Array) { fail(ctx, exception, "Native convolution requires Float32Array channels"); return nullptr; }
+    const auto offset = JSObjectGetTypedArrayByteOffset(ctx, array, exception);
+    auto* base = static_cast<unsigned char*>(JSObjectGetTypedArrayBytesPtr(ctx, array, exception));
+    // JavaScriptCore returns the backing ArrayBuffer base, including for a
+    // subarray. Every channel view must account for its own byte offset.
+    return base != nullptr ? reinterpret_cast<float*>(base + offset) : nullptr;
+}
 juce::File safeResource(const juce::File& root, const juce::String& relative) {
     auto decoded = juce::URL::removeEscapeChars(relative).replaceCharacter('\\', '/');
     if (decoded.startsWithChar('/') || decoded.contains("..") || decoded.containsChar(':')) return {};
@@ -197,8 +205,22 @@ void NativeRuntime::process(int count) noexcept {
         if (!std::isfinite(outR[static_cast<size_t>(i)])) outR[static_cast<size_t>(i)] = 0;
     }
 }
-void NativeRuntime::reset() noexcept { if (ready()) call(resetFunction, 0, nullptr); for (auto& c : convolvers) if (c) c->dsp.reset(); }
+void NativeRuntime::reset() noexcept {
+    if (!ready()) return;
+    const bool previousRender = inRender; inRender = true;
+    call(resetFunction, 0, nullptr); inRender = previousRender;
+}
 juce::String NativeRuntime::stateJSON() { return text(context, call(stateFunction, 0, nullptr)); }
+juce::String NativeRuntime::captureRequestJSON(const juce::String& request) {
+    const auto fn = function("captureRequestJSON");
+    if (fn == nullptr) return "{\"ok\":false,\"error\":\"MIDI capture is unavailable.\"}";
+    JSString string(request); const JSValueRef arg = JSValueMakeString(context, string);
+    // Capture is an explicit UI operation, executed by the sole audio owner;
+    // it cannot load resources or construct a replacement audio graph.
+    const bool previousRender = inRender; inRender = true;
+    const auto result = call(fn, 1, &arg, false); inRender = previousRender;
+    return result != nullptr ? text(context, result) : "{\"ok\":false,\"error\":\"MIDI capture request failed.\"}";
+}
 NativeRuntime* NativeRuntime::owner(JSContextRef ctx) { return static_cast<NativeRuntime*>(JSObjectGetPrivate(JSContextGetGlobalObject(ctx))); }
 JSValueRef NativeRuntime::resourceCallback(JSContextRef ctx, JSObjectRef, JSObjectRef, size_t argc, const JSValueRef argv[], JSValueRef* exception) {
     auto* runtime = owner(ctx);
@@ -230,8 +252,8 @@ JSValueRef NativeRuntime::convolverCreate(JSContextRef ctx, JSObjectRef, JSObjec
     if (a == nullptr || b == nullptr) return JSValueMakeUndefined(ctx);
     const auto n = JSObjectGetTypedArrayLength(ctx, a, exception), m = JSObjectGetTypedArrayLength(ctx, b, exception);
     if (n == 0 || n != m || n > static_cast<size_t>(runtime->rate * 30)) { fail(ctx, exception, "Invalid convolution impulse response"); return JSValueMakeUndefined(ctx); }
-    const auto* left = static_cast<const float*>(JSObjectGetTypedArrayBytesPtr(ctx, a, exception));
-    const auto* right = static_cast<const float*>(JSObjectGetTypedArrayBytesPtr(ctx, b, exception));
+    const auto* left = floatArrayData(ctx, a, exception);
+    const auto* right = floatArrayData(ctx, b, exception);
     const double irRate = JSValueToNumber(ctx, argv[2], exception);
     if (left == nullptr || right == nullptr || irRate < 8000 || irRate > 192000) { fail(ctx, exception, "Invalid convolution rate or channels"); return JSValueMakeUndefined(ctx); }
     auto convolver = std::make_unique<Convolver>(); juce::AudioBuffer<float> impulse(2, static_cast<int>(n));
@@ -249,7 +271,7 @@ JSValueRef NativeRuntime::convolverProcess(JSContextRef ctx, JSObjectRef, JSObje
     if (id < 0 || id >= static_cast<int>(runtime->convolvers.size()) || !runtime->convolvers[static_cast<size_t>(id)] || count < 0 || count > runtime->blockCapacity) { fail(ctx, exception, "Invalid native convolution block"); return JSValueMakeUndefined(ctx); }
     auto& c = *runtime->convolvers[static_cast<size_t>(id)]; if (!c.active) return JSValueMakeUndefined(ctx);
     float* data[4]{};
-    for (int i = 0; i < 4; ++i) { auto array = JSValueToObject(ctx, argv[i + 1], exception); if (array == nullptr || JSObjectGetTypedArrayLength(ctx, array, exception) < static_cast<size_t>(count)) return JSValueMakeUndefined(ctx); data[i] = static_cast<float*>(JSObjectGetTypedArrayBytesPtr(ctx, array, exception)); if (data[i] == nullptr) return JSValueMakeUndefined(ctx); }
+    for (int i = 0; i < 4; ++i) { auto array = JSValueToObject(ctx, argv[i + 1], exception); if (array == nullptr || JSObjectGetTypedArrayLength(ctx, array, exception) < static_cast<size_t>(count)) { fail(ctx, exception, "Native convolution channel is too short"); return JSValueMakeUndefined(ctx); } data[i] = floatArrayData(ctx, array, exception); if (data[i] == nullptr) return JSValueMakeUndefined(ctx); }
     c.buffer.copyFrom(0, 0, data[0], count); c.buffer.copyFrom(1, 0, data[1], count);
     auto block = juce::dsp::AudioBlock<float>(c.buffer).getSubBlock(0, static_cast<size_t>(count)); c.dsp.process(juce::dsp::ProcessContextReplacing<float>(block));
     std::memcpy(data[2], c.buffer.getReadPointer(0), static_cast<size_t>(count) * sizeof(float)); std::memcpy(data[3], c.buffer.getReadPointer(1), static_cast<size_t>(count) * sizeof(float));

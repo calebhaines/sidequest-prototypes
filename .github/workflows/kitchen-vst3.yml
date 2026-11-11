@@ -20,15 +20,60 @@ jobs:
   apple-silicon:
     runs-on: macos-15
     timeout-minutes: 120
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 1G
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: false
+          fetch-depth: 1
+          sparse-checkout: |
+            plugins
+            loom
+            shared
+            grain
+            form
+            music/form
+            music/morsel
+            tine
+            mire
+            spool
+            haze
+            bower
+            ravel
+            fable
+            roux
+            batter
+            proof
+            marinade
+            picnic
+            morsel
+            heirloom
+            brine
+            citrus
+            .github
       - name: Verify native Apple Silicon runner and JavaScriptCore
         run: |
           test "$(uname -m)" = arm64
           clang++ -std=c++17 plugins/Source/JSCProbe.cpp -framework JavaScriptCore -o /tmp/kitchen-jsc-probe
           /tmp/kitchen-jsc-probe | tee /tmp/kitchen-jsc-capabilities.json
+      - name: Set up native compiler cache
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          command -v ccache >/dev/null || brew install ccache
+          ccache --max-size=1G
+          ccache --zero-stats
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-${{ runner.arch }}-juce8.0.12-${{ hashFiles('plugins/Source/**', 'plugins/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-juce8.0.12-
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -41,7 +86,17 @@ jobs:
       - name: Configure VST3 and AU suite
         env:
           KITCHEN_REQUESTED_ARCH: ${{ inputs.architectures || 'arm64' }}
-        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DKITCHEN_BUILD_AU=ON
+        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DKITCHEN_BUILD_AU=ON
+      - name: Verify JUCE implementation modules compile once
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,collections
+          commands=json.loads(pathlib.Path('plugins/build/compile_commands.json').read_text())
+          counts=collections.Counter(pathlib.Path(row['file']).stem for row in commands)
+          for module in ['juce_audio_processors','juce_audio_processors_headless','juce_gui_basics']:
+              if counts[module]!=1:raise SystemExit(f'{module} compiles {counts[module]} times; expected one shared implementation')
+          print(f'{len(commands)} translation units; audio processor and GUI implementations each compile once')
+          PY
       - name: Compile every Kitchen instrument and effect
         run: cmake --build plugins/build --config Release --parallel 3
       - name: Test native DSP, MIDI, clock and saved state
@@ -72,9 +127,25 @@ jobs:
           for bundle in pathlib.Path('plugins/build').rglob('*.vst3'):shutil.copytree(bundle,target/bundle.name)
           units=pathlib.Path('plugins/dist/Components');units.mkdir(parents=True,exist_ok=True)
           for bundle in pathlib.Path('plugins/build').rglob('*.component'):shutil.copytree(bundle,units/bundle.name)
-          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-bundles.json']:
+          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-bundles.json']:
               source=pathlib.Path('plugins/generated')/name
               if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
+          for name in ['README.md','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
+              source=pathlib.Path('plugins')/name
+              if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
+          if pathlib.Path('plugins/licenses').exists():shutil.copytree('plugins/licenses','plugins/dist/licenses')
+          PY
+          git archive --format=tar.gz --output="plugins/dist/Kitchen-Source-${GITHUB_SHA}.tar.gz" HEAD plugins loom shared grain form music/form music/morsel/MORSEL-phonemizer-C-source.zip tine mire spool haze bower ravel fable roux batter proof marinade picnic morsel heirloom brine citrus package.json package-lock.json
+          tar --exclude=.git -czf plugins/dist/JUCE-Source-8.0.12.tar.gz -C plugins/build/_deps juce-src
+          tar --exclude=.cache --exclude=esbuild --exclude=@esbuild -czf plugins/dist/npm-runtime-sources.tar.gz -C plugins node_modules
+          mkdir -p plugins/dist/upstream-sources
+          curl --fail --location --retry 3 https://codeload.github.com/mohayonao/web-audio-engine/tar.gz/a7d09ffd8aa1ef9837355fd412457c8bab296a21 --output plugins/dist/upstream-sources/web-audio-engine-0.13.4.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/101arrowz/fflate/tar.gz/d3243651cb142e3e04f3e4bc037b9e985878f444 --output plugins/dist/upstream-sources/fflate-0.8.2.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/indutny/fft.js/tar.gz/f8be92e1369f684da3e121e4c5b7fbcc8d50f868 --output plugins/dist/upstream-sources/fft.js-4.0.4.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/Gozala/events/tar.gz/aed9f91fee236bdedab8d593f7aa418ae6ed2718 --output plugins/dist/upstream-sources/events-3.3.0.tar.gz
+          python3 - <<'PY'
+          import os,json,pathlib
+          pathlib.Path('plugins/dist/SOURCE.json').write_text(json.dumps({'repository':os.environ['GITHUB_SERVER_URL']+'/'+os.environ['GITHUB_REPOSITORY'],'commit':os.environ['GITHUB_SHA'],'juce':'8.0.12'},indent=2)+'\n')
           PY
           ditto -c -k --sequesterRsrc --keepParent plugins/dist plugins/Kitchen-Apple-Silicon.zip
       - uses: actions/upload-artifact@v4
@@ -85,7 +156,16 @@ jobs:
             plugins/Kitchen-Apple-Silicon.zip
             plugins/generated/native-smoke-report.json
             plugins/generated/native-vst3-host-report.json
+            plugins/generated/native-ui-smoke-report.json
             plugins/generated/native-bundles.json
             /tmp/kitchen-jsc-capabilities.json
           if-no-files-found: warn
           retention-days: 14
+      - name: Report native compiler cache
+        if: always()
+        run: ccache --show-stats
+      - uses: actions/cache/save@v4
+        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: .ccache
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}

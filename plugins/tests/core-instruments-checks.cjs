@@ -110,6 +110,22 @@ for (const entry of manifest.instruments) {
     sequenced.noteOn({ id:'stopped-host', pitch:64, velocity:.8, frame:24384 });
     const afterStop = render(sequenced, 4096, 24384, false);
     assert(afterStop.energy > 1e-8, 'stopped host prevented manual MIDI');
+    const resetCore=sequenced.core,resetState=sequenced.getState(),sampleRefs=entry.id==='spool'?resetCore.decks.map(d=>d.asset):entry.id==='ravel'?resetCore.sample:entry.id==='marinade'?resetCore.models:entry.id==='mire'?resetCore.samples:null;
+    const decode=g.SpoolAudio?.decodePCM,seed=g.RavelDSP?.generateSeed,analyze=g.MarinadeAnalysis?.analyze;
+    const noPrepare=()=>{throw Error('DAW reset attempted source preparation on the audio thread');};
+    if(g.SpoolAudio)g.SpoolAudio.decodePCM=noPrepare;if(g.RavelDSP)g.RavelDSP.generateSeed=noPrepare;if(g.MarinadeAnalysis)g.MarinadeAnalysis.analyze=noPrepare;
+    try{sequenced.reset();}finally{if(g.SpoolAudio)g.SpoolAudio.decodePCM=decode;if(g.RavelDSP)g.RavelDSP.generateSeed=seed;if(g.MarinadeAnalysis)g.MarinadeAnalysis.analyze=analyze;}
+    assert.equal(sequenced.core,resetCore,'DAW reset reconstructed the DSP');assert.equal(resetCore.frame,0);assert.deepEqual(sequenced.getState(),resetState,'DAW reset changed the saved patch');
+    if(entry.id==='spool')resetCore.decks.forEach((d,i)=>assert.equal(d.asset,sampleRefs[i],'DAW reset replaced prepared deck PCM'));
+    else if(entry.id==='ravel')assert.equal(resetCore.sample,sampleRefs,'DAW reset replaced prepared slices');
+    else if(entry.id==='marinade')assert.equal(resetCore.models,sampleRefs,'DAW reset replaced spectral models');
+    else if(entry.id==='mire')assert.equal(resetCore.samples,sampleRefs,'DAW reset replaced source samples');
+    sequenced.noteOn({id:'after-reset',pitch:60,velocity:.8,frame:17});const resetAudio=render(sequenced,4096,0,false);assert(resetAudio.energy>1e-8,'DAW reset broke later MIDI');assert(sequenced.noteOff({id:'after-reset',frame:4096}));
+    if(entry.id==='mire'){
+      const node=g.KitchenCoreInstruments.create('mire',SR,state,{nativeSequence:false}),directNode=reference(g,'mire',state,node);
+      node.noteOn({id:'node-audition',pitch:60,velocity:.8,channel:13,frame:0});directNode.core.trigger({index:0,audition:true,destination:1,velocity:.8,frame:0,source:'vst:node-audition',durationSeconds:600});
+      const l=new Float32Array(128),r=new Float32Array(128),expectedL=new Float32Array(128),expectedR=new Float32Array(128);node.process(l,r);directNode.process(expectedL,expectedR,0);assert.deepEqual(l,expectedL,'REDUCE direct-node audition differs from the web');assert.deepEqual(r,expectedR);
+    }
     console.log(entry.id + ': exact canonical DSP parity, MIDI offset, host clock, state, automation and live gates passed'); count++;
   } catch (error) { console.error(entry.id + ': ' + error.stack); process.exitCode = 1; }
 }

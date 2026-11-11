@@ -1876,8 +1876,8 @@
           "path": "state.tracks.0.decay",
           "label": "SUB KICK decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.42,
           "log": false
         },
@@ -1916,8 +1916,8 @@
           "path": "state.tracks.1.decay",
           "label": "NOISE SNARE decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.28,
           "log": false
         },
@@ -1956,8 +1956,8 @@
           "path": "state.tracks.2.decay",
           "label": "CLOSED HAT decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.09,
           "log": false
         },
@@ -1996,8 +1996,8 @@
           "path": "state.tracks.3.decay",
           "label": "OPEN HAT decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.53,
           "log": false
         },
@@ -2036,8 +2036,8 @@
           "path": "state.tracks.4.decay",
           "label": "RIM SHOT decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.12,
           "log": false
         },
@@ -2076,8 +2076,8 @@
           "path": "state.tracks.5.decay",
           "label": "CLAP STACK decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.32,
           "log": false
         },
@@ -2116,8 +2116,8 @@
           "path": "state.tracks.6.decay",
           "label": "DUST PERC decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.2,
           "log": false
         },
@@ -2156,8 +2156,8 @@
           "path": "state.tracks.7.decay",
           "label": "TEXTURE decay",
           "type": "number",
-          "min": 0.01,
-          "max": 4,
+          "min": 0,
+          "max": 1,
           "default": 0.66,
           "log": false
         }
@@ -16388,7 +16388,7 @@
           "path": "state.tracks.0.decay",
           "label": "FELT KICK decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.53,
           "log": false
@@ -16428,7 +16428,7 @@
           "path": "state.tracks.1.decay",
           "label": "SNARE SKIN decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.36,
           "log": false
@@ -16468,7 +16468,7 @@
           "path": "state.tracks.2.decay",
           "label": "BRUSH HAT decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.14,
           "log": false
@@ -16508,7 +16508,7 @@
           "path": "state.tracks.3.decay",
           "label": "OPEN METAL decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.65,
           "log": false
@@ -16548,7 +16548,7 @@
           "path": "state.tracks.4.decay",
           "label": "TIMBER RIM decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.17,
           "log": false
@@ -16588,7 +16588,7 @@
           "path": "state.tracks.5.decay",
           "label": "FELT KEY decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.57,
           "log": false
@@ -16628,7 +16628,7 @@
           "path": "state.tracks.6.decay",
           "label": "WIRE PLUCK decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.62,
           "log": false
@@ -16668,7 +16668,7 @@
           "path": "state.tracks.7.decay",
           "label": "HOLLOW TOM decay",
           "type": "number",
-          "min": 0.01,
+          "min": 0.04,
           "max": 4,
           "default": 0.63,
           "log": false
@@ -18990,7 +18990,7 @@
           "label": "Master tone",
           "type": "number",
           "min": 100,
-          "max": 20000,
+          "max": 22000,
           "default": 18000,
           "log": true
         },
@@ -118873,7 +118873,7 @@
           "label": "Master volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.76,
           "log": false
         },
@@ -118883,7 +118883,7 @@
           "label": "Master delayFeedback",
           "type": "number",
           "min": 0,
-          "max": 0.95,
+          "max": 0.86,
           "default": 0.28,
           "log": false
         },
@@ -118892,8 +118892,8 @@
           "path": "state.master.delayTone",
           "label": "Master delayTone",
           "type": "number",
-          "min": 100,
-          "max": 18000,
+          "min": 200,
+          "max": 16000,
           "default": 4800,
           "log": true
         },
@@ -118903,7 +118903,7 @@
           "label": "Kick volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.88,
           "log": false
         },
@@ -118922,8 +118922,8 @@
           "path": "state.lanes.0.lowpass",
           "label": "Kick lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -118933,7 +118933,7 @@
           "label": "Kick highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -118943,7 +118943,7 @@
           "label": "Snare volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.76,
           "log": false
         },
@@ -118962,8 +118962,8 @@
           "path": "state.lanes.1.lowpass",
           "label": "Snare lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -118973,7 +118973,7 @@
           "label": "Snare highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -118983,7 +118983,7 @@
           "label": "Side stick volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119002,8 +119002,8 @@
           "path": "state.lanes.2.lowpass",
           "label": "Side stick lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119013,7 +119013,7 @@
           "label": "Side stick highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119023,7 +119023,7 @@
           "label": "Closed hat volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119042,8 +119042,8 @@
           "path": "state.lanes.3.lowpass",
           "label": "Closed hat lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119053,7 +119053,7 @@
           "label": "Closed hat highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119063,7 +119063,7 @@
           "label": "Half-open hat volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119082,8 +119082,8 @@
           "path": "state.lanes.4.lowpass",
           "label": "Half-open hat lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119093,7 +119093,7 @@
           "label": "Half-open hat highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119103,7 +119103,7 @@
           "label": "Ride tip volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119122,8 +119122,8 @@
           "path": "state.lanes.5.lowpass",
           "label": "Ride tip lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119133,7 +119133,7 @@
           "label": "Ride tip highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119143,7 +119143,7 @@
           "label": "Crash volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119162,8 +119162,8 @@
           "path": "state.lanes.6.lowpass",
           "label": "Crash lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119173,7 +119173,7 @@
           "label": "Crash highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119183,7 +119183,7 @@
           "label": "Floor tom volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119202,8 +119202,8 @@
           "path": "state.lanes.7.lowpass",
           "label": "Floor tom lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119213,7 +119213,7 @@
           "label": "Floor tom highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119223,7 +119223,7 @@
           "label": "Rack tom volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119242,8 +119242,8 @@
           "path": "state.lanes.8.lowpass",
           "label": "Rack tom lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119253,7 +119253,7 @@
           "label": "Rack tom highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119263,7 +119263,7 @@
           "label": "Tom rim volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119282,8 +119282,8 @@
           "path": "state.lanes.9.lowpass",
           "label": "Tom rim lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119293,7 +119293,7 @@
           "label": "Tom rim highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119303,7 +119303,7 @@
           "label": "Hand clap volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119322,8 +119322,8 @@
           "path": "state.lanes.10.lowpass",
           "label": "Hand clap lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119333,7 +119333,7 @@
           "label": "Hand clap highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         },
@@ -119343,7 +119343,7 @@
           "label": "Tambourine volume",
           "type": "number",
           "min": 0,
-          "max": 1,
+          "max": 1.5,
           "default": 0.6,
           "log": false
         },
@@ -119362,8 +119362,8 @@
           "path": "state.lanes.11.lowpass",
           "label": "Tambourine lowpass",
           "type": "number",
-          "min": 100,
-          "max": 20000,
+          "min": 40,
+          "max": 22000,
           "default": 20000,
           "log": true
         },
@@ -119373,7 +119373,7 @@
           "label": "Tambourine highpass",
           "type": "number",
           "min": 20,
-          "max": 12000,
+          "max": 8000,
           "default": 20,
           "log": true
         }

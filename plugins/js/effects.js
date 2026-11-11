@@ -95,7 +95,7 @@
         panel: item.panel || null, parameters, defaults: { params: copy(item.defaults) },
         webDefinition: copy(item),
         groups: copy(item.groups || []), presets: copy(item.presets || []),
-        acceptsMidi: false, producesMidi: id === 'ferment'
+        acceptsMidi: false, producesMidi: false, capturesMidi: id === 'ferment'
       };
     });
     const eqSpec = eq().specifications;

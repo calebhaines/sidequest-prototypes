@@ -30,7 +30,8 @@
     g.KitchenWebAudio.installContextFactory(sampleRate);
     let project = copy(input == null ? defaultProject(id) : input), state, playbackState, engine, context, pull, ready = false, frame = 0, serial = 0, lastClock = null;
     let length = 4, sequenceLoop = true, sequenceCache = new Map(), nativeSequence = resources.nativeSequence !== false, fableRandom = state?.seed || 1;
-    const held = new Map(), midiHeld = new Map(); let sustained = false;
+    const held = new Map(), midiHeld = new Map(), pendingCancels = new Map(); let sustained = false, patternSource = SOURCE + ':0';
+    function nextPatternSource() { patternSource = SOURCE + ':' + (++serial); }
     function unwrap() {
       state = project.state && typeof project.state === 'object' ? project.state : project;
       if (id === 'fable') state = g.FableSchema.normalize(state);
@@ -51,7 +52,7 @@
       for (const entry of entries) for (let repeat = 0; repeat < entry.repeats; repeat++) {
         state.tracks.forEach((track, voiceIndex) => { if (track.mute || solo && !track.solo) return;
           const row = project.banks?.[entry.bank]?.[voiceIndex] || track.steps;
-          row.slice(0, stepCount).forEach((hit, step) => { if (hit) events.push({ voiceIndex, beat: offset + step / 4 + (step % 2 ? state.swing / 4 : 0), pitch: 36 + voiceIndex, velocity: hit >= 2 ? 1 : id === 'grain' ? .82 : .73, locks: project.bankLocks?.[entry.bank]?.[voiceIndex]?.[step] }); });
+          row.slice(0, stepCount).forEach((hit, step) => { if (hit) events.push({ voiceIndex, beat: offset + step / 4 + (step % 2 ? state.swing / 4 : 0), pitch: 36 + voiceIndex, velocity: hit >= 2 ? 1 : .73, locks: project.bankLocks?.[entry.bank]?.[voiceIndex]?.[step] }); });
         }); offset += stepCount / 4;
       }
       length = offset; sequenceLoop = chain?.enabled ? chain.loop !== false : true; return events;
@@ -63,6 +64,7 @@
       else if (id === 'batter') { const score = g.BatterSchema.compile(state); length = score.cycleBeats; sequenceLoop = !state.chainEnabled || state.chainLoop !== false; sequenceCache.set(0, score.events); }
       else if (id === 'picnic') length = g.PicnicSequence.lengthBeats(state);
       else length = state.musicLabPattern?.pattern.lengthBeats || state.patterns[state.selectedPattern].length / 4;
+      for (const events of sequenceCache.values()) events.sort((a, b) => a.beat - b.beat);
     }
     function cycleEvents(cycle) {
       if (sequenceCache.has(cycle)) return sequenceCache.get(cycle);
@@ -72,7 +74,7 @@
       else if (id === 'form' && state.musicLabPattern) { const { pattern, voiceMap } = state.musicLabPattern; events = pattern.notes.map(n => ({ ...n, voiceIndex: Number(String(voiceMap[n.voice]).replace('voice-', '')), beat: n.beat + (Math.round(n.beat * 4) % 2 ? pattern.swing / 4 : 0), pitch: n.pitch })); }
       else if (id === 'form') { // Original deterministic probability uses the full cycle coordinate.
         const A = g.KitchenHotplateAudio, runs = A.sequenceRuns(state); events = [];
-        for (const run of runs) for (let step = 0; step < run.pattern.length; step++) for (const e of A.eventsForStep(run.pattern.steps, run.pattern.stepDetails, step, cycle * runs.length + run.entry, state.bpm, state.swing)) {
+        for (const [runIndex, run] of runs.entries()) for (let step = 0; step < run.pattern.length; step++) for (const e of A.eventsForStep(run.pattern.steps, run.pattern.stepDetails, step, cycle * runs.length + runIndex, state.bpm, state.swing)) {
           if (!state.muted[e.voice]) events.push({ ...e, voiceIndex: e.voice, beat: (run.startStep + step) / 4 + e.offset * state.bpm / 60, pitch: 36 + e.voice + e.pitch });
         }
       } else if (id === 'fable') {
@@ -83,10 +85,11 @@
             for (let ratchet = 0; ratchet < s.ratchet; ratchet++) events.push({ beat: step / 4 + (step % 2 ? state.swing / 8 : 0) + ratchet * span / s.ratchet, pitch: s.note, velocity: s.velocity, durationBeats: span / s.ratchet * s.gate }); }); }
       } else events = sequenceCache.get(0);
       if (sequenceCache.size > 4) for (const key of sequenceCache.keys()) if (key !== 0) { sequenceCache.delete(key); break; }
-      sequenceCache.set(cycle, events); return events;
+      events.sort((a, b) => a.beat - b.beat); sequenceCache.set(cycle, events); return events;
     }
     function when(event) { return Math.max(context.currentTime, finite(event.frame, frame) / sampleRate); }
     function cancel(source, at) {
+      if (source !== undefined && at > context.currentTime) pendingCancels.set(source, at);
       if (id === 'grain' || id === 'tine' || id === 'form') engine.cancelNativeNotes({ source, when: at });
       else if (id === 'fable') engine.stopNotes({ source, when: at });
       else if (id === 'picnic') engine.cancelNotes({ source, when: at });
@@ -136,7 +139,7 @@
     function transport(clock) {
       if (!ready) return;
       const tempo = finite(clock.tempo, 120), at = finite(clock.frame, frame) / sampleRate;
-      if (lastClock && (clock.revision !== lastClock.revision || lastClock.playing && !clock.playing)) cancel(SOURCE, Math.max(context.currentTime, at));
+      if (lastClock && (clock.revision !== lastClock.revision || lastClock.playing && !clock.playing)) { cancel(patternSource, Math.max(context.currentTime, at)); nextPatternSource(); }
       const anchor = { ...clock, tempo, audioTime: at, time: at };
       if (id === 'fable' && engine.graph.state.tempo !== tempo) { playbackState = { ...state, tempo }; engine.graph.setState(playbackState, context.currentTime); }
       if (id === 'batter' && engine.graph.state.tempo !== tempo) { playbackState = { ...state, tempo }; engine.updateGraph(engine.graph, playbackState); sequenceCache.clear(); }
@@ -149,7 +152,7 @@
       get ready() { return api._ready; },
       prepare() { return api._ready; },
       getFramePosition() { return frame; },
-      setNativeSequence(value) { nativeSequence = value !== false; if (!nativeSequence && ready) cancel(SOURCE, context.currentTime); },
+      setNativeSequence(value) { nativeSequence = value !== false; if (!nativeSequence && ready) { cancel(patternSource, context.currentTime); nextPatternSource(); } },
       setParameter(path, value) {
         if (path === '_nativeSequence') { api.setNativeSequence(value); return; }
         const keys = String(path).split('.'); let target = project;
@@ -203,20 +206,26 @@
               else if (p.arpMode === 'updown' && notes.length > 1) { const n = step % (notes.length * 2 - 2); index = n < notes.length ? n : notes.length * 2 - 2 - n; }
               else if (p.arpMode === 'random') index = Math.floor(engine.random() * notes.length);
               const chosen = p.arpMode === 'chord' ? notes : [notes[index]], at = (frame + Math.round((b - beat) * sampleRate * 60 / tempo)) / sampleRate;
-              for (const note of chosen) schedule({ pitch: note.pitch, velocity: note.velocity * p.velocity, durationBeats: division * (1 + (step % 2 ? -1 : 1) * state.swing * .5) * p.gate }, at, SOURCE, tempo, b);
+              for (const note of chosen) schedule({ pitch: note.pitch, velocity: note.velocity * p.velocity, durationBeats: division * (1 + (step % 2 ? -1 : 1) * state.swing * .5) * p.gate }, at, patternSource, tempo, b);
             }
           } else {
-          const first = Math.floor(beat / length), last = Math.floor((end - EPS) / length);
+          // Adjacent cycles include negative humanize/microtiming offsets at
+          // their boundary; binary search avoids scanning an entire long chain.
+          const first = Math.max(0, Math.floor(beat / length) - 1), last = Math.floor((end - EPS) / length) + 1;
           for (let cycle = first; cycle <= last; cycle++) { if (!sequenceLoop && cycle > 0) continue;
-            for (const event of cycleEvents(cycle)) { const b = cycle * length + event.beat; if (b < beat - EPS || b >= end - EPS) continue; const at = (frame + Math.round((b - beat) * sampleRate * 60 / tempo)) / sampleRate; schedule(event, at, SOURCE, tempo, b); }
+            const events = cycleEvents(cycle), origin = cycle * length; let lo = 0, hi = events.length;
+            while (lo < hi) { const mid = (lo + hi) >>> 1; if (origin + events[mid].beat < beat - EPS) lo = mid + 1; else hi = mid; }
+            for (let index = lo; index < events.length; index++) { const event = events[index], b = origin + event.beat; if (b >= end - EPS) break; const at = (frame + Math.round((b - beat) * sampleRate * 60 / tempo)) / sampleRate; schedule(event, at, patternSource, tempo, b); }
           }
           }
         }
         if (id === 'fable') engine.graph.tick(context.currentTime, (frame + left.length) / sampleRate + .085);
         pull.process(left, right); frame += left.length;
+        const barriers = engine._sourceCuts || engine.sourceCuts || engine.futureCancels || engine._pool?.cancellationBarriers;
+        for (const [source, boundary] of pendingCancels) if (boundary <= context.currentTime) { if (barriers?.get(source) <= context.currentTime) barriers.delete(source); pendingCancels.delete(source); }
       },
-      reset() { if (!ready) return; cancel(undefined, context.currentTime); held.clear(); midiHeld.clear(); sustained = false; pull.reset(); lastClock = null; },
-      allNotesOff() { if (ready) { cancel(undefined, context.currentTime); if (id === 'fable') engine.setSustain(false); } held.clear(); midiHeld.clear(); sustained = false; },
+      reset() { if (!ready) return; cancel(undefined, context.currentTime); held.clear(); midiHeld.clear(); pendingCancels.clear(); nextPatternSource(); sustained = false; pull.reset(); lastClock = null; },
+      allNotesOff() { if (ready) { cancel(undefined, context.currentTime); if (id === 'fable') engine.setSustain(false); } held.clear(); midiHeld.clear(); pendingCancels.clear(); nextPatternSource(); sustained = false; },
       panic() { api.allNotesOff(); },
       getLatencySamples() { return 128 + (id === 'batter' ? 0 : Math.max(1, Math.round(sampleRate * .006))); },
       dispose() { ready = false; if (!engine) return; if (engine.timer != null) g.clearInterval(engine.timer); if (engine.dispose) return engine.dispose(); if (engine.close) return engine.close(); engine.stopAll?.(); engine.stop?.(); return context?.close(); }

@@ -11,7 +11,7 @@ public:
     ~PluginProcessor() override;
     const juce::String getName() const override { return product.name; }
     bool acceptsMidi() const override { return product.instrument() || product.id == "ferment"; }
-    bool producesMidi() const override { return product.id == "ferment"; }
+    bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return product.instrument() ? 30.0 : 60.0; }
     void prepareToPlay(double, int) override;
@@ -37,6 +37,8 @@ public:
     void stateFromEditor(const juce::var&);
     void parameterFromEditor(const juce::var&);
     void midiFromEditor(const juce::var&);
+    void captureFromEditor(const juce::var&);
+    juce::Array<juce::var> captureReplies();
     bool isReady() const noexcept { return readyFlag.load(); }
 private:
     Product product;
@@ -49,6 +51,8 @@ private:
     std::atomic<bool> readyFlag { false }, runtimeFault { false }, resetRequested { false }, appliedFlag { false };
     std::atomic<double> rate { 48000.0 };
     std::atomic<int> maxBlock { 512 };
+    std::atomic<int> appliedLatency { 0 };
+    std::atomic<float> outputPeak { 0 }, outputRmsLeft { 0 }, outputRmsRight { 0 };
     std::atomic<std::uint64_t> requestVersion { 0 };
     std::uint64_t builtVersion = 0;
     juce::CriticalSection stateLock;
@@ -62,6 +66,11 @@ private:
     struct UiMidi { int type = 0, data1 = 0, channel = 1; double data2 = 0; };
     std::array<UiMidi, 1024> uiMidi{};
     juce::AbstractFifo uiMidiFifo { static_cast<int>(uiMidi.size()) };
+    struct CaptureCommand { juce::String request, response; };
+    std::array<CaptureCommand, 16> captureCommands{};
+    juce::AbstractFifo captureRequests { static_cast<int>(captureCommands.size()) };
+    std::array<juce::String, 16> captureResponses{};
+    juce::AbstractFifo captureResults { static_cast<int>(captureResponses.size()) };
     std::uint32_t noteSerial = 0;
     std::array<std::array<std::uint32_t, 8>, 16 * 128> heldIds{};
     std::array<int, 16 * 128> heldCount{};

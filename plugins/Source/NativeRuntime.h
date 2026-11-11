@@ -33,6 +33,7 @@ public:
     double appliedParameter(int index) const noexcept { return appliedParameters[static_cast<size_t>(index)]; }
     void reset() noexcept;
     juce::String stateJSON();
+    juce::String captureRequestJSON(const juce::String&);
     int latency() const noexcept { return latencySamples; }
     int capacity() const noexcept { return blockCapacity; }
     float* input(int channel) noexcept { return channel == 0 ? inL.data() : inR.data(); }
@@ -47,6 +48,7 @@ public:
     void setError(const juce::String& message) { error = message; }
     static void destroy(void* value) { delete static_cast<NativeRuntime*>(value); }
 private:
+    friend struct NativeRuntimeContractChecks;
     struct Convolver {
         juce::dsp::Convolution dsp;
         juce::AudioBuffer<float> buffer;

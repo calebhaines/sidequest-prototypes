@@ -40,20 +40,23 @@ function instrumentDefinitions() {
 }
 const instruments = instrumentDefinitions();
 function instrumentHTML(id) {
+  if (process.env.KITCHEN_EDITOR_GENERATED) return fs.readFileSync(path.join(root, 'plugins/generated/ui', id + '.html'), 'utf8');
   const file = path.join(root, id === 'form' ? 'music/form/index.html' : id + '/index.html'); let html = fs.readFileSync(file, 'utf8');
   if (id === 'form' && !html.includes('FormApp')) {
     const marker = 'We.current={project:f,masterVolume:Te,solo:ae};'; assert(html.includes(marker), 'HOTPLATE facade injection needs its current reducer signature');
     const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid HOTPLATE project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
     html = html.replace(marker, marker + expose);
   }
-  const parameters = [{ path: '_nativeSequence', type: 'boolean', default: true }, ...(instruments.get(id)?.parameters || [])].map(value => ({ ...value, type: value.type === 'number' ? 'range' : value.type, path: value.path || value.id || value.key, options: value.options || value.values?.map(option => ({ value: option, label: String(option) })) }));
+  const sourceParameters = instruments.get(id)?.parameters || [];
+  const parameters = [...(sourceParameters.some(value => value.path === 'followHost' || value.path === '_nativeSequence') ? [] : [{ path: '_nativeSequence', type: 'boolean', default: true }]), ...sourceParameters].map(value => ({ ...value, type: value.type === 'number' ? 'range' : value.type, path: value.path || value.id || value.key, options: value.options || value.values?.map(option => ({ value: option, label: String(option) })) }));
   const descriptor = { id: 'instrument-' + id, sourceId: id, kind: 'instrument', name: names[ids.indexOf(id)], parameters };
   return html.replace(/<head(?:\s[^>]*)?>/i, match => match + script('window.KitchenPluginDescriptor=' + JSON.stringify(descriptor)) + script(bridge));
 }
 function effectHTML(definition) {
+  if (process.env.KITCHEN_EDITOR_GENERATED) return fs.readFileSync(path.join(root, 'plugins/generated/ui', definition.id + '.html'), 'utf8');
   const descriptor = { id: 'effect-' + definition.id, sourceId: definition.id, kind: 'effect', name: definition.name, definition, parameters: definition.parameters, defaultState: definition.defaults };
-  const styles = ['plugins/web/effect-editor.css', 'loom/deluxe.css', 'loom/svt.css', 'loom/guitar-pedals.css', 'loom/cabinet.css'].map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
-  const code = [bridge, ...['loom/deluxe-ui.js', 'loom/svt-ui.js', 'loom/guitar-pedals-ui.js', 'loom/cabinet-ui.js', 'plugins/web/effect-editor.js'].map(file => fs.readFileSync(path.join(root, file), 'utf8'))].join('\n');
+  const styles = ['plugins/web/effect-editor.css', 'loom/deluxe.css', 'loom/svt.css', 'loom/guitar-pedals.css', 'loom/cabinet.css', 'loom/pedal-midi.css'].map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
+  const code = [bridge, ...['loom/deluxe-ui.js', 'loom/svt-ui.js', 'loom/guitar-pedals-ui.js', 'loom/cabinet-ui.js', 'loom/pedal-midi.js', 'loom/pedal-midi-ui.js', 'plugins/web/effect-editor.js'].map(file => fs.readFileSync(path.join(root, file), 'utf8'))].join('\n');
   return fs.readFileSync(path.join(web, 'effect-editor.html'), 'utf8').replace('<!-- KITCHEN_PLUGIN_DESCRIPTOR -->', script('window.KitchenPluginDescriptor=' + JSON.stringify(descriptor))).replace('<!-- KITCHEN_EFFECT_STYLES -->', '<style>' + styles + '</style>').replace('<!-- KITCHEN_EFFECT_SCRIPTS -->', script(code));
 }
 async function serve() {
@@ -73,16 +76,27 @@ async function serve() {
 async function pageFor(base, route) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
   await context.addInitScript(() => {
-    window.__nativeMessages = []; window.__nativeAudioContexts = 0; window.__offlineRenders = 0;
+    window.__nativeMessages = []; window.__nativeAudioContexts = 0; window.__offlineRenders = 0; window.__editorWorkers = 0;
     const Original = window.AudioContext;
     if (Original) { function Counted(...args) { window.__nativeAudioContexts++; return new Original(...args); } Counted.prototype = Original.prototype; window.AudioContext = Counted; window.webkitAudioContext = Counted; }
+    const WorkerConstructor = window.Worker;
+    if (WorkerConstructor) { function CountedWorker(...args) { window.__editorWorkers++; return new WorkerConstructor(...args); } CountedWorker.prototype = WorkerConstructor.prototype; window.Worker = CountedWorker; }
     if (window.OfflineAudioContext) { const start = OfflineAudioContext.prototype.startRendering; OfflineAudioContext.prototype.startRendering = function (...args) { window.__offlineRenders++; return start.apply(this, args); }; }
     const listeners = new Map(); let serial = 0;
     window.__nativeDeliver = (type, value) => { for (const record of listeners.values()) if (record.type === type) record.callback(value); };
     window.__JUCE__ = { backend: {
       addEventListener(type, callback) { const id = ++serial; listeners.set(id, { type, callback }); return id; },
       removeEventListener(id) { listeners.delete(id); },
-      emitEvent(type, payload) { window.__nativeMessages.push({ type, payload }); }
+      emitEvent(type, payload) {
+        window.__nativeMessages.push({ type, payload });
+        if (type === 'kitchenCapture') queueMicrotask(() => {
+          if (payload.action === 'start') window.__captureTake = { token: 'native-test-take', capturing: true, sampleRate: 48000, tempo: 120, frames: 0, notes: [] };
+          else if (payload.action === 'stop') { const count = window.__captureTestNotes || 1; window.__captureTake = { ...window.__captureTake, capturing: false, frames: count * 4800 + 4800, notes: Array.from({ length: count }, (_, index) => ({ pitch: 57 + index % 12, velocity: .8, startFrame: index * 4800 + 240, endFrame: index * 4800 + 2400 })) }; }
+          else if (payload.action === 'clear') window.__captureTake = null;
+          const take = window.__captureTake, offset = payload.afterNote || 0, maxNotes = payload.maxNotes ?? 64;
+          window.__nativeDeliver('kitchenCapture', { requestId: payload.requestId, ok: true, take: take ? { ...take, notes: take.notes.slice(offset, offset + maxNotes), notesOffset: offset, noteCount: take.notes.length, moreNotes: offset + maxNotes < take.notes.length } : null });
+        });
+      }
     } };
   });
   await context.route('**/*', route => { const address = route.request().url(); if (/^(data:|blob:|about:)/.test(address) || new URL(address).origin === base) return route.continue(); report.external.push({ current, address }); return route.abort(); });
@@ -112,7 +126,7 @@ async function instrumentCheck(base, id) {
         list[index] = ratio; await KitchenNativeEditor.receive('kitchenParameters', list);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const automated = at(await KitchenNativeEditor.getProject(), d.path);
-        if (Math.abs(automated - expected) > 1e-6) throw Error(id + ' host automation did not reach original controls: ' + JSON.stringify({ path: d.path, expected, automated, diagnostics: KitchenNativeEditor.diagnostics }));
+        if (!Number.isFinite(automated) || Math.abs(automated - expected) > 1e-6) throw Error(id + ' host automation did not reach original controls: ' + JSON.stringify({ path: d.path, expected, automated, diagnostics: KitchenNativeEditor.diagnostics }));
         const changed = await KitchenNativeEditor.getProject(); let found = false;
         for (const source of [changed, changed?.state, changed?.project, changed?.recipe]) {
           for (const candidate of [d.path, d.path.replace(/^(?:recipe|state|project)\./, '')]) {
@@ -124,12 +138,35 @@ async function instrumentCheck(base, id) {
         const before = __nativeMessages.length;
         if (id === 'form' && d.path === 'masterVolume') { const field = document.querySelector('input[aria-label="Master playback volume"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, String(original)); field.dispatchEvent(new Event('input', { bubbles: true })); field.dispatchEvent(new Event('change', { bubbles: true })); }
         else await (app.loadState || app.setState).call(app, changed);
-        await new Promise(resolve => requestAnimationFrame(resolve)); document.getElementById('kitchenNativeSequence').dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(resolve => requestAnimationFrame(resolve)); (document.getElementById('kitchenNativeSequence') || document.getElementById('kitchenNativeClock')).dispatchEvent(new Event('input', { bubbles: true }));
         await new Promise(resolve => setTimeout(resolve, 650));
         const messages = __nativeMessages.slice(before), parameters = messages.filter(value => value.type === 'kitchenSetParameter'), recipes = messages.filter(value => value.type === 'kitchenSetState');
         if (!parameters.some(value => value.payload.index === index)) throw Error(id + ' original control edit did not reach its native parameter');
         if (recipes.length) throw Error(id + ' parameter-only edit rebuilt the full native recipe');
         automation = { path: d.path, restored: automated, parameterMessages: parameters.length, fullRecipeMessages: recipes.length };
+      }
+      let preparation = null;
+      if (id === 'morsel') {
+        const recipe = await app.getState(); let hydrations = 0, preparedOptions;
+        window.KitchenMorselPreparation = {
+          async hydrateBank() { hydrations++; await new Promise(resolve => setTimeout(resolve, 20)); },
+          signature: value => JSON.stringify(value),
+          async prepareBank(options) { preparedOptions = options; options.onProgress(2, 4); if (!document.getElementById('kitchenNativeStatus').textContent.includes('50%')) throw Error('MORSEL preparation progress is wrong'); return { key: 'prepared-test-bank' }; }
+        };
+        const state = { recipe, bank: { key: 'restored-test-bank' } };
+        await Promise.all([KitchenNativeEditor.receive('kitchenReady', { state }), KitchenNativeEditor.receive('kitchenState', { state })]);
+        if (hydrations !== 1) throw Error('A duplicate native snapshot restored MORSEL ' + hydrations + ' times');
+        await app.engine.prepareNotes({ state: recipe, events: [] });
+        await window.MorselController.preview({ pitch: 64, voice: recipe.voice, lyric: recipe.lyric, velocity: .7, durationSeconds: .1 });
+        if (__editorWorkers) throw Error('Ordinary MORSEL control/preview started duplicate neural workers');
+        const before = __nativeMessages.length; await KitchenNativeEditor.prepareVoices();
+        const messages = __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetState');
+        if (messages.length !== 1 || messages[0].payload.state.bank.key !== 'prepared-test-bank') throw Error('MORSEL did not commit one complete prepared bank');
+        if (preparedOptions.voices.length !== 4 || preparedOptions.pitches.length !== 49) throw Error('MORSEL preparation omits voices or keyboard pitches');
+        KitchenMorselPreparation.prepareBank = options => new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true }));
+        const beforeCancel = __nativeMessages.length, pending = KitchenNativeEditor.prepareVoices(); await new Promise(resolve => setTimeout(resolve, 0)); document.getElementById('kitchenCancelVoices').click(); await pending;
+        if (__nativeMessages.slice(beforeCancel).some(value => value.type === 'kitchenSetState')) throw Error('MORSEL cancel replaced the usable native bank');
+        preparation = { hydrations, voices: preparedOptions.voices.length, pitches: preparedOptions.pitches.length, workerCount: __editorWorkers, fullBankMessages: messages.length, cancellationRetainsBank: true };
       }
       __nativeDeliver('kitchenClock', { tempo: 137, beat: 9.25, playing: true, sampleRate: 48000, samplePosition: 194400, revision: 2 });
       const context = new AudioContext(), rate = context.sampleRate;
@@ -137,10 +174,50 @@ async function instrumentCheck(base, id) {
       await context.close();
       const before = __nativeMessages.length;
       if (app.engine?.noteOn) { app.engine.noteOn({ id: 'editor-note', pitch: 60, note: 60, velocity: .75 }); app.engine.noteOff?.({ id: 'editor-note', pitch: 60, note: 60 }); }
+      else if (id === 'grain' || id === 'tine') await app.engine.preview((await app.getState()).tracks[0]);
+      else if (id === 'mire') { await app.engine.trigger(2, .75); await app.engine.triggerNode(2); }
+      else if (id === 'ravel') await app.engine.triggerSlice(3);
+      else if (id === 'bower') await app.engine.pluck(2, 0, .75);
+      else if (id === 'haze') app.engine.scheduleNote({ voiceId: '0', velocity: .75, durationSeconds: .1 });
+      else if (id === 'roux') await app.engine.liveNote(48, .75, .1);
+      else if (id === 'proof' || id === 'marinade') { await app.engine.trigger(60, .75, .1); app.engine.release(60); }
+      else if (id === 'picnic') app.engine.scheduleNote({ pitch: 60, voice: 'chords', velocity: .75, durationSeconds: .1 });
+      else if (id === 'morsel') await app.engine.preview({ pitch: 60, velocity: .75, durationSeconds: .1 });
       const midi = __nativeMessages.slice(before).filter(value => value.type === 'kitchenMidi').map(value => value.payload);
-      return { id, facade, restoredExact: true, automation, clock: document.getElementById('kitchenNativeClock').textContent, nativeAudioContexts: __nativeAudioContexts, offlineRenders: __offlineRenders, workletUnavailable: context.audioWorklet === undefined, editorRate: rate, nativeMidiMessages: midi.length, diagnostics: KitchenNativeEditor.diagnostics };
+      if (id !== 'form' && !midi.some(value => value.type === 'on')) throw Error('No native audition note for ' + id);
+      if (id === 'ravel' && !midi.some(value => value.pitch === 60 && value.channel === 4)) throw Error('DICER audition selected the wrong slice or pitch');
+      if (id === 'mire' && !midi.some(value => value.channel === 15)) throw Error('REDUCE node audition did not use its native node channel');
+      if (id === 'bower' && !midi.some(value => value.channel === 3)) throw Error('SKEWER audition selected the wrong string');
+      if (id === 'picnic') {
+        app.engine.scheduleNote({ id: 'source-a', source: 'source-a', pitch: 60, velocity: .8, durationSeconds: 1 }); app.engine.scheduleNote({ id: 'source-b', source: 'source-b', pitch: 64, velocity: .8, durationSeconds: 1 });
+        const atCancel = __nativeMessages.length; app.engine.cancelNotes({ source: 'source-a' });
+        const cancelled = __nativeMessages.slice(atCancel).filter(value => value.type === 'kitchenMidi' && value.payload.type === 'off');
+        if (cancelled.length !== 1 || cancelled[0].payload.pitch !== 60) throw Error('PICNIC released an unrelated held source');
+      }
+      return { id, facade, restoredExact: true, automation, preparation, clock: document.getElementById('kitchenNativeClock').textContent, nativeAudioContexts: __nativeAudioContexts, offlineRenders: __offlineRenders, workletUnavailable: context.audioWorklet === undefined, editorRate: rate, nativeMidiMessages: midi.length, diagnostics: KitchenNativeEditor.diagnostics };
     }, { facade: facades[ids.indexOf(id)], id });
     assert.equal(evidence.nativeAudioContexts, 0); assert.equal(evidence.offlineRenders, 0); assert.equal(evidence.workletUnavailable, true); assert.match(evidence.clock, /137 BPM.*Playing/); assert.deepEqual(evidence.diagnostics.errors, []);
+    if (id === 'form') {
+      const before = await page.evaluate(() => __nativeMessages.length); await page.locator('.track-play').first().click();
+      await page.waitForFunction(before => __nativeMessages.slice(before).some(value => value.type === 'kitchenMidi' && value.payload.type === 'on'), before);
+      evidence.originalPadAudition = true;
+    }
+    if (id === 'brine') {
+      await page.locator('#saveButton').click(); await page.waitForFunction(() => __nativeMessages.some(value => value.type === 'kitchenDownload' && value.payload.filename.endsWith('.json')));
+      await page.locator('#exportScope').selectOption('note');
+      await page.locator('#wavButton').evaluate(element => { for (let parent = element.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true; });
+      await page.locator('#wavButton').click(); await page.waitForFunction(() => __nativeMessages.some(value => value.type === 'kitchenDownload' && value.payload.filename.endsWith('.wav')));
+      evidence.exports = await page.evaluate(async () => {
+        const recipe = __nativeMessages.find(value => value.type === 'kitchenDownload' && value.payload.filename.endsWith('.json')).payload, wav = __nativeMessages.find(value => value.type === 'kitchenDownload' && value.payload.filename.endsWith('.wav')).payload;
+        const link = document.createElement('a'), url = URL.createObjectURL(new Blob(['detached-export'], { type: 'text/plain' })); link.href = url; link.download = 'detached.txt'; link.click(); URL.revokeObjectURL(url);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const detached = __nativeMessages.filter(value => value.type === 'kitchenDownload' && value.payload.filename === 'detached.txt');
+        const context = new OfflineAudioContext(1, 128, 48000), oscillator = context.createOscillator(); oscillator.connect(context.destination); oscillator.start(); const rendered = await context.startRendering();
+        return { recipeName: JSON.parse(atob(recipe.base64)).state.name, wavHeader: atob(wav.base64).slice(0, 4), detachedCount: detached.length, detachedText: detached.length ? atob(detached[0].payload.base64) : '', explicitOfflineAudible: rendered.getChannelData(0).some(value => value !== 0), nativeAudioContexts: __nativeAudioContexts };
+      }); assert.equal(evidence.exports.wavHeader, 'RIFF'); assert.equal(evidence.exports.detachedCount, 1); assert.equal(evidence.exports.detachedText, 'detached-export'); assert(evidence.exports.explicitOfflineAudible); assert.equal(evidence.exports.nativeAudioContexts, 0);
+    }
+    const postAudition = await page.evaluate(() => ({ nativeAudioContexts: __nativeAudioContexts, errors: KitchenNativeEditor.diagnostics.errors })); assert.equal(postAudition.nativeAudioContexts, 0); assert.deepEqual(postAudition.errors, []);
+    if (['form', 'brine', 'morsel'].includes(id)) { evidence.nativeSmoke = await page.evaluate(() => KitchenNativeEditor.runSmokeTest()); assert.equal(evidence.nativeSmoke.pass, true, JSON.stringify(evidence.nativeSmoke)); }
     const button = page.locator('button#playButton,button#play-button,button#play').first();
     if (await button.count()) { await button.click({ force: true }); assert.match(await page.locator('#kitchenNativeStatus').textContent(), /DAW/); }
     return evidence;
@@ -162,8 +239,39 @@ async function effectCheck(base, definition) {
       return { id: descriptor.sourceId, controls, parameters: descriptor.parameters.length, bypass, title: document.getElementById('pluginName').textContent, clock: document.getElementById('pluginClock').textContent, nativeAudioContexts: __nativeAudioContexts, special: !document.getElementById('pluginSpecialEditor').matches(':empty') };
     });
     assert(evidence.parameters > 0); assert(evidence.controls > 0); assert(evidence.bypass && evidence.bypass.payload.normalized === 1); assert.equal(evidence.nativeAudioContexts, 0); assert.match(evidence.clock, /143 BPM/);
+    const automation = await page.evaluate(async () => {
+      const parameters = KitchenNativeEditor.descriptor.parameters, index = parameters.findIndex(value => ['range', 'number'].includes(value.type));
+      if (index < 0) return null;
+      const d = parameters[index], list = []; list[index] = .375;
+      await KitchenNativeEditor.receive('kitchenParameters', list);
+      const key = d.key || d.path.replace(/^params\./, ''), actual = KitchenEffectEditor.state.params[key], expected = KitchenNativeEditor.actual(d, .375);
+      if (actual !== expected) throw Error('Native effect automation did not reach the visible editor for ' + key);
+      const before = __nativeMessages.length; KitchenEffectEditor.emit({ [key]: KitchenNativeEditor.actual(d, .625) });
+      const parameter = __nativeMessages.slice(before).find(value => value.type === 'kitchenSetParameter');
+      if (!parameter || parameter.payload.index !== index || __nativeMessages.slice(before).some(value => value.type === 'kitchenSetState')) throw Error('Effect parameter edits do not use native atomics');
+      return { path: d.path, normalized: parameter.payload.normalized };
+    }); evidence.automation = automation;
     const select = page.locator('select[data-select],#pluginSpecialEditor select').first();
     if (await select.count()) { const handle = await select.elementHandle(); await handle.evaluate(element => { for (let parent = element.parentElement; parent; parent = parent.parentElement) if (parent.tagName === 'DETAILS') parent.open = true; }); await select.click(); assert(await handle.evaluate(element => element.isConnected && document.activeElement === element)); await page.keyboard.press('Escape'); }
+    if (definition.id === 'ferment') {
+      evidence.pagedRestoreBlocksExport = await page.evaluate(() => {
+        const notes = Array.from({ length: 130 }, (_, index) => ({ pitch: 57 + index % 12, velocity: .8, startFrame: index * 4800 + 240, endFrame: index * 4800 + 2400 }));
+        window.__captureTake = { token: 'restored-take', capturing: false, sampleRate: 48000, tempo: 120, frames: 130 * 4800 + 4800, notes };
+        __nativeDeliver('kitchenCapture', { requestId: 'initial-restore', ok: true, take: { ...__captureTake, notes: notes.slice(0, 64), notesOffset: 0, noteCount: 130, moreNotes: true } });
+        return document.getElementById('fermentMidiSave').disabled;
+      }); assert.equal(evidence.pagedRestoreBlocksExport, true);
+      await page.waitForFunction(() => document.getElementById('fermentMidiCount').textContent === '130' && !document.getElementById('fermentMidiSave').disabled);
+      await page.evaluate(() => window.__captureTestNotes = 130);
+      await page.locator('#fermentMidiPanel').evaluate(element => element.open = true);
+      await page.locator('#fermentMidiStart').click(); await page.waitForFunction(() => !document.getElementById('fermentMidiStop').disabled);
+      await page.locator('#fermentMidiStop').click(); await page.waitForFunction(() => !document.getElementById('fermentMidiSave').disabled);
+      await page.locator('#fermentMidiSave').click(); await page.waitForFunction(() => __nativeMessages.some(value => value.type === 'kitchenDownload'));
+      evidence.capture = await page.evaluate(() => {
+        const file = __nativeMessages.find(value => value.type === 'kitchenDownload').payload;
+        return { count: document.getElementById('fermentMidiCount').textContent, filename: file.filename, midiHeader: atob(file.base64).slice(0, 4), actions: __nativeMessages.filter(value => value.type === 'kitchenCapture').map(value => value.payload.action) };
+      }); assert.equal(evidence.capture.count, '130'); assert.equal(evidence.capture.midiHeader, 'MThd'); assert.match(evidence.capture.filename, /\.mid$/);
+    }
+    if (definition.id === 'sunday') { evidence.nativeSmoke = await page.evaluate(() => KitchenNativeEditor.runSmokeTest()); assert.equal(evidence.nativeSmoke.pass, true, JSON.stringify(evidence.nativeSmoke)); }
     if (['broiler', 'cellar', 'cupboard'].includes(definition.id)) { await page.screenshot({ path: path.join(output, definition.id + '-desktop.png'), fullPage: true }); await page.setViewportSize({ width: 390, height: 1000 }); const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1); assert.equal(overflow, false); await page.screenshot({ path: path.join(output, definition.id + '-mobile.png'), fullPage: true }); }
     return evidence;
   } finally { await context.close(); }

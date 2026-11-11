@@ -149,7 +149,11 @@
     "check:galley-cpu-review-browser": "GALLEY_135_REGRESSION=1 node loom/performance-2026-browser-checks.cjs",
     "check:cellar-board": "node loom/svt-checks.cjs && node loom/guitar-pedals-checks.cjs && node loom/cellar-board-project-checks.cjs && node loom/cellar-board-checks.cjs",
     "check:cellar-board-browser": "node loom/cellar-board-browser-checks.cjs",
-    "check:playback-stability": "node loom/playback-stability-checks.cjs && node loom/vocal-cache-checks.cjs && node loom/offline-performance-checks.cjs && node loom/project-data-performance-checks.cjs && node loom/ui-rendering-checks.cjs && node loom/host-scheduler-performance-checks.cjs && node loom/broiler-hotpath-checks.cjs && node loom/deluxe-performance-checks.cjs && node loom/cellar-performance-checks.cjs && node loom/board-allocation-checks.cjs"
+    "check:playback-stability": "node loom/playback-stability-checks.cjs && node loom/vocal-cache-checks.cjs && node loom/offline-performance-checks.cjs && node loom/project-data-performance-checks.cjs && node loom/ui-rendering-checks.cjs && node loom/host-scheduler-performance-checks.cjs && node loom/broiler-hotpath-checks.cjs && node loom/deluxe-performance-checks.cjs && node loom/cellar-performance-checks.cjs && node loom/board-allocation-checks.cjs",
+    "plugins:generate": "node plugins/scripts/generate.mjs",
+    "check:plugins": "node plugins/scripts/checks.cjs && node plugins/scripts/runtime-checks.cjs",
+    "check:plugins-dsp": "node plugins/tests/effects-checks.cjs && node plugins/tests/core-instruments-checks.cjs && node plugins/tests/webaudio-instruments-checks.cjs && node plugins/tests/host-runtime-checks.cjs && node plugins/tests/morsel-checks.cjs",
+    "plugins:build": "bash plugins/build-native.sh"
   },
   "devDependencies": {
     "vite": "^7.1.0"

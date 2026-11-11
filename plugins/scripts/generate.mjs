@@ -174,8 +174,8 @@ for (const product of products) {
     if (product.id === 'morsel' && fs.existsSync(path.join(root, 'js/morsel-preparation.js'))) html = html.replace(/<\/body>/i, '<script>' + closeScript(read('plugins/js/morsel-preparation.js')) + '</script></body>');
   } else {
     html = read('plugins/web/effect-editor.html');
-    const styles = ['plugins/web/effect-editor.css', 'loom/deluxe.css', 'loom/svt.css', 'loom/guitar-pedals.css', 'loom/cabinet.css'].map(read).join('\n');
-    const scripts = [bridge, ...['loom/deluxe-ui.js', 'loom/svt-ui.js', 'loom/guitar-pedals-ui.js', 'loom/cabinet-ui.js', 'plugins/web/effect-editor.js'].map(read)].join('\n');
+    const styles = ['plugins/web/effect-editor.css', 'loom/deluxe.css', 'loom/svt.css', 'loom/guitar-pedals.css', 'loom/cabinet.css', 'loom/pedal-midi.css'].map(read).join('\n');
+    const scripts = [bridge, ...['loom/deluxe-ui.js', 'loom/svt-ui.js', 'loom/guitar-pedals-ui.js', 'loom/cabinet-ui.js', 'loom/pedal-midi.js', 'loom/pedal-midi-ui.js', 'plugins/web/effect-editor.js'].map(read)].join('\n');
     html = html.replace('<!-- KITCHEN_PLUGIN_DESCRIPTOR -->', descriptor).replace('<!-- KITCHEN_EFFECT_STYLES -->', '<style>' + styles + '</style>').replace('<!-- KITCHEN_EFFECT_SCRIPTS -->', '<script>' + closeScript(scripts) + '</script>');
   }
   fs.writeFileSync(path.join(generated, 'ui', product.id + '.html'), html);

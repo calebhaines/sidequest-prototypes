@@ -75,6 +75,9 @@ async function main() {
   assert(Math.abs(released[12000 + 128] - .72) < 1e-6, 'attack-to-release gap holds current value');
   assert(Math.abs(released[21600 + 128] - .36) < 1e-6, 'release begins at its original absolute timestamp');
   assert(Math.abs(exponential[21600 + 128] - .0072) < 1e-6, 'exponential release follows its original endpoint');
+  const delayContext = createContext(24000), delayPull = createPull(delayContext), delaySource = delayContext.createBufferSource(), delayBuffer = delayContext.createBuffer(1, 16, 24000), delay = delayContext.createDelay(16.8);
+  delayBuffer.getChannelData(0).fill(.25); delaySource.buffer = delayBuffer; delaySource.loop = true; delaySource.connect(delay); delay.connect(delayContext.destination); delay.delayTime.setValueAtTime(.252, 0); delaySource.start(0);
+  const delayed = new Float32Array(24000); delayPull.process(delayed, new Float32Array(delayed.length)); assert(delayed.every(Number.isFinite), 'fractional delay index crossing zero never rounds outside its ring'); assert(Math.abs(delayed[10000] - .25) < 1e-6);
   for (const id of Object.keys(sources)) {
     const a = await render(id, [128]), b = await render(id, [17, 31, 255, 3, 129]);
     let error = 0; for (let i = 0; i < a.output.length; i++) error = Math.max(error, Math.abs(a.output[i] - b.output[i])); assert(error < 2e-6, id + ' arbitrary DAW block partitions: ' + error);

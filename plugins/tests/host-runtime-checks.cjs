@@ -204,6 +204,37 @@ const plain = x => JSON.parse(JSON.stringify(x));
     }
     assert.deepEqual(JSON.parse(api.getStateJSON()),plain(reference.getState())); assert(api.getTailSeconds()>=0);assert.equal(api.getLatencySamples(),0);
   });
+  await check('FERMENT retains exact canonical played-note capture and exports original Standard MIDI files',()=>{
+    const g=effectRealm,api=g.KitchenNativePlugin,io=g.KitchenHostIO;
+    const def=g.KitchenEffectPlugins.definitions().find(def=>def.id==='ferment'),params={...def.defaults.params,mode:'track',gate:-70,inputRange:'guitar',mix:1};
+    api.create('effect-ferment',48000,1024,JSON.stringify({params}));
+    const reference=g.KitchenEffectPlugins.create('ferment',48000,{params});
+    const start=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'start',requestId:'start',token:'exact-take',tempo:120,maxBeats:4})));
+    assert.equal(start.ok,true);assert.equal(start.take.capturing,true);assert.equal(start.requestId,'start');reference.startMidiCapture({token:'exact-take',tempo:120,maxBeats:4});
+    for(let frame=0;frame<48000;frame+=512){const frames=Math.min(512,48000-frame);clock(g,{localFrame:800000+frame,beat:frame/24000});events(g,[]);for(let i=0;i<frames;i++){const n=frame+i;io.inputLeft[i]=io.inputRight[i]=n<35000?.2*Math.sin(2*Math.PI*220*n/48000):0;}api.render(frames);
+      for(let offset=0;offset<frames;offset+=128){const n=Math.min(128,frames-offset),left=io.inputLeft.slice(offset,offset+n),right=io.inputRight.slice(offset,offset+n);reference.process(left,right,{sampleRate:48000,tempo:120,beat:(frame+offset)/24000,playing:true,frame:frame+offset});assert.deepEqual(Array.from(left),Array.from(io.outputLeft.subarray(offset,offset+n)));}
+      if(frame===24064){const progress=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'poll',requestId:'progress',maxNotes:0})));assert.equal(progress.take.capturing,true);assert.equal(progress.take.notes.length,0);assert.equal(progress.take.frames,frame+frames);}
+    }
+    const stop=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'stop',requestId:'stop',reason:'test stopped'})));reference.stopMidiCapture('test stopped');const expected=plain(reference.drainMidiEvents());
+    assert.equal(stop.ok,true);assert.equal(stop.take.capturing,false);assert.deepEqual(stop.take.notes,expected.events);assert(stop.take.notes.some(n=>n.pitch===57));assert.equal(stop.take.frames,expected.frames);
+    vm.runInContext(source('loom/pedal-midi.js'),g,{filename:'pedal-midi.js'});const midi=g.LoomPedalMidi.toMidi(stop.take),pattern=g.LoomPedalMidi.toPattern(stop.take);assert.equal(Buffer.from(midi.subarray(0,4)).toString(),'MThd');assert.equal(Buffer.from(midi.subarray(14,18)).toString(),'MTrk');assert(pattern.notes.some(n=>n.pitch===57));
+    const reopened=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'poll'})));assert.deepEqual(reopened.take.notes,stop.take.notes);
+    assert.equal(JSON.parse(api.captureRequestJSON(JSON.stringify({action:'clear'}))).take,null);assert.equal(JSON.parse(api.captureRequestJSON(JSON.stringify({action:'poll'}))).take,null);
+    api.setParameter(def.parameters.findIndex(p=>p.path==='params.bypass'),1);assert.equal(JSON.parse(api.captureRequestJSON(JSON.stringify({action:'start'}))).ok,false);assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
+    assert.equal(def.producesMidi,false);assert.equal(def.capturesMidi,true);assert.equal(io.outputEventCount,0,'Historical capture must not masquerade as live MIDI');
+  });
+  await check('Long FERMENT takes page snapshots to bounded messages without losing closed notes',()=>{
+    const g=realm();let queue=[],active=false,token=null,frames=0;
+    g.KitchenEffectPlugins={ids:['ferment'],definitions:()=>[],create:()=>({getState:()=>({params:{}}),process(){},startMidiCapture(options){assert.equal(options.maxNotes,undefined,'Page size must not shorten capture limit');active=true;token=options.token;frames=0;return{token,frames,sampleRate:48000,tempo:120,done:false};},stopMidiCapture(reason){active=false;return{token,frames,sampleRate:48000,tempo:120,done:true,reason};},drainMidiEvents(){if(!token)return null;const result={token,frames,sampleRate:48000,tempo:120,done:!active,events:queue};queue=[];return result;}})};
+    g.KitchenPluginDescriptor={id:'ferment',kind:'effect',parameters:[]};vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});const api=g.KitchenNativePlugin;api.create('ferment',48000,1024,'');
+    assert.equal(JSON.parse(api.captureRequestJSON(JSON.stringify({action:'start',maxNotes:64}))).ok,true);
+    const expected=Array.from({length:4096},(_,i)=>({pitch:36+i%49,startFrame:i*200,endFrame:i*200+160,velocity:.8}));queue=expected.slice();frames=819200;
+    let response=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'stop',maxNotes:64}))),notes=[];
+    for(;;){assert(response.take.notes.length<=128);assert.equal(response.take.notesOffset,notes.length);notes.push(...response.take.notes);if(!response.take.moreNotes)break;response=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'poll',afterNote:notes.length,maxNotes:10000})));}
+    assert.equal(response.take.noteCount,4096);assert.deepEqual(notes,expected);
+    const statusOnly=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'poll',maxNotes:0})));assert.equal(statusOnly.take.notes.length,0);assert.equal(statusOnly.take.noteCount,4096);assert(JSON.stringify(statusOnly).length<1000);
+    const error=JSON.parse(api.captureRequestJSON(JSON.stringify({action:'invalid',requestId:'bad'})));assert.equal(error.ok,false);assert.equal(error.requestId,'bad');assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
+  });
   const esbuild=require('esbuild');
   const bundled=(entry,globalName)=>esbuild.buildSync({entryPoints:[path.join(root,entry)],bundle:true,write:false,format:'iife',platform:'browser',target:'es2020',globalName,logLevel:'silent'}).outputFiles[0].text;
   const vendor=bundled('plugins/js/vendor-entry.js'),hotplate=bundled('plugins/js/hotplate-entry.js','KitchenHotplateAudio');

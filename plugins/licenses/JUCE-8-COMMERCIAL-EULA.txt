@@ -1,0 +1,344 @@
+Title: The JUCE 8 End User Licence Agreement
+
+URL Source: https://juce.com/legal/juce-8-licence/
+
+Published Time: 2024-03-25T09:00:34+00:00
+
+Markdown Content:
+* * *
+
+**Changelog:**
+
+7th May 2024:
+
+*   JUCE 8 EULA Published
+
+20th May 2024:
+
+*   1.7 clarified to exclude contributions from typical sound design workflows
+
+2nd June 2025:
+
+*   Added an Educational Licence Type in 1.2 and 1.2.4
+
+17th July 2025:
+
+*   11.2 clarified that this Agreement is not transferrable
+
+* * *
+
+This JUCE 8 End User Licence Agreement (“Agreement”) is a legal agreement for the licensing of the JUCE 8 Framework (“Framework”, defined below) between you (“Licensee” or “you”) and Raw Material Software Limited, a company registered in England and Wales with company number 03971916 and registered office address at 5 Technology Park, Colindeep Lane, Colindale, London, United Kingdom, NW9 6BX (“RMS”, “Licensor”, “us” or “we”). If you are accepting the terms of this Agreement on behalf of a company or other legal entity, you represent and warrant that you have the authority to bind that company or other legal entity to the terms of this Agreement and, in such event, “you” and “Licensee” will refer to that company or other legal entity. You must be over 18 to accept the terms of this Agreement. If you are not 18 years of age, but you are at least the age of 13, you may use the Framework only if your parent or guardian agrees to the terms of this Agreement, and then any reference to “you” shall include the parent or guardian.
+
+By clicking on the “accept” button linking to these terms, or by downloading, installing, or using the Framework, or combining the Framework with any other source code, object code, content or any other copyrightable work, you agree to the terms of this Agreement, and all incorporated terms including the [JUCE Privacy Policy](https://juce.com/legal/juce-privacy-policy/) and the [JUCE Website Terms of Service](https://juce.com/legal/juce-website-terms-of-service/), as applicable, which will bind you. If you do not agree to the terms of this Agreement, we will not license the Framework to you, and you must discontinue the installation or download process and cease use of the Framework.
+
+Users of JUCE 7, 6, 5 or 4 should refer to the end user licence agreement corresponding to that particular version of JUCE. End user licence agreements for older versions of JUCE can be found here: [https://juce.com/juce-legal/](https://juce.com/juce-legal/).
+
+*   [**1. Licensing The JUCE 8 Framewo**](https://juce.com/legal/juce-8-licence/#Licensing-The-JUCE-8-Framework)**[rk](https://juce.com/legal/juce-8-licence/#Licensing-The-JUCE-8-Framework)**
+*   [1.1. What The JUCE 8 Framework Is](https://juce.com/legal/juce-8-licence/#What-The-JUCE-8-Framework-Is)
+*   [1.2. JUCE 8 Licence Types](https://juce.com/legal/juce-8-licence/#JUCE-8-Licence-Types)
+*   [1.2.1. Annual Revenue or Funding Limit](https://juce.com/legal/juce-8-licence/#Annual-Revenue-or-Funding-Limit)
+*   [1.2.2. Minimum Commitment for Subscriptions](https://juce.com/legal/juce-8-licence/#Minimum-Commitment-for-Subscriptions)
+*   [1.2.3. Perpetual Licences](https://juce.com/legal/juce-8-licence/#Perpetual-Licences)
+*   [1.2.4. Educational Licence Requirements](https://juce.com/legal/juce-8-licence/#Educational-Licence-Requirements)
+*   [1.3. Ownership of the Framework](https://juce.com/legal/juce-8-licence/#Ownership-of-the-Framework)
+*   [1.4. Products](https://juce.com/legal/juce-8-licence/#Products)
+*   [1.5. Owners of Products](https://juce.com/legal/juce-8-licence/#Owners-of-Products)
+*   [1.6. Licences for Product Owners](https://juce.com/legal/juce-8-licence/#Licences-for-Product-Owners)
+*   [1.7. The Number of Licence Seats Required to Create and Modify Products](https://juce.com/legal/juce-8-licence/#The-Number-of-Licence-Seats-Required-to-Create-and-Modify-Products)
+*   [1.8. Moving Licence Seats Between Users](https://juce.com/legal/juce-8-licence/#Moving-Licence-Seats-Between-Users)
+*   [1.9. Distributing and Selling Products Owned by You](https://juce.com/legal/juce-8-licence/#Distributing-and-Selling-Products-Owned-by-You)
+*   [1.10.](https://juce.com/legal/juce-8-licence/#Distribution-and-Subscription-Licences)[The Number of Licence Seats Required to Distribute Products](https://juce.com/legal/juce-8-licence/#The-Number-of-Licence-Seats-Required-to-Distribute-Products)
+*   [1.11. Redistributing and Selling Distributed Products](https://juce.com/legal/juce-8-licence/#Redistributing-and-Selling-Distributed-Products)
+*   [1.12. Products That Create Products](https://juce.com/legal/juce-8-licence/#Products-That-Create-Products)
+*   [1.13. Simultaneous Licence Type Use](https://juce.com/legal/juce-8-licence/#Simultaneous-Licence-Type-Use)
+*   [1.14. Moving Between Licence Types](https://juce.com/legal/juce-8-licence/#Moving-Between-Licence-Types)
+*   [1.15. Framework Versions](https://juce.com/legal/juce-8-licence/#Framework-Versions)
+*   [1.16. Products Directed Towards Children](https://juce.com/legal/juce-8-licence/#Products-Directed-Towards-Children)
+*   [1.17. Sub-licensing and Distributing the Framework On Its Own](https://juce.com/legal/juce-8-licence/#Sub-licensing-and-Distributing-the-Framework-On-Its-Own)
+*   [**2. Licensing Restrict**](https://juce.com/legal/juce-8-licence/#Licensing-Restrictions)**[ions](https://juce.com/legal/juce-8-licence/#Licensing-Restrictions)**
+*   [**3. Fees and Minimum Commitment**](https://juce.com/legal/juce-8-licence/#Fees-and-Minimum-Commitments)**[s](https://juce.com/legal/juce-8-licence/#Fees-and-Minimum-Commitments)**
+*   [**4.**](https://juce.com/legal/juce-8-licence/%5Cl%20%22h.33iw55b2aard%22)**[Support](https://juce.com/legal/juce-8-licence/#Support)**
+*   [**5. Intellectual Property Right**](https://juce.com/legal/juce-8-licence/#Intellectual-Property-Rights)**[s](https://juce.com/legal/juce-8-licence/#Intellectual-Property-Rights)**
+*   [**6. Disclaimer of Warranty**](https://juce.com/legal/juce-8-licence/#Disclaimer-of-Warranty)
+*   [**7. Limitation of Liability and Indemnification**](https://juce.com/legal/juce-8-licence/#Limitation-of-Liability-and-Indemnification)
+*   [**8. Term and Terminatio**](https://juce.com/legal/juce-8-licence/#Term-and-Termination)**[n](https://juce.com/legal/juce-8-licence/#Term-and-Termination)**
+*   [**9. Communications Between U**](https://juce.com/legal/juce-8-licence/#Communications-Between-Us)**[s](https://juce.com/legal/juce-8-licence/#Communications-Between-Us)**
+*   [**10. Data, Privacy and Publicit**](https://juce.com/legal/juce-8-licence/#Data-Privacy-and-Publicity)**[y](https://juce.com/legal/juce-8-licence/#Data-Privacy-and-Publicity)**
+*   [**11. Other Important Ter**](https://juce.com/legal/juce-8-licence/#Other-Important-Terms)**[ms](https://juce.com/legal/juce-8-licence/#Other-Important-Terms)**
+
+**1. Licensing The JUCE 8 Framework**
+
+1.1. What The JUCE 8 Framework Is
+
+The JUCE 8 Framework (the “Framework”) licensed to you under this Agreement is composed of:
+
+*   The JUCE 8 source code (“Source Code”), including any updates or newer versions made available to you under this Agreement, and any object code compiled from the Source Code.
+*   The Projucer and DemoRunner software (“Software”), which are applications provided to configure JUCE-based software projects and showcase JUCE features respectively.
+*   The JUCE documentation (“Documentation”), including the documentation of JUCE classes and functions, the JUCE examples and the JUCE tutorials.
+*   Any media associated with the Source Code, Software, and Documentation.
+
+1.2. JUCE 8 Licence Types
+
+The JUCE 8 Framework can be licensed using one of the licence types (“Licence Types”) tabulated below, and you agree to only use the Framework as is allowed under your particular Licence Type as described further below.
+
+Starter Indie Pro Educational
+Annual Revenue or Funding Limit Up to $20,000 Up to $300,000 No limit No limit
+Minimum Commitment for a Subscription N/A 1 month 12 months N/A
+Monthly Subscription Price per user N/A$40$175 N/A
+Perpetual Price per user Free$800$3500 Free
+
+1.2.1. Annual Revenue or Funding Limit
+
+The annual revenue or funding limits applicable to the Licence Types are based on revenue received or obtained by the Licensee over the previous 12 months.
+
+If the owner of a Licence is an individual, or an entity that does not have a separate legal identity from an individual, the applicable annual revenue or funding limit is the total revenue or funding generated by that individual or entity’s use of the Framework from all sources, including donations, sponsorship, advertising, and any other indirect revenue from their use of the Framework.
+
+If the Licensee is a company, or other legal entity, the applicable annual revenue or funding limit is the total revenue or funding received by the entity and all its Affiliates (an “Affiliate” being any business entity from time to time controlling, controlled by, or under common control with the Licensee) from all sources, whether it be received in connection with the entity’s use of the Framework or not, without offsets of any kind.
+
+Funding limits are in USD or currency conversion equivalent.
+
+1.2.2. Minimum Commitment for Subscriptions
+
+The Minimum Commitment is the minimum length of time you must maintain a subscription to license the Framework in order to be eligible for the corresponding Licence Type. The minimum commitment is waived if you purchase the same number of perpetual licence seats.
+
+1.2.3. Perpetual Licences
+
+A perpetual licence grants the Licensee a license for a specific major version of the Framework under the terms of this Agreement in perpetuity.
+
+1.2.4. Educational Licence Requirements
+
+The Educational Licence Type may only be used for (i) educational purposes by universities, schools, colleges, academies and accredited online courses (“Educational Institutes”) by students and teachers in structured educational programs at Educational Institutes and (ii) academic research at universities properly authorised to operate as such in the territory in which the university is located. Licensees using the Educational Licence Type must be able to provide RMS with proof of their status as either an Educational Institute or an educator or student at an Educational Institute upon request. The Educational Licence Type may not be used for any commercial, professional, promotional, or any other for-profit activity. Notwithstanding any reference to a perpetual licence, an Educational Licence shall only come into effect and endure for the period of time the Education Licence requirements are met.
+
+**1.3. Ownership of the Framework**
+
+We do not sell the Framework to you and there is no transfer of ownership. The Framework is licensed to you under one of the Licence Types (a “Licence”) as described in this Agreement and we remain the owners of the Framework at all times. Provided you adhere to the terms of this Agreement, including payment of subscription fees and their minimum commitments, we grant you a worldwide, non-exclusive, non-transferable Licence to download, install, copy, modify and execute the Framework.
+
+**1.4. Products**
+
+A product (“Product”) is any product, service, or project that is a combination of the Framework with any other source code, object code, content or any other copyrightable work. You own all rights in any Products you create aside from our rights in the Framework, which we retain ownership of at all times.
+
+**1.5. Owners of Products**
+
+For the purposes of this Agreement, the owner (“Owner”) of a Product is the entity or person legally responsible for the development or maintenance of the Product. The Owner of a Product is responsible for the licensing of the Framework in relation to that Product.
+
+**1.6. Licences for Product Owners**
+
+For the purposes of this Agreement, a “Framework User” is an employee, agent, independent contractor, or third party developer of the Licensee or any of the Licensee’s Affiliates who is permitted or authorised to use the Framework. Where the Licensee is an individual the Framework User is the Licensee themselves.
+
+Framework Users contributing to, developing or maintaining a Product for an Owner must be provided with a Licence to use the Framework by the Product Owner. For the avoidance of doubt, a Framework User is not required to obtain an additional or separate Licence to use the Framework beyond that procured by the Product Owner.
+
+**1.7. The Number of Licence Seats Required to Create and Modify Products**
+
+Every Framework User contributing to or modifying source code, object code, content or any other copyrightable work that is either directly or transitively dependent upon the Framework, or modifying the Framework itself, requires a Licence. This includes any configuration that modifies the functionality of a Product in a way that end users of that Product cannot, but excludes configuration files or “presets” that only use features available to the end users of a Product. Any static content that retains its full functionality if the Framework were removed, such as audio and MIDI files, images, and plain text, is exempted.
+
+Separation of individuals working on Products into teams does not reduce the number of Licences required.
+
+In the event the software development team using the Framework can be shown to be a small fraction of the overall software development team, and the use of the Framework is not important to the overall Product, then we may, at our sole discretion, allow a Product to be licensed using fewer seats than would otherwise be required by this Agreement. If your use of JUCE meets these conditions, please contact [sales@juce.com](mailto:sales@juce.com) to discuss an alternative licensing arrangement.
+
+Additional Licence seats are not required for computers or services that are only used for the compilation and testing of Products.
+
+**1.8. Moving Licence Seats Between Users**
+
+Licences cannot be shared between Framework Users. You may reassign a Licence seat to another Framework User when the original assignee leaves the entity that owns the Licence, is moved to another project, or there is another permanent reason that changes the assignee’s requirement for a Licence. Any such assignment must not be undertaken so frequently as to enable the sharing of a Licence between multiple Framework Users. You must keep a record of the identities of the Licensed Framework Users over time and on our written request certify in writing that the use of the Licences is in full compliance with the terms of this Agreement and provide a current list of the Licensed Framework Users.
+
+**1.9. Distributing and Selling Products Owned by You**
+
+Provided you adhere to the terms of this Agreement we grant you a worldwide, non-exclusive, non-transferable, licence to Distribute and sell Products where you are the Owner. For these purposes to “Distribute” is to make a Product, a copy of the Product, or the functionality of the Product over a network, available to another person or entity (the “Recipient”).
+
+**1.10. The Number of Licence Seats Required to Distribute Products**
+
+If a Product has been developed or maintained using a subscription Licence then all subscription Licence seats required to develop or maintain that Product must be kept active to continue developing and Distributing the Product. Except as set out below, if the size of the team developing or maintaining a Product is reduced you must maintain a subscription for the original number of Licence seats to continue to develop and Distribute the Product.
+
+If a subscription is cancelled, the number of seats reduced, or the corresponding fees for the subscription are not paid, then you must immediately cease development and Distribution of a Product unless you purchase the corresponding number of perpetual Licences seats.
+
+You may reduce the number of Licence seats required to maintain or Distribute a Product to the number of Framework Users currently requiring a licence seat to maintain that Product when upgrading to the next Major version of JUCE. Indie subscription Licence holders may reduce the number of seats in their subscription to the number required to maintain or Distribute a Product at any time providing that there remains at least one active subscription or perpetual Licence seat at all times and all corresponding Minimum Commitments have been fulfilled.
+
+**1.11 Redistributing and Selling Distributed Products**
+
+The right to Distribute and sell Products is conferred upon the Recipient of the Product, provided that the Product has been created, maintained and Distributed by the Owner under the appropriate number of Licence seats.
+
+**1.12. Products That Create Products**
+
+You may not create, make available as a service, nor Distribute Products that create other Products. Any Products that are created using software or a service must be licensed by the end users of that software or service.
+
+Please contact [sales@juce.com](mailto:sales@juce.com) for an alternative licence agreement if you want to Distribute Products that create Products.
+
+**1.13. Simultaneous Licence Type Use**
+
+You may not use the Starter, Indie or Pro Licence Types simultaneously. You may not combine or integrate your content or Products developed with one Licence Type (e.g. Starter) with any of your content or Products developed with another Licence Type (e.g. Indie or Pro).
+
+**1.14. Moving Between Licence Types**
+
+If you exceed the Revenue or Funding Limit for the Licence Type you are using then you must either purchase a new Licence Type appropriate for your new Revenue or Funding Limit or immediately cease developing and Distributing Products.
+
+If you have a subscription Licence and you become eligible for a Licence Type with a lower Revenue or Funding Limit then you can convert your subscription to the new Licence Type.
+
+**1.15. Framework Versions**
+
+Each Licence includes new Minor and Point versions for the specified Major version of the Framework, and all previous Major versions of the Framework, but does not include new Major versions, where:
+
+*   A Major version contains such significant differences from the previous versions as to be generally accepted in the marketplace as constituting a new product (e.g. JUCE 8 to JUCE 9).
+*   A Minor version is any release of a new feature within the same Major version of the Framework licensed by you (e.g. JUCE 8.1.0 to JUCE 8.2.0).
+*   A Point version is any release of bug fixes and small improvements within the same Minor version of the Framework licensed by you (e.g. JUCE 8.1.1 to JUCE 8.1.2).
+
+**1.16. Products Directed Towards Children**
+
+You may not use the Framework in connection with any Product that may be “directed to children” as defined under the Children’s Online Privacy Protection Act (“COPPA”, the Children’s Online Privacy Protection Act of 1998, 15 U.S.C. 6501–6505, as may be updated and amended.) unless you fully comply with COPPA and all other similar applicable laws. You are fully liable for, and will defend, hold harmless and indemnify RMS and its affiliates against any and all liability arising from or relating to COPPA in connection with any Product directed to children.
+
+**1.17. Sub-licensing and Distributing the Framework On Its Own**
+
+You may not sell, sub-license, or otherwise Distribute the Framework, or any subset of the Framework, on its own.
+
+**2. Licensing Restrictions**
+
+Except as expressly set out in this Agreement or as permitted by any local law, you undertake:
+
+2.1. not, in whole or in part, to copy the Framework except where such copying is incidental to normal use of the Framework or necessary for the purpose of back-up;
+
+2.2. not to rent, lease, sub-license, loan, translate, merge, adapt, vary or modify the Framework nor permit the Framework or any part of it to be combined with, or become incorporated in, any other programs or frameworks;
+
+2.3. not to do anything that could cause or result in the Framework being subject to any open source licence (or similar licence) that requires as a condition of use, modification or distribution that the Framework or other software combined or distributed with the Framework be:
+
+2.3.1. disclosed or distributed in source code form;
+
+2.3.2. licensed for the purpose of making derivative works;
+
+2.3.3. redistributable at no charge.
+
+2.4. not to disassemble, de-compile, reverse engineer or create derivative works based on the whole or any part of the Framework nor attempt to do any such things except to the extent expressly permitted by applicable law;
+
+2.5. to maintain accurate and up-to-date records of the number and locations of all copies of the Framework;
+
+2.6. to comply with all applicable laws, including all technology control or export laws and regulations;
+
+2.7. to supervise and control use of the Framework and ensure that the Framework is used by your employees and representatives in accordance with the terms of this Agreement;
+
+2.8. not to use the Framework in connection with anything that infringes or misappropriates any third party right, including any intellectual property, property, privacy, contract or other proprietary right or for any other illegal or immoral purpose;
+
+2.9. not to delete or in any manner alter any of our copyright, trademark or other proprietary rights notices or markings appearing on or in the Framework;
+
+2.10. not otherwise use, copy, transfer or distribute the Framework or part of it, except as expressly permitted by this Agreement, in any manner which is inconsistent with this Agreement.
+
+**3. Fees and Minimum Commitments**
+
+Each Licence Type has a corresponding fee (“Fee”) that is payable by you to us for use of the Framework as detailed in this Agreement and on juce.com and its associated web pages (the “Website”).
+
+3.1. Where you have purchased a JUCE subscription licence, you agree to pay the subscription Fee from the first day of purchase, and recurring every month on the same day, for the Minimum Commitment, where applicable. Through purchasing a subscription you authorise RMS to send instructions to the financial institution that issued your payment card to take Fees from your card account in accordance with this Agreement.
+
+3.2. We may change the Fees associated with our subscription plans from time to time, or may upgrade a subscription licence to the latest Major version of the Framework. These changes will be communicated to you in writing and in advance. Subject to applicable law, you accept the new Fees or Major version by continuing to use the Framework after the change has taken effect. You have the right to reject a Fee change or Major version by terminating your subscription prior to the change going into effect.
+
+3.3. Where you have purchased a perpetual licence you agree to pay the Fee as notified to you on the Website at the time you purchase your JUCE licence.
+
+3.4. All payment obligations are non-cancellable, and payments of Fees are non-refundable.
+
+3.5. All Fees payable under this Agreement are exclusive of VAT or any relevant local sales taxes, for which you shall be responsible.
+
+3.6. Without limiting all available remedies, in the event RMS discovers that you have been using the Framework in breach of this Agreement, or have exceeded your Revenue Limit in breach of this Agreement, you shall be liable for the amount of Fees due if you had properly purchased the appropriate tier and number of JUCE subscription Licence(s) for the entire duration of the breach of this Agreement, together with the amount of any audit, and internal administration costs in the amount of no less than £1,000.
+
+**4. Support**
+
+4.1. We shall have no obligation to provide support and maintenance services to you. You may participate in our online support forum in accordance with our forum policies in place from time to time. Further support and maintenance services may be offered at our sole discretion, and may be offered as a feature of the Licence Type you purchase.
+
+4.2. You acknowledge and agree that we have no obligation under this Agreement to provide new Major, Minor or Point versions of the Framework.
+
+**5. Intellectual Property Rights**
+
+“Intellectual property rights” are patents, utility models, rights to inventions, copyright and related rights, trademarks and service marks, trade names and domain names, rights in get-up, goodwill and the right to sue for passing off or unfair competition, rights in designs, rights in computer software, database rights, rights to preserve the confidentiality of information (including know-how and trade secrets) and any other intellectual property rights, including all applications for (and rights to apply for and be granted), renewals or extensions of, and rights to claim priority from, such rights and all similar or equivalent rights or forms of protection which subsist or will subsist, now or in the future, in any part of the world.
+
+5.1. You acknowledge that all Intellectual Property Rights in the Framework and all copies thereof throughout the world belong to us, that rights in the Framework are licensed (not sold) to you, and that you have no rights in, or to, the Framework other than the right to use it in accordance with the terms of this Agreement.
+
+5.2. You shall own all modifications you make to the Source Code, and all Intellectual Property Rights therein, that are created and incorporated into a Product, subject to our continuing ownership of the Framework and all associated Intellectual Property Rights in the Framework.
+
+**6. Disclaimer of Warranty**
+
+6.1. The Framework is provided “as is” and without warranty of any kind, including without limitation any warranties that the Framework or any Products will be uninterrupted, error-free or otherwise free from infringement. All other conditions, warranties or other terms whether express or implied, or incorporated into this Agreement or any collateral contract, whether by statute, common law or otherwise, including without limitation warranty of merchantability or fitness for a particular purpose are hereby excluded to the fullest extent permitted by law, including the implied conditions, warranties or other terms as to satisfactory quality, fitness for purpose or the use of reasonable skill and care.
+
+6.2. You acknowledge that the Framework has not been developed to meet your individual requirements, including any particular cybersecurity requirements you might be subject to under law or otherwise, and that it is therefore your responsibility to ensure that the facilities and functions of the Framework meet your requirements.
+
+**7. Limitation of Liability and Indemnification**
+
+7.1. Neither RMS nor its parent company, subsidiaries, employees, partners or contractors shall in any circumstances whatsoever be liable to you, whether in contract, tort (including negligence), breach of statutory duty, or otherwise, arising under or in connection with this Agreement for:
+
+7.1.1. loss of profits, sales, business, or revenue; business interruption;
+
+7.1.2. loss of anticipated savings;
+
+7.1.3. loss or corruption of content, data or information;
+
+7.1.4. loss of business opportunity, goodwill or reputation;
+
+7.1.5. any computer failure or malfunction, corruption to or loss of data or files, or any and all other commercial damage or loss;
+
+7.1.6. any indirect, special or consequential loss or damage.
+
+7.2. Nothing in this Agreement shall limit or exclude our liability for:
+
+7.2.1. death or personal injury resulting from our negligence;
+
+7.2.2. fraud or fraudulent misrepresentation;
+
+7.2.3. any other liability that cannot be excluded or limited by law.
+
+7.3. Subject to clause 7.1 and 7.2, our maximum aggregate liability under or in connection with this Agreement whether in contract, tort (including negligence) or otherwise, shall in all circumstances be limited to: (i) in the case of Monthly Subscriptions the Fees paid by you to RMS in the month before the claim arose, (ii) in the case of Perpetual Licences the perpetual licence Fee or (iii) $15, whichever is greater.
+
+7.4. You agree to indemnify, defend and hold us and our licensors, partners, affiliates, contractors, officers, directors, employees and agents harmless from any third party claims, liabilities, losses, costs and expenses (including legal expenses) or otherwise arising directly or indirectly from (i) the content or your Products; (ii) your use, handling, or operation of the Framework otherwise than in accordance with this Agreement, or (iii) any violation of applicable laws by you, including without limitation COPPA violations.
+
+7.5. This clause 7 shall survive and shall not be rendered ineffective by the termination or expiry of this Agreement for whatever reason.
+
+**8. Term and Termination**
+
+8.1. Where you have purchased a perpetual Licence, this Agreement shall remain in effect in perpetuity for the version originally acquired (and any Minor or Point versions acquired under that version) unless terminated by us in accordance with this Agreement.
+
+8.2. Where you have purchased a subscription Licence, this Agreement shall remain in effect for the Minimum Commitment and shall renew automatically on a monthly basis following expiry of the Minimum Commitment, subject to payment of any applicable Fees.
+
+8.3. Where you have purchased a subscription Licence and you fail to pay the subscription Fee when it falls due then your Licence will terminate. Where your Licence is terminated before the end of the Minimum Commitment then you, in any event, are still responsible for paying the subscription Fee for the remaining term of the Minimum Commitment.
+
+8.4. We may terminate this Agreement immediately by written notice to you if you commit a breach of this Agreement which you fail to remedy (if remediable) within 14 days after written notice requiring you to do so.
+
+8.5. Upon termination for any reason:
+
+8.5.1. all rights granted to you under this Agreement shall cease, including without limitation, the rights to deal with the Framework incorporated within any Products;
+
+8.5.2. you must cease all activities authorised by this Agreement, including distribution of your Products that incorporate the Framework.
+
+8.5.3. Notwithstanding the provisions of Sections 8.5.1 and 8.5.2, any versions of your Products that have already been distributed to end users may continue to be used by end users.
+
+**9. Communications Between Us**
+
+9.1. If you wish to contact us in writing, or if any condition in this Agreement requires you to give us notice in writing, you can send this to us by email at [info@juce.com](mailto:info@juce.com). We will confirm receipt of this by contacting you by email.
+
+9.2. If we have to contact you or give you notice in writing, we will do so by the email associated with your Licence or by pre-paid post to the address you provide to us in your order for the Framework.
+
+**10. Data, Privacy and Publicity**
+
+10.1. We may collect and process information about you and your use of our Framework, some of which may amount to personal data. Personal data will be collected and processed in accordance with our Privacy Policy.
+
+10.2. You agree that RMS may use your name and logo (whether or not a registered trademark) to publicise that you are using the Framework in your Products and in our marketing and publicity materials. You may opt out of this publicity by emailing RMS at [info@juce.com](about:blank) and we will use best efforts to remove all uses of your name or logo within a commercially reasonable time.
+
+10.3. To ensure compliance with this Agreement, you agree that within thirty (30) days from the date of our request, you shall provide all pertinent records and information requested in order to verify that your installation and use of any and all Frameworks are in compliance with this Agreement, along with a signed verification that all such information is complete and correct. You also agree we may audit applicable records concerning your use of Framework during normal business hours upon notice to you, at our cost, except in the event the audit reveals an underpayment or breach of this Agreement, when you shall be liable for the cost of the audit.
+
+**11. Other Important Terms**
+
+11.1. We may transfer our rights and obligations under this Agreement, without your consent or notification in advance, to another organisation, but this will not affect your rights or our obligations under this Agreement.
+
+11.2. You must not transfer or otherwise deal in any manner with your rights under this Agreement. We may terminate this Agreement in the event you are a company and undergo a change in the beneficial ownership of more than 50% of the issued share capital of your company or there is a change in the legal power to direct or cause the direction of the general management of your company.
+
+11.3. This Agreement does not convey a benefit on any person not a party to it.
+
+11.4. This Agreement and any document expressly referred to in it constitutes the entire agreement between you and us. You acknowledge that you have not relied on any statement, promise or representation made or given by or on behalf of us which is not set out in this Agreement or any document expressly referred to in it.
+
+11.5. If we fail to insist that you perform any of your obligations under this Agreement, or if we do not enforce our rights against you, or if we delay in doing so, that will not mean that we have waived our rights against you and will not mean that you do not have to comply with those obligations. If we do waive a default by you, we will only do so in writing, and that will not mean that we will automatically waive any later default by you.
+
+11.6. Each of the conditions of this Agreement operates separately. If any court or competent authority decides that any of them are unlawful or unenforceable, the remaining conditions will remain in full force and effect.
+
+11.7. We will not be in breach or liable for any delay in performing any of our obligations if such delay is caused by circumstances beyond our reasonable control.
+
+11.8. Governing Law and Jurisdiction
+
+11.8.1. If you are a UK, EU, EEA or Swiss citizen, this Licence shall be governed by the laws of England and Wales without regard to its conflict of law rules and you consent to the exclusive jurisdiction of the courts located in England, UK.
+
+11.8.2. If you are a US citizen, this Licence shall be governed by the laws of California without regard to its conflict of laws rules and you consent to the exclusive jurisdiction of the state and federal courts located in Santa Clara County.
+
+11.8.3. If you live outside the US, UK and EU, EEA or Switzerland, you agree to the laws and jurisdiction of California as noted in clause 11.8.2.
+
+11.8.4. You may have additional rights as a consumer under your local law.

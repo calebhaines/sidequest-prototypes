@@ -266,7 +266,8 @@
     }
     function trigger(event, valueSource, duration = HOLD) {
       const frame = Math.max(localFrame, Math.round(event.frame ?? localFrame)), pitch = event.pitch, velocity = event.velocity;
-      if (id === 'mire') core.trigger({ index: voiceIndex(event, 4), note: pitch, velocity, frame, source: valueSource, durationSeconds: duration });
+      if (id === 'mire') core.trigger({ index: event.channel>=12?0:voiceIndex(event, 4), note: event.channel>=12?undefined:pitch, velocity, frame, source: valueSource, durationSeconds: duration,
+        ...(event.channel>=12?{audition:true,destination:event.channel-12}:{}) });
       else if (id === 'spool') {
         // The web keyboard releases by pitch. A DAW may hold that pitch on
         // several channels; retain each existing gate while using its voice DSP.
@@ -348,6 +349,30 @@
       if (lastClock) lastClock = { ...lastClock, frame: localFrame, beat: lastClock.beat + (lastClock.playing ? left.length * lastClock.tempo / (60 * sampleRate) : 0) };
       return true;
     }
+    function reset() {
+      // Called directly by a DAW reset on its audio thread. Keep each original
+      // Core, delay line, decoded sample and spectral model; never construct or
+      // prepare assets here. The canonical panic routines clear existing DSP.
+      held.clear();midiJobs.length=0;
+      if(wrapper){core.enqueue('panic',{frame:core.frame});core.synth.reset?.();}
+      else if(core.panic)core.panic();else core.clear(true);
+      core.frame=0;
+      if(id==='spool')core.rewind();
+      else if(id==='haze')core.setPosition(state.position);
+      else if(id==='bower'||id==='roux')core.rewind();
+      else if(id==='ravel'){
+        core.clockFrame=0;core.nextBar=0;core.bar=0;core.pattern=state.selectedPattern;core.pending=null;core.rng=g.RavelDSP.random(state.seed);
+      }
+      if(id==='proof'||id==='marinade'){
+        core.originFrame=core.originBeat=0;core.clockRevision=undefined;
+      }else if(wrapper){
+        if(id==='citrus'){core.origin=core.originBeat=core.cycle=core.cursor=0;core.transportRevision=null;}
+        else {core.nativeOriginFrame=core.nativeOriginBeat=core.nativeCycle=core.nativeCursor=0;core.clockOriginFrame=core.clockOriginBeat=0;core.clockRevision=undefined;
+          if(id==='brine'){core.arpOriginFrame=core.arpStep=0;}
+        }
+      }
+      localFrame=0;anchored=false;lastClock=null;nativeWasPlaying=false;
+    }
     const api = {
       id, get core() { return core; },
       getState() { return envelope ? { ...copy(envelope), state: copy(state) } : copy(state); },
@@ -366,7 +391,7 @@
         const next = copy(state); let object = next; for (let i=0;i<p.length-1;i++) { if (!object[p[i]] || typeof object[p[i]] !== 'object') throw Error('Unknown parameter path.'); object=object[p[i]]; }
         object[p[p.length-1]]=value; return setState(envelope ? { ...envelope, state: next } : next,p.join('.'));
       },
-      reset() { held.clear(); midiJobs.length=0; localFrame=0; anchored=false; lastClock=null; nativeWasPlaying=false; resourceKey=''; construct(); },
+      reset,
       prepare() { prepareResources(false); return true; },
       panic() { held.clear(); midiJobs.length=0; if (wrapper) core.enqueue('panic',{frame:localFrame}); else if (core.panic) core.panic(); else core.clear(true); },
       getMeters() { return core.getMeters?.() || (typeof core.meters === 'function' ? core.meters() : core.meters) || {}; }

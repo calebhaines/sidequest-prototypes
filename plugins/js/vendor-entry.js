@@ -11,6 +11,7 @@ const AudioParamUtils = require('web-audio-engine/lib/utils/AudioParamUtils');
 const Biquad = require('web-audio-engine/lib/impl/BiquadFilterNode');
 const BiquadCoeffs = require('biquad-coeffs-webaudio');
 const AudioParamImpl = require('web-audio-engine/lib/impl/AudioParam');
+const Delay = require('web-audio-engine/lib/impl/DelayNode');
 
 const QUANTUM = 128;
 const scope = typeof window === 'object' ? window : globalThis;
@@ -37,9 +38,9 @@ AudioParamImpl.prototype.dspValuesForTimeRange = function (output) {
       for (let i = 0; i < count; i++) output[at - start + i] = event.startValue + (at + i - event.startFrame) * slope;
       value = event.startValue + (until - event.startFrame) * slope;
     } else if (event.type === 'exponentialRampToValueAtTime') {
-      const ratio = event.endValue / event.startValue;
-      for (let i = 0; i < count; i++) output[at - start + i] = event.startValue * Math.pow(ratio, (at + i - event.startFrame) / range);
-      value = event.startValue * Math.pow(ratio, (until - event.startFrame) / range);
+      const ratio = event.endValue / event.startValue, growth = Math.pow(ratio, 1 / range);
+      value = event.startValue * Math.pow(ratio, (at - event.startFrame) / range);
+      for (let i = 0; i < count; i++) { output[at - start + i] = value; value *= growth; }
     } else if (event.type === 'setTargetAtTime') {
       value = AudioParamUtils.computeValueAtTime(timeline, at / this.sampleRate, this._userValue);
       const coefficient = event.args[2] > 0 ? Math.exp(-1 / (this.sampleRate * event.args[2])) : 0, target = event.args[0];
@@ -52,6 +53,25 @@ AudioParamImpl.prototype.dspValuesForTimeRange = function (output) {
     at = until;
   }
   this._value = value; this._currentEventIndex = index; this._remainSamples = 0; this._quantumStartFrame = end; this._hasSampleAccurateValues = true;
+};
+// Float32 ring indices in WAE can round a fractional read at the wrap to
+// buffer.length, returning undefined/NaN. Accurate automation also omits the
+// positive wrap. Keep the original preallocated delay kernels and interpolate
+// with bounded double-precision indices instead.
+Delay.prototype.dspProcess1 = Delay.prototype.dspProcess2 = Delay.prototype.dspProcessN = function () {
+  const input = this.inputs[0].bus.getChannelData(), output = this.outputs[0].bus.getMutableData();
+  const accurate = this._delayTime.hasSampleAccurateValues(), values = accurate ? this._delayTime.getSampleAccurateValues() : null, fixed = this._delayTime.getValue();
+  for (let channel = 0; channel < output.length; channel++) {
+    const kernel = this._kernels[channel], buffer = kernel._delayBuffer, length = buffer.length, write = kernel._virtualDelayIndex;
+    buffer.set(input[channel] || input[0], write);
+    for (let i = 0; i < this.blockSize; i++) {
+      const seconds = Math.max(0, Math.min(kernel._maxDelayTime, values ? values[i] : fixed));
+      let index = (write + i - seconds * this.sampleRate) % length; if (index < 0) index += length; if (index >= length) index = 0;
+      const lo = Math.floor(index), hi = (lo + 1) % length, fraction = index - lo;
+      output[channel][i] = buffer[lo] + fraction * (buffer[hi] - buffer[lo]);
+    }
+    kernel._virtualDelayIndex = (write + this.blockSize) % length;
+  }
 };
 // Browser frequency parameters are clamped to Nyquist. WAE omits that bound,
 // which otherwise makes unedited PICNIC patches unstable at lower DAW rates.

@@ -3,12 +3,59 @@
   'use strict';
   const bridge = global.KitchenNativeEditor;
   if (!bridge) throw Error('The Kitchen native editor bridge must load first.');
-  let descriptor = bridge.descriptor, state = descriptor.defaultState || descriptor.defaults || descriptor.definition?.defaults || { params: {} }, generation = 0, special = null, drag = null, keyboard = null, values = new Map(), nodes = new Map();
+  let descriptor = bridge.descriptor, state = descriptor.defaultState || descriptor.defaults || descriptor.definition?.defaults || { params: {} }, generation = 0, special = null, capturePanel = null, drag = null, keyboard = null, values = new Map(), nodes = new Map();
+  let captureTake = null, captureSerial = 0, captureTimer = 0, captureLoading = false;
+  const captureRequests = new Map(), captureListeners = new Set();
   const $ = id => document.getElementById(id), copy = value => JSON.parse(JSON.stringify(value)), esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const productId = () => descriptor.sourceId || descriptor.effectId || String(descriptor.id || '').replace(/^effect[:-]/, '');
   const definition = () => descriptor.catalog || descriptor.definition?.webDefinition || descriptor.definition?.catalog || global.LoomEffectsCatalog?.find(value => value.id === productId()) || descriptor.definition || descriptor;
   const params = () => state.params || state;
   const hostParameters = () => descriptor.parameters || descriptor.definition?.parameters || [];
+  function captureRequest(action) {
+    const requestId = 'editor-' + (++captureSerial);
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { captureRequests.delete(requestId); reject(Error('The audio engine did not answer. Start the DAW audio engine and try again.')); }, 10000);
+      captureRequests.set(requestId, { resolve, reject, timer }); bridge.send('kitchenCapture', { action, requestId, afterNote: action === 'start' || action === 'clear' ? 0 : captureTake?.notes?.length || 0, maxNotes: 64 });
+    });
+  }
+  function pollCapture() {
+    clearTimeout(captureTimer); captureTimer = 0;
+    if (captureTake?.capturing && $('fermentMidiPanel')?.open) captureTimer = setTimeout(() => captureRequest('poll').catch(error => bridge.send('kitchenGetState', { reason: error.message })), 200);
+  }
+  function lockCaptureControls() {
+    if (!captureLoading) return;
+    for (const button of $('pluginCaptureEditor').querySelectorAll('button')) button.disabled = true;
+    const status = $('fermentMidiStatus'); if (status) status.textContent = 'Loading captured notes · ' + (captureTake?.notes?.length || 0) + ' / ' + (captureTake?.noteCount || '…');
+  }
+  function captureFailed(error) {
+    if (captureLoading) captureTake = null;
+    captureLoading = false; clearTimeout(captureTimer); captureTimer = 0;
+    for (const listener of captureListeners) listener(); $('pluginStatus').textContent = error.message || String(error);
+  }
+  bridge.subscribe('capture', value => {
+    const pending = captureRequests.get(value.requestId); if (pending) { clearTimeout(pending.timer); captureRequests.delete(value.requestId); }
+    if (value.ok === false || value.error) { const error = Error(value.error || 'The capture action failed.'); captureFailed(error); pending?.reject(error); return; }
+    const incoming = value.take;
+    if (!incoming) captureTake = null;
+    else {
+      const notes = captureTake?.token === incoming.token ? [...captureTake.notes] : [], offset = Number(incoming.notesOffset || 0);
+      if (offset > notes.length) { const error = Error('The captured note pages were incomplete. Reopen Capture MIDI to poll the take again.'); captureLoading = true; captureFailed(error); pending?.reject(error); return; }
+      for (let index = 0; index < (incoming.notes?.length || 0); index++) notes[offset + index] = incoming.notes[index];
+      captureTake = { ...incoming, notes };
+    }
+    captureLoading = !!incoming?.moreNotes;
+    for (const listener of captureListeners) listener(); lockCaptureControls();
+    if (incoming?.moreNotes) {
+      clearTimeout(captureTimer); captureTimer = 0;
+      captureRequest('poll').then(take => pending?.resolve(take), error => { captureFailed(error); pending?.reject(error); });
+    } else { pollCapture(); pending?.resolve(captureTake); }
+  });
+  const captureEngine = {
+    getPedalMidiTake: () => captureTake,
+    startPedalMidi: () => captureRequest('start'), stopPedalMidi: () => captureRequest('stop'),
+    clearPedalMidiTake: () => { captureRequest('clear').catch(error => $('pluginStatus').textContent = error.message); },
+    subscribePedalMidi(listener) { captureListeners.add(listener); return () => captureListeners.delete(listener); }
+  };
   function descriptorFor(key) { const list = hostParameters(); const index = list.findIndex(value => value.key === key || value.path === key || value.path === 'params.' + key); return { index, value: list[index] }; }
   function emit(patch, meta = {}) {
     const next = { ...params(), ...patch }; state = { ...state, params: next };
@@ -60,6 +107,12 @@
       // The original specialist panels include the full model/control set.
       // Generic controls remain available when the original panel is absent.
     } else $('pluginControls').hidden = false;
+    capturePanel?.dispose(); capturePanel = null; clearTimeout(captureTimer); $('pluginCaptureEditor').replaceChildren();
+    if (productId() === 'ferment' && global.LoomPedalMidiUI?.create) {
+      capturePanel = global.LoomPedalMidiUI.create({ element: $('pluginCaptureEditor'), engine: captureEngine, getOwnerId: () => 'plugin', getSlot: () => 0, getGeneration: () => generation, onStatus: message => $('pluginStatus').textContent = message });
+      $('fermentMidiPanel').addEventListener('toggle', () => { if ($('fermentMidiPanel').open) captureRequest('poll').catch(error => $('pluginStatus').textContent = error.message); else clearTimeout(captureTimer); });
+      lockCaptureControls(); if (!captureRequests.size) captureRequest('poll').catch(error => $('pluginStatus').textContent = error.message);
+    }
     render();
   }
   function render() {
@@ -115,5 +168,6 @@
   bridge.subscribe('meters', value => special?.paint?.(value));
   bridge.subscribe('status', value => $('pluginStatus').textContent = value);
   build(); bridge.send('kitchenReady', { request: true, editorReady: true });
+  global.addEventListener('pagehide', () => { special?.dispose?.(); capturePanel?.dispose(); clearTimeout(captureTimer); for (const pending of captureRequests.values()) clearTimeout(pending.timer); captureRequests.clear(); });
   global.KitchenEffectEditor = Object.freeze({ get state() { return state; }, get parameterCount() { return nodes.size + 1; }, render, emit });
 })(window);

@@ -8,6 +8,7 @@
   if (!env) throw Error('Load the native language environment before the host runtime.');
   let descriptors = [], backend = null, descriptor = null, sourceId = '', family = '', rate = 48000, capacity = 0;
   let parameters = [], parameterValues = [], ready = false, preparing = false, error = '', generation = 0;
+  let captureTake = null, captureSerial = 0, captureClearedToken = null;
   let frameEpoch = null, frameBase = 0, lastBackendEnd = 0, lastRawEnd = null, lastTempo = 120, fallbackBeat = 0;
   let scratchL, scratchR, viewsL, viewsR, indices;
   const clock = { sampleRate: 48000, tempo: 120, bpm: 120, beat: 0, ppqPosition: 0, playing: false, frame: 0, samplePosition: 0, revision: 0, timeSigNumerator: 4, timeSigDenominator: 4, timeSig: { numerator: 4, denominator: 4 }, looping: false, loopStart: 0, loopEnd: 0, recording: false };
@@ -86,7 +87,7 @@
       if (!descriptors.length) configureDescriptors(g.KitchenPluginDescriptors || g.KitchenPluginProducts || g.KitchenPluginDescriptor);
       const product = descriptors.find(value => value.id === id); if (!product) throw Error('Unknown native plugin product ' + id + '.');
       if (backend?.dispose) backend.dispose();
-      backend = null; descriptor = product; sourceId = String(product.sourceId || product.instrumentId || product.effectId || product.id).replace(/^(?:instrument|effect)[:-]/, '');
+      backend = null; captureTake = null; captureClearedToken = null; descriptor = product; sourceId = String(product.sourceId || product.instrumentId || product.effectId || product.id).replace(/^(?:instrument|effect)[:-]/, '');
       const selection = registryFor(product, sourceId); family = selection[0]; rate = sampleRate; capacity = maxBlock;
       parameters = product.parameters || product.definition?.parameters || selection[1].definitions().find(definition => definition.id === sourceId)?.parameters || [];
       frameEpoch = null; frameBase = lastBackendEnd = 0; lastRawEnd = null; fallbackBeat = 0; lastTempo = 120;
@@ -228,6 +229,51 @@
       env.rebaseAudio(frameBase); return true;
     } catch (cause) { return fail(cause); }
   }
+  function requireCapture() { if (!backend?.startMidiCapture || !backend?.stopMidiCapture || !backend?.drainMidiEvents) throw Error('This effect has no note-capture facility.'); }
+  function updateCapture(batch) {
+    if (!batch || batch.token === captureClearedToken) return;
+    if (!captureTake || captureTake.token !== batch.token) captureTake = { token: batch.token, ownerId: 'plugin', slot: 0, sampleRate: batch.sampleRate, tempo: batch.tempo, frames: 0, capturing: false, reason: '', notes: [] };
+    captureTake.sampleRate = batch.sampleRate; captureTake.tempo = batch.tempo; captureTake.frames = batch.frames;
+    captureTake.capturing = !batch.done; captureTake.reason = batch.reason || '';
+    for (const event of batch.events || []) {
+      if (captureTake.notes.length >= 4096) throw Error('The FERMENT capture exceeds its 4,096-note limit.');
+      captureTake.notes.push(event);
+    }
+  }
+  function drainCapture() { requireCapture(); const batch = backend.drainMidiEvents(); updateCapture(batch); return batch; }
+  function startCapture(options = {}) {
+    requireCapture(); drainCapture();
+    if (captureTake?.capturing) throw Error('Stop the current FERMENT capture before starting another.');
+    const metadata = backend.startMidiCapture({ ...options, tempo: Number.isFinite(options.tempo) ? options.tempo : lastTempo, token: options.token || 'ferment-native-' + (++captureSerial) });
+    captureTake = null; captureClearedToken = null; updateCapture(metadata); return metadata;
+  }
+  function stopCapture(reason = 'stopped') { requireCapture(); const metadata = backend.stopMidiCapture(reason); updateCapture(metadata); drainCapture(); return metadata; }
+  // Called only by the native audio owner, in response to a bounded UI command.
+  // Export remains in the original web helper: historical startFrame values
+  // cannot truthfully be sent as live DAW MIDI after a note has already ended.
+  function captureSnapshot(request) {
+    if (!captureTake) return null;
+    const total = captureTake.notes.length;
+    const offset = clamp(Math.floor(finite(request.afterNote, 0)), 0, total);
+    const limit = clamp(Math.floor(finite(request.maxNotes, 64)), 0, 128), end = Math.min(total, offset + limit);
+    return { token: captureTake.token, ownerId: captureTake.ownerId, slot: captureTake.slot, sampleRate: captureTake.sampleRate, tempo: captureTake.tempo, frames: captureTake.frames, capturing: captureTake.capturing, reason: captureTake.reason, notes: captureTake.notes.slice(offset, end), notesOffset: offset, noteCount: total, moreNotes: end < total };
+  }
+  function captureRequestJSON(requestJSON) {
+    let request = {};
+    try {
+      request = stateValue(requestJSON) || {}; requireCapture();
+      const action = request.action || 'poll';
+      if (action === 'start') startCapture({ token: request.token, tempo: request.tempo, maxNotes: request.captureMaxNotes, maxBeats: request.maxBeats });
+      else if (action === 'stop') stopCapture(request.reason || 'stopped');
+      else if (action === 'clear') { drainCapture(); if (captureTake?.capturing) throw Error('Stop FERMENT capture before clearing its take.'); captureClearedToken = captureTake?.token || captureClearedToken; captureTake = null; }
+      else if (action === 'poll' || action === 'drain' || action === 'export') drainCapture();
+      else throw Error('Unknown FERMENT capture command.');
+      return JSON.stringify({ requestId: request.requestId ?? null, ok: true, error: null, take: captureSnapshot(request) });
+    } catch (cause) {
+      // An unavailable/bypassed capture is a normal UI error; audio continues.
+      return JSON.stringify({ requestId: request.requestId ?? null, ok: false, error: cause?.message || String(cause), take: captureSnapshot(request) });
+    }
+  }
   function latency() { return Math.max(0, Math.round(finite(backend?.getLatencySamples?.(), finite(descriptor?.latencySamples, 0)))); }
   function getStateJSON() { try { if (!backend) throw Error('Native plugin is not created.'); return JSON.stringify(backend.getState()); } catch (cause) { return fail(cause); } }
   function setStateJSON(json) { if (!descriptor) throw Error('Native plugin is not created.'); return create(descriptor.id, rate, capacity, json); }
@@ -237,9 +283,9 @@
     getParameterValues: () => parameterValues.slice(),
     getTailSeconds: () => Math.max(0, finite(backend?.getTailSeconds?.(), 0)),
     getMetersJSON: () => JSON.stringify(backend?.getMeters?.() || {}),
-    startMidiCapture(options) { if (!backend?.startMidiCapture) throw Error('This effect has no note-capture facility.'); return backend.startMidiCapture(options); },
-    stopMidiCapture(reason) { if (!backend?.stopMidiCapture) throw Error('This effect has no note-capture facility.'); return backend.stopMidiCapture(reason); },
-    drainMidiEventsJSON() { return JSON.stringify(backend?.drainMidiEvents?.() || null); }
+    startMidiCapture: startCapture, stopMidiCapture: stopCapture,
+    drainMidiEventsJSON() { return JSON.stringify(drainCapture()); },
+    captureRequestJSON
   };
   g.KitchenNativePlugin = Object.freeze(api);
 })(globalThis);

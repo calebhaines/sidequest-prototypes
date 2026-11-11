@@ -30,7 +30,7 @@
   function connectBackend() {
     if (backend || !global.__JUCE__?.backend) return;
     backend = global.__JUCE__.backend;
-    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenClock', 'kitchenStatus', 'kitchenMeters']) {
+    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenClock', 'kitchenStatus', 'kitchenMeters', 'kitchenCapture', 'kitchenDownloadResult']) {
       const listener = value => receive(type, parse(value));
       backendListeners.push([type, backend.addEventListener?.(type, listener), listener]);
     }
@@ -160,7 +160,7 @@
           if (ratio === undefined) return;
           const value = actual(d, ratio), path = d.path || d.key;
           parameterValues.set(index, value);
-          if (path === '_nativeSequence') { const field = document.getElementById('kitchenNativeSequence'); if (field) field.checked = !!value; }
+          if (path === '_nativeSequence' || path === 'followHost') { const field = document.getElementById('kitchenNativeSequence'); if (field) field.checked = !!value; }
           else if (recipe && byPath(recipe, path) !== undefined && byPath(recipe, path) !== value) patch.push([path, value]);
         });
         if (!patch.length) continue;
@@ -267,13 +267,15 @@
     return Number.isInteger(match?.pitch) ? match.pitch : 36 + (Number.isInteger(voice) ? voice : Math.max(0, voices.indexOf(match)));
   }
   function midi(type, note, velocity = .8, channel = 1, noteId) {
+    if (applying) return false;
     if (!Number.isFinite(Number(note))) return false;
     const pitch = clamp(Math.round(Number(note)), 0, 127), token = String(noteId ?? channel + ':' + pitch);
     if (releases.has(token)) { const timer = releases.get(token); clearTimeout(timer); timers.delete(timer); releases.delete(token); }
     if (type === 'on') { held.set(token, pitch); heldChannels.set(token, channel); } else if (type === 'off') { note = held.get(token) ?? pitch; channel = heldChannels.get(token) ?? channel; held.delete(token); heldChannels.delete(token); }
     diagnostics.midiMessages++; return send('kitchenMidi', { type, pitch: type === 'off' ? Number(note) : pitch, velocity: clamp(Number(velocity) || 0, 0, 1), channel: clamp(Number(channel) || 1, 1, 16), id: token });
   }
-  function audition(pitch, velocity = .8, duration = .35, token, channel = 1) { token ??= 'editor-preview-' + (++serial); midi('on', pitch, velocity, channel, token); releases.set(String(token), later(() => midi('off', pitch, 0, channel, token), clamp(Number(duration) || .35, .01, 768) * 1000)); return true; }
+  function audition(pitch, velocity = .8, duration = .35, token, channel = 1) { if (applying) return false; token ??= 'editor-preview-' + (++serial); midi('on', pitch, velocity, channel, token); releases.set(String(token), later(() => midi('off', pitch, 0, channel, token), clamp(Number(duration) || .35, .01, 768) * 1000)); return true; }
+  function panicNative() { for (const timer of releases.values()) { clearTimeout(timer); timers.delete(timer); } releases.clear(); held.clear(); heldChannels.clear(); send('kitchenMidi', { type: 'allOff' }); }
   function patchEngine(value) {
     if (!value || patched.has(value)) return; patched.add(value); engine = value;
     const replace = (name, fn) => { if (typeof value[name] !== 'function') return; try { value[name] = fn; } catch (_) {} };
@@ -285,7 +287,8 @@
       replace('prepareNotes', options => preparation ? prepareNotes(options) : Promise.resolve(true));
     }
     for (const name of ['start', 'play']) if (!(id() === 'form' && name === 'play')) replace(name, async () => { setStatus('Start playback in your DAW. This instrument follows its clock.'); return true; });
-    for (const name of ['stop', 'stopAll', 'panic']) replace(name, () => {});
+    for (const name of ['stop', 'stopAll']) replace(name, () => {});
+    replace('panic', () => { if (!applying) panicNative(); });
     const originalMeters = typeof value.getMeters === 'function' ? value.getMeters.bind(value) : () => ({});
     replace('getMeters', () => { let base = {}; try { base = originalMeters() || {}; } catch (_) {} return { ...base, ...(clock.meters || {}), beat: clock.beat, playing: clock.playing, step: Math.floor(Math.max(0, clock.beat) * 4) % 16, peak: clock.meters?.peak || clock.meters?.outputPeak || 0 }; });
     for (const key of ['playing', 'isPlaying']) try { if (Object.getOwnPropertyDescriptor(value, key)?.configurable !== false) Object.defineProperty(value, key, { configurable: true, get: () => !!clock.playing, set() {} }); } catch (_) {}
@@ -304,22 +307,25 @@
     });
     replace('noteOff', (event, options = {}) => { if (event && typeof event === 'object') return midi('off', event.pitch ?? event.note ?? held.get(String(event.id)) ?? 60, 0, (event.channel || 0) + 1, event.id || event.source); if (typeof event === 'string' && held.has(event)) return midi('off', held.get(event), 0, 1, event); return midi('off', event, 0, 1, options.source); });
     replace('liveNote', (pitch, velocity, duration) => audition(pitch, velocity, duration));
-    replace('triggerSlice', (slice, options = {}) => audition(60 + Number(options.pitch || 0), options.velocity ?? .8, options.durationSeconds ?? .35, undefined, Number(slice) + 1));
-    replace('triggerNode', node => audition(60, .85, .35, undefined, 13 + Number(node)));
-    replace('preview', track => { if (id() === 'morsel') return Promise.resolve(audition(track.pitch ?? 60, track.velocity ?? .8, track.durationSeconds ?? 1, track.source)); const tracks = currentRecipe()?.tracks || []; const index = Math.max(0, tracks.findIndex(value => value.id === track?.id || value.name === track?.name)); return Promise.resolve(audition(voicePitch(index), 1)); });
-    replace('trigger', (note, velocity, duration, source) => Promise.resolve(audition(id() === 'mire' ? currentRecipe()?.sources?.[Number(note)]?.pitch ?? 60 : ['grain', 'tine', 'batter'].includes(id()) ? voicePitch(note) : note, velocity, typeof duration === 'object' ? duration.duration : duration, source ?? 'key:' + note, id() === 'mire' ? Number(note) + 1 : 1)));
+    replace('triggerSlice', (slice, options = {}) => audition(60 + Number(options.pitch || 0), options.velocity ?? .8, options.durationSeconds ?? 20, undefined, Number(slice) + 1));
+    replace('triggerNode', node => audition(60, 1, 20, undefined, 13 + Number(node)));
+    replace('preview', track => { if (id() === 'morsel') return Promise.resolve(audition(track.pitch ?? 60, track.velocity ?? .8, track.durationSeconds ?? 1, track.source)); const tracks = currentRecipe()?.tracks || []; const index = Math.max(0, tracks.findIndex(value => value.id === track?.id || value.name === track?.name)); return Promise.resolve(audition(voicePitch(index), 1, 20)); });
+    replace('trigger', (note, velocity, duration, source) => {
+      const gate = id() === 'mire' ? duration ?? Math.min(16.1, (currentRecipe()?.sources?.[Number(note)]?.decay ?? 1000) * .0016 + .05) : typeof duration === 'object' ? duration.duration ?? 20 : duration ?? 20;
+      return Promise.resolve(audition(id() === 'mire' ? currentRecipe()?.sources?.[Number(note)]?.pitch ?? 60 : ['grain', 'tine', 'batter'].includes(id()) ? voicePitch(note) : note, velocity, gate, source ?? 'key:' + note, id() === 'mire' ? Number(note) + 1 : 1));
+    });
     replace('release', (note, source) => midi('off', note, 0, 1, source ?? 'key:' + note));
-    replace('pluck', (lane, degree = 0, velocity = .8, note = null) => Promise.resolve(audition(note ?? global.BowerSchema?.degreeMidi(currentRecipe(), lane, degree) ?? 60, velocity, .8, undefined, Number(lane) + 1)));
+    replace('pluck', (lane, degree = 0, velocity = .8, note = null) => Promise.resolve(audition(note ?? global.BowerSchema?.degreeMidi(currentRecipe(), lane, degree) ?? 60, velocity, 20, undefined, Number(lane) + 1)));
     replace('strum', () => { for (let lane = 0; lane < 4; lane++) later(() => value.pluck(lane, [0, 2, 4, 7][lane], .9), lane * 45); return Promise.resolve(true); });
     replace('setSustain', down => send('kitchenMidi', { type: 'cc', controller: 64, value: down ? 1 : 0, channel: 1 }));
-    for (const name of ['cancelNotes', 'stopNotes']) replace(name, () => { for (const [key, pitch] of [...held]) midi('off', pitch, 0, 1, key); return true; });
-    if (id() === 'form') for (const name of ['play', 'schedulePrepared']) replace(name, (sound, velocity, when, pitch, fifth, sixth, seventh) => Promise.resolve(audition(36 + (Number(name === 'play' ? sixth : seventh) || 0), velocity ?? .8)));
+    for (const name of ['cancelNotes', 'stopNotes']) replace(name, (options = {}) => { const source = typeof options === 'string' ? options : options.source; for (const [key, pitch] of [...held]) if (!source || key === source || key.startsWith(source + ':')) midi('off', pitch, 0, 1, key); return true; });
+    if (id() === 'form') for (const name of ['play', 'schedulePrepared']) replace(name, (sound, velocity, when, pitch, fifth, sixth, seventh) => Promise.resolve(audition(36 + (Number(name === 'play' ? sixth : seventh) || 0), velocity ?? .8, 20)));
     if (id() === 'form') replace('preload', () => Promise.resolve());
   }
   function header() {
     if (document.getElementById('kitchenNativeBar')) return;
     const bar = document.createElement('div'); bar.id = 'kitchenNativeBar'; bar.className = 'kitchen-native-bar';
-    const sequenceIndex = parameters().findIndex(value => value.path === '_nativeSequence');
+    const sequenceIndex = parameters().findIndex(value => value.path === '_nativeSequence' || value.path === 'followHost');
     bar.innerHTML = '<span class="kitchen-native-title">KITCHEN / DAW</span><output id="kitchenNativeClock">120 BPM · Stopped</output>' + (sequenceIndex >= 0 ? '<label><input type="checkbox" id="kitchenNativeSequence" checked> DAW pattern</label>' : '') + '<span id="kitchenNativeStatus" role="status">Opening native audio…</span>' + (id() === 'morsel' ? '<button type="button" id="kitchenPrepareVoices">Prepare voices</button><button type="button" id="kitchenCancelVoices" hidden>Cancel</button>' : '');
     const style = document.createElement('style'); style.textContent = '.kitchen-native-bar{box-sizing:border-box;position:sticky;top:0;z-index:2147483000;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 16px;background:#1d3025;color:#e6ddba;border-bottom:1px solid #8b9770;font:11px/1.5 ui-monospace,monospace}.kitchen-native-title{font-weight:700;letter-spacing:.13em}.kitchen-native-bar output{color:#d4c58c}.kitchen-native-bar [role=status]{flex:1;min-width:100px;color:#b7c2a4}.kitchen-native-bar button{font:inherit;color:#eee2bd;background:#354633;border:1px solid #9b9e73;border-radius:3px;padding:5px 9px}.kitchen-native-bar [hidden]{display:none!important}.kitchen-native-bar button:focus-visible{outline:2px solid #e5c58b;outline-offset:2px}'; document.head.append(style); document.body.prepend(bar);
     document.getElementById('kitchenPrepareVoices')?.addEventListener('click', prepareVoices);
@@ -330,7 +336,7 @@
   async function prepareVoices() {
     if (preparation || !app?.engine) return;
     if (!global.KitchenMorselPreparation?.prepareBank) { setStatus('The native voice preparation helper is missing.'); return; }
-    const controller = preparation = new AbortController(), revision = generation;
+    const controller = preparation = new AbortController();
     const button = document.getElementById('kitchenPrepareVoices'), cancel = document.getElementById('kitchenCancelVoices'); if (button) button.disabled = true; if (cancel) cancel.hidden = false;
     try {
       const project = await projectSnapshot(), recipe = project?.state || project;
@@ -354,6 +360,8 @@
     if (value.descriptor) { descriptor = value.descriptor; global.KitchenPluginDescriptor = descriptor; }
     if (type === 'kitchenClock') { clock = { ...clock, ...value, tempo: Number(value.tempo ?? value.bpm ?? clock.tempo), beat: Number(value.beat ?? value.ppq ?? clock.beat), samplePosition: Number(value.samplePosition ?? value.hostSamplePosition ?? clock.samplePosition), timeSigNum: Number(value.timeSigNum ?? value.numerator ?? clock.timeSigNum), timeSigDen: Number(value.timeSigDen ?? value.denominator ?? clock.timeSigDen) }; paintClock(); notify('clock', clock); return; }
     if (type === 'kitchenParameters') { if (instrument()) await applyParameters(value); notify('parameters', value); return; }
+    if (type === 'kitchenCapture') { notify('capture', value); return; }
+    if (type === 'kitchenDownloadResult') { setStatus(value.ok ? 'Saved ' + (value.filename || 'your export') + '.' : value.error || 'Export save cancelled.'); notify('download', value); return; }
     if (type === 'kitchenStatus') { setStatus(value.message ?? value.status ?? value); return; }
     if (type === 'kitchenMeters') { clock.meters = value; notify('meters', value); return; }
     if (type === 'kitchenReady') { diagnostics.ready = true; setStatus('Native audio ready. Transport follows your DAW.'); notify('ready', value); }
@@ -382,9 +390,48 @@
     const key = (target.id || '').replace(/[-_]/g, '').toLowerCase();
     if (/^(?:playbutton|stopbutton|pausebutton|restartbutton|play|stop|startbutton|transportplay|transportstop)$/.test(key) || target.matches('.transport-play,.transport-stop,[aria-label="Restart sequencer from beginning"]')) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Start or stop playback in your DAW.'); return; }
     if (/^(?:recordbutton|capturemix)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Record the plugin output in your DAW.'); return; }
-    if (/^(?:panicbutton|panic)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); send('kitchenMidi', { type: 'allOff' }); held.clear(); setStatus('All native notes released.'); }
+    if (/^(?:panicbutton|panic)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); panicNative(); setStatus('All native notes released.'); }
   }
   function edited() { if (app?.engine && app.engine !== engine) patchEngine(app.engine); scheduleParameters(); scheduleSnapshot(); }
+  async function downloadAction(event) {
+    const link = event.target?.closest?.('a[download]');
+    if (!link || !/^(?:blob:|data:)/.test(link.href)) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    try {
+      const blob = await (await fetch(link.href)).blob();
+      const encoded = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1]); reader.onerror = () => reject(reader.error || Error('The export could not be prepared.')); reader.readAsDataURL(blob); });
+      send('kitchenDownload', { filename: link.download || 'kitchen-export', mimeType: blob.type || 'application/octet-stream', base64: encoded });
+      setStatus('Choose where to save your export.');
+    } catch (error) { report(error); }
+  }
+  async function runSmokeTest() {
+    const result = { sourceId: id(), pass: false, ready: false, restored: false };
+    try {
+      for (let attempt = 0; attempt < 500 && (!diagnostics.ready || instrument() && (!restored || applying || parameterRestoreBusy || stateRestorePending)); attempt++) await new Promise(resolve => setTimeout(resolve, 20));
+      result.ready = diagnostics.ready; result.restored = instrument() ? restored : !!global.KitchenEffectEditor;
+      if (!result.ready || !result.restored) throw Error('The original editor did not finish native hydration.');
+      const probes = { brine: ['input[data-slider="pwmAmount"]', 'synth.pwmAmount'], form: ['input[aria-label="Master playback volume"]', 'masterVolume'], morsel: ['input[data-knob="tone"]', 'recipe.tone'], sunday: ['input[data-deluxe-number="input"]', 'params.input'] };
+      const probe = probes[id()]; if (!probe) throw Error('No native smoke control is configured for ' + id());
+      const field = document.querySelector(probe[0]), index = parameters().findIndex(value => value.path === probe[1]);
+      if (!field || index < 0) throw Error('The original native smoke control or its parameter is missing.');
+      const recipe = () => instrument() ? currentRecipe() : global.KitchenEffectEditor?.state;
+      const before = byPath(recipe(), probe[1]), count = diagnostics.parameterMessages, low = Number(field.min || 0), high = Number(field.max || 1), step = Number(field.step || .01), current = Number(field.value);
+      const next = clamp(current + (current + step * 2 <= high ? step * 2 : -step * 2), low, high);
+      result.controlName = field.getAttribute('aria-label') || field.id;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field, String(next));
+      field.dispatchEvent(new Event('input', { bubbles: true })); field.dispatchEvent(new Event('change', { bubbles: true }));
+      for (let attempt = 0; attempt < 100 && diagnostics.parameterMessages === count; attempt++) await new Promise(resolve => setTimeout(resolve, 20));
+      const after = byPath(recipe(), probe[1]); result.parameter = { index, path: probe[1], before, after, normalizedAfter: normalized(parameters()[index], after) }; result.parameterMessages = diagnostics.parameterMessages - count;
+      result.pass = before !== after && result.parameterMessages > 0;
+      if (!result.pass) throw Error('The original control edit did not round-trip through native parameters.');
+    } catch (error) { result.error = error.message || String(error); }
+    send('kitchenSmokeResult', result); return result;
+  }
+  const anchorClick = global.HTMLAnchorElement?.prototype.click;
+  if (anchorClick) global.HTMLAnchorElement.prototype.click = function (...args) {
+    if (this.hasAttribute('download') && /^(?:blob:|data:)/.test(this.href)) { downloadAction({ target: this, preventDefault() {}, stopImmediatePropagation() {} }); return; }
+    return anchorClick.apply(this, args);
+  };
   function dispose() {
     if (disposed) return; for (const [key, pitch] of held) midi('off', pitch, 0, 1, key);
     disposed = true; preparation?.abort(); for (const timer of timers) clearTimeout(timer); timers.clear();
@@ -395,10 +442,11 @@
   for (const type of ['input', 'change', 'musiclab:state-change', 'musiclab:patternchange']) document.addEventListener(type, edited);
   document.addEventListener('pointerup', () => later(edited, 0)); document.addEventListener('click', () => later(edited, 0));
   document.addEventListener('click', transportAction, true);
-  document.addEventListener('keydown', event => { if (!instrument() || event.target.closest?.('input,textarea,select,[contenteditable=true]')) return; if (event.code === 'Space') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Transport follows your DAW.'); } else if (event.code === 'Escape' && !document.querySelector('dialog[open]')) { send('kitchenMidi', { type: 'allOff' }); held.clear(); } }, true);
+  document.addEventListener('click', downloadAction, true);
+  document.addEventListener('keydown', event => { if (!instrument() || event.target.closest?.('input,textarea,select,[contenteditable=true]')) return; if (event.code === 'Space') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Transport follows your DAW.'); } else if (event.code === 'Escape' && !document.querySelector('dialog[open]')) panicNative(); }, true);
   document.addEventListener('musiclab:app-ready', scheduleAttach);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }, { once: true });
   else { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }
   global.addEventListener('pagehide', dispose);
-  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, browserContexts: contexts.size }; } });
+  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, runSmokeTest, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, browserContexts: contexts.size }; } });
 })(window);

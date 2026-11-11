@@ -1,0 +1,30 @@
+{
+  "name": "scijs-window-functions",
+  "version": "2.0.2",
+  "description": "Window functions for spectral analysis",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "generate-plots": "node docs/generate.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/scijs/window-functions.git"
+  },
+  "keywords": [
+    "complex",
+    "scijs",
+    "window-functions",
+    "math",
+    "fourier",
+    "spectral-analysis",
+    "dsp"
+  ],
+  "author": "Ricky Reusser",
+  "license": "MIT",
+  "devDependencies": {
+    "jshint": "^2.7.0",
+    "mocha": "^2.2.4",
+    "plotly": "^1.0.2"
+  }
+}

@@ -74,6 +74,7 @@ bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layout) const {
 void PluginProcessor::prepareToPlay(double sampleRate, int blockSize) {
     rate.store(sampleRate); maxBlock.store(juce::jlimit(128, 65536, blockSize)); clockTracker.reset(); heldCount.fill(0);
     signalThreadShouldExit(); notify(); stopThread(-1); drainGarbage(); delete pending.exchange(nullptr); delete current; current = nullptr;
+    resetRequested.store(false); outputPeak.store(0); outputRmsLeft.store(0); outputRmsRight.store(0);
     ++requestVersion; rebuildSynchronously(); startThread();
 }
 void PluginProcessor::releaseResources() { resetRequested.store(true); }
@@ -85,7 +86,7 @@ void PluginProcessor::rebuildSynchronously() {
     std::vector<float> initialParameters; for (auto* parameter : hostParameters) initialParameters.push_back(parameter->getValue());
     next->prepareParameters(initialParameters);
     if (!next->ready()) { const juce::ScopedLock lock(stateLock); status = next->getError(); readyFlag.store(false); builtVersion = version; return; }
-    setLatencySamples(next->latency()); current = next.release(); readyFlag.store(true); runtimeFault.store(false);
+    appliedLatency.store(next->latency()); setLatencySamples(next->latency()); current = next.release(); readyFlag.store(true); runtimeFault.store(false);
     std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); builtVersion = version;
     const juce::ScopedLock lock(stateLock); status = "Ready";
 }
@@ -93,7 +94,7 @@ void PluginProcessor::requestRebuild() { ++requestVersion; notify(); }
 void PluginProcessor::run() {
     while (!threadShouldExit()) {
         drainGarbage();
-        if (appliedFlag.exchange(false)) { const juce::ScopedLock lock(stateLock); status = "Ready"; }
+        if (appliedFlag.exchange(false)) { setLatencySamples(appliedLatency.load()); const juce::ScopedLock lock(stateLock); status = "Ready"; }
         const auto version = requestVersion.load();
         if (version != builtVersion) {
             juce::String state; { const juce::ScopedLock lock(stateLock); state = cachedState; status = "Preparing the saved sound"; }
@@ -151,11 +152,18 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     juce::ScopedNoDenormals noDenormals;
     if (auto* next = pending.load(); next && (current == nullptr || garbageFifo.getFreeSpace() > 0)) {
         next = pending.exchange(nullptr);
-        if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
+        if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); appliedLatency.store(next->latency()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
     }
-    if (current == nullptr || !current->ready()) { buffer.clear(); midiMessages.clear(); readyFlag.store(false); return; }
+    if (current == nullptr || !current->ready()) { buffer.clear(); midiMessages.clear(); outputPeak.store(0); outputRmsLeft.store(0); outputRmsRight.store(0); readyFlag.store(false); return; }
     if (resetRequested.exchange(false)) { current->reset(); heldCount.fill(0); clockTracker.reset(); }
     for (size_t i = 0; i < hostParameters.size(); ++i) { const float value = hostParameters[i]->getValue(); if (value != current->appliedParameter(static_cast<int>(i))) { current->parameter(static_cast<int>(i), value, true); lastParameters[i] = value; } }
+    if (product.id == "ferment" && captureResults.getFreeSpace() > 0) {
+        int first, count, second, remaining; captureRequests.prepareToRead(1, first, count, second, remaining);
+        if (count) {
+            int resultAt, resultCount, resultOther, resultRemaining; captureResults.prepareToWrite(1, resultAt, resultCount, resultOther, resultRemaining);
+            if (resultCount) { captureResponses[static_cast<size_t>(resultAt)] = current->captureRequestJSON(captureCommands[static_cast<size_t>(first)].request); captureResults.finishedWrite(1); captureRequests.finishedRead(1); }
+        }
+    }
     std::array<double, clockFields> c{}; const int total = buffer.getNumSamples(); readHostClock(c, total); outputMidi.clear();
     for (int offset = 0; offset < total;) {
         const int count = juce::jmin(current->capacity(), total - offset);
@@ -181,6 +189,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         offset += count;
     }
     clockTracker.advance(total); midiMessages.swapWith(outputMidi);
+    float peak = 0; double square[2] = { 0, 0 };
+    for (int ch = 0; ch < juce::jmin(2, buffer.getNumChannels()); ++ch) { const auto* samples = buffer.getReadPointer(ch); for (int i = 0; i < total; ++i) { peak = juce::jmax(peak, std::abs(samples[i])); square[ch] += static_cast<double>(samples[i]) * samples[i]; } }
+    outputPeak.store(peak); outputRmsLeft.store(total > 0 ? static_cast<float>(std::sqrt(square[0] / total)) : 0); outputRmsRight.store(total > 0 ? static_cast<float>(std::sqrt(square[1] / total)) : 0);
     if (!current->ready()) { readyFlag.store(false); runtimeFault.store(true); }
 }
 void PluginProcessor::synchronizeParametersFromState(const juce::var& state) {
@@ -210,10 +221,24 @@ void PluginProcessor::midiFromEditor(const juce::var& payload) {
     event.data2 = event.type == controller || event.type == pitchBend ? static_cast<double>(payload["value"]) : payload["velocity"].isVoid() ? .8 : static_cast<double>(payload["velocity"]);
     int first, count, second, remaining; uiMidiFifo.prepareToWrite(1, first, count, second, remaining); if (count) { uiMidi[static_cast<size_t>(first)] = event; uiMidiFifo.finishedWrite(1); }
 }
+void PluginProcessor::captureFromEditor(const juce::var& payload) {
+    if (product.id != "ferment") return;
+    const auto request = juce::JSON::toString(payload, true); if (request.getNumBytesAsUTF8() > 2048) return;
+    int first, count, second, remaining; captureRequests.prepareToWrite(1, first, count, second, remaining);
+    if (count) { captureCommands[static_cast<size_t>(first)].request = request; captureRequests.finishedWrite(1); }
+}
+juce::Array<juce::var> PluginProcessor::captureReplies() {
+    juce::Array<juce::var> replies;
+    int first, count, second, remaining; captureResults.prepareToRead(16, first, count, second, remaining);
+    for (int i = 0; i < count + remaining; ++i) { auto& response = captureResponses[static_cast<size_t>(i < count ? first + i : second + i - count)]; replies.add(juce::JSON::parse(response)); response.clear(); }
+    captureResults.finishedRead(count + remaining); return replies;
+}
 void PluginProcessor::getStateInformation(juce::MemoryBlock& dest) {
-    auto* object = new juce::DynamicObject(); object->setProperty("format", "kitchen-vst3-state"); object->setProperty("version", 1); object->setProperty("product", product.id);
+    auto* object = new juce::DynamicObject(); object->setProperty("format", "kitchen-vst3-state"); object->setProperty("version", 2); object->setProperty("product", product.id);
     { const juce::ScopedLock lock(stateLock); object->setProperty("state", cachedState); }
-    juce::Array<juce::var> values; for (auto* parameter : hostParameters) values.add(parameter->getValue()); object->setProperty("parameters", values);
+    auto* values = new juce::DynamicObject();
+    for (int i = 0; i < static_cast<int>(hostParameters.size()); ++i) { auto key = metadata[i]["id"].toString(); if (key.isEmpty()) key = metadata[i]["path"].toString(); values->setProperty(juce::Identifier(key), hostParameters[static_cast<size_t>(i)]->getValue()); }
+    object->setProperty("parameters", juce::var(values));
     const auto json = juce::JSON::toString(juce::var(object), true); dest.replaceAll(json.toRawUTF8(), json.getNumBytesAsUTF8());
 }
 void PluginProcessor::setStateInformation(const void* data, int size) {
@@ -221,7 +246,17 @@ void PluginProcessor::setStateInformation(const void* data, int size) {
     auto value = juce::JSON::parse(juce::String::fromUTF8(static_cast<const char*>(data), size));
     if (value["format"].toString() != "kitchen-vst3-state" || value["product"].toString() != product.id) return;
     { const juce::ScopedLock lock(stateLock); cachedState = value["state"].toString(); }
-    if (auto* values = value["parameters"].getArray()) for (int i = 0; i < values->size() && i < static_cast<int>(hostParameters.size()); ++i) hostParameters[static_cast<size_t>(i)]->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, static_cast<float>((*values)[i])));
+    if (auto* values = value["parameters"].getDynamicObject()) {
+        for (int i = 0; i < static_cast<int>(hostParameters.size()); ++i) {
+            auto key = metadata[i]["id"].toString(); if (key.isEmpty()) key = metadata[i]["path"].toString();
+            const auto saved = values->getProperty(juce::Identifier(key));
+            if ((saved.isInt() || saved.isInt64() || saved.isDouble()) && std::isfinite(static_cast<double>(saved))) hostParameters[static_cast<size_t>(i)]->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, static_cast<float>(saved)));
+        }
+    } else if (auto* values = value["parameters"].getArray()) {
+        // Version 1 used positional overlays. Continue opening those projects,
+        // while all new saves survive parameter additions and reordering.
+        for (int i = 0; i < values->size() && i < static_cast<int>(hostParameters.size()); ++i) { const auto& saved = (*values)[i]; if ((saved.isInt() || saved.isInt64() || saved.isDouble()) && std::isfinite(static_cast<double>(saved))) hostParameters[static_cast<size_t>(i)]->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, static_cast<float>(saved))); }
+    }
     requestRebuild();
 }
 juce::var PluginProcessor::editorSnapshot() {
@@ -232,7 +267,9 @@ juce::var PluginProcessor::editorSnapshot() {
 juce::var PluginProcessor::parameterSnapshot() const { juce::Array<juce::var> values; for (auto* parameter : hostParameters) values.add(parameter->getValue()); return values; }
 juce::var PluginProcessor::editorClock() const {
     auto* object = new juce::DynamicObject(); const char* names[] = { "tempo", "beat", "playing", "numerator", "denominator", "looping", "loopStart", "loopEnd", "samplePosition", "localFrame", "revision", "sampleRate", "frames", "recording", "validPpq", "validHostSample" };
-    for (int i = 0; i < clockFields; ++i) object->setProperty(names[i], displayClock[static_cast<size_t>(i)].load()); return juce::var(object);
+    for (int i = 0; i < clockFields; ++i) object->setProperty(names[i], displayClock[static_cast<size_t>(i)].load());
+    auto* meters = new juce::DynamicObject(); const auto left = outputRmsLeft.load(), right = outputRmsRight.load();
+    meters->setProperty("peak", outputPeak.load()); meters->setProperty("outputPeak", outputPeak.load()); meters->setProperty("rmsLeft", left); meters->setProperty("rmsRight", right); const auto rms = std::sqrt((left * left + right * right) * .5f); meters->setProperty("rms", rms); meters->setProperty("outputRms", rms); object->setProperty("meters", juce::var(meters)); return juce::var(object);
 }
 juce::String PluginProcessor::statusMessage() { if (runtimeFault.load()) return "Audio processing stopped after a DSP error. Reload the saved sound."; const juce::ScopedLock lock(stateLock); return status; }
 juce::AudioProcessorEditor* PluginProcessor::createEditor() { return new PluginEditor(*this); }

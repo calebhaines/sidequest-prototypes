@@ -11,7 +11,10 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withEventListener("kitchenSetState", [this](const juce::var& value) { processor.stateFromEditor(value); })
         .withEventListener("kitchenSetParameter", [this](const juce::var& value) { processor.parameterFromEditor(value); })
         .withEventListener("kitchenMidi", [this](const juce::var& value) { processor.midiFromEditor(value); })
-        .withEventListener("kitchenReady", [this](const juce::var&) { sendState(); })
+        .withEventListener("kitchenCapture", [this](const juce::var& value) { processor.captureFromEditor(value); })
+        .withEventListener("kitchenDownload", [this](const juce::var& value) { downloadToFile(value); })
+        .withEventListener("kitchenReady", [this](const juce::var&) { receivedReady = true; sendState(); })
+        .withEventListener("kitchenSmokeResult", [this](const juce::var& value) { smokeResult = value; })
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
     browser = std::make_unique<juce::WebBrowserComponent>(options);
     addAndMakeVisible(*browser);
@@ -19,6 +22,7 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
     startTimerHz(20);
 }
 void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds()); }
+void PluginEditor::startNativeUiSmoke() { smokeResult = {}; if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
 std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const juce::String& requested) {
     auto path = juce::URL::removeEscapeChars(requested).upToFirstOccurrenceOf("?", false, false);
     while (path.startsWithChar('/')) path = path.substring(1);
@@ -39,9 +43,26 @@ void PluginEditor::sendState() {
     if (!browser) return;
     const auto value = processor.editorSnapshot(); browser->emitEventIfBrowserIsVisible("kitchenReady", value); browser->emitEventIfBrowserIsVisible("kitchenState", value);
 }
+void PluginEditor::downloadToFile(const juce::var& payload) {
+    if (downloadChooser) return;
+    const auto encoded = payload["base64"].toString();
+    if (encoded.isEmpty() || encoded.length() > 640 * 1024 * 1024) return;
+    downloadData.reset(); juce::MemoryOutputStream output(downloadData, false);
+    if (!juce::Base64::convertFromBase64(output, encoded)) { downloadData.reset(); return; }
+    auto filename = juce::File::createLegalFileName(payload["filename"].toString()); if (filename.isEmpty()) filename = "Kitchen-export";
+    downloadChooser = std::make_unique<juce::FileChooser>("Save Kitchen export", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(filename));
+    downloadChooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::warnAboutOverwriting,
+        [safe = juce::Component::SafePointer<PluginEditor>(this)](const juce::FileChooser& chooser) {
+            if (!safe) return;
+            const auto file = chooser.getResult();
+            if (file != juce::File()) { const bool saved = file.replaceWithData(safe->downloadData.getData(), safe->downloadData.getSize()); auto* result = new juce::DynamicObject(); result->setProperty("ok", saved); result->setProperty("filename", file.getFileName()); if (safe->browser) safe->browser->emitEventIfBrowserIsVisible("kitchenDownloadResult", juce::var(result)); }
+            safe->downloadData.reset(); safe->downloadChooser.reset();
+        });
+}
 void PluginEditor::timerCallback() {
     if (!browser) return;
     browser->emitEventIfBrowserIsVisible("kitchenClock", processor.editorClock());
+    for (const auto& reply : processor.captureReplies()) browser->emitEventIfBrowserIsVisible("kitchenCapture", reply);
     const auto message = processor.statusMessage();
     if (message != lastStatus) { lastStatus = message; auto* value = new juce::DynamicObject(); value->setProperty("message", message); value->setProperty("ready", processor.isReady()); browser->emitEventIfBrowserIsVisible("kitchenStatus", juce::var(value)); }
     // Host automation changes do not touch the DSP's JavaScript context from

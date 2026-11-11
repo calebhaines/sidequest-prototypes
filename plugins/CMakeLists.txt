@@ -27,12 +27,20 @@ endif()
 include(FetchContent)
 FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG 8.0.12 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(JUCE)
+# Every product uses the same module implementations in KitchenNativeCore.
+# JUCE's client interface normally imports the processor module sources into
+# each product as well; retain the client headers/wrappers and remove just that
+# implementation dependency, avoiding 42 copies of the framework compilation.
+get_target_property(kitchen_client_links juce_audio_plugin_client INTERFACE_LINK_LIBRARIES)
+list(REMOVE_ITEM kitchen_client_links juce_audio_processors juce::juce_audio_processors)
+set_property(TARGET juce_audio_plugin_client PROPERTY INTERFACE_LINK_LIBRARIES "${kitchen_client_links}")
 add_library(KitchenNativeCore STATIC Source/NativeRuntime.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
 target_include_directories(KitchenNativeCore PUBLIC Source "${juce_SOURCE_DIR}/modules")
 target_compile_definitions(KitchenNativeCore PUBLIC
     JUCE_WEB_BROWSER=1 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 JUCE_PLUGINHOST_VST3=1
     JUCE_DISPLAY_SPLASH_SCREEN=0 JUCE_REPORT_APP_USAGE=0
     JUCE_MODULE_AVAILABLE_juce_audio_utils=1 JUCE_MODULE_AVAILABLE_juce_audio_processors=1
+    JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1
     JUCE_MODULE_AVAILABLE_juce_audio_basics=1 JUCE_MODULE_AVAILABLE_juce_audio_devices=1
     JUCE_MODULE_AVAILABLE_juce_audio_formats=1 JUCE_MODULE_AVAILABLE_juce_gui_extra=1
     JUCE_MODULE_AVAILABLE_juce_gui_basics=1 JUCE_MODULE_AVAILABLE_juce_graphics=1
@@ -49,6 +57,11 @@ add_test(NAME kitchen_all_native_audio COMMAND kitchen_native_smoke --resources 
 juce_add_console_app(kitchen_vst3_host_smoke PRODUCT_NAME "Kitchen VST3 Host Smoke")
 target_sources(kitchen_vst3_host_smoke PRIVATE Source/PluginHostSmoke.cpp)
 target_link_libraries(kitchen_vst3_host_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore")
+juce_add_gui_app(kitchen_native_ui_smoke PRODUCT_NAME "Kitchen Native UI Smoke")
+target_sources(kitchen_native_ui_smoke PRIVATE Source/NativeUiSmoke.cpp)
+target_link_libraries(kitchen_native_ui_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore")
+add_test(NAME kitchen_native_webkit_ui COMMAND kitchen_native_ui_smoke --resources "${KITCHEN_GENERATED}" --report "${KITCHEN_GENERATED}/native-ui-smoke-report.json")
+set_tests_properties(kitchen_native_webkit_ui PROPERTIES TIMEOUT 240)
 if(KITCHEN_BUILD_PLUGINS)
     add_test(NAME kitchen_compiled_vst3_audio COMMAND kitchen_vst3_host_smoke --bundles "${CMAKE_BINARY_DIR}" --report "${KITCHEN_GENERATED}/native-vst3-host-report.json")
 endif()
@@ -70,7 +83,6 @@ function(kitchen_add_product id display_name code kind)
     endif()
     if(id STREQUAL "ferment")
         set(needs_midi TRUE)
-        set(midi_output TRUE)
     endif()
     if(is_instrument)
         set(categories Instrument Synth)
@@ -99,14 +111,14 @@ function(kitchen_add_product id display_name code kind)
         HARDENED_RUNTIME_OPTIONS com.apple.security.cs.allow-jit com.apple.security.cs.allow-unsigned-executable-memory)
     target_sources(${target} PRIVATE Source/PluginEntry.cpp)
     target_compile_definitions(${target} PRIVATE KITCHEN_PRODUCT_ID="${id}")
-    target_link_libraries(${target} PRIVATE KitchenNativeCore)
+    target_link_libraries(${target} PUBLIC KitchenNativeCore)
     foreach(format IN LISTS formats)
         set(bundle_target "${target}_${format}")
         add_custom_command(TARGET ${bundle_target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/ui"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${KITCHEN_GENERATED}/runtime.js" "${KITCHEN_GENERATED}/products.json" "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${KITCHEN_GENERATED}/ui/${id}.html" "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/ui/${id}.html"
-            COMMAND ${CMAKE_COMMAND} -DKITCHEN_ASSET_SOURCE="${KITCHEN_GENERATED}/assets/${id}" -DKITCHEN_ASSET_DEST="$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/assets/${id}" -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/CopyAssets.cmake"
+            COMMAND ${CMAKE_COMMAND} "-DKITCHEN_ASSET_SOURCE=${KITCHEN_GENERATED}/assets/${id}" "-DKITCHEN_ASSET_DEST=$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/assets/${id}" -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/CopyAssets.cmake"
             COMMAND /usr/bin/codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:${bundle_target}>"
             VERBATIM)
     endforeach()
