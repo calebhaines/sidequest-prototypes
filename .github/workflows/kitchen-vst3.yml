@@ -88,7 +88,7 @@ jobs:
       - name: Configure VST3 and AU suite
         env:
           KITCHEN_REQUESTED_ARCH: ${{ inputs.architectures || 'arm64' }}
-        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DKITCHEN_BUILD_AU=ON
+        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DKITCHEN_BUILD_AU=ON
       - name: Verify JUCE implementation modules compile once
         run: |
           python3 - <<'PY'
@@ -113,7 +113,7 @@ jobs:
       - name: Verify all plugin bundles contain Apple Silicon code
         run: |
           python3 - <<'PY'
-          import pathlib, subprocess, json
+          import pathlib, subprocess, json, re
           expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
           found=[]
           for suffix,label in [('vst3','VST3'),('component','AU')]:
@@ -125,7 +125,10 @@ jobs:
                   for binary in binaries:
                       arch=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
                       if 'arm64' not in arch.split():raise SystemExit('Missing Apple Silicon slice: '+str(binary))
-                      found.append({'bundle':str(path),'format':label,'architectures':arch})
+                      build=subprocess.check_output(['xcrun','vtool','-show-build',str(binary)],text=True)
+                      minimums=re.findall(r'\bminos\s+([0-9.]+)',build)
+                      if not minimums or any(tuple(map(int,value.split('.')[:2]))!=(12,0) for value in minimums):raise SystemExit('Unexpected macOS deployment minimum: '+str(binary)+' '+str(minimums))
+                      found.append({'bundle':str(path),'format':label,'architectures':arch,'minimumMacOS':minimums})
                   subprocess.run(['codesign','--verify','--deep','--strict',str(path)],check=True)
           pathlib.Path('plugins/generated/native-bundles.json').write_text(json.dumps(found,indent=2)+'\n')
           PY

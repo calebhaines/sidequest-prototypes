@@ -10,7 +10,7 @@ public:
     explicit PluginProcessor(Product product, juce::File resources = findResourceRoot());
     ~PluginProcessor() override;
     const juce::String getName() const override { return product.name; }
-    bool acceptsMidi() const override { return product.instrument() || product.id == "ferment"; }
+    bool acceptsMidi() const override { return product.instrument(); }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return product.instrument() ? 30.0 : 60.0; }
