@@ -1,0 +1,24 @@
+{
+  "id": "morsel",
+  "name": "MORSEL",
+  "kind": "instrument",
+  "engine": "prepared-original-neural-words-and-signalsmith-notes",
+  "sources": [
+    "morsel/schema.js",
+    "morsel/sequence.js",
+    "morsel/audio-engine.js",
+    "plugins/js/morsel-preparation.js",
+    "plugins/js/morsel.js"
+  ],
+  "nativeDependencies": ["plugins/js/vendor-entry.js"],
+  "editorExtraSources": ["plugins/js/morsel-preparation.js"],
+  "assets": [
+    { "source": "plugins/assets/morsel/morsel-bank.json.gz", "target": "morsel-bank.json.gz" }
+  ],
+  "defaultBankResource": "morsel-bank.json",
+  "latencySamples": 128,
+  "midiPitchRange": [36, 84],
+  "voices": ["alto", "tenor", "bass", "robot"],
+  "preparation": "The original editor prepares genuine neural words and pitch/duration fits off the audio callback. The resulting validated bank is retained in plugin state and supports editor-closed/native offline playback.",
+  "liveMidiDifference": "An unknown future MIDI gate cannot be offline-fitted in advance. Live voiced notes use a short crossfaded voiced sustain loop and release on key-off; authored pattern notes use the original prepared finite waveform and duration."
+}

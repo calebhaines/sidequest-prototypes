@@ -1,0 +1,91 @@
+name: Kitchen native plugins
+on:
+  workflow_dispatch:
+    inputs:
+      architectures:
+        description: Apple architectures (arm64 or arm64;x86_64)
+        default: arm64
+        required: true
+  push:
+    branches: [main, feat/kitchen-vst3-suite]
+    paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml', 'loom/**', 'brine/**', 'heirloom/**', 'citrus/**', 'proof/**', 'marinade/**', 'grain/**', 'tine/**', 'batter/**', 'form/**', 'fable/**', 'morsel/**', 'mire/**', 'spool/**', 'haze/**', 'bower/**', 'ravel/**', 'roux/**', 'picnic/**', 'shared/**']
+  pull_request:
+    paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml']
+permissions:
+  contents: read
+concurrency:
+  group: kitchen-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apple-silicon:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Verify native Apple Silicon runner and JavaScriptCore
+        run: |
+          test "$(uname -m)" = arm64
+          clang++ -std=c++17 plugins/Source/JSCProbe.cpp -framework JavaScriptCore -o /tmp/kitchen-jsc-probe
+          /tmp/kitchen-jsc-probe | tee /tmp/kitchen-jsc-capabilities.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install plugin packer dependencies
+        run: npm ci --prefix plugins
+      - name: Generate canonical DSP and editor resources
+        run: node plugins/scripts/generate.mjs
+      - name: Validate generated runtime coverage
+        run: node plugins/scripts/checks.cjs
+      - name: Configure VST3 and AU suite
+        env:
+          KITCHEN_REQUESTED_ARCH: ${{ inputs.architectures || 'arm64' }}
+        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DKITCHEN_BUILD_AU=ON
+      - name: Compile every Kitchen instrument and effect
+        run: cmake --build plugins/build --config Release --parallel 3
+      - name: Test native DSP, MIDI, clock and saved state
+        run: ctest --test-dir plugins/build --output-on-failure
+      - name: Verify all plugin bundles contain Apple Silicon code
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess, json
+          found=[]
+          for path in pathlib.Path('plugins/build').rglob('*.vst3'):
+              binaries=list((path/'Contents'/'MacOS').glob('*'))
+              if not binaries: raise SystemExit('Missing VST3 executable: '+str(path))
+              for binary in binaries:
+                  arch=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
+                  if 'arm64' not in arch.split(): raise SystemExit('Missing Apple Silicon slice: '+str(binary))
+                  found.append({'bundle':str(path),'architectures':arch})
+              subprocess.run(['codesign','--verify','--deep','--strict',str(path)],check=True)
+          expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
+          if len(found)!=expected: raise SystemExit(f'Expected {expected} VST3s, found {len(found)}')
+          pathlib.Path('plugins/generated/native-bundles.json').write_text(json.dumps(found,indent=2)+'\n')
+          PY
+      - name: Package the native suite
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import pathlib, shutil
+          target=pathlib.Path('plugins/dist/VST3');target.mkdir(parents=True,exist_ok=True)
+          for bundle in pathlib.Path('plugins/build').rglob('*.vst3'):shutil.copytree(bundle,target/bundle.name)
+          units=pathlib.Path('plugins/dist/Components');units.mkdir(parents=True,exist_ok=True)
+          for bundle in pathlib.Path('plugins/build').rglob('*.component'):shutil.copytree(bundle,units/bundle.name)
+          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-bundles.json']:
+              source=pathlib.Path('plugins/generated')/name
+              if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
+          PY
+          ditto -c -k --sequesterRsrc --keepParent plugins/dist plugins/Kitchen-Apple-Silicon.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-Apple-Silicon
+          path: |
+            plugins/Kitchen-Apple-Silicon.zip
+            plugins/generated/native-smoke-report.json
+            plugins/generated/native-vst3-host-report.json
+            plugins/generated/native-bundles.json
+            /tmp/kitchen-jsc-capabilities.json
+          if-no-files-found: warn
+          retention-days: 14
