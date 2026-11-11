@@ -47,10 +47,13 @@ function instrumentHTML(id) {
     const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid HOTPLATE project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
     html = html.replace(marker, marker + expose);
   }
-  const sourceParameters = instruments.get(id)?.parameters || [];
+  const sourceParameters = [...(instruments.get(id)?.parameters || [])];
+  if (['mire', 'spool'].includes(id) && !sourceParameters.some(value => value.path === '_nativeInput')) sourceParameters.push({ path: '_nativeInput', type: 'boolean', default: false }, ...(id === 'mire' ? [{ path: '_nativeInputDestination', type: 'range', min: 0, max: 3, step: 1, default: 0 }] : []));
   const parameters = [...(sourceParameters.some(value => value.path === 'followHost' || value.path === '_nativeSequence') ? [] : [{ path: '_nativeSequence', type: 'boolean', default: true }]), ...sourceParameters].map(value => ({ ...value, type: value.type === 'number' ? 'range' : value.type, path: value.path || value.id || value.key, options: value.options || value.values?.map(option => ({ value: option, label: String(option) })) }));
   const descriptor = { id: 'instrument-' + id, sourceId: id, kind: 'instrument', name: names[ids.indexOf(id)], parameters };
-  return html.replace(/<head(?:\s[^>]*)?>/i, match => match + script('window.KitchenPluginDescriptor=' + JSON.stringify(descriptor)) + script(bridge));
+  html = html.replace(/<head(?:\s[^>]*)?>/i, match => match + script('window.KitchenPluginDescriptor=' + JSON.stringify(descriptor)) + script(bridge));
+  if (id === 'morsel') html = html.replace(/<\/body>/i, script(fs.readFileSync(path.join(root, 'plugins/js/morsel-preparation.js'), 'utf8')) + '</body>');
+  return html;
 }
 function effectHTML(definition) {
   if (process.env.KITCHEN_EDITOR_GENERATED) return fs.readFileSync(path.join(root, 'plugins/generated/ui', definition.id + '.html'), 'utf8');
@@ -159,6 +162,8 @@ async function instrumentCheck(base, id) {
         await app.engine.prepareNotes({ state: recipe, events: [] });
         await window.MorselController.preview({ pitch: 64, voice: recipe.voice, lyric: recipe.lyric, velocity: .7, durationSeconds: .1 });
         if (__editorWorkers) throw Error('Ordinary MORSEL control/preview started duplicate neural workers');
+        const beforeCustomStep = __nativeMessages.length; await app.engine.preview({ pitch: 64, voice: 'bass', lyric: 'different custom step word', velocity: .7, durationSeconds: .1 });
+        if (__nativeMessages.slice(beforeCustomStep).some(value => value.type === 'kitchenMidi') || !document.getElementById('kitchenNativeStatus').textContent.includes('assigned word and voice')) throw Error('MORSEL custom step preview substituted the keyboard word');
         const before = __nativeMessages.length; await KitchenNativeEditor.prepareVoices();
         const messages = __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetState');
         if (messages.length !== 1 || messages[0].payload.state.bank.key !== 'prepared-test-bank') throw Error('MORSEL did not commit one complete prepared bank');
@@ -173,7 +178,8 @@ async function instrumentCheck(base, id) {
       await context.resume(); const oscillator = context.createOscillator(), gain = context.createGain(); oscillator.connect(gain); gain.connect(context.destination); oscillator.start();
       await context.close();
       const before = __nativeMessages.length;
-      if (app.engine?.noteOn) { app.engine.noteOn({ id: 'editor-note', pitch: 60, note: 60, velocity: .75 }); app.engine.noteOff?.({ id: 'editor-note', pitch: 60, note: 60 }); }
+      if (id === 'batter') await app.engine.trigger((await app.getState()).lanes[0].id, .75);
+      else if (app.engine?.noteOn) { app.engine.noteOn({ id: 'editor-note', pitch: 60, note: 60, velocity: .75 }); app.engine.noteOff?.({ id: 'editor-note', pitch: 60, note: 60 }); }
       else if (id === 'grain' || id === 'tine') await app.engine.preview((await app.getState()).tracks[0]);
       else if (id === 'mire') { await app.engine.trigger(2, .75); await app.engine.triggerNode(2); }
       else if (id === 'ravel') await app.engine.triggerSlice(3);
@@ -184,6 +190,7 @@ async function instrumentCheck(base, id) {
       else if (id === 'picnic') app.engine.scheduleNote({ pitch: 60, voice: 'chords', velocity: .75, durationSeconds: .1 });
       else if (id === 'morsel') await app.engine.preview({ pitch: 60, velocity: .75, durationSeconds: .1 });
       const midi = __nativeMessages.slice(before).filter(value => value.type === 'kitchenMidi').map(value => value.payload);
+      if (midi.some(value => ['on', 'off'].includes(value.type) && (!Number.isInteger(value.nativeId) || value.nativeId < 0x80000001 || value.nativeId > 0xffffffff))) throw Error('Editor note escaped the owned native ID namespace');
       if (id !== 'form' && !midi.some(value => value.type === 'on')) throw Error('No native audition note for ' + id);
       if (id === 'ravel' && !midi.some(value => value.pitch === 60 && value.channel === 4)) throw Error('DICER audition selected the wrong slice or pitch');
       if (id === 'mire' && !midi.some(value => value.channel === 15)) throw Error('REDUCE node audition did not use its native node channel');
@@ -194,7 +201,30 @@ async function instrumentCheck(base, id) {
         const cancelled = __nativeMessages.slice(atCancel).filter(value => value.type === 'kitchenMidi' && value.payload.type === 'off');
         if (cancelled.length !== 1 || cancelled[0].payload.pitch !== 60) throw Error('PICNIC released an unrelated held source');
       }
-      return { id, facade, restoredExact: true, automation, preparation, clock: document.getElementById('kitchenNativeClock').textContent, nativeAudioContexts: __nativeAudioContexts, offlineRenders: __offlineRenders, workletUnavailable: context.audioWorklet === undefined, editorRate: rate, nativeMidiMessages: midi.length, diagnostics: KitchenNativeEditor.diagnostics };
+      if (id === 'proof') {
+        const beforeRetrigger = __nativeMessages.length; await app.engine.trigger(60, .8, 1, 'native-retrigger'); await app.engine.trigger(60, .8, 1, 'native-retrigger'); app.engine.release(60, 'native-retrigger');
+        const messages = __nativeMessages.slice(beforeRetrigger).filter(value => value.type === 'kitchenMidi').map(value => value.payload);
+        if (messages.map(value => value.type).join(',') !== 'on,off,on,off' || messages[0].nativeId !== messages[1].nativeId || messages[2].nativeId !== messages[3].nativeId || messages[0].nativeId === messages[2].nativeId) throw Error('Rapid source retrigger left a native note held or reused its identity: ' + JSON.stringify(messages));
+        const unowned = __nativeMessages.length; app.engine.release(99, 'not-an-owned-source'); if (__nativeMessages.length !== unowned) throw Error('An unowned editor key-up could release a DAW note');
+      }
+      if (id === 'batter') {
+        const beforeCatalog = __nativeMessages.length; await app.engine.trigger((await app.getState()).lanes[0].id, .8, { sampleId: 'unassigned-catalog-preview' });
+        if (__nativeMessages.slice(beforeCatalog).some(value => value.type === 'kitchenMidi') || !document.getElementById('kitchenNativeStatus').textContent.includes('Use this sample first')) throw Error('BATTER catalog preview played the wrong assigned lane');
+      }
+      let nativeInput = null;
+      if (['mire', 'spool'].includes(id)) {
+        const parameters = KitchenNativeEditor.descriptor.parameters, input = parameters.findIndex(value => value.path === '_nativeInput'), destination = parameters.findIndex(value => value.path === '_nativeInputDestination'), before = __nativeMessages.length;
+        await app.engine.setMic(true, 2);
+        const messages = __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetParameter');
+        if (!messages.some(value => value.payload.index === input && value.payload.normalized === 1) || !app.engine.micEnabled) throw Error('Original mic button did not enable native DAW input');
+        if (destination >= 0 && !messages.some(value => value.payload.index === destination && value.payload.normalized === 2 / 3)) throw Error('REDUCE live input targeted the wrong node');
+        const native = []; native[input] = 0; if (destination >= 0) native[destination] = 1 / 3;
+        const beforeRestore = __nativeMessages.length; await KitchenNativeEditor.receive('kitchenParameters', native);
+        if (app.engine.micEnabled || document.getElementById('mic-button').getAttribute('aria-pressed') !== 'false' || __nativeMessages.slice(beforeRestore).some(value => value.type === 'kitchenSetParameter')) throw Error('Native input restore changed the host or did not update original controls');
+        if (id === 'spool') { let message = ''; try { await app.engine.startDeckRecording(0); } catch (error) { message = error.message; } if (!message.includes('Record audio in your DAW')) throw Error('ROTISSERIE attempted unsupported browser deck recording'); }
+        nativeInput = { enabledThroughNativeParameter: true, destination: destination >= 0 ? 2 : null, restoredWithoutEcho: true };
+      }
+      return { id, facade, restoredExact: true, automation, preparation, nativeInput, clock: document.getElementById('kitchenNativeClock').textContent, nativeAudioContexts: __nativeAudioContexts, offlineRenders: __offlineRenders, workletUnavailable: context.audioWorklet === undefined, editorRate: rate, nativeMidiMessages: midi.length, diagnostics: KitchenNativeEditor.diagnostics };
     }, { facade: facades[ids.indexOf(id)], id });
     assert.equal(evidence.nativeAudioContexts, 0); assert.equal(evidence.offlineRenders, 0); assert.equal(evidence.workletUnavailable, true); assert.match(evidence.clock, /137 BPM.*Playing/); assert.deepEqual(evidence.diagnostics.errors, []);
     if (id === 'form') {
@@ -220,7 +250,28 @@ async function instrumentCheck(base, id) {
     if (['form', 'brine', 'morsel'].includes(id)) { evidence.nativeSmoke = await page.evaluate(() => KitchenNativeEditor.runSmokeTest()); assert.equal(evidence.nativeSmoke.pass, true, JSON.stringify(evidence.nativeSmoke)); }
     const button = page.locator('button#playButton,button#play-button,button#play').first();
     if (await button.count()) { await button.click({ force: true }); assert.match(await page.locator('#kitchenNativeStatus').textContent(), /DAW/); }
+    if (id === 'marinade') { await page.locator('#auditionA').click(); assert.match(await page.locator('#kitchenNativeStatus').textContent(), /Source-only previews/); }
+    if (id === 'proof') {
+      evidence.uiOwnership = await page.evaluate(async () => {
+        await ProofApp.engine.trigger(60, .8, 20, 'close-owned'); const on = __nativeMessages.filter(value => value.type === 'kitchenMidi' && value.payload.type === 'on').at(-1).payload;
+        const before = __nativeMessages.length; KitchenNativeEditor.dispose(); const messages = __nativeMessages.slice(before).filter(value => value.type === 'kitchenMidi').map(value => value.payload);
+        if (messages.length !== 1 || messages[0].type !== 'off' || messages[0].nativeId !== on.nativeId) throw Error('Closing the editor did not release only its owned native note');
+        return { ownedNamespace: on.nativeId >= 0x80000001, closeOffs: messages.length, globalOffs: messages.filter(value => value.type === 'allOff').length, pairedIdentity: on.nativeId === messages[0].nativeId };
+      });
+    }
     return evidence;
+  } finally { await context.close(); }
+}
+async function neuralCheck(base) {
+  const { context, page } = await pageFor(base, '/instrument/morsel/');
+  try {
+    await page.waitForFunction(() => KitchenNativeEditor.diagnostics.attached);
+    const result = await page.evaluate(async () => {
+      await KitchenNativeEditor.receive('kitchenReady', { state: await KitchenNativeEditor.getProject() });
+      const before = __nativeMessages.length, result = await KitchenNativeEditor.runNeuralSmokeTest();
+      return { ...result, nativeStateMessages: __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetState').length, nativeAudioContexts: __nativeAudioContexts, workerCount: __editorWorkers };
+    });
+    assert.equal(result.pass, true, JSON.stringify(result)); assert.equal(result.nativeStateMessages, 0); assert.equal(result.nativeAudioContexts, 0); assert(result.workersCreated >= 2); assert.equal(result.word, 'zucchini'); assert.equal(result.signalsmith.fitCalls, 1); return result;
   } finally { await context.close(); }
 }
 async function effectCheck(base, definition) {
@@ -279,6 +330,7 @@ async function effectCheck(base, definition) {
 (async () => {
   try {
     const base = await serve(); browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+    if (process.env.KITCHEN_EDITOR_NEURAL_SMOKE) { await check('MORSEL real neural word and Signalsmith note', () => neuralCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     for (const id of ids) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(id)) await check('Original instrument editor / ' + id, () => instrumentCheck(base, id));
     for (const definition of effects) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(definition.id)) await check('Native effect editor / ' + definition.id, () => effectCheck(base, definition));
     assert.deepEqual(report.pageErrors, [], 'No hidden editor errors'); save(); console.log('Kitchen plugin editors:', report.passed.length, 'groups passed.');

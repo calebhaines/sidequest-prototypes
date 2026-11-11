@@ -89,9 +89,19 @@
     if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000) throw Error('Choose an 8–192 kHz sample rate.');
     let envelope = null, state, core, localFrame = 0, anchored = false, lastClock = null, serial = 0;
     let nativeSequence = resources.nativeSequence !== false, nativeWasPlaying = false, resourceKey = '', models = resources.models || null;
+    let inputEnabled=resources.nativeInput===true,inputDestination=Math.round(bounded(resources.inputDestination,0,3,0));
     let sequenceEvents = [], sequenceLength = 4, externalSequence = false;
     const held = new Map(), midiJobs = [];
     const wrapper = ['heirloom', 'brine', 'citrus'].includes(id);
+    function setInput(options={}) {
+      if(id!=='mire'&&id!=='spool')throw Error('This instrument does not accept live audio input.');
+      if(typeof options==='boolean')options={enabled:options};
+      if(options.enabled!==undefined)inputEnabled=options.enabled===true;
+      if(options.destination!==undefined)inputDestination=Math.round(bounded(options.destination,0,3,inputDestination));
+      if(id==='mire'){core.micGain=inputEnabled?1:0;core.micDestination=inputDestination;}
+      else core.micEnabled=inputEnabled;
+      return {enabled:inputEnabled,destination:inputDestination};
+    }
     function normalize(raw) {
       if (raw && raw.state && typeof raw.format === 'string') { envelope = { ...raw }; raw = raw.state; }
       else envelope = null;
@@ -173,6 +183,7 @@
       else if (id === 'brine') core = new (g.createBrinePlaybackDSP(g.createBrineDSP).Core)(sampleRate, state, localFrame);
       else core = new (g.createCitrusPlaybackDSP(g.createCitrusDSP).Core)(sampleRate, g.CitrusAudio.prepareState(state), localFrame);
       prepareResources(true); buildSequence();
+      if(id==='mire'||id==='spool')setInput();
     }
     function setState(raw, controlPath) {
       state = normalize(raw);
@@ -321,17 +332,22 @@
         }
       }
     }
-    function render(left, right, frame) {
+    function render(left, right, frame,inputLeft,inputRight,inputOffset=0) {
+      // Match the original worklets: REDUCE receives the first (mono) channel;
+      // ROTISSERIE retains independent stereo input for monitoring/capture.
+      const a=inputOffset&&inputLeft?inputLeft.subarray(inputOffset):inputLeft,b=inputOffset&&inputRight?inputRight.subarray(inputOffset):inputRight;
       if (wrapper) core.process(left, right);
       else if (id === 'ravel') core.processBlock(left, right, frame);
-      else if (id === 'spool') core.processBlock(left, right, undefined, undefined, frame);
+      else if (id === 'spool') core.processBlock(left, right, a, b, frame);
+      else if(id==='mire')core.processBlock(left,right,a);
       else core.processBlock(left, right);
     }
-    function process(left, right, clock) {
+    function process(left, right, clock,inputLeft,inputRight) {
       if (!(left instanceof Float32Array) || !(right instanceof Float32Array) || left.length !== right.length) throw Error('Provide equal stereo Float32 output buffers.');
+      if(inputLeft!==undefined&&(!(inputLeft instanceof Float32Array)||inputLeft.length<left.length)||inputRight!==undefined&&(!(inputRight instanceof Float32Array)||inputRight.length<left.length))throw Error('Live audio input must be a Float32 channel at least as long as the output.');
       let c = clock ? transport(clock) : lastClock;
       if(c?.playing&&c.beat<0&&nativeSequence){const lead=Math.round(-c.beat*sampleRate*60/c.tempo);
-        if(lead>0&&lead<left.length){process(left.subarray(0,lead),right.subarray(0,lead),c);process(left.subarray(lead),right.subarray(lead),{...c,frame:c.frame+lead,beat:0});return true;}
+        if(lead>0&&lead<left.length){process(left.subarray(0,lead),right.subarray(0,lead),c,inputLeft,inputRight);process(left.subarray(lead),right.subarray(lead),{...c,frame:c.frame+lead,beat:0},inputLeft?.subarray(lead),inputRight?.subarray(lead));return true;}
         if(lead===0)c=transport({...c,beat:0});
       }
       scheduleExternal(c, left.length);
@@ -342,9 +358,9 @@
             if (e.on) trigger(e, e.source); else for (const voice of core.voices) if (voice.pluginSource === e.source) voice.releasing = true;
           }
           const end = Math.min(left.length, midiJobs.length ? Math.max(at, midiJobs[0].frame - localFrame) : left.length);
-          if (end > at) render(left.subarray(at,end), right.subarray(at,end), localFrame+at); at = end;
+          if (end > at) render(left.subarray(at,end), right.subarray(at,end), localFrame+at,inputLeft,inputRight,at); at = end;
         }
-      } else render(left, right, localFrame);
+      } else render(left, right, localFrame,inputLeft,inputRight);
       localFrame += left.length;
       if (lastClock) lastClock = { ...lastClock, frame: localFrame, beat: lastClock.beat + (lastClock.playing ? left.length * lastClock.tempo / (60 * sampleRate) : 0) };
       return true;
@@ -372,11 +388,13 @@
         }
       }
       localFrame=0;anchored=false;lastClock=null;nativeWasPlaying=false;
+      if(id==='mire'||id==='spool')setInput();
     }
     const api = {
       id, get core() { return core; },
       getState() { return envelope ? { ...copy(envelope), state: copy(state) } : copy(state); },
       getNativeState() { return copy(state); }, setState, noteOn, noteOff, transport, process,
+      setInput,getInput(){return {enabled:inputEnabled,destination:inputDestination};},
       controlChange(event={}) {
         if(event.controller===123||event.controller===120){api.panic();return true;}
         if(id!=='heirloom'&&id!=='brine')return false;
@@ -388,12 +406,14 @@
       setNativeSequence(value) { if (nativeSequence === !!value) return; nativeSequence = !!value; if (lastClock) transport(lastClock); },
       setParameter(path, value) { const p = String(path).replace(/^state\./, '').split('.'); if (p.some(k => ['__proto__','prototype','constructor'].includes(k))) throw Error('Invalid parameter path.');
         if(path==='_nativeSequence'){api.setNativeSequence(value);return nativeSequence;}
+        if(path==='_nativeInput'){setInput({enabled:value});return inputEnabled;}
+        if(path==='_nativeInputDestination'){setInput({destination:value});return inputDestination;}
         const next = copy(state); let object = next; for (let i=0;i<p.length-1;i++) { if (!object[p[i]] || typeof object[p[i]] !== 'object') throw Error('Unknown parameter path.'); object=object[p[i]]; }
         object[p[p.length-1]]=value; return setState(envelope ? { ...envelope, state: next } : next,p.join('.'));
       },
       reset,
       prepare() { prepareResources(false); return true; },
-      panic() { held.clear(); midiJobs.length=0; if (wrapper) core.enqueue('panic',{frame:localFrame}); else if (core.panic) core.panic(); else core.clear(true); },
+      panic() { held.clear(); midiJobs.length=0; if (wrapper) core.enqueue('panic',{frame:localFrame}); else if (core.panic) core.panic(); else core.clear(true);if(id==='mire'||id==='spool')setInput(); },
       getMeters() { return core.getMeters?.() || (typeof core.meters === 'function' ? core.meters() : core.meters) || {}; }
     };
     state = normalize(initialState); construct(); return api;

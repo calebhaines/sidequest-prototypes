@@ -34,18 +34,22 @@ async function render(id, partition, sequence = false, voiceFX = false) {
   const g = load(id), sr = 24000;
   const instrument = g.KitchenWebAudioInstruments.create(id, sr, undefined, { nativeSequence: sequence }); await instrument.prepare();
   if (voiceFX) { const project = instrument.getState(), state = project.state || project, voices = state.tracks || state.sounds || state.lanes;
-    const defaults = g.KitchenVoiceEffects.defaults('prism'); defaults.mix = 1; defaults.low = -12; defaults.filter = 'lowpass'; defaults.cutoff = 220;
-    voices[0].galleyFx = [{ type: 'prism', params: defaults }, null]; await instrument.setState(project); }
-  const count = sr, output = new Float32Array(count); let frame = 0, n = 0;
+    const defaults = g.KitchenVoiceEffects.defaults('prism'); defaults.mix = 1;
+    if (voiceFX !== 'transparent') { defaults.low = -12; defaults.filter = 'lowpass'; defaults.cutoff = 220; }
+    voices[0].galleyFx = voiceFX === 'bypass' ? [null, null] : [{ type: 'prism', params: defaults }, voiceFX === 'transparent' ? { type: 'prism', params: { ...defaults, mix: .5 } } : null]; await instrument.setState(project); }
+  const count = sr, output = new Float32Array(count), outputRight = new Float32Array(count); let frame = 0, n = 0;
+  // The native host supplies the transport anchor before dispatching MIDI at
+  // that sample, including its first stopped clock (which resets old FX tails).
+  instrument.transport({ tempo: 120, beat: 0, playing: sequence, frame: 0, revision: 0 });
   if (!sequence) instrument.noteOn({ pitch: ['grain', 'tine', 'form', 'batter'].includes(id) ? 36 : 60, velocity: .8, channel: 0, frame: 17 });
   while (frame < count) { const size = Math.min(partition[n++ % partition.length], count - frame), left = new Float32Array(size), right = new Float32Array(size);
     instrument.process(left, right, { tempo: 120, beat: frame / sr * 2, playing: sequence, frame, revision: 0 });
-    for (let i = 0; i < size; i++) { assert(Number.isFinite(left[i]) && Number.isFinite(right[i]), id + ' finite audio'); output[frame + i] = left[i]; } frame += size;
+    for (let i = 0; i < size; i++) { assert(Number.isFinite(left[i]) && Number.isFinite(right[i]), id + ' finite audio'); output[frame + i] = left[i]; outputRight[frame + i] = right[i]; } frame += size;
   }
   const peak = output.reduce((p, v) => Math.max(p, Math.abs(v)), 0); assert(peak > .00001, id + ' original graph audible');
   assert(output.subarray(0, instrument.getLatencySamples() + (sequence ? 0 : 17)).every(x => Math.abs(x) < 1e-9), id + ' sample-offset/PDC onset');
   const state = instrument.getState(); assert(state && typeof state === 'object'); await instrument.setState(state); assert.deepEqual(JSON.parse(JSON.stringify(instrument.getState())), JSON.parse(JSON.stringify(state)), id + ' complete project round trip');
-  await instrument.dispose(); return { output, peak, latency: instrument.getLatencySamples() };
+  await instrument.dispose(); return { output, outputRight, peak, latency: instrument.getLatencySamples() };
 }
 async function main() {
   const { createContext, createPull, PartitionedConvolver } = require('../js/vendor-entry.js');
@@ -54,7 +58,8 @@ async function main() {
   for (let offset = 0; offset < rendered.length; offset += 128) { const block = new Float32Array(128); if (!offset) block[0] = 1; rendered.set(convolver.process(block), offset); }
   for (let i = 0; i < impulse.length; i++) assert(Math.abs(rendered[i] - impulse[i]) < 1e-6, 'partitioned FFT impulse exact');
   convolver.reset(); assert(convolver.process(new Float32Array(128)).every(x => x === 0), 'convolution reset clears history');
-  const context = createContext(48000), pull = createPull(context), source = context.createBufferSource(), buffer = context.createBuffer(1, 1, 48000), processor = context.createScriptProcessor();
+  const context = createContext(48000), pull = createPull(context), source = context.createBufferSource(), buffer = context.createBuffer(1, 1, 48000), processor = context.createScriptProcessor(1024, 2, 2);
+  assert.equal(processor.bufferSize, 128, 'native script shim processes one synchronous graph quantum even when the browser fallback requests1024');
   buffer.getChannelData(0)[0] = 1; source.buffer = buffer; processor.onaudioprocess = e => { e.outputBuffer.getChannelData(0).set(e.inputBuffer.getChannelData(0)); e.outputBuffer.getChannelData(1).set(e.inputBuffer.getChannelData(1)); }; source.connect(processor); processor.connect(context.destination); source.start(17 / 48000);
   const left = new Float32Array(500), right = new Float32Array(500); pull.process(left, right); assert.equal(left.findIndex(x => x !== 0), 145); assert.equal(right[145], 1);
   const resetContext = createContext(48000), resetPull = createPull(resetContext), initial = new Float32Array(160);
@@ -82,7 +87,20 @@ async function main() {
     const a = await render(id, [128]), b = await render(id, [17, 31, 255, 3, 129]);
     let error = 0; for (let i = 0; i < a.output.length; i++) error = Math.max(error, Math.abs(a.output[i] - b.output[i])); assert(error < 2e-6, id + ' arbitrary DAW block partitions: ' + error);
     const sequence = await render(id, [97, 128, 41], true); console.log(id + ': MIDI + DAW sequence, complete state, quantum partition parity; peak=' + a.peak.toFixed(4) + ', latency=' + a.latency + ', seqPeak=' + sequence.peak.toFixed(4));
-    if (['grain', 'tine', 'form', 'batter'].includes(id)) { const wet = await render(id, [33, 128, 79], false, true); let difference = 0; for (let i = 0; i < a.output.length; i++) difference += Math.abs(a.output[i] - wet.output[i]); assert(difference > .01, id + ' actual GALLEY insert rack changes the original voice'); }
+    if (['grain', 'tine', 'form', 'batter'].includes(id)) {
+      const wet = await render(id, [33, 128, 79], false, true); let difference = 0; for (let i = 0; i < a.output.length; i++) difference += Math.abs(a.output[i] - wet.output[i]); assert(difference > .01, id + ' actual GALLEY insert rack changes the original voice');
+      const bypass = await render(id, [128], false, 'bypass'), transparent = await render(id, [17, 31, 255, 3, 129], false, 'transparent');
+      let error = 0, signalError = 0; for (let i = 0; i < bypass.output.length; i++) {
+        const delta = Math.max(Math.abs(bypass.output[i] - transparent.output[i]), Math.abs(bypass.outputRight[i] - transparent.outputRight[i])); error = Math.max(error, delta);
+        if (Math.max(Math.abs(bypass.output[i]), Math.abs(transparent.output[i]), Math.abs(bypass.outputRight[i]), Math.abs(transparent.outputRight[i])) > .0001) signalError = Math.max(signalError, delta);
+      }
+      // HOTPLATE's direct source disconnection can trim a <−90dB final sample;
+      // the live script rack retains that sample through the compressor tail.
+      assert(error < .00003 && signalError < 2e-6, id + ' two transparent voice inserts preserve stereo signal timing without an extra script buffer: ' + error);
+      assert.equal(transparent.output.findIndex(x => Math.abs(x) > 1e-8), bypass.output.findIndex(x => Math.abs(x) > 1e-8), id + ' enabled voice rack preserves exact MIDI transient timestamp');
+      assert.equal(transparent.latency, bypass.latency, id + ' transparent rack does not change reported latency');
+      console.log(id + ': two enabled voice inserts preserve exact transient frame ' + transparent.output.findIndex(x => Math.abs(x) > 1e-8) + '; stereo max error=' + error);
+    }
   }
   for (const id of ['fable', 'picnic']) {
     const g = load(id), instrument = g.KitchenWebAudioInstruments.create(id, 24000, undefined, { nativeSequence: id === 'fable' }); await instrument.prepare();

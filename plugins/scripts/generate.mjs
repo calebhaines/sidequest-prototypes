@@ -127,6 +127,11 @@ for (const product of products) {
   if (new Set(product.parameters.map(value => value.path)).size !== product.parameters.length) throw Error('Duplicate native parameter IDs: ' + product.id);
   product.defaultState = product.defaultState ?? product.defaults ?? null;
   if (product.kind === 'instrument' && !product.parameters.some(value => value.path === '_nativeSequence' || value.path === 'followHost')) product.parameters.unshift(parameter({ path: '_nativeSequence', name: 'Follow DAW pattern', type: 'boolean', default: true }));
+  if (['mire', 'spool'].includes(product.id)) {
+    product.acceptsAudioInput = true;
+    if (!product.parameters.some(value => value.path === '_nativeInput')) product.parameters.push(parameter({ path: '_nativeInput', name: 'Live DAW input', type: 'boolean', default: false }));
+    if (product.id === 'mire' && !product.parameters.some(value => value.path === '_nativeInputDestination')) product.parameters.push(parameter({ path: '_nativeInputDestination', name: 'Live input destination', type: 'number', min: 0, max: 3, step: 1, default: 0 }));
+  }
   product.acceptsMidi = product.kind === 'instrument' || product.acceptsMidi === true;
   product.producesMidi = product.producesMidi === true;
   product.latencySamples ||= product.runtime === 'web-audio-graph' ? 128 : 0;

@@ -37,6 +37,7 @@ public:
     void stateFromEditor(const juce::var&);
     void parameterFromEditor(const juce::var&);
     void midiFromEditor(const juce::var&);
+    void releaseEditorMidi() noexcept;
     void captureFromEditor(const juce::var&);
     juce::Array<juce::var> captureReplies();
     bool isReady() const noexcept { return readyFlag.load(); }
@@ -54,6 +55,8 @@ private:
     std::atomic<int> appliedLatency { 0 };
     std::atomic<float> outputPeak { 0 }, outputRmsLeft { 0 }, outputRmsRight { 0 };
     std::atomic<std::uint64_t> requestVersion { 0 };
+    std::atomic<std::uint64_t> completedVersion { 0 }, failedVersion { 0 };
+    std::atomic<std::uint64_t> installedVersion { 0 };
     std::uint64_t builtVersion = 0;
     juce::CriticalSection stateLock;
     juce::String cachedState, status;
@@ -63,25 +66,26 @@ private:
     struct Garbage { void* pointer = nullptr; void (*destroy)(void*) = nullptr; };
     std::array<Garbage, 1024> garbage{};
     juce::AbstractFifo garbageFifo { static_cast<int>(garbage.size()) };
-    struct UiMidi { int type = 0, data1 = 0, channel = 1; double data2 = 0; };
+    struct UiMidi { int type = 0, data1 = 0, channel = 1; double data2 = 0; std::uint32_t identity = 0; };
     std::array<UiMidi, 1024> uiMidi{};
     juce::AbstractFifo uiMidiFifo { static_cast<int>(uiMidi.size()) };
-    struct CaptureCommand { juce::String request, response; };
+    struct CaptureCommand { juce::String request; };
     std::array<CaptureCommand, 16> captureCommands{};
     juce::AbstractFifo captureRequests { static_cast<int>(captureCommands.size()) };
     std::array<juce::String, 16> captureResponses{};
     juce::AbstractFifo captureResults { static_cast<int>(captureResponses.size()) };
-    std::uint32_t noteSerial = 0;
-    std::array<std::array<std::uint32_t, 8>, 16 * 128> heldIds{};
-    std::array<int, 16 * 128> heldCount{};
+    MidiNoteIdentities identities;
+    std::array<UiMidi, 1024> editorHeld{};
+    std::atomic<bool> releaseEditorNotes { false };
     void run() override;
     void requestRebuild();
     void rebuildSynchronously();
+    bool waitForOfflineState();
     bool retire(void*, void (*)(void*)) noexcept;
     static bool retireThunk(void*, void*, void (*)(void*));
     void drainGarbage();
-    std::uint32_t midiId(int pitch, int channel, bool on) noexcept;
-    void addEvent(NativeRuntime&, int offset, int type, int first, double second, int channel) noexcept;
+    void addEvent(NativeRuntime&, int offset, int type, int first, double second, int channel, std::uint32_t identity = 0) noexcept;
+    bool trackEditorNote(const UiMidi&) noexcept;
     void readHostClock(std::array<double, clockFields>&, int frames);
     void synchronizeParametersFromState(const juce::var&);
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)

@@ -15,6 +15,7 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withEventListener("kitchenDownload", [this](const juce::var& value) { downloadToFile(value); })
         .withEventListener("kitchenReady", [this](const juce::var&) { receivedReady = true; sendState(); })
         .withEventListener("kitchenSmokeResult", [this](const juce::var& value) { smokeResult = value; })
+        .withEventListener("kitchenNeuralSmokeResult", [this](const juce::var& value) { neuralSmokeResult = value; })
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
     browser = std::make_unique<juce::WebBrowserComponent>(options);
     addAndMakeVisible(*browser);
@@ -22,7 +23,9 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
     startTimerHz(20);
 }
 void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds()); }
-void PluginEditor::startNativeUiSmoke() { smokeResult = {}; if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
+PluginEditor::~PluginEditor() { processor.releaseEditorMidi(); }
+void PluginEditor::startNativeUiSmoke() { smokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
+void PluginEditor::startNativeNeuralSmoke() { neuralSmokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runNeuralSmokeTest()"); }
 std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const juce::String& requested) {
     auto path = juce::URL::removeEscapeChars(requested).upToFirstOccurrenceOf("?", false, false);
     while (path.startsWithChar('/')) path = path.substring(1);
@@ -36,7 +39,7 @@ std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const 
         juce::GZIPDecompressorInputStream stream(&input, false, juce::GZIPDecompressorInputStream::gzipFormat); stream.readIntoMemoryBlock(bytes);
     } else return std::nullopt;
     juce::WebBrowserComponent::Resource result; result.data.resize(bytes.getSize()); if (bytes.getSize()) std::memcpy(result.data.data(), bytes.getData(), bytes.getSize());
-    result.mimeType = path.endsWithIgnoreCase(".html") ? "text/html; charset=utf-8" : path.endsWithIgnoreCase(".js") ? "text/javascript" : path.endsWithIgnoreCase(".json") ? "application/json" : path.endsWithIgnoreCase(".css") ? "text/css" : path.endsWithIgnoreCase(".wasm") ? "application/wasm" : path.endsWithIgnoreCase(".woff2") ? "font/woff2" : "application/octet-stream";
+    result.mimeType = path.endsWithIgnoreCase(".html") ? "text/html" : path.endsWithIgnoreCase(".js") ? "text/javascript" : path.endsWithIgnoreCase(".json") ? "application/json" : path.endsWithIgnoreCase(".css") ? "text/css" : path.endsWithIgnoreCase(".wasm") ? "application/wasm" : path.endsWithIgnoreCase(".woff2") ? "font/woff2" : "application/octet-stream";
     return result;
 }
 void PluginEditor::sendState() {
@@ -47,8 +50,9 @@ void PluginEditor::downloadToFile(const juce::var& payload) {
     if (downloadChooser) return;
     const auto encoded = payload["base64"].toString();
     if (encoded.isEmpty() || encoded.length() > 640 * 1024 * 1024) return;
-    downloadData.reset(); juce::MemoryOutputStream output(downloadData, false);
-    if (!juce::Base64::convertFromBase64(output, encoded)) { downloadData.reset(); return; }
+    downloadData.reset(); bool decoded = false;
+    { juce::MemoryOutputStream output(downloadData, false); decoded = juce::Base64::convertFromBase64(output, encoded); }
+    if (!decoded) { downloadData.reset(); return; }
     auto filename = juce::File::createLegalFileName(payload["filename"].toString()); if (filename.isEmpty()) filename = "Kitchen-export";
     downloadChooser = std::make_unique<juce::FileChooser>("Save Kitchen export", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(filename));
     downloadChooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::warnAboutOverwriting,

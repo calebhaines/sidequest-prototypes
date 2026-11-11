@@ -7,8 +7,8 @@
   const initial = parse(global.__JUCE__?.initialisationData?.kitchenProduct?.[0] ?? global.__JUCE__?.initialisationData?.kitchenProduct);
   let descriptor = parse(global.KitchenPluginDescriptor) || initial || {}, backend = null, app = null, registered = null, engine = null;
   let disposed = false, applying = 0, restored = false, snapshotBusy = false, snapshotAgain = false, changed = false, serial = 0, lastJSON = '', lastNativeJSON = '', status = '';
-  let snapshotTimer = 0, parameterTimer = 0, attachTimer = 0, nativeState, generation = 0, preparedBank = null, preparation = null, pendingParameters = null, parameterRestoreBusy = false, previousProject = null, stateRestorePending = null;
-  const subscriptions = new Map(), backendListeners = [], controls = new Map(), held = new Map(), heldChannels = new Map(), releases = new Map(), timers = new Set(), patched = new WeakSet(), contexts = new Set();
+  let snapshotTimer = 0, parameterTimer = 0, attachTimer = 0, nativeState, generation = 0, preparedBank = null, preparation = null, pendingParameters = null, parameterRestoreBusy = false, previousProject = null, stateRestorePending = null, nativeIdSerial = 0x80000000;
+  const subscriptions = new Map(), backendListeners = [], controls = new Map(), held = new Map(), heldChannels = new Map(), heldIds = new Map(), releases = new Map(), timers = new Set(), patched = new WeakSet(), contexts = new Set();
   const parameterValues = new Map(), eventQueue = [], storageValues = Object.create(null);
   const diagnostics = { nativeAudioContexts: 0, offlineContexts: 0, snapshots: 0, parameterMessages: 0, midiMessages: 0, restored: false, ready: false, errors: [] };
   let clock = { tempo: 120, beat: 0, playing: false, sampleRate: 48000, samplePosition: 0, revision: 0, timeSigNum: 4, timeSigDen: 4 };
@@ -73,7 +73,7 @@
       return facade;
     }
     for (const key of ['AudioContext', 'webkitAudioContext']) Object.defineProperty(global, key, { value: ControllerAudioContext, configurable: true, writable: true });
-    if (global.navigator?.mediaDevices?.getUserMedia) Object.defineProperty(global.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => { throw Error('Route audio to this plugin through your DAW. The editor does not open a separate microphone.'); } });
+    if (global.navigator?.mediaDevices?.getUserMedia) Object.defineProperty(global.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => { throw Error('Record audio in your DAW, then import the recording into this instrument. The editor does not open a separate microphone.'); } });
     try { Object.defineProperty(global, 'localStorage', { configurable: true, get: privateStorage }); Object.defineProperty(global, 'sessionStorage', { configurable: true, get: privateStorage }); } catch (_) {}
     const library = new Map();
     const collection = Object.freeze({ persistent: false, list: async () => [...library.values()], get: async key => library.get(String(key)) || null, save: async value => { const key = String(value.id || 'item-' + (++serial)); library.set(key, value); return key; }, remove: async key => library.delete(String(key)) });
@@ -161,6 +161,8 @@
           const value = actual(d, ratio), path = d.path || d.key;
           parameterValues.set(index, value);
           if (path === '_nativeSequence' || path === 'followHost') { const field = document.getElementById('kitchenNativeSequence'); if (field) field.checked = !!value; }
+          else if (path === '_nativeInput') { if (engine) engine.micEnabled = !!value; paintNativeInput(); }
+          else if (path === '_nativeInputDestination') paintNativeInput();
           else if (recipe && byPath(recipe, path) !== undefined && byPath(recipe, path) !== value) patch.push([path, value]);
         });
         if (!patch.length) continue;
@@ -270,12 +272,16 @@
     if (applying) return false;
     if (!Number.isFinite(Number(note))) return false;
     const pitch = clamp(Math.round(Number(note)), 0, 127), token = String(noteId ?? channel + ':' + pitch);
+    if (type === 'off' && !held.has(token)) return false;
+    if (type === 'on' && held.has(token)) midi('off', held.get(token), 0, heldChannels.get(token) || channel, token);
     if (releases.has(token)) { const timer = releases.get(token); clearTimeout(timer); timers.delete(timer); releases.delete(token); }
-    if (type === 'on') { held.set(token, pitch); heldChannels.set(token, channel); } else if (type === 'off') { note = held.get(token) ?? pitch; channel = heldChannels.get(token) ?? channel; held.delete(token); heldChannels.delete(token); }
-    diagnostics.midiMessages++; return send('kitchenMidi', { type, pitch: type === 'off' ? Number(note) : pitch, velocity: clamp(Number(velocity) || 0, 0, 1), channel: clamp(Number(channel) || 1, 1, 16), id: token });
+    let nativeId;
+    if (type === 'on') { do { nativeIdSerial = nativeIdSerial >= 0xffffffff ? 0x80000001 : nativeIdSerial + 1; } while ([...heldIds.values()].includes(nativeIdSerial)); nativeId = nativeIdSerial; held.set(token, pitch); heldChannels.set(token, channel); heldIds.set(token, nativeId); }
+    else if (type === 'off') { note = held.get(token) ?? pitch; channel = heldChannels.get(token) ?? channel; nativeId = heldIds.get(token); held.delete(token); heldChannels.delete(token); heldIds.delete(token); }
+    diagnostics.midiMessages++; return send('kitchenMidi', { type, pitch: type === 'off' ? Number(note) : pitch, velocity: clamp(Number(velocity) || 0, 0, 1), channel: clamp(Number(channel) || 1, 1, 16), id: token, nativeId });
   }
   function audition(pitch, velocity = .8, duration = .35, token, channel = 1) { if (applying) return false; token ??= 'editor-preview-' + (++serial); midi('on', pitch, velocity, channel, token); releases.set(String(token), later(() => midi('off', pitch, 0, channel, token), clamp(Number(duration) || .35, .01, 768) * 1000)); return true; }
-  function panicNative() { for (const timer of releases.values()) { clearTimeout(timer); timers.delete(timer); } releases.clear(); held.clear(); heldChannels.clear(); send('kitchenMidi', { type: 'allOff' }); }
+  function panicNative(all = false) { for (const [key, pitch] of [...held]) midi('off', pitch, 0, heldChannels.get(key) || 1, key); for (const timer of releases.values()) { clearTimeout(timer); timers.delete(timer); } releases.clear(); held.clear(); heldChannels.clear(); heldIds.clear(); if (all) send('kitchenMidi', { type: 'allOff', explicit: true }); }
   function patchEngine(value) {
     if (!value || patched.has(value)) return; patched.add(value); engine = value;
     const replace = (name, fn) => { if (typeof value[name] !== 'function') return; try { value[name] = fn; } catch (_) {} };
@@ -309,15 +315,35 @@
     replace('liveNote', (pitch, velocity, duration) => audition(pitch, velocity, duration));
     replace('triggerSlice', (slice, options = {}) => audition(60 + Number(options.pitch || 0), options.velocity ?? .8, options.durationSeconds ?? 20, undefined, Number(slice) + 1));
     replace('triggerNode', node => audition(60, 1, 20, undefined, 13 + Number(node)));
-    replace('preview', track => { if (id() === 'morsel') return Promise.resolve(audition(track.pitch ?? 60, track.velocity ?? .8, track.durationSeconds ?? 1, track.source)); const tracks = currentRecipe()?.tracks || []; const index = Math.max(0, tracks.findIndex(value => value.id === track?.id || value.name === track?.name)); return Promise.resolve(audition(voicePitch(index), 1, 20)); });
+    replace('preview', track => {
+      if (id() === 'morsel') {
+        const recipe = currentRecipe(), voice = !track.voice || track.voice === 'inherit' ? recipe.voice : track.voice, word = value => String(value || '').trim().replace(/\s+/g, ' ');
+        if (voice !== recipe.voice || word(track.lyric || recipe.lyric) !== word(recipe.lyric)) { setStatus('Play the phrase in your DAW to hear this step’s assigned word and voice.'); return Promise.resolve(false); }
+        return Promise.resolve(audition(track.pitch ?? 60, track.velocity ?? .8, track.durationSeconds ?? 1, track.source));
+      }
+      const tracks = currentRecipe()?.tracks || [], index = Math.max(0, tracks.findIndex(value => value.id === track?.id || value.name === track?.name)); return Promise.resolve(audition(voicePitch(index), 1, 20));
+    });
     replace('trigger', (note, velocity, duration, source) => {
+      if (id() === 'batter' && duration && typeof duration === 'object' && (duration.sampleId || duration.soloSource)) { setStatus(duration.sampleId ? 'Use this sample first to audition through the plugin. Lane pads audition the assigned sound.' : 'Source-only audition is available in the web instrument. Lane pads play the complete native voice.'); return Promise.resolve(false); }
       const gate = id() === 'mire' ? duration ?? Math.min(16.1, (currentRecipe()?.sources?.[Number(note)]?.decay ?? 1000) * .0016 + .05) : typeof duration === 'object' ? duration.duration ?? 20 : duration ?? 20;
       return Promise.resolve(audition(id() === 'mire' ? currentRecipe()?.sources?.[Number(note)]?.pitch ?? 60 : ['grain', 'tine', 'batter'].includes(id()) ? voicePitch(note) : note, velocity, gate, source ?? 'key:' + note, id() === 'mire' ? Number(note) + 1 : 1));
     });
     replace('release', (note, source) => midi('off', note, 0, 1, source ?? 'key:' + note));
     replace('pluck', (lane, degree = 0, velocity = .8, note = null) => Promise.resolve(audition(note ?? global.BowerSchema?.degreeMidi(currentRecipe(), lane, degree) ?? 60, velocity, 20, undefined, Number(lane) + 1)));
     replace('strum', () => { for (let lane = 0; lane < 4; lane++) later(() => value.pluck(lane, [0, 2, 4, 7][lane], .9), lane * 45); return Promise.resolve(true); });
-    replace('setSustain', down => send('kitchenMidi', { type: 'cc', controller: 64, value: down ? 1 : 0, channel: 1 }));
+    replace('setSustain', down => !applying && send('kitchenMidi', { type: 'cc', controller: 64, value: down ? 1 : 0, channel: 1 }));
+    if (['mire', 'spool'].includes(id())) replace('setMic', async (enabled, destination = 0) => {
+      if (applying) return !!value.micEnabled;
+      const input = parameters().findIndex(d => d.path === '_nativeInput'), target = parameters().findIndex(d => d.path === '_nativeInputDestination');
+      if (input < 0) throw Error('Record audio in your DAW, then import the recording into this instrument.');
+      if (target >= 0) setParameter(target, clamp(Math.round(Number(destination) || 0), 0, 3));
+      setParameter(input, !!enabled); value.micEnabled = !!enabled; paintNativeInput(); setStatus(enabled ? 'DAW audio input enabled. Route audio to this plugin’s input bus in your DAW.' : 'DAW audio input disabled.'); return !!enabled;
+    });
+    if (id() === 'spool') {
+      replace('startDeckRecording', async () => { const message = 'Record audio in your DAW, then import it into the selected deck. Native deck recording is not available.'; setStatus(message); throw Error(message); });
+      replace('stopDeckRecording', async () => null);
+      replace('cancelDeckRecording', () => { value.deckRecording = null; });
+    }
     for (const name of ['cancelNotes', 'stopNotes']) replace(name, (options = {}) => { const source = typeof options === 'string' ? options : options.source; for (const [key, pitch] of [...held]) if (!source || key === source || key.startsWith(source + ':')) midi('off', pitch, 0, 1, key); return true; });
     if (id() === 'form') for (const name of ['play', 'schedulePrepared']) replace(name, (sound, velocity, when, pitch, fifth, sixth, seventh) => Promise.resolve(audition(36 + (Number(name === 'play' ? sixth : seventh) || 0), velocity ?? .8, 20)));
     if (id() === 'form') replace('preload', () => Promise.resolve());
@@ -354,6 +380,13 @@
     const text = Number(clock.tempo || 120).toFixed(2).replace(/\.00$/, '') + ' BPM · ' + (clock.playing ? 'Playing ' + (Math.floor(Math.max(0, clock.beat) / (clock.timeSigNum || 4)) + 1) + ':' + (Math.floor(Math.max(0, clock.beat)) % (clock.timeSigNum || 4) + 1) : 'Stopped');
     if (output.textContent !== text) output.textContent = text;
     for (const field of document.querySelectorAll('input#tempo,input#bpm,input#tempo-input,input#tempoInput,input[aria-label="Tempo BPM"],input[data-host-tempo]')) { field.disabled = true; field.title = 'Tempo follows your DAW'; if (document.activeElement !== field) field.value = String(clock.tempo); }
+    paintNativeInput();
+  }
+  function paintNativeInput() {
+    if (!['mire', 'spool'].includes(id()) || !parameters().some(d => d.path === '_nativeInput')) return;
+    const button = document.getElementById('mic-button'), enabled = !!engine?.micEnabled;
+    if (button) { button.title = 'Enable or disable the plugin’s DAW audio input bus'; button.setAttribute('aria-label', enabled ? 'Disable DAW audio input' : 'Enable DAW audio input'); button.setAttribute('aria-pressed', String(enabled)); button.classList.toggle('mic-active', enabled); if (id() === 'spool') button.classList.toggle('recording', enabled); const text = button.querySelector('span'), label = enabled ? 'DAW input live' : 'DAW input'; if (text && text.textContent !== label) text.textContent = label; }
+    const destination = document.querySelector('.mic-destination'); if (destination) { destination.title = 'DAW audio input destination'; destination.setAttribute('aria-label', 'DAW audio input destination'); const index = parameters().findIndex(d => d.path === '_nativeInputDestination'); if (index >= 0 && parameterValues.has(index) && destination.value !== String(parameterValues.get(index))) { destination.value = String(parameterValues.get(index)); applying++; try { destination.dispatchEvent(new Event('change', { bubbles: true })); } finally { applying--; } } for (const option of destination.options) { const text = 'Input → ' + String.fromCharCode(65 + Number(option.value)); if (option.textContent !== text) option.textContent = text; } }
   }
   async function receive(type, value = {}) {
     if (disposed) return; value ||= {};
@@ -388,9 +421,11 @@
     if (!instrument()) return;
     const target = event.target?.closest?.('button,[role=button]'); if (!target) return;
     const key = (target.id || '').replace(/[-_]/g, '').toLowerCase();
+    if (id() === 'marinade' && /^(?:auditiona|auditionb)$/.test(key) || id() === 'fable' && key === 'recordpreview') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Source-only previews are available in the web instrument. Use the native keyboard or chord audition to hear this plugin.'); return; }
     if (/^(?:playbutton|stopbutton|pausebutton|restartbutton|play|stop|startbutton|transportplay|transportstop)$/.test(key) || target.matches('.transport-play,.transport-stop,[aria-label="Restart sequencer from beginning"]')) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Start or stop playback in your DAW.'); return; }
-    if (/^(?:recordbutton|capturemix)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Record the plugin output in your DAW.'); return; }
-    if (/^(?:panicbutton|panic)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); panicNative(); setStatus('All native notes released.'); }
+    if (id() === 'spool' && key === 'deckrecordbutton') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Record audio in your DAW, then import it into the selected deck. Native deck recording is not available.'); return; }
+    if (/^(?:recordbutton|capturebutton|capturemix)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Record the plugin output in your DAW.'); return; }
+    if (/^(?:panicbutton|panic)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); panicNative(true); setStatus('All native notes released.'); }
   }
   function edited() { if (app?.engine && app.engine !== engine) patchEngine(app.engine); scheduleParameters(); scheduleSnapshot(); }
   async function downloadAction(event) {
@@ -427,6 +462,47 @@
     } catch (error) { result.error = error.message || String(error); }
     send('kitchenSmokeResult', result); return result;
   }
+  async function runNeuralSmokeTest() {
+    const result = { sourceId: id(), pass: false, word: 'zucchini', voice: 'alto', pitch: 60, tempo: 120, workersCreated: 0, nativeBankPublished: false }, started = performance.now();
+    let audio, saved, controller, WorkerConstructor, CountingWorker, recipeBefore, snapshotsBefore;
+    try {
+      if (id() !== 'morsel' || !app?.engine || !global.KitchenMorselPreparation?.prepareBank) throw Error('Open the complete MORSEL native editor before running its neural smoke test.');
+      if (preparation || app.engine.preparing || app.engine.pendingWords.size || app.engine.pendingNotes.size) throw Error('Another MORSEL preparation is still active.');
+      audio = app.engine; recipeBefore = JSON.stringify(await projectSnapshot()); snapshotsBefore = diagnostics.snapshots;
+      saved = { words: audio.words, noteCache: audio.noteCache, pendingWords: audio.pendingWords, pendingNotes: audio.pendingNotes, wordBytes: audio.wordBytes, noteBytes: audio.noteBytes, reservedNoteBytes: audio.reservedNoteBytes, preparing: audio.preparing, fit: Object.getOwnPropertyDescriptor(audio.stretch, 'fit'), analyze: Object.getOwnPropertyDescriptor(audio.stretch, 'analyze') };
+      audio.words = new Map(); audio.noteCache = new Map(); audio.pendingWords = new Map(); audio.pendingNotes = new Map(); audio.wordBytes = audio.noteBytes = audio.reservedNoteBytes = 0;
+      controller = preparation = new AbortController(); WorkerConstructor = global.Worker;
+      let neuralWorkerReady = false, stretchWorkerReady = false, fitCalls = 0, analysisCalls = 0;
+      CountingWorker = function (...args) { const worker = new WorkerConstructor(...args); result.workersCreated++; worker.addEventListener('message', event => { if (event.data?.ready) { if (event.data.backend) neuralWorkerReady = true; else stretchWorkerReady = true; } }); return worker; };
+      CountingWorker.prototype = WorkerConstructor.prototype; Object.setPrototypeOf(CountingWorker, WorkerConstructor); global.Worker = CountingWorker;
+      const fit = audio.stretch.fit, analyze = audio.stretch.analyze;
+      audio.stretch.fit = function (...args) { fitCalls++; return fit.apply(this, args); };
+      audio.stretch.analyze = function (...args) { analysisCalls++; return analyze.apply(this, args); };
+      const state = global.MorselSchema.normalize({ ...app.getState(), voice: 'alto', lyric: 'zucchini', phrase: '', tempo: 120, musicLabPattern: undefined, steps: Array.from({ length: 32 }, () => ({ ...global.MorselSchema.step(), on: false })) });
+      const helper = global.KitchenMorselPreparation, bank = await helper.prepareBank({ audio, state, voices: ['alto'], pitches: [60], tempos: [120], keyboardDuration: .8, signal: controller.signal });
+      const measure = entry => { if (!entry) throw Error('Neural preparation returned no PCM.'); const pcm = helper.decode(entry.pcm, entry.frames); let peak = 0, energy = 0; for (const value of pcm) { if (!Number.isFinite(value)) throw Error('Neural preparation returned non-finite PCM.'); peak = Math.max(peak, Math.abs(value)); energy += value * value; } return { frames: pcm.length, sampleRate: entry.sampleRate, seconds: pcm.length / entry.sampleRate, finite: true, peak, rms: Math.sqrt(energy / Math.max(1, pcm.length)) }; };
+      const word = bank.words.find(entry => entry.identity === 'alto\u0000zucchini'), note = bank.notes.find(entry => entry.identity === 'alto\u0000zucchini' && entry.pitch === 60);
+      result.backend = bank.backend; result.modelHash = String(bank.modelHash || global.MorselSpeech?.modelHash || '').slice(0, 64); result.neuralReady = !!global.MorselSpeech?.ready; result.neuralWorkerReady = neuralWorkerReady;
+      result.signalsmith = { analysisCalls, fitCalls, ready: !!audio.stretch.worker && !!audio.stretch.ready, workerReady: stretchWorkerReady };
+      result.wordFit = { ...measure(word), voicedFrames: word.voicedFrames?.length || 0, maskFrames: word.maskFrames || 0 }; result.noteFit = measure(note);
+      result.emptyPattern = global.MorselSequence.events(state, { realizeProbability: false }).length === 0;
+      if (bank.words.length !== 1 || bank.notes.length !== 1 || !result.neuralReady || !result.signalsmith.ready || analysisCalls < 1 || fitCalls < 1 || result.wordFit.peak < 1e-5 || result.noteFit.peak < 1e-5 || !result.emptyPattern) throw Error('The real neural word and Signalsmith note-fit proof is incomplete.');
+      result.pass = true;
+    } catch (error) { result.error = error.message || String(error); }
+    finally {
+      if (WorkerConstructor && global.Worker === CountingWorker) global.Worker = WorkerConstructor;
+      if (audio && saved) {
+        for (const key of ['words', 'noteCache', 'pendingWords', 'pendingNotes', 'wordBytes', 'noteBytes', 'reservedNoteBytes', 'preparing']) audio[key] = saved[key];
+        for (const key of ['fit', 'analyze']) { if (saved[key]) Object.defineProperty(audio.stretch, key, saved[key]); else delete audio.stretch[key]; }
+        result.cachesRestored = audio.words === saved.words && audio.noteCache === saved.noteCache && audio.wordBytes === saved.wordBytes && audio.noteBytes === saved.noteBytes;
+      }
+      if (preparation === controller) preparation = null;
+      try { result.recipeUnchanged = recipeBefore !== undefined && recipeBefore === JSON.stringify(await projectSnapshot()); } catch (error) { result.recipeUnchanged = false; result.error ||= error.message || String(error); } result.nativeBankPublished = snapshotsBefore !== undefined && diagnostics.snapshots !== snapshotsBefore;
+      result.elapsedMs = Math.round(performance.now() - started); result.pass = result.pass && result.cachesRestored && result.recipeUnchanged && !result.nativeBankPublished;
+      send('kitchenNeuralSmokeResult', result);
+    }
+    return result;
+  }
   const anchorClick = global.HTMLAnchorElement?.prototype.click;
   if (anchorClick) global.HTMLAnchorElement.prototype.click = function (...args) {
     if (this.hasAttribute('download') && /^(?:blob:|data:)/.test(this.href)) { downloadAction({ target: this, preventDefault() {}, stopImmediatePropagation() {} }); return; }
@@ -443,10 +519,10 @@
   document.addEventListener('pointerup', () => later(edited, 0)); document.addEventListener('click', () => later(edited, 0));
   document.addEventListener('click', transportAction, true);
   document.addEventListener('click', downloadAction, true);
-  document.addEventListener('keydown', event => { if (!instrument() || event.target.closest?.('input,textarea,select,[contenteditable=true]')) return; if (event.code === 'Space') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Transport follows your DAW.'); } else if (event.code === 'Escape' && !document.querySelector('dialog[open]')) panicNative(); }, true);
+  document.addEventListener('keydown', event => { if (!instrument() || event.target.closest?.('input,textarea,select,[contenteditable=true]')) return; if (event.code === 'Space') { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Transport follows your DAW.'); } else if (event.code === 'Escape' && !document.querySelector('dialog[open]')) panicNative(true); }, true);
   document.addEventListener('musiclab:app-ready', scheduleAttach);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }, { once: true });
   else { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }
   global.addEventListener('pagehide', dispose);
-  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, runSmokeTest, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, browserContexts: contexts.size }; } });
+  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, runSmokeTest, runNeuralSmokeTest, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, browserContexts: contexts.size }; } });
 })(window);

@@ -200,10 +200,12 @@ void NativeRuntime::process(int count) noexcept {
     const auto countValue = property(context, io, "outputEventCount");
     if (JSValueIsNumber(context, countValue)) outputEventCount = juce::jlimit(0, maxEvents, static_cast<int>(JSValueToNumber(context, countValue, nullptr)));
     inRender = false;
+    bool invalidOutput = false;
     for (int i = 0; i < count; ++i) {
-        if (!std::isfinite(outL[static_cast<size_t>(i)])) outL[static_cast<size_t>(i)] = 0;
-        if (!std::isfinite(outR[static_cast<size_t>(i)])) outR[static_cast<size_t>(i)] = 0;
+        if (!std::isfinite(outL[static_cast<size_t>(i)])) { outL[static_cast<size_t>(i)] = 0; invalidOutput = true; }
+        if (!std::isfinite(outR[static_cast<size_t>(i)])) { outR[static_cast<size_t>(i)] = 0; invalidOutput = true; }
     }
+    if (invalidOutput && error.isEmpty()) error = "DSP emitted non-finite audio samples";
 }
 void NativeRuntime::reset() noexcept {
     if (!ready()) return;

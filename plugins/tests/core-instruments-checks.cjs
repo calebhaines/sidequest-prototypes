@@ -13,6 +13,12 @@ function load(entry) {
   scope.window = scope; scope.globalThis = scope;
   vm.createContext(scope);
   for (const source of entry.sourceFiles) vm.runInContext(fs.readFileSync(path.join(root, source), 'utf8'), scope, { filename: source });
+  // Reuse immutable factory fixture PCM across independent test instances;
+  // generate each source with the real canonical decoder once per recipe.
+  if(entry.id==='spool'){
+    const decode=scope.SpoolAudio.decodePCM,cache=new Map();
+    scope.SpoolAudio.decodePCM=asset=>{const key=JSON.stringify(asset);if(!cache.has(key))cache.set(key,decode(asset));return cache.get(key);};
+  }
   return scope;
 }
 function clock(frame = 0, playing = false, beat = 0, revision = 1, tempo = 120) { return { sampleRate: SR, tempo, playing, beat, frame, revision, timeSig: { numerator: 4, denominator: 4 } }; }
@@ -48,11 +54,13 @@ function reference(g, id, state, plugin) {
       else if(id==='proof'||id==='marinade')core.scheduleNote({note:pitch,velocity,frame,duration:600,source});
       else core.enqueue(id==='heirloom'?'on':'manualOn',{id:'reference',pitch,velocity,frame,source,channel:0});
     },
-    process(left,right,frame){if(['heirloom','brine','citrus'].includes(id))core.process(left,right);else if(id==='ravel')core.processBlock(left,right,frame);else if(id==='spool')core.processBlock(left,right,undefined,undefined,frame);else core.processBlock(left,right);}
+    process(left,right,frame,inputLeft,inputRight){if(['heirloom','brine','citrus'].includes(id))core.process(left,right);else if(id==='ravel')core.processBlock(left,right,frame);else if(id==='spool')core.processBlock(left,right,inputLeft,inputRight,frame);else if(id==='mire')core.processBlock(left,right,inputLeft);else core.processBlock(left,right);}
   };
 }
 let count = 0;
-for (const entry of manifest.instruments) {
+const selected=process.argv.slice(2),entries=manifest.instruments.filter(entry=>!selected.length||selected.includes(entry.id));
+assert(entries.length>0,'Choose an existing Core instrument ID.');
+for (const entry of entries) {
   try {
     const g = load(entry), state = g[entry.schema].normalize(g[entry.schema].defaultState());
     const definition=g.KitchenCoreInstruments.definitions().find(d=>d.id===entry.id);
@@ -126,8 +134,27 @@ for (const entry of manifest.instruments) {
       node.noteOn({id:'node-audition',pitch:60,velocity:.8,channel:13,frame:0});directNode.core.trigger({index:0,audition:true,destination:1,velocity:.8,frame:0,source:'vst:node-audition',durationSeconds:600});
       const l=new Float32Array(128),r=new Float32Array(128),expectedL=new Float32Array(128),expectedR=new Float32Array(128);node.process(l,r);directNode.process(expectedL,expectedR,0);assert.deepEqual(l,expectedL,'REDUCE direct-node audition differs from the web');assert.deepEqual(r,expectedR);
     }
+    if(entry.id==='mire'||entry.id==='spool'){
+      const inputState=JSON.parse(JSON.stringify(state));if(entry.id==='spool'){inputState.record.input='mic';inputState.source.monitor=true;}
+      const input=g.KitchenCoreInstruments.create(entry.id,SR,inputState,{nativeSequence:false}),directInput=reference(g,entry.id,inputState,input);
+      input.setInput({enabled:true,destination:2});if(entry.id==='mire'){directInput.core.micGain=1;directInput.core.micDestination=2;}else directInput.core.micEnabled=true;
+      let energy=0;
+      for(let at=0;at<2048;at+=128){const a=Float32Array.from({length:128},(_,i)=>.12*Math.sin((at+i)*.037)),b=Float32Array.from({length:128},(_,i)=>-.08*Math.cos((at+i)*.029));
+        const l=new Float32Array(128),r=new Float32Array(128),x=new Float32Array(128),y=new Float32Array(128);input.process(l,r,undefined,a,b);directInput.process(x,y,at,a,b);assert.deepEqual(l,x,entry.id+' live-input left channel differs from original worklet');assert.deepEqual(r,y,entry.id+' live-input right channel differs from original worklet');energy+=l.reduce((n,v)=>n+v*v,0)+r.reduce((n,v)=>n+v*v,0);
+      }
+      assert(energy>1e-8,'Native live input produced silence');assert.deepEqual(JSON.parse(JSON.stringify(input.getState())),inputState,'Input toggles changed the canonical patch');input.reset();assert.equal(input.getInput().enabled,true,'Reset lost the host input enable parameter');
+      input.setParameter('_nativeInput',false);assert.equal(input.getInput().enabled,false);input.setParameter('_nativeInputDestination',1);assert.equal(input.getInput().destination,1);
+      const bypassed=g.KitchenCoreInstruments.create(entry.id,SR,inputState,{nativeSequence:false}),quiet=g.KitchenCoreInstruments.create(entry.id,SR,inputState,{nativeSequence:false}),a=new Float32Array(128).fill(.1),b=new Float32Array(128).fill(-.2),l=new Float32Array(128),r=new Float32Array(128),x=new Float32Array(128),y=new Float32Array(128);bypassed.process(l,r,undefined,a,b);quiet.process(x,y);assert.deepEqual(l,x,'Disabled live input changed original sonics');assert.deepEqual(r,y);
+      if(entry.id==='spool'){
+        // Canonical capture is deliberately prepared/finished outside render;
+        // native UI recording needs its own off-thread asset/state handoff.
+        input.setInput({enabled:true});input.core.startCapture(0,{input:'mic',quantize:false});
+        for(let at=0;at<1024;at+=128)input.process(l,r,undefined,a,b);
+        const capture=input.core.finishCapture();assert.equal(capture.frames,1024);assert.equal(capture.pcm[256*2],a[0]);assert.equal(capture.pcm[256*2+1],b[0]);
+      }
+    }
     console.log(entry.id + ': exact canonical DSP parity, MIDI offset, host clock, state, automation and live gates passed'); count++;
   } catch (error) { console.error(entry.id + ': ' + error.stack); process.exitCode = 1; }
 }
-assert.equal(count, 11, 'Every portable Core instrument must pass.');
+assert.equal(count, entries.length, 'Every selected portable Core instrument must pass.');
 console.log('All ' + count + ' canonical Kitchen Core instruments passed.');

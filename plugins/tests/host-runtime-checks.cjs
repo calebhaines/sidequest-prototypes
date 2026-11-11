@@ -8,7 +8,8 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const source = file => fs.readFileSync(path.join(root, file), 'utf8');
 let passed = 0;
-async function check(name, run) { await run(); passed++; console.log('PASS', name); }
+const liveInputOnly = process.argv.includes('--live-input-only');
+async function check(name, run) { if (liveInputOnly && !name.includes('live input')) return; await run(); passed++; console.log('PASS', name); }
 function realm() {
   const g = { Float32Array, Float64Array, Uint8Array, Int32Array, ArrayBuffer, DataView, console };
   vm.createContext(g); vm.runInContext(source('plugins/js/environment.js'), g, { filename: 'environment.js' });
@@ -178,6 +179,22 @@ const plain = x => JSON.parse(JSON.stringify(x));
     assert(energy>1e-6,entry.id+' did not render actual native instrument audio');
     const snapshot=JSON.parse(api.getStateJSON());assert.equal(snapshot.format,entry.id+'-project');assert.deepEqual(snapshot.retained.assetNames,['original']);
     clock(g,{localFrame:504096,playing:false});events(g,[[0,2,60,0,1,82]]);api.render(17);
+  });
+  for(const id of ['mire','spool'])await check(id+': live input reaches canonical DSP through independent bounded stereo views and is unchanged when disabled',()=>{
+    const entry=coreManifest.instruments.find(entry=>entry.id===id),g=realm();for(const file of entry.sourceFiles)vm.runInContext(source(file),g,{filename:file});
+    const state=g[entry.schema].normalize(g[entry.schema].defaultState());if(id==='spool'){state.record.input='mic';state.source.monitor=true;}
+    const params=[{path:'_nativeSequence',type:'boolean',default:false},{path:'_nativeInput',type:'boolean',default:false},{path:'_nativeInputDestination',type:'number',min:0,max:3,default:0}];
+    g.KitchenPluginDescriptor={id,sourceId:id,kind:'instrument',parameters:params};vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});
+    function canonical(enabled){const core=id==='mire'?new g.MireDSP(48000,state):new g.SpoolDSP(48000,state);if(id==='spool'){state.assets.forEach((asset,i)=>{const sample=g.SpoolAudio.decodePCM(asset);core.setSample(i,sample.pcm,sample.sampleRate);});core.micEnabled=enabled;}else{core.micGain=enabled?1:0;core.micDestination=2;}return core;}
+    const api=g.KitchenNativePlugin,io=g.KitchenHostIO;let totalEnergy=0;
+    for(const enabled of [false,true]){api.create(id,48000,1024,JSON.stringify(state));api.setParameter(0,0);api.setParameter(2,2/3);if(enabled)api.setParameter(1,1);const direct=canonical(enabled);let frame=0;
+      for(const frames of [17,301,512,129,65,1024]){clock(g,{bpm:state.tempo,localFrame:700000+frame,playing:false});events(g,[]);for(let i=0;i<frames;i++){io.inputLeft[i]=.12*Math.sin((frame+i)*.037);io.inputRight[i]=-.08*Math.cos((frame+i)*.029);}const originalL=io.inputLeft.slice(0,frames),originalR=io.inputRight.slice(0,frames);api.render(frames);
+        for(let offset=0;offset<frames;offset+=128){const count=Math.min(128,frames-offset),l=new Float32Array(count),r=new Float32Array(count),a=enabled?originalL.subarray(offset,offset+count):undefined,b=enabled?originalR.subarray(offset,offset+count):undefined;if(id==='mire')direct.processBlock(l,r,a);else direct.processBlock(l,r,a,b,frame+offset);assert.deepEqual(Array.from(io.outputLeft.subarray(offset,offset+count)),Array.from(l));assert.deepEqual(Array.from(io.outputRight.subarray(offset,offset+count)),Array.from(r));if(enabled)for(let i=0;i<count;i++)totalEnergy+=Math.abs(l[i])+Math.abs(r[i]);}
+        assert.deepEqual(io.inputLeft.slice(0,frames),originalL,'DSP modified host inputLeft');assert.deepEqual(io.inputRight.slice(0,frames),originalR,'DSP modified host inputRight');frame+=frames;
+      }
+      assert.deepEqual(JSON.parse(api.getStateJSON()),plain(state),'Live input switches altered canonical patch state');
+    }
+    assert(totalEnergy>1e-7,'Live input did not produce actual instrument audio');
   });
   const manifest = JSON.parse(source('plugins/effects-manifest.json')), effectRealm = realm();
   for (const file of [...manifest.catalogSources, ...manifest.dspSources, manifest.adapter]) vm.runInContext(source(file), effectRealm, { filename: file });

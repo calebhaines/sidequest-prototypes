@@ -71,6 +71,10 @@ int main(int argc, char* argv[]) {
             if (changedParameter >= restored->getParameters().size() || std::abs(restored->getParameters()[changedParameter]->getValue() - savedParameterValue) > .002f) throw std::runtime_error("Nondefault numeric host parameter was not restored");
             auto* parameterRoundTrip = new juce::DynamicObject(); parameterRoundTrip->setProperty("name", changedParameterName); parameterRoundTrip->setProperty("index", changedParameter); parameterRoundTrip->setProperty("normalized", savedParameterValue); parameterRoundTrip->setProperty("passed", true); row->setProperty("hostParameterRoundTrip", juce::var(parameterRoundTrip));
             const auto again = render(*restored, playHead, descriptions[0]->isInstrument); if (again.rms < 1.0e-8) throw std::runtime_error("Reloaded compiled VST3 rendered silence");
+            restored->setNonRealtime(true); restored->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+            const auto offline = render(*restored, playHead, descriptions[0]->isInstrument);
+            if (offline.rms < 1.0e-8 || std::abs(restored->getParameters()[changedParameter]->getValue() - savedParameterValue) > .002f) throw std::runtime_error("Prepared-to-offline saved-state restoration failed");
+            row->setProperty("offlinePreparedRestore", true);
             row->setProperty("name", descriptions[0]->name); row->setProperty("passed", true); row->setProperty("rms", audio.rms); row->setProperty("peak", audio.peak); row->setProperty("firstSample", audio.first); row->setProperty("latencySamples", restored->getLatencySamples()); row->setProperty("stateBytes", static_cast<juce::int64>(saved.getSize())); row->setProperty("editorClosed", true); row->setProperty("clockChanges", true); restored->releaseResources();
         } catch (const std::exception& e) { success = false; row->setProperty("passed", false); row->setProperty("error", e.what()); }
         rows.add(juce::var(row)); std::cout << juce::JSON::toString(juce::var(row), true).toStdString() << std::endl;

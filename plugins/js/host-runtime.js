@@ -10,7 +10,7 @@
   let parameters = [], parameterValues = [], ready = false, preparing = false, error = '', generation = 0;
   let captureTake = null, captureSerial = 0, captureClearedToken = null;
   let frameEpoch = null, frameBase = 0, lastBackendEnd = 0, lastRawEnd = null, lastTempo = 120, fallbackBeat = 0;
-  let scratchL, scratchR, viewsL, viewsR, indices;
+  let scratchL, scratchR, viewsL, viewsR, indices, inputScratchL, inputScratchR, inputViewsL, inputViewsR, liveInput = false;
   const clock = { sampleRate: 48000, tempo: 120, bpm: 120, beat: 0, ppqPosition: 0, playing: false, frame: 0, samplePosition: 0, revision: 0, timeSigNumerator: 4, timeSigDenominator: 4, timeSig: { numerator: 4, denominator: 4 }, looping: false, loopStart: 0, loopEnd: 0, recording: false };
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
   const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
@@ -91,7 +91,11 @@
       const selection = registryFor(product, sourceId); family = selection[0]; rate = sampleRate; capacity = maxBlock;
       parameters = product.parameters || product.definition?.parameters || selection[1].definitions().find(definition => definition.id === sourceId)?.parameters || [];
       frameEpoch = null; frameBase = lastBackendEnd = 0; lastRawEnd = null; fallbackBeat = 0; lastTempo = 120;
+      liveInput = family === 'core' && (sourceId === 'mire' || sourceId === 'spool');
       scratchL = new Float32Array(QUANTUM); scratchR = new Float32Array(QUANTUM);
+      inputScratchL = liveInput ? new Float32Array(QUANTUM) : null; inputScratchR = liveInput ? new Float32Array(QUANTUM) : null;
+      inputViewsL = liveInput ? Array.from({ length: QUANTUM + 1 }, (_, length) => inputScratchL.subarray(0, length)) : null;
+      inputViewsR = liveInput ? Array.from({ length: QUANTUM + 1 }, (_, length) => inputScratchR.subarray(0, length)) : null;
       viewsL = Array.from({ length: QUANTUM + 1 }, (_, length) => scratchL.subarray(0, length)); viewsR = Array.from({ length: QUANTUM + 1 }, (_, length) => scratchR.subarray(0, length)); indices = new Int32Array(MAX_EVENTS);
       ready = false; preparing = true; error = ''; env.configure({ sampleRate, clearTimers: true });
       const resources = makeResources();
@@ -195,7 +199,11 @@
         const left = viewsL[count], right = viewsR[count];
         if (family === 'effect') { for (let i = 0; i < count; i++) { left[i] = io.inputLeft[offset + i]; right[i] = io.inputRight[offset + i]; } }
         else { left.fill(0); right.fill(0); }
-        backend.process(left, right, clock);
+        if (liveInput) {
+          const inputLeft = inputViewsL[count], inputRight = inputViewsR[count];
+          for (let i = 0; i < count; i++) { inputLeft[i] = io.inputLeft[offset + i]; inputRight[i] = io.inputRight[offset + i]; }
+          backend.process(left, right, clock, inputLeft, inputRight);
+        } else backend.process(left, right, clock);
         for (let i = 0; i < count; i++) { io.outputLeft[offset + i] = left[i]; io.outputRight[offset + i] = right[i]; }
         offset += count; env.advanceToFrame(localStart + offset);
       } while (offset <= frames);

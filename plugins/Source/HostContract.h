@@ -16,6 +16,27 @@ inline void writeMidiRow(double* row, int offset, int type, int data1, double da
     for (int i = 0; i < eventFields; ++i) row[i] = 0;
     row[0] = offset; row[1] = type; row[2] = type == pitchBend ? data2 : data1; row[3] = data2; row[4] = channel; row[5] = id;
 }
+struct MidiNoteIdentities {
+    static constexpr std::uint32_t editorMask = 0x80000000u;
+    std::uint32_t serial = 0;
+    std::uint32_t evicted = 0;
+    std::array<std::array<std::uint32_t, 8>, 16 * 128> held{};
+    std::array<int, 16 * 128> counts{};
+    void clear() noexcept { counts.fill(0); }
+    std::uint32_t event(int type, int pitch, int channel, std::uint32_t editorId = 0) noexcept {
+        evicted = 0;
+        if ((type != noteOn && type != noteOff)) return 0;
+        if ((editorId & editorMask) != 0) return editorId;
+        const auto key = static_cast<size_t>(std::clamp(channel - 1, 0, 15) * 128 + std::clamp(pitch, 0, 127)); auto& count = counts[key]; auto& ids = held[key];
+        if (type == noteOn) {
+            if (count == static_cast<int>(ids.size())) { evicted = ids[0]; for (int i = 1; i < count; ++i) ids[static_cast<size_t>(i - 1)] = ids[static_cast<size_t>(i)]; --count; }
+            serial = (serial + 1u) & ~editorMask; if (serial == 0) serial = 1;
+            ids[static_cast<size_t>(count++)] = serial; return serial;
+        }
+        if (count == 0) return 0;
+        const auto id = ids[0]; for (int i = 1; i < count; ++i) ids[static_cast<size_t>(i - 1)] = ids[static_cast<size_t>(i)]; --count; return id;
+    }
+};
 struct ClockTracker {
     std::uint64_t local = 0, epoch = 0;
     bool previousValid = false, previousPlaying = false;

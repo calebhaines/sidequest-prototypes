@@ -11,6 +11,7 @@ struct Product {
     juce::String id, name, kind;
     juce::var descriptor;
     bool instrument() const { return kind == "instrument"; }
+    bool liveInput() const { return id == "mire" || id == "spool"; }
     juce::Array<juce::var> parameters() const;
 };
 juce::File findResourceRoot();
@@ -36,6 +37,8 @@ public:
     juce::String captureRequestJSON(const juce::String&);
     int latency() const noexcept { return latencySamples; }
     int capacity() const noexcept { return blockCapacity; }
+    void setGeneration(std::uint64_t value) noexcept { generation = value; }
+    std::uint64_t getGeneration() const noexcept { return generation; }
     float* input(int channel) noexcept { return channel == 0 ? inL.data() : inR.data(); }
     float* output(int channel) noexcept { return channel == 0 ? outL.data() : outR.data(); }
     double* midi() noexcept { return events.data(); }
@@ -63,6 +66,7 @@ private:
     Product product;
     double rate;
     int blockCapacity = 0, eventCount = 0, outputEventCount = 0, latencySamples = 0;
+    std::uint64_t generation = 0;
     bool inRender = false;
     juce::String error;
     std::vector<float> inL, inR, outL, outR;

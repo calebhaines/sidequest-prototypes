@@ -20,6 +20,8 @@ jobs:
   apple-silicon:
     runs-on: macos-15
     timeout-minutes: 120
+    permissions:
+      contents: write
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
@@ -95,6 +97,13 @@ jobs:
           counts=collections.Counter(pathlib.Path(row['file']).stem for row in commands)
           for module in ['juce_audio_processors','juce_audio_processors_headless','juce_gui_basics']:
               if counts[module]!=1:raise SystemExit(f'{module} compiles {counts[module]} times; expected one shared implementation')
+          expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
+          for wrapper in ['juce_audio_plugin_client_VST3','juce_audio_plugin_client_AU_1','juce_audio_plugin_client_AU_2']:
+              if counts[wrapper]!=expected:raise SystemExit(f'{wrapper} compiles {counts[wrapper]} times; expected {expected}')
+          allowed={'juce_audio_plugin_client_VST3','juce_audio_plugin_client_AU_1','juce_audio_plugin_client_AU_2','juce_audio_plugin_client_utils'}
+          for name,count in counts.items():
+              if name.startswith('juce_audio_plugin_client_') and name not in allowed:raise SystemExit(f'Inactive wrapper {name} compiles {count} times')
+          if counts['juce_audio_plugin_client_utils'] not in (0,2*expected):raise SystemExit('Unexpected shared client utility compilation count')
           print(f'{len(commands)} translation units; audio processor and GUI implementations each compile once')
           PY
       - name: Compile every Kitchen instrument and effect
@@ -105,17 +114,19 @@ jobs:
         run: |
           python3 - <<'PY'
           import pathlib, subprocess, json
-          found=[]
-          for path in pathlib.Path('plugins/build').rglob('*.vst3'):
-              binaries=list((path/'Contents'/'MacOS').glob('*'))
-              if not binaries: raise SystemExit('Missing VST3 executable: '+str(path))
-              for binary in binaries:
-                  arch=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
-                  if 'arm64' not in arch.split(): raise SystemExit('Missing Apple Silicon slice: '+str(binary))
-                  found.append({'bundle':str(path),'architectures':arch})
-              subprocess.run(['codesign','--verify','--deep','--strict',str(path)],check=True)
           expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
-          if len(found)!=expected: raise SystemExit(f'Expected {expected} VST3s, found {len(found)}')
+          found=[]
+          for suffix,label in [('vst3','VST3'),('component','AU')]:
+              bundles=list(pathlib.Path('plugins/build').rglob('*.'+suffix))
+              if len(bundles)!=expected:raise SystemExit(f'Expected {expected} {label}s, found {len(bundles)}')
+              for path in bundles:
+                  binaries=list((path/'Contents'/'MacOS').glob('*'))
+                  if not binaries:raise SystemExit(f'Missing {label} executable: {path}')
+                  for binary in binaries:
+                      arch=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
+                      if 'arm64' not in arch.split():raise SystemExit('Missing Apple Silicon slice: '+str(binary))
+                      found.append({'bundle':str(path),'format':label,'architectures':arch})
+                  subprocess.run(['codesign','--verify','--deep','--strict',str(path)],check=True)
           pathlib.Path('plugins/generated/native-bundles.json').write_text(json.dumps(found,indent=2)+'\n')
           PY
       - name: Package the native suite
@@ -130,9 +141,9 @@ jobs:
           for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-bundles.json']:
               source=pathlib.Path('plugins/generated')/name
               if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
-          for name in ['README.md','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
+          for name in ['README.md','RELEASE.md','Install.command','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
               source=pathlib.Path('plugins')/name
-              if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
+              if source.exists():shutil.copy2(source,pathlib.Path('plugins/dist')/name)
           if pathlib.Path('plugins/licenses').exists():shutil.copytree('plugins/licenses','plugins/dist/licenses')
           PY
           git archive --format=tar.gz --output="plugins/dist/Kitchen-Source-${GITHUB_SHA}.tar.gz" HEAD plugins loom shared grain form music/form music/morsel/MORSEL-phonemizer-C-source.zip tine mire spool haze bower ravel fable roux batter proof marinade picnic morsel heirloom brine citrus package.json package-lock.json
@@ -148,6 +159,17 @@ jobs:
           pathlib.Path('plugins/dist/SOURCE.json').write_text(json.dumps({'repository':os.environ['GITHUB_SERVER_URL']+'/'+os.environ['GITHUB_REPOSITORY'],'commit':os.environ['GITHUB_SHA'],'juce':'8.0.12'},indent=2)+'\n')
           PY
           ditto -c -k --sequesterRsrc --keepParent plugins/dist plugins/Kitchen-Apple-Silicon.zip
+      - name: Publish immutable Kitchen native preview
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_tag=kitchen-native-v1.0.0-preview.1
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${release_tag}" >/dev/null 2>&1; then
+            echo "The native preview tag already exists; preserving its published binaries."
+            exit 0
+          fi
+          gh release create "$release_tag" plugins/Kitchen-Apple-Silicon.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Kitchen Native 1.0.0 Preview 1" --notes-file plugins/RELEASE.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:

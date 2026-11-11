@@ -41,7 +41,7 @@ juce::var atPath(juce::var value, const juce::var& path) {
 }
 }
 PluginProcessor::PluginProcessor(Product p, juce::File root)
-    : AudioProcessor(p.instrument() ? BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)
+    : AudioProcessor(p.instrument() && !p.liveInput() ? BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)
                                    : BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true).withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       juce::Thread("Kitchen preset preparation"), product(std::move(p)), resources(std::move(root)), metadata(product.parameters()) {
     cachedState = juce::JSON::toString(product.descriptor["defaultState"], true);
@@ -69,10 +69,11 @@ PluginProcessor::~PluginProcessor() {
 }
 bool PluginProcessor::isBusesLayoutSupported(const BusesLayout& layout) const {
     if (layout.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
-    return product.instrument() || layout.getMainInputChannelSet() == juce::AudioChannelSet::stereo() || layout.getMainInputChannelSet() == juce::AudioChannelSet::mono();
+    if (product.instrument() && !product.liveInput()) return layout.getMainInputChannelSet().isDisabled();
+    return (product.liveInput() && layout.getMainInputChannelSet().isDisabled()) || layout.getMainInputChannelSet() == juce::AudioChannelSet::stereo() || layout.getMainInputChannelSet() == juce::AudioChannelSet::mono();
 }
 void PluginProcessor::prepareToPlay(double sampleRate, int blockSize) {
-    rate.store(sampleRate); maxBlock.store(juce::jlimit(128, 65536, blockSize)); clockTracker.reset(); heldCount.fill(0);
+    rate.store(sampleRate); maxBlock.store(juce::jlimit(128, 65536, blockSize)); clockTracker.reset(); identities.clear(); for (auto& note : editorHeld) note.identity = 0;
     signalThreadShouldExit(); notify(); stopThread(-1); drainGarbage(); delete pending.exchange(nullptr); delete current; current = nullptr;
     resetRequested.store(false); outputPeak.store(0); outputRmsLeft.store(0); outputRmsRight.store(0);
     ++requestVersion; rebuildSynchronously(); startThread();
@@ -83,28 +84,31 @@ void PluginProcessor::rebuildSynchronously() {
     const auto version = requestVersion.load();
     juce::String state; { const juce::ScopedLock lock(stateLock); state = cachedState; }
     auto next = std::make_unique<NativeRuntime>(product, resources, rate.load(), maxBlock.load(), state, this, retireThunk);
+    next->setGeneration(version);
     std::vector<float> initialParameters; for (auto* parameter : hostParameters) initialParameters.push_back(parameter->getValue());
     next->prepareParameters(initialParameters);
-    if (!next->ready()) { const juce::ScopedLock lock(stateLock); status = next->getError(); readyFlag.store(false); builtVersion = version; return; }
-    appliedLatency.store(next->latency()); setLatencySamples(next->latency()); current = next.release(); readyFlag.store(true); runtimeFault.store(false);
-    std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); builtVersion = version;
+    if (!next->ready()) { const juce::ScopedLock lock(stateLock); status = next->getError(); readyFlag.store(false); builtVersion = version; failedVersion.store(version); completedVersion.store(version); return; }
+    appliedLatency.store(next->latency()); setLatencySamples(next->latency()); current = next.release(); installedVersion.store(version); readyFlag.store(true); runtimeFault.store(false);
+    std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); builtVersion = version; completedVersion.store(version);
     const juce::ScopedLock lock(stateLock); status = "Ready";
 }
 void PluginProcessor::requestRebuild() { ++requestVersion; notify(); }
 void PluginProcessor::run() {
     while (!threadShouldExit()) {
         drainGarbage();
-        if (appliedFlag.exchange(false)) { setLatencySamples(appliedLatency.load()); const juce::ScopedLock lock(stateLock); status = "Ready"; }
+        if (appliedFlag.exchange(false)) { setLatencySamples(appliedLatency.load()); if (installedVersion.load() >= requestVersion.load()) { const juce::ScopedLock lock(stateLock); status = "Ready"; } }
         const auto version = requestVersion.load();
         if (version != builtVersion) {
             juce::String state; { const juce::ScopedLock lock(stateLock); state = cachedState; status = "Preparing the saved sound"; }
             auto next = std::make_unique<NativeRuntime>(product, resources, rate.load(), maxBlock.load(), state, this, retireThunk);
+            next->setGeneration(version);
             std::vector<float> initialParameters; for (auto* parameter : hostParameters) initialParameters.push_back(parameter->getValue());
             next->prepareParameters(initialParameters);
             if (version == requestVersion.load() && !threadShouldExit()) {
                 builtVersion = version;
                 if (next->ready()) { delete pending.exchange(next.release()); const juce::ScopedLock lock(stateLock); status = "Prepared; waiting for the next audio block"; }
-                else { const juce::ScopedLock lock(stateLock); status = next->getError(); }
+                else { failedVersion.store(version); const juce::ScopedLock lock(stateLock); status = next->getError(); }
+                completedVersion.store(version);
             }
         }
         wait(20);
@@ -136,26 +140,45 @@ void PluginProcessor::readHostClock(std::array<double, clockFields>& c, int coun
     clockTracker.begin(c, rate.load(), count);
     for (int i = 0; i < clockFields; ++i) displayClock[static_cast<size_t>(i)].store(c[static_cast<size_t>(i)]);
 }
-std::uint32_t PluginProcessor::midiId(int pitch, int channel, bool on) noexcept {
-    const int key = juce::jlimit(0, 15, channel - 1) * 128 + juce::jlimit(0, 127, pitch); auto& count = heldCount[static_cast<size_t>(key)]; auto& ids = heldIds[static_cast<size_t>(key)];
-    if (on) { if (count == static_cast<int>(ids.size())) { for (int i = 1; i < count; ++i) ids[static_cast<size_t>(i - 1)] = ids[static_cast<size_t>(i)]; --count; } const auto id = ++noteSerial; ids[static_cast<size_t>(count++)] = id; return id; }
-    if (count == 0) return 0; const auto id = ids[0]; for (int i = 1; i < count; ++i) ids[static_cast<size_t>(i - 1)] = ids[static_cast<size_t>(i)]; --count; return id;
-}
-void PluginProcessor::addEvent(NativeRuntime& runtime, int offset, int type, int first, double second, int channel) noexcept {
+void PluginProcessor::addEvent(NativeRuntime& runtime, int offset, int type, int first, double second, int channel, std::uint32_t identity) noexcept {
     auto& count = runtime.midiCount();
-    if (count >= maxEvents - 1) { auto* row = runtime.midi() + (maxEvents - 1) * eventFields; std::fill(row, row + eventFields, 0); row[0] = offset; row[1] = allNotesOff; count = maxEvents; heldCount.fill(0); return; }
+    if (count >= maxEvents - 1) { auto* row = runtime.midi() + (maxEvents - 1) * eventFields; std::fill(row, row + eventFields, 0); row[0] = offset; row[1] = allNotesOff; count = maxEvents; identities.clear(); for (auto& note : editorHeld) note.identity = 0; return; }
+    const auto resolved = identities.event(type, first, channel, identity);
+    if (identities.evicted != 0) { auto* release = runtime.midi() + count++ * eventFields; writeMidiRow(release, offset, noteOff, first, 0, channel, identities.evicted); }
     auto* row = runtime.midi() + count++ * eventFields;
-    writeMidiRow(row, offset, type, first, second, channel, type == noteOn || type == noteOff ? midiId(first, channel, type == noteOn) : 0);
-    if (type == allNotesOff) heldCount.fill(0);
+    writeMidiRow(row, offset, type, first, second, channel, resolved);
+    if (type == allNotesOff) { identities.clear(); for (auto& note : editorHeld) note.identity = 0; }
+}
+bool PluginProcessor::waitForOfflineState() {
+    if (!isNonRealtime() || (current != nullptr && current->getGeneration() >= requestVersion.load())) return true;
+    notify(); const auto started = juce::Time::getMillisecondCounterHiRes();
+    while (completedVersion.load() < requestVersion.load()) {
+        if (juce::Time::getMillisecondCounterHiRes() - started > 65000) { runtimeFault.store(true); readyFlag.store(false); return false; }
+        juce::Thread::sleep(1);
+    }
+    if (failedVersion.load() == requestVersion.load()) { runtimeFault.store(true); readyFlag.store(false); return false; }
+    while (current != nullptr && garbageFifo.getFreeSpace() == 0) { if (juce::Time::getMillisecondCounterHiRes() - started > 65000) return false; notify(); juce::Thread::sleep(1); }
+    return true;
+}
+bool PluginProcessor::trackEditorNote(const UiMidi& event) noexcept {
+    if (event.type != noteOn && event.type != noteOff) return true;
+    for (auto& held : editorHeld) if (held.identity == event.identity) { if (event.type == noteOff) held.identity = 0; else held = event; return true; }
+    if (event.type == noteOff) return true;
+    for (auto& held : editorHeld) if (held.identity == 0) { held = event; return true; }
+    return false;
 }
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
     juce::ScopedNoDenormals noDenormals;
-    if (auto* next = pending.load(); next && (current == nullptr || garbageFifo.getFreeSpace() > 0)) {
-        next = pending.exchange(nullptr);
-        if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); appliedLatency.store(next->latency()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
+    for (;;) {
+        if (!waitForOfflineState()) { buffer.clear(); midiMessages.clear(); return; }
+        if (auto* next = pending.load(); next && (current == nullptr || garbageFifo.getFreeSpace() > 0)) {
+            next = pending.exchange(nullptr);
+            if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); appliedLatency.store(next->latency()); installedVersion.store(next->getGeneration()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
+        }
+        if (!isNonRealtime() || current == nullptr || current->getGeneration() >= requestVersion.load()) break;
     }
     if (current == nullptr || !current->ready()) { buffer.clear(); midiMessages.clear(); outputPeak.store(0); outputRmsLeft.store(0); outputRmsRight.store(0); readyFlag.store(false); return; }
-    if (resetRequested.exchange(false)) { current->reset(); heldCount.fill(0); clockTracker.reset(); }
+    if (resetRequested.exchange(false)) { current->reset(); identities.clear(); for (auto& note : editorHeld) note.identity = 0; clockTracker.reset(); }
     for (size_t i = 0; i < hostParameters.size(); ++i) { const float value = hostParameters[i]->getValue(); if (value != current->appliedParameter(static_cast<int>(i))) { current->parameter(static_cast<int>(i), value, true); lastParameters[i] = value; } }
     if (product.id == "ferment" && captureResults.getFreeSpace() > 0) {
         int first, count, second, remaining; captureRequests.prepareToRead(1, first, count, second, remaining);
@@ -171,7 +194,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         current->clock()[frames] = count; current->clock()[localFrame] = static_cast<double>(clockTracker.local + static_cast<std::uint64_t>(offset));
         if (c[validPpq] && c[playing]) current->clock()[ppq] += offset * c[tempo] / (60.0 * rate.load());
         if (c[validHostSample]) current->clock()[hostSample] += offset;
-        if (product.instrument()) { std::fill(current->input(0), current->input(0) + count, 0); std::fill(current->input(1), current->input(1) + count, 0); }
+        if (product.instrument() && !product.liveInput()) { std::fill(current->input(0), current->input(0) + count, 0); std::fill(current->input(1), current->input(1) + count, 0); }
         else { const int inputChannels = getTotalNumInputChannels(); for (int ch = 0; ch < 2; ++ch) { if (inputChannels > 0) std::memcpy(current->input(ch), buffer.getReadPointer(juce::jmin(ch, inputChannels - 1), offset), static_cast<size_t>(count) * sizeof(float)); else std::fill(current->input(ch), current->input(ch) + count, 0); } }
         current->setMidiCount(0);
         for (const auto event : midiMessages) {
@@ -182,7 +205,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             else if (message.isController()) addEvent(*current, at, message.isAllNotesOff() || message.isAllSoundOff() ? allNotesOff : controller, message.getControllerNumber(), message.getControllerValue() / 127.0, message.getChannel());
             else if (message.isPitchWheel()) addEvent(*current, at, pitchBend, 0, (message.getPitchWheelValue() - 8192) / 8192.0, message.getChannel());
         }
-        if (offset == 0) { int first, n, second, other; uiMidiFifo.prepareToRead(1024, first, n, second, other); for (int i = 0; i < n + other; ++i) { const auto& e = uiMidi[static_cast<size_t>(i < n ? first + i : second + i - n)]; addEvent(*current, 0, e.type, e.data1, e.data2, e.channel); } uiMidiFifo.finishedRead(n + other); }
+        if (offset == 0) {
+            int first, n, second, other; uiMidiFifo.prepareToRead(1024, first, n, second, other);
+            for (int i = 0; i < n + other; ++i) {
+                const auto& e = uiMidi[static_cast<size_t>(i < n ? first + i : second + i - n)];
+                if (e.type == -1) { for (auto& held : editorHeld) if (held.identity != 0) { const auto owned = held; held.identity = 0; addEvent(*current, 0, noteOff, owned.data1, 0, owned.channel, owned.identity); } continue; }
+                addEvent(*current, 0, e.type, e.data1, e.data2, e.channel, e.identity); if (!trackEditorNote(e)) addEvent(*current, 0, noteOff, e.data1, 0, e.channel, e.identity);
+            }
+            uiMidiFifo.finishedRead(n + other);
+            if (releaseEditorNotes.exchange(false)) for (auto& e : editorHeld) if (e.identity != 0) { const auto owned = e; e.identity = 0; addEvent(*current, 0, noteOff, owned.data1, 0, owned.channel, owned.identity); }
+        }
         current->process(count);
         for (int ch = 0; ch < juce::jmin(2, buffer.getNumChannels()); ++ch) std::memcpy(buffer.getWritePointer(ch, offset), current->output(ch), static_cast<size_t>(count) * sizeof(float));
         if (producesMidi()) for (int i = 0; i < current->midiOutputCount(); ++i) { const auto* e = current->midiOutput() + i * eventFields; const int at = offset + juce::jlimit(0, count - 1, static_cast<int>(e[0])), channel = juce::jlimit(1, 16, static_cast<int>(e[4])); if (e[1] == noteOn) outputMidi.addEvent(juce::MidiMessage::noteOn(channel, juce::jlimit(0, 127, static_cast<int>(e[2])), static_cast<float>(juce::jlimit(0.0, 1.0, e[3]))), at); else if (e[1] == noteOff) outputMidi.addEvent(juce::MidiMessage::noteOff(channel, juce::jlimit(0, 127, static_cast<int>(e[2]))), at); }
@@ -217,9 +249,18 @@ void PluginProcessor::parameterFromEditor(const juce::var& payload) {
 }
 void PluginProcessor::midiFromEditor(const juce::var& payload) {
     UiMidi event; const auto type = payload["type"].toString(); event.type = type == "on" || type == "noteOn" ? noteOn : type == "off" || type == "noteOff" ? noteOff : type == "cc" ? controller : type == "bend" ? pitchBend : allNotesOff;
+    if (event.type == allNotesOff && !static_cast<bool>(payload["explicit"])) return;
+    if (event.type == noteOn || event.type == noteOff) { const double identity = payload["nativeId"]; if (!std::isfinite(identity) || identity < 2147483648.0 || identity > 4294967295.0 || std::floor(identity) != identity) return; event.identity = static_cast<std::uint32_t>(identity); }
     event.channel = juce::jlimit(1, 16, payload["channel"].isVoid() ? 1 : static_cast<int>(payload["channel"])); event.data1 = event.type == controller ? static_cast<int>(payload["controller"]) : static_cast<int>(payload["pitch"]);
     event.data2 = event.type == controller || event.type == pitchBend ? static_cast<double>(payload["value"]) : payload["velocity"].isVoid() ? .8 : static_cast<double>(payload["velocity"]);
     int first, count, second, remaining; uiMidiFifo.prepareToWrite(1, first, count, second, remaining); if (count) { uiMidi[static_cast<size_t>(first)] = event; uiMidiFifo.finishedWrite(1); }
+}
+void PluginProcessor::releaseEditorMidi() noexcept {
+    // Keep close/reopen ordering in the MIDI queue, so a newly opened editor's
+    // first note cannot be consumed by a delayed release from the old editor.
+    int first, count, second, remaining; uiMidiFifo.prepareToWrite(1, first, count, second, remaining);
+    if (count) { UiMidi release; release.type = -1; uiMidi[static_cast<size_t>(first)] = release; uiMidiFifo.finishedWrite(1); }
+    else releaseEditorNotes.store(true);
 }
 void PluginProcessor::captureFromEditor(const juce::var& payload) {
     if (product.id != "ferment") return;

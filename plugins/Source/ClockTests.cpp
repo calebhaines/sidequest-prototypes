@@ -1,4 +1,7 @@
 #include "HostContract.h"
+#ifdef NDEBUG
+ #undef NDEBUG
+#endif
 #include <cassert>
 #include <iostream>
 int main() {
@@ -15,5 +18,22 @@ int main() {
     assert(event[0] == 17 && event[1] == 4 && event[2] == -.25 && event[3] == -.25 && event[4] == 3);
     kitchen::writeMidiRow(event.data(), 31, kitchen::noteOn, 60, .8, 2, 77);
     assert(event[0] == 31 && event[2] == 60 && event[3] == .8 && event[4] == 2 && event[5] == 77);
-    std::cout << "PASS native clock continuity, seek/loop revisions, stop and reset\n";
+    kitchen::MidiNoteIdentities notes;
+    const auto dawFirst = notes.event(kitchen::noteOn, 60, 1);
+    const std::uint32_t editorId = kitchen::MidiNoteIdentities::editorMask | 37;
+    assert(notes.event(kitchen::noteOn, 60, 1, editorId) == editorId);
+    const auto dawSecond = notes.event(kitchen::noteOn, 60, 1);
+    assert(notes.event(kitchen::noteOff, 60, 1, editorId) == editorId);
+    assert(notes.event(kitchen::noteOff, 60, 1) == dawFirst);
+    assert(notes.event(kitchen::noteOff, 60, 1) == dawSecond);
+    assert(notes.event(kitchen::noteOff, 60, 1) == 0);
+    notes.serial = kitchen::MidiNoteIdentities::editorMask - 1;
+    assert(notes.event(kitchen::noteOn, 62, 1) == 1);
+    notes.clear(); notes.serial = 0;
+    for (int i = 0; i < 8; ++i) { assert(notes.event(kitchen::noteOn, 60, 1) == static_cast<std::uint32_t>(i + 1)); assert(notes.evicted == 0); }
+    assert(notes.event(kitchen::noteOn, 60, 1) == 9 && notes.evicted == 1);
+    kitchen::writeMidiRow(event.data(), 29, kitchen::noteOff, 60, 0, 1, notes.evicted);
+    assert(event[0] == 29 && event[1] == kitchen::noteOff && event[5] == 1);
+    assert(notes.event(kitchen::noteOff, 60, 1) == 2);
+    std::cout << "PASS native clock continuity, seek/loop revisions, stop, reset and overlapping UI/DAW note ownership\n";
 }

@@ -49,7 +49,8 @@ private:
     std::unique_ptr<AudioPump> audio;
     kitchen::PluginEditor* editor = nullptr;
     int index = 0;
-    bool requested = false, success = true;
+    bool requested = false, neuralRequested = false, success = true;
+    juce::var parameterResult;
     double started = 0;
     void closeProduct() { audio.reset(); window.reset(); editor = nullptr; if (processor) processor->releaseResources(); processor.reset(); }
     void beginProduct() {
@@ -58,7 +59,7 @@ private:
         processor = std::make_unique<kitchen::PluginProcessor>(product, resources); processor->prepareToPlay(48000, 128);
         if (!processor->isReady()) throw std::runtime_error(processor->statusMessage().toStdString());
         window = std::make_unique<SmokeWindow>(); editor = new kitchen::PluginEditor(*processor); window->setContentOwned(editor, true); window->centreWithSize(1180, 820); window->setVisible(true); audio = std::make_unique<AudioPump>(*processor);
-        requested = false; started = juce::Time::getMillisecondCounterHiRes();
+        requested = neuralRequested = false; parameterResult = juce::var(); started = juce::Time::getMillisecondCounterHiRes();
     }
     void finishProduct(juce::var result) {
         auto* object = result.getDynamicObject(); if (object == nullptr) { object = new juce::DynamicObject(); result = juce::var(object); }
@@ -71,7 +72,14 @@ private:
     }
     void timerCallback() override {
         if (editor == nullptr) return;
-        if (juce::Time::getMillisecondCounterHiRes() - started > 45000) { auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", "Timed out waiting for original WebKit UI hydration and parameter roundtrip"); finishProduct(juce::var(failure)); return; }
+        const double timeout = ids[index] == "morsel" ? 120000 : 45000;
+        if (juce::Time::getMillisecondCounterHiRes() - started > timeout) { auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", neuralRequested ? "Timed out waiting for original WebKit neural/Signalsmith preparation" : "Timed out waiting for original WebKit UI hydration and parameter roundtrip"); finishProduct(juce::var(failure)); return; }
+        if (neuralRequested) {
+            const auto neural = editor->nativeNeuralSmokeResult(); if (!neural.isObject()) return;
+            parameterResult.getDynamicObject()->setProperty("neural", neural);
+            if (!static_cast<bool>(neural["pass"])) { parameterResult.getDynamicObject()->setProperty("pass", false); parameterResult.getDynamicObject()->setProperty("error", neural["error"]); }
+            finishProduct(parameterResult); return;
+        }
         if (!requested && editor->nativeUiReady()) { requested = true; editor->startNativeUiSmoke(); }
         const auto result = editor->nativeUiSmokeResult(); if (!result.isObject()) return;
         if (static_cast<bool>(result["pass"])) {
@@ -81,6 +89,7 @@ private:
             if (at < 0 || at >= parameters.size() || expected.isVoid() || std::abs(parameters[at]->getValue() - static_cast<float>(expected)) > .002f) { auto* failure = result.getDynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", "Original UI edit did not reach the native host parameter"); }
             else result.getDynamicObject()->setProperty("nativeParameterRoundTrip", true);
         }
+        if (ids[index] == "morsel" && static_cast<bool>(result["pass"])) { parameterResult = result; neuralRequested = true; editor->startNativeNeuralSmoke(); return; }
         finishProduct(result);
     }
     void writeReport() {

@@ -6,10 +6,13 @@ namespace kitchen {
 class PluginEditor final : public juce::AudioProcessorEditor, private juce::Timer {
 public:
     explicit PluginEditor(PluginProcessor&);
+    ~PluginEditor() override;
     void resized() override;
     bool nativeUiReady() const noexcept { return receivedReady; }
     void startNativeUiSmoke();
     juce::var nativeUiSmokeResult() const { return smokeResult; }
+    void startNativeNeuralSmoke();
+    juce::var nativeNeuralSmokeResult() const { return neuralSmokeResult; }
 private:
     PluginProcessor& processor;
     std::unique_ptr<juce::WebBrowserComponent> browser;
@@ -21,6 +24,7 @@ private:
     int ticks = 0;
     bool receivedReady = false;
     juce::var smokeResult;
+    juce::var neuralSmokeResult;
     std::optional<juce::WebBrowserComponent::Resource> resource(const juce::String&);
     void timerCallback() override;
     void sendState();

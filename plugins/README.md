@@ -10,7 +10,8 @@ Windows and Linux plugin binaries are not part of this implementation.
 
 Download the `Kitchen-Apple-Silicon` artifact from a successful
 [native build](https://github.com/calebhaines/sidequest-prototypes/actions/workflows/kitchen-vst3.yml).
-Extract its `Kitchen-Apple-Silicon.zip`. Copy whichever plugins you want:
+Extract its `Kitchen-Apple-Silicon.zip`. Run `Install.command` to install the
+suite in your user account, or copy whichever plugins you want:
 
 | Format | User installation folder |
 | --- | --- |
@@ -21,6 +22,10 @@ Restart or rescan plugins in your DAW. Instruments receive MIDI; effects
 receive stereo audio (mono input is duplicated to stereo). Use the original
 Kitchen editor to change sounds, samples, patterns and effect settings.
 Presets, samples and the current recipe are saved with the DAW plugin state.
+REDUCE and ROTISSERIE additionally expose an optional live audio input. Enable
+that bus in your DAW, route audio to it and use the instrument's DAW input
+switch. REDUCE's destination control routes the first input channel to its
+selected voice; ROTISSERIE receives stereo input.
 
 **Follow DAW pattern** plays an instrument's internal pattern from the DAW's
 playhead. Switch it off to sequence the instrument exclusively with DAW MIDI.
@@ -41,6 +46,8 @@ these numeric MIDI note values are authoritative.
 The bundles are ad-hoc signed and verified by the build. They are **not
 Apple Developer signed or notarized**. macOS may require local approval for
 downloaded plugins. No Xcode installation is needed to use the binaries.
+The installer verifies each signature and removes quarantine only from the
+Kitchen bundles it installs; it does not change system-wide security settings.
 
 ## Included products
 
@@ -109,10 +116,19 @@ There are specific remaining differences from browser audio:
   so held notes sustain a crossfaded loop in the prepared voiced region and
   release on key-up. Prepare changed words in the editor before playing them;
   the prepared voices are then retained in DAW state for editor-closed and
-  offline playback. Factory voices cover MIDI 36–84.
+  offline playback. Factory voices cover MIDI 36–84. Use DAW phrase playback
+  to audition steps with a custom word or voice; the keyboard audition uses
+  the current keyboard word and voice.
 - The browser's shared sample/pattern storage is not shared across DAW
   processes. Import samples or recipes into the plugin and save the DAW
   project to retain them.
+- Standalone ingredient previews that directly create browser audio, such as
+  MARINADE's Hear A/B controls, are not routed to the DAW. Use the instrument's
+  native keys or DAW MIDI. In BATTER, use a catalog sample in a lane before
+  auditioning it with a lane pad.
+- Browser microphone-device recording and ROTISSERIE's internal deck capture
+  are replaced by DAW recording followed by sample import. Live DAW input
+  routing in REDUCE and ROTISSERIE is supported separately.
 
 The original engines still allocate some per-note objects and use a garbage
 collected VM. This is not a claim of allocation-free or hard-real-time DSP.
