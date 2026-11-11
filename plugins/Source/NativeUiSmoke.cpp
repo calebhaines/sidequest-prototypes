@@ -50,6 +50,7 @@ private:
     kitchen::PluginEditor* editor = nullptr;
     int index = 0;
     bool requested = false, neuralRequested = false, success = true;
+    int storageStage = 0;
     juce::var parameterResult;
     double started = 0;
     void closeProduct() { audio.reset(); window.reset(); editor = nullptr; if (processor) processor->releaseResources(); processor.reset(); }
@@ -59,7 +60,7 @@ private:
         processor = std::make_unique<kitchen::PluginProcessor>(product, resources); processor->prepareToPlay(48000, 128);
         if (!processor->isReady()) throw std::runtime_error(processor->statusMessage().toStdString());
         window = std::make_unique<SmokeWindow>(); editor = new kitchen::PluginEditor(*processor); window->setContentOwned(editor, true); window->centreWithSize(1180, 820); window->setVisible(true); audio = std::make_unique<AudioPump>(*processor);
-        requested = neuralRequested = false; parameterResult = juce::var(); started = juce::Time::getMillisecondCounterHiRes();
+        requested = neuralRequested = false; storageStage = 0; parameterResult = juce::var(); started = juce::Time::getMillisecondCounterHiRes();
     }
     void finishProduct(juce::var result) {
         auto* object = result.getDynamicObject(); if (object == nullptr) { object = new juce::DynamicObject(); result = juce::var(object); }
@@ -74,6 +75,19 @@ private:
         if (editor == nullptr) return;
         const double timeout = ids[index] == "morsel" ? 120000 : 45000;
         if (juce::Time::getMillisecondCounterHiRes() - started > timeout) { auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", neuralRequested ? "Timed out waiting for original WebKit neural/Signalsmith preparation" : "Timed out waiting for original WebKit UI hydration and parameter roundtrip"); finishProduct(juce::var(failure)); return; }
+        if (storageStage != 0) {
+            if (storageStage == 2) { if (editor->nativeUiReady()) { storageStage = 3; editor->startNativeStorageSmoke(true); } return; }
+            const auto storage = editor->nativeStorageSmokeResult(); if (!storage.isObject()) return;
+            if (!static_cast<bool>(storage["pass"])) { parameterResult.getDynamicObject()->setProperty("pass", false); parameterResult.getDynamicObject()->setProperty("error", "Native editor preset storage roundtrip failed"); finishProduct(parameterResult); return; }
+            if (storageStage == 1) {
+                juce::MemoryBlock saved; processor->getStateInformation(saved);
+                const auto state = juce::JSON::parse(juce::String::fromUTF8(static_cast<const char*>(saved.getData()), static_cast<int>(saved.getSize())));
+                if (state["editorStorage"]["__kitchenNativeSmokePreset"].toString() != "saved-original-editor-preset") { parameterResult.getDynamicObject()->setProperty("pass", false); parameterResult.getDynamicObject()->setProperty("error", "Editor preset was not included in native host state"); finishProduct(parameterResult); return; }
+                processor->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+                window.reset(); editor = nullptr; window = std::make_unique<SmokeWindow>(); editor = new kitchen::PluginEditor(*processor); window->setContentOwned(editor, true); window->centreWithSize(1180, 820); window->setVisible(true); storageStage = 2; return;
+            }
+            parameterResult.getDynamicObject()->setProperty("editorStorageRoundTrip", storage); finishProduct(parameterResult); return;
+        }
         if (neuralRequested) {
             const auto neural = editor->nativeNeuralSmokeResult(); if (!neural.isObject()) return;
             parameterResult.getDynamicObject()->setProperty("neural", neural);
@@ -90,6 +104,7 @@ private:
             else result.getDynamicObject()->setProperty("nativeParameterRoundTrip", true);
         }
         if (ids[index] == "morsel" && static_cast<bool>(result["pass"])) { parameterResult = result; neuralRequested = true; editor->startNativeNeuralSmoke(); return; }
+        if (ids[index] == "brine" && static_cast<bool>(result["pass"])) { parameterResult = result; storageStage = 1; editor->startNativeStorageSmoke(false); return; }
         finishProduct(result);
     }
     void writeReport() {

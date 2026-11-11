@@ -13,7 +13,7 @@ public:
     bool acceptsMidi() const override { return product.instrument(); }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return product.instrument() ? 30.0 : 60.0; }
+    double getTailLengthSeconds() const override { return reportedTail.load(); }
     void prepareToPlay(double, int) override;
     void releaseResources() override;
     bool isBusesLayoutSupported(const BusesLayout&) const override;
@@ -33,10 +33,13 @@ public:
     juce::var editorSnapshot();
     juce::var editorClock() const;
     juce::var parameterSnapshot() const;
+    juce::var editorStorageSnapshot();
+    std::uint64_t editorStateRevision() const noexcept { return editorRevision.load(); }
     juce::String statusMessage();
     void stateFromEditor(const juce::var&);
     void parameterFromEditor(const juce::var&);
     void midiFromEditor(const juce::var&);
+    void storageFromEditor(const juce::var&);
     void releaseEditorMidi() noexcept;
     void captureFromEditor(const juce::var&);
     juce::Array<juce::var> captureReplies();
@@ -53,13 +56,16 @@ private:
     std::atomic<double> rate { 48000.0 };
     std::atomic<int> maxBlock { 512 };
     std::atomic<int> appliedLatency { 0 };
+    std::atomic<double> reportedTail { 0 };
     std::atomic<float> outputPeak { 0 }, outputRmsLeft { 0 }, outputRmsRight { 0 };
     std::atomic<std::uint64_t> requestVersion { 0 };
     std::atomic<std::uint64_t> completedVersion { 0 }, failedVersion { 0 };
     std::atomic<std::uint64_t> installedVersion { 0 };
+    std::atomic<std::uint64_t> editorRevision { 0 };
     std::uint64_t builtVersion = 0;
     juce::CriticalSection stateLock;
     juce::String cachedState, status;
+    juce::var editorStorage { new juce::DynamicObject() };
     juce::MidiBuffer outputMidi;
     ClockTracker clockTracker;
     std::array<std::atomic<double>, clockFields> displayClock{};

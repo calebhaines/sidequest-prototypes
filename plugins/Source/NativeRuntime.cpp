@@ -74,6 +74,7 @@ NativeRuntime::NativeRuntime(const Product& p, const juce::File& root, double sa
       inL(static_cast<size_t>(blockCapacity)), inR(inL.size()), outL(inL.size()), outR(inL.size()),
       events(maxEvents * eventFields), outputEvents(maxEvents * eventFields), parameters(maxParameters), appliedParameters(maxParameters, std::numeric_limits<double>::quiet_NaN()),
       retireOwner(ownerPtr), retireFunction(retire) {
+    cachedTail = product.instrument() ? 30.0 : 60.0;
     try {
         group = JSContextGroupCreate();
         JSClassDefinition definition = kJSClassDefinitionEmpty; definition.className = "KitchenNativeHost";
@@ -100,14 +101,14 @@ NativeRuntime::NativeRuntime(const Product& p, const juce::File& root, double sa
         api = JSValueToObject(context, property(context, global, "KitchenNativePlugin"), nullptr);
         if (api == nullptr) throw std::runtime_error("KitchenNativePlugin runtime is missing");
         JSValueProtect(context, api);
-        renderFunction = function("render"); parameterFunction = function("setParameter"); resetFunction = function("reset"); stateFunction = function("getStateJSON");
+        renderFunction = function("render"); parameterFunction = function("setParameter"); resetFunction = function("reset"); stateFunction = function("getStateJSON"); tailFunction = function("getTailSeconds");
         if (renderFunction == nullptr || parameterFunction == nullptr) throw std::runtime_error("Plugin runtime has no render/parameter contract");
         auto create = function("create");
         if (create == nullptr) throw std::runtime_error("Plugin runtime has no create contract");
         const JSValueRef args[] = { stringValue(context, p.id), JSValueMakeNumber(context, sampleRate), JSValueMakeNumber(context, blockCapacity), stringValue(context, state) };
         call(create, 4, args);
         if (error.isNotEmpty()) return;
-        waitUntilPrepared(); updateLatency();
+        waitUntilPrepared(); updateLatency(); updateTail();
     } catch (const std::exception& e) { error = e.what(); }
 }
 void NativeRuntime::waitUntilPrepared() {
@@ -141,11 +142,20 @@ void NativeRuntime::updateLatency() {
             if (value != nullptr && JSValueIsNumber(context, value)) latencySamples = juce::jlimit(0, 1048576, static_cast<int>(JSValueToNumber(context, value, nullptr)));
         }
 }
+void NativeRuntime::updateTail() {
+    if (!ready()) return;
+    const auto value = call(tailFunction, 0, nullptr, false);
+    if (value != nullptr && JSValueIsNumber(context, value)) {
+        const auto seconds = JSValueToNumber(context, value, nullptr);
+        if (std::isfinite(seconds) && seconds >= 0) cachedTail = product.instrument() && seconds <= 0 ? 30.0 : seconds;
+    }
+    tailDirty = false;
+}
 void NativeRuntime::prepareParameters(const std::vector<float>& values) {
     if (!ready()) return;
     try {
         for (size_t i = 0; i < values.size() && i < static_cast<size_t>(maxParameters); ++i) parameter(static_cast<int>(i), values[i]);
-        waitUntilPrepared(); updateLatency();
+        waitUntilPrepared(); updateLatency(); updateTail();
     } catch (const std::exception& e) { error = e.what(); }
 }
 
@@ -190,27 +200,36 @@ void NativeRuntime::parameter(int index, double value, bool realtime) noexcept {
     const JSValueRef args[] = { JSValueMakeNumber(context, index), JSValueMakeNumber(context, value) };
     const bool previousRender = inRender; inRender = inRender || realtime;
     call(parameterFunction, 2, args); inRender = previousRender;
-    if (error.isEmpty()) appliedParameters[static_cast<size_t>(index)] = value;
+    if (error.isEmpty()) { appliedParameters[static_cast<size_t>(index)] = value; tailDirty = true; }
 }
 void NativeRuntime::process(int count) noexcept {
     std::fill(outL.begin(), outL.begin() + count, 0.0f); std::fill(outR.begin(), outR.begin() + count, 0.0f);
     outputEventCount = 0; if (!ready()) return;
+    if (clockData[tempo] != previousTailTempo) { previousTailTempo = clockData[tempo]; tailDirty = true; }
     inRender = true; set(io, "eventCount", JSValueMakeNumber(context, eventCount)); set(io, "outputEventCount", JSValueMakeNumber(context, 0));
     const JSValueRef arg = JSValueMakeNumber(context, count); call(renderFunction, 1, &arg);
     const auto countValue = property(context, io, "outputEventCount");
     if (JSValueIsNumber(context, countValue)) outputEventCount = juce::jlimit(0, maxEvents, static_cast<int>(JSValueToNumber(context, countValue, nullptr)));
     inRender = false;
-    bool invalidOutput = false;
+    const bool monitorActivity = cachedTail <= 0;
+    bool invalidOutput = false, activity = monitorActivity && eventCount > 0;
     for (int i = 0; i < count; ++i) {
+        if (monitorActivity && !activity && (std::abs(inL[static_cast<size_t>(i)]) > 1.0e-9f || std::abs(inR[static_cast<size_t>(i)]) > 1.0e-9f)) activity = true;
         if (!std::isfinite(outL[static_cast<size_t>(i)])) { outL[static_cast<size_t>(i)] = 0; invalidOutput = true; }
         if (!std::isfinite(outR[static_cast<size_t>(i)])) { outR[static_cast<size_t>(i)] = 0; invalidOutput = true; }
     }
     if (invalidOutput && error.isEmpty()) error = "DSP emitted non-finite audio samples";
+    // Some original effects report no tail while sleeping. Refresh on their
+    // first active block, then retain the conservative bound until controls or
+    // host tempo change; host tail queries never enter JavaScript.
+    if (tailDirty || (activity && !previousActivity && cachedTail <= 0)) updateTail();
+    previousActivity = activity;
 }
 void NativeRuntime::reset() noexcept {
     if (!ready()) return;
     const bool previousRender = inRender; inRender = true;
     call(resetFunction, 0, nullptr); inRender = previousRender;
+    tailDirty = true; previousActivity = false;
 }
 juce::String NativeRuntime::stateJSON() { return text(context, call(stateFunction, 0, nullptr)); }
 juce::String NativeRuntime::captureRequestJSON(const juce::String& request) {

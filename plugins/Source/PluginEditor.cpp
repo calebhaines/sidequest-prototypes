@@ -3,19 +3,22 @@
 
 namespace kitchen {
 PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), processor(p) {
+    lastSnapshotRevision = processor.editorStateRevision();
     setResizable(true, true); setResizeLimits(620, 420, 2400, 1800); setSize(1180, 820);
     auto options = juce::WebBrowserComponent::Options().withNativeIntegrationEnabled()
         .withResourceProvider([this](const juce::String& path) { return resource(path); })
-        .withUserScript("window.KitchenPluginDescriptor=" + juce::JSON::toString(p.getProduct().descriptor, true) + ";window.KitchenPluginNative=true;")
+        .withUserScript("window.KitchenPluginDescriptor=" + juce::JSON::toString(p.getProduct().descriptor, true) + ";window.KitchenNativeEditorStorage=" + juce::JSON::toString(p.editorStorageSnapshot(), true) + ";window.KitchenPluginNative=true;")
         .withInitialisationData("kitchenProduct", p.getProduct().descriptor)
         .withEventListener("kitchenSetState", [this](const juce::var& value) { processor.stateFromEditor(value); })
         .withEventListener("kitchenSetParameter", [this](const juce::var& value) { processor.parameterFromEditor(value); })
         .withEventListener("kitchenMidi", [this](const juce::var& value) { processor.midiFromEditor(value); })
+        .withEventListener("kitchenEditorStorage", [this](const juce::var& value) { processor.storageFromEditor(value); })
         .withEventListener("kitchenCapture", [this](const juce::var& value) { processor.captureFromEditor(value); })
         .withEventListener("kitchenDownload", [this](const juce::var& value) { downloadToFile(value); })
         .withEventListener("kitchenReady", [this](const juce::var&) { receivedReady = true; sendState(); })
         .withEventListener("kitchenSmokeResult", [this](const juce::var& value) { smokeResult = value; })
         .withEventListener("kitchenNeuralSmokeResult", [this](const juce::var& value) { neuralSmokeResult = value; })
+        .withEventListener("kitchenStorageSmokeResult", [this](const juce::var& value) { storageSmokeResult = value; })
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
     browser = std::make_unique<juce::WebBrowserComponent>(options);
     addAndMakeVisible(*browser);
@@ -26,6 +29,10 @@ void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds())
 PluginEditor::~PluginEditor() { processor.releaseEditorMidi(); }
 void PluginEditor::startNativeUiSmoke() { smokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
 void PluginEditor::startNativeNeuralSmoke() { neuralSmokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runNeuralSmokeTest()"); }
+void PluginEditor::startNativeStorageSmoke(bool readOnly) {
+    storageSmokeResult = juce::var(); if (!browser) return;
+    browser->evaluateJavascript("void(function(){const r={pass:false};try{" + juce::String(readOnly ? "" : "localStorage.setItem('__kitchenNativeSmokePreset','saved-original-editor-preset');") + "r.value=localStorage.getItem('__kitchenNativeSmokePreset');r.pass=r.value==='saved-original-editor-preset';r.reopened=" + juce::String(readOnly ? "true" : "false") + ";}catch(e){r.error=String(e);}KitchenNativeEditor.send('kitchenStorageSmokeResult',r);})()");
+}
 std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const juce::String& requested) {
     auto path = juce::URL::removeEscapeChars(requested).upToFirstOccurrenceOf("?", false, false);
     while (path.startsWithChar('/')) path = path.substring(1);
@@ -44,7 +51,8 @@ std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const 
 }
 void PluginEditor::sendState() {
     if (!browser) return;
-    const auto value = processor.editorSnapshot(); browser->emitEventIfBrowserIsVisible("kitchenReady", value); browser->emitEventIfBrowserIsVisible("kitchenState", value);
+    lastSnapshotRevision = processor.editorStateRevision();
+    browser->emitEventIfBrowserIsVisible("kitchenReady", processor.editorSnapshot());
 }
 void PluginEditor::downloadToFile(const juce::var& payload) {
     if (downloadChooser) return;
@@ -65,6 +73,8 @@ void PluginEditor::downloadToFile(const juce::var& payload) {
 }
 void PluginEditor::timerCallback() {
     if (!browser) return;
+    const auto revision = processor.editorStateRevision();
+    if (revision != lastSnapshotRevision) { lastSnapshotRevision = revision; sendState(); }
     browser->emitEventIfBrowserIsVisible("kitchenClock", processor.editorClock());
     for (const auto& reply : processor.captureReplies()) browser->emitEventIfBrowserIsVisible("kitchenCapture", reply);
     const auto message = processor.statusMessage();

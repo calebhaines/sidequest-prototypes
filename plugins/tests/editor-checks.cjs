@@ -42,6 +42,10 @@ const instruments = instrumentDefinitions();
 function instrumentHTML(id) {
   if (process.env.KITCHEN_EDITOR_GENERATED) return fs.readFileSync(path.join(root, 'plugins/generated/ui', id + '.html'), 'utf8');
   const file = path.join(root, id === 'form' ? 'music/form/index.html' : id + '/index.html'); let html = fs.readFileSync(file, 'utf8');
+  if (['brine', 'heirloom', 'citrus'].includes(id) && !html.includes('KitchenEditorSetParameter')) {
+    const marker = new RegExp('scope\\.' + facades[ids.indexOf(id)] + '\\s*='); assert(marker.test(html), 'Native scalar parameter facade marker');
+    html = html.replace(marker, 'scope.KitchenEditorSetParameter=(path,value)=>{if(!path.startsWith("synth."))return undefined;return ' + (id === 'citrus' ? 'setSound' : 'setParam') + '(path.slice(6),value,{remembered:true})};$&');
+  }
   if (id === 'form' && !html.includes('FormApp')) {
     const marker = 'We.current={project:f,masterVolume:Te,solo:ae};'; assert(html.includes(marker), 'HOTPLATE facade injection needs its current reducer signature');
     const expose = 'window.FormApp={getState:()=>pn(We.current.project),getProject:()=>pn(We.current.project),isPlaying:()=>q,get engine(){return Ge.current},prepare:()=>il().preload(We.current.project.sounds),play:()=>_(!0),stop:()=>{_(!1);Ge.current?.stopAll()},panic:()=>{_(!1);Ge.current?.stopAll()},setTempo:value=>c({type:"change",update:p=>({...p,bpm:Math.max(40,Math.min(240,Number(value)||120))})}),loadState:value=>{const p=value?.project||value;if(!sf(p))throw Error("Invalid HOTPLATE project.");_(!1);Ge.current?.stopAll();c({type:"load",project:{...p,sounds:p.sounds.map(Ll)}});S(0);ce(null)}};';
@@ -76,10 +80,11 @@ async function serve() {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); return 'http://127.0.0.1:' + server.address().port;
 }
-async function pageFor(base, route) {
+async function pageFor(base, route, editorStorage = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
-  await context.addInitScript(() => {
+  await context.addInitScript(editorStorage => {
     window.__nativeMessages = []; window.__nativeAudioContexts = 0; window.__offlineRenders = 0; window.__editorWorkers = 0;
+    window.__nativeEditorStorage = { ...editorStorage }; window.KitchenNativeEditorStorage = { ...editorStorage };
     const Original = window.AudioContext;
     if (Original) { function Counted(...args) { window.__nativeAudioContexts++; return new Original(...args); } Counted.prototype = Original.prototype; window.AudioContext = Counted; window.webkitAudioContext = Counted; }
     const WorkerConstructor = window.Worker;
@@ -92,6 +97,7 @@ async function pageFor(base, route) {
       removeEventListener(id) { listeners.delete(id); },
       emitEvent(type, payload) {
         window.__nativeMessages.push({ type, payload });
+        if (type === 'kitchenEditorStorage') { if (payload.action === 'set') window.__nativeEditorStorage[payload.key] = payload.value; else if (payload.action === 'remove') delete window.__nativeEditorStorage[payload.key]; else if (payload.action === 'clear') window.__nativeEditorStorage = {}; }
         if (type === 'kitchenCapture') queueMicrotask(() => {
           if (payload.action === 'start') window.__captureTake = { token: 'native-test-take', capturing: true, sampleRate: 48000, tempo: 120, frames: 0, notes: [] };
           else if (payload.action === 'stop') { const count = window.__captureTestNotes || 1; window.__captureTake = { ...window.__captureTake, capturing: false, frames: count * 4800 + 4800, notes: Array.from({ length: count }, (_, index) => ({ pitch: 57 + index % 12, velocity: .8, startFrame: index * 4800 + 240, endFrame: index * 4800 + 2400 })) }; }
@@ -101,7 +107,7 @@ async function pageFor(base, route) {
         });
       }
     } };
-  });
+  }, editorStorage);
   await context.route('**/*', route => { const address = route.request().url(); if (/^(data:|blob:|about:)/.test(address) || new URL(address).origin === base) return route.continue(); report.external.push({ current, address }); return route.abort(); });
   const page = await context.newPage(); page.setDefaultTimeout(45000); page.on('pageerror', error => report.pageErrors.push({ current, message: error.message, stack: error.stack }));
   await page.goto(base + route, { waitUntil: 'load', timeout: 120000 }); return { context, page };
@@ -200,6 +206,10 @@ async function instrumentCheck(base, id) {
         const atCancel = __nativeMessages.length; app.engine.cancelNotes({ source: 'source-a' });
         const cancelled = __nativeMessages.slice(atCancel).filter(value => value.type === 'kitchenMidi' && value.payload.type === 'off');
         if (cancelled.length !== 1 || cancelled[0].payload.pitch !== 60) throw Error('PICNIC released an unrelated held source');
+        const update = []; update[index] = .375; const beforeHostAutomation = __nativeMessages.length; await KitchenNativeEditor.receive('kitchenParameters', update);
+        if (__nativeMessages.slice(beforeHostAutomation).some(value => value.type === 'kitchenMidi' && value.payload.type === 'off')) throw Error('Host automation cancelled a held PICNIC note');
+        const beforeRelease = __nativeMessages.length; app.engine.cancelNotes({ source: 'source-b' }); const released = __nativeMessages.slice(beforeRelease).filter(value => value.type === 'kitchenMidi');
+        if (released.length !== 1 || released[0].payload.type !== 'off' || released[0].payload.pitch !== 64) throw Error('PICNIC host automation lost ownership of its held note');
       }
       if (id === 'proof') {
         const beforeRetrigger = __nativeMessages.length; await app.engine.trigger(60, .8, 1, 'native-retrigger'); await app.engine.trigger(60, .8, 1, 'native-retrigger'); app.engine.release(60, 'native-retrigger');
@@ -247,6 +257,25 @@ async function instrumentCheck(base, id) {
       }); assert.equal(evidence.exports.wavHeader, 'RIFF'); assert.equal(evidence.exports.detachedCount, 1); assert.equal(evidence.exports.detachedText, 'detached-export'); assert(evidence.exports.explicitOfflineAudible); assert.equal(evidence.exports.nativeAudioContexts, 0);
     }
     const postAudition = await page.evaluate(() => ({ nativeAudioContexts: __nativeAudioContexts, errors: KitchenNativeEditor.diagnostics.errors })); assert.equal(postAudition.nativeAudioContexts, 0); assert.deepEqual(postAudition.errors, []);
+    if (['brine', 'heirloom', 'citrus'].includes(id)) {
+      const before = await page.evaluate(() => { if (typeof KitchenEditorSetParameter !== 'function') throw Error('Generated native scalar hook is missing'); document.activeElement?.blur(); return __nativeMessages.length; });
+      await page.keyboard.down('a'); await page.waitForFunction(before => __nativeMessages.slice(before).some(value => value.type === 'kitchenMidi' && value.payload.type === 'on'), before);
+      const held = await page.evaluate(async before => {
+        const on = __nativeMessages.slice(before).find(value => value.type === 'kitchenMidi' && value.payload.type === 'on').payload, path = 'synth.cutoff', parameters = KitchenNativeEditor.descriptor.parameters, index = parameters.findIndex(value => value.path === path);
+        if (index < 0) throw Error('Cutoff automation parameter is missing');
+        const start = __nativeMessages.length, updatesBefore = KitchenNativeEditor.diagnostics.scalarParameterUpdates, historyBefore = document.querySelector('#undoButton')?.disabled, list = []; list[index] = .35;
+        await KitchenNativeEditor.receive('kitchenParameters', list);
+        const changed = (await KitchenNativeEditor.getProject()).state?.synth || (await KitchenNativeEditor.getProject()).synth, expected = KitchenNativeEditor.actual(parameters[index], .35), messages = __nativeMessages.slice(start);
+        if (!Number.isFinite(changed?.cutoff) || Math.abs(changed.cutoff - expected) > 1e-6) throw Error('Scalar cutoff automation did not update the original state');
+        if (messages.some(value => value.type === 'kitchenMidi' && value.payload.type === 'off') || messages.some(value => value.type === 'kitchenSetState' || value.type === 'kitchenSetParameter')) throw Error('Host cutoff automation released a held keyboard note or echoed to native');
+        if (KitchenNativeEditor.diagnostics.scalarParameterUpdates <= updatesBefore) throw Error('Host cutoff automation fell back to full recipe restore');
+        if (document.querySelector('#undoButton')?.disabled !== historyBefore) throw Error('Host cutoff automation created an undo entry');
+        return { nativeId: on.nativeId, pitch: on.pitch, scalarUpdates: KitchenNativeEditor.diagnostics.scalarParameterUpdates - updatesBefore, keyupStart: __nativeMessages.length };
+      }, before);
+      await page.keyboard.up('a');
+      await page.waitForFunction(({ at, nativeId }) => __nativeMessages.slice(at).some(value => value.type === 'kitchenMidi' && value.payload.type === 'off' && value.payload.nativeId === nativeId), { at: held.keyupStart, nativeId: held.nativeId });
+      evidence.physicalKeyAutomation = { retainedDuringHostUpdate: true, sameNativeIdOnRelease: true, nativeId: held.nativeId, scalarUpdates: held.scalarUpdates };
+    }
     if (['form', 'brine', 'morsel'].includes(id)) { evidence.nativeSmoke = await page.evaluate(() => KitchenNativeEditor.runSmokeTest()); assert.equal(evidence.nativeSmoke.pass, true, JSON.stringify(evidence.nativeSmoke)); }
     const button = page.locator('button#playButton,button#play-button,button#play').first();
     if (await button.count()) { await button.click({ force: true }); assert.match(await page.locator('#kitchenNativeStatus').textContent(), /DAW/); }
@@ -273,6 +302,45 @@ async function neuralCheck(base) {
     });
     assert.equal(result.pass, true, JSON.stringify(result)); assert.equal(result.nativeStateMessages, 0); assert.equal(result.nativeAudioContexts, 0); assert(result.workersCreated >= 2); assert.equal(result.word, 'zucchini'); assert.equal(result.signalsmith.fitCalls, 1); return result;
   } finally { await context.close(); }
+}
+async function storageCheck(base) {
+  let first, second, isolated; const name = 'Native persisted house recipe';
+  try {
+    first = await pageFor(base, '/instrument/form/');
+    await first.page.waitForFunction(() => KitchenNativeEditor.diagnostics.attached);
+    await first.page.evaluate(async () => { await KitchenNativeEditor.receive('kitchenReady', { state: await KitchenNativeEditor.getProject(), editorStorage: __nativeEditorStorage }); window.__storageStart = __nativeMessages.length; });
+    await first.page.locator('.deep-recipe-toggle').click();
+    await first.page.getByRole('button', { name: 'Save sound as preset', exact: true }).click();
+    const dialog = first.page.getByRole('dialog').filter({ hasText: 'Save the house recipe.' }); await dialog.getByRole('textbox').fill(name); await dialog.getByRole('button', { name: 'Save sound', exact: true }).click();
+    await first.page.waitForFunction(name => (__nativeEditorStorage['form-custom-presets'] || '').includes(name), name);
+    const saved = await first.page.evaluate(async () => {
+      sessionStorage.setItem('session-only', 'ephemeral'); localStorage.setItem('editor-theme-test', 'sage');
+      const pattern = { format: 'musiclab-pattern', version: 1, name: 'Native saved note pattern', sourceApp: 'FORM', kind: 'notes', tempo: 120, swing: 0, lengthBeats: 4, meter: [4, 4], voices: [{ id: 'voice-0', name: 'Burner 1' }], notes: [{ id: 'one', voice: 'voice-0', pitch: 36, beat: 0, duration: .25, velocity: .8, probability: 1 }], tags: [] };
+      const metadata = await MusicLabPatterns.save(pattern); await new Promise(resolve => setTimeout(resolve, 500));
+      const messages = __nativeMessages.slice(__storageStart);
+      return { editorStorage: __nativeEditorStorage, patternId: metadata.id, presetName: JSON.parse(localStorage.getItem('form-custom-presets'))[0].name, storageDeltas: messages.filter(value => value.type === 'kitchenEditorStorage').length, dspStateMessages: messages.filter(value => value.type === 'kitchenSetState').length, parameterMessages: messages.filter(value => value.type === 'kitchenSetParameter').length, sameStorageObject: localStorage === localStorage, persistentPatterns: MusicLabHost.patternLibrary.persistent };
+    });
+    assert.equal(saved.presetName, name); assert(saved.storageDeltas >= 3); assert.equal(saved.dspStateMessages, 0); assert.equal(saved.parameterMessages, 0); assert(saved.sameStorageObject); assert(saved.persistentPatterns);
+    await first.context.close(); first = null;
+    const hostSavedState = JSON.parse(JSON.stringify({ editorStorage: saved.editorStorage }));
+    second = await pageFor(base, '/instrument/form/', hostSavedState.editorStorage); await second.page.waitForFunction(() => KitchenNativeEditor.diagnostics.attached);
+    await second.page.evaluate(async () => KitchenNativeEditor.receive('kitchenReady', { state: await KitchenNativeEditor.getProject(), editorStorage: __nativeEditorStorage }));
+    await second.page.getByRole('button', { name: 'Sound recipes', exact: true }).click(); await second.page.getByRole('textbox', { name: 'Search presets' }).fill(name); await second.page.getByText(name, { exact: true }).waitFor();
+    const restored = await second.page.evaluate(async ({ patternId, editorStorage }) => {
+      const before = __nativeMessages.length, pattern = await MusicLabPatterns.get(patternId), entries = await MusicLabPatterns.list();
+      if (sessionStorage.getItem('session-only') !== null || localStorage.getItem('editor-theme-test') !== 'sage') throw Error('Persistent/local and ephemeral/session storage were mixed');
+      localStorage.setItem('temporary-preset-key', 'test'); localStorage.removeItem('temporary-preset-key'); localStorage.clear();
+      await KitchenNativeEditor.receive('kitchenReady', { editorStorage });
+      const messages = __nativeMessages.slice(before); let quota = '', emptyKey = '';
+      try { localStorage.setItem('too-large', 'x'.repeat(16 * 1024 * 1024)); } catch (error) { quota = error.name; }
+      try { localStorage.setItem('', 'empty'); } catch (error) { emptyKey = error.name; }
+      return { patternName: pattern.name, patternNotes: pattern.notes.length, listedPattern: entries.some(value => value.id === patternId && value.notes === 1), sessionCleared: sessionStorage.getItem('session-only') === null, restoredPreset: (localStorage.getItem('form-custom-presets') || '').includes('Native persisted house recipe'), actions: messages.filter(value => value.type === 'kitchenEditorStorage').map(value => value.payload.action), dspStateMessages: messages.filter(value => value.type === 'kitchenSetState').length, parameterMessages: messages.filter(value => value.type === 'kitchenSetParameter').length, quota, emptyKey };
+    }, { patternId: saved.patternId, editorStorage: hostSavedState.editorStorage });
+    assert.equal(restored.patternName, 'Native saved note pattern'); assert.equal(restored.patternNotes, 1); assert(restored.listedPattern); assert(restored.sessionCleared); assert(restored.restoredPreset); assert.deepEqual(restored.actions, ['set', 'remove', 'clear']); assert.equal(restored.dspStateMessages, 0); assert.equal(restored.parameterMessages, 0); assert.equal(restored.quota, 'QuotaExceededError'); assert.equal(restored.emptyKey, 'DataError');
+    isolated = await pageFor(base, '/instrument/form/'); await isolated.page.waitForFunction(() => KitchenNativeEditor.diagnostics.attached);
+    assert.equal(await isolated.page.evaluate(() => (localStorage.getItem('form-custom-presets') || '').includes('Native persisted house recipe')), false);
+    return { originalPresetVisibleAfterReopen: true, nativeHostStateRestored: true, pluginInstancesIsolated: true, patternLibraryPersistent: true, storageDeltas: saved.storageDeltas, ...restored };
+  } finally { await first?.context.close(); await second?.context.close(); await isolated?.context.close(); }
 }
 async function effectCheck(base, definition) {
   const { context, page } = await pageFor(base, '/effect/' + definition.id + '/');
@@ -331,8 +399,10 @@ async function effectCheck(base, definition) {
   try {
     const base = await serve(); browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
     if (process.env.KITCHEN_EDITOR_NEURAL_SMOKE) { await check('MORSEL real neural word and Signalsmith note', () => neuralCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
+    if (process.env.KITCHEN_EDITOR_STORAGE_SMOKE) { await check('Native editor presets and pattern storage survive reopen', () => storageCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     for (const id of ids) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(id)) await check('Original instrument editor / ' + id, () => instrumentCheck(base, id));
     for (const definition of effects) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(definition.id)) await check('Native effect editor / ' + definition.id, () => effectCheck(base, definition));
+    if (!process.env.KITCHEN_EDITOR_FILTER) await check('Native editor presets and pattern storage survive reopen', () => storageCheck(base));
     assert.deepEqual(report.pageErrors, [], 'No hidden editor errors'); save(); console.log('Kitchen plugin editors:', report.passed.length, 'groups passed.');
   } catch (error) { report.failure = { current, message: error.stack || String(error) }; console.error(error); process.exitCode = 1; }
   finally { await browser?.close(); if (server) await new Promise(resolve => server.close(resolve)); save(); }

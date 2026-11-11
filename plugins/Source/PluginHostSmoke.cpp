@@ -75,6 +75,9 @@ int main(int argc, char* argv[]) {
             const auto offline = render(*restored, playHead, descriptions[0]->isInstrument);
             if (offline.rms < 1.0e-8 || std::abs(restored->getParameters()[changedParameter]->getValue() - savedParameterValue) > .002f) throw std::runtime_error("Prepared-to-offline saved-state restoration failed");
             row->setProperty("offlinePreparedRestore", true);
+            const auto tailSeconds = restored->getTailLengthSeconds(); row->setProperty("tailSeconds", tailSeconds);
+            if (descriptions[0]->name.containsIgnoreCase("TRACK EQ") && std::abs(tailSeconds - .1) > 1.0e-5) throw std::runtime_error("Compiled EQ tail differs from its canonical 0.1 second bound");
+            if (descriptions[0]->name.containsIgnoreCase("HOOD") && tailSeconds <= 0) throw std::runtime_error("Compiled HOOD reverb did not report its decay tail");
             row->setProperty("name", descriptions[0]->name); row->setProperty("passed", true); row->setProperty("rms", audio.rms); row->setProperty("peak", audio.peak); row->setProperty("firstSample", audio.first); row->setProperty("latencySamples", restored->getLatencySamples()); row->setProperty("stateBytes", static_cast<juce::int64>(saved.getSize())); row->setProperty("editorClosed", true); row->setProperty("clockChanges", true); restored->releaseResources();
         } catch (const std::exception& e) { success = false; row->setProperty("passed", false); row->setProperty("error", e.what()); }
         rows.add(juce::var(row)); std::cout << juce::JSON::toString(juce::var(row), true).toStdString() << std::endl;

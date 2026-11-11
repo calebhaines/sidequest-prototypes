@@ -99,6 +99,12 @@ function(kitchen_add_product id display_name code kind)
         return()
     endif()
     set(target "Kitchen_${id}")
+    set(bundle_name "${display_name}")
+    # Keep the visible effect spelling while avoiding Apple's codesign crash
+    # on the accented SAUTÉ executable/bundle path.
+    if(id STREQUAL "saute")
+        set(bundle_name "SAUTE")
+    endif()
     set(is_instrument FALSE)
     set(needs_midi FALSE)
     set(midi_output FALSE)
@@ -121,7 +127,8 @@ function(kitchen_add_product id display_name code kind)
         PLUGIN_MANUFACTURER_CODE Ktch
         PLUGIN_CODE ${code}
         FORMATS ${formats}
-        PRODUCT_NAME "Kitchen ${display_name}"
+        PRODUCT_NAME "Kitchen ${bundle_name}"
+        PLUGIN_NAME "Kitchen ${display_name}"
         IS_SYNTH ${is_instrument}
         NEEDS_MIDI_INPUT ${needs_midi}
         NEEDS_MIDI_OUTPUT ${midi_output}

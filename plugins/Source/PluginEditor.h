@@ -13,6 +13,8 @@ public:
     juce::var nativeUiSmokeResult() const { return smokeResult; }
     void startNativeNeuralSmoke();
     juce::var nativeNeuralSmokeResult() const { return neuralSmokeResult; }
+    void startNativeStorageSmoke(bool readOnly);
+    juce::var nativeStorageSmokeResult() const { return storageSmokeResult; }
 private:
     PluginProcessor& processor;
     std::unique_ptr<juce::WebBrowserComponent> browser;
@@ -22,9 +24,11 @@ private:
     juce::String lastStatus;
     juce::String lastParameters;
     int ticks = 0;
+    std::uint64_t lastSnapshotRevision = 0;
     bool receivedReady = false;
     juce::var smokeResult;
     juce::var neuralSmokeResult;
+    juce::var storageSmokeResult;
     std::optional<juce::WebBrowserComponent::Resource> resource(const juce::String&);
     void timerCallback() override;
     void sendState();

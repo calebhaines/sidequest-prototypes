@@ -167,6 +167,13 @@ for (const product of products) {
   if (product.kind === 'instrument') {
     const name = product.id === 'form' ? 'music/form/index.html' : product.id + '/index.html';
     html = read(name);
+    if (['brine', 'heirloom', 'citrus'].includes(product.id)) {
+      const facade = { brine: 'BrineApp', heirloom: 'HeirloomApp', citrus: 'CitrusApp' }[product.id];
+      const marker = new RegExp('scope\\.' + facade + '\\s*=');
+      if (!marker.test(html)) throw Error('Native scalar parameter hook needs an updated facade: ' + product.id);
+      const setter = product.id === 'citrus' ? 'setSound' : 'setParam';
+      html = html.replace(marker, 'scope.KitchenEditorSetParameter=(path,value)=>{if(!path.startsWith("synth."))return undefined;return ' + setter + '(path.slice(6),value,{remembered:true})};$&');
+    }
     if (product.id === 'form' && !/\b\w+\.FormApp\s*=/.test(html)) {
       const host = read('loom/instrument-host.js'), match = host.match(/const expose = ('(?:[^'\\]|\\.)*');/);
       if (!match) throw Error('HOTPLATE canonical facade exposure was not found');

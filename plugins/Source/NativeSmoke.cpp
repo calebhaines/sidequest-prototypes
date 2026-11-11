@@ -90,6 +90,9 @@ int main(int argc, char* argv[]) {
                 const auto parameters = product.parameters();
                 std::vector<float> values; for (const auto& parameter : parameters) values.push_back(static_cast<float>(parameter["defaultNormalized"])); runtime.prepareParameters(values);
                 const auto audio = render(runtime, product.instrument(), 48000);
+                row->setProperty("tailSeconds", runtime.tailSeconds());
+                if (id == "track-eq" && std::abs(runtime.tailSeconds() - .1) > 1.0e-5) throw std::runtime_error("Native EQ tail differs from its canonical 0.1 second bound");
+                if (id == "undertow" && runtime.tailSeconds() <= 0) throw std::runtime_error("Native HOOD reverb did not report its decay tail");
                 auto* timing = new juce::DynamicObject(); timing->setProperty("avg", audio.averageMicros); timing->setProperty("p95", audio.p95Micros); timing->setProperty("p99", audio.p99Micros); timing->setProperty("max", audio.maxMicros); row->setProperty("callbackMicros", juce::var(timing)); row->setProperty("realtimeRatio", audio.realtimeRatio);
                 if (audio.realtimeRatio > 1.0) throw std::runtime_error("Native plugin average processing time exceeds the audio duration");
                 if (audio.rms < 1.0e-8 || audio.first < 0) throw std::runtime_error("Native plugin rendered silence from MIDI/audio input");

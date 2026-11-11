@@ -36,6 +36,7 @@ public:
     juce::String stateJSON();
     juce::String captureRequestJSON(const juce::String&);
     int latency() const noexcept { return latencySamples; }
+    double tailSeconds() const noexcept { return cachedTail; }
     int capacity() const noexcept { return blockCapacity; }
     void setGeneration(std::uint64_t value) noexcept { generation = value; }
     std::uint64_t getGeneration() const noexcept { return generation; }
@@ -62,12 +63,15 @@ private:
     JSClassRef globalClass = nullptr;
     JSObjectRef api = nullptr, io = nullptr;
     JSObjectRef renderFunction = nullptr, parameterFunction = nullptr, resetFunction = nullptr, stateFunction = nullptr;
+    JSObjectRef tailFunction = nullptr;
     juce::File resources;
     Product product;
     double rate;
     int blockCapacity = 0, eventCount = 0, outputEventCount = 0, latencySamples = 0;
     std::uint64_t generation = 0;
     bool inRender = false;
+    bool tailDirty = true, previousActivity = false;
+    double cachedTail = 60, previousTailTempo = 120;
     juce::String error;
     std::vector<float> inL, inR, outL, outR;
     std::vector<double> events, outputEvents, parameters, appliedParameters;
@@ -78,6 +82,7 @@ private:
     void evaluate(const juce::String&, const juce::String&);
     void waitUntilPrepared();
     void updateLatency();
+    void updateTail();
     JSValueRef call(JSObjectRef, size_t, const JSValueRef*, bool captureError = true);
     JSObjectRef function(const char*);
     void set(JSObjectRef, const char*, JSValueRef);

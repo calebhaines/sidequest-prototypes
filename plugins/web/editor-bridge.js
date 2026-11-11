@@ -9,8 +9,10 @@
   let disposed = false, applying = 0, restored = false, snapshotBusy = false, snapshotAgain = false, changed = false, serial = 0, lastJSON = '', lastNativeJSON = '', status = '';
   let snapshotTimer = 0, parameterTimer = 0, attachTimer = 0, nativeState, generation = 0, preparedBank = null, preparation = null, pendingParameters = null, parameterRestoreBusy = false, previousProject = null, stateRestorePending = null, nativeIdSerial = 0x80000000;
   const subscriptions = new Map(), backendListeners = [], controls = new Map(), held = new Map(), heldChannels = new Map(), heldIds = new Map(), releases = new Map(), timers = new Set(), patched = new WeakSet(), contexts = new Set();
-  const parameterValues = new Map(), eventQueue = [], storageValues = Object.create(null);
-  const diagnostics = { nativeAudioContexts: 0, offlineContexts: 0, snapshots: 0, parameterMessages: 0, midiMessages: 0, restored: false, ready: false, errors: [] };
+  const parameterValues = new Map(), eventQueue = [], storageValues = Object.create(null), sessionValues = Object.create(null);
+  const patternStoragePrefix = '__kitchenPattern:', storageLimit = 16 * 1024 * 1024;
+  let localStorageFacade, sessionStorageFacade;
+  const diagnostics = { nativeAudioContexts: 0, offlineContexts: 0, snapshots: 0, parameterMessages: 0, midiMessages: 0, scalarParameterUpdates: 0, restored: false, ready: false, errors: [] };
   let clock = { tempo: 120, beat: 0, playing: false, sampleRate: 48000, samplePosition: 0, revision: 0, timeSigNum: 4, timeSigDen: 4 };
   const id = () => String(descriptor.sourceId || descriptor.instrumentId || descriptor.effectId || descriptor.id || '').replace(/^(?:instrument|effect)[:-]/, '');
   const instrument = () => descriptor.kind !== 'effect' && descriptor.kind !== 'utility' && !!facades[id()];
@@ -30,7 +32,7 @@
   function connectBackend() {
     if (backend || !global.__JUCE__?.backend) return;
     backend = global.__JUCE__.backend;
-    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenClock', 'kitchenStatus', 'kitchenMeters', 'kitchenCapture', 'kitchenDownloadResult']) {
+    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenClock', 'kitchenStatus', 'kitchenMeters', 'kitchenCapture', 'kitchenDownloadResult', 'kitchenEditorStorage']) {
       const listener = value => receive(type, parse(value));
       backendListeners.push([type, backend.addEventListener?.(type, listener), listener]);
     }
@@ -38,9 +40,36 @@
   }
   function subscribe(type, callback) { if (!subscriptions.has(type)) subscriptions.set(type, new Set()); subscriptions.get(type).add(callback); return () => subscriptions.get(type)?.delete(callback); }
   function setStatus(message) { status = String(message || ''); const output = document.getElementById('kitchenNativeStatus'); if (output && output.textContent !== status) output.textContent = status; notify('status', status); }
-  function privateStorage() {
-    const methods = { getItem: key => own(storageValues, String(key)) ? storageValues[String(key)] : null, setItem(key, value) { storageValues[String(key)] = String(value); scheduleSnapshot(); }, removeItem(key) { delete storageValues[String(key)]; }, clear() { for (const key of Object.keys(storageValues)) delete storageValues[key]; }, key: index => Object.keys(storageValues)[index] ?? null };
-    return new Proxy(methods, { get(target, key) { return key === 'length' ? Object.keys(storageValues).length : key in target ? target[key] : storageValues[key]; }, set(_, key, value) { methods.setItem(key, value); return true; }, deleteProperty(_, key) { methods.removeItem(key); return true; }, ownKeys: () => Object.keys(storageValues), getOwnPropertyDescriptor(_, key) { return own(storageValues, key) ? { value: storageValues[key], configurable: true, enumerable: true, writable: true } : undefined; } });
+  function storageSize(values) { return new TextEncoder().encode(JSON.stringify(values)).length; }
+  function recoveryStorageKey() { return ({ grain: 'grain-drum-machine-v2', tine: 'tine-drum-machine-v1', form: 'form-studio-v2', batter: 'kitchen.batter.project.v1', bower: 'musiclab-bower-score-v1', morsel: 'kitchen-morsel-project-v1' })[id()] || id() + '-project-v1'; }
+  function privateStorage(values, persistent) {
+    const methods = {
+      getItem: key => own(values, String(key)) ? values[String(key)] : null,
+      setItem(key, value) {
+        key = String(key); value = String(value); if (values[key] === value) return;
+        // Original async imports commit their project before writing recovery.
+        // Preset/library metadata writes never trigger this DSP snapshot path.
+        if (persistent && key === recoveryStorageKey()) { scheduleParameters(); scheduleSnapshot(); }
+        if (!key.length) throw new DOMException('Use a nonempty key for plugin editor storage.', 'DataError');
+        if (key.length > 1024 || storageSize({ ...values, [key]: value }) > storageLimit) { const message = 'Plugin editor storage is full (16 MiB). Export or remove a saved preset or pattern first.'; setStatus(message); throw new DOMException(message, 'QuotaExceededError'); }
+        values[key] = value; if (persistent) send('kitchenEditorStorage', { action: 'set', key, value });
+      },
+      removeItem(key) { key = String(key); if (!own(values, key)) return; delete values[key]; if (persistent) send('kitchenEditorStorage', { action: 'remove', key }); },
+      clear() { if (!Object.keys(values).length) return; for (const key of Object.keys(values)) delete values[key]; if (persistent) send('kitchenEditorStorage', { action: 'clear' }); },
+      key: index => Object.keys(values)[index] ?? null
+    };
+    return new Proxy(methods, { get(target, key) { return key === 'length' ? Object.keys(values).length : key in target ? target[key] : values[key]; }, set(_, key, value) { methods.setItem(key, value); return true; }, deleteProperty(_, key) { methods.removeItem(key); return true; }, ownKeys: () => Object.keys(values), getOwnPropertyDescriptor(_, key) { return own(values, key) ? { value: values[key], configurable: true, enumerable: true, writable: true } : undefined; } });
+  }
+  function restoreEditorStorage(value) {
+    value = parse(value); if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    for (const key of Object.keys(storageValues)) if (!own(value, key)) delete storageValues[key];
+    for (const [key, item] of Object.entries(value)) if (typeof item === 'string') storageValues[key] = item;
+    global.KitchenNativeEditorStorage = { ...storageValues }; notify('storage', { ...storageValues });
+  }
+  function installEditorStorage() {
+    restoreEditorStorage(global.KitchenNativeEditorStorage || {});
+    localStorageFacade = privateStorage(storageValues, true); sessionStorageFacade = privateStorage(sessionValues, false);
+    try { Object.defineProperty(global, 'localStorage', { configurable: true, get: () => localStorageFacade }); Object.defineProperty(global, 'sessionStorage', { configurable: true, get: () => sessionStorageFacade }); } catch (error) { report(error); }
   }
   function silenceBrowserAudio() {
     if (!instrument()) return;
@@ -74,11 +103,16 @@
     }
     for (const key of ['AudioContext', 'webkitAudioContext']) Object.defineProperty(global, key, { value: ControllerAudioContext, configurable: true, writable: true });
     if (global.navigator?.mediaDevices?.getUserMedia) Object.defineProperty(global.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => { throw Error('Record audio in your DAW, then import the recording into this instrument. The editor does not open a separate microphone.'); } });
-    try { Object.defineProperty(global, 'localStorage', { configurable: true, get: privateStorage }); Object.defineProperty(global, 'sessionStorage', { configurable: true, get: privateStorage }); } catch (_) {}
     const library = new Map();
-    const collection = Object.freeze({ persistent: false, list: async () => [...library.values()], get: async key => library.get(String(key)) || null, save: async value => { const key = String(value.id || 'item-' + (++serial)); library.set(key, value); return key; }, remove: async key => library.delete(String(key)) });
+    const collection = Object.freeze({ persistent: false, list: async () => [...library.values()], get: async key => library.get(String(key)) || null, save: async value => { const key = String(value.id || 'item-' + (++serial)); library.set(key, value); setStatus('This shared audio shelf lasts until the editor closes. Export the sample or save it in the instrument’s project to keep it.'); return { ...value, id: key }; }, remove: async key => library.delete(String(key)) });
+    const patternRecords = () => Object.keys(storageValues).filter(key => key.startsWith(patternStoragePrefix)).map(key => parse(storageValues[key])).filter(value => value && typeof value === 'object' && value.id && Array.isArray(value.notes));
+    const patternMetadata = record => ({ id: record.id, name: record.name, sourceApp: record.sourceApp, createdAt: record.createdAt, tempo: record.tempo, swing: record.swing, lengthBeats: record.lengthBeats, meter: record.meter, kind: record.kind || 'notes', notes: record.notes.length, voices: record.voices?.length || 0, tags: record.tags, bytes: record.bytes });
+    const paintLibraryNotice = () => { const line = document.querySelector('.ml-pat-storage'); if (line) line.textContent = 'Saved with this plugin instance and its DAW project. Export a pattern file to share it with another instrument.'; };
+    const patternCollection = Object.freeze({ persistent: true, list: async () => { later(paintLibraryNotice, 0); return patternRecords().map(patternMetadata); }, get: async key => clone(parse(storageValues[patternStoragePrefix + String(key)])) || null,
+      save: async value => { const pattern = global.MusicLabPatternSchema?.normalize ? global.MusicLabPatternSchema.normalize(value) : clone(value), records = patternRecords(); if (records.length >= 128) throw Error('The pattern library is full (128 patterns). Delete an entry or export it first.'); const key = global.crypto?.randomUUID?.() || 'pattern-' + Date.now() + '-' + (++serial), record = { ...pattern, id: key, createdAt: Date.now(), bytes: storageSize(pattern) }; localStorageFacade.setItem(patternStoragePrefix + key, JSON.stringify(record)); setStatus('Pattern saved with this plugin instance and its DAW project.'); return patternMetadata(record); },
+      remove: async key => localStorageFacade.removeItem(patternStoragePrefix + String(key)) });
     let context;
-    const host = { version: 1, trackId: 'native-plugin', get tempo() { return clock.tempo; }, get transport() { return { ...clock, when: clock.samplePosition / clock.sampleRate }; }, get context() { return context ||= new ControllerAudioContext({ sampleRate: clock.sampleRate }); }, get destination() { return this.context.destination; }, createAudioContext: options => new ControllerAudioContext(options), audioLibrary: collection, patternLibrary: collection,
+    const host = { version: 1, trackId: 'native-plugin', get tempo() { return clock.tempo; }, get transport() { return { ...clock, when: clock.samplePosition / clock.sampleRate }; }, get context() { return context ||= new ControllerAudioContext({ sampleRate: clock.sampleRate }); }, get destination() { return this.context.destination; }, createAudioContext: options => new ControllerAudioContext(options), audioLibrary: collection, patternLibrary: patternCollection,
       registerInstrument(value) { registered = value; scheduleAttach(); return host; }, notifyStateChange() { scheduleParameters(); scheduleSnapshot(); }, requestAudition() { return true; }, status: message => setStatus(message) };
     Object.defineProperty(global, 'MusicLabHost', { configurable: true, value: host });
   }
@@ -166,6 +200,15 @@
           else if (recipe && byPath(recipe, path) !== undefined && byPath(recipe, path) !== value) patch.push([path, value]);
         });
         if (!patch.length) continue;
+        if (typeof global.KitchenEditorSetParameter === 'function') {
+          applying++;
+          try {
+            const remaining = [];
+            for (const [path, value] of patch) { if (global.KitchenEditorSetParameter(path, value) === undefined) remaining.push([path, value]); else diagnostics.scalarParameterUpdates++; }
+            patch.splice(0, patch.length, ...remaining); generation++;
+          } finally { applying--; }
+          if (!patch.length) continue;
+        }
         const project = await projectSnapshot(); if (disposed || !project) continue;
         let dirty = false; for (const [path, value] of patch) dirty = assignByPath(project, path, value) || dirty;
         if (!dirty) continue;
@@ -344,7 +387,7 @@
       replace('stopDeckRecording', async () => null);
       replace('cancelDeckRecording', () => { value.deckRecording = null; });
     }
-    for (const name of ['cancelNotes', 'stopNotes']) replace(name, (options = {}) => { const source = typeof options === 'string' ? options : options.source; for (const [key, pitch] of [...held]) if (!source || key === source || key.startsWith(source + ':')) midi('off', pitch, 0, 1, key); return true; });
+    for (const name of ['cancelNotes', 'stopNotes']) replace(name, (options = {}) => { if (applying) return true; const source = typeof options === 'string' ? options : options.source; for (const [key, pitch] of [...held]) if (!source || key === source || key.startsWith(source + ':')) midi('off', pitch, 0, 1, key); return true; });
     if (id() === 'form') for (const name of ['play', 'schedulePrepared']) replace(name, (sound, velocity, when, pitch, fifth, sixth, seventh) => Promise.resolve(audition(36 + (Number(name === 'play' ? sixth : seventh) || 0), velocity ?? .8, 20)));
     if (id() === 'form') replace('preload', () => Promise.resolve());
   }
@@ -390,6 +433,8 @@
   }
   async function receive(type, value = {}) {
     if (disposed) return; value ||= {};
+    if (type === 'kitchenEditorStorage') { restoreEditorStorage(value.editorStorage || value); return; }
+    if (own(value, 'editorStorage')) restoreEditorStorage(value.editorStorage);
     if (value.descriptor) { descriptor = value.descriptor; global.KitchenPluginDescriptor = descriptor; }
     if (type === 'kitchenClock') { clock = { ...clock, ...value, tempo: Number(value.tempo ?? value.bpm ?? clock.tempo), beat: Number(value.beat ?? value.ppq ?? clock.beat), samplePosition: Number(value.samplePosition ?? value.hostSamplePosition ?? clock.samplePosition), timeSigNum: Number(value.timeSigNum ?? value.numerator ?? clock.timeSigNum), timeSigDen: Number(value.timeSigDen ?? value.denominator ?? clock.timeSigDen) }; paintClock(); notify('clock', clock); return; }
     if (type === 'kitchenParameters') { if (instrument()) await applyParameters(value); notify('parameters', value); return; }
@@ -514,7 +559,7 @@
     for (const [type, token, listener] of backendListeners) { try { backend.removeEventListener?.(token ?? type, listener); } catch (_) {} }
     for (const context of contexts) context.close().catch(() => {}); contexts.clear(); subscriptions.clear();
   }
-  silenceBrowserAudio(); connectBackend();
+  installEditorStorage(); silenceBrowserAudio(); connectBackend();
   for (const type of ['input', 'change', 'musiclab:state-change', 'musiclab:patternchange']) document.addEventListener(type, edited);
   document.addEventListener('pointerup', () => later(edited, 0)); document.addEventListener('click', () => later(edited, 0));
   document.addEventListener('click', transportAction, true);

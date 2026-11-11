@@ -5,6 +5,17 @@
 
 namespace kitchen {
 namespace {
+constexpr size_t maxEditorStorageBytes = 16 * 1024 * 1024;
+juce::String factoryStateJSON(const Product& product, const juce::File& resources) {
+    const auto resource = product.descriptor["defaultStateResource"].toString();
+    return resource.isNotEmpty() ? readTextResource(resources, "assets/" + product.id + "/" + resource) : juce::JSON::toString(product.descriptor["defaultState"], true);
+}
+bool editorStorageFits(const juce::var& value) { return juce::JSON::toString(value, juce::JSON::FormatOptions().withSpacing(juce::JSON::Spacing::none)).getNumBytesAsUTF8() <= maxEditorStorageBytes; }
+juce::var validatedEditorStorage(const juce::var& saved) {
+    auto* object = new juce::DynamicObject(); juce::var result(object);
+    if (const auto* source = saved.getDynamicObject()) for (const auto& item : source->getProperties()) if (item.name.toString().isNotEmpty() && item.name.toString().length() <= 1024 && item.value.isString()) object->setProperty(item.name, item.value);
+    return editorStorageFits(result) ? result : juce::var(new juce::DynamicObject());
+}
 float defaultNormalized(const juce::var& p) {
     if (!p["defaultNormalized"].isVoid()) return juce::jlimit(0.0f, 1.0f, static_cast<float>(p["defaultNormalized"]));
     const double lo = p["min"], hi = p["max"], value = p["default"];
@@ -44,7 +55,8 @@ PluginProcessor::PluginProcessor(Product p, juce::File root)
     : AudioProcessor(p.instrument() && !p.liveInput() ? BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)
                                    : BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true).withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       juce::Thread("Kitchen preset preparation"), product(std::move(p)), resources(std::move(root)), metadata(product.parameters()) {
-    cachedState = juce::JSON::toString(product.descriptor["defaultState"], true);
+    cachedState = factoryStateJSON(product, resources);
+    reportedTail.store(product.instrument() ? 30.0 : 60.0);
     for (int i = 0; i < metadata.size() && i < maxParameters; ++i) {
         const auto pmeta = metadata[i]; auto id = pmeta["id"].toString(); if (id.isEmpty()) id = "parameter-" + juce::String(i);
         auto name = pmeta["name"].toString(); if (name.isEmpty()) name = pmeta["label"].toString(); if (name.isEmpty()) name = id;
@@ -88,7 +100,7 @@ void PluginProcessor::rebuildSynchronously() {
     std::vector<float> initialParameters; for (auto* parameter : hostParameters) initialParameters.push_back(parameter->getValue());
     next->prepareParameters(initialParameters);
     if (!next->ready()) { const juce::ScopedLock lock(stateLock); status = next->getError(); readyFlag.store(false); builtVersion = version; failedVersion.store(version); completedVersion.store(version); return; }
-    appliedLatency.store(next->latency()); setLatencySamples(next->latency()); current = next.release(); installedVersion.store(version); readyFlag.store(true); runtimeFault.store(false);
+    reportedTail.store(next->tailSeconds()); appliedLatency.store(next->latency()); setLatencySamples(next->latency()); current = next.release(); installedVersion.store(version); readyFlag.store(true); runtimeFault.store(false);
     std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); builtVersion = version; completedVersion.store(version);
     const juce::ScopedLock lock(stateLock); status = "Ready";
 }
@@ -173,7 +185,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         if (!waitForOfflineState()) { buffer.clear(); midiMessages.clear(); return; }
         if (auto* next = pending.load(); next && (current == nullptr || garbageFifo.getFreeSpace() > 0)) {
             next = pending.exchange(nullptr);
-            if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); appliedLatency.store(next->latency()); installedVersion.store(next->getGeneration()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
+            if (next) { auto* previous = current; current = next; if (previous) retire(previous, NativeRuntime::destroy); std::fill(lastParameters.begin(), lastParameters.end(), std::numeric_limits<float>::quiet_NaN()); reportedTail.store(next->tailSeconds()); appliedLatency.store(next->latency()); installedVersion.store(next->getGeneration()); readyFlag.store(true); runtimeFault.store(false); appliedFlag.store(true); }
         }
         if (!isNonRealtime() || current == nullptr || current->getGeneration() >= requestVersion.load()) break;
     }
@@ -216,6 +228,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             if (releaseEditorNotes.exchange(false)) for (auto& e : editorHeld) if (e.identity != 0) { const auto owned = e; e.identity = 0; addEvent(*current, 0, noteOff, owned.data1, 0, owned.channel, owned.identity); }
         }
         current->process(count);
+        reportedTail.store(current->tailSeconds());
         for (int ch = 0; ch < juce::jmin(2, buffer.getNumChannels()); ++ch) std::memcpy(buffer.getWritePointer(ch, offset), current->output(ch), static_cast<size_t>(count) * sizeof(float));
         if (producesMidi()) for (int i = 0; i < current->midiOutputCount(); ++i) { const auto* e = current->midiOutput() + i * eventFields; const int at = offset + juce::jlimit(0, count - 1, static_cast<int>(e[0])), channel = juce::jlimit(1, 16, static_cast<int>(e[4])); if (e[1] == noteOn) outputMidi.addEvent(juce::MidiMessage::noteOn(channel, juce::jlimit(0, 127, static_cast<int>(e[2])), static_cast<float>(juce::jlimit(0.0, 1.0, e[3]))), at); else if (e[1] == noteOff) outputMidi.addEvent(juce::MidiMessage::noteOff(channel, juce::jlimit(0, 127, static_cast<int>(e[2]))), at); }
         offset += count;
@@ -238,6 +251,7 @@ void PluginProcessor::stateFromEditor(const juce::var& payload) {
     const auto json = juce::JSON::toString(state, true); if (json.getNumBytesAsUTF8() > 448 * 1024 * 1024) return;
     synchronizeParametersFromState(state);
     { const juce::ScopedLock lock(stateLock); if (cachedState == json) return; cachedState = json; }
+    updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
     requestRebuild();
 }
 void PluginProcessor::parameterFromEditor(const juce::var& payload) {
@@ -276,7 +290,7 @@ juce::Array<juce::var> PluginProcessor::captureReplies() {
 }
 void PluginProcessor::getStateInformation(juce::MemoryBlock& dest) {
     auto* object = new juce::DynamicObject(); object->setProperty("format", "kitchen-vst3-state"); object->setProperty("version", 2); object->setProperty("product", product.id);
-    { const juce::ScopedLock lock(stateLock); object->setProperty("state", cachedState); }
+    { const juce::ScopedLock lock(stateLock); object->setProperty("state", cachedState); object->setProperty("editorStorage", editorStorage.clone()); }
     auto* values = new juce::DynamicObject();
     for (int i = 0; i < static_cast<int>(hostParameters.size()); ++i) { auto key = metadata[i]["id"].toString(); if (key.isEmpty()) key = metadata[i]["path"].toString(); values->setProperty(juce::Identifier(key), hostParameters[static_cast<size_t>(i)]->getValue()); }
     object->setProperty("parameters", juce::var(values));
@@ -286,7 +300,9 @@ void PluginProcessor::setStateInformation(const void* data, int size) {
     if (data == nullptr || size <= 0 || size > 448 * 1024 * 1024) return;
     auto value = juce::JSON::parse(juce::String::fromUTF8(static_cast<const char*>(data), size));
     if (value["format"].toString() != "kitchen-vst3-state" || value["product"].toString() != product.id) return;
-    { const juce::ScopedLock lock(stateLock); cachedState = value["state"].toString(); }
+    auto restoredState = value["state"].toString();
+    if (restoredState.trim().isEmpty() || restoredState.trim() == "null") restoredState = factoryStateJSON(product, resources);
+    { const juce::ScopedLock lock(stateLock); cachedState = restoredState; editorStorage = validatedEditorStorage(value["editorStorage"]); }
     if (auto* values = value["parameters"].getDynamicObject()) {
         for (int i = 0; i < static_cast<int>(hostParameters.size()); ++i) {
             auto key = metadata[i]["id"].toString(); if (key.isEmpty()) key = metadata[i]["path"].toString();
@@ -298,14 +314,29 @@ void PluginProcessor::setStateInformation(const void* data, int size) {
         // while all new saves survive parameter additions and reordering.
         for (int i = 0; i < values->size() && i < static_cast<int>(hostParameters.size()); ++i) { const auto& saved = (*values)[i]; if ((saved.isInt() || saved.isInt64() || saved.isDouble()) && std::isfinite(static_cast<double>(saved))) hostParameters[static_cast<size_t>(i)]->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, static_cast<float>(saved))); }
     }
-    requestRebuild();
+    ++editorRevision; requestRebuild();
 }
 juce::var PluginProcessor::editorSnapshot() {
     auto* object = new juce::DynamicObject(); object->setProperty("descriptor", product.descriptor);
-    { const juce::ScopedLock lock(stateLock); object->setProperty("state", juce::JSON::parse(cachedState)); }
+    { const juce::ScopedLock lock(stateLock); object->setProperty("state", juce::JSON::parse(cachedState)); object->setProperty("editorStorage", editorStorage.clone()); }
     juce::Array<juce::var> values; for (auto* parameter : hostParameters) values.add(parameter->getValue()); object->setProperty("parameters", values); object->setProperty("status", statusMessage()); object->setProperty("ready", isReady()); return juce::var(object);
 }
 juce::var PluginProcessor::parameterSnapshot() const { juce::Array<juce::var> values; for (auto* parameter : hostParameters) values.add(parameter->getValue()); return values; }
+juce::var PluginProcessor::editorStorageSnapshot() { const juce::ScopedLock lock(stateLock); return editorStorage.clone(); }
+void PluginProcessor::storageFromEditor(const juce::var& payload) {
+    const auto action = payload["action"].toString(), key = payload["key"].toString();
+    bool changed = false;
+    {
+        const juce::ScopedLock lock(stateLock); auto* storage = editorStorage.getDynamicObject(); if (storage == nullptr) return;
+        if (action == "clear" && !storage->getProperties().isEmpty()) { editorStorage = juce::var(new juce::DynamicObject()); changed = true; }
+        else if (key.isNotEmpty() && key.length() <= 1024 && action == "remove" && storage->hasProperty(juce::Identifier(key))) { storage->removeProperty(juce::Identifier(key)); changed = true; }
+        else if (key.isNotEmpty() && key.length() <= 1024 && action == "set" && payload["value"].isString() && storage->getProperty(juce::Identifier(key)) != payload["value"]) {
+            auto candidate = editorStorage.clone(); candidate.getDynamicObject()->setProperty(juce::Identifier(key), payload["value"]);
+            if (editorStorageFits(candidate)) { editorStorage = candidate; changed = true; }
+        }
+    }
+    if (changed) updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
+}
 juce::var PluginProcessor::editorClock() const {
     auto* object = new juce::DynamicObject(); const char* names[] = { "tempo", "beat", "playing", "numerator", "denominator", "looping", "loopStart", "loopEnd", "samplePosition", "localFrame", "revision", "sampleRate", "frames", "recording", "validPpq", "validHostSample" };
     for (int i = 0; i < clockFields; ++i) object->setProperty(names[i], displayClock[static_cast<size_t>(i)].load());
