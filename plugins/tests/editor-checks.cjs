@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const { chromium, webkit } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const root = path.resolve(__dirname, '../..'), web = path.join(root, 'plugins/web');
 const output = process.env.KITCHEN_EDITOR_QA_DIR || '/tmp/kitchen-plugin-editors';
 const ids = ['grain', 'form', 'tine', 'mire', 'spool', 'haze', 'bower', 'ravel', 'fable', 'roux', 'batter', 'proof', 'marinade', 'picnic', 'morsel', 'heirloom', 'brine', 'citrus'];
@@ -82,9 +82,14 @@ async function serve() {
 }
 async function pageFor(base, route, editorStorage = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
-  await context.addInitScript(editorStorage => {
+  await context.addInitScript(({ editorStorage, legacyStream }) => {
     window.__nativeMessages = []; window.__nativeAudioContexts = 0; window.__offlineRenders = 0; window.__editorWorkers = 0;
     window.__nativeEditorStorage = { ...editorStorage }; window.KitchenNativeEditorStorage = { ...editorStorage };
+    if (legacyStream) {
+      const OriginalBlob = window.Blob;
+      function LegacyStreamBlob(parts = [], options) { if (parts.some(part => typeof part === 'string' && part.includes('function runWorker') && part.includes('const plainIPA'))) { parts = ['delete ReadableStream.prototype[Symbol.asyncIterator];\n', ...parts]; window.__legacyStreamInjections = (window.__legacyStreamInjections || 0) + 1; } return new OriginalBlob(parts, options); }
+      LegacyStreamBlob.prototype = OriginalBlob.prototype; Object.setPrototypeOf(LegacyStreamBlob, OriginalBlob); window.Blob = LegacyStreamBlob;
+    }
     const Original = window.AudioContext;
     if (Original) { function Counted(...args) { window.__nativeAudioContexts++; return new Original(...args); } Counted.prototype = Original.prototype; window.AudioContext = Counted; window.webkitAudioContext = Counted; }
     const WorkerConstructor = window.Worker;
@@ -107,7 +112,7 @@ async function pageFor(base, route, editorStorage = {}) {
         });
       }
     } };
-  }, editorStorage);
+  }, { editorStorage, legacyStream: !!process.env.KITCHEN_EDITOR_LEGACY_STREAM });
   await context.route('**/*', route => { const address = route.request().url(); if (/^(data:|blob:|about:)/.test(address) || new URL(address).origin === base) return route.continue(); report.external.push({ current, address }); return route.abort(); });
   const page = await context.newPage(); page.setDefaultTimeout(45000); page.on('pageerror', error => report.pageErrors.push({ current, message: error.message, stack: error.stack }));
   await page.goto(base + route, { waitUntil: 'load', timeout: 120000 }); return { context, page };
@@ -298,7 +303,7 @@ async function neuralCheck(base) {
     const result = await page.evaluate(async () => {
       await KitchenNativeEditor.receive('kitchenReady', { state: await KitchenNativeEditor.getProject() });
       const before = __nativeMessages.length, result = await KitchenNativeEditor.runNeuralSmokeTest();
-      return { ...result, nativeStateMessages: __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetState').length, nativeAudioContexts: __nativeAudioContexts, workerCount: __editorWorkers };
+      return { ...result, nativeStateMessages: __nativeMessages.slice(before).filter(value => value.type === 'kitchenSetState').length, nativeAudioContexts: __nativeAudioContexts, workerCount: __editorWorkers, legacyStreamInjections: window.__legacyStreamInjections || 0 };
     });
     assert.equal(result.pass, true, JSON.stringify(result)); assert.equal(result.nativeStateMessages, 0); assert.equal(result.nativeAudioContexts, 0); assert(result.workersCreated >= 2); assert.equal(result.word, 'zucchini'); assert.equal(result.signalsmith.fitCalls, 1); return result;
   } finally { await context.close(); }
@@ -397,7 +402,7 @@ async function effectCheck(base, definition) {
 }
 (async () => {
   try {
-    const base = await serve(); browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+    const base = await serve(); browser = process.env.KITCHEN_EDITOR_BROWSER === 'webkit' ? await webkit.launch({ headless: true }) : await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
     if (process.env.KITCHEN_EDITOR_NEURAL_SMOKE) { await check('MORSEL real neural word and Signalsmith note', () => neuralCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     if (process.env.KITCHEN_EDITOR_STORAGE_SMOKE) { await check('Native editor presets and pattern storage survive reopen', () => storageCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     for (const id of ids) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(id)) await check('Original instrument editor / ' + id, () => instrumentCheck(base, id));

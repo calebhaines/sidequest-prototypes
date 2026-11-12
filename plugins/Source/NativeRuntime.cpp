@@ -77,9 +77,13 @@ NativeRuntime::NativeRuntime(const Product& p, const juce::File& root, double sa
     cachedTail = product.instrument() ? 30.0 : 60.0;
     try {
         group = JSContextGroupCreate();
-        JSClassDefinition definition = kJSClassDefinitionEmpty; definition.className = "KitchenNativeHost";
-        globalClass = JSClassCreate(&definition); context = JSGlobalContextCreateInGroup(group, globalClass);
-        auto global = JSContextGetGlobalObject(context); JSObjectSetPrivate(global, this);
+        JSClassDefinition definition = kJSClassDefinitionEmpty; definition.className = "KitchenNativeOwner";
+        globalClass = JSClassCreate(&definition); context = JSGlobalContextCreateInGroup(group, nullptr);
+        auto global = JSContextGetGlobalObject(context);
+        // Use JSC's standard global object so native Math/typed-array intrinsic
+        // optimizations remain available. Owner data needs only a private box.
+        auto ownerObject = JSObjectMake(context, globalClass, this); JSString ownerKey("__KitchenNativeOwner");
+        JSObjectSetProperty(context, global, ownerKey, ownerObject, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum | kJSPropertyAttributeDontDelete, nullptr);
         io = JSObjectMake(context, nullptr, nullptr); JSValueProtect(context, io);
         exposeTypedArray(io, "inputLeft", inL.data(), inL.size() * sizeof(float), kJSTypedArrayTypeFloat32Array);
         exposeTypedArray(io, "inputRight", inR.data(), inR.size() * sizeof(float), kJSTypedArrayTypeFloat32Array);
@@ -155,8 +159,21 @@ void NativeRuntime::prepareParameters(const std::vector<float>& values) {
     if (!ready()) return;
     try {
         for (size_t i = 0; i < values.size() && i < static_cast<size_t>(maxParameters); ++i) parameter(static_cast<int>(i), values[i]);
-        waitUntilPrepared(); updateLatency(); updateTail();
+        waitUntilPrepared(); warmUp(); updateLatency(); updateTail();
     } catch (const std::exception& e) { error = e.what(); }
+}
+void NativeRuntime::warmUp() {
+    if (!ready() || warmedUp) return;
+    const auto warm = function("warmup"); if (warm == nullptr) return;
+    std::vector<Convolver*> pristine; for (const auto& node : convolvers) pristine.push_back(node.get());
+    const auto originalSize = convolvers.size();
+    const JSValueRef frames = JSValueMakeNumber(context, std::round(rate * 2.0));
+    call(warm, 1, &frames); waitUntilPrepared();
+    // Discard only convolution engines allocated by the throwaway backend,
+    // including any that reused an existing empty slot. Original DSP is parked
+    // untouched by the JavaScript warmup transaction.
+    for (auto& node : convolvers) if (node && std::find(pristine.begin(), pristine.end(), node.get()) == pristine.end()) node.reset();
+    convolvers.resize(originalSize); JSGarbageCollect(context); warmedUp = ready();
 }
 
 NativeRuntime::~NativeRuntime() {
@@ -242,7 +259,11 @@ juce::String NativeRuntime::captureRequestJSON(const juce::String& request) {
     const auto result = call(fn, 1, &arg, false); inRender = previousRender;
     return result != nullptr ? text(context, result) : "{\"ok\":false,\"error\":\"MIDI capture request failed.\"}";
 }
-NativeRuntime* NativeRuntime::owner(JSContextRef ctx) { return static_cast<NativeRuntime*>(JSObjectGetPrivate(JSContextGetGlobalObject(ctx))); }
+NativeRuntime* NativeRuntime::owner(JSContextRef ctx) {
+    static JSStringRef key = JSStringCreateWithUTF8CString("__KitchenNativeOwner");
+    const auto value = JSObjectGetProperty(ctx, JSContextGetGlobalObject(ctx), key, nullptr);
+    return JSValueIsObject(ctx, value) ? static_cast<NativeRuntime*>(JSObjectGetPrivate(JSValueToObject(ctx, value, nullptr))) : nullptr;
+}
 JSValueRef NativeRuntime::resourceCallback(JSContextRef ctx, JSObjectRef, JSObjectRef, size_t argc, const JSValueRef argv[], JSValueRef* exception) {
     auto* runtime = owner(ctx);
     if (runtime == nullptr || argc < 1) return JSValueMakeUndefined(ctx);

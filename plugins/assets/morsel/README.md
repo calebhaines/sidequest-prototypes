@@ -47,6 +47,11 @@ repository commit `df7e584fc155f8055f12e34cd118b370d2edcbf2`.
 | Preparation helper used for generation | `7ad292dc0f6b926f5005d06078713ee157a2e2f84afe1139e388f2a6ec834ebe` |
 
 The bank format is version 1, `float32le`, with configuration key `cb9f6327`.
+Plugin state and editor messages encode cache identities as lossless JSON
+tuples (`identityEncoding: json-tuple-v1`), because JUCE rejects embedded NUL
+characters in otherwise valid JSON strings. Hydration restores the original
+cache identities before rendering. This transport encoding does not change
+the factory bank asset, model data or PCM.
 Its decoded word cache uses 1,048,608 bytes and its fitted notes use
 26,642,336 bytes, within MORSEL's separate original 64 MiB cache budgets.
 Re-running neural inference or a different browser version may change PCM;

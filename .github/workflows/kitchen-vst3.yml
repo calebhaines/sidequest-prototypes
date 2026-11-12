@@ -17,8 +17,27 @@ concurrency:
   group: kitchen-native-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  javascriptcore-capabilities:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            plugins/Source
+            plugins/platform
+      - name: Compare signed and unsigned JSC globals and JIT performance
+        run: bash plugins/platform/probe-jsc.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-JSC-Capabilities
+          path: /tmp/kitchen-jsc-*
+          if-no-files-found: warn
   apple-silicon:
     runs-on: macos-15
+    needs: javascriptcore-capabilities
     timeout-minutes: 120
     permissions:
       contents: write
@@ -60,8 +79,7 @@ jobs:
       - name: Verify native Apple Silicon runner and JavaScriptCore
         run: |
           test "$(uname -m)" = arm64
-          clang++ -std=c++17 plugins/Source/JSCProbe.cpp -framework JavaScriptCore -o /tmp/kitchen-jsc-probe
-          /tmp/kitchen-jsc-probe | tee /tmp/kitchen-jsc-capabilities.json
+          bash plugins/platform/probe-jsc.sh
       - name: Set up native compiler cache
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -109,7 +127,36 @@ jobs:
       - name: Compile every Kitchen instrument and effect
         run: cmake --build plugins/build --config Release --parallel 3
       - name: Test native DSP, MIDI, clock and saved state
-        run: ctest --test-dir plugins/build --output-on-failure
+        run: |
+          codesign -d --entitlements :- plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke
+          ctest --test-dir plugins/build --output-on-failure
+      - name: Capture native crash backtrace
+        if: failure()
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import pathlib,subprocess,re,shutil
+          generated=pathlib.Path('plugins/generated');generated.mkdir(exist_ok=True)
+          log=pathlib.Path('plugins/build/Testing/Temporary/LastTest.log')
+          text=log.read_text(errors='replace') if log.exists() else ''
+          if log.exists():shutil.copyfile(log,generated/'native-ctest.log')
+          executable=pathlib.Path('plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke').resolve()
+          crashed='Subprocess aborted' in text or 'Exception:' in text or (executable.exists() and not (generated/'native-vst3-host-report.json').exists())
+          if crashed:
+              matches=re.findall(r'Kitchen host SCAN (.+)',text)
+              arguments=['--plugin',matches[-1].strip()] if matches else ['--bundles',str(pathlib.Path('plugins/build').resolve())]
+              command=['xcrun','lldb','--batch','-o','run','-o','thread backtrace all','--',str(executable),*arguments]
+              try:
+                  result=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+                  output=result.stdout
+              except subprocess.TimeoutExpired as error:
+                  output=error.stdout or b''
+                  if isinstance(output,bytes):output=output.decode(errors='replace')
+              (generated/'native-vst3-backtrace.log').write_text(output)
+          reports=pathlib.Path.home()/'Library/Logs/DiagnosticReports'
+          for report in reports.glob('*'):
+              if 'kitchen' in report.name.lower() and report.is_file():shutil.copyfile(report,generated/report.name)
+          PY
       - name: Verify all plugin bundles contain Apple Silicon code
         run: |
           python3 - <<'PY'
@@ -176,14 +223,26 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Kitchen-Apple-Silicon
+          name: Kitchen-Native-Test-Reports
           path: |
-            plugins/Kitchen-Apple-Silicon.zip
             plugins/generated/native-smoke-report.json
             plugins/generated/native-vst3-host-report.json
             plugins/generated/native-ui-smoke-report.json
             plugins/generated/native-bundles.json
+            plugins/generated/native-ctest.log
+            plugins/generated/native-vst3-backtrace.log
+            plugins/generated/*.ips
+            plugins/generated/*.crash
             /tmp/kitchen-jsc-capabilities.json
+            /tmp/kitchen-jsc-*.json
+            /tmp/kitchen-jsc-*.log
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-Apple-Silicon
+          path: plugins/Kitchen-Apple-Silicon.zip
           if-no-files-found: warn
           retention-days: 14
       - name: Report native compiler cache

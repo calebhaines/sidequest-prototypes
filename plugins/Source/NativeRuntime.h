@@ -69,7 +69,7 @@ private:
     double rate;
     int blockCapacity = 0, eventCount = 0, outputEventCount = 0, latencySamples = 0;
     std::uint64_t generation = 0;
-    bool inRender = false;
+    bool inRender = false, warmedUp = false;
     bool tailDirty = true, previousActivity = false;
     double cachedTail = 60, previousTailTempo = 120;
     juce::String error;
@@ -83,6 +83,7 @@ private:
     void waitUntilPrepared();
     void updateLatency();
     void updateTail();
+    void warmUp();
     JSValueRef call(JSObjectRef, size_t, const JSValueRef*, bool captureError = true);
     JSObjectRef function(const char*);
     void set(JSObjectRef, const char*, JSValueRef);

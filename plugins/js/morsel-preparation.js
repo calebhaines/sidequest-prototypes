@@ -5,9 +5,33 @@
 (function (scope) {
   'use strict';
   const FORMAT = 'kitchen-morsel-bank', VERSION = 1, LIMIT = 64 * 1024 * 1024;
+  const IDENTITY_ENCODING = 'json-tuple-v1';
   const VOICES = Object.freeze(['alto', 'tenor', 'bass', 'robot']);
   const clone = value => JSON.parse(JSON.stringify(value));
   function checkAbort(signal) { if (signal?.aborted) throw new DOMException('MORSEL preparation cancelled.', 'AbortError'); }
+  function installReadableStreamIterator() {
+    // System WebKit can provide gzip streams while lacking their async
+    // iterator. The original phonemizer consumes a decompressed data stream
+    // with for-await; without this shim its lazy ready promise never settles.
+    const Stream = globalThis.ReadableStream;
+    if (!Stream || typeof Symbol.asyncIterator !== 'symbol' || Stream.prototype[Symbol.asyncIterator]) return;
+    Object.defineProperty(Stream.prototype, Symbol.asyncIterator, { configurable: true, writable: true, value: async function* () {
+      const reader = this.getReader(); let finished = false;
+      try { for (;;) { const item = await reader.read(); if (item.done) { finished = true; return; } yield item.value; } }
+      finally { try { if (!finished) await reader.cancel(); } finally { reader.releaseLock(); } }
+    } });
+  }
+  function installWorkerCompatibility() {
+    const NativeBlob = scope.Blob; if (typeof NativeBlob !== 'function') return () => {};
+    const prelude = '(' + installReadableStreamIterator.toString() + ')();\n';
+    function PreparationBlob(parts, options) {
+      const chunks = Array.from(parts || []);
+      if (chunks.some(part => typeof part === 'string' && part.includes('const trimNeuralPadding=') && part.includes('function runWorker'))) chunks.unshift(prelude);
+      return new NativeBlob(chunks, options);
+    }
+    PreparationBlob.prototype = NativeBlob.prototype; Object.setPrototypeOf(PreparationBlob, NativeBlob); scope.Blob = PreparationBlob;
+    return () => { if (scope.Blob === PreparationBlob) scope.Blob = NativeBlob; };
+  }
   function encode(array) {
     const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength); let binary = '';
     for (let at = 0; at < bytes.length; at += 16384) binary += String.fromCharCode(...bytes.subarray(at, at + 16384));
@@ -22,6 +46,37 @@
   }
   function signature(state) {
     return JSON.stringify({ voice: state.voice, lyric: state.lyric, tempo: state.tempo, release: state.release, length: state.length, division: state.division, swing: state.swing, steps: state.steps, musicLabPattern: state.musicLabPattern });
+  }
+  function identityTuple(value) {
+    const boundary = value.indexOf('\u0000');
+    if (boundary < 1) throw Error('Invalid prepared MORSEL identity.');
+    return [value.slice(0, boundary), value.slice(boundary + 1)];
+  }
+  function serializeBank(bank) {
+    if (!bank || bank.identityEncoding === IDENTITY_ENCODING) return bank;
+    if (bank.identityEncoding !== undefined) throw Error('Unsupported prepared MORSEL identity encoding.');
+    // JUCE's JSON parser rejects an escaped U+0000 even though JSON permits it.
+    // Keep original NUL cache identities inside DSP; transport a lossless tuple
+    // as ordinary JSON text so state and WebKit messages survive JUCE parsing.
+    return { ...bank, identityEncoding: IDENTITY_ENCODING,
+      words: bank.words.map(word => ({ ...word, identity: JSON.stringify(identityTuple(word.identity)) })),
+      notes: bank.notes.map(note => { const tuple = identityTuple(note.identity); return { ...note, identity: JSON.stringify(tuple), key: JSON.stringify([...tuple, note.pitch, note.frames]) }; }) };
+  }
+  function restoreBank(bank) {
+    if (!bank?.identityEncoding) return bank;
+    if (bank.identityEncoding !== IDENTITY_ENCODING || !Array.isArray(bank.words) || !Array.isArray(bank.notes)) throw Error('Unsupported prepared MORSEL identity encoding.');
+    const parse = value => {
+      let tuple; try { tuple = JSON.parse(value); } catch (_) { throw Error('Invalid prepared MORSEL identity tuple.'); }
+      if (!Array.isArray(tuple) || tuple.length !== 2 || !VOICES.includes(tuple[0]) || typeof tuple[1] !== 'string') throw Error('Invalid prepared MORSEL identity tuple.');
+      return tuple;
+    };
+    const result = { ...bank,
+      words: bank.words.map(word => { const tuple = parse(word.identity); return { ...word, identity: tuple[0] + '\u0000' + tuple[1] }; }),
+      notes: bank.notes.map(note => {
+        const tuple = parse(note.identity); if (note.key !== JSON.stringify([...tuple, note.pitch, note.frames])) throw Error('Invalid prepared MORSEL note tuple.');
+        const identity = tuple[0] + '\u0000' + tuple[1]; return { ...note, identity, key: identity + '\u0000' + note.pitch + '\u0000' + note.frames };
+      }) };
+    delete result.identityEncoding; return result;
   }
   function key(text) { let value = 2166136261; for (let at = 0; at < text.length; at++) value = Math.imul(value ^ text.charCodeAt(at), 16777619); return (value >>> 0).toString(16).padStart(8, '0'); }
   function holdRegion(base, targetFrames) {
@@ -67,7 +122,10 @@
     for (const voice of voices) for (const pitch of pitches) events.push({ voice, pitch, lyric: state.lyric, velocity: .8, durationSeconds: keyboardDuration });
     const normalized = events.map(event => ({ event, note: D.identity(event, state) }));
     options.onProgress?.(0, events.length);
-    await audio.init(); checkAbort(signal);
+    const restoreWorkerCompatibility = installWorkerCompatibility();
+    try { await audio.init(); await scope.MorselSpeech.prepare(); }
+    finally { restoreWorkerCompatibility(); }
+    checkAbort(signal);
     pruneCache(audio, normalized, state);
     // prepareNotes performs all neural synthesis, analysis and duration/pitch
     // fitting off the audio callback. It also enforces the original word/note
@@ -97,9 +155,10 @@
     }
     const configuration = signature(state);
     const bank = { format: FORMAT, version: VERSION, encoding: 'float32le', key: key(configuration), configuration, backend: scope.MorselSpeech?.backend || 'kitten-tts-nano-0.8-int8', modelHash: scope.MorselSpeechAssets?.modelHash || '', preparedTempos: tempos, keyboard: { lyric: state.lyric, voices: voices.slice(), pitches: pitches.slice(), durationSeconds: keyboardDuration }, words, notes, wordBytes, noteBytes };
-    options.onProgress?.(events.length, events.length); checkAbort(signal); return bank;
+    options.onProgress?.(events.length, events.length); checkAbort(signal); return serializeBank(bank);
   }
   function hydrateBank(audio, bank) {
+    bank = restoreBank(bank);
     if (!bank || bank.format !== FORMAT || bank.version !== VERSION || bank.encoding !== 'float32le' || !Array.isArray(bank.words) || !Array.isArray(bank.notes) || bank.words.length > 256 || bank.notes.length > 16384) throw Error('MORSEL needs a valid prepared voice bank. Open its editor and choose Prepare voices.');
     const words = new Map(), notes = new Map(); let wordBytes = 0, noteBytes = 0;
     for (const item of bank.words) {
@@ -124,5 +183,5 @@
     audio.words = words; audio.noteCache = notes; audio.wordBytes = wordBytes; audio.noteBytes = noteBytes;
     return { words: words.size, notes: notes.size, wordBytes, noteBytes };
   }
-  scope.KitchenMorselPreparation = Object.freeze({ FORMAT, VERSION, VOICES, prepareBank, hydrateBank, signature, holdRegion, encode, decode });
+  scope.KitchenMorselPreparation = Object.freeze({ FORMAT, VERSION, VOICES, prepareBank, hydrateBank, serializeBank, restoreBank, signature, holdRegion, encode, decode });
 })(typeof window === 'object' ? window : globalThis);

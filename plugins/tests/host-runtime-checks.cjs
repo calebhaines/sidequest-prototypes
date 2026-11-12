@@ -8,8 +8,8 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const source = file => fs.readFileSync(path.join(root, file), 'utf8');
 let passed = 0;
-const liveInputOnly = process.argv.includes('--live-input-only');
-async function check(name, run) { if (liveInputOnly && !name.includes('live input')) return; await run(); passed++; console.log('PASS', name); }
+const liveInputOnly = process.argv.includes('--live-input-only'), warmupOnly = process.argv.includes('--warmup-only');
+async function check(name, run) { if (liveInputOnly && !name.includes('live input') || warmupOnly && !name.includes('warmup')) return; await run(); passed++; console.log('PASS', name); }
 function realm() {
   const g = { Float32Array, Float64Array, Uint8Array, Int32Array, ArrayBuffer, DataView, console };
   vm.createContext(g); vm.runInContext(source('plugins/js/environment.js'), g, { filename: 'environment.js' });
@@ -139,6 +139,25 @@ const plain = x => JSON.parse(JSON.stringify(x));
     clock(g, { localFrame: 50000 }); events(g, [[0,1,60,1,1,99]]); api.render(1); assert.equal(g.fixtures[0].events[0].frame, 0); assert(Math.abs(g.performance.now() - 1000/48000) < 1e-12);
     api.create('instrument-failed', 48000, 1024, ''); await Promise.resolve(); assert.match(JSON.parse(api.getStatusJSON()).error, /preparation failure/); assert.throws(() => api.render(1), /preparation failure/);
   });
+  await check('Preparation warmup parks the untouched engine, timers and native IO while warming shared code',()=>{
+    const g=fixtures(),api=g.KitchenNativePlugin,io=g.KitchenHostIO;api.create('instrument-fixture',48000,1024,JSON.stringify({gain:.37,mode:'double',enabled:true,bank:{name:'unchanged'}}));api.setParameter(3,0);
+    let timerFired=0;g.setTimeout(()=>timerFired++,3);io.inputLeft.fill(.43);io.outputLeft.fill(.76);io.clock[9]=730000;
+    const before=api.getStateJSON(),time=g.performance.now(),pending=g.KitchenNativeEnvironment.pendingTimers,original=g.fixtures[0];
+    const status=JSON.parse(api.warmup(4096));assert.equal(status.ready,false);assert.equal(status.preparing,true);
+    for(let i=0;i<4&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();
+    assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(g.KitchenHostIO,io);assert.equal(api.getStateJSON(),before);assert.equal(g.performance.now(),time);assert.equal(g.KitchenNativeEnvironment.pendingTimers,pending);assert.equal(timerFired,0);
+    assert.equal(original.sizes.length,0,'Published DSP advanced during warmup');assert.equal(original.events.length,0);assert.equal(g.fixtures[1].sizes.reduce((a,b)=>a+b,0),4096);assert.equal(g.fixtures[1].follow,false);
+    assert.equal(io.clock[9],730000);assert(io.inputLeft.every(v=>v===Math.fround(.43)));assert(io.outputLeft.every(v=>v===Math.fround(.76)));
+    const report=JSON.parse(api.getWarmupReportJSON());assert.equal(report.frames,4096);assert.equal(report.restored,true);assert.equal(report.discarded,true);
+    clock(g,{localFrame:800000});events(g,[[13,1,60,.5,1,7]]);api.render(17);assert.equal(original.events[0].frame,13);assert.equal(original.clocks[0].frame,0);assert.equal(timerFired,0);
+    clock(g,{localFrame:800017});events(g,[]);api.render(128);assert.equal(timerFired,1);assert.throws(()=>api.warmup(128),/before its first audio/);assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
+  });
+  await check('Preparation warmup services asynchronous backend promises before restoring pristine readiness',async()=>{
+    const g=fixtures(),api=g.KitchenNativePlugin;api.create('instrument-asynchronous',48000,1024,'');api.prepareTick(5);await Promise.resolve();const original=g.fixtures[0],time=g.performance.now();assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
+    api.warmup(257);assert.equal(JSON.parse(api.getStatusJSON()).ready,false);
+    for(let i=0;i<30&&!JSON.parse(api.getStatusJSON()).ready;i++){api.prepareTick(1);await Promise.resolve();}
+    assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(g.performance.now(),time);assert.equal(original.sizes.length,0);assert.equal(g.fixtures[1].prepared,true);assert.equal(g.fixtures[1].sizes.reduce((a,b)=>a+b,0),257);
+  });
   await check('Timers split audio at their actual sample offset rather than host buffer boundaries', () => {
     const g = fixtures(), api = g.KitchenNativePlugin; api.create('instrument-fixture', 48000, 1024, '');
     let fired = false; g.setTimeout(() => { fired = true; api.setParameter(2, 0); }, 5 * 1000 / 48000);
@@ -203,6 +222,7 @@ const plain = x => JSON.parse(JSON.stringify(x));
   for (const definition of effectRealm.KitchenEffectPlugins.definitions()) await check(definition.name + ': native host exact headless canonical adapter PCM with automation and bypass', () => {
     const g = effectRealm, api = g.KitchenNativePlugin, io = g.KitchenHostIO, sampleRate = 48000;
     const state = plain(definition.defaults); api.create('effect-'+definition.id,sampleRate,1024,JSON.stringify(state));
+    api.warmup(256); api.prepareTick(); assert.equal(JSON.parse(api.getStatusJSON()).ready,true,'Effect warmup did not restore readiness');
     const reference = g.KitchenEffectPlugins.create(definition.id,sampleRate,state);
     let local = 100000, beat = 3.75;
     for (const [turn,frames] of [1,17,129,301,512,63].entries()) {
@@ -220,6 +240,17 @@ const plain = x => JSON.parse(JSON.stringify(x));
       local+=frames;beat+=frames*bpm/(60*sampleRate);
     }
     assert.deepEqual(JSON.parse(api.getStateJSON()),plain(reference.getState())); assert(api.getTailSeconds()>=0);assert.equal(api.getLatencySamples(),0);
+  });
+  for(const id of ['heirloom','brine'])await check(id+': warmup leaves actual synth phase and saved sound identical to a cold canonical backend',()=>{
+    const entry=coreManifest.instruments.find(entry=>entry.id===id),g=realm();for(const file of entry.sourceFiles)vm.runInContext(source(file),g,{filename:file});const def=g.KitchenCoreInstruments.definitions().find(d=>d.id===id);
+    const params=[{path:'_nativeSequence',type:'boolean',default:false},...def.parameters];g.KitchenPluginDescriptor={id,kind:'instrument',parameters:params};vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});const api=g.KitchenNativePlugin;api.create(id,48000,1024,JSON.stringify(def.defaults));api.setParameter(0,0);const saved=api.getStateJSON();api.warmup(2048);
+    for(let i=0;i<10&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(api.getStateJSON(),saved);
+    const cold=g.KitchenCoreInstruments.create(id,48000,def.defaults,{nativeSequence:false});cold.noteOn({pitch:60,velocity:.8,channel:0,frame:17,id:52});
+    for(let frame=0;frame<1024;frame+=128){clock(g,{localFrame:900000+frame,playing:false,beat:0});events(g,frame===0?[[17,1,60,.8,1,52]]:[]);api.render(128);for(const [offset,count]of frame===0?[[0,17],[17,111]]:[[0,128]]){const l=new Float32Array(count),r=new Float32Array(count);cold.process(l,r,{sampleRate:48000,tempo:120,beat:0,playing:false,frame:frame+offset,revision:0});assert.deepEqual(Array.from(l),Array.from(g.KitchenHostIO.outputLeft.subarray(offset,offset+count)));assert.deepEqual(Array.from(r),Array.from(g.KitchenHostIO.outputRight.subarray(offset,offset+count)));}}
+  });
+  await check('BOARD warmup leaves nonlinear circuit history identical to a cold processor',()=>{
+    const g=effectRealm,api=g.KitchenNativePlugin,def=g.KitchenEffectPlugins.definitions().find(d=>d.id==='board');api.create('effect-board',48000,1024,JSON.stringify(def.defaults));const state=api.getStateJSON();api.warmup(2048);for(let i=0;i<4&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();assert.equal(api.getStateJSON(),state);const cold=g.KitchenEffectPlugins.create('board',48000,def.defaults);
+    for(let frame=0;frame<1024;frame+=128){clock(g,{localFrame:700000+frame,beat:frame/24000});events(g,[]);for(let i=0;i<128;i++){g.KitchenHostIO.inputLeft[i]=.07*Math.sin((frame+i)*.037);g.KitchenHostIO.inputRight[i]=.06*Math.cos((frame+i)*.029);}const l=g.KitchenHostIO.inputLeft.slice(0,128),r=g.KitchenHostIO.inputRight.slice(0,128);api.render(128);cold.process(l,r,{tempo:120,beat:frame/24000,playing:true,frame});assert.deepEqual(Array.from(l),Array.from(g.KitchenHostIO.outputLeft.subarray(0,128)));assert.deepEqual(Array.from(r),Array.from(g.KitchenHostIO.outputRight.subarray(0,128)));}
   });
   await check('FERMENT retains exact canonical played-note capture and exports original Standard MIDI files',()=>{
     const g=effectRealm,api=g.KitchenNativePlugin,io=g.KitchenHostIO;
@@ -269,6 +300,7 @@ const plain = x => JSON.parse(JSON.stringify(x));
     const api=g.KitchenNativePlugin;api.create(entry.id,48000,1024,'');
     for(let i=0;i<1000&&!JSON.parse(api.getStatusJSON()).ready;i++){api.prepareTick(1);await Promise.resolve();}
     assert.equal(JSON.parse(api.getStatusJSON()).ready,true,api.getStatusJSON());api.setParameter(0,0);
+    const pristine=api.getStateJSON();api.warmup(512);for(let i=0;i<1000&&!JSON.parse(api.getStatusJSON()).ready;i++){api.prepareTick(1);await Promise.resolve();}assert.equal(JSON.parse(api.getStatusJSON()).ready,true,api.getStatusJSON());assert.equal(api.getStateJSON(),pristine,'Warmup altered the published Web Audio sound');
     let energy=0;
     for(let frame=0;frame<4096;frame+=512){clock(g,{localFrame:700000+frame,playing:false});events(g,frame===0?[[17,1,['grain','tine','form','batter'].includes(entry.id)?36:60,.8,1,102]]:[]);rendering=true;api.render(512);rendering=false;for(let i=0;i<512;i++){assert(Number.isFinite(g.KitchenHostIO.outputLeft[i]));energy+=Math.abs(g.KitchenHostIO.outputLeft[i])+Math.abs(g.KitchenHostIO.outputRight[i]);}}
     assert(energy>1e-6,entry.id+' did not play actual graph');const state=JSON.parse(api.getStateJSON());assert(state&&typeof state==='object');
@@ -286,7 +318,7 @@ const plain = x => JSON.parse(JSON.stringify(x));
     g.KitchenNativeReadResource=(name,asText)=>{assert(!rendering,'MORSEL resource read inrender');assert.equal(name,'assets/morsel/morsel-bank.json');reads++;return require('node:zlib').gunzipSync(fs.readFileSync(path.join(root,'plugins/assets/morsel/morsel-bank.json.gz'))).toString('utf8');};
     g.KitchenPluginDescriptor={...definition,defaultBankResource:'morsel-bank.json',defaultState:{recipe:definition.defaults.recipe,followHost:false}};
     vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});
-    const api=g.KitchenNativePlugin;api.create('morsel',48000,1024,'null');assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(reads,1);
+    const api=g.KitchenNativePlugin;api.create('morsel',48000,1024,'null');assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(reads,1);api.warmup(512);for(let i=0;i<20&&!JSON.parse(api.getStatusJSON()).ready;i++){api.prepareTick(1);await Promise.resolve();}assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(reads,1,'Warmup reloaded MORSEL resources');
     let energy=0;
     for(let frame=0;frame<16384;frame+=512){clock(g,{localFrame:900000+frame,playing:false});events(g,frame===0?[[17,1,60,.8,1,102]]:[]);rendering=true;api.render(512);rendering=false;for(let i=0;i<512;i++){assert(Number.isFinite(g.KitchenHostIO.outputLeft[i]));energy+=Math.abs(g.KitchenHostIO.outputLeft[i]);}}
     assert(energy>.1,'Prepared neural voice was silent');assert.equal(api.getLatencySamples(),128);

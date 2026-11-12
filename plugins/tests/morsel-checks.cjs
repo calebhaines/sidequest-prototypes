@@ -28,6 +28,17 @@ async function prepareDefault(word) {
   const errors = []; let arbitraryBank;
   try {
     const page = await browser.newPage(); page.setDefaultTimeout(120000);
+    if (process.argv.includes('--legacy-stream')) await page.addInitScript(() => {
+      const OriginalBlob = window.Blob; window.__legacyStreamWorkers = 0;
+      function LegacyBlob(parts, options) {
+        const chunks = Array.from(parts || []);
+        if (chunks.some(part => typeof part === 'string' && part.includes('const trimNeuralPadding=') && part.includes('function runWorker'))) {
+          chunks.unshift('delete ReadableStream.prototype[Symbol.asyncIterator];\n'); window.__legacyStreamWorkers++;
+        }
+        return new OriginalBlob(chunks, options);
+      }
+      LegacyBlob.prototype = OriginalBlob.prototype; Object.setPrototypeOf(LegacyBlob, OriginalBlob); window.Blob = LegacyBlob;
+    });
     page.on('pageerror', error => errors.push(error.message));
     await page.exposeFunction('nativeBankProgress', (done, total) => console.log('MORSEL PREPARING', Math.round(done), '/', total));
     await page.goto('http://127.0.0.1:' + server.address().port + '/', { waitUntil: 'load', timeout: 120000 });
@@ -48,6 +59,7 @@ async function prepareDefault(word) {
       return { words: prepared.words.length, notes: prepared.notes.length, noteBytes: prepared.noteBytes, wordBytes: prepared.wordBytes, key: prepared.key, backend: prepared.backend, modelHash: prepared.modelHash };
     }, word || null);
     const json = await page.evaluate(() => JSON.stringify(nativePreparedBank));
+    if (process.argv.includes('--legacy-stream')) assert.equal(await page.evaluate(() => window.__legacyStreamWorkers), 1, 'The real neural worker must exercise the missing ReadableStream iterator compatibility path.');
     const compressed = zlib.gzipSync(Buffer.from(json), { level: 9, mtime: 0 });
     const report = { ...result, sourceHTMLSHA256: digest(html), jsonBytes: Buffer.byteLength(json), gzipBytes: compressed.length, jsonSHA256: digest(Buffer.from(json)), gzipSHA256: digest(compressed), errors };
     if (word) arbitraryBank = JSON.parse(json);
@@ -74,7 +86,7 @@ async function prepareDefault(word) {
     }
     assert.equal(new Set(evidence.map(row => row.sha256)).size, 4);
     const directory = '/tmp/kitchen-morsel-native'; fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(path.join(directory, 'arbitrary-word-report.json'), JSON.stringify({ word, backend: arbitraryBank.backend, modelHash: arbitraryBank.modelHash, notes: arbitraryBank.notes.length, cachePruned: true, editorClosed: true, evidence }, null, 2) + '\n');
+    fs.writeFileSync(path.join(directory, 'arbitrary-word-report.json'), JSON.stringify({ word, backend: arbitraryBank.backend, modelHash: arbitraryBank.modelHash, notes: arbitraryBank.notes.length, identityEncoding: arbitraryBank.identityEncoding, legacyStreamCompatibility: process.argv.includes('--legacy-stream'), cachePruned: true, editorClosed: true, evidence }, null, 2) + '\n');
     console.log('PASS Arbitrary original neural word prepares all four 49-key voices and restores for native editor-closed playback', JSON.stringify({ word, evidence }));
   }
 }
@@ -120,6 +132,15 @@ async function runChecks() {
     assert.throws(() => KitchenMorselPreparation.hydrateBank(audio, damaged), /PCM/); assert.strictEqual(audio.noteCache, original);
     for (const note of audio.noteCache.values()) assert.equal(digest(Buffer.from(note.left.buffer)), digest(Buffer.from(note.pcm, 'base64')));
     return result;
+  });
+  await check('Lossless bank transport contains no NUL strings that JUCE rejects', () => {
+    const encoded = KitchenMorselPreparation.serializeBank(bank), stateJSON = JSON.stringify(encoded);
+    assert.equal(encoded.identityEncoding, 'json-tuple-v1');
+    JSON.parse(stateJSON, (key, value) => { if (typeof value === 'string') assert(!value.includes('\0'), 'JUCE cannot parse a U+0000 string: ' + key); return value; });
+    const restored = KitchenMorselPreparation.restoreBank(JSON.parse(stateJSON));
+    assert.deepEqual(restored.words.map(value => value.identity), bank.words.map(value => value.identity));
+    assert.deepEqual(restored.notes.map(value => [value.key, value.identity, digest(Buffer.from(value.pcm, 'base64'))]), bank.notes.map(value => [value.key, value.identity, digest(Buffer.from(value.pcm, 'base64'))]));
+    return { encoding: encoded.identityEncoding, words: restored.words.length, notes: restored.notes.length, pcmUnchanged: true };
   });
   await check('Sample-offset MIDI produces no early audio under irregular host blocks', () => {
     const adapter = create();
@@ -191,6 +212,7 @@ async function runChecks() {
     try {
       first.setParameter('recipe.voice', 'bass'); first.setParameter('recipe.tone', .4); first.setParameter('recipe.volume', .5);
       const state = JSON.parse(JSON.stringify(first.getState())), expected = create(state), restored = create(state);
+      JSON.parse(JSON.stringify(state), (key, value) => { if (typeof value === 'string') assert(!value.includes('\0'), 'Native state contains U+0000: ' + key); return value; });
       try {
         for (const adapter of [expected, restored]) adapter.noteOn({ pitch: 48, velocity: .8, channel: 2, id: 40, frame: 0 });
         const a = processFrames(expected, 48000), b = processFrames(restored, 48000);

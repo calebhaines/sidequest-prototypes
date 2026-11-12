@@ -129,6 +129,10 @@
     advanceToFrame(frame) { return advance(frame * 1000 / rate); },
     prepareTick(milliseconds = 1) { if (audioStarted) throw Error('Preparation ticks cannot advance a running audio engine.'); return advance(now + Math.max(0, Number(milliseconds) || 0)); },
     nextTimerFrame() { let due = Infinity; for (const timer of timers.values()) if (timer.due < due) due = timer.due; return Number.isFinite(due) ? Math.ceil(due * rate / 1000 - 1e-7) : Infinity; },
+    // Preparation-only parking lets a throwaway engine warm JIT code without
+    // advancing any timer or sample phase belonging to the published engine.
+    captureClockState() { return { now, rate, serial, audioStarted, timers: Array.from(timers.values(), timer => ({ ...timer, args: timer.args.slice() })) }; },
+    restoreClockState(saved) { if (!saved || !Number.isFinite(saved.now) || !Number.isFinite(saved.rate) || !Array.isArray(saved.timers)) throw Error('Invalid parked native clock.'); timers.clear(); for (const timer of saved.timers) timers.set(timer.id, timer); now = saved.now; rate = saved.rate; serial = Math.max(serial, saved.serial); audioStarted = saved.audioStarted; },
     get timeMilliseconds() { return now; }, get pendingTimers() { return timers.size; }, get sampleRate() { return rate; }
   });
 })(globalThis);

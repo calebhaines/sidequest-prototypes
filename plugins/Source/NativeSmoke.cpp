@@ -96,9 +96,12 @@ int main(int argc, char* argv[]) {
                 auto* timing = new juce::DynamicObject(); timing->setProperty("avg", audio.averageMicros); timing->setProperty("p95", audio.p95Micros); timing->setProperty("p99", audio.p99Micros); timing->setProperty("max", audio.maxMicros); row->setProperty("callbackMicros", juce::var(timing)); row->setProperty("realtimeRatio", audio.realtimeRatio);
                 if (audio.realtimeRatio > 1.0) throw std::runtime_error("Native plugin average processing time exceeds the audio duration");
                 if (audio.rms < 1.0e-8 || audio.first < 0) throw std::runtime_error("Native plugin rendered silence from MIDI/audio input");
-                const auto saved = runtime.stateJSON(); if (!juce::JSON::parse(saved).isObject()) throw std::runtime_error("Native state export is not valid JSON");
+                const auto saved = runtime.stateJSON(); juce::var parsedState; const auto parsed = juce::JSON::parse(saved, parsedState); row->setProperty("savedStateBytes", static_cast<juce::int64>(saved.getNumBytesAsUTF8()));
+                if (parsed.failed() || !parsedState.isObject()) throw std::runtime_error(("Native state export JSON: " + parsed.getErrorMessage() + "; length=" + juce::String(saved.length()) + "; first=" + saved.substring(0, 120) + "; last=" + saved.substring(juce::jmax(0, saved.length() - 120))).toStdString());
+                if (id == "morsel" && saved.contains("\\u0000")) throw std::runtime_error("MORSEL state contains unsupported escaped NUL keys");
                 kitchen::NativeRuntime restored(product, resources, 48000, 512, saved);
                 if (!restored.ready()) throw std::runtime_error("Native state restoration: " + restored.getError().toStdString());
+                restored.prepareParameters(values);
                 const auto again = render(restored, product.instrument(), 48000);
                 if (again.rms < 1.0e-8) throw std::runtime_error("Restored native plugin rendered silence");
                 runtime.reset(); row->setProperty("passed", true); row->setProperty("rms", audio.rms); row->setProperty("peak", audio.peak); row->setProperty("firstSample", audio.first); row->setProperty("latencySamples", runtime.latency()); row->setProperty("stateRoundTrip", true);

@@ -508,17 +508,42 @@
     send('kitchenSmokeResult', result); return result;
   }
   async function runNeuralSmokeTest() {
-    const result = { sourceId: id(), pass: false, word: 'zucchini', voice: 'alto', pitch: 60, tempo: 120, workersCreated: 0, nativeBankPublished: false }, started = performance.now();
-    let audio, saved, controller, WorkerConstructor, CountingWorker, recipeBefore, snapshotsBefore;
+    const result = { sourceId: id(), pass: false, word: 'zucchini', voice: 'alto', pitch: 60, tempo: 120, workersCreated: 0, nativeBankPublished: false, workerTrace: [], environment: { protocol: location.protocol, secureContext: global.isSecureContext, userAgent: String(navigator.userAgent).slice(0, 180) } }, started = performance.now();
+    let audio, saved, controller, WorkerConstructor, CountingWorker, BlobConstructor, DiagnosticBlob, recipeBefore, snapshotsBefore, neuralWorkerReady = false, stretchWorkerReady = false, fitCalls = 0, analysisCalls = 0;
+    const trace = value => { if (result.workerTrace.length < 48) result.workerTrace.push({ ms: Math.round(performance.now() - started), ...value }); };
     try {
       if (id() !== 'morsel' || !app?.engine || !global.KitchenMorselPreparation?.prepareBank) throw Error('Open the complete MORSEL native editor before running its neural smoke test.');
       if (preparation || app.engine.preparing || app.engine.pendingWords.size || app.engine.pendingNotes.size) throw Error('Another MORSEL preparation is still active.');
+      result.blobWorkerProbe = await new Promise((resolve, reject) => {
+        const source = 'self.onmessage=e=>self.postMessage({echo:e.data,wasm:typeof WebAssembly==="object",decompressionStream:typeof DecompressionStream==="function",readableStreamAsyncIterator:typeof ReadableStream!=="undefined"&&typeof ReadableStream.prototype[Symbol.asyncIterator]==="function",origin:self.origin,secureContext:self.isSecureContext});';
+        const url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' })); let worker;
+        const timer = setTimeout(() => { worker?.terminate(); URL.revokeObjectURL(url); reject(Error('The native Blob Worker echo timed out after 3 seconds.')); }, 3000);
+        try { worker = new global.Worker(url); worker.onmessage = event => { clearTimeout(timer); worker.terminate(); URL.revokeObjectURL(url); resolve(event.data); }; worker.onerror = event => { clearTimeout(timer); worker.terminate(); URL.revokeObjectURL(url); reject(Error(event.message || 'The native Blob Worker echo failed.')); }; worker.postMessage('kitchen-native-worker'); } catch (error) { clearTimeout(timer); worker?.terminate(); URL.revokeObjectURL(url); reject(error); }
+      });
       audio = app.engine; recipeBefore = JSON.stringify(await projectSnapshot()); snapshotsBefore = diagnostics.snapshots;
       saved = { words: audio.words, noteCache: audio.noteCache, pendingWords: audio.pendingWords, pendingNotes: audio.pendingNotes, wordBytes: audio.wordBytes, noteBytes: audio.noteBytes, reservedNoteBytes: audio.reservedNoteBytes, preparing: audio.preparing, fit: Object.getOwnPropertyDescriptor(audio.stretch, 'fit'), analyze: Object.getOwnPropertyDescriptor(audio.stretch, 'analyze') };
       audio.words = new Map(); audio.noteCache = new Map(); audio.pendingWords = new Map(); audio.pendingNotes = new Map(); audio.wordBytes = audio.noteBytes = audio.reservedNoteBytes = 0;
       controller = preparation = new AbortController(); WorkerConstructor = global.Worker;
-      let neuralWorkerReady = false, stretchWorkerReady = false, fitCalls = 0, analysisCalls = 0;
-      CountingWorker = function (...args) { const worker = new WorkerConstructor(...args); result.workersCreated++; worker.addEventListener('message', event => { if (event.data?.ready) { if (event.data.backend) neuralWorkerReady = true; else stretchWorkerReady = true; } }); return worker; };
+      BlobConstructor = global.Blob;
+      DiagnosticBlob = function (parts = [], options) {
+        const transformed = parts.map(part => {
+          if (typeof part !== 'string' || !part.includes('function runWorker') || !part.includes('const plainIPA')) return part;
+          let source = part;
+          for (const [needle, stage] of [['const plainIPA =', 'phonemize-start'], ['const ipa =', 'phonemize-done'], ['const output = await session.run(', 'inference-start'], ['const generated =', 'inference-done']]) source = source.replace(needle, '__kitchenNeuralReport(' + JSON.stringify(stage) + ');' + needle);
+          const prefix = 'const __kitchenNeuralReport=(stage,error)=>self.postMessage({kitchenNeuralStage:stage,message:String(error?.message||error||"").slice(0,500),stack:String(error?.stack||"").slice(0,900)});self.addEventListener("error",e=>__kitchenNeuralReport("worker-global-error",e.error||e.message));self.addEventListener("unhandledrejection",e=>__kitchenNeuralReport("worker-unhandled-rejection",e.reason));self.postMessage({kitchenNeuralStage:"worker-features",message:JSON.stringify({streamAsyncIterator:typeof ReadableStream.prototype[Symbol.asyncIterator]==="function"})});\n';
+          trace({ event: 'neural-stage-instrumentation' }); return prefix + source;
+        });
+        return new BlobConstructor(transformed, options);
+      };
+      DiagnosticBlob.prototype = BlobConstructor.prototype; Object.setPrototypeOf(DiagnosticBlob, BlobConstructor); global.Blob = DiagnosticBlob;
+      CountingWorker = function (...args) {
+        const worker = new WorkerConstructor(...args), number = ++result.workersCreated; trace({ worker: number, event: 'created', type: args[1]?.type || 'classic', url: String(args[0]).slice(0, 120) });
+        const post = worker.postMessage.bind(worker);
+        try { worker.postMessage = function (value, ...transfer) { trace({ worker: number, event: 'out', id: value?.id, kind: value?.kind || (value?.text ? 'render-word' : 'fit'), text: value?.text ? String(value.text).slice(0, 60) : undefined, frames: value?.audio?.left?.length }); return post(value, ...transfer); }; } catch (_) {}
+        worker.addEventListener('message', event => { const value = event.data; if (value?.ready) { if (value.backend) neuralWorkerReady = true; else stretchWorkerReady = true; } trace({ worker: number, event: 'in', id: value?.id, kind: value?.kitchenNeuralStage || (value?.ready ? 'ready' : value?.result ? 'word-result' : value?.left ? 'fit-result' : value?.audio ? 'analysis-result' : 'other'), backend: value?.backend, message: String(value?.initializationError || value?.error || value?.message || '').slice(0, 500), stack: String(value?.stack || '').slice(0, 900) }); });
+        worker.addEventListener('error', event => trace({ worker: number, event: 'error', message: String(event.message || '').slice(0, 500), filename: String(event.filename || '').slice(0, 160), line: event.lineno, column: event.colno, stack: String(event.error?.stack || '').slice(0, 900) }));
+        worker.addEventListener('messageerror', () => trace({ worker: number, event: 'messageerror' })); return worker;
+      };
       CountingWorker.prototype = WorkerConstructor.prototype; Object.setPrototypeOf(CountingWorker, WorkerConstructor); global.Worker = CountingWorker;
       const fit = audio.stretch.fit, analyze = audio.stretch.analyze;
       audio.stretch.fit = function (...args) { fitCalls++; return fit.apply(this, args); };
@@ -526,7 +551,7 @@
       const state = global.MorselSchema.normalize({ ...app.getState(), voice: 'alto', lyric: 'zucchini', phrase: '', tempo: 120, musicLabPattern: undefined, steps: Array.from({ length: 32 }, () => ({ ...global.MorselSchema.step(), on: false })) });
       const helper = global.KitchenMorselPreparation, bank = await helper.prepareBank({ audio, state, voices: ['alto'], pitches: [60], tempos: [120], keyboardDuration: .8, signal: controller.signal });
       const measure = entry => { if (!entry) throw Error('Neural preparation returned no PCM.'); const pcm = helper.decode(entry.pcm, entry.frames); let peak = 0, energy = 0; for (const value of pcm) { if (!Number.isFinite(value)) throw Error('Neural preparation returned non-finite PCM.'); peak = Math.max(peak, Math.abs(value)); energy += value * value; } return { frames: pcm.length, sampleRate: entry.sampleRate, seconds: pcm.length / entry.sampleRate, finite: true, peak, rms: Math.sqrt(energy / Math.max(1, pcm.length)) }; };
-      const word = bank.words.find(entry => entry.identity === 'alto\u0000zucchini'), note = bank.notes.find(entry => entry.identity === 'alto\u0000zucchini' && entry.pitch === 60);
+      const word = bank.words[0], note = bank.notes.find(entry => entry.pitch === 60);
       result.backend = bank.backend; result.modelHash = String(bank.modelHash || global.MorselSpeech?.modelHash || '').slice(0, 64); result.neuralReady = !!global.MorselSpeech?.ready; result.neuralWorkerReady = neuralWorkerReady;
       result.signalsmith = { analysisCalls, fitCalls, ready: !!audio.stretch.worker && !!audio.stretch.ready, workerReady: stretchWorkerReady };
       result.wordFit = { ...measure(word), voicedFrames: word.voicedFrames?.length || 0, maskFrames: word.maskFrames || 0 }; result.noteFit = measure(note);
@@ -536,6 +561,10 @@
     } catch (error) { result.error = error.message || String(error); }
     finally {
       if (WorkerConstructor && global.Worker === CountingWorker) global.Worker = WorkerConstructor;
+      if (BlobConstructor && global.Blob === DiagnosticBlob) global.Blob = BlobConstructor;
+      result.neuralReady = !!global.MorselSpeech?.ready; result.neuralWorkerReady = neuralWorkerReady;
+      result.signalsmith ||= { analysisCalls, fitCalls, ready: !!audio?.stretch?.worker && !!audio?.stretch?.ready, workerReady: stretchWorkerReady };
+      if (!result.pass && audio) { controller?.abort(); global.MorselSpeech?.dispose?.(); audio.stretch?.close?.(); }
       if (audio && saved) {
         for (const key of ['words', 'noteCache', 'pendingWords', 'pendingNotes', 'wordBytes', 'noteBytes', 'reservedNoteBytes', 'preparing']) audio[key] = saved[key];
         for (const key of ['fit', 'analyze']) { if (saved[key]) Object.defineProperty(audio.stretch, key, saved[key]); else delete audio.stretch[key]; }

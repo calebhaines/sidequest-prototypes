@@ -43,28 +43,33 @@ Metrics render(juce::AudioPluginInstance& plugin, TestPlayHead& playHead, bool i
 }
 }
 int main(int argc, char* argv[]) {
-    juce::ScopedJuceInitialiser_GUI initialiser; juce::File directory; juce::File reportFile;
-    for (int i = 1; i < argc; ++i) { const juce::String arg(argv[i]); if (arg == "--bundles" && i + 1 < argc) directory = juce::File(argv[++i]); else if (arg == "--report" && i + 1 < argc) reportFile = juce::File(argv[++i]); }
-    if (!directory.isDirectory()) { std::cerr << "Pass --bundles with the CMake build directory\n"; return 2; }
+    juce::ScopedJuceInitialiser_GUI initialiser; juce::File directory, selectedBundle; juce::File reportFile;
+    for (int i = 1; i < argc; ++i) { const juce::String arg(argv[i]); if (arg == "--bundles" && i + 1 < argc) directory = juce::File(argv[++i]); else if (arg == "--plugin" && i + 1 < argc) selectedBundle = juce::File(argv[++i]); else if (arg == "--report" && i + 1 < argc) reportFile = juce::File(argv[++i]); }
+    if (!directory.isDirectory() && !selectedBundle.isDirectory()) { std::cerr << "Pass --bundles with the build directory or --plugin with a VST3 bundle\n"; return 2; }
     juce::AudioPluginFormatManager manager; manager.addFormat(std::make_unique<juce::VST3PluginFormat>());
-    juce::Array<juce::File> bundles; directory.findChildFiles(bundles, juce::File::findDirectories, true, "*.vst3");
+    juce::Array<juce::File> bundles; if (selectedBundle.isDirectory()) bundles.add(selectedBundle); else directory.findChildFiles(bundles, juce::File::findDirectories, true, "*.vst3");
     bool success = !bundles.isEmpty(); juce::Array<juce::var> rows;
     for (const auto& bundle : bundles) {
         auto* row = new juce::DynamicObject(); row->setProperty("bundle", bundle.getFullPathName());
         try {
+            std::cerr << "Kitchen host SCAN " << bundle.getFullPathName().toStdString() << std::endl;
             juce::OwnedArray<juce::PluginDescription> descriptions; manager.getFormat(0)->findAllTypesForFile(descriptions, bundle.getFullPathName());
             if (descriptions.size() != 1) throw std::runtime_error("Compiled bundle did not expose exactly one VST3 product");
+            std::cerr << "Kitchen host CREATE " << descriptions[0]->name.toStdString() << std::endl;
             juce::String error; auto plugin = manager.createPluginInstance(*descriptions[0], 48000, 128, error);
             if (!plugin) throw std::runtime_error(("Could not load compiled VST3: " + error).toStdString());
+            std::cerr << "Kitchen host PREPARE " << descriptions[0]->name.toStdString() << std::endl;
             TestPlayHead playHead; plugin->setPlayHead(&playHead); plugin->setPlayConfigDetails(descriptions[0]->isInstrument ? 0 : 2, 2, 48000, 128); plugin->prepareToPlay(48000, 128);
+            std::cerr << "Kitchen host RENDER " << descriptions[0]->name.toStdString() << std::endl;
             const auto audio = render(*plugin, playHead, descriptions[0]->isInstrument);
             auto* timing = new juce::DynamicObject(); timing->setProperty("avg", audio.averageMicros); timing->setProperty("p95", audio.p95Micros); timing->setProperty("p99", audio.p99Micros); timing->setProperty("max", audio.maxMicros); row->setProperty("callbackMicros", juce::var(timing)); row->setProperty("realtimeRatio", audio.realtimeRatio);
             if (audio.realtimeRatio > 1.0) throw std::runtime_error("Compiled VST3 average processing time exceeds the audio duration");
             if (audio.first < 0 || audio.rms < 1.0e-8) throw std::runtime_error("Compiled VST3 rendered silence");
             int changedParameter = -1; float savedParameterValue = .61f; juce::String changedParameterName;
-            for (int i = 0; i < plugin->getParameters().size(); ++i) { auto* parameter = plugin->getParameters()[i]; const auto name = parameter->getName(128); if (parameter->getNumSteps() > 16 && !parameter->isBoolean() && !name.containsIgnoreCase("follow") && !name.containsIgnoreCase("bypass") && !name.containsIgnoreCase("sequence")) { changedParameter = i; changedParameterName = name; if (std::abs(parameter->getDefaultValue() - savedParameterValue) < .001f) savedParameterValue = .37f; parameter->beginChangeGesture(); parameter->setValueNotifyingHost(savedParameterValue); parameter->endChangeGesture(); savedParameterValue = parameter->getValue(); break; } }
+            for (int i = 0; i < plugin->getParameters().size(); ++i) { auto* parameter = plugin->getParameters()[i]; const auto name = parameter->getName(128); if (parameter->getNumSteps() > 128 && !parameter->isBoolean() && !name.containsIgnoreCase("follow") && !name.containsIgnoreCase("bypass") && !name.containsIgnoreCase("sequence")) { changedParameter = i; changedParameterName = name; if (std::abs(parameter->getDefaultValue() - savedParameterValue) < .001f) savedParameterValue = .37f; parameter->beginChangeGesture(); parameter->setValueNotifyingHost(savedParameterValue); parameter->endChangeGesture(); savedParameterValue = parameter->getValue(); break; } }
             if (changedParameter < 0) throw std::runtime_error("No numeric parameter found for nondefault host-state validation");
             juce::MemoryBlock saved; plugin->getStateInformation(saved); if (saved.getSize() == 0) throw std::runtime_error("Compiled VST3 state is empty");
+            std::cerr << "Kitchen host RESTORE " << descriptions[0]->name.toStdString() << std::endl;
             plugin->releaseResources(); plugin.reset();
             auto restored = manager.createPluginInstance(*descriptions[0], 48000, 128, error); if (!restored) throw std::runtime_error(error.toStdString());
             restored->setStateInformation(saved.getData(), static_cast<int>(saved.getSize())); restored->setPlayHead(&playHead); restored->setPlayConfigDetails(descriptions[0]->isInstrument ? 0 : 2, 2, 48000, 128); restored->prepareToPlay(48000, 128);

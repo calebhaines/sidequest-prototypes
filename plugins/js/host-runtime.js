@@ -8,7 +8,7 @@
   if (!env) throw Error('Load the native language environment before the host runtime.');
   let descriptors = [], backend = null, descriptor = null, sourceId = '', family = '', rate = 48000, capacity = 0;
   let parameters = [], parameterValues = [], ready = false, preparing = false, error = '', generation = 0;
-  let captureTake = null, captureSerial = 0, captureClearedToken = null;
+  let captureTake = null, captureSerial = 0, captureClearedToken = null, warmSession = null, warmupReport = null;
   let frameEpoch = null, frameBase = 0, lastBackendEnd = 0, lastRawEnd = null, lastTempo = 120, fallbackBeat = 0;
   let scratchL, scratchR, viewsL, viewsR, indices, inputScratchL, inputScratchR, inputViewsL, inputViewsR, liveInput = false;
   const clock = { sampleRate: 48000, tempo: 120, bpm: 120, beat: 0, ppqPosition: 0, playing: false, frame: 0, samplePosition: 0, revision: 0, timeSigNumerator: 4, timeSigDenominator: 4, timeSig: { numerator: 4, denominator: 4 }, looping: false, loopStart: 0, loopEnd: 0, recording: false };
@@ -73,7 +73,7 @@
     if (typeof text !== 'object') throw TypeError('Native state must be a JSON object.');
     return text;
   }
-  function status() { return { ready, preparing, error: error || null, id: descriptor?.id || null, sourceId: sourceId || null, family: family || null, latencySamples: backend ? latency() : 0 }; }
+  function status() { return { ready: ready && !warmSession, preparing: preparing || !!warmSession, error: error || null, id: descriptor?.id || null, sourceId: sourceId || null, family: family || null, warmup: warmSession ? { frames: warmSession.frames, completedFrames: warmSession.completed } : warmupReport, latencySamples: backend ? latency() : 0 }; }
   function watchPreparation(result, token) {
     if (result && typeof result.then === 'function') {
       preparing = true; ready = false;
@@ -123,8 +123,8 @@
     } catch (cause) { return fail(cause); }
   }
   function prepareTick(milliseconds = 1) {
-    try { if (error) throw Error(error); if (preparing) env.prepareTick(milliseconds); return JSON.stringify(status()); }
-    catch (cause) { return fail(cause); }
+    try { if (error) throw Error(error); if (preparing) env.prepareTick(milliseconds); if (warmSession && ready && !preparing) warmupTick(); return JSON.stringify(status()); }
+    catch (cause) { if (warmSession) { try { restoreWarmup(cause); } catch (_) {} } return fail(cause); }
   }
   function ioForRender(frames) {
     const io = g.KitchenHostIO;
@@ -172,7 +172,7 @@
   }
   function render(frames) {
     try {
-      if (!backend || !ready || error) throw Error(error || 'Native plugin preparation has not completed.');
+      if (!backend || !ready || error || warmSession && !warmSession.rendering) throw Error(error || 'Native plugin preparation has not completed.');
       if (!Number.isInteger(frames) || frames < 0 || frames > capacity) throw RangeError('Render exceeds native block capacity.');
       const io = ioForRender(frames), raw = io.clock;
       if (raw[11] && raw[11] !== rate) throw Error('Sample-rate changes require preparing a new native engine.');
@@ -237,6 +237,71 @@
       env.rebaseAudio(frameBase); return true;
     } catch (cause) { return fail(cause); }
   }
+  function restoreWarmup(cause) {
+    const session = warmSession; if (!session) return;
+    const temporary = backend;
+    try { if (temporary?.dispose) { const closing = temporary.dispose(); if (closing?.catch) closing.catch(() => {}); } }
+    finally {
+      const saved = session.saved; backend = saved.backend; parameterValues = saved.parameterValues;
+      ready = saved.ready; preparing = saved.preparing; error = saved.error;
+      frameEpoch = saved.frameEpoch; frameBase = saved.frameBase; lastBackendEnd = saved.lastBackendEnd; lastRawEnd = saved.lastRawEnd; lastTempo = saved.lastTempo; fallbackBeat = saved.fallbackBeat;
+      captureTake = saved.captureTake; captureSerial = saved.captureSerial; captureClearedToken = saved.captureClearedToken;
+      Object.assign(clock, saved.clock); Object.assign(saved.timeSig, saved.timeSigValues); clock.timeSig = saved.timeSig;
+      scratchL.set(saved.scratchL); scratchR.set(saved.scratchR); if (liveInput) { inputScratchL.set(saved.inputL); inputScratchR.set(saved.inputR); }
+      env.restoreClockState(saved.environment); g.KitchenHostIO = saved.io;
+      for (const [key, data] of Object.entries(saved.ioValues)) if (ArrayBuffer.isView(data)) saved.io[key].set(data); else saved.io[key] = data;
+      ++generation; warmSession = null;
+      warmupReport = { frames: session.completed, requestedFrames: session.frames, quanta: session.quanta, sampleRate: rate, restored: !cause, discarded: true };
+    }
+    if (cause) throw cause;
+  }
+  function warmup(frames = Math.round(rate * 2)) {
+    // The C++ preparation worker is the sole caller. A pristine backend is
+    // parked, never rendered/reset/recreated: oscillator/IR/noise state and
+    // already-prepared resources remain bit-for-bit intact after warmup.
+    if (!backend || !ready || preparing || warmSession || error || frameEpoch !== null) throw Error('Warmup requires a prepared engine before its first audio block.');
+    if (!Number.isInteger(frames) || frames < QUANTUM || frames > rate * 3) throw RangeError('Warmup must contain128frames to three seconds of discarded audio.');
+    const saved = { backend, parameterValues, ready, preparing, error, frameEpoch, frameBase, lastBackendEnd, lastRawEnd, lastTempo, fallbackBeat, captureTake, captureSerial, captureClearedToken,
+      clock: { ...clock }, timeSig: clock.timeSig, timeSigValues: { ...clock.timeSig }, scratchL: scratchL.slice(), scratchR: scratchR.slice(), inputL: inputScratchL?.slice(), inputR: inputScratchR?.slice(), environment: env.captureClockState(), io: g.KitchenHostIO, ioValues: {} };
+    for (const key of ['inputLeft', 'inputRight', 'outputLeft', 'outputRight', 'clock', 'events', 'parameters', 'eventCount', 'outputEventCount']) { const value = saved.io[key]; saved.ioValues[key] = ArrayBuffer.isView(value) ? value.slice() : value; }
+    const state = backend.getState(), registry = registryFor(descriptor, sourceId)[1];
+    // Keep native object/typed-array identities too, so their hot ICs are
+    // trained on the same shapes/backing buffers as the real audio callback.
+    const io = saved.io;
+    warmSession = { saved, io, frames, completed: 0, quanta: 0, beat: 0, notesOff: false, rendering: false };
+    try {
+      env.configure({ sampleRate: rate, clearTimers: true }); g.KitchenHostIO = io;
+      frameEpoch = null; frameBase = lastBackendEnd = 0; lastRawEnd = null; fallbackBeat = 0; lastTempo = 120;
+      captureTake = null; captureClearedToken = null; parameterValues = saved.parameterValues.slice();
+      backend = null;
+      backend = registry.create(sourceId, rate, state, makeResources());
+      for (let i = 0; i < parameterValues.length; i++) setParameter(i, parameterValues[i]);
+      const preparation = typeof backend.prepare === 'function' ? backend.prepare() : backend.ready;
+      watchPreparation(preparation, ++generation);
+      return JSON.stringify(status());
+    } catch (cause) { restoreWarmup(cause); }
+  }
+  function warmupTick() {
+    const session = warmSession, io = session.io;
+    try {
+      // Bound each worker tick; the native status loop can still detect faults
+      // and does not need one monolithic multi-second JavaScript call.
+      for (let quantum = 0; quantum < 32 && session.completed < session.frames; quantum++) {
+        const frame = session.completed, count = Math.min(QUANTUM, capacity, session.frames - frame), tempo = frame < session.frames / 2 ? 120 : 137;
+        io.clock.set([tempo, session.beat, frame < session.frames * .9 ? 1 : 0, 4, 4, 0, 0, 4, frame, frame, frame < session.frames / 2 ? 1 : 2, rate, count, 0, 1, 1]);
+        io.eventCount = 0;
+        if (family !== 'effect' && (frame === 0 || !session.notesOff && frame >= session.frames * .65)) {
+          const on = frame === 0; for (let note = 0; note < 3; note++) io.events.set([on ? Math.min(17, count - 1) : 0, on ? 1 : 2, 36 + note * 12, on ? .8 : 0, 1, note + 1, 0, 0], note * 8);
+          io.eventCount = 3; if (!on) session.notesOff = true;
+        }
+        for (let i = 0; i < count; i++) { const at = frame + i; io.inputLeft[i] = .07 * Math.sin(at * 220 * 2 * Math.PI / rate); io.inputRight[i] = .06 * Math.sin(at * 330 * 2 * Math.PI / rate); }
+        session.rendering = true; render(count); session.rendering = false;
+        session.beat += frame < session.frames * .9 ? count * tempo / (60 * rate) : 0;
+        session.completed += count; session.quanta++;
+      }
+      if (session.completed === session.frames) restoreWarmup();
+    } catch (cause) { session.rendering = false; if (warmSession) restoreWarmup(cause); else throw cause; }
+  }
   function requireCapture() { if (!backend?.startMidiCapture || !backend?.stopMidiCapture || !backend?.drainMidiEvents) throw Error('This effect has no note-capture facility.'); }
   function updateCapture(batch) {
     if (!batch || batch.token === captureClearedToken) return;
@@ -286,7 +351,7 @@
   function getStateJSON() { try { if (!backend) throw Error('Native plugin is not created.'); return JSON.stringify(backend.getState()); } catch (cause) { return fail(cause); } }
   function setStateJSON(json) { if (!descriptor) throw Error('Native plugin is not created.'); return create(descriptor.id, rate, capacity, json); }
   const api = {
-    configureDescriptors, create, render, prepareTick, getStateJSON, setStateJSON, setParameter, reset,
+    configureDescriptors, create, render, prepareTick, warmup, getWarmupReportJSON: () => JSON.stringify(warmupReport), getStateJSON, setStateJSON, setParameter, reset,
     getLatencySamples: latency, getStatusJSON: () => JSON.stringify(status()),
     getParameterValues: () => parameterValues.slice(),
     getTailSeconds: () => Math.max(0, finite(backend?.getTailSeconds?.(), 0)),

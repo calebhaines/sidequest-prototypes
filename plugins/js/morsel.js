@@ -22,7 +22,8 @@
     if (!Number.isInteger(sampleRate) || sampleRate < 8000 || sampleRate > 192000) throw Error('Unsupported MORSEL sample rate.');
     const S = scope.MorselSchema, Q = scope.MorselSequence, P = scope.KitchenMorselPreparation, W = scope.KitchenWebAudio;
     if (!S || !Q || !P || !W || !scope.MorselAudio) throw Error('MORSEL native sources or Web Audio compatibility are missing.');
-    let recipe = S.normalize(supplied.recipe || supplied.state || supplied), bank = supplied.bank || resources.morselBank || resources.bank || scope.KitchenMorselDefaultBank;
+    let recipe = S.normalize(supplied.recipe || supplied.state || supplied), bank = P.restoreBank(supplied.bank || resources.morselBank || resources.bank || scope.KitchenMorselDefaultBank);
+    let serializedBank = P.serializeBank(bank);
     let followHost = supplied.followHost !== false, lastClock = null, disposed = false;
     W.installContextFactory(sampleRate);
     // MorselAudio.init creates its graph synchronously before awaiting speech.
@@ -119,13 +120,13 @@
       }
     }
     return {
-      getState() { return { recipe: clone(recipe), bank, followHost }; },
+      getState() { return { recipe: clone(recipe), bank: serializedBank, followHost }; },
       setState(value = {}) {
-        const next = S.normalize(value.recipe || value.state || value), nextBank = value.bank || bank; validateCoverage(next, nextBank);
+        const next = S.normalize(value.recipe || value.state || value), nextBank = value.bank ? P.restoreBank(value.bank) : bank; validateCoverage(next, nextBank);
         if (nextBank !== bank) {
-          const prepared = {}; P.hydrateBank(prepared, nextBank); reset();
+          const prepared = {}; P.hydrateBank(prepared, nextBank); const preparedSerialized = P.serializeBank(nextBank); reset();
           audio.words = prepared.words; audio.noteCache = prepared.noteCache; audio.wordBytes = prepared.wordBytes; audio.noteBytes = prepared.noteBytes;
-          bank = nextBank; makeBuffers();
+          bank = nextBank; serializedBank = preparedSerialized; makeBuffers();
         }
         recipe = next; if (value.followHost !== undefined) followHost = value.followHost !== false; audio.setState(recipe); sent.clear();
       },
