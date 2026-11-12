@@ -254,12 +254,13 @@ void PluginProcessor::stateFromEditor(const juce::var& payload) {
     updateHostDisplay(ChangeDetails().withNonParameterStateChanged(true));
     requestRebuild();
 }
-void PluginProcessor::parameterFromEditor(const juce::var& payload) {
+juce::var PluginProcessor::parameterFromEditor(const juce::var& payload) {
     int index = payload["index"].isVoid() ? -1 : static_cast<int>(payload["index"]);
     if (index < 0 && !payload["path"].isVoid()) for (int i = 0; i < metadata.size(); ++i) if (metadata[i]["path"] == payload["path"] || metadata[i]["path"].toString() == payload["path"].toString()) { index = i; break; }
-    if (index < 0 || index >= static_cast<int>(hostParameters.size())) return;
+    if (index < 0 || index >= static_cast<int>(hostParameters.size())) return {};
     const float value = payload["normalized"].isVoid() ? normalizedValue(metadata[index], payload["value"]) : juce::jlimit(0.0f, 1.0f, static_cast<float>(payload["normalized"]));
     auto* parameter = hostParameters[static_cast<size_t>(index)]; parameter->beginChangeGesture(); parameter->setValueNotifyingHost(value); parameter->endChangeGesture();
+    auto* reply = new juce::DynamicObject(); reply->setProperty("index", index); reply->setProperty("normalized", parameter->getValue()); reply->setProperty("clientRevision", payload["clientRevision"]); return juce::var(reply);
 }
 void PluginProcessor::midiFromEditor(const juce::var& payload) {
     UiMidi event; const auto type = payload["type"].toString(); event.type = type == "on" || type == "noteOn" ? noteOn : type == "off" || type == "noteOff" ? noteOff : type == "cc" ? controller : type == "bend" ? pitchBend : allNotesOff;

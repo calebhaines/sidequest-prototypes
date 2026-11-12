@@ -6,6 +6,49 @@
   const ids = Object.freeze(Object.keys(names)), copy = value => JSON.parse(JSON.stringify(value));
   const finite = (x, fallback) => Number.isFinite(x) ? x : fallback;
   const SOURCE = 'kitchen-plugin-pattern', EPS = 1e-8;
+  const GRAIN_NOISE_COLORS = Object.freeze(['white', 'pink', 'brown', 'blue', 'violet', 'grey', 'velvet', 'crackle', 'metallic', 'digital', 'dust', 'radio']);
+  const grainNoiseBanks = new Map();
+  async function preparedGrainNoise(sampleRate) {
+    let pending = grainNoiseBanks.get(sampleRate);
+    if (!pending) {
+      pending = (async () => {
+        // Canonical makeNoise is private and deterministic: its seed is only
+        // 1977 + colorIndex * 701, and its length/rate depend on sampleRate.
+        // Ask an isolated original engine to produce its exact AudioBuffers.
+        // The real engine's voices, clock and two performance RNGs stay pristine.
+        const helper = new g.NoiseEngine(), bank = new Map();
+        helper.values = { master: 0, drive: 0, space: 0 };
+        helper.setVoiceState({ bpm: 120, tracks: [] });
+        try {
+          await helper.init();
+          // WAE also lazily builds immutable basic-wave tables per sample rate.
+          // Preparing unstarted oscillators trains those tables without ever
+          // advancing a note's phase or changing the real engine's node graph.
+          for (const wave of ['sine', 'triangle', 'sawtooth', 'square']) { const node = helper.context.createOscillator(); node.type = wave; node.disconnect(); }
+          for (const color of GRAIN_NOISE_COLORS) {
+            const track = { name: 'Prepared noise', noise: color, mode: 'texture', level: 1, pan: 0, tone: .5, decay: 0, pitch: .5, mute: false, solo: false, steps: Array(16).fill(0), galleyFx: [null, null] };
+            g.GrainSynth.ensureTrack(track);
+            Object.assign(track.synth.body, { level: 0 });
+            Object.assign(track.synth.noise, { level: 1, attack: .001, hold: 0, decay: .005, drive: 0, bursts: 1 });
+            Object.assign(track.synth.mod, { depth: 0, target: 'off' });
+            helper.scheduleNativeNote(track, 0, { voiceIndex: 0, voiceKey: 'prepared-noise-' + color, velocity: .5, tempo: 120, source: 'kitchen-noise-preparation' });
+            const buffer = helper.environment.buffers.get(color);
+            if (!buffer || buffer.sampleRate !== sampleRate || buffer.length !== sampleRate * 2 || buffer.numberOfChannels !== 1) throw Error('SIZZLE could not prepare its original ' + color + ' noise.');
+            bank.set(color, buffer);
+          }
+          return bank;
+        } finally {
+          // The helper never renders. Explicitly release its prepared native
+          // room too, so a JUCE convolution worker cannot outlive this setup.
+          if (helper.graph?.reverb) helper.graph.reverb.buffer = null;
+          await helper.dispose();
+        }
+      })();
+      grainNoiseBanks.set(sampleRate, pending);
+    }
+    try { return await pending; }
+    catch (error) { if (grainNoiseBanks.get(sampleRate) === pending) grainNoiseBanks.delete(sampleRate); throw error; }
+  }
   function defaultProject(id) {
     if (id === 'grain' || id === 'tine') {
       const p = copy(id === 'grain' ? g.NOISE_PRESETS[0] : g.TINE_PRESETS[0]);
@@ -126,6 +169,7 @@
         else if (id === 'batter') { engine.setState(state); await engine.ensureSamples(); }
         else await engine.update(state);
       }
+      if (id === 'grain') for (const [color, buffer] of await preparedGrainNoise(sampleRate)) engine.environment.buffers.set(color, buffer);
       playbackState = state; buildSequence();
       // Sample transforms and context AudioBuffers are ready before rendering.
       if (id === 'fable') for (const zone of state.zones) { const asset = state.assets.find(a => a.id === zone.assetId); if (asset) engine.graph.prepared(asset, zone); }

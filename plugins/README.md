@@ -95,6 +95,10 @@ before the engine is published to the audio callback. Resource loading and
 full recipe reconstruction run outside rendering. Continuous parameter
 automation retains the active DSP and voices.
 
+Before publishing a prepared engine, the runtime warms a disposable instance
+in the same VM, then restores the untouched original engine, clock, timers and
+buffers. The discarded audio does not advance the sound you hear.
+
 The 22 rack effects, CHANNEL EQ, MASTERING and eleven Core instruments reuse
 their original numerical DSP. Adapter tests compare their PCM directly with
 the canonical engines. SIZZLE, HOTPLATE, CLATTER, STOCK, BATTER, PICNIC and
@@ -134,6 +138,18 @@ The original engines still allocate some per-note objects and use a garbage
 collected VM. This is not a claim of allocation-free or hard-real-time DSP.
 The supplied tests verify functionality and output; they do not replace
 performance testing in your particular DAW and buffer-size configuration.
+
+JavaScriptCore acceleration also depends on the **host process permitting
+JIT compilation**. Apple applies the DAW's executable permissions to an
+in-process plugin; signing the plugin cannot grant that permission to the
+DAW. Without JIT, the more demanding engines may exceed the playback budget.
+The official REAPER 7.85 Apple Silicon application and its separate plugin
+host, and Cubase 16.0.5's Apple Silicon application, contain the explicit JIT
+entitlement. Ableton Live Lite 12.4.16 instead permits unsigned executable
+memory without an explicit JIT entitlement; that configuration needs its
+own runtime check. These signature inspections are not claims of completed
+playback testing in those DAWs or every other host.
+The native test applications are signed with the required permissions.
 
 ## Rebuild
 

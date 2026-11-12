@@ -72,6 +72,12 @@ for (const entry of entries) {
       assert.deepEqual(l,expectedL,entry.id+' left channel differs from canonical source DSP');assert.deepEqual(r,expectedR,entry.id+' right channel differs from canonical source DSP');}
     const instrument = g.KitchenCoreInstruments.create(entry.id, SR, state, { nativeSequence: false });
     const baseline = g.KitchenCoreInstruments.create(entry.id, SR, state, { nativeSequence: false });
+    if(['heirloom','brine','citrus'].includes(entry.id)){
+      assert.equal(instrument.core.constructor,baseline.core.constructor,'Prepared instances used different playback classes');
+      assert.equal(instrument.core.synth.constructor,baseline.core.synth.constructor,'Prepared instances used different synthesis classes');
+      assert.notEqual(instrument.core.synth,baseline.core.synth,'Prepared instances shared a live synthesizer');
+      assert.notEqual(instrument.core.jobs,baseline.core.jobs,'Prepared instances shared the scheduler queue');
+    }
     instrument.noteOn({ id: 'midi-a', pitch: 60, velocity: .85, channel: 0, frame: 64 });
     const actual = render(instrument, 8192), silent = render(baseline, 8192);
     assert.deepEqual(actual.left.slice(0,64), silent.left.slice(0,64), entry.id + ' MIDI started before its sample offset');
@@ -87,7 +93,26 @@ for (const entry of entries) {
     const volume=definition.parameters.find(p=>p.type==='number'&&/volume$/.test(p.path))||definition.parameters.find(p=>p.type==='number');
     instrument.setParameter(volume.path,volume.min+(volume.max-volume.min)*.42);assert.equal(instrument.core,originalCore,'automation recreated live DSP');
     assert.equal(instrument.getState().format,entry.id+'-project','parameter edit lost complete project envelope');
-    if(entry.id==='marinade'){assert.equal(instrument.core.models[0].lanes,72);assert(instrument.core.models[0].amplitudes.some(x=>x>0),'Spectral source model is empty');const models=instrument.core.models;instrument.setParameter('synth.filter.cutoff',4200);assert.equal(instrument.core.models,models,'Filter automation repeated spectral analysis');}
+    if(entry.id==='marinade'){
+      assert.equal(instrument.core.models[0].lanes,72);assert(instrument.core.models[0].amplitudes.some(x=>x>0),'Spectral source model is empty');const models=instrument.core.models;instrument.setParameter('synth.filter.cutoff',4200);assert.equal(instrument.core.models,models,'Filter automation repeated spectral analysis');
+      const native=g.KitchenCoreInstruments.create('marinade',SR,state,{nativeSequence:false,models}),canonical=new g.MarinadeDSP.Core(SR,state,models),left=new Float32Array(128),right=new Float32Array(128),expectedL=new Float32Array(128),expectedR=new Float32Array(128);
+      const analyze=g.MarinadeAnalysis.analyze,sources=g.MarinadeSources,wasm=vm.runInContext('WebAssembly',g),Module=wasm.Module,Instance=wasm.Instance;
+      const noRenderPreparation=()=>{throw Error('MARINADE prepared assets or compiled WASM in the audio callback');};
+      g.MarinadeAnalysis.analyze=noRenderPreparation;g.MarinadeSources={...sources,resolve:noRenderPreparation};wasm.Module=noRenderPreparation;wasm.Instance=noRenderPreparation;
+      let maxVoices=0,nativeNanos=0n,canonicalNanos=0n;
+      try{for(let block=0;block<512;block++){
+        const frame=block*128;
+        if(block%8===0&&block<192){const id='poly-'+block,pitch=36+(block/8*7)%49,velocity=.35+(block%5)*.12;native.noteOn({id,pitch,velocity,frame});canonical.scheduleNote({note:pitch,velocity,frame,duration:600,source:'vst:'+id});}
+        if(block===248)for(let n=0;n<12;n++){native.noteOff({id:'poly-'+n*8,frame});canonical.stopNotes({source:'vst:poly-'+n*8,frame});}
+        if(block===96||block===224||block===352){const next=JSON.parse(JSON.stringify(state));next.synth.morph=block===96?.17:.83;next.synth.filter.cutoff=block===224?1700:6400;next.synth.formantShift=block===352?-7:5;next.synth.lfo.target='formant';next.synth.lfo.depth=.43;native.setState(next);canonical.setState(g.MarinadeSchema.normalize(next));}
+        let before=process.hrtime.bigint();native.process(left,right);nativeNanos+=process.hrtime.bigint()-before;before=process.hrtime.bigint();canonical.processBlock(expectedL,expectedR);canonicalNanos+=process.hrtime.bigint()-before;
+        assert.deepEqual(left,expectedL,'WASM spectral kernel changed canonical stereo PCM at '+frame);assert.deepEqual(right,expectedR,'WASM spectral kernel changed canonical stereo PCM at '+frame);
+        assert.equal(native.core.voices.length,canonical.voices.length,'WASM spectral kernel changed voice stealing');maxVoices=Math.max(maxVoices,native.core.voices.length);
+        for(let n=0;n<canonical.voices.length;n++)for(const key of ['cos','sin','amp','ampStep','quality','qualityStep'])assert.deepEqual(native.core.voices[n][key],canonical.voices[n][key],'WASM spectral kernel changed '+key+' at '+frame);
+      }}finally{g.MarinadeAnalysis.analyze=analyze;g.MarinadeSources=sources;wasm.Module=Module;wasm.Instance=Instance;}
+      assert.equal(maxVoices,16,'Long spectral parity did not exercise the full canonical voice budget');
+      console.log('marinade scalar kernel:65536frames exact stereo/phase/ramp parity through16voices, steals and automation; local render '+(Number(nativeNanos)/1e6).toFixed(1)+'ms vs canonical '+(Number(canonicalNanos)/1e6).toFixed(1)+'ms');
+    }
     if(entry.id==='ravel'){
       const seeded=g.RavelDSP.generateSeed(state.asset);assert.deepEqual(instrument.core.sample,seeded.pcm,'Factory source PCM differs from the web engine');
       const pcm=Buffer.alloc(1024*2);for(let i=0;i<1024;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.1)*24000),i*2);

@@ -251,7 +251,7 @@
       env.restoreClockState(saved.environment); g.KitchenHostIO = saved.io;
       for (const [key, data] of Object.entries(saved.ioValues)) if (ArrayBuffer.isView(data)) saved.io[key].set(data); else saved.io[key] = data;
       ++generation; warmSession = null;
-      warmupReport = { frames: session.completed, requestedFrames: session.frames, quanta: session.quanta, sampleRate: rate, restored: !cause, discarded: true };
+      warmupReport = { frames: session.completed, requestedFrames: session.frames, quanta: session.quanta, voicesExercised: session.notes.length, sampleRate: rate, restored: !cause, discarded: true };
     }
     if (cause) throw cause;
   }
@@ -268,7 +268,9 @@
     // Keep native object/typed-array identities too, so their hot ICs are
     // trained on the same shapes/backing buffers as the real audio callback.
     const io = saved.io;
-    warmSession = { saved, io, frames, completed: 0, quanta: 0, beat: 0, notesOff: false, rendering: false };
+    const drumVoices = ['grain', 'form', 'tine'].includes(sourceId) ? 8 : sourceId === 'batter' ? 12 : 0;
+    const pitches = family === 'effect' ? [] : drumVoices ? Array.from({ length: drumVoices }, (_, index) => 36 + index) : [48, 52, 55];
+    warmSession = { saved, io, frames, completed: 0, quanta: 0, beat: 0, notes: pitches, drumVoices, hitStage: 0, notesOff: false, rendering: false };
     try {
       env.configure({ sampleRate: rate, clearTimers: true }); g.KitchenHostIO = io;
       frameEpoch = null; frameBase = lastBackendEnd = 0; lastRawEnd = null; fallbackBeat = 0; lastTempo = 120;
@@ -290,9 +292,13 @@
         const frame = session.completed, count = Math.min(QUANTUM, capacity, session.frames - frame), tempo = frame < session.frames / 2 ? 120 : 137;
         io.clock.set([tempo, session.beat, frame < session.frames * .9 ? 1 : 0, 4, 4, 0, 0, 4, frame, frame, frame < session.frames / 2 ? 1 : 2, rate, count, 0, 1, 1]);
         io.eventCount = 0;
-        if (family !== 'effect' && (frame === 0 || !session.notesOff && frame >= session.frames * .65)) {
-          const on = frame === 0; for (let note = 0; note < 3; note++) io.events.set([on ? Math.min(17, count - 1) : 0, on ? 1 : 2, 36 + note * 12, on ? .8 : 0, 1, note + 1, 0, 0], note * 8);
-          io.eventCount = 3; if (!on) session.notesOff = true;
+        const retrigger = session.drumVoices && session.hitStage < 2 && frame >= session.frames * (session.hitStage + 1) / 4;
+        if (family !== 'effect' && (frame === 0 || retrigger || !session.notesOff && frame >= session.frames * .65)) {
+          const on = frame === 0 || retrigger;
+          // Drum MIDI selects lanes, so octaves would miss seven/eleven of
+          // their models. Repeated valid hits also exercise the choke paths.
+          for (let note = 0; note < session.notes.length; note++) io.events.set([on ? Math.min(17 + (session.drumVoices ? note : 0), count - 1) : 0, on ? 1 : 2, session.notes[note], on ? .8 : 0, 1, note + 1, 0, 0], note * 8);
+          io.eventCount = session.notes.length; if (!on) session.notesOff = true; else if (retrigger) session.hitStage++;
         }
         for (let i = 0; i < count; i++) { const at = frame + i; io.inputLeft[i] = .07 * Math.sin(at * 220 * 2 * Math.PI / rate); io.inputRight[i] = .06 * Math.sin(at * 330 * 2 * Math.PI / rate); }
         session.rendering = true; render(count); session.rendering = false;

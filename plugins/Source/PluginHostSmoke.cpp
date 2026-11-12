@@ -68,6 +68,10 @@ int main(int argc, char* argv[]) {
             int changedParameter = -1; float savedParameterValue = .61f; juce::String changedParameterName;
             for (int i = 0; i < plugin->getParameters().size(); ++i) { auto* parameter = plugin->getParameters()[i]; const auto name = parameter->getName(128); if (parameter->getNumSteps() > 128 && !parameter->isBoolean() && !name.containsIgnoreCase("follow") && !name.containsIgnoreCase("bypass") && !name.containsIgnoreCase("sequence")) { changedParameter = i; changedParameterName = name; if (std::abs(parameter->getDefaultValue() - savedParameterValue) < .001f) savedParameterValue = .37f; parameter->beginChangeGesture(); parameter->setValueNotifyingHost(savedParameterValue); parameter->endChangeGesture(); savedParameterValue = parameter->getValue(); break; } }
             if (changedParameter < 0) throw std::runtime_error("No numeric parameter found for nondefault host-state validation");
+            // VST3 host edits are queued into the processor's next audio
+            // quantum. Commit that real automation event before requesting
+            // the processor's state, as a DAW does during normal playback.
+            juce::AudioBuffer<float> commitAudio(2, 128); commitAudio.clear(); juce::MidiBuffer commitMidi; plugin->processBlock(commitAudio, commitMidi);
             juce::MemoryBlock saved; plugin->getStateInformation(saved); if (saved.getSize() == 0) throw std::runtime_error("Compiled VST3 state is empty");
             std::cerr << "Kitchen host RESTORE " << descriptions[0]->name.toStdString() << std::endl;
             plugin->releaseResources(); plugin.reset();
@@ -81,7 +85,7 @@ int main(int argc, char* argv[]) {
             if (offline.rms < 1.0e-8 || std::abs(restored->getParameters()[changedParameter]->getValue() - savedParameterValue) > .002f) throw std::runtime_error("Prepared-to-offline saved-state restoration failed");
             row->setProperty("offlinePreparedRestore", true);
             const auto tailSeconds = restored->getTailLengthSeconds(); row->setProperty("tailSeconds", tailSeconds);
-            if (descriptions[0]->name.containsIgnoreCase("TRACK EQ") && std::abs(tailSeconds - .1) > 1.0e-5) throw std::runtime_error("Compiled EQ tail differs from its canonical 0.1 second bound");
+            if (descriptions[0]->name.containsIgnoreCase("CHANNEL EQ") && std::abs(tailSeconds - .1) > 1.0e-5) throw std::runtime_error("Compiled EQ tail differs from its canonical 0.1 second bound");
             if (descriptions[0]->name.containsIgnoreCase("HOOD") && tailSeconds <= 0) throw std::runtime_error("Compiled HOOD reverb did not report its decay tail");
             row->setProperty("name", descriptions[0]->name); row->setProperty("passed", true); row->setProperty("rms", audio.rms); row->setProperty("peak", audio.peak); row->setProperty("firstSample", audio.first); row->setProperty("latencySamples", restored->getLatencySamples()); row->setProperty("stateBytes", static_cast<juce::int64>(saved.getSize())); row->setProperty("editorClosed", true); row->setProperty("clockChanges", true); restored->releaseResources();
         } catch (const std::exception& e) { success = false; row->setProperty("passed", false); row->setProperty("error", e.what()); }

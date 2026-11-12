@@ -10,7 +10,7 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withUserScript("window.KitchenPluginDescriptor=" + juce::JSON::toString(p.getProduct().descriptor, true) + ";window.KitchenNativeEditorStorage=" + juce::JSON::toString(p.editorStorageSnapshot(), true) + ";window.KitchenPluginNative=true;")
         .withInitialisationData("kitchenProduct", p.getProduct().descriptor)
         .withEventListener("kitchenSetState", [this](const juce::var& value) { processor.stateFromEditor(value); })
-        .withEventListener("kitchenSetParameter", [this](const juce::var& value) { processor.parameterFromEditor(value); })
+        .withEventListener("kitchenSetParameter", [this](const juce::var& value) { const auto reply = processor.parameterFromEditor(value); if (reply.isObject() && browser) browser->emitEventIfBrowserIsVisible("kitchenParameterAck", reply); })
         .withEventListener("kitchenMidi", [this](const juce::var& value) { processor.midiFromEditor(value); })
         .withEventListener("kitchenEditorStorage", [this](const juce::var& value) { processor.storageFromEditor(value); })
         .withEventListener("kitchenCapture", [this](const juce::var& value) { processor.captureFromEditor(value); })
@@ -52,7 +52,9 @@ std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const 
 void PluginEditor::sendState() {
     if (!browser) return;
     lastSnapshotRevision = processor.editorStateRevision();
-    browser->emitEventIfBrowserIsVisible("kitchenReady", processor.editorSnapshot());
+    const auto snapshot = processor.editorSnapshot();
+    lastParameters = juce::JSON::toString(snapshot["parameters"], true);
+    browser->emitEventIfBrowserIsVisible("kitchenReady", snapshot);
 }
 void PluginEditor::downloadToFile(const juce::var& payload) {
     if (downloadChooser) return;

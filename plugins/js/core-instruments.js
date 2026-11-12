@@ -18,6 +18,78 @@
   const SOURCE = 'kitchen-plugin-pattern';
   const HOLD = 600;
   const parameterCache = new Map();
+  // A prepared throwaway instance can train JSC's inline caches for the live
+  // instance only when both use the same original classes/prototypes. These
+  // factories contain immutable tables; all voices/filter/delay state belongs
+  // to each Core. Keep the classes per JS context, never a running engine.
+  const playbackCache = new Map();
+  function capturedFactory(factory, bindings={}) {
+    const source=typeof factory==='function'?factory.toString():factory;
+    // Capture the same original intrinsic functions once: repeated global
+    // Math/Number resolution can dominate small DSP helpers in an embedded VM.
+    const names=[...new Set([...source.matchAll(/\bMath\.(\w+)\(/g)].map(match=>match[1]))],entries=Object.entries(bindings);
+    const optimized=source.replace(/\bMath\.(\w+)\(/g,(_,name)=>'__kitchenMath_'+name+'(').replace(/\bNumber\.isFinite\(/g,'__kitchenFinite(');
+    return new Function(...entries.map(([name])=>name),...names.map(name=>'__kitchenMath_'+name),'__kitchenFinite','return ('+optimized+');')(...entries.map(([,value])=>value),...names.map(name=>Math[name]),Number.isFinite);
+  }
+  function playbackDSP(id) {
+    if (!playbackCache.has(id)) {
+      const title = id[0].toUpperCase() + id.slice(1);
+      playbackCache.set(id, capturedFactory(g['create' + title + 'PlaybackDSP'])(capturedFactory(g['create' + title + 'DSP'])));
+    }
+    return playbackCache.get(id);
+  }
+  let spectralDSP = null;
+  function marinadeDSP() {
+    if (spectralDSP) return spectralDSP;
+    // MARINADE's independent partial rotations account for 36 oscillators per
+    // voice, per sample. Keep precisely the original operation order and f32
+    // stores, while running this small numeric loop in scalar WebAssembly.
+    // Compilation, memory and every voice view are prepared before rendering.
+    const offsets = { cos:16, sin:304, rotC:592, rotS:880, amp:1168, ampStep:1312, quality:1456, qualityStep:1600, panL:1744, panR:1888 };
+    const u = number => { const bytes=[]; do { const byte=number&127;number>>>=7;bytes.push(byte|(number?128:0)); } while(number); return bytes; };
+    const str = value => [value.length,...Array.from(value,c=>c.charCodeAt(0))];
+    const section = (id,data) => [id,...u(data.length),...data];
+    const get = i => [0x20,...u(i)], set = i => [0x21,...u(i)];
+    const f64 = value => { const data=new DataView(new ArrayBuffer(8));data.setFloat64(0,value,true);return [0x44,...new Uint8Array(data.buffer)]; };
+    const load64 = (key,local=3) => [...get(local),0x2b,3,...u(offsets[key])];
+    const load32 = key => [...get(4),0x2a,2,...u(offsets[key]),0xbb];
+    const store32 = (key,step) => [...get(4),...load32(key),...load32(step),0xa0,0xb6,0x38,2,...u(offsets[key])];
+    const body = [2,3,0x7f,7,0x7c, // locals: index/address8/address4; seven f64s
+      0x02,0x40,0x03,0x40,...get(2),...get(1),0x4f,0x0d,1,
+      ...get(0),...get(2),0x41,3,0x74,0x6a,...set(3),
+      ...get(0),...get(2),0x41,2,0x74,0x6a,...set(4),
+      ...store32('amp','ampStep'),...store32('quality','qualityStep'),
+      ...load32('quality'),...f64(.00001),0x63,...load32('qualityStep'),...f64(0),0x65,0x71,
+      0x04,0x40,0x05, // Skip the same inaudible partials as the canonical loop.
+      ...load64('cos'),...set(8),...load64('sin'),...set(9),
+      ...get(9),...load32('amp'),0xa2,...load32('quality'),0xa2,...set(7),
+      ...get(3),...get(8),...load64('rotC'),0xa2,...get(9),...load64('rotS'),0xa2,0xa1,0x39,3,...u(offsets.cos),
+      ...get(3),...get(9),...load64('rotC'),0xa2,...get(8),...load64('rotS'),0xa2,0xa0,0x39,3,...u(offsets.sin),
+      ...get(5),...get(7),...load32('panL'),0xa2,0xa0,...set(5),
+      ...get(6),...get(7),...load32('panR'),0xa2,0xa0,...set(6),
+      0x0b,...get(2),0x41,1,0x6a,...set(2),0x0c,0,0x0b,0x0b,
+      ...get(0),...get(5),0x39,3,0,...get(0),...get(6),0x39,3,8,0x0b];
+    const module = new WebAssembly.Module(new Uint8Array([0,97,115,109,1,0,0,0,
+      ...section(1,[1,0x60,2,0x7f,0x7f,0]),...section(3,[1,0]),...section(5,[1,0,1]),
+      ...section(7,[2,...str('memory'),2,0,...str('step'),0,0]),...section(10,[1,...u(body.length),...body])]));
+    const engines = new WeakMap();
+    function prepare(core) {
+      const instance=new WebAssembly.Instance(module), buffer=instance.exports.memory.buffer, slots=[];
+      for(let i=0;i<16;i++) {const base=i*2048,arrays={};for(const [key,offset]of Object.entries(offsets))arrays[key]=key==='cos'||key==='sin'||key==='rotC'||key==='rotS'?new Float64Array(buffer,base+offset,36):new Float32Array(buffer,base+offset,36);slots.push({base,arrays,output:new Float64Array(buffer,base,2)});}
+      engines.set(core,{step:instance.exports.step,slots,voices:new WeakMap()});
+    }
+    function partialSample(core,voice) {const engine=engines.get(core),slot=engine.voices.get(voice);engine.step(slot.base,core.lanes.length);return slot.output;}
+    const original='let l=0,r=0;for(let k=0;k<this.lanes.length;k++){v.amp[k]+=v.ampStep[k];v.quality[k]+=v.qualityStep[k];if(v.quality[k]<.00001&&v.qualityStep[k]<=0)continue;const value=v.sin[k]*v.amp[k]*v.quality[k],cos=v.cos[k],sin=v.sin[k];v.cos[k]=cos*v.rotC[k]-sin*v.rotS[k];v.sin[k]=sin*v.rotC[k]+cos*v.rotS[k];l+=value*v.panL[k];r+=value*v.panR[k];}';
+    const source=g.createMarinadeDSP.toString();
+    if(!source.includes(original)||source.indexOf(original)!==source.lastIndexOf(original))throw Error('MARINADE native oscillator contract changed; update its exact scalar kernel.');
+    const dsp=capturedFactory(source.replace(original,'const partials=partialSample(this,v);let l=partials[0],r=partials[1];'),{createMarinadeSequence:g.createMarinadeSequence,partialSample})();
+    const note=dsp.Core.prototype._note;
+    dsp.Core.prototype._note=function(event){note.call(this,event);const voice=this.voices[this.voices.length-1],engine=engines.get(this);if(!voice||engine.voices.has(voice))return;
+      const used=new Set(this.voices.map(v=>engine.voices.get(v))),slot=engine.slots.find(s=>!used.has(s));if(!slot)throw Error('MARINADE exceeded its canonical16voice budget.');
+      for(const [key,array]of Object.entries(slot.arrays)){array.set(voice[key]);voice[key]=array;}engine.voices.set(voice,slot);
+    };
+    spectralDSP={Core:dsp.Core,prepare};return spectralDSP;
+  }
   const atPath = (state, path) => path.split('.').reduce((object, key) => object?.[key], state);
   function putPath(state, path, value) { const parts=path.split('.'); let object=state; for(let i=0;i<parts.length-1;i++)object=object[parts[i]]; object[parts[parts.length-1]]=value; }
   function parameters(id) {
@@ -178,10 +250,9 @@
       else if (id === 'ravel') core = new g.RavelDSP.Core(state, resources.sample || (state.asset.kind === 'seed' ? g.RavelDSP.generateSeed(state.asset) : stereoPCM(state.asset)), sampleRate);
       else if (id === 'roux') core = new g.RouxDSP.Core(sampleRate, state, g.RouxNativeScore(state));
       else if (id === 'proof') core = new g.ProofDSP.Core(sampleRate, state);
-      else if (id === 'marinade') { core = null; prepareResources(true); core = new g.MarinadeDSP.Core(sampleRate, state, models); }
-      else if (id === 'heirloom') core = new (g.createHeirloomPlaybackDSP(g.createHeirloomDSP).Core)(sampleRate, state, localFrame);
-      else if (id === 'brine') core = new (g.createBrinePlaybackDSP(g.createBrineDSP).Core)(sampleRate, state, localFrame);
-      else core = new (g.createCitrusPlaybackDSP(g.createCitrusDSP).Core)(sampleRate, g.CitrusAudio.prepareState(state), localFrame);
+      else if (id === 'marinade') { core = null; prepareResources(true); const DSP=marinadeDSP();core = new DSP.Core(sampleRate, state, models);DSP.prepare(core); }
+      else if (id === 'heirloom' || id === 'brine') core = new (playbackDSP(id).Core)(sampleRate, state, localFrame);
+      else core = new (playbackDSP(id).Core)(sampleRate, g.CitrusAudio.prepareState(state), localFrame);
       prepareResources(true); buildSequence();
       if(id==='mire'||id==='spool')setInput();
     }

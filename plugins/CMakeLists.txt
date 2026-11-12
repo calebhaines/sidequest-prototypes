@@ -110,8 +110,8 @@ function(kitchen_add_product id display_name code kind)
     endif()
     set(target "Kitchen_${id}")
     set(bundle_name "${display_name}")
-    # Keep the visible effect spelling while avoiding Apple's codesign crash
-    # on the accented SAUTÉ executable/bundle path.
+    # Keep the original spelling inside the editor. JUCE's plugin-name macros
+    # and Apple's executable signing paths require an ASCII host-facing name.
     if(id STREQUAL "saute")
         set(bundle_name "SAUTE")
     endif()
@@ -138,7 +138,7 @@ function(kitchen_add_product id display_name code kind)
         PLUGIN_CODE ${code}
         FORMATS ${formats}
         PRODUCT_NAME "Kitchen ${bundle_name}"
-        PLUGIN_NAME "Kitchen ${display_name}"
+        PLUGIN_NAME "Kitchen ${bundle_name}"
         IS_SYNTH ${is_instrument}
         NEEDS_MIDI_INPUT ${needs_midi}
         NEEDS_MIDI_OUTPUT ${midi_output}

@@ -8,8 +8,8 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const source = file => fs.readFileSync(path.join(root, file), 'utf8');
 let passed = 0;
-const liveInputOnly = process.argv.includes('--live-input-only'), warmupOnly = process.argv.includes('--warmup-only');
-async function check(name, run) { if (liveInputOnly && !name.includes('live input') || warmupOnly && !name.includes('warmup')) return; await run(); passed++; console.log('PASS', name); }
+const liveInputOnly = process.argv.includes('--live-input-only'), warmupOnly = process.argv.includes('--warmup-only'), webAudioOnly = process.argv.includes('--webaudio-only');
+async function check(name, run) { if (liveInputOnly && !name.includes('live input') || warmupOnly && !name.includes('warmup') || webAudioOnly && !name.includes('Web Audio graph') && !name.startsWith('MORSEL reads')) return; await run(); passed++; console.log('PASS', name); }
 function realm() {
   const g = { Float32Array, Float64Array, Uint8Array, Int32Array, ArrayBuffer, DataView, console };
   vm.createContext(g); vm.runInContext(source('plugins/js/environment.js'), g, { filename: 'environment.js' });
@@ -151,6 +151,15 @@ const plain = x => JSON.parse(JSON.stringify(x));
     const report=JSON.parse(api.getWarmupReportJSON());assert.equal(report.frames,4096);assert.equal(report.restored,true);assert.equal(report.discarded,true);
     clock(g,{localFrame:800000});events(g,[[13,1,60,.5,1,7]]);api.render(17);assert.equal(original.events[0].frame,13);assert.equal(original.clocks[0].frame,0);assert.equal(timerFired,0);
     clock(g,{localFrame:800017});events(g,[]);api.render(128);assert.equal(timerFired,1);assert.throws(()=>api.warmup(128),/before its first audio/);assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
+  });
+  for(const id of ['grain','form','tine','batter'])await check(id+': warmup exercises every valid percussion lane and repeated-hit path without touching the published engine',()=>{
+    const g=realm();vm.runInContext(fixtureSource,g);const registry=g.KitchenCoreInstruments;g.KitchenWebAudioInstruments={...registry,ids:[id]};
+    g.KitchenPluginDescriptor={id,kind:'instrument',parameters:registry.definitions()[0].parameters};vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});
+    const api=g.KitchenNativePlugin;api.create(id,48000,1024,'');const original=g.fixtures[0],state=api.getStateJSON(),io=g.KitchenHostIO;api.warmup(512);for(let i=0;i<4&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();
+    assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(api.getStateJSON(),state);assert.equal(original.events.length,0);assert.equal(original.sizes.length,0);assert.equal(g.KitchenHostIO,io);
+    const voices=id==='batter'?12:8,notes=g.fixtures[1].events.filter(event=>event.type==='on'),off=g.fixtures[1].events.filter(event=>event.type==='off');
+    assert.equal(notes.length,voices*3);assert.equal(off.length,voices);for(let hit=0;hit<3;hit++)assert.deepEqual(Array.from(notes.slice(hit*voices,(hit+1)*voices),event=>event.pitch),Array.from({length:voices},(_,i)=>36+i));
+    assert(notes.every(event=>event.channel===0));assert.equal(JSON.parse(api.getWarmupReportJSON()).voicesExercised,voices);
   });
   await check('Preparation warmup services asynchronous backend promises before restoring pristine readiness',async()=>{
     const g=fixtures(),api=g.KitchenNativePlugin;api.create('instrument-asynchronous',48000,1024,'');api.prepareTick(5);await Promise.resolve();const original=g.fixtures[0],time=g.performance.now();assert.equal(JSON.parse(api.getStatusJSON()).ready,true);

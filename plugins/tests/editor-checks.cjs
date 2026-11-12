@@ -102,6 +102,7 @@ async function pageFor(base, route, editorStorage = {}) {
       removeEventListener(id) { listeners.delete(id); },
       emitEvent(type, payload) {
         window.__nativeMessages.push({ type, payload });
+        if (type === 'kitchenSetParameter' && !window.__holdParameterAcks) queueMicrotask(() => window.__nativeDeliver('kitchenParameterAck', { index: payload.index, normalized: Math.fround(payload.normalized), clientRevision: payload.clientRevision }));
         if (type === 'kitchenEditorStorage') { if (payload.action === 'set') window.__nativeEditorStorage[payload.key] = payload.value; else if (payload.action === 'remove') delete window.__nativeEditorStorage[payload.key]; else if (payload.action === 'clear') window.__nativeEditorStorage = {}; }
         if (type === 'kitchenCapture') queueMicrotask(() => {
           if (payload.action === 'start') window.__captureTake = { token: 'native-test-take', capturing: true, sampleRate: 48000, tempo: 120, frames: 0, notes: [] };
@@ -296,6 +297,47 @@ async function instrumentCheck(base, id) {
     return evidence;
   } finally { await context.close(); }
 }
+async function hydrationCheck(base, id) {
+  const { context, page } = await pageFor(base, '/instrument/' + id + '/');
+  try {
+    await page.waitForFunction(() => KitchenNativeEditor.diagnostics.attached);
+    const evidence = await page.evaluate(async id => {
+      const bridge = KitchenNativeEditor, parameters = bridge.descriptor.parameters, path = id === 'form' ? 'masterVolume' : 'recipe.tone', index = parameters.findIndex(d => d.path === path), definition = parameters[index];
+      const field = () => document.querySelector(id === 'form' ? 'input[aria-label="Master playback volume"]' : 'input[data-knob="tone"]');
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const physical = () => id === 'form' ? Number(field().value) : MorselApp.getState().tone;
+      const list = value => Object.assign([], { [index]: value });
+      const edit = value => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field(), String(value)); field().dispatchEvent(new Event('input', { bubbles: true })); field().dispatchEvent(new Event('change', { bubbles: true })); };
+      const initial = await bridge.getProject(), started = performance.now();
+      const restore = bridge.receive('kitchenReady', { state: initial, parameters: list(.55) });
+      const lateRestore = new Promise(resolve => setTimeout(() => resolve(bridge.receive('kitchenParameters', list(.55))), 90));
+      const smoke = await bridge.runSmokeTest(); await restore; await lateRestore;
+      if (!smoke.pass) throw Error('The original control edit raced initial hydration: ' + JSON.stringify(smoke));
+      const settledMs = Math.round(performance.now() - started);
+      if (settledMs < 340 || !bridge.diagnostics.hydrated) throw Error('The probe did not wait for the complete, quiet native hydration.');
+      window.__holdParameterAcks = true;
+      const before = physical(), edited = Math.min(.95, before + .04), beforeRatio = bridge.normalized(definition, before), count = __nativeMessages.length;
+      edit(edited);
+      await delay(5); await bridge.receive('kitchenParameters', list(beforeRatio));
+      await delay(60); await bridge.receive('kitchenParameters', list(beforeRatio));
+      const write = __nativeMessages.slice(count).filter(m => m.type === 'kitchenSetParameter' && m.payload.index === index).at(-1)?.payload;
+      if (!write || Math.abs(physical() - edited) > .000001) throw Error('A delayed native echo overwrote the original control gesture: ' + JSON.stringify({ before, edited, after: physical(), write }));
+      await bridge.receive('kitchenParameterAck', { index, normalized: beforeRatio, clientRevision: write.clientRevision - 1 });
+      await bridge.receive('kitchenParameters', list(beforeRatio));
+      if (Math.abs(physical() - edited) > .000001) throw Error('An old acknowledgement released a newer local gesture.');
+      await bridge.receive('kitchenParameterAck', { index, normalized: Math.fround(write.normalized), clientRevision: write.clientRevision });
+      if (bridge.diagnostics.pendingLocalParameters) throw Error('The current native acknowledgement did not release local parameter ownership.');
+      await bridge.receive('kitchenParameters', list(.33));
+      const hostValue = bridge.actual(definition, .33);
+      if (Math.abs(physical() - hostValue) > .000001) throw Error('Genuine later DAW automation was suppressed after acknowledgement.');
+      await delay(80);
+      const parameterMessages = __nativeMessages.slice(count).filter(m => m.type === 'kitchenSetParameter');
+      if (parameterMessages.length !== 1 || __nativeMessages.slice(count).some(m => m.type === 'kitchenSetState')) throw Error('A native echo caused parameter feedback or a DSP recipe rebuild.');
+      return { originalControl: path, settledMs, smoke, retainedGesture: edited, acknowledgedRevision: write.clientRevision, laterHostAutomation: physical(), parameterMessages: parameterMessages.length, nativeAudioContexts: __nativeAudioContexts };
+    }, id);
+    assert.equal(evidence.nativeAudioContexts, 0); return evidence;
+  } finally { await context.close(); }
+}
 async function neuralCheck(base) {
   const { context, page } = await pageFor(base, '/instrument/morsel/');
   try {
@@ -403,6 +445,7 @@ async function effectCheck(base, definition) {
 (async () => {
   try {
     const base = await serve(); browser = process.env.KITCHEN_EDITOR_BROWSER === 'webkit' ? await webkit.launch({ headless: true }) : await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+    if (process.env.KITCHEN_EDITOR_HYDRATION_SMOKE) { for (const id of ['form', 'morsel']) await check('Native hydration and delayed echo / ' + id, () => hydrationCheck(base, id)); assert.deepEqual(report.pageErrors, []); save(); return; }
     if (process.env.KITCHEN_EDITOR_NEURAL_SMOKE) { await check('MORSEL real neural word and Signalsmith note', () => neuralCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     if (process.env.KITCHEN_EDITOR_STORAGE_SMOKE) { await check('Native editor presets and pattern storage survive reopen', () => storageCheck(base)); assert.deepEqual(report.pageErrors, []); save(); return; }
     for (const id of ids) if (!process.env.KITCHEN_EDITOR_FILTER || new RegExp(process.env.KITCHEN_EDITOR_FILTER).test(id)) await check('Original instrument editor / ' + id, () => instrumentCheck(base, id));

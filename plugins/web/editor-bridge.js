@@ -8,8 +8,9 @@
   let descriptor = parse(global.KitchenPluginDescriptor) || initial || {}, backend = null, app = null, registered = null, engine = null;
   let disposed = false, applying = 0, restored = false, snapshotBusy = false, snapshotAgain = false, changed = false, serial = 0, lastJSON = '', lastNativeJSON = '', status = '';
   let snapshotTimer = 0, parameterTimer = 0, attachTimer = 0, nativeState, generation = 0, preparedBank = null, preparation = null, pendingParameters = null, parameterRestoreBusy = false, previousProject = null, stateRestorePending = null, nativeIdSerial = 0x80000000;
+  let hydrationReceives = 0, hydrationTouched = performance.now(), parameterRevision = 0;
   const subscriptions = new Map(), backendListeners = [], controls = new Map(), held = new Map(), heldChannels = new Map(), heldIds = new Map(), releases = new Map(), timers = new Set(), patched = new WeakSet(), contexts = new Set();
-  const parameterValues = new Map(), eventQueue = [], storageValues = Object.create(null), sessionValues = Object.create(null);
+  const parameterValues = new Map(), localParameters = new Map(), eventQueue = [], storageValues = Object.create(null), sessionValues = Object.create(null);
   const patternStoragePrefix = '__kitchenPattern:', storageLimit = 16 * 1024 * 1024;
   let localStorageFacade, sessionStorageFacade;
   const diagnostics = { nativeAudioContexts: 0, offlineContexts: 0, snapshots: 0, parameterMessages: 0, midiMessages: 0, scalarParameterUpdates: 0, restored: false, ready: false, errors: [] };
@@ -32,7 +33,7 @@
   function connectBackend() {
     if (backend || !global.__JUCE__?.backend) return;
     backend = global.__JUCE__.backend;
-    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenClock', 'kitchenStatus', 'kitchenMeters', 'kitchenCapture', 'kitchenDownloadResult', 'kitchenEditorStorage']) {
+    for (const type of ['kitchenReady', 'kitchenState', 'kitchenParameters', 'kitchenParameterAck', 'kitchenClock', 'kitchenStatus', 'kitchenMeters', 'kitchenCapture', 'kitchenDownloadResult', 'kitchenEditorStorage']) {
       const listener = value => receive(type, parse(value));
       backendListeners.push([type, backend.addEventListener?.(type, listener), listener]);
     }
@@ -178,6 +179,27 @@
     }
     return same(left, right);
   }
+  function parameterEqual(definition, left, right) { return left !== undefined && right !== undefined && Math.abs(normalized(definition, left) - normalized(definition, right)) < .000001; }
+  function acceptParameters(list) {
+    if (!Array.isArray(list)) return list;
+    const accepted = list.slice();
+    list.forEach((item, index) => {
+      const pending = localParameters.get(index), ratio = item?.normalized ?? (typeof item === 'number' ? item : undefined);
+      if (!pending || ratio === undefined) return;
+      if (Math.abs(ratio - pending.normalized) < .000001) { localParameters.delete(index); parameterValues.set(index, pending.value); }
+      // A control edit owns its value until the native write is acknowledged.
+      // Late timer snapshots may still describe the value before that gesture.
+      else if (performance.now() - pending.at < 1500) delete accepted[index];
+      else localParameters.delete(index);
+    });
+    return accepted;
+  }
+  async function parameterAck(value) {
+    const index = Number(value.index), pending = localParameters.get(index);
+    if (!pending || pending.clientRevision !== value.clientRevision) return;
+    localParameters.delete(index);
+    if (Math.abs(Number(value.normalized) - pending.normalized) >= .000001) await receive('kitchenParameters', Object.assign([], { [index]: value.normalized }));
+  }
   async function applyParameters(list) {
     if (!Array.isArray(list)) return;
     pendingParameters = list;
@@ -186,7 +208,7 @@
     try {
       while (stateRestorePending) await stateRestorePending;
       while (pendingParameters && !disposed) {
-        const next = pendingParameters; pendingParameters = null;
+        const next = acceptParameters(pendingParameters); pendingParameters = null;
         const recipe = currentRecipe(), patch = [];
         next.forEach((item, index) => {
           const d = parameters()[index]; if (!d) return;
@@ -197,40 +219,43 @@
           if (path === '_nativeSequence' || path === 'followHost') { const field = document.getElementById('kitchenNativeSequence'); if (field) field.checked = !!value; }
           else if (path === '_nativeInput') { if (engine) engine.micEnabled = !!value; paintNativeInput(); }
           else if (path === '_nativeInputDestination') paintNativeInput();
-          else if (recipe && byPath(recipe, path) !== undefined && byPath(recipe, path) !== value) patch.push([path, value]);
+          else if (recipe && byPath(recipe, path) !== undefined && !parameterEqual(d, byPath(recipe, path), value)) patch.push([path, value, index]);
         });
         if (!patch.length) continue;
         if (typeof global.KitchenEditorSetParameter === 'function') {
           applying++;
           try {
             const remaining = [];
-            for (const [path, value] of patch) { if (global.KitchenEditorSetParameter(path, value) === undefined) remaining.push([path, value]); else diagnostics.scalarParameterUpdates++; }
+            for (const [path, value, index] of patch) { if (global.KitchenEditorSetParameter(path, value) === undefined) remaining.push([path, value, index]); else diagnostics.scalarParameterUpdates++; }
             patch.splice(0, patch.length, ...remaining); generation++;
           } finally { applying--; }
           if (!patch.length) continue;
         }
         const project = await projectSnapshot(); if (disposed || !project) continue;
-        let dirty = false; for (const [path, value] of patch) dirty = assignByPath(project, path, value) || dirty;
+        let dirty = false; for (const [path, value, index] of patch) { const local = localParameters.get(index); if (!local || parameterEqual(parameters()[index], local.value, value)) dirty = assignByPath(project, path, value) || dirty; }
         if (!dirty) continue;
         const loader = app.loadState || app.setState || app.applyState || registered?.setState;
         if (!loader) continue;
         applying++;
         try {
           await loader.call(app, project, { history: false });
-          if (id() === 'form') await restoreFormVolume(project.masterVolume);
+          if (id() === 'form') await restoreFormVolume(localParameters.get(parameters().findIndex(d => d.path === 'masterVolume'))?.value ?? project.masterVolume);
           // Do not echo DAW automation back as a new project or retransmit a
           // prepared MORSEL bank. Native parameter atomics already own it.
           changed = false; generation++;
         } finally { applying--; }
       }
     } catch (error) { report(error); }
-    finally { parameterRestoreBusy = false; }
+    finally { parameterRestoreBusy = false; hydrationTouched = performance.now(); }
   }
   function setParameter(index, value, options = {}) {
     const definition = parameters()[index]; if (!definition) return false;
     const ratio = options.normalized ? clamp(Number(value) || 0, 0, 1) : normalized(definition, value);
-    parameterValues.set(index, options.normalized ? actual(definition, ratio) : value); diagnostics.parameterMessages++;
-    return send('kitchenSetParameter', { index, normalized: ratio, path: definition.path || definition.key, gesture: options.gesture || 'single' });
+    value = options.normalized ? actual(definition, ratio) : value;
+    const clientRevision = ++parameterRevision;
+    localParameters.set(index, { value, normalized: ratio, clientRevision, at: performance.now() });
+    parameterValues.set(index, value); diagnostics.parameterMessages++;
+    return send('kitchenSetParameter', { index, normalized: ratio, path: definition.path || definition.key, gesture: options.gesture || 'single', clientRevision });
   }
   function formVolume() { return document.querySelector('input[aria-label="Master playback volume"]'); }
   async function restoreFormVolume(value) {
@@ -245,13 +270,13 @@
     return id() === 'form' && formVolume() ? { ...value, masterVolume: Number(formVolume().value) } : value;
   }
   function scheduleParameters() {
-    if (!app || applying || !restored || parameterTimer) return;
+    if (!app || !restored || parameterTimer) return;
     parameterTimer = later(() => {
-      parameterTimer = 0; if (applying) return;
+      parameterTimer = 0; if (applying) { scheduleParameters(); return; }
       const recipe = currentRecipe(); if (!recipe) return;
       parameters().forEach((definition, index) => {
         const value = byPath(recipe, definition.path || definition.key || '');
-        if (value !== undefined && parameterValues.get(index) !== value) setParameter(index, value, { gesture: 'edit' });
+        if (value !== undefined && !parameterEqual(definition, parameterValues.get(index), value)) setParameter(index, value, { gesture: 'edit' });
       });
     }, 32);
   }
@@ -290,6 +315,7 @@
     const json = JSON.stringify(requested); if (json === lastJSON || json === lastNativeJSON) { restored = true; diagnostics.restored = true; return; }
     const loader = app.loadState || app.setState || app.applyState || registered?.setState;
     if (!loader) throw Error('This instrument does not expose native project restore.');
+    localParameters.clear();
     let release; const pending = stateRestorePending = new Promise(resolve => { release = resolve; }); applying++;
     try {
       // Percussion facade loaders validate their complete bank/chain envelope.
@@ -302,7 +328,7 @@
       previousProject = await projectSnapshot();
       const recipe = currentRecipe(); if (recipe) parameters().forEach((definition, index) => parameterValues.set(index, byPath(recipe, definition.path || definition.key || '')));
       restored = true; diagnostics.restored = true; setStatus('Native audio ready. Transport follows your DAW.');
-    } finally { applying--; if (stateRestorePending === pending) stateRestorePending = null; release(); }
+    } finally { applying--; if (stateRestorePending === pending) stateRestorePending = null; hydrationTouched = performance.now(); release(); }
   }
   function voicePitch(voice) {
     const recipe = currentRecipe(), state = recipe?.state || recipe?.project || recipe, tracks = state?.tracks || state?.lanes || state?.parts || state?.sounds;
@@ -433,20 +459,25 @@
   }
   async function receive(type, value = {}) {
     if (disposed) return; value ||= {};
+    const hydrating = ['kitchenReady', 'kitchenState', 'kitchenParameters'].includes(type);
+    if (hydrating) { hydrationReceives++; hydrationTouched = performance.now(); }
+    try {
     if (type === 'kitchenEditorStorage') { restoreEditorStorage(value.editorStorage || value); return; }
     if (own(value, 'editorStorage')) restoreEditorStorage(value.editorStorage);
     if (value.descriptor) { descriptor = value.descriptor; global.KitchenPluginDescriptor = descriptor; }
     if (type === 'kitchenClock') { clock = { ...clock, ...value, tempo: Number(value.tempo ?? value.bpm ?? clock.tempo), beat: Number(value.beat ?? value.ppq ?? clock.beat), samplePosition: Number(value.samplePosition ?? value.hostSamplePosition ?? clock.samplePosition), timeSigNum: Number(value.timeSigNum ?? value.numerator ?? clock.timeSigNum), timeSigDen: Number(value.timeSigDen ?? value.denominator ?? clock.timeSigDen) }; paintClock(); notify('clock', clock); return; }
-    if (type === 'kitchenParameters') { if (instrument()) await applyParameters(value); notify('parameters', value); return; }
+    if (type === 'kitchenParameterAck') { await parameterAck(value); return; }
+    if (type === 'kitchenParameters') { const accepted = acceptParameters(value); if (instrument()) await applyParameters(accepted); notify('parameters', accepted); return; }
     if (type === 'kitchenCapture') { notify('capture', value); return; }
     if (type === 'kitchenDownloadResult') { setStatus(value.ok ? 'Saved ' + (value.filename || 'your export') + '.' : value.error || 'Export save cancelled.'); notify('download', value); return; }
     if (type === 'kitchenStatus') { setStatus(value.message ?? value.status ?? value); return; }
     if (type === 'kitchenMeters') { clock.meters = value; notify('meters', value); return; }
     if (type === 'kitchenReady') { diagnostics.ready = true; setStatus('Native audio ready. Transport follows your DAW.'); notify('ready', value); }
     if (own(value, 'state')) { nativeState = parse(value.state); if (instrument()) { try { await applyState(nativeState); } catch (error) { report(error); } } notify('state', { ...value, state: nativeState }); }
-    if (value.parameters) { if (instrument()) await applyParameters(value.parameters); notify('parameters', value.parameters); }
+    if (value.parameters) { const accepted = acceptParameters(value.parameters); if (instrument()) await applyParameters(accepted); notify('parameters', accepted); }
     if (value.status) setStatus(value.status.message || value.status);
     if (!app && instrument()) scheduleAttach();
+    } finally { if (hydrating) { hydrationReceives--; hydrationTouched = performance.now(); } }
   }
   function scheduleAttach() { if (attachTimer || disposed || !instrument()) return; attachTimer = later(() => { attachTimer = 0; attach(); }, 20); }
   function attach() {
@@ -472,7 +503,21 @@
     if (/^(?:recordbutton|capturebutton|capturemix)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); setStatus('Record the plugin output in your DAW.'); return; }
     if (/^(?:panicbutton|panic)$/.test(key)) { event.preventDefault(); event.stopImmediatePropagation(); panicNative(true); setStatus('All native notes released.'); }
   }
-  function edited() { if (app?.engine && app.engine !== engine) patchEngine(app.engine); scheduleParameters(); scheduleSnapshot(); }
+  function edited(event) {
+    if (app?.engine && app.engine !== engine) patchEngine(app.engine);
+    // React commits HOTPLATE asynchronously; MORSEL emits its state change
+    // before the debounced parameter send. Capture their small control values
+    // now so an already queued native echo cannot undo the user's gesture.
+    if (restored && (!applying || event?.isTrusted) && ['input', 'change'].includes(event?.type)) {
+      const path = id() === 'form' && event.target === formVolume() ? 'masterVolume' : id() === 'morsel' && event.target?.matches?.('input[data-knob]') ? 'recipe.' + event.target.dataset.knob : null;
+      const index = path ? parameters().findIndex(d => d.path === path) : -1;
+      if (index >= 0) {
+        const value = byPath(currentRecipe(), path), definition = parameters()[index];
+        if (value !== undefined && !parameterEqual(definition, parameterValues.get(index), value)) localParameters.set(index, { value, normalized: normalized(definition, value), clientRevision: 0, at: performance.now() });
+      }
+    }
+    scheduleParameters(); scheduleSnapshot();
+  }
   async function downloadAction(event) {
     const link = event.target?.closest?.('a[download]');
     if (!link || !/^(?:blob:|data:)/.test(link.href)) return;
@@ -484,10 +529,21 @@
       setStatus('Choose where to save your export.');
     } catch (error) { report(error); }
   }
+  function hydrated() { return diagnostics.ready && (instrument() ? !!app && restored : !!global.KitchenEffectEditor) && !applying && !parameterRestoreBusy && !stateRestorePending && !pendingParameters && !hydrationReceives; }
+  async function whenHydrated(timeoutMs = 10000) {
+    const start = performance.now();
+    while (!disposed && performance.now() - start < timeoutMs) {
+      // Wait beyond the native 200 ms parameter poll as well as all promise
+      // continuations and React commits belonging to the initial snapshot.
+      if (hydrated() && performance.now() - hydrationTouched >= 260) return true;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    throw Error('The original editor did not finish native hydration.');
+  }
   async function runSmokeTest() {
     const result = { sourceId: id(), pass: false, ready: false, restored: false };
     try {
-      for (let attempt = 0; attempt < 500 && (!diagnostics.ready || instrument() && (!restored || applying || parameterRestoreBusy || stateRestorePending)); attempt++) await new Promise(resolve => setTimeout(resolve, 20));
+      await whenHydrated();
       result.ready = diagnostics.ready; result.restored = instrument() ? restored : !!global.KitchenEffectEditor;
       if (!result.ready || !result.restored) throw Error('The original editor did not finish native hydration.');
       const probes = { brine: ['input[data-slider="pwmAmount"]', 'synth.pwmAmount'], form: ['input[aria-label="Master playback volume"]', 'masterVolume'], morsel: ['input[data-knob="tone"]', 'recipe.tone'], sunday: ['input[data-deluxe-number="input"]', 'params.input'] };
@@ -512,6 +568,7 @@
     let audio, saved, controller, WorkerConstructor, CountingWorker, BlobConstructor, DiagnosticBlob, recipeBefore, snapshotsBefore, neuralWorkerReady = false, stretchWorkerReady = false, fitCalls = 0, analysisCalls = 0;
     const trace = value => { if (result.workerTrace.length < 48) result.workerTrace.push({ ms: Math.round(performance.now() - started), ...value }); };
     try {
+      await whenHydrated();
       if (id() !== 'morsel' || !app?.engine || !global.KitchenMorselPreparation?.prepareBank) throw Error('Open the complete MORSEL native editor before running its neural smoke test.');
       if (preparation || app.engine.preparing || app.engine.pendingWords.size || app.engine.pendingNotes.size) throw Error('Another MORSEL preparation is still active.');
       result.blobWorkerProbe = await new Promise((resolve, reject) => {
@@ -598,5 +655,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }, { once: true });
   else { if (instrument()) { header(); scheduleAttach(); } send('kitchenReady', { request: true }); }
   global.addEventListener('pagehide', dispose);
-  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, runSmokeTest, runNeuralSmokeTest, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, browserContexts: contexts.size }; } });
+  global.KitchenNativeEditor = Object.freeze({ send, subscribe, receive, setParameter, normalized, actual, prepareVoices, attach, captureState, getProject: projectSnapshot, whenHydrated, runSmokeTest, runNeuralSmokeTest, dispose, get descriptor() { return descriptor; }, get state() { return nativeState; }, get clock() { return { ...clock }; }, get diagnostics() { return { ...diagnostics, errors: [...diagnostics.errors], attached: !!app, hydrated: hydrated(), hydrationReceives, pendingLocalParameters: localParameters.size, browserContexts: contexts.size }; } });
 })(window);

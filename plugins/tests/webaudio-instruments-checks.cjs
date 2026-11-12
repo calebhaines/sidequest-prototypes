@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const esbuild = require('esbuild');
 const root = path.resolve(__dirname, '../..');
@@ -51,6 +52,72 @@ async function render(id, partition, sequence = false, voiceFX = false) {
   const state = instrument.getState(); assert(state && typeof state === 'object'); await instrument.setState(state); assert.deepEqual(JSON.parse(JSON.stringify(instrument.getState())), JSON.parse(JSON.stringify(state)), id + ' complete project round trip');
   await instrument.dispose(); return { output, outputRight, peak, latency: instrument.getLatencySamples() };
 }
+async function grainPreparationProof() {
+  const g = load('grain'), Original = g.NoiseEngine, engines = [], sr = 48000;
+  g.NoiseEngine = class extends Original {
+    constructor() { super(); this.randomCalls = this.modRandomCalls = 0; engines.push(this); }
+    async init() {
+      await super.init();
+      if (!this.environment.preparationSpy) {
+        const random = this.environment.random, modRandom = this.environment.modRandom;
+        this.environment.random = (...args) => { this.randomCalls++; return random(...args); };
+        this.environment.modRandom = (...args) => { this.modRandomCalls++; return modRandom(...args); };
+        this.environment.preparationSpy = true;
+      }
+      return this;
+    }
+  };
+  const prepared = g.KitchenWebAudioInstruments.create('grain', sr, undefined, { nativeSequence: false }); await prepared.prepare();
+  const actual = engines[0]; assert.equal(engines.length, 2, 'one isolated canonical noise helper');
+  assert.equal(engines[1].context, null, 'noise helper context disposed');
+  assert.equal(actual.environment.buffers.size, 12, 'all twelve canonical noise colors prepared off the callback');
+  assert.equal(actual.context.currentTime, 0); assert.equal(actual.environment.voices.size, 0); assert.equal(actual.environment.hats.size, 0);
+  assert.equal(actual.randomCalls, 0, 'preparation never advances the original performance RNG');
+  assert.equal(actual.modRandomCalls, 0, 'preparation never advances the original modulation RNG');
+  const wavePrototype = g.KitchenWebAudioEngine.impl.PeriodicWave.prototype, buildWave = wavePrototype.dspBuildWaveTable; let waveBuilds = 0;
+  wavePrototype.dspBuildWaveTable = function (...args) { waveBuilds++; return buildWave.apply(this, args); };
+  try { for (const wave of ['sine', 'triangle', 'sawtooth', 'square']) { const node = actual.context.createOscillator(); node.type = wave; node.disconnect(); } }
+  finally { wavePrototype.dspBuildWaveTable = buildWave; }
+  assert.equal(waveBuilds, 0, 'all four original immutable basic-wave tables are prepared before the first note');
+  const cold = g.KitchenWebAudioInstruments.create('grain', sr, prepared.getState(), { nativeSequence: false }); await cold.prepare();
+  const control = engines[2]; assert.equal(engines.length, 3, 'same-rate immutable bank is reused without another helper');
+  assert.notEqual(actual.environment.buffers, control.environment.buffers, 'live environments own separate mutable maps');
+  control.environment.buffers.clear(); // Reproduce the original first-hit lazy path.
+  const countAllocations = engine => {
+    const create = engine.context.createBuffer.bind(engine.context); let count = 0;
+    engine.context.createBuffer = (channels, length, rate) => { if (channels === 1 && length === sr * 2 && rate === sr) count++; return create(channels, length, rate); };
+    return () => count;
+  };
+  const actualAllocations = countAllocations(actual), controlAllocations = countAllocations(control);
+  const clock = frame => ({ sampleRate: sr, frame, tempo: 120, beat: frame / sr * 2, playing: false, revision: 0 });
+  prepared.transport(clock(0)); cold.transport(clock(0));
+  const colors = ['white', 'pink', 'brown', 'blue', 'violet', 'grey', 'velvet', 'crackle', 'metallic', 'digital', 'dust', 'radio'];
+  const state = prepared.getState().state;
+  for (const [index, color] of colors.entries()) {
+    const track = JSON.parse(JSON.stringify(state.tracks[index % 8])); track.noise = color; track.synth.noise.level = Math.max(.2, track.synth.noise.level);
+    const options = { voiceIndex: index % 8, voiceKey: 'proof-' + index, velocity: .8, tempo: 120, source: 'noise-pcm-proof' }, at = (17 + index * 311) / sr;
+    actual.scheduleNativeNote(JSON.parse(JSON.stringify(track)), at, options); control.scheduleNativeNote(JSON.parse(JSON.stringify(track)), at, options);
+  }
+  assert.equal(actualAllocations(), 0, 'actual first notes never allocate a two-second noise buffer');
+  assert.equal(controlAllocations(), 12, 'control exercises twelve original lazy noise generations');
+  const hash = array => crypto.createHash('sha256').update(Buffer.from(array.buffer, array.byteOffset, array.byteLength)).digest('hex');
+  for (const color of colors) {
+    const a = actual.environment.buffers.get(color), b = control.environment.buffers.get(color);
+    assert.equal(a.sampleRate, sr); assert.equal(a.length, sr * 2); assert.equal(a.numberOfChannels, 1);
+    assert.equal(hash(a.getChannelData(0)), hash(b.getChannelData(0)), color + ' prepared PCM is byte-exact canonical makeNoise output');
+  }
+  const aL = new Float32Array(sr), aR = new Float32Array(sr), bL = new Float32Array(sr), bR = new Float32Array(sr);
+  for (let frame = 0; frame < sr; frame += 128) { const end = Math.min(sr, frame + 128); prepared.process(aL.subarray(frame, end), aR.subarray(frame, end), clock(frame)); cold.process(bL.subarray(frame, end), bR.subarray(frame, end), clock(frame)); }
+  assert.equal(hash(aL), hash(bL), 'entire left performance PCM remains byte-exact'); assert.equal(hash(aR), hash(bR), 'entire right performance PCM remains byte-exact');
+  assert.equal(actual.randomCalls, control.randomCalls); assert.equal(actual.modRandomCalls, control.modRandomCalls);
+  await prepared.dispose(); await cold.dispose();
+  const hooks = load('grain'); let creates = 0, destroys = 0;
+  hooks.KitchenNativeCreateConvolver = () => creates++;
+  hooks.KitchenNativeDestroyConvolver = () => { destroys++; };
+  const hookInstrument = hooks.KitchenWebAudioInstruments.create('grain', 24000, undefined, { nativeSequence: false }); await hookInstrument.prepare();
+  assert.equal(creates, 2, 'real graph and isolated setup graph each prepare one native room'); assert.equal(destroys, 1, 'helper native room is explicitly destroyed before setup finishes'); await hookInstrument.dispose();
+  console.log('grain: all12prepared-noise SHA256 match original lazy generation; full48000frame stereo PCM byte-exact; no original RNG/time/voice advancement or first-hit noise allocation');
+}
 async function main() {
   const { createContext, createPull, PartitionedConvolver } = require('../js/vendor-entry.js');
   const impulse = new Float32Array(5099); impulse[0] = .5; impulse[2048] = .25; impulse[4097] = -.2;
@@ -83,6 +150,7 @@ async function main() {
   const delayContext = createContext(24000), delayPull = createPull(delayContext), delaySource = delayContext.createBufferSource(), delayBuffer = delayContext.createBuffer(1, 16, 24000), delay = delayContext.createDelay(16.8);
   delayBuffer.getChannelData(0).fill(.25); delaySource.buffer = delayBuffer; delaySource.loop = true; delaySource.connect(delay); delay.connect(delayContext.destination); delay.delayTime.setValueAtTime(.252, 0); delaySource.start(0);
   const delayed = new Float32Array(24000); delayPull.process(delayed, new Float32Array(delayed.length)); assert(delayed.every(Number.isFinite), 'fractional delay index crossing zero never rounds outside its ring'); assert(Math.abs(delayed[10000] - .25) < 1e-6);
+  await grainPreparationProof();
   for (const id of Object.keys(sources)) {
     const a = await render(id, [128]), b = await render(id, [17, 31, 255, 3, 129]);
     let error = 0; for (let i = 0; i < a.output.length; i++) error = Math.max(error, Math.abs(a.output[i] - b.output[i])); assert(error < 2e-6, id + ' arbitrary DAW block partitions: ' + error);
@@ -120,5 +188,5 @@ async function main() {
   }
   console.log('Six original Web Audio instruments passed.');
 }
-module.exports = { load, render };
+module.exports = { load, render, grainPreparationProof };
 if (require.main === module) main().catch(error => { console.error(error.stack); process.exitCode = 1; });

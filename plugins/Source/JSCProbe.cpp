@@ -42,6 +42,7 @@ int main() {
     // a child so it cannot change the measured JSC VM allocator eligibility.
     const auto memory = probeMemoryInChild();
     auto context = JSGlobalContextCreate(nullptr); JSValueRef exception = nullptr;
+    evaluate(context, "globalThis.__wasmCompile=false;globalThis.__wasmError=null;try{const code=new Uint8Array([0,97,115,109,1,0,0,0,1,7,1,96,2,127,127,1,127,3,2,1,0,7,7,1,3,97,100,100,0,0,10,9,1,7,0,32,0,32,1,106,11]);__wasmCompile=new WebAssembly.Instance(new WebAssembly.Module(code)).exports.add(2,3)===5;}catch(error){__wasmError=String(error);}", &exception);
     const char* setup = "globalThis.__kitchenPromise=0;Promise.resolve(17).then(x=>globalThis.__kitchenPromise=x);globalThis.__probePhase=0;globalThis.__probeState=0;globalThis.__probeBuffer=new Float32Array(128);globalThis.__probeRender=function(){let z=__probeState,p=__probePhase;for(let i=0;i<128;i++){const x=Math.sin(p);p+=.021;z+=.09*(Math.tanh(x*3.1+.1*z)-z);__probeBuffer[i]=z;}__probeState=z;__probePhase=p;return z;}";
     evaluate(context, setup, &exception);
     const auto key = JSStringCreateWithUTF8CString("__probeRender");
@@ -49,7 +50,7 @@ int main() {
     const auto coldMicros = benchmark(context, function, 128, &exception);
     benchmark(context, function, 2048, &exception);
     const auto warmMicros = benchmark(context, function, 512, &exception);
-    const auto result = evaluate(context, "JSON.stringify({typedArray:(new Float32Array([1.25]))[0]===1.25,wasm:typeof WebAssembly==='object',promise:typeof Promise==='function',promiseResolved:globalThis.__kitchenPromise===17})", &exception);
+    const auto result = evaluate(context, "JSON.stringify({typedArray:(new Float32Array([1.25]))[0]===1.25,wasm:typeof WebAssembly==='object',wasmCompile:globalThis.__wasmCompile,wasmError:globalThis.__wasmError,promise:typeof Promise==='function',promiseResolved:globalThis.__kitchenPromise===17})", &exception);
     if (exception || !result) { std::fputs("JavaScriptCore capability probe failed\n", stderr); JSGlobalContextRelease(context); return 1; }
     auto string = JSValueToStringCopy(context, result, nullptr); std::vector<char> bytes(JSStringGetMaximumUTF8CStringSize(string)); JSStringGetUTF8CString(string, bytes.data(), bytes.size()); JSStringRelease(string);
     std::string report(bytes.data()); if (!report.empty()) report.pop_back();

@@ -37,7 +37,7 @@ public:
     std::uint64_t editorStateRevision() const noexcept { return editorRevision.load(); }
     juce::String statusMessage();
     void stateFromEditor(const juce::var&);
-    void parameterFromEditor(const juce::var&);
+    juce::var parameterFromEditor(const juce::var&);
     void midiFromEditor(const juce::var&);
     void storageFromEditor(const juce::var&);
     void releaseEditorMidi() noexcept;
