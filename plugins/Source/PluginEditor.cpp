@@ -2,6 +2,27 @@
 #include <cstring>
 
 namespace kitchen {
+namespace {
+class EditorBrowser final : public juce::WebBrowserComponent {
+public:
+    EditorBrowser(const Options& options, juce::String entry) : WebBrowserComponent(options), entryURL(std::move(entry)) {}
+    void loadWhenAttached() {
+        if (requested || !isShowing() || getPeer() == nullptr) return;
+        requested = true;
+        goToURL(entryURL);
+    }
+    bool pageAboutToLoad(const juce::String& url) override {
+        // JUCE caches goToURL's argument and can replay it on a later window
+        // association, even with keep-page enabled. The editor is one local
+        // document; preserve its live state when that same entry is replayed.
+        return !(finished && url == entryURL);
+    }
+    void pageFinishedLoading(const juce::String& url) override { if (url == entryURL) finished = true; }
+private:
+    juce::String entryURL;
+    bool requested = false, finished = false;
+};
+}
 PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), processor(p) {
     lastSnapshotRevision = processor.editorStateRevision();
     setResizable(true, true); setResizeLimits(620, 420, 2400, 1800); setSize(1180, 820);
@@ -23,12 +44,11 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withEventListener("kitchenNeuralSmokeResult", [this](const juce::var& value) { neuralSmokeResult = value; })
         .withEventListener("kitchenStorageSmokeResult", [this](const juce::var& value) { storageSmokeResult = value; })
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
-    browser = std::make_unique<juce::WebBrowserComponent>(options);
+    browser = std::make_unique<EditorBrowser>(options, juce::WebBrowserComponent::getResourceProviderRoot() + "ui/" + p.getProduct().id + ".html");
     addAndMakeVisible(*browser);
     // The preferred size was set before the browser existed. Hosts may attach
     // the editor at that exact size without sending another resize callback.
     resized();
-    browser->goToURL(juce::WebBrowserComponent::getResourceProviderRoot() + "ui/" + p.getProduct().id + ".html");
     startTimerHz(20);
 }
 void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds()); }
@@ -91,6 +111,7 @@ void PluginEditor::downloadToFile(const juce::var& payload) {
 }
 void PluginEditor::timerCallback() {
     if (!browser) return;
+    static_cast<EditorBrowser*>(browser.get())->loadWhenAttached();
     const auto revision = processor.editorStateRevision();
     if (revision != lastSnapshotRevision) { lastSnapshotRevision = revision; sendState(); }
     browser->emitEventIfBrowserIsVisible("kitchenClock", processor.editorClock());

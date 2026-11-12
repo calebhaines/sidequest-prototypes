@@ -66,7 +66,7 @@ private:
     int storageStage = 0;
     juce::var parameterResult;
     double started = 0, attachAfter = 0;
-    bool attached = false, resizeChecked = false, preferredBoundsChecked = false, reopenedBoundsChecked = false;
+    bool attached = false, resizeChecked = false, preferredBoundsChecked = false, reopenedBoundsChecked = false, tickRunning = false;
     void closeProduct() { audio.reset(); window.reset(); editor = nullptr; if (processor) processor->releaseResources(); processor.reset(); }
     void openEditor(bool reopening = false) {
         window = std::make_unique<SmokeWindow>(); auto next = std::make_unique<kitchen::PluginEditor>(*processor);
@@ -98,6 +98,8 @@ private:
         try { beginProduct(); } catch (const std::exception& e) { auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", e.what()); finishProduct(juce::var(failure)); }
     }
     void timerCallback() override {
+        if (tickRunning) return;
+        const juce::ScopedValueSetter<bool> guard(tickRunning, true);
         if (editor == nullptr) return;
         const double timeout = ids[index] == "morsel" ? 120000 : 45000;
         if (juce::Time::getMillisecondCounterHiRes() - started > timeout) { auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false); failure->setProperty("error", neuralRequested ? "Timed out waiting for original WebKit neural/Signalsmith preparation" : "Timed out waiting for original WebKit UI hydration and parameter roundtrip"); finishProduct(juce::var(failure)); return; }

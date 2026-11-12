@@ -163,7 +163,8 @@ public:
             if (!manifest["products"].isArray()) throw std::runtime_error("Invalid products.json manifest");
             bundlesDirectory.findChildFiles(bundles, juce::File::findDirectories, true, "*.vst3");
             formats.addFormat(std::make_unique<juce::VST3PluginFormat>());
-            startTimerHz(20); beginProduct();
+            beginProduct();
+            if (plugin != nullptr) startTimerHz(20);
         } catch (const std::exception& error) {
             success = false; initialisationError = error.what(); writeReport(); setApplicationReturnValue(2); quit();
         }
@@ -188,7 +189,7 @@ private:
     std::vector<float> parametersBefore;
     juce::String initialisationError, smokePageGeneration, preservedPageGeneration;
     int productIndex = 0, preferredWidth = 0, preferredHeight = 0;
-    bool success = true, prepared = false;
+    bool success = true, prepared = false, tickRunning = false;
     Step step = Step::detached;
     Geometry geometry = Geometry::initial;
     double productStarted = 0, stepStarted = 0, lastRequest = 0;
@@ -304,6 +305,10 @@ private:
         pending = evaluate(view, "(function(){const state=window.__KitchenCompiledSmokeState={pageGeneration:window.__KitchenCompiledPageGeneration,phase:'running',startedAt:performance.now()};delete window.__KitchenCompiledSmokeResult;window.KitchenNativeEditor.runSmokeTest().then(function(r){state.phase='completed';state.completedAt=performance.now();window.__KitchenCompiledSmokeResult=r;},function(e){state.phase='rejected';window.__KitchenCompiledSmokeResult={pass:false,error:String(e)};});return JSON.stringify({started:true,state:state});})()", "launchControlSmoke");
     }
     void timerCallback() override {
+        // AppKit/plugin creation can run nested message loops while a product
+        // transition is in progress. Never advance that transition twice.
+        if (tickRunning) return;
+        const juce::ScopedValueSetter<bool> guard(tickRunning, true);
         @autoreleasepool {
             try { tick(); }
             catch (const std::exception& error) { finishProduct(error.what()); }
