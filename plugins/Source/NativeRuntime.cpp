@@ -228,11 +228,11 @@ void NativeRuntime::parameter(int index, double value, bool realtime) noexcept {
     call(parameterFunction, 2, args); inRender = previousRender;
     if (error.isEmpty()) { appliedParameters[static_cast<size_t>(index)] = value; tailDirty = true; }
 }
-void NativeRuntime::process(int count) noexcept {
+void NativeRuntime::process(int count, bool nonRealtime) noexcept {
     if (count < 0 || count > blockCapacity) { error = "Invalid native DSP block size"; return; }
     std::fill(outL.begin(), outL.begin() + count, 0.0f); std::fill(outR.begin(), outR.begin() + count, 0.0f);
     outputEventCount = 0; if (!ready()) return;
-    if (remote) { remote->process(count); return; }
+    if (remote) { remote->process(count, nonRealtime); return; }
     if (clockData[tempo] != previousTailTempo) { previousTailTempo = clockData[tempo]; tailDirty = true; }
     inRender = true; set(io, "eventCount", JSValueMakeNumber(context, eventCount)); set(io, "outputEventCount", JSValueMakeNumber(context, 0));
     const JSValueRef arg = JSValueMakeNumber(context, count); call(renderFunction, 1, &arg);

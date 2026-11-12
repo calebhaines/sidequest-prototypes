@@ -32,7 +32,7 @@ public:
     bool usingHelper() const noexcept { return remoteReady; }
     int helperProcessId() const noexcept;
     const juce::String& getError() const noexcept { return error; }
-    void process(int count) noexcept;
+    void process(int count, bool nonRealtime = false) noexcept;
     void parameter(int index, double normalized, bool realtime = false) noexcept;
     void prepareParameters(const std::vector<float>&);
     double appliedParameter(int index) const noexcept { return appliedParameters[static_cast<size_t>(index)]; }

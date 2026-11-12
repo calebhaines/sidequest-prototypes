@@ -35,25 +35,33 @@ template <size_t size> void put(char (&destination)[size], const juce::String& v
 std::int64_t nowNanos() noexcept {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
-bool receiveToken(int socket, std::uint64_t expected, int timeoutMs, pid_t& child) noexcept {
-    const auto deadline = nowNanos() + static_cast<std::int64_t>(timeoutMs) * 1000000;
+enum class TokenResult { complete, deadline, failed };
+TokenResult receiveToken(int socket, std::uint64_t expected, std::int64_t deadline,
+                         const std::atomic<std::uint64_t>& completed, pid_t& child) noexcept {
     for (;;) {
-        const auto remaining = deadline - nowNanos(); if (remaining <= 0) return false;
+        // Drain acknowledgements before enforcing the deadline. The parent can
+        // be descheduled after poll times out while the child finishes normally.
+        std::uint64_t token = 0;
+        const auto bytes = ::recv(socket, &token, sizeof(token), MSG_DONTWAIT);
+        if (bytes == sizeof(token)) {
+            if (token > expected) return TokenResult::failed;
+            if (token == expected) return completed.load(std::memory_order_acquire) == expected ? TokenResult::complete : TokenResult::failed;
+            continue; // A completed shared-memory request may leave its ACK queued.
+        }
+        if (bytes < 0 && errno == EINTR) continue;
+        if (bytes >= 0 || (errno != EAGAIN && errno != EWOULDBLOCK)) return TokenResult::failed;
+        if (completed.load(std::memory_order_acquire) == expected) return TokenResult::complete;
+        if (child <= 0) return TokenResult::failed;
+        const auto remaining = deadline - nowNanos(); if (remaining <= 0) return TokenResult::deadline;
         pollfd descriptor { socket, POLLIN, 0 };
         const int waitMs = static_cast<int>(std::max<std::int64_t>(1, (remaining + 999999) / 1000000));
         const int result = ::poll(&descriptor, 1, std::min(waitMs, 250));
         if (result < 0 && errno == EINTR) continue;
         if (result == 0) {
             const auto reaped = ::waitpid(child, nullptr, WNOHANG);
-            if (reaped == child || (reaped < 0 && errno == ECHILD)) { child = -1; return false; }
-            continue;
+            if (reaped == child || (reaped < 0 && errno == ECHILD)) { child = -1; return TokenResult::failed; }
         }
-        if (result < 0 || (descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) return false;
-        std::uint64_t token = 0;
-        const auto bytes = ::recv(socket, &token, sizeof(token), MSG_DONTWAIT);
-        if (bytes < 0 && (errno == EINTR || errno == EAGAIN)) continue;
-        if (bytes != sizeof(token)) return false;
-        if (token == expected) return true;
+        if (result < 0 || (descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) return TokenResult::failed;
     }
 }
 void configureAudioPriority(double rate, int frames) noexcept {
@@ -175,21 +183,68 @@ void NativeRemoteRuntime::cleanup() noexcept {
     if (sharedName.isNotEmpty()) ::shm_unlink(sharedName.toRawUTF8());
     if (temporaryDirectory != juce::File()) temporaryDirectory.deleteRecursively();
 }
-bool NativeRemoteRuntime::exchange(int command, int timeoutMs) noexcept {
+bool NativeRemoteRuntime::exchange(int command, int timeoutMs, bool allowLateRender) noexcept {
     if (socket < 0 || shared == nullptr || owner.error.isNotEmpty()) return false;
+    if (pendingSequence != 0) { owner.error = "A shared DSP request was overwritten before completion"; return false; }
     shared->command = command; const auto token = ++sequence;
+    const auto started = nowNanos();
+    pendingSequence = token;
+    pendingDeadline = started + static_cast<std::int64_t>(std::max(250, timeoutMs + 200)) * 1000000;
     shared->requested.store(token, std::memory_order_release);
-    if (::send(socket, &token, sizeof(token), MSG_DONTWAIT) != sizeof(token) || !receiveToken(socket, token, timeoutMs, child)
-        || shared->completed.load(std::memory_order_acquire) != token) {
+    if (::send(socket, &token, sizeof(token), MSG_DONTWAIT) != sizeof(token)) {
         owner.error = "The Kitchen DSP helper stopped responding; audio has been stopped for this instance"; return false;
     }
+    const auto result = receiveToken(socket, token, started + static_cast<std::int64_t>(timeoutMs) * 1000000, shared->completed, child);
+    if (result == TokenResult::deadline && allowLateRender) {
+        // Keep this request immutable. It still executes exactly once; the next
+        // operation must finish it before publishing any new input or command.
+        return false;
+    }
+    if (result != TokenResult::complete) {
+        owner.error = "The Kitchen DSP helper stopped responding; audio has been stopped for this instance"; return false;
+    }
+    pendingSequence = 0;
     copyStatus(); return owner.error.isEmpty();
+}
+bool NativeRemoteRuntime::finishPending() noexcept {
+    if (owner.error.isNotEmpty()) return false;
+    if (pendingSequence == 0) return true;
+    const auto result = receiveToken(socket, pendingSequence, pendingDeadline, shared->completed, child);
+    if (result != TokenResult::complete) {
+        owner.error = "The Kitchen DSP helper did not recover before its bounded deadline; audio has been stopped for this instance";
+        return false;
+    }
+    pendingSequence = 0; copyStatus();
+    // The missed block's PCM is obsolete, but its MIDI releases must survive.
+    // Retain all output rows in order so delayed note-on/off pairs remain valid.
+    return owner.error.isEmpty() && retainOutputMidi(true);
+}
+bool NativeRemoteRuntime::retainOutputMidi(bool late) noexcept {
+    const int count = shared->outputEventCount;
+    if (count < 0 || count > maxEvents || count > maxEvents * 2 - deferredMidiCount) {
+        owner.error = "The bounded DSP MIDI recovery queue overflowed"; return false;
+    }
+    auto* target = deferredMidi.data() + deferredMidiCount * eventFields;
+    std::memcpy(target, shared->outputEvents, static_cast<size_t>(count * eventFields) * sizeof(double));
+    if (late) for (int i = 0; i < count; ++i) target[i * eventFields] = 0;
+    deferredMidiCount += count; return true;
+}
+void NativeRemoteRuntime::publishDeferredMidi(int frames) noexcept {
+    if (frames <= 0) return;
+    const int count = std::min(deferredMidiCount, maxEvents - owner.outputEventCount);
+    auto* target = owner.outputEvents.data() + owner.outputEventCount * eventFields;
+    std::memcpy(target, deferredMidi.data(), static_cast<size_t>(count * eventFields) * sizeof(double));
+    for (int i = 0; i < count; ++i) target[i * eventFields] = juce::jlimit(0.0, static_cast<double>(frames - 1), target[i * eventFields]);
+    owner.outputEventCount += count; deferredMidiCount -= count;
+    std::memmove(deferredMidi.data(), deferredMidi.data() + count * eventFields, static_cast<size_t>(deferredMidiCount * eventFields) * sizeof(double));
+    for (int i = 0; i < deferredMidiCount; ++i) deferredMidi[static_cast<size_t>(i * eventFields)] = 0;
 }
 void NativeRemoteRuntime::copyStatus() noexcept {
     owner.latencySamples = shared->latency; owner.cachedTail = shared->tail;
     if (shared->failed != 0) owner.error = juce::String::fromUTF8(shared->error);
 }
 void NativeRemoteRuntime::prepare(const std::vector<float>& values) {
+    if (!finishPending()) return;
     shared->parameterCount = std::min(static_cast<int>(values.size()), maxParameters);
     for (int i = 0; i < shared->parameterCount; ++i) {
         shared->parameters[i] = values[static_cast<size_t>(i)]; owner.parameters[static_cast<size_t>(i)] = values[static_cast<size_t>(i)];
@@ -197,32 +252,42 @@ void NativeRemoteRuntime::prepare(const std::vector<float>& values) {
     }
     exchange(commandPrepare, 65000);
 }
-void NativeRemoteRuntime::process(int frames) noexcept {
+void NativeRemoteRuntime::process(int frames, bool nonRealtime) noexcept {
     if (frames < 0 || frames > owner.blockCapacity) { owner.error = "Invalid shared DSP block size"; return; }
+    if (!finishPending()) return;
+    publishDeferredMidi(frames);
     shared->frames = frames; shared->eventCount = owner.eventCount;
     std::memcpy(shared->inputLeft, owner.inL.data(), static_cast<size_t>(frames) * sizeof(float));
     std::memcpy(shared->inputRight, owner.inR.data(), static_cast<size_t>(frames) * sizeof(float));
     std::memcpy(shared->events, owner.events.data(), static_cast<size_t>(owner.eventCount * eventFields) * sizeof(double));
     std::memcpy(shared->clock, owner.clockData.data(), clockFields * sizeof(double));
     std::memcpy(shared->parameters, owner.parameters.data(), static_cast<size_t>(shared->parameterCount) * sizeof(double));
-    const int timeoutMs = std::max(50, static_cast<int>(std::ceil(frames * 4000.0 / owner.rate)));
-    if (!exchange(commandRender, timeoutMs)) return;
+    const int timeoutMs = nonRealtime ? 65000 : std::max(50, static_cast<int>(std::ceil(frames * 4000.0 / owner.rate)));
+    if (!exchange(commandRender, timeoutMs, !nonRealtime)) return;
     std::memcpy(owner.outL.data(), shared->outputLeft, static_cast<size_t>(frames) * sizeof(float));
     std::memcpy(owner.outR.data(), shared->outputRight, static_cast<size_t>(frames) * sizeof(float));
-    owner.outputEventCount = juce::jlimit(0, maxEvents, shared->outputEventCount);
-    std::memcpy(owner.outputEvents.data(), shared->outputEvents, static_cast<size_t>(owner.outputEventCount * eventFields) * sizeof(double));
+    if (retainOutputMidi(false)) publishDeferredMidi(frames);
 }
 void NativeRemoteRuntime::reset() noexcept {
+    if (!finishPending()) return;
+    // A panic/reset must never deliver an obsolete deferred note-on afterward.
+    // Keep releases and controller messages so already-emitted notes can end.
+    int kept = 0;
+    for (int i = 0; i < deferredMidiCount; ++i) if (deferredMidi[static_cast<size_t>(i * eventFields + 1)] != noteOn) {
+        if (kept != i) std::memmove(deferredMidi.data() + kept * eventFields, deferredMidi.data() + i * eventFields, eventFields * sizeof(double));
+        ++kept;
+    }
+    deferredMidiCount = kept;
     std::memcpy(shared->parameters, owner.parameters.data(), static_cast<size_t>(shared->parameterCount) * sizeof(double));
     exchange(commandReset, 100);
 }
 juce::String NativeRemoteRuntime::stateJSON() {
-    if (owner.error.isNotEmpty()) return {};
+    if (!finishPending()) return {};
     std::memcpy(shared->parameters, owner.parameters.data(), static_cast<size_t>(shared->parameterCount) * sizeof(double));
     return exchange(commandSnapshot, 65000) ? temporaryDirectory.getChildFile("snapshot.json").loadFileAsString() : juce::String{};
 }
 juce::String NativeRemoteRuntime::capture(const juce::String& request) {
-    if (owner.error.isNotEmpty()) return "{\"ok\":false,\"error\":\"DSP helper is unavailable\"}";
+    if (!finishPending()) return "{\"ok\":false,\"error\":\"DSP helper is unavailable\"}";
     if (request.getNumBytesAsUTF8() >= sizeof(shared->captureRequest)) return "{\"ok\":false,\"error\":\"MIDI capture request is too large\"}";
     put(shared->captureRequest, request);
     std::memcpy(shared->parameters, owner.parameters.data(), static_cast<size_t>(shared->parameterCount) * sizeof(double));
@@ -304,6 +369,9 @@ int NativeRemoteRuntime::runChild(int argc, char** argv) {
                 status();
             }
         } catch (const std::exception& exception) { shared->failed = 1; put(shared->error, juce::String(exception.what())); }
+        // This releases ownership of every Shared byte to the parent, which may
+        // publish the next request before this thread sends its local ACK token.
+        // Do not access Shared again until the next requested.acquire above.
         shared->completed.store(token, std::memory_order_release);
         if (::send(childSocket, &token, sizeof(token), MSG_DONTWAIT) != sizeof(token)) break;
     }

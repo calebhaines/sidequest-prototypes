@@ -10,6 +10,8 @@
 #include <vector>
 #include <csignal>
 #include <cerrno>
+#include <thread>
+#include <sys/wait.h>
 #include <unistd.h>
 
 namespace {
@@ -128,14 +130,104 @@ void capturePages(const kitchen::Product& product, const juce::File& resources) 
     }
     require(received == total, "Capture did not retain every completed note across transport pages"); std::cout << "PASS FERMENT actual capture128-note pages, large valid JSON and complete retained take; notes=" << received << '\n';
 }
+void stopHelper(Runtime& runtime) {
+    const int pid = runtime.helperProcessId(); require(::kill(pid, SIGSTOP) == 0, "Unable to suspend the helper");
+    int status = 0; pid_t waited; do { waited = ::waitpid(pid, &status, WUNTRACED); } while (waited < 0 && errno == EINTR);
+    require(waited == pid && WIFSTOPPED(status), "Helper did not enter the controlled suspended state");
+}
+void softTimeout(Runtime& runtime, int frames) {
+    const auto before = std::chrono::steady_clock::now(); runtime.process(frames);
+    const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - before).count();
+    require(elapsed >= 40 && elapsed < 200, "The first render did not use its bounded soft deadline");
+    require(runtime.ready() && runtime.getError().isEmpty(), "A single late helper render permanently muted the instance");
+    for (int channel = 0; channel < 2; ++channel) for (int i = 0; i < frames; ++i) require(runtime.output(channel)[i] == 0, "A timed-out render reused stale PCM");
+}
+void lateRender(const kitchen::Product& product, const juce::File& resources, bool delayedParent) {
+    auto values = defaults(product); set(values, product, "_nativeSequence", false);
+    auto local = create(product, resources, values, true), remote = create(product, resources, values, false);
+    constexpr int frames = 128;
+    for (auto* runtime : { local.get(), remote.get() }) { clock(*runtime, 0, frames, 120, 0); event(*runtime, 17, kitchen::noteOn, 60, .8, 2, 91); }
+    local->process(frames); stopHelper(*remote); softTimeout(*remote, frames);
+    const int scalar = parameter(product, "synth.pwmAmount");
+    for (auto* runtime : { local.get(), remote.get() }) {
+        // Owner buffers may change while the old Shared request remains immutable.
+        // The old note must start before this block's pitch/control/release data.
+        runtime->parameter(scalar, .37f); clock(*runtime, frames, frames, 137, frames / 24000.0);
+        event(*runtime, 11, kitchen::noteOff, 60, 0, 2, 91); event(*runtime, 31, kitchen::noteOn, 67, .7, 1, 92);
+        event(*runtime, 49, kitchen::pitchBend, 0, .25, 1); event(*runtime, 71, kitchen::controller, 1, .6, 1);
+    }
+    const int pid = remote->helperProcessId(); std::thread resume([pid] { std::this_thread::sleep_for(std::chrono::milliseconds(20)); ::kill(pid, SIGCONT); });
+    // Simulate a stopped/descheduled host. A request that finished long ago must
+    // be accepted even though the parent's original hard deadline has elapsed.
+    if (delayedParent) std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    local->process(frames); remote->process(frames); resume.join();
+    require(remote->ready(), "Late render did not resume with the original DSP state: " + remote->getError()); exact(*local, *remote, frames);
+    double energy = 0;
+    for (int i = 0; i < frames; ++i) energy += std::abs(remote->output(0)[i]) + std::abs(remote->output(1)[i]);
+    for (int turn = 2; turn < 12; ++turn) {
+        for (auto* runtime : { local.get(), remote.get() }) {
+            clock(*runtime, static_cast<std::uint64_t>(turn * frames), frames, 137, turn * frames * 137.0 / (60 * 48000));
+            if (turn == 8) event(*runtime, 7, kitchen::noteOff, 67, 0, 1, 92);
+        }
+        local->process(frames); remote->process(frames); require(remote->ready(), "Resumed helper did not stay healthy"); exact(*local, *remote, frames);
+        for (int i = 0; i < frames; ++i) energy += std::abs(remote->output(0)[i]) + std::abs(remote->output(1)[i]);
+    }
+    require(energy > .0001, "Recovered MIDI/phase parity compared only silence");
+    std::cout << "PASS late helper render: soft zero block, unchanged in-flight MIDI/clock/params, exact continuing PCM; " << (delayedParent ? "ACK already complete after host pause" : "~70ms suspension") << '\n';
+}
+void lateControls(const kitchen::Product& product, const juce::File& resources) {
+    auto values = defaults(product); auto local = create(product, resources, values, true), remote = create(product, resources, values, false);
+    constexpr int frames = 128; std::uint64_t frame = 0;
+    for (int operation = 0; operation < 4; ++operation) {
+        for (auto* runtime : { local.get(), remote.get() }) {
+            clock(*runtime, frame, frames, 120, frame / 24000.0);
+            for (int i = 0; i < frames; ++i) { runtime->input(0)[i] = static_cast<float>(.1 * std::sin((frame + i) * .037)); runtime->input(1)[i] = static_cast<float>(.08 * std::cos((frame + i) * .029)); }
+        }
+        local->process(frames); stopHelper(*remote); softTimeout(*remote, frames);
+        local->parameter(0, .31f); remote->parameter(0, .31f); values[0] = .31f;
+        const int pid = remote->helperProcessId(); std::thread resume([pid] { std::this_thread::sleep_for(std::chrono::milliseconds(20)); ::kill(pid, SIGCONT); });
+        juce::String a, b;
+        if (operation == 0) { a = local->stateJSON(); b = remote->stateJSON(); }
+        else if (operation == 1) { local->reset(); remote->reset(); }
+        else if (operation == 2) { local->prepareParameters(values); remote->prepareParameters(values); }
+        else { a = local->captureRequestJSON("{\"action\":\"poll\"}"); b = remote->captureRequestJSON("{\"action\":\"poll\"}"); }
+        resume.join(); require(remote->ready(), "A control command overwrote an in-flight audio request: " + remote->getError());
+        if (operation == 0 || operation == 3) require(a == b, "Pending-render control command returned stale state");
+        frame += frames;
+        for (auto* runtime : { local.get(), remote.get() }) {
+            clock(*runtime, frame, frames, 137, frame * 137.0 / (60 * 48000));
+            for (int i = 0; i < frames; ++i) { runtime->input(0)[i] = -.12f; runtime->input(1)[i] = .07f; }
+        }
+        local->process(frames); remote->process(frames); exact(*local, *remote, frames); frame += frames;
+    }
+    std::cout << "PASS snapshot/reset/prepare/capture wait for late audio before every shared-memory write\n";
+}
+void lateOffline(const kitchen::Product& product, const juce::File& resources) {
+    auto values = defaults(product); set(values, product, "params.low", 4.0);
+    auto local = create(product, resources, values, true), remote = create(product, resources, values, false);
+    constexpr int frames = 128;
+    for (auto* runtime : { local.get(), remote.get() }) {
+        clock(*runtime, 0, frames, 137, .75);
+        for (int i = 0; i < frames; ++i) { runtime->input(0)[i] = static_cast<float>(.1 * std::sin(i * .037)); runtime->input(1)[i] = static_cast<float>(.08 * std::cos(i * .029)); }
+    }
+    local->process(frames, true); stopHelper(*remote);
+    const int pid = remote->helperProcessId(); std::thread resume([pid] { std::this_thread::sleep_for(std::chrono::milliseconds(70)); ::kill(pid, SIGCONT); });
+    const auto before = std::chrono::steady_clock::now(); remote->process(frames, true); resume.join();
+    const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - before).count();
+    require(elapsed >= 60 && elapsed < 500, "Offline render did not await its late helper block");
+    require(remote->ready(), "Offline render failed after a transient helper delay"); exact(*local, *remote, frames);
+    std::cout << "PASS offline70ms helper suspension keeps the first block's exact Float32 PCM; wait=" << elapsed << "ms\n";
+}
 void failure(const kitchen::Product& product, const juce::File& resources, bool stop) {
     int pid = -1;
     {
-        auto runtime = create(product, resources, defaults(product), false); pid = runtime->helperProcessId(); require(::kill(pid, stop ? SIGSTOP : SIGKILL) == 0, "Unable to exercise helper failure");
+        auto runtime = create(product, resources, defaults(product), false); pid = runtime->helperProcessId(); if (stop) stopHelper(*runtime); else require(::kill(pid, SIGKILL) == 0, "Unable to exercise helper failure");
         clock(*runtime, 0, 128, 120, 0); const auto before = std::chrono::steady_clock::now(); runtime->process(128); const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - before).count();
-        require(elapsed < 500, "Helper failure blocked beyond its bounded deadline"); require(!runtime->ready() && runtime->getError().isNotEmpty(), "Helper failure was hidden as successful silence"); const auto error = runtime->getError(); runtime->reset(); runtime->process(128); require(!runtime->ready() && runtime->getError() == error, "Helper failure silently recovered with stale state");
+        if (stop) { require(runtime->ready(), "The first stalled callback was not recoverable"); clock(*runtime, 128, 128, 120, 128 / 24000.0); runtime->process(128); }
+        const auto total = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - before).count();
+        require(total < 500, "Helper failure blocked beyond its bounded deadline"); require(!runtime->ready() && runtime->getError().isNotEmpty(), "Helper failure was hidden as successful silence"); const auto error = runtime->getError(); runtime->reset(); runtime->process(128); require(!runtime->ready() && runtime->getError() == error, "Helper failure silently recovered with stale state");
         for (int i = 0; i < 128; ++i) require(runtime->output(0)[i] == 0 && runtime->output(1)[i] == 0, "Helper reused stale audio after a failed exchange");
-        std::cout << "PASS visible persistent helper " << (stop ? "timeout" : "crash") << " fault with bounded wait=" << elapsed << "ms\n";
+        std::cout << "PASS visible persistent helper " << (stop ? "timeout" : "crash") << " fault with bounded wait=" << total << "ms; first callback=" << elapsed << "ms\n";
     }
     errno = 0; require(::kill(pid, 0) == -1 && errno == ESRCH, "Faulted/stopped helper was not reaped");
 }
@@ -146,7 +238,9 @@ int main(int argc, char** argv) {
     try {
         const auto manifest = kitchen::readManifest(resources); const auto eq = kitchen::findProduct(manifest, "track-eq");
         pairProof(eq, resources); pairProof(kitchen::findProduct(manifest, "tremor"), resources); pairProof(kitchen::findProduct(manifest, "brine"), resources);
-        isolation(eq, resources); capturePages(kitchen::findProduct(manifest, "ferment"), resources); failure(eq, resources, true); failure(eq, resources, false);
+        isolation(eq, resources); capturePages(kitchen::findProduct(manifest, "ferment"), resources);
+        lateRender(kitchen::findProduct(manifest, "brine"), resources, false); lateRender(kitchen::findProduct(manifest, "brine"), resources, true); lateControls(eq, resources); lateOffline(eq, resources);
+        failure(eq, resources, true); failure(eq, resources, false);
         std::cout << "PASS all actual helper transport contracts (CPU measurements include copying, wake and synchronous wait)\n";
     } catch (const std::exception& exception) { std::cerr << "FAIL helper transport: " << exception.what() << '\n'; return 1; }
     return 0;

@@ -25,8 +25,9 @@ suite in your user account, or copy whichever plugins you want:
 When updating, close your DAW, run the new archive's installer, then reopen
 the DAW and rescan plugins. Preview 3 fixes missed native sample starts,
 CLATTER voice cleanup, and BATTER automation overhead that could cause
-increasing CPU usage and playback dropouts. It includes Preview 2's editor
-fixes. Existing plugin IDs and project-state formats are retained.
+increasing CPU usage and playback dropouts. Late DSP-helper responses also
+recover without permanently muting the instance. It includes Preview 2's
+editor fixes. Existing plugin IDs and project-state formats are retained.
 
 Restart or rescan plugins in your DAW. Instruments receive MIDI; effects
 receive stereo audio (mono input is duplicated to stereo). Use the original
