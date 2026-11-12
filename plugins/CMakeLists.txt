@@ -22,6 +22,7 @@ if(NOT APPLE)
     message(STATUS "Apple plugin binaries require macOS. Building portable host-clock tests only.")
     return()
 endif()
+enable_language(OBJCXX)
 function(kitchen_sign_jit_test target)
     add_custom_command(TARGET ${target} POST_BUILD
         COMMAND /usr/bin/codesign --force --sign - --entitlements "${CMAKE_CURRENT_SOURCE_DIR}/platform/Jit.entitlements" "$<TARGET_FILE:${target}>"
@@ -126,6 +127,13 @@ add_test(NAME kitchen_native_webkit_ui COMMAND kitchen_native_ui_smoke --resourc
 set_tests_properties(kitchen_native_webkit_ui PROPERTIES TIMEOUT 300)
 if(KITCHEN_BUILD_PLUGINS)
     add_test(NAME kitchen_compiled_vst3_audio COMMAND kitchen_vst3_host_smoke --bundles "${CMAKE_BINARY_DIR}" --report "${KITCHEN_GENERATED}/native-vst3-host-report.json")
+    juce_add_gui_app(kitchen_compiled_ui_smoke PRODUCT_NAME "Kitchen Compiled UI Smoke")
+    set_target_properties(kitchen_compiled_ui_smoke PROPERTIES OBJCXX_STANDARD 17 OBJCXX_STANDARD_REQUIRED YES)
+    target_sources(kitchen_compiled_ui_smoke PRIVATE Source/CompiledUiSmoke.mm)
+    target_link_libraries(kitchen_compiled_ui_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore" "-framework AppKit" "-framework WebKit")
+    kitchen_sign_jit_test(kitchen_compiled_ui_smoke)
+    add_test(NAME kitchen_compiled_vst3_webkit_ui COMMAND kitchen_compiled_ui_smoke --resources "${KITCHEN_GENERATED}" --bundles "${CMAKE_BINARY_DIR}" --report "${KITCHEN_GENERATED}/native-compiled-ui-smoke-report.json")
+    set_tests_properties(kitchen_compiled_vst3_webkit_ui PROPERTIES TIMEOUT 300)
 endif()
 
 function(kitchen_add_product id display_name code kind)

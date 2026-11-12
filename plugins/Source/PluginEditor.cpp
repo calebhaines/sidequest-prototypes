@@ -22,6 +22,9 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
     browser = std::make_unique<juce::WebBrowserComponent>(options);
     addAndMakeVisible(*browser);
+    // The preferred size was set before the browser existed. Hosts may attach
+    // the editor at that exact size without sending another resize callback.
+    resized();
     browser->goToURL(juce::WebBrowserComponent::getResourceProviderRoot() + "ui/" + p.getProduct().id + ".html");
     startTimerHz(20);
 }
