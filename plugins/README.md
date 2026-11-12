@@ -11,7 +11,7 @@ Windows and Linux plugin binaries are not part of this implementation.
 ## Install and play
 
 Download `Kitchen-Apple-Silicon.zip` from the
-[native preview release](https://github.com/calebhaines/sidequest-prototypes/releases/tag/kitchen-native-v1.0.0-preview.2).
+[native preview release](https://github.com/calebhaines/sidequest-prototypes/releases/tag/kitchen-native-v1.0.0-preview.3).
 Development builds are also available from successful
 [native workflows](https://github.com/calebhaines/sidequest-prototypes/actions/workflows/kitchen-vst3.yml).
 Extract the ZIP. Run `Install.command` to install the
@@ -23,9 +23,10 @@ suite in your user account, or copy whichever plugins you want:
 | Audio Unit | `~/Library/Audio/Plug-Ins/Components/` |
 
 When updating, close your DAW, run the new archive's installer, then reopen
-the DAW and rescan plugins. Preview 2 fixes black editors in hosts that open
-the plugin at its preferred size without an additional resize. Existing
-plugin IDs and project-state formats are retained.
+the DAW and rescan plugins. Preview 3 fixes missed native sample starts,
+CLATTER voice cleanup, and BATTER automation overhead that could cause
+increasing CPU usage and playback dropouts. It includes Preview 2's editor
+fixes. Existing plugin IDs and project-state formats are retained.
 
 Restart or rescan plugins in your DAW. Instruments receive MIDI; effects
 receive stereo audio (mono input is duplicated to stereo). Use the original

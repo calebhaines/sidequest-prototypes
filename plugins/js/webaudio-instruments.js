@@ -208,10 +208,46 @@
         if (id === 'grain' || id === 'tine') { engine.setMasterVolume(state.master ?? .78); if (/(drive|space)$/.test(path)) engine.setEffects(state); }
         else if (id === 'form') { if (path === 'masterVolume') engine.setMasterVolume(.72 * value); }
         else if (id === 'fable') engine.setState(state);
-        else if (id === 'batter') engine.updateGraph(engine.graph, state);
+        else if (id === 'batter') {
+          const tempo = finite(lastClock?.tempo, state.tempo);
+          playbackState = tempo === state.tempo ? state : { ...state, tempo };
+          const graph = engine.graph, key = path.replace(/^state\./, '');
+          let parameter, target = value, handled = true;
+          if (key === 'master.volume') parameter = graph.master.gain;
+          else if (key === 'master.delayFeedback') parameter = graph.feedback.gain;
+          else if (key === 'master.delayTone') parameter = graph.delayFilter.frequency;
+          else {
+            const laneControl = /^lanes\.(\d+)\.(volume|pan|lowpass|highpass)$/.exec(key);
+            if (!laneControl) handled = false;
+            else {
+              const index = Number(laneControl[1]), lane = playbackState.lanes[index], nodes = graph.lanes[index];
+              if (laneControl[2] === 'volume') { parameter = nodes.volume.gain; target = lane.mute || playbackState.lanes.some(l => l.solo) && !lane.solo ? 0 : lane.volume; }
+              else if (laneControl[2] === 'pan') parameter = nodes.pan.pan;
+              else if (laneControl[2] === 'lowpass') { parameter = nodes.lp.frequency; target = Math.min(lane.lowpass, context.sampleRate * .45); }
+              else parameter = nodes.hp.frequency;
+            }
+          }
+          if (handled) {
+            // A scalar gesture retains the DAW tempo and touches only its own
+            // smoothing curve; the original full update remains for deep edits.
+            graph.state = playbackState;
+            if (parameter) {
+              if (graph.initialized && parameter.setTargetAtTime) {
+                if (g.KitchenWebAudio.setTargetAtCurrentTime) g.KitchenWebAudio.setTargetAtCurrentTime(parameter, target, .01);
+                else parameter.setTargetAtTime(target, context.currentTime, .01);
+              } else parameter.value = target;
+            }
+          } else engine.updateGraph(graph, playbackState);
+        }
         else { engine._state = { ...state, tempo: lastClock?.tempo || state.tempo }; engine._pool.state = engine._state; engine._graph.update(engine._state); }
       },
-      getState() { if (id === 'batter' && ready) { const portable = engine.getState({ portable: true }); if (project.state) project.state = portable; else project = portable; } return copy(project); },
+      getState() {
+        if (id === 'batter' && ready) {
+          const portable = { ...state, assets: engine.getState({ portable: true }).assets };
+          return copy(project.state ? { ...project, state: portable } : portable);
+        }
+        return copy(project);
+      },
       setState(value) { ready = false; project = copy(value); unwrap(); api._ready = prepare(); return api._ready; },
       transport,
       noteOn(event) { if (!ready) throw Error(names[id] + ' is still preparing.'); if (!event.velocity) return api.noteOff(event); const key = String(event.id ?? (event.channel || 0) + ':' + event.pitch), source = 'kitchen-plugin-midi:' + (++serial); if (held.has(key)) cancel(held.get(key), when(event)); held.set(key, source); midiHeld.set(key, { ...event, source, down: true, order: serial }); if (id === 'fable' && state.performance.mode === 'arp' && nativeSequence && lastClock?.playing) return true; return schedule(event, when(event), source, lastClock?.tempo || state.bpm || state.tempo || 120, lastClock?.beat || 0); },
