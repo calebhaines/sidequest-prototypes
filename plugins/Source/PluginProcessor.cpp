@@ -243,7 +243,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             uiMidiFifo.finishedRead(n + other);
             if (releaseEditorNotes.exchange(false)) for (auto& e : editorHeld) if (e.identity != 0) { const auto owned = e; e.identity = 0; addEvent(*current, 0, noteOff, owned.data1, 0, owned.channel, owned.identity); }
         }
-        current->process(count);
+        current->process(count, isNonRealtime());
         reportedTail.store(current->tailSeconds());
         for (int ch = 0; ch < juce::jmin(2, buffer.getNumChannels()); ++ch) std::memcpy(buffer.getWritePointer(ch, offset), current->output(ch), static_cast<size_t>(count) * sizeof(float));
         if (producesMidi()) for (int i = 0; i < current->midiOutputCount(); ++i) { const auto* e = current->midiOutput() + i * eventFields; const int at = offset + juce::jlimit(0, count - 1, static_cast<int>(e[0])), channel = juce::jlimit(1, 16, static_cast<int>(e[4])); if (e[1] == noteOn) outputMidi.addEvent(juce::MidiMessage::noteOn(channel, juce::jlimit(0, 127, static_cast<int>(e[2])), static_cast<float>(juce::jlimit(0.0, 1.0, e[3]))), at); else if (e[1] == noteOff) outputMidi.addEvent(juce::MidiMessage::noteOff(channel, juce::jlimit(0, 127, static_cast<int>(e[2]))), at); }

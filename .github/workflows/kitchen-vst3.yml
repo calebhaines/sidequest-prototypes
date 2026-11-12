@@ -7,7 +7,7 @@ on:
         default: arm64
         required: true
   push:
-    branches: [main, feat/kitchen-vst3-suite, fix/kitchen-vst3-editor-initial-layout, fix/kitchen-native-sustained-playback]
+    branches: [main, feat/kitchen-vst3-suite, fix/kitchen-vst3-editor-initial-layout, fix/kitchen-native-sustained-playback, fix/kitchen-native-late-audio-response]
     paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml', 'loom/**', 'brine/**', 'heirloom/**', 'citrus/**', 'proof/**', 'marinade/**', 'grain/**', 'tine/**', 'batter/**', 'form/**', 'fable/**', 'morsel/**', 'mire/**', 'spool/**', 'haze/**', 'bower/**', 'ravel/**', 'roux/**', 'picnic/**', 'shared/**']
   pull_request:
     paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml']
