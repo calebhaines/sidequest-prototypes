@@ -53,6 +53,14 @@ Result render(kitchen::NativeRuntime& runtime, bool instrument, double rate, int
             for (int n = 0; n < 3; ++n) { auto* event = runtime.midi() + n * kitchen::eventFields; std::fill(event, event + kitchen::eventFields, 0.0); event[0] = 17; event[1] = kitchen::noteOn; event[2] = 36 + n * 12; event[3] = .8; event[4] = 1; event[5] = n + 1; }
             runtime.setMidiCount(3);
         }
+        if (instrument && quantum == 12) {
+            kitchen::writeMidiRow(runtime.midi(), 19, kitchen::pitchBend, 0, .25, 1);
+            runtime.setMidiCount(1);
+        }
+        if (instrument && quantum == 20) {
+            kitchen::writeMidiRow(runtime.midi(), 23, kitchen::controller, 1, 80.0 / 127.0, 1);
+            runtime.setMidiCount(1);
+        }
         if (instrument && quantum == 60) {
             for (int n = 0; n < 3; ++n) { auto* event = runtime.midi() + n * kitchen::eventFields; std::fill(event, event + kitchen::eventFields, 0.0); event[0] = 31; event[1] = kitchen::noteOff; event[2] = 36 + n * 12; event[4] = 1; event[5] = n + 1; }
             runtime.setMidiCount(3);
@@ -75,8 +83,8 @@ Result render(kitchen::NativeRuntime& runtime, bool instrument, double rate, int
 }
 int main(int argc, char* argv[]) {
     juce::ScopedJuceInitialiser_GUI juceInitialiser;
-    juce::File resources = kitchen::findResourceRoot(); juce::String selected;
-    for (int i = 1; i < argc; ++i) { const juce::String arg(argv[i]); if (arg == "--resources" && i + 1 < argc) resources = juce::File(argv[++i]); else if (arg == "--product" && i + 1 < argc) selected = argv[++i]; }
+    juce::File resources = kitchen::findResourceRoot(), reportFile; juce::String selected;
+    for (int i = 1; i < argc; ++i) { const juce::String arg(argv[i]); if (arg == "--resources" && i + 1 < argc) resources = juce::File(argv[++i]); else if (arg == "--product" && i + 1 < argc) selected = argv[++i]; else if (arg == "--report" && i + 1 < argc) reportFile = juce::File(argv[++i]); }
     juce::Array<juce::var> results; bool success = true;
     try {
         const auto manifest = kitchen::readManifest(resources); auto* products = manifest["products"].getArray(); if (products == nullptr || products->isEmpty()) throw std::runtime_error("Empty product manifest");
@@ -112,6 +120,7 @@ int main(int argc, char* argv[]) {
         if (results.isEmpty()) throw std::runtime_error("No matching native plugin was tested");
     } catch (const std::exception& e) { std::cerr << e.what() << std::endl; return 2; }
     auto* report = new juce::DynamicObject(); report->setProperty("passed", success); report->setProperty("products", results); report->setProperty("architecture", juce::SystemStats::getCpuVendor());
-    resources.getChildFile("native-smoke-report.json").replaceWithText(juce::JSON::toString(juce::var(report), false));
+    if (reportFile == juce::File()) reportFile = resources.getChildFile("native-smoke-report.json");
+    reportFile.replaceWithText(juce::JSON::toString(juce::var(report), false));
     return success ? 0 : 1;
 }

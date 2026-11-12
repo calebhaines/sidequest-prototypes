@@ -5,6 +5,18 @@
 
 namespace kitchen {
 namespace {
+class NativeParameter final : public juce::AudioParameterFloat {
+public:
+    NativeParameter(const juce::ParameterID& id, const juce::String& name, juce::NormalisableRange<float> range,
+                    float value, const juce::AudioParameterFloatAttributes& attributes, int discreteSteps, bool toggle)
+        : juce::AudioParameterFloat(id, name, std::move(range), value, attributes), steps(discreteSteps), boolean(toggle) {}
+    int getNumSteps() const override { return steps > 1 ? steps : getDefaultNumParameterSteps(); }
+    bool isDiscrete() const override { return steps > 1; }
+    bool isBoolean() const override { return boolean; }
+private:
+    int steps = 0;
+    bool boolean = false;
+};
 constexpr size_t maxEditorStorageBytes = 16 * 1024 * 1024;
 juce::String factoryStateJSON(const Product& product, const juce::File& resources) {
     const auto resource = product.descriptor["defaultStateResource"].toString();
@@ -60,12 +72,16 @@ PluginProcessor::PluginProcessor(Product p, juce::File root)
     for (int i = 0; i < metadata.size() && i < maxParameters; ++i) {
         const auto pmeta = metadata[i]; auto id = pmeta["id"].toString(); if (id.isEmpty()) id = "parameter-" + juce::String(i);
         auto name = pmeta["name"].toString(); if (name.isEmpty()) name = pmeta["label"].toString(); if (name.isEmpty()) name = id;
-        float interval = 0;
-        if (auto* values = choices(pmeta); values && values->size() > 1) interval = 1.0f / (values->size() - 1);
-        else if (pmeta["type"].toString() == "boolean") interval = 1;
+        float interval = 0; int discreteSteps = 0;
+        const bool toggle = pmeta["type"].toString() == "boolean";
+        if (auto* values = choices(pmeta); values && values->size() > 1) { discreteSteps = values->size(); interval = 1.0f / (discreteSteps - 1); }
+        else if (toggle) { discreteSteps = 2; interval = 1; }
         auto attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction([pmeta](float value, int) { return parameterText(pmeta, value); })
             .withValueFromStringFunction([pmeta](const juce::String& value) { return normalizedValue(pmeta, juce::var(value)); });
-        auto* parameter = new juce::AudioParameterFloat(juce::ParameterID(id, 1), name, juce::NormalisableRange<float>(0, 1, interval), defaultNormalized(pmeta), attributes);
+        // AudioParameterFloat deliberately advertises continuous automation,
+        // even with an interval. Expose actual choice/toggle metadata so hosts
+        // cannot record an unquantized enum value that later saves differently.
+        auto* parameter = new NativeParameter(juce::ParameterID(id, 1), name, juce::NormalisableRange<float>(0, 1, interval), defaultNormalized(pmeta), attributes, discreteSteps, toggle);
         addParameter(parameter); hostParameters.push_back(parameter);
     }
     lastParameters.assign(hostParameters.size(), std::numeric_limits<float>::quiet_NaN());

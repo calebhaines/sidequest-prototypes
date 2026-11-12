@@ -270,7 +270,7 @@
     const io = saved.io;
     const drumVoices = ['grain', 'form', 'tine'].includes(sourceId) ? 8 : sourceId === 'batter' ? 12 : 0;
     const pitches = family === 'effect' ? [] : drumVoices ? Array.from({ length: drumVoices }, (_, index) => 36 + index) : [48, 52, 55];
-    warmSession = { saved, io, frames, completed: 0, quanta: 0, beat: 0, notes: pitches, drumVoices, hitStage: 0, notesOff: false, rendering: false };
+    warmSession = { saved, io, frames, completed: 0, quanta: 0, beat: 0, notes: pitches, drumVoices, hitStage: 0, controllerStage: 0, notesOff: false, rendering: false };
     try {
       env.configure({ sampleRate: rate, clearTimers: true }); g.KitchenHostIO = io;
       frameEpoch = null; frameBase = lastBackendEnd = 0; lastRawEnd = null; fallbackBeat = 0; lastTempo = 120;
@@ -299,6 +299,13 @@
           // their models. Repeated valid hits also exercise the choke paths.
           for (let note = 0; note < session.notes.length; note++) io.events.set([on ? Math.min(17 + (session.drumVoices ? note : 0), count - 1) : 0, on ? 1 : 2, session.notes[note], on ? .8 : 0, 1, note + 1, 0, 0], note * 8);
           io.eventCount = session.notes.length; if (!on) session.notesOff = true; else if (retrigger) session.hitStage++;
+        }
+        // Exercise the same wheel/bend branches as a DAW performance. Append
+        // after note rows so a drum hit and controller event can coexist.
+        while (family !== 'effect' && session.controllerStage < 3 && frame >= session.frames * (session.controllerStage === 0 ? .25 : session.controllerStage === 1 ? .5 : .65)) {
+          const stage = session.controllerStage++, bend = stage === 0 ? .25 : stage === 1 ? -.25 : 0, wheel = stage === 0 ? 80 / 127 : stage === 1 ? 48 / 127 : 0;
+          io.events.set([Math.min(19, count - 1), 4, bend, bend, 1, 0, 0, 0], io.eventCount++ * EVENT_FIELDS);
+          io.events.set([Math.min(23, count - 1), 3, 1, wheel, 1, 0, 0, 0], io.eventCount++ * EVENT_FIELDS);
         }
         for (let i = 0; i < count; i++) { const at = frame + i; io.inputLeft[i] = .07 * Math.sin(at * 220 * 2 * Math.PI / rate); io.inputRight[i] = .06 * Math.sin(at * 330 * 2 * Math.PI / rate); }
         session.rendering = true; render(count); session.rendering = false;

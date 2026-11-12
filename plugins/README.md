@@ -8,9 +8,11 @@ Windows and Linux plugin binaries are not part of this implementation.
 
 ## Install and play
 
-Download the `Kitchen-Apple-Silicon` artifact from a successful
-[native build](https://github.com/calebhaines/sidequest-prototypes/actions/workflows/kitchen-vst3.yml).
-Extract its `Kitchen-Apple-Silicon.zip`. Run `Install.command` to install the
+Download `Kitchen-Apple-Silicon.zip` from the
+[native preview release](https://github.com/calebhaines/sidequest-prototypes/releases/tag/kitchen-native-v1.0.0-preview.1).
+Development builds are also available from successful
+[native workflows](https://github.com/calebhaines/sidequest-prototypes/actions/workflows/kitchen-vst3.yml).
+Extract the ZIP. Run `Install.command` to install the
 suite in your user account, or copy whichever plugins you want:
 
 | Format | User installation folder |
@@ -92,8 +94,9 @@ instance synchronously. A WKWebView displays the editor and sends controls;
 it does not run the audio device or stream audio to the host. Each plugin
 has independent state, timers and DSP. Samples and speech banks are prepared
 before the engine is published to the audio callback. Resource loading and
-full recipe reconstruction run outside rendering. Continuous parameter
-automation retains the active DSP and voices.
+full recipe reconstruction run outside rendering. Automation of exposed DAW
+parameters retains the active DSP and voices. Other deep editor changes
+prepare a replacement engine from the complete recipe.
 
 Before publishing a prepared engine, the runtime warms a disposable instance
 in the same VM, then restores the untouched original engine, clock, timers and
@@ -118,14 +121,17 @@ There are specific remaining differences from browser audio:
 - MORSEL's finite pattern notes use the original neural speech and
   Signalsmith-fitted waveforms. A live MIDI gate has no known future duration,
   so held notes sustain a crossfaded loop in the prepared voiced region and
-  release on key-up. Prepare changed words in the editor before playing them;
-  the prepared voices are then retained in DAW state for editor-closed and
+  release on key-up. Use Prepare voices after changing words or phrase/pattern
+  structure; scalar sound knobs apply immediately. Prepared voices are
+  retained in DAW state for editor-closed and
   offline playback. Factory voices cover MIDI 36–84. Use DAW phrase playback
   to audition steps with a custom word or voice; the keyboard audition uses
   the current keyboard word and voice.
-- The browser's shared sample/pattern storage is not shared across DAW
-  processes. Import samples or recipes into the plugin and save the DAW
-  project to retain them.
+- Named presets and the JSON pattern library persist per plugin instance in
+  DAW state. The browser's shared audio shelf lasts only while that editor is
+  open. Import a sample into the active recipe, or export it, to keep it.
+- FERMENT retains Capture, Stop and `.mid` export. It does not expose a live
+  MIDI output bus; import its exported file into a DAW MIDI track.
 - Standalone ingredient previews that directly create browser audio, such as
   MARINADE's Hear A/B controls, are not routed to the DAW. Use the instrument's
   native keys or DAW MIDI. In BATTER, use a catalog sample in a lane before

@@ -113,6 +113,27 @@ for (const entry of entries) {
       assert.equal(maxVoices,16,'Long spectral parity did not exercise the full canonical voice budget');
       console.log('marinade scalar kernel:65536frames exact stereo/phase/ramp parity through16voices, steals and automation; local render '+(Number(nativeNanos)/1e6).toFixed(1)+'ms vs canonical '+(Number(canonicalNanos)/1e6).toFixed(1)+'ms');
     }
+    if(entry.id==='heirloom'){
+      const cases=[{}, {unequal:true}, {polyFreqA:true,polyPwA:true,polyFilter:true,polyEnv:.43,polyB:.61,sync:true,aPulse:true,bPulse:true,bTriangle:true,wheelPwA:true,wheelPwB:true,wheelFilter:true,lfoSaw:true,lfoSquare:true,noiseLevel:.17,filterModel:'ssm2040',resonance:.63}, {wheelFreqB:false}, {wheelFreqA:false,unequal:true}, {polyFreqA:true,polyB:.52,polyEnv:.32,wheelFreqB:false,unequal:true,glide:.08,polyGlide:true}];
+      for(const variation of cases){const patch=JSON.parse(JSON.stringify(state));Object.assign(patch.synth,variation);delete patch.synth.unequal;const normalized=g.HeirloomSchema.normalize(patch),native=g.KitchenCoreInstruments.create('heirloom',SR,normalized,{nativeSequence:false}),canonical=new (g.createHeirloomPlaybackDSP(g.createHeirloomDSP).Core)(SR,normalized,0),left=new Float32Array(128),right=new Float32Array(128),x=new Float32Array(128),y=new Float32Array(128);
+        for(let n=0;n<5;n++){const id='wheel-'+n,channel=variation.unequal?n:0,pitch=43+n*5;native.noteOn({id,pitch,velocity:.8,channel,frame:0});canonical.enqueue('on',{id,pitch,velocity:.8,channel,source:'vst:'+id,frame:0});}
+        for(let block=0;block<48;block++){const frame=block*128;if(block===0||block===16||block===32)for(let n=0;n<(variation.unequal?5:1);n++){const value=variation.unequal?.07+n*.19:block===16?.23:.81,bend=block===32?-.3:.25;native.controlChange({controller:1,channel:n,value,frame});canonical.enqueue('wheel',{channel:n,value,frame});native.pitchBend({channel:n,value:bend,frame});canonical.enqueue('bend',{channel:n,value:bend,frame});}
+          if(block===24){native.noteOff({id:'wheel-0',frame});canonical.enqueue('off',{id:'wheel-0',channel:0,source:'vst:wheel-0',frame});}
+          native.process(left,right);canonical.process(x,y);assert.deepEqual(left,x,'HEIRLOOM pitch cache changed canonical left PCM');assert.deepEqual(right,y,'HEIRLOOM pitch cache changed canonical right PCM');
+          for(let n=0;n<5;n++){const a=native.core.synth.voices[n],b=canonical.synth.voices[n];for(const osc of ['oscA','oscB']){assert.equal(a[osc].phase,b[osc].phase,'HEIRLOOM pitch cache changed oscillator phase');assert.deepEqual(a[osc].io,b[osc].io);for(const key of ['sawCarry','pulseCarry','triangleCarry'])assert.equal(a[osc][key],b[osc][key]);}assert.deepEqual(a.filter.state,b.filter.state,'HEIRLOOM pitch cache changed nonlinear filter state');assert.deepEqual(a.filter.io,b.filter.io);assert.equal(a.env.value,b.env.value);assert.equal(a.amp.value,b.amp.value);}
+          assert.deepEqual(native.core.synth.noise.state,canonical.synth.noise.state,'HEIRLOOM pitch cache changed the noise clock');assert.deepEqual(native.core.synth.aaState,canonical.synth.aaState);
+        }
+      }
+      const counted=load(entry),math=vm.runInContext('Math',counted),floor=math.floor;let floors=0;math.floor=value=>{floors++;return floor(value);};
+      const fast=counted.KitchenCoreInstruments.create('heirloom',SR,state,{nativeSequence:false}),slow=new (counted.createHeirloomPlaybackDSP(counted.createHeirloomDSP).Core)(SR,state,0),l=new Float32Array(128),r=new Float32Array(128),x=new Float32Array(128),y=new Float32Array(128);
+      for(let n=0;n<5;n++){const id='count-'+n,pitch=43+n*5;fast.noteOn({id,pitch,velocity:.8,frame:0});slow.enqueue('on',{id,pitch,velocity:.8,source:'vst:'+id,channel:0,frame:0});}fast.controlChange({controller:1,channel:0,value:.8,frame:0});slow.enqueue('wheel',{channel:0,value:.8,frame:0});
+      floors=0;fast.process(l,r);const cachedFloors=floors;floors=0;slow.process(x,y);const canonicalFloors=floors;assert.deepEqual(l,x);assert.deepEqual(r,y);
+      // exp2 calls floor once; oscillator/noise/drift/filter clocks and every
+      // other floor call remain identical. Five voices formerly needed ten
+      // identical wheel ratios per oversample; now they need just one.
+      assert.equal(canonicalFloors-cachedFloors,128*4*9,'HEIRLOOM did not reduce40wheel-exp2calls/sample to4');
+      console.log('heirloom pitch cache:36864frames exact stereo/oscillator/filter/noise parity with5voices, unequal channelwheels, bends, sync and poly/wheel flags');
+    }
     if(entry.id==='ravel'){
       const seeded=g.RavelDSP.generateSeed(state.asset);assert.deepEqual(instrument.core.sample,seeded.pcm,'Factory source PCM differs from the web engine');
       const pcm=Buffer.alloc(1024*2);for(let i=0;i<1024;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.1)*24000),i*2);

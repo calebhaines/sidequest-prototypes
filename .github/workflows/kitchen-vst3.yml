@@ -127,11 +127,51 @@ jobs:
           print(f'{len(commands)} translation units; audio processor and GUI implementations each compile once')
           PY
       - name: Compile every Kitchen instrument and effect
+        id: native_build
         run: cmake --build plugins/build --config Release --parallel 3
       - name: Test native DSP, MIDI, clock and saved state
         run: |
           codesign -d --entitlements :- plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke
+          set +e
           ctest --test-dir plugins/build --output-on-failure
+          kitchen_native_test_status=$?
+          set -e
+          python3 - <<'PY'
+          import pathlib
+          for name in ['native-smoke-report.json','native-ui-smoke-report.json','native-vst3-host-report.json']:
+              report=pathlib.Path('plugins/generated')/name
+              if report.exists():
+                  print('Native test report: '+name,flush=True)
+                  print(report.read_text(),flush=True)
+          PY
+          exit "$kitchen_native_test_status"
+      - name: Test heavy DSP under unsigned-memory-only host policy
+        if: always() && steps.native_build.outcome == 'success'
+        run: |
+          cp plugins/build/kitchen_native_smoke_artefacts/Release/kitchen_native_smoke /tmp/kitchen-native-unsigned-smoke
+          codesign --force --sign - --options runtime --entitlements plugins/platform/JitUnsignedMemory.entitlements /tmp/kitchen-native-unsigned-smoke
+          python3 - <<'PY'
+          import pathlib,json,subprocess
+          resources=pathlib.Path('plugins/generated').resolve()
+          products=['heirloom','brine','marinade','grain','board','sunday']
+          rows=[]
+          for product in products:
+              target=resources/('native-unsigned-'+product+'.json')
+              command=['/tmp/kitchen-native-unsigned-smoke','--resources',str(resources),'--product',product,'--report',str(target)]
+              try:
+                  result=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=240)
+                  print(result.stdout,flush=True)
+                  report=json.loads(target.read_text()) if target.exists() else {}
+                  row=(report.get('products') or [{'id':product,'passed':False,'error':'Policy test produced no DSP report'}])[0]
+                  row['exitCode']=result.returncode
+              except subprocess.TimeoutExpired:
+                  row={'id':product,'passed':False,'error':'Unsigned-memory-only DSP test timed out'}
+              rows.append(row)
+              print('::notice title=Unsigned-memory DSP '+product+'::'+json.dumps(row),flush=True)
+          passed=len(rows)==len(products) and all(row.get('passed') and row.get('exitCode')==0 for row in rows)
+          (resources/'native-unsigned-policy-report.json').write_text(json.dumps({'passed':passed,'policy':'hardened unsigned-executable-memory only; no allow-jit','products':rows},indent=2)+'\n')
+          if not passed:raise SystemExit('Heavy DSP failed under unsigned-memory-only host policy')
+          PY
       - name: Capture native crash backtrace
         if: failure()
         continue-on-error: true
@@ -190,7 +230,7 @@ jobs:
           for bundle in pathlib.Path('plugins/build').rglob('*.vst3'):shutil.copytree(bundle,target/bundle.name)
           units=pathlib.Path('plugins/dist/Components');units.mkdir(parents=True,exist_ok=True)
           for bundle in pathlib.Path('plugins/build').rglob('*.component'):shutil.copytree(bundle,units/bundle.name)
-          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-bundles.json']:
+          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-unsigned-policy-report.json','native-bundles.json']:
               source=pathlib.Path('plugins/generated')/name
               if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
           for name in ['README.md','RELEASE.md','Install.command','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
@@ -231,6 +271,7 @@ jobs:
             plugins/generated/native-vst3-host-report.json
             plugins/generated/native-ui-smoke-report.json
             plugins/generated/native-bundles.json
+            plugins/generated/native-unsigned-*.json
             plugins/generated/native-ctest.log
             plugins/generated/native-vst3-backtrace.log
             plugins/generated/*.ips

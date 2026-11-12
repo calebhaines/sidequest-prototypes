@@ -147,6 +147,7 @@ const plain = x => JSON.parse(JSON.stringify(x));
     for(let i=0;i<4&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();
     assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(g.KitchenHostIO,io);assert.equal(api.getStateJSON(),before);assert.equal(g.performance.now(),time);assert.equal(g.KitchenNativeEnvironment.pendingTimers,pending);assert.equal(timerFired,0);
     assert.equal(original.sizes.length,0,'Published DSP advanced during warmup');assert.equal(original.events.length,0);assert.equal(g.fixtures[1].sizes.reduce((a,b)=>a+b,0),4096);assert.equal(g.fixtures[1].follow,false);
+    const bends=g.fixtures[1].events.filter(event=>event.type==='bend'),wheels=g.fixtures[1].events.filter(event=>event.type==='cc');assert.deepEqual(Array.from(bends,event=>event.value),[.25,-.25,0]);assert.deepEqual(Array.from(wheels,event=>event.value),[80/127,48/127,0]);assert(wheels.every(event=>event.controller===1&&event.channel===0));assert(bends[0].frame>=1024&&bends[2].frame>=4096*.65);
     assert.equal(io.clock[9],730000);assert(io.inputLeft.every(v=>v===Math.fround(.43)));assert(io.outputLeft.every(v=>v===Math.fround(.76)));
     const report=JSON.parse(api.getWarmupReportJSON());assert.equal(report.frames,4096);assert.equal(report.restored,true);assert.equal(report.discarded,true);
     clock(g,{localFrame:800000});events(g,[[13,1,60,.5,1,7]]);api.render(17);assert.equal(original.events[0].frame,13);assert.equal(original.clocks[0].frame,0);assert.equal(timerFired,0);
@@ -160,6 +161,7 @@ const plain = x => JSON.parse(JSON.stringify(x));
     const voices=id==='batter'?12:8,notes=g.fixtures[1].events.filter(event=>event.type==='on'),off=g.fixtures[1].events.filter(event=>event.type==='off');
     assert.equal(notes.length,voices*3);assert.equal(off.length,voices);for(let hit=0;hit<3;hit++)assert.deepEqual(Array.from(notes.slice(hit*voices,(hit+1)*voices),event=>event.pitch),Array.from({length:voices},(_,i)=>36+i));
     assert(notes.every(event=>event.channel===0));assert.equal(JSON.parse(api.getWarmupReportJSON()).voicesExercised,voices);
+    const coexist=g.fixtures[1].events.filter(event=>event.frame>=128&&event.frame<256);assert.equal(coexist.filter(event=>event.type==='on').length,voices);assert.equal(coexist.filter(event=>event.type==='bend'||event.type==='cc').length,2,'Controller rows overwrote simultaneous drum hits');
   });
   await check('Preparation warmup services asynchronous backend promises before restoring pristine readiness',async()=>{
     const g=fixtures(),api=g.KitchenNativePlugin;api.create('instrument-asynchronous',48000,1024,'');api.prepareTick(5);await Promise.resolve();const original=g.fixtures[0],time=g.performance.now();assert.equal(JSON.parse(api.getStatusJSON()).ready,true);
@@ -252,8 +254,10 @@ const plain = x => JSON.parse(JSON.stringify(x));
   });
   for(const id of ['heirloom','brine'])await check(id+': warmup leaves actual synth phase and saved sound identical to a cold canonical backend',()=>{
     const entry=coreManifest.instruments.find(entry=>entry.id===id),g=realm();for(const file of entry.sourceFiles)vm.runInContext(source(file),g,{filename:file});const def=g.KitchenCoreInstruments.definitions().find(d=>d.id===id);
+    const originalRegistry=g.KitchenCoreInstruments,accepted=[];let instances=0;g.KitchenCoreInstruments={...originalRegistry,create(...args){const instance=originalRegistry.create(...args),warm=instances++===1;for(const method of ['pitchBend','controlChange']){const run=instance[method].bind(instance);instance[method]=event=>{const result=run(event);if(warm)accepted.push({method,result,event:{...event}});return result;};}return instance;}};
     const params=[{path:'_nativeSequence',type:'boolean',default:false},...def.parameters];g.KitchenPluginDescriptor={id,kind:'instrument',parameters:params};vm.runInContext(source('plugins/js/host-runtime.js'),g,{filename:'host-runtime.js'});const api=g.KitchenNativePlugin;api.create(id,48000,1024,JSON.stringify(def.defaults));api.setParameter(0,0);const saved=api.getStateJSON();api.warmup(2048);
     for(let i=0;i<10&&!JSON.parse(api.getStatusJSON()).ready;i++)api.prepareTick();assert.equal(JSON.parse(api.getStatusJSON()).ready,true);assert.equal(api.getStateJSON(),saved);
+    assert.equal(accepted.length,6,'Actual analog synth did not receive all warmup controllers');assert(accepted.every(event=>event.result===true));assert.deepEqual(accepted.filter(event=>event.method==='pitchBend').map(event=>event.event.value),[.25,-.25,0]);
     const cold=g.KitchenCoreInstruments.create(id,48000,def.defaults,{nativeSequence:false});cold.noteOn({pitch:60,velocity:.8,channel:0,frame:17,id:52});
     for(let frame=0;frame<1024;frame+=128){clock(g,{localFrame:900000+frame,playing:false,beat:0});events(g,frame===0?[[17,1,60,.8,1,52]]:[]);api.render(128);for(const [offset,count]of frame===0?[[0,17],[17,111]]:[[0,128]]){const l=new Float32Array(count),r=new Float32Array(count);cold.process(l,r,{sampleRate:48000,tempo:120,beat:0,playing:false,frame:frame+offset,revision:0});assert.deepEqual(Array.from(l),Array.from(g.KitchenHostIO.outputLeft.subarray(offset,offset+count)));assert.deepEqual(Array.from(r),Array.from(g.KitchenHostIO.outputRight.subarray(offset,offset+count)));}}
   });

@@ -34,7 +34,21 @@
   function playbackDSP(id) {
     if (!playbackCache.has(id)) {
       const title = id[0].toUpperCase() + id.slice(1);
-      playbackCache.set(id, capturedFactory(g['create' + title + 'PlaybackDSP'])(capturedFactory(g['create' + title + 'DSP'])));
+      let synth=g['create' + title + 'DSP'];
+      if(id==='heirloom') {
+        let source=synth.toString();
+        const scope='const wheelSource=this.lfoValue*(1-s[11])+this.pinkValue*s[11],white=this.whiteValue*s[4];let sum=0;';
+        const b='(bendB===0?1:exp2(bendB))',a='(bendA===0?1:exp2(bendA))';
+        for(const needle of [scope,b,a])if(!source.includes(needle)||source.indexOf(needle)!==source.lastIndexOf(needle))throw Error('HEIRLOOM native pitch-modulation contract changed.');
+        // All voices hear the same LFO sample; the default global mod wheel
+        // therefore asks for the identical exp2 ratio up to ten times. Reuse
+        // only exactly equal inputs within this one oversample. Per-channel
+        // wheel values and poly modulation keep their original calculation.
+        const ratio=value=>'('+value+'===0?1:'+value+'===__kitchenPitchValue?__kitchenPitchRatio:(__kitchenPitchValue='+value+',__kitchenPitchRatio=exp2('+value+')))';
+        source=source.replace(scope,scope.slice(0,-1)+',__kitchenPitchValue=0,__kitchenPitchRatio=1;').replace(b,ratio('bendB')).replace(a,'(bendA===0?1:bendA===bendB?__kitchenPitchRatio:exp2(bendA))');
+        synth=source;
+      }
+      playbackCache.set(id, capturedFactory(g['create' + title + 'PlaybackDSP'])(capturedFactory(synth)));
     }
     return playbackCache.get(id);
   }

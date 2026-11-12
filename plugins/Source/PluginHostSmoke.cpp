@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
             int changedParameter = -1; float savedParameterValue = .61f; juce::String changedParameterName;
             for (int i = 0; i < plugin->getParameters().size(); ++i) { auto* parameter = plugin->getParameters()[i]; const auto name = parameter->getName(128); if (parameter->getNumSteps() > 128 && !parameter->isBoolean() && !name.containsIgnoreCase("follow") && !name.containsIgnoreCase("bypass") && !name.containsIgnoreCase("sequence")) { changedParameter = i; changedParameterName = name; if (std::abs(parameter->getDefaultValue() - savedParameterValue) < .001f) savedParameterValue = .37f; parameter->beginChangeGesture(); parameter->setValueNotifyingHost(savedParameterValue); parameter->endChangeGesture(); savedParameterValue = parameter->getValue(); break; } }
             if (changedParameter < 0) throw std::runtime_error("No numeric parameter found for nondefault host-state validation");
+            auto* parameterRoundTrip = new juce::DynamicObject(); parameterRoundTrip->setProperty("name", changedParameterName); parameterRoundTrip->setProperty("index", changedParameter); parameterRoundTrip->setProperty("normalized", savedParameterValue); parameterRoundTrip->setProperty("steps", plugin->getParameters()[changedParameter]->getNumSteps()); parameterRoundTrip->setProperty("passed", false); row->setProperty("hostParameterRoundTrip", juce::var(parameterRoundTrip));
             // VST3 host edits are queued into the processor's next audio
             // quantum. Commit that real automation event before requesting
             // the processor's state, as a DAW does during normal playback.
@@ -77,8 +78,10 @@ int main(int argc, char* argv[]) {
             plugin->releaseResources(); plugin.reset();
             auto restored = manager.createPluginInstance(*descriptions[0], 48000, 128, error); if (!restored) throw std::runtime_error(error.toStdString());
             restored->setStateInformation(saved.getData(), static_cast<int>(saved.getSize())); restored->setPlayHead(&playHead); restored->setPlayConfigDetails(descriptions[0]->isInstrument ? 0 : 2, 2, 48000, 128); restored->prepareToPlay(48000, 128);
-            if (changedParameter >= restored->getParameters().size() || std::abs(restored->getParameters()[changedParameter]->getValue() - savedParameterValue) > .002f) throw std::runtime_error("Nondefault numeric host parameter was not restored");
-            auto* parameterRoundTrip = new juce::DynamicObject(); parameterRoundTrip->setProperty("name", changedParameterName); parameterRoundTrip->setProperty("index", changedParameter); parameterRoundTrip->setProperty("normalized", savedParameterValue); parameterRoundTrip->setProperty("passed", true); row->setProperty("hostParameterRoundTrip", juce::var(parameterRoundTrip));
+            const float restoredValue = changedParameter < restored->getParameters().size() ? restored->getParameters()[changedParameter]->getValue() : -1;
+            parameterRoundTrip->setProperty("restored", restoredValue);
+            if (std::abs(restoredValue - savedParameterValue) > .002f) throw std::runtime_error(("Nondefault numeric host parameter was not restored: " + changedParameterName + " expected " + juce::String(savedParameterValue, 8) + " got " + juce::String(restoredValue, 8)).toStdString());
+            parameterRoundTrip->setProperty("passed", true);
             const auto again = render(*restored, playHead, descriptions[0]->isInstrument); if (again.rms < 1.0e-8) throw std::runtime_error("Reloaded compiled VST3 rendered silence");
             restored->setNonRealtime(true); restored->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
             const auto offline = render(*restored, playHead, descriptions[0]->isInstrument);
