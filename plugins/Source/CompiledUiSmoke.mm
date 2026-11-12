@@ -23,18 +23,27 @@ struct Reply {
     juce::String error;
     juce::String operation;
     double requestedAt = juce::Time::getMillisecondCounterHiRes();
+    double returnedAt = 0, completedAt = 0;
 };
+void traceReply(const Reply& reply, const char* event) {
+    std::cerr << "Kitchen WK " << reply.operation.toStdString() << ' ' << event
+              << " at=" << juce::Time::getMillisecondCounterHiRes()
+              << " ageMs=" << juce::Time::getMillisecondCounterHiRes() - reply.requestedAt << std::endl;
+}
 std::shared_ptr<Reply> evaluate(WKWebView* view, const juce::String& javascript, const juce::String& operation = "evaluate") {
     auto reply = std::make_shared<Reply>();
     reply->operation = operation;
+    traceReply(*reply, "enter");
     [view evaluateJavaScript:nsString(javascript) completionHandler:^(id value, NSError* error) {
         @autoreleasepool {
             if (error != nil) reply->error = string([error localizedDescription]);
             else if ([value isKindOfClass:[NSString class]]) reply->value = juce::JSON::parse(string((NSString*) value));
             else reply->error = "WebKit did not return a JSON string";
-            reply->complete = true;
+            reply->completedAt = juce::Time::getMillisecondCounterHiRes(); reply->complete = true;
+            traceReply(*reply, "complete");
         }
     }];
+    reply->returnedAt = juce::Time::getMillisecondCounterHiRes(); traceReply(*reply, "return");
     return reply;
 }
 
@@ -51,6 +60,7 @@ std::vector<WKWebView*> webViews(juce::Component& host) {
 std::shared_ptr<Reply> snapshot(WKWebView* view) {
     auto reply = std::make_shared<Reply>();
     reply->operation = "takeSnapshot";
+    traceReply(*reply, "enter");
     WKSnapshotConfiguration* configuration = [[WKSnapshotConfiguration alloc] init];
     configuration.rect = [view bounds];
     configuration.snapshotWidth = @256;
@@ -85,9 +95,11 @@ std::shared_ptr<Reply> snapshot(WKWebView* view) {
                 if (context != nullptr) CGContextRelease(context);
                 CGColorSpaceRelease(colourSpace);
             }
-            reply->complete = true;
+            reply->completedAt = juce::Time::getMillisecondCounterHiRes(); reply->complete = true;
+            traceReply(*reply, "complete");
         }
     }];
+    reply->returnedAt = juce::Time::getMillisecondCounterHiRes(); traceReply(*reply, "return");
    #if ! __has_feature(objc_arc)
     [configuration release];
    #endif
@@ -135,7 +147,9 @@ constexpr auto pageProbe = R"JS((function() {
     return JSON.stringify({ bridge: !!bridge, sourceId: String(descriptor.sourceId || descriptor.instrumentId || descriptor.effectId || descriptor.id || '').replace(/^(?:instrument|effect)[:-]/, ''),
         ready: !!diagnostics.ready, hydrated: !!diagnostics.hydrated, diagnostics,
         width: innerWidth, height: innerHeight, bodyVisible: visible(body), originalControlsVisible: controls,
-        visibility: document.visibilityState, url: location.href, pageGeneration: window.__KitchenCompiledPageGeneration });
+        visibility: document.visibilityState, url: location.href, pageGeneration: window.__KitchenCompiledPageGeneration,
+        documentReadyState: document.readyState, formFacadeType: typeof window.FormApp,
+        rootChildCount: document.getElementById('root')?.children.length || 0, performanceNow: performance.now() });
 })())JS";
 
 class CompiledUiSmokeApplication final : public juce::JUCEApplication, private juce::Timer {
@@ -193,6 +207,8 @@ private:
     Step step = Step::detached;
     Geometry geometry = Geometry::initial;
     double productStarted = 0, stepStarted = 0, lastRequest = 0;
+    double lastTimerArrival = 0, lastProgressTick = 0, maxTimerGap = 0, maxProgressGap = 0;
+    int reentrantTicks = 0;
 
     static double now() { return juce::Time::getMillisecondCounterHiRes(); }
     juce::String geometryName() const {
@@ -217,7 +233,11 @@ private:
         }
         return {};
     }
-    void enter(Step next) { pending.reset(); step = next; stepStarted = now(); lastRequest = 0; }
+    void traceOperation(const char* operation) {
+        std::cerr << "Kitchen compiled UI " << ids[productIndex] << ' ' << geometryName() << '/' << stepName()
+                  << ' ' << operation << " productMs=" << now() - productStarted << std::endl;
+    }
+    void enter(Step next) { pending.reset(); step = next; stepStarted = now(); lastRequest = 0; traceOperation("enterPhase"); }
     void closeProduct() {
         pending.reset(); retiredReplies.clear(); audio.reset(); editor.reset(); host.reset();
         if (plugin && prepared) plugin->releaseResources();
@@ -227,6 +247,7 @@ private:
         closeProduct(); row = object(); checks.clear(); lastPage = lastFrame = smokeResult = smokeLaunchAck = lastSmokePoll = juce::var();
         smokePageGeneration.clear(); preservedPageGeneration.clear();
         put(row, "id", ids[productIndex]); productStarted = now();
+        lastTimerArrival = lastProgressTick = maxTimerGap = maxProgressGap = 0; reentrantTicks = 0;
         try {
             juce::var descriptor;
             for (const auto& candidate : *manifest["products"].getArray()) if (candidate["id"].toString() == ids[productIndex]) descriptor = candidate;
@@ -249,7 +270,7 @@ private:
             juce::String error; plugin = formats.createPluginInstance(*descriptions[0], 48000, 128, error);
             if (!plugin) throw std::runtime_error(("Could not load compiled VST3: " + error).toStdString());
             plugin->setPlayConfigDetails(descriptions[0]->isInstrument ? 0 : 2, 2, 48000, 128);
-            plugin->prepareToPlay(48000, 128); prepared = true;
+            traceOperation("preparePlugin enter"); plugin->prepareToPlay(48000, 128); prepared = true; traceOperation("preparePlugin return");
             audio = std::make_unique<AudioPump>(*plugin, descriptions[0]->isInstrument);
             host = std::make_unique<EditorHost>(); host->setName("Kitchen compiled editor smoke");
             geometry = Geometry::initial; createDetachedEditor();
@@ -257,7 +278,7 @@ private:
     }
     void createDetachedEditor() {
         if (host->getPeer() != nullptr) throw std::runtime_error("Editor construction unexpectedly has a desktop peer");
-        editor.reset(plugin->createEditorIfNeeded());
+        traceOperation("createEditor enter"); editor.reset(plugin->createEditorIfNeeded()); traceOperation("createEditor return");
         if (!editor || editor->getWidth() <= 0 || editor->getHeight() <= 0) throw std::runtime_error("Compiled VST3 has no editor with a preferred size");
         if (geometry == Geometry::initial) {
             preferredWidth = editor->getWidth(); preferredHeight = editor->getHeight();
@@ -307,7 +328,15 @@ private:
     void timerCallback() override {
         // AppKit/plugin creation can run nested message loops while a product
         // transition is in progress. Never advance that transition twice.
-        if (tickRunning) return;
+        const auto arrived = now();
+        if (lastTimerArrival > 0) maxTimerGap = std::max(maxTimerGap, arrived - lastTimerArrival);
+        lastTimerArrival = arrived;
+        if (tickRunning) { ++reentrantTicks; return; }
+        if (lastProgressTick > 0) {
+            const auto gap = arrived - lastProgressTick; maxProgressGap = std::max(maxProgressGap, gap);
+            if (gap > 1000) traceOperation("timerProgressGapOver1s");
+        }
+        lastProgressTick = arrived;
         const juce::ScopedValueSetter<bool> guard(tickRunning, true);
         @autoreleasepool {
             try { tick(); }
@@ -324,7 +353,7 @@ private:
         if (step == Step::detached) {
             if (editor->getWidth() != preferredWidth || editor->getHeight() != preferredHeight) throw std::runtime_error("Editor size changed before peer attachment");
             if (now() - stepStarted < 250) return;
-            host->addToDesktop(juce::ComponentPeer::windowHasTitleBar);
+            traceOperation("attachPeer enter"); host->addToDesktop(juce::ComponentPeer::windowHasTitleBar); traceOperation("attachPeer return");
             host->setVisible(true); host->toFront(true); enter(Step::ready); return;
         }
         if (step == Step::closed) {
@@ -332,7 +361,7 @@ private:
             if (plugin->getActiveEditor() != nullptr || !webViews(*host).empty()) throw std::runtime_error("Previous compiled editor was not removed from its native host");
             put(row, "previousEditorClosed", true);
             put(row, "staleCallbacksGuarded", true);
-            host->removeFromDesktop(); geometry = Geometry::reopened; createDetachedEditor(); return;
+            traceOperation("removePeer enter"); host->removeFromDesktop(); traceOperation("removePeer return"); geometry = Geometry::reopened; createDetachedEditor(); return;
         }
         if (step == Step::hidden) {
             if (now() - stepStarted < 250) return;
@@ -431,10 +460,15 @@ private:
             if (pending) {
                 auto request = object(); put(request, "operation", pending->operation); put(request, "complete", pending->complete);
                 put(request, "ageMs", now() - pending->requestedAt); put(request, "value", pending->value); put(request, "error", pending->error);
+                put(request, "requestedAtProductMs", pending->requestedAt - productStarted);
+                put(request, "returnedAtProductMs", pending->returnedAt > 0 ? pending->returnedAt - productStarted : -1);
+                put(request, "completedAtProductMs", pending->completedAt > 0 ? pending->completedAt - productStarted : -1);
+                put(request, "completedAgeMs", pending->completedAt > 0 ? now() - pending->completedAt : -1);
                 put(row, "pending", request);
             }
         }
         put(row, "elapsedMs", now() - productStarted);
+        put(row, "maxTimerGapMs", maxTimerGap); put(row, "maxProgressGapMs", maxProgressGap); put(row, "reentrantTicks", reentrantTicks);
         int completedRetiredReplies = 0; for (const auto& reply : retiredReplies) if (reply->complete) ++completedRetiredReplies;
         put(row, "retiredCallbacksCompleted", completedRetiredReplies);
         rows.add(row); std::cout << juce::JSON::toString(row, true).toStdString() << std::endl; closeProduct();
