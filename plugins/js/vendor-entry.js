@@ -12,9 +12,53 @@ const Biquad = require('web-audio-engine/lib/impl/BiquadFilterNode');
 const BiquadCoeffs = require('biquad-coeffs-webaudio');
 const AudioParamImpl = require('web-audio-engine/lib/impl/AudioParam');
 const Delay = require('web-audio-engine/lib/impl/DelayNode');
+const ConstantSource = require('web-audio-engine/lib/impl/ConstantSourceNode');
+const AudioContextImpl = require('web-audio-engine/lib/impl/AudioContext');
 
 const QUANTUM = 128;
 const scope = typeof window === 'object' ? window : globalThis;
+// Flooring seconds directly can put an exact quantum boundary in the previous quantum
+// (e.g. 3456 / 48000 * 48000 is 3455.9999999999995). That past task never runs,
+// dropping the hit and retaining its source graph. Retain WAE's future-quantum
+// activation rules, but never enqueue a new source behind the current quantum.
+AudioContextImpl.prototype.sched = function (time, task) {
+  const frame = Math.max(this.currentSampleFrame, Math.floor(time * this.sampleRate / this.blockSize) * this.blockSize) | 0;
+  if (!this._sched[frame]) this._sched[frame] = [task];
+  else this._sched[frame].push(task);
+};
+// WAE's ConstantSource fills every quantum indefinitely, ignoring its scheduled
+// stop and never sending `ended`. CLATTER uses the original source's ended event
+// to retire each resonator graph, so stopped voices otherwise accumulate forever.
+// Match the browser's sample boundaries and dispatch completion after graph pull.
+ConstantSource.prototype.dspInit = function () { this._done = false; };
+ConstantSource.prototype.stop = function (when) {
+  if (this._done) return;
+  // A later stop() replaces an earlier scheduled stop until the source ends.
+  // Keep WAE's numeric conversion and clamp to the started source's clock.
+  this._stopTime = Math.max(this.context.currentTime, this._startTime, +when || 0);
+  this._stopFrame = Math.round(this._stopTime * this.sampleRate);
+};
+ConstantSource.prototype.dspProcess = function () {
+  const output = this.outputs[0].bus.getMutableData()[0], first = this.context.currentSampleFrame;
+  output.fill(0);
+  if (this._done) return;
+  const begin = Math.max(0, Math.min(this.blockSize, this._startFrame - first));
+  const end = Math.max(0, Math.min(this.blockSize, this._stopFrame - first));
+  if (begin < end) {
+    if (this._offset.hasSampleAccurateValues()) {
+      const values = this._offset.getSampleAccurateValues();
+      for (let i = begin; i < end; i++) output[i] = values[i];
+    } else output.fill(this._offset.getValue(), begin, end);
+  }
+  if (this._stopFrame <= first + this.blockSize) {
+    this._done = true;
+    this.context.addPostProcess(() => {
+      this.outputs[0].bus.zeros();
+      this.outputs[0].disable();
+      this.dispatchEvent({ type: 'ended' });
+    });
+  }
+};
 // WAE's original scheduler consumes a future zero-length setValue event before
 // reaching its start, pulling a following release ramp into the sustain gap.
 // Walk the same canonical event table, explicitly holding gaps and respecting
