@@ -273,7 +273,7 @@ void NativeRemoteRuntime::reset() noexcept {
     // A panic/reset must never deliver an obsolete deferred note-on afterward.
     // Keep releases and controller messages so already-emitted notes can end.
     int kept = 0;
-    for (int i = 0; i < deferredMidiCount; ++i) if (deferredMidi[static_cast<size_t>(i * eventFields + 1)] != noteOn) {
+    for (int i = 0; i < deferredMidiCount; ++i) if (deferredMidi[static_cast<size_t>(i * eventFields + 1)] != noteOn || deferredMidi[static_cast<size_t>(i * eventFields + 3)] <= 0) {
         if (kept != i) std::memmove(deferredMidi.data() + kept * eventFields, deferredMidi.data() + i * eventFields, eventFields * sizeof(double));
         ++kept;
     }
