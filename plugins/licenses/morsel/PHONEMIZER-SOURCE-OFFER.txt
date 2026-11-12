@@ -1,0 +1,23 @@
+MORSEL eSpeak NG phonemizer source access
+
+The complete preferred upstream phonemizer.js JavaScript sources, packed data,
+configuration and license accompany this download in phonemizer-source.zip.
+They are pinned to xenova/phonemizer.js commit
+6835144b7ee9043129222549c1ed2f6a27216278.
+
+The underlying eSpeak NG is GPLv3 (see ../COPYING). Full upstream eSpeak NG
+1.52.0 C/C++, pronunciation dictionaries, phoneme sources, Emscripten glue and
+build scripts are available without charge from the same Kitchen download site:
+
+https://calebhaines.github.io/sidequest-prototypes/music/morsel/MORSEL-phonemizer-C-source.zip
+
+Supplement SHA-256:
+b4517592e3cbc43703bb1c782702eafb98097659e0b7e96e69c32ee32ae5003a
+
+Upstream archive:
+https://codeload.github.com/espeak-ng/espeak-ng/zip/refs/tags/1.52.0
+
+The phonemizer package does not identify its historical C/compiler revision;
+we do not claim a modern C rebuild produces identical compiled JavaScript.
+The exact unmodified JavaScript used by MORSEL is included, and no recompilation
+or source-supplement download is needed to rebuild the standalone HTML offline.

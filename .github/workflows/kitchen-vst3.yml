@@ -1,0 +1,313 @@
+name: Kitchen native plugins
+on:
+  workflow_dispatch:
+    inputs:
+      architectures:
+        description: Apple architectures (arm64 or arm64;x86_64)
+        default: arm64
+        required: true
+  push:
+    branches: [main, feat/kitchen-vst3-suite]
+    paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml', 'loom/**', 'brine/**', 'heirloom/**', 'citrus/**', 'proof/**', 'marinade/**', 'grain/**', 'tine/**', 'batter/**', 'form/**', 'fable/**', 'morsel/**', 'mire/**', 'spool/**', 'haze/**', 'bower/**', 'ravel/**', 'roux/**', 'picnic/**', 'shared/**']
+  pull_request:
+    paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml']
+permissions:
+  contents: read
+concurrency:
+  group: kitchen-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  javascriptcore-capabilities:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            plugins/Source
+            plugins/platform
+      - name: Compare signed and unsigned JSC globals and JIT performance
+        run: bash plugins/platform/probe-jsc.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-JSC-Capabilities
+          path: |
+            /tmp/kitchen-jsc-*.json
+            /tmp/kitchen-jsc-*.log
+          if-no-files-found: warn
+  apple-silicon:
+    runs-on: macos-15
+    needs: javascriptcore-capabilities
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 1G
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          fetch-depth: 1
+          sparse-checkout: |
+            plugins
+            loom
+            shared
+            grain
+            form
+            music/form
+            music/morsel
+            tine
+            mire
+            spool
+            haze
+            bower
+            ravel
+            fable
+            roux
+            batter
+            proof
+            marinade
+            picnic
+            morsel
+            heirloom
+            brine
+            citrus
+            .github
+      - name: Verify native Apple Silicon runner and JavaScriptCore
+        run: |
+          test "$(uname -m)" = arm64
+          bash plugins/platform/probe-jsc.sh
+      - name: Set up native compiler cache
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          command -v ccache >/dev/null || brew install ccache
+          ccache --max-size=1G
+          ccache --zero-stats
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-${{ runner.arch }}-juce8.0.12-${{ hashFiles('plugins/Source/**', 'plugins/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-juce8.0.12-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install plugin packer dependencies
+        run: npm ci --prefix plugins
+      - name: Generate canonical DSP and editor resources
+        run: node plugins/scripts/generate.mjs
+      - name: Validate generated runtime coverage
+        run: |
+          node plugins/scripts/checks.cjs
+          node plugins/tests/environment-compat-checks.cjs
+      - name: Configure VST3 and AU suite
+        env:
+          KITCHEN_REQUESTED_ARCH: ${{ inputs.architectures || 'arm64' }}
+        run: cmake -S plugins -B plugins/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_OSX_ARCHITECTURES="$KITCHEN_REQUESTED_ARCH" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DKITCHEN_BUILD_AU=ON
+      - name: Verify JUCE implementation modules compile once
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,collections
+          commands=json.loads(pathlib.Path('plugins/build/compile_commands.json').read_text())
+          counts=collections.Counter(pathlib.Path(row['file']).stem for row in commands)
+          for module in ['juce_audio_processors','juce_audio_processors_headless','juce_gui_basics']:
+              if counts[module]!=1:raise SystemExit(f'{module} compiles {counts[module]} times; expected one shared implementation')
+          expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
+          for wrapper in ['juce_audio_plugin_client_VST3','juce_audio_plugin_client_AU_1','juce_audio_plugin_client_AU_2']:
+              if counts[wrapper]!=expected:raise SystemExit(f'{wrapper} compiles {counts[wrapper]} times; expected {expected}')
+          allowed={'juce_audio_plugin_client_VST3','juce_audio_plugin_client_AU_1','juce_audio_plugin_client_AU_2','juce_audio_plugin_client_utils'}
+          for name,count in counts.items():
+              if name.startswith('juce_audio_plugin_client_') and name not in allowed:raise SystemExit(f'Inactive wrapper {name} compiles {count} times')
+          if counts['juce_audio_plugin_client_utils'] not in (0,2*expected):raise SystemExit('Unexpected shared client utility compilation count')
+          print(f'{len(commands)} translation units; audio processor and GUI implementations each compile once')
+          PY
+      - name: Compile every Kitchen instrument and effect
+        id: native_build
+        run: cmake --build plugins/build --config Release --parallel 3
+      - name: Test native DSP, MIDI, clock and saved state
+        run: |
+          codesign -d --entitlements :- plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke
+          set +e
+          ctest --test-dir plugins/build --output-on-failure
+          kitchen_native_test_status=$?
+          set -e
+          python3 - <<'PY'
+          import pathlib,shutil
+          testlog=pathlib.Path('plugins/build/Testing/Temporary/LastTest.log')
+          if testlog.exists():shutil.copyfile(testlog,pathlib.Path('plugins/generated/native-ctest.log'))
+          for name in ['native-smoke-report.json','native-ui-smoke-report.json','native-vst3-host-report.json']:
+              report=pathlib.Path('plugins/generated')/name
+              if report.exists():
+                  print('Native test report: '+name,flush=True)
+                  print(report.read_text(),flush=True)
+          PY
+          exit "$kitchen_native_test_status"
+      - name: Test heavy DSP under unsigned-memory-only host policy
+        if: always() && steps.native_build.outcome == 'success'
+        run: |
+          cp plugins/build/kitchen_native_smoke_artefacts/Release/kitchen_native_smoke /tmp/kitchen-native-unsigned-smoke
+          codesign --force --sign - --options runtime --entitlements plugins/platform/JitUnsignedMemory.entitlements /tmp/kitchen-native-unsigned-smoke
+          export KITCHEN_DSP_HELPER="$PWD/plugins/build/kitchen_dsp_helper_artefacts/Release/KitchenDSPHelper"
+          python3 - <<'PY'
+          import pathlib,json,subprocess
+          resources=pathlib.Path('plugins/generated').resolve()
+          products=['heirloom','brine','marinade','grain','board','sunday']
+          rows=[]
+          for product in products:
+              target=resources/('native-unsigned-'+product+'.json')
+              command=['/tmp/kitchen-native-unsigned-smoke','--resources',str(resources),'--product',product,'--report',str(target)]
+              try:
+                  result=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=240)
+                  print(result.stdout,flush=True)
+                  report=json.loads(target.read_text()) if target.exists() else {}
+                  row=(report.get('products') or [{'id':product,'passed':False,'error':'Policy test produced no DSP report'}])[0]
+                  row['exitCode']=result.returncode
+              except subprocess.TimeoutExpired:
+                  row={'id':product,'passed':False,'error':'Unsigned-memory-only DSP test timed out'}
+              rows.append(row)
+              print('::notice title=Unsigned-memory DSP '+product+'::'+json.dumps(row),flush=True)
+          passed=len(rows)==len(products) and all(row.get('passed') and row.get('exitCode')==0 for row in rows)
+          (resources/'native-unsigned-policy-report.json').write_text(json.dumps({'passed':passed,'policy':'hardened unsigned-executable-memory only; no allow-jit','products':rows},indent=2)+'\n')
+          if not passed:raise SystemExit('Heavy DSP failed under unsigned-memory-only host policy')
+          PY
+      - name: Capture native crash backtrace
+        if: failure()
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import pathlib,subprocess,re,shutil
+          generated=pathlib.Path('plugins/generated');generated.mkdir(exist_ok=True)
+          log=pathlib.Path('plugins/build/Testing/Temporary/LastTest.log')
+          text=log.read_text(errors='replace') if log.exists() else ''
+          if log.exists():shutil.copyfile(log,generated/'native-ctest.log')
+          executable=pathlib.Path('plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke').resolve()
+          crashed='Subprocess aborted' in text or 'Exception:' in text or (executable.exists() and not (generated/'native-vst3-host-report.json').exists())
+          if crashed:
+              matches=re.findall(r'Kitchen host SCAN (.+)',text)
+              arguments=['--plugin',matches[-1].strip()] if matches else ['--bundles',str(pathlib.Path('plugins/build').resolve())]
+              command=['xcrun','lldb','--batch','-o','run','-o','thread backtrace all','--',str(executable),*arguments]
+              try:
+                  result=subprocess.run(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+                  output=result.stdout
+              except subprocess.TimeoutExpired as error:
+                  output=error.stdout or b''
+                  if isinstance(output,bytes):output=output.decode(errors='replace')
+              (generated/'native-vst3-backtrace.log').write_text(output)
+          reports=pathlib.Path.home()/'Library/Logs/DiagnosticReports'
+          for report in reports.glob('*'):
+              if 'kitchen' in report.name.lower() and report.is_file():shutil.copyfile(report,generated/report.name)
+          PY
+      - name: Verify all plugin bundles contain Apple Silicon code
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess, json, re, plistlib
+          expected=len(json.loads(pathlib.Path('plugins/generated/products.json').read_text())['products'])
+          found=[]
+          for suffix,label in [('vst3','VST3'),('component','AU')]:
+              bundles=list(pathlib.Path('plugins/build').rglob('*.'+suffix))
+              if len(bundles)!=expected:raise SystemExit(f'Expected {expected} {label}s, found {len(bundles)}')
+              for path in bundles:
+                  binaries=list((path/'Contents'/'MacOS').glob('*'))
+                  if not binaries:raise SystemExit(f'Missing {label} executable: {path}')
+                  for binary in binaries:
+                      arch=subprocess.check_output(['lipo','-archs',str(binary)],text=True).strip()
+                      if 'arm64' not in arch.split():raise SystemExit('Missing Apple Silicon slice: '+str(binary))
+                      build=subprocess.check_output(['xcrun','vtool','-show-build',str(binary)],text=True)
+                      minimums=re.findall(r'\bminos\s+([0-9.]+)',build)
+                      if not minimums or any(tuple(map(int,value.split('.')[:2]))!=(12,0) for value in minimums):raise SystemExit('Unexpected macOS deployment minimum: '+str(binary)+' '+str(minimums))
+                      found.append({'bundle':str(path),'format':label,'architectures':arch,'minimumMacOS':minimums})
+                  subprocess.run(['codesign','--verify','--deep','--strict',str(path)],check=True)
+                  helper=path/'Contents'/'Helpers'/'KitchenDSPHelper'
+                  if not helper.is_file():raise SystemExit('Missing independent DSP helper: '+str(path))
+                  arch=subprocess.check_output(['lipo','-archs',str(helper)],text=True).strip()
+                  if 'arm64' not in arch.split():raise SystemExit('Missing Apple Silicon helper slice: '+str(helper))
+                  build=subprocess.check_output(['xcrun','vtool','-show-build',str(helper)],text=True)
+                  minimums=re.findall(r'\bminos\s+([0-9.]+)',build)
+                  if not minimums or any(tuple(map(int,value.split('.')[:2]))!=(12,0) for value in minimums):raise SystemExit('Unexpected DSP helper macOS minimum: '+str(helper))
+                  signed=subprocess.check_output(['codesign','-d','--entitlements',':-',str(helper)],stderr=subprocess.DEVNULL)
+                  entitlements=plistlib.loads(signed)
+                  if entitlements.get('com.apple.security.cs.allow-jit') is not True:raise SystemExit('DSP helper lost its JIT entitlement: '+str(helper))
+          pathlib.Path('plugins/generated/native-bundles.json').write_text(json.dumps(found,indent=2)+'\n')
+          PY
+      - name: Package the native suite
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import pathlib, shutil
+          target=pathlib.Path('plugins/dist/VST3');target.mkdir(parents=True,exist_ok=True)
+          for bundle in pathlib.Path('plugins/build').rglob('*.vst3'):shutil.copytree(bundle,target/bundle.name)
+          units=pathlib.Path('plugins/dist/Components');units.mkdir(parents=True,exist_ok=True)
+          for bundle in pathlib.Path('plugins/build').rglob('*.component'):shutil.copytree(bundle,units/bundle.name)
+          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-unsigned-policy-report.json','native-bundles.json']:
+              source=pathlib.Path('plugins/generated')/name
+              if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
+          for name in ['README.md','RELEASE.md','Install.command','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
+              source=pathlib.Path('plugins')/name
+              if source.exists():shutil.copy2(source,pathlib.Path('plugins/dist')/name)
+          if pathlib.Path('plugins/licenses').exists():shutil.copytree('plugins/licenses','plugins/dist/licenses')
+          PY
+          git archive --format=tar.gz --output="plugins/dist/Kitchen-Source-${GITHUB_SHA}.tar.gz" HEAD plugins loom shared grain form music/form music/morsel/MORSEL-phonemizer-C-source.zip tine mire spool haze bower ravel fable roux batter proof marinade picnic morsel heirloom brine citrus package.json package-lock.json
+          tar --exclude=.git -czf plugins/dist/JUCE-Source-8.0.12.tar.gz -C plugins/build/_deps juce-src
+          tar --exclude=.cache --exclude=esbuild --exclude=@esbuild -czf plugins/dist/npm-runtime-sources.tar.gz -C plugins node_modules
+          mkdir -p plugins/dist/upstream-sources
+          curl --fail --location --retry 3 https://codeload.github.com/mohayonao/web-audio-engine/tar.gz/a7d09ffd8aa1ef9837355fd412457c8bab296a21 --output plugins/dist/upstream-sources/web-audio-engine-0.13.4.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/101arrowz/fflate/tar.gz/d3243651cb142e3e04f3e4bc037b9e985878f444 --output plugins/dist/upstream-sources/fflate-0.8.2.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/indutny/fft.js/tar.gz/f8be92e1369f684da3e121e4c5b7fbcc8d50f868 --output plugins/dist/upstream-sources/fft.js-4.0.4.tar.gz
+          curl --fail --location --retry 3 https://codeload.github.com/Gozala/events/tar.gz/aed9f91fee236bdedab8d593f7aa418ae6ed2718 --output plugins/dist/upstream-sources/events-3.3.0.tar.gz
+          python3 - <<'PY'
+          import os,json,pathlib
+          pathlib.Path('plugins/dist/SOURCE.json').write_text(json.dumps({'repository':os.environ['GITHUB_SERVER_URL']+'/'+os.environ['GITHUB_REPOSITORY'],'commit':os.environ['GITHUB_SHA'],'juce':'8.0.12'},indent=2)+'\n')
+          PY
+          ditto -c -k --sequesterRsrc --keepParent plugins/dist plugins/Kitchen-Apple-Silicon.zip
+      - name: Publish immutable Kitchen native preview
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_tag=kitchen-native-v1.0.0-preview.1
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${release_tag}" >/dev/null 2>&1; then
+            echo "The native preview tag already exists; preserving its published binaries."
+            exit 0
+          fi
+          gh release create "$release_tag" plugins/Kitchen-Apple-Silicon.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Kitchen Native 1.0.0 Preview 1" --notes-file plugins/RELEASE.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-Native-Test-Reports
+          path: |
+            plugins/generated/native-smoke-report.json
+            plugins/generated/native-vst3-host-report.json
+            plugins/generated/native-ui-smoke-report.json
+            plugins/generated/native-bundles.json
+            plugins/generated/native-unsigned-*.json
+            plugins/generated/native-ctest.log
+            plugins/generated/native-vst3-backtrace.log
+            plugins/generated/*.ips
+            plugins/generated/*.crash
+            /tmp/kitchen-jsc-capabilities.json
+            /tmp/kitchen-jsc-*.json
+            /tmp/kitchen-jsc-*.log
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kitchen-Apple-Silicon
+          path: plugins/Kitchen-Apple-Silicon.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Report native compiler cache
+        if: always()
+        run: ccache --show-stats
+      - uses: actions/cache/save@v4
+        if: always() && steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: .ccache
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}

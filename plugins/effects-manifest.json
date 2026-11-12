@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "adapter": "plugins/js/effects.js",
+  "namespace": "KitchenEffectPlugins",
+  "stateShape": "{ params: { ...canonicalGALLEYValues } }",
+  "sampleRateRange": [8000, 192000],
+  "channelLayout": "stereo; independent equal-length Float32 channel views",
+  "insertIds": ["prism", "velvet", "cinder", "undertow", "parallax", "vestige", "halo", "tremor", "broiler", "glaze", "scales", "strainer", "swirl", "crumble", "saute", "preserve", "tinpan", "ferment", "sunday", "cellar", "board", "cupboard"],
+  "utilityIds": ["track-eq", "mastering"],
+  "catalogSources": ["loom/vocal-catalog.js", "loom/utility-catalog.js", "loom/filter-catalog.js", "loom/creative-catalog.js", "loom/preamp-catalog.js", "loom/tape-catalog.js", "loom/char-catalog.js", "loom/lofi-catalog.js", "loom/pedal-synth-catalog.js", "loom/deluxe-catalog.js", "loom/svt-catalog.js", "loom/guitar-pedals-catalog.js", "loom/cabinet-catalog.js", "loom/effects-catalog.js"],
+  "dspSources": ["loom/vocal-dsp.js", "loom/utility-dsp.js", "loom/filter-dsp.js", "loom/creative-dsp.js", "loom/broiler-pedals.js", "loom/compressor-dsp.js", "loom/preamp-dsp.js", "loom/tape-dsp.js", "loom/char-dsp.js", "loom/lofi-dsp.js", "loom/pedal-synth-tracker.js", "loom/pedal-midi-dsp.js", "loom/pedal-synth-dsp.js", "loom/deluxe-dsp.js", "loom/svt-dsp.js", "loom/guitar-pedals-dsp.js", "loom/hood-dsp.js", "loom/cabinet-dsp.js", "loom/effects.js", "loom/track-eq-dsp.js", "loom/mastering-dsp.js"]
+}

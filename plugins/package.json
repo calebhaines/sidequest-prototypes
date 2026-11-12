@@ -1,0 +1,15 @@
+{
+  "name": "kitchen-native-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Kitchen plugin compatibility dependencies",
+  "dependencies": {
+    "events": "3.3.0",
+    "fflate": "0.8.2",
+    "fft.js": "4.0.4",
+    "web-audio-engine": "0.13.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
