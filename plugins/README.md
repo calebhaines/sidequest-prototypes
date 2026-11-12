@@ -4,6 +4,8 @@ This suite builds **18 instruments and 24 effects** as separate native macOS
 VST3 plugins. Apple Silicon (`arm64`) is the default target. Audio Units are
 also built for hosts such as Logic. The deployment target is macOS 12.0;
 the automated native build and host tests run on macOS 15 Apple Silicon.
+Keep macOS and its Safari/WebKit updates current for the original editors,
+especially MORSEL's neural voice preparation.
 Windows and Linux plugin binaries are not part of this implementation.
 
 ## Install and play
@@ -180,6 +182,7 @@ automated distribution is arm64; an Intel slice is not implied.
 Portable DSP verification also runs on Linux:
 
 ```sh
+node plugins/tests/environment-compat-checks.cjs
 node plugins/tests/effects-checks.cjs
 node plugins/tests/core-instruments-checks.cjs
 node plugins/tests/webaudio-instruments-checks.cjs

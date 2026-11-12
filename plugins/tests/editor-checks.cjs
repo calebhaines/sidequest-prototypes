@@ -82,8 +82,10 @@ async function serve() {
 }
 async function pageFor(base, route, editorStorage = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, reducedMotion: 'reduce' });
-  await context.addInitScript(({ editorStorage, legacyStream }) => {
+  await context.addInitScript(({ editorStorage, legacyStream, legacyBuiltins }) => {
     window.__nativeMessages = []; window.__nativeAudioContexts = 0; window.__offlineRenders = 0; window.__editorWorkers = 0;
+    window.__originalBuiltins = { at: Array.prototype.at, hasOwn: Object.hasOwn };
+    if (legacyBuiltins) { Object.defineProperty(Array.prototype, 'at', { value: undefined, writable: true, configurable: true, enumerable: true }); Object.defineProperty(Object, 'hasOwn', { value: undefined, writable: true, configurable: true, enumerable: true }); if (Array.prototype[Symbol.unscopables]) Array.prototype[Symbol.unscopables].at = false; }
     window.__nativeEditorStorage = { ...editorStorage }; window.KitchenNativeEditorStorage = { ...editorStorage };
     if (legacyStream) {
       const OriginalBlob = window.Blob;
@@ -113,10 +115,32 @@ async function pageFor(base, route, editorStorage = {}) {
         });
       }
     } };
-  }, { editorStorage, legacyStream: !!process.env.KITCHEN_EDITOR_LEGACY_STREAM });
+  }, { editorStorage, legacyStream: !!process.env.KITCHEN_EDITOR_LEGACY_STREAM, legacyBuiltins: !!process.env.KITCHEN_EDITOR_LEGACY_BUILTINS });
   await context.route('**/*', route => { const address = route.request().url(); if (/^(data:|blob:|about:)/.test(address) || new URL(address).origin === base) return route.continue(); report.external.push({ current, address }); return route.abort(); });
   const page = await context.newPage(); page.setDefaultTimeout(45000); page.on('pageerror', error => report.pageErrors.push({ current, message: error.message, stack: error.stack }));
-  await page.goto(base + route, { waitUntil: 'load', timeout: 120000 }); return { context, page };
+  await page.goto(base + route, { waitUntil: 'load', timeout: 120000 });
+  if (process.env.KITCHEN_EDITOR_LEGACY_BUILTINS) {
+    const proof = await page.evaluate(() => {
+      const assert = (value, message) => { if (!value) throw Error(message); }, throwsTypeError = callback => { try { callback(); return false; } catch (error) { return error instanceof TypeError; } };
+      for (const [object, name] of [[Array.prototype, 'at'], [Object, 'hasOwn']]) { const d = Object.getOwnPropertyDescriptor(object, name); assert(d && typeof d.value === 'function' && !d.enumerable && d.writable && d.configurable, name + ' descriptor'); }
+      const at = Array.prototype.at;
+      assert(at.name === 'at' && at.length === 1 && Object.hasOwn.name === 'hasOwn' && Object.hasOwn.length === 2 && throwsTypeError(() => Reflect.construct(at, [0])) && throwsTypeError(() => Reflect.construct(Object.hasOwn, [{}, 'x'])), 'Built-in names, arity and nonconstructibility');
+      assert(Array.prototype[Symbol.unscopables].at === true && Function('at', 'with([]) { return at; }')('outer') === 'outer', 'Array.at unscopables');
+      assert(at.call({ 0: 'first', 1: 'last', length: 2 }, -1.9) === 'last' && at.call('abc', 1.9) === 'b', 'Generic receiver and fractional truncation');
+      assert([1, 2].at(-0) === 1 && [1, 2].at(NaN) === 1 && [1, 2].at() === 1, 'Zero, NaN and missing index');
+      assert([1].at(Infinity) === undefined && [1].at(-Infinity) === undefined && [1].at(-2) === undefined, 'Infinite and out-of-range indices');
+      assert(at.call({ length: Infinity, 9007199254740990: 'clamped' }, -1) === 'clamped' && at.call({ length: -1, 0: 'hidden' }, 0) === undefined && at.call({ length: 1.9, 1: 'hidden' }, 1) === undefined, 'ToLength clamp and truncation');
+      const inherited = Object.create({ 0: 'inherited' }); inherited.length = 1; assert(at.call(inherited, 0) === 'inherited', 'Inherited indexed properties');
+      for (const call of [() => at.call(null, 0), () => at.call(undefined, 0), () => at.call([], 1n), () => at.call([], Symbol()), () => at.call({ length: 1n }, 0), () => Object.hasOwn(null, 'x'), () => Object.hasOwn(undefined, 'x')]) assert(throwsTypeError(call), 'Required TypeError');
+      const order = []; assert(at.call({ get length() { order.push('length'); return 1; }, 0: 'value' }, { valueOf() { order.push('index'); return 0; } }) === 'value' && order.join() === 'length,index', 'Array.at coercion order');
+      let keyCoercions = 0; assert(throwsTypeError(() => Object.hasOwn(null, { toString() { keyCoercions++; return 'x'; } })) && keyCoercions === 0, 'Object.hasOwn converts object before key');
+      const symbol = Symbol('own'), object = Object.create({ inherited: true }); object[symbol] = true; object.x = 1;
+      assert(Object.hasOwn(object, symbol) && Object.hasOwn(object, { toString() { return 'x'; } }) && !Object.hasOwn(object, 'inherited') && Object.hasOwn('abc', 1), 'Own, inherited, symbol and primitive properties');
+      return { arrayAt: true, objectHasOwn: true, descriptors: true, coercionOrder: true, rejectedBigIntAndSymbolIndices: true };
+    });
+    (report.compatibility ||= []).push({ route, ...proof });
+  } else await page.evaluate(() => { if (Array.prototype.at !== __originalBuiltins.at || Object.hasOwn !== __originalBuiltins.hasOwn) throw Error('A present native compatibility method was replaced.'); });
+  return { context, page };
 }
 async function instrumentCheck(base, id) {
   const { context, page } = await pageFor(base, '/instrument/' + id + '/');

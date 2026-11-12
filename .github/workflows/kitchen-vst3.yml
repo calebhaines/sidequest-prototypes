@@ -104,7 +104,9 @@ jobs:
       - name: Generate canonical DSP and editor resources
         run: node plugins/scripts/generate.mjs
       - name: Validate generated runtime coverage
-        run: node plugins/scripts/checks.cjs
+        run: |
+          node plugins/scripts/checks.cjs
+          node plugins/tests/environment-compat-checks.cjs
       - name: Configure VST3 and AU suite
         env:
           KITCHEN_REQUESTED_ARCH: ${{ inputs.architectures || 'arm64' }}

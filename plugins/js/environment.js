@@ -3,6 +3,22 @@
 (function (g) {
   'use strict';
   g.window = g; g.self = g; g.global = g;
+  // macOS12.0's system JavaScriptCore predates these ES2022 conveniences.
+  // Keep existing implementations and install standard property descriptors.
+  if (Array.prototype.at === undefined) {
+    Object.defineProperty(Array.prototype, 'at', { configurable: true, writable: true, enumerable: false, value: { at(index) {
+      if (this === null || this === undefined) throw new TypeError('Array.at requires an object.');
+      const object = Object(this), size = +object.length;
+      const length = size > 0 ? Math.min(Math.floor(size), 9007199254740991) : 0;
+      const relative = Math.trunc(+index) || 0, position = relative >= 0 ? relative : length + relative;
+      return position < 0 || position >= length ? undefined : object[position];
+    } }.at });
+    const excluded = Array.prototype[Symbol.unscopables]; if (excluded && typeof excluded === 'object') excluded.at = true;
+  }
+  if (Object.hasOwn === undefined) Object.defineProperty(Object, 'hasOwn', { configurable: true, writable: true, enumerable: false, value: { hasOwn(object, key) {
+    if (object === null || object === undefined) throw new TypeError('Object.hasOwn requires an object.');
+    return Object.prototype.hasOwnProperty.call(Object(object), key);
+  } }.hasOwn });
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   if (!g.btoa) g.btoa = function (value) {
     const text = String(value); let result = '';

@@ -5,6 +5,7 @@
 #include <new>
 #include <stdexcept>
 #include <chrono>
+#include <cstdio>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -238,7 +239,14 @@ int NativeRemoteRuntime::runChild(int argc, char** argv) {
     }
     const int memory = ::shm_open(memoryName.toRawUTF8(), O_RDWR, 0600); if (memory < 0) return 2;
     struct stat memoryInfo{};
-    if (::fstat(memory, &memoryInfo) != 0 || memoryInfo.st_size != static_cast<off_t>(sizeof(Shared))) { ::close(memory); ::shm_unlink(memoryName.toRawUTF8()); return 2; }
+    const auto pageSize = static_cast<size_t>(std::max<long>(1, ::sysconf(_SC_PAGESIZE)));
+    const auto paddedBytes = (sizeof(Shared) + pageSize - 1) / pageSize * pageSize;
+    // Darwin reports a POSIX shared segment rounded to the VM page size.
+    // The header below still requires this exact protocol's struct size.
+    if (::fstat(memory, &memoryInfo) != 0 || memoryInfo.st_size < static_cast<off_t>(sizeof(Shared)) || memoryInfo.st_size > static_cast<off_t>(paddedBytes)) {
+        std::fprintf(stderr, "Kitchen DSP shared-memory size mismatch: actual=%lld expected=%zu padded=%zu\n", static_cast<long long>(memoryInfo.st_size), sizeof(Shared), paddedBytes);
+        ::close(memory); ::shm_unlink(memoryName.toRawUTF8()); return 2;
+    }
     auto* shared = static_cast<Shared*>(::mmap(nullptr, sizeof(Shared), PROT_READ | PROT_WRITE, MAP_SHARED, memory, 0)); ::close(memory); ::shm_unlink(memoryName.toRawUTF8());
     if (shared == MAP_FAILED) return 2;
     ::mlock(shared, sizeof(Shared));

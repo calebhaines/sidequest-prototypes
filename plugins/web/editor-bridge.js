@@ -1,6 +1,28 @@
 /* Kitchen native editors. The web view is a controller, never an audio device. */
 (function (global) {
   'use strict';
+  // macOS 12.0's WebKit predates these ES2022 methods. Keep native methods
+  // untouched, and make the missing methods behave like normal built-ins.
+  if (typeof Array.prototype.at !== 'function') {
+    Object.defineProperty(Array.prototype, 'at', {
+      configurable: true, writable: true, enumerable: false, value: { at(index) {
+        if (this == null) throw TypeError('Array.prototype.at called on null or undefined');
+        const object = Object(this), rawLength = +object.length;
+        const length = rawLength > 0 ? Math.min(Math.floor(rawLength), 9007199254740991) : 0;
+        const number = +index, relative = Number.isNaN(number) ? 0 : Math.trunc(number);
+        const position = relative >= 0 ? relative : length + relative;
+        return position < 0 || position >= length ? undefined : object[position];
+      } }.at
+    });
+    const unscopables = Array.prototype[Symbol.unscopables];
+    if (unscopables && typeof unscopables === 'object') unscopables.at = true;
+  }
+  if (typeof Object.hasOwn !== 'function') Object.defineProperty(Object, 'hasOwn', {
+    configurable: true, writable: true, enumerable: false, value: { hasOwn(object, property) {
+      if (object == null) throw TypeError('Object.hasOwn called on null or undefined');
+      return Object.prototype.hasOwnProperty.call(Object(object), property);
+    } }.hasOwn
+  });
   if (global.KitchenNativeEditor) return;
   const facades = Object.freeze({ grain: 'GrainApp', form: 'FormApp', tine: 'TineApp', mire: 'MireApp', spool: 'SpoolApp', haze: 'HazeApp', bower: 'BowerApp', ravel: 'RavelApp', fable: 'FableApp', roux: 'RouxApp', batter: 'BatterApp', proof: 'ProofApp', marinade: 'MarinadeApp', picnic: 'PicnicApp', morsel: 'MorselApp', heirloom: 'HeirloomApp', brine: 'BrineApp', citrus: 'CitrusApp' });
   const parse = value => { if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch (_) { return value; } };
