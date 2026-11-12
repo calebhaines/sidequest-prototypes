@@ -1,6 +1,6 @@
 Apple Silicon preview of **all 18 Kitchen instruments and 24 GALLEY effects/utilities**, as VST3 plugins, with Audio Units included for Logic.
 
-Preview 2 fixes black plugin interfaces when a DAW opens an editor at its preferred size without resizing it. The embedded browser now receives its bounds immediately and keeps its page loaded during host attachment or temporary hiding. Native regression tests cover initial layout without a resize and opening, reopening and resizing the compiled VST3 editor in a host window. Audio DSP, plugin IDs and project-state formats are retained.
+Preview 2 fixes black plugin interfaces when a DAW opens an editor at its preferred size without resizing it. The embedded browser now receives its bounds immediately and keeps its page loaded during host attachment or temporary hiding. It also removes long interface stalls when reopening HOTPLATE or restoring large saved states. Native regression tests cover initial layout without a resize and opening, reopening and resizing the compiled VST3 editor in a host window. Audio DSP, plugin IDs and project-state formats are retained.
 
 - Original Kitchen editors and DSP, with DAW tempo, playhead, looping and MIDI.
 - Audio and offline rendering work with the editor closed.

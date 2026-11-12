@@ -135,25 +135,7 @@ jobs:
         run: |
           codesign -d --entitlements :- plugins/build/kitchen_vst3_host_smoke_artefacts/Release/kitchen_vst3_host_smoke
           set +e
-          python3 - <<'PY'
-          import pathlib,subprocess,time,sys
-          test=subprocess.Popen(['ctest','--test-dir','plugins/build','--output-on-failure','-R','kitchen_compiled_vst3_webkit_ui'])
-          observed={}
-          while test.poll() is None:
-              listing=subprocess.run(['ps','-axo','pid=,command='],capture_output=True,text=True,check=True).stdout
-              for line in listing.splitlines():
-                  if '/kitchen_compiled_ui_smoke_artefacts/' not in line or '/Contents/MacOS/' not in line:continue
-                  pid=int(line.split(None,1)[0])
-                  started,samples=observed.setdefault(pid,(time.monotonic(),set()))
-                  for threshold in [20,40,60,80]:
-                      if threshold in samples or time.monotonic()-started<threshold:continue
-                      samples.add(threshold)
-                      report=pathlib.Path('plugins/generated')/f'native-compiled-ui-sample-{pid}-{threshold}.txt'
-                      try:subprocess.run(['/usr/bin/sample',str(pid),'1','-file',str(report)],stdout=subprocess.DEVNULL,stderr=subprocess.STDOUT,timeout=10)
-                      except subprocess.TimeoutExpired:print(f'Native UI stack sample timed out at {threshold}s',flush=True)
-              time.sleep(.5)
-          sys.exit(test.returncode)
-          PY
+          ctest --test-dir plugins/build --output-on-failure
           kitchen_native_test_status=$?
           set -e
           python3 - <<'PY'
@@ -165,9 +147,6 @@ jobs:
               if report.exists():
                   print('Native test report: '+name,flush=True)
                   print(report.read_text(),flush=True)
-          for report in pathlib.Path('plugins/generated').glob('native-compiled-ui-sample-*.txt'):
-              print('Native UI stack sample: '+report.name,flush=True)
-              print(report.read_text(),flush=True)
           PY
           exit "$kitchen_native_test_status"
       - name: Test heavy DSP under unsigned-memory-only host policy
@@ -307,7 +286,6 @@ jobs:
             plugins/generated/native-vst3-host-report.json
             plugins/generated/native-ui-smoke-report.json
             plugins/generated/native-compiled-ui-smoke-report.json
-            plugins/generated/native-compiled-ui-sample-*.txt
             plugins/generated/native-bundles.json
             plugins/generated/native-unsigned-*.json
             plugins/generated/native-ctest.log

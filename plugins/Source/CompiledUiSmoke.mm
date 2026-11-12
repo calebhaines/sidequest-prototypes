@@ -345,11 +345,7 @@ private:
     }
     void tick() {
         if (!editor && step != Step::closed) return;
-        // A delayed timer delivery must still consume a final proof that has
-        // already completed. Every unresolved phase retains its watchdog.
-        const bool finalProofComplete = step == Step::snapshot && geometry == Geometry::restored
-            && pending && pending->complete && pending->error.isEmpty() && static_cast<bool>(pending->value["pass"]);
-        if (now() - productStarted > 60000 && !finalProofComplete) throw std::runtime_error(("Timed out during " + geometryName() + "/" + stepName()).toStdString());
+        if (now() - productStarted > 60000) throw std::runtime_error(("Timed out during " + geometryName() + "/" + stepName()).toStdString());
         if (step == Step::detached) {
             if (editor->getWidth() != preferredWidth || editor->getHeight() != preferredHeight) throw std::runtime_error("Editor size changed before peer attachment");
             if (now() - stepStarted < 250) return;

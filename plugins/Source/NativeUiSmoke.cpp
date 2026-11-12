@@ -117,7 +117,8 @@ private:
             if (storageStage == 1) {
                 juce::MemoryBlock saved; processor->getStateInformation(saved);
                 const auto state = juce::JSON::parse(juce::String::fromUTF8(static_cast<const char*>(saved.getData()), static_cast<int>(saved.getSize())));
-                if (state["editorStorage"]["__kitchenNativeSmokePreset"].toString() != "saved-original-editor-preset") { parameterResult.getDynamicObject()->setProperty("pass", false); parameterResult.getDynamicObject()->setProperty("error", "Editor preset was not included in native host state"); finishProduct(parameterResult); return; }
+                const auto unit = juce::String::fromUTF8(u8"saved-original-editor-preset 'single' \"double\" \\ path\ncaf\u00e9 \U0001f373 \u2028");
+                if (state["editorStorage"]["__kitchenNativeSmokePreset"].toString() != juce::String::repeatedString(unit, 8192)) { parameterResult.getDynamicObject()->setProperty("pass", false); parameterResult.getDynamicObject()->setProperty("error", "Quoted Unicode editor preset was not preserved in native host state"); finishProduct(parameterResult); return; }
                 processor->setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
                 window.reset(); editor = nullptr;
                 try { openEditor(true); }
