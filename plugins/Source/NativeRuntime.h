@@ -7,6 +7,7 @@
 #include <vector>
 
 namespace kitchen {
+class NativeRemoteRuntime;
 struct Product {
     juce::String id, name, kind;
     juce::var descriptor;
@@ -23,10 +24,13 @@ class NativeRuntime {
 public:
     using RetireFunction = bool (*)(void*, void*, void (*)(void*));
     NativeRuntime(const Product&, const juce::File&, double rate, int maxBlock,
-                  const juce::String& state, void* retireOwner = nullptr, RetireFunction retire = nullptr);
+                  const juce::String& state, void* retireOwner = nullptr, RetireFunction retire = nullptr,
+                  bool forceLocal = false);
     ~NativeRuntime();
     NativeRuntime(const NativeRuntime&) = delete;
-    bool ready() const noexcept { return api != nullptr && error.isEmpty(); }
+    bool ready() const noexcept { return (api != nullptr || remoteReady) && error.isEmpty(); }
+    bool usingHelper() const noexcept { return remoteReady; }
+    int helperProcessId() const noexcept;
     const juce::String& getError() const noexcept { return error; }
     void process(int count) noexcept;
     void parameter(int index, double normalized, bool realtime = false) noexcept;
@@ -53,6 +57,9 @@ public:
     static void destroy(void* value) { delete static_cast<NativeRuntime*>(value); }
 private:
     friend struct NativeRuntimeContractChecks;
+    friend class NativeRemoteRuntime;
+    std::unique_ptr<NativeRemoteRuntime> remote;
+    bool remoteReady = false;
     struct Convolver {
         juce::dsp::Convolution dsp;
         juce::AudioBuffer<float> buffer;

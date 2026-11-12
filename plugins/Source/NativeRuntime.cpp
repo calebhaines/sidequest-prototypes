@@ -1,4 +1,5 @@
 #include "NativeRuntime.h"
+#include "NativeRemoteRuntime.h"
 #include <dlfcn.h>
 #include <cstring>
 #include <stdexcept>
@@ -69,13 +70,17 @@ Product findProduct(const juce::var& manifest, const juce::String& id) {
 }
 
 NativeRuntime::NativeRuntime(const Product& p, const juce::File& root, double sampleRate, int maxBlock,
-                             const juce::String& state, void* ownerPtr, RetireFunction retire)
+                             const juce::String& state, void* ownerPtr, RetireFunction retire, bool forceLocal)
     : resources(root), product(p), rate(sampleRate), blockCapacity(juce::jlimit(128, 65536, maxBlock)),
       inL(static_cast<size_t>(blockCapacity)), inR(inL.size()), outL(inL.size()), outR(inL.size()),
       events(maxEvents * eventFields), outputEvents(maxEvents * eventFields), parameters(maxParameters), appliedParameters(maxParameters, std::numeric_limits<double>::quiet_NaN()),
       retireOwner(ownerPtr), retireFunction(retire) {
     cachedTail = product.instrument() ? 30.0 : 60.0;
     try {
+        if (!forceLocal) {
+            remote = std::make_unique<NativeRemoteRuntime>(*this, state); remoteReady = true;
+            return;
+        }
         group = JSContextGroupCreate();
         JSClassDefinition definition = kJSClassDefinitionEmpty; definition.className = "KitchenNativeOwner";
         globalClass = JSClassCreate(&definition); context = JSGlobalContextCreateInGroup(group, nullptr);
@@ -158,6 +163,7 @@ void NativeRuntime::updateTail() {
 void NativeRuntime::prepareParameters(const std::vector<float>& values) {
     if (!ready()) return;
     try {
+        if (remote) { remote->prepare(values); return; }
         for (size_t i = 0; i < values.size() && i < static_cast<size_t>(maxParameters); ++i) parameter(static_cast<int>(i), values[i]);
         waitUntilPrepared(); warmUp(); updateLatency(); updateTail();
     } catch (const std::exception& e) { error = e.what(); }
@@ -177,6 +183,7 @@ void NativeRuntime::warmUp() {
 }
 
 NativeRuntime::~NativeRuntime() {
+    remote.reset();
     if (context != nullptr) {
         if (api != nullptr) JSValueUnprotect(context, api);
         if (io != nullptr) JSValueUnprotect(context, io);
@@ -185,6 +192,7 @@ NativeRuntime::~NativeRuntime() {
     if (globalClass != nullptr) JSClassRelease(globalClass);
     if (group != nullptr) JSContextGroupRelease(group);
 }
+int NativeRuntime::helperProcessId() const noexcept { return remote ? remote->processId() : -1; }
 void NativeRuntime::set(JSObjectRef object, const char* name, JSValueRef value) { JSString key(name); JSObjectSetProperty(context, object, key, value, kJSPropertyAttributeNone, nullptr); }
 void NativeRuntime::exposeTypedArray(JSObjectRef object, const char* name, void* bytes, size_t size, JSTypedArrayType type) {
     JSValueRef exception = nullptr;
@@ -214,14 +222,17 @@ JSValueRef NativeRuntime::call(JSObjectRef fn, size_t count, const JSValueRef* a
 void NativeRuntime::parameter(int index, double value, bool realtime) noexcept {
     if (!ready() || index < 0 || index >= maxParameters || !std::isfinite(value)) return;
     parameters[static_cast<size_t>(index)] = value;
+    if (remote) { appliedParameters[static_cast<size_t>(index)] = value; return; }
     const JSValueRef args[] = { JSValueMakeNumber(context, index), JSValueMakeNumber(context, value) };
     const bool previousRender = inRender; inRender = inRender || realtime;
     call(parameterFunction, 2, args); inRender = previousRender;
     if (error.isEmpty()) { appliedParameters[static_cast<size_t>(index)] = value; tailDirty = true; }
 }
 void NativeRuntime::process(int count) noexcept {
+    if (count < 0 || count > blockCapacity) { error = "Invalid native DSP block size"; return; }
     std::fill(outL.begin(), outL.begin() + count, 0.0f); std::fill(outR.begin(), outR.begin() + count, 0.0f);
     outputEventCount = 0; if (!ready()) return;
+    if (remote) { remote->process(count); return; }
     if (clockData[tempo] != previousTailTempo) { previousTailTempo = clockData[tempo]; tailDirty = true; }
     inRender = true; set(io, "eventCount", JSValueMakeNumber(context, eventCount)); set(io, "outputEventCount", JSValueMakeNumber(context, 0));
     const JSValueRef arg = JSValueMakeNumber(context, count); call(renderFunction, 1, &arg);
@@ -244,12 +255,14 @@ void NativeRuntime::process(int count) noexcept {
 }
 void NativeRuntime::reset() noexcept {
     if (!ready()) return;
+    if (remote) { remote->reset(); return; }
     const bool previousRender = inRender; inRender = true;
     call(resetFunction, 0, nullptr); inRender = previousRender;
     tailDirty = true; previousActivity = false;
 }
-juce::String NativeRuntime::stateJSON() { return text(context, call(stateFunction, 0, nullptr)); }
+juce::String NativeRuntime::stateJSON() { return remote ? remote->stateJSON() : text(context, call(stateFunction, 0, nullptr)); }
 juce::String NativeRuntime::captureRequestJSON(const juce::String& request) {
+    if (remote) return remote->capture(request);
     const auto fn = function("captureRequestJSON");
     if (fn == nullptr) return "{\"ok\":false,\"error\":\"MIDI capture is unavailable.\"}";
     JSString string(request); const JSValueRef arg = JSValueMakeString(context, string);

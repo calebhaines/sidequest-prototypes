@@ -62,7 +62,7 @@ foreach(kitchen_format IN ITEMS VST3 AU)
     endforeach()
     set_property(TARGET juce_audio_plugin_client_${kitchen_format} PROPERTY INTERFACE_SOURCES "${kitchen_selected_sources}")
 endforeach()
-add_library(KitchenNativeCore STATIC Source/NativeRuntime.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
+add_library(KitchenNativeCore STATIC Source/NativeRuntime.cpp Source/NativeRemoteRuntime.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
 set_target_properties(KitchenNativeCore PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 target_include_directories(KitchenNativeCore PUBLIC Source "${juce_SOURCE_DIR}/modules")
 target_compile_definitions(KitchenNativeCore PUBLIC
@@ -82,10 +82,31 @@ target_link_libraries(KitchenNativeCore PRIVATE
 # This target contains SDK headers/definitions only, so wrappers retain VST3
 # include paths without re-importing any JUCE implementation sources.
 target_link_libraries(KitchenNativeCore PUBLIC juce_vst3_headers)
+juce_add_console_app(kitchen_dsp_helper PRODUCT_NAME "KitchenDSPHelper")
+target_sources(kitchen_dsp_helper PRIVATE Source/DspHelperMain.cpp)
+target_link_libraries(kitchen_dsp_helper PRIVATE KitchenNativeCore "-framework JavaScriptCore")
+set_target_properties(kitchen_dsp_helper PROPERTIES OUTPUT_NAME KitchenDSPHelper)
+add_custom_command(TARGET kitchen_dsp_helper POST_BUILD
+    COMMAND /usr/bin/codesign --force --sign - --options runtime --entitlements "${CMAKE_CURRENT_SOURCE_DIR}/platform/DspHelper.entitlements" "$<TARGET_FILE:kitchen_dsp_helper>"
+    VERBATIM)
+function(kitchen_copy_test_helper target)
+    add_dependencies(${target} kitchen_dsp_helper)
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:kitchen_dsp_helper>" "$<TARGET_FILE_DIR:${target}>/KitchenDSPHelper"
+        VERBATIM)
+endfunction()
 juce_add_console_app(kitchen_native_smoke PRODUCT_NAME "Kitchen Native Smoke")
 target_sources(kitchen_native_smoke PRIVATE Source/NativeSmoke.cpp)
 target_link_libraries(kitchen_native_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore")
 kitchen_sign_jit_test(kitchen_native_smoke)
+kitchen_copy_test_helper(kitchen_native_smoke)
+juce_add_console_app(kitchen_helper_transport_tests PRODUCT_NAME "Kitchen Helper Transport Tests")
+target_sources(kitchen_helper_transport_tests PRIVATE Source/HelperTransportTests.cpp)
+target_link_libraries(kitchen_helper_transport_tests PRIVATE KitchenNativeCore "-framework JavaScriptCore")
+kitchen_sign_jit_test(kitchen_helper_transport_tests)
+kitchen_copy_test_helper(kitchen_helper_transport_tests)
+add_test(NAME kitchen_helper_transport COMMAND kitchen_helper_transport_tests --resources "${KITCHEN_GENERATED}")
+set_tests_properties(kitchen_helper_transport PROPERTIES TIMEOUT 240)
 juce_add_console_app(kitchen_parameter_tests PRODUCT_NAME "Kitchen Parameter Tests")
 target_sources(kitchen_parameter_tests PRIVATE Source/ParameterTests.cpp)
 target_link_libraries(kitchen_parameter_tests PRIVATE KitchenNativeCore "-framework JavaScriptCore")
@@ -95,10 +116,12 @@ juce_add_console_app(kitchen_vst3_host_smoke PRODUCT_NAME "Kitchen VST3 Host Smo
 target_sources(kitchen_vst3_host_smoke PRIVATE Source/PluginHostSmoke.cpp)
 target_link_libraries(kitchen_vst3_host_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore")
 kitchen_sign_jit_test(kitchen_vst3_host_smoke)
+kitchen_copy_test_helper(kitchen_vst3_host_smoke)
 juce_add_gui_app(kitchen_native_ui_smoke PRODUCT_NAME "Kitchen Native UI Smoke")
 target_sources(kitchen_native_ui_smoke PRIVATE Source/NativeUiSmoke.cpp)
 target_link_libraries(kitchen_native_ui_smoke PRIVATE KitchenNativeCore "-framework JavaScriptCore")
 kitchen_sign_jit_test(kitchen_native_ui_smoke)
+kitchen_copy_test_helper(kitchen_native_ui_smoke)
 add_test(NAME kitchen_native_webkit_ui COMMAND kitchen_native_ui_smoke --resources "${KITCHEN_GENERATED}" --report "${KITCHEN_GENERATED}/native-ui-smoke-report.json")
 set_tests_properties(kitchen_native_webkit_ui PROPERTIES TIMEOUT 300)
 if(KITCHEN_BUILD_PLUGINS)
@@ -157,12 +180,15 @@ function(kitchen_add_product id display_name code kind)
     target_link_libraries(${target} PUBLIC KitchenNativeCore)
     foreach(format IN LISTS formats)
         set(bundle_target "${target}_${format}")
+        add_dependencies(${bundle_target} kitchen_dsp_helper)
         add_custom_command(TARGET ${bundle_target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/ui"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Helpers"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:kitchen_dsp_helper>" "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Helpers/KitchenDSPHelper"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${KITCHEN_GENERATED}/runtime.js" "${KITCHEN_GENERATED}/products.json" "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${KITCHEN_GENERATED}/ui/${id}.html" "$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/ui/${id}.html"
             COMMAND ${CMAKE_COMMAND} "-DKITCHEN_ASSET_SOURCE=${KITCHEN_GENERATED}/assets/${id}" "-DKITCHEN_ASSET_DEST=$<TARGET_BUNDLE_CONTENT_DIR:${bundle_target}>/Resources/Kitchen/assets/${id}" -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/CopyAssets.cmake"
-            COMMAND /usr/bin/codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:${bundle_target}>"
+            COMMAND /usr/bin/codesign --force --sign - "$<TARGET_BUNDLE_DIR:${bundle_target}>"
             VERBATIM)
     endforeach()
 endfunction()

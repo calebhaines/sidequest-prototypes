@@ -8,6 +8,11 @@
 namespace kitchen {
 struct NativeRuntimeContractChecks {
     static void run(NativeRuntime& runtime) {
+        if (runtime.usingHelper()) {
+            NativeRuntime local(runtime.product, runtime.resources, runtime.rate, runtime.blockCapacity,
+                                juce::JSON::toString(runtime.product.descriptor["defaultState"], true), nullptr, nullptr, true);
+            run(local); return;
+        }
         runtime.evaluate(R"JS((function () {
           function require(condition, message) { if (!condition) throw Error('Native convolution contract: ' + message); }
           const irBaseL = new Float32Array(64).fill(91), irBaseR = new Float32Array(71).fill(93);
@@ -95,6 +100,8 @@ int main(int argc, char* argv[]) {
                 const auto product = kitchen::findProduct(manifest, id);
                 kitchen::NativeRuntime runtime(product, resources, 48000, 512, juce::JSON::toString(product.descriptor["defaultState"], true));
                 if (!runtime.ready()) throw std::runtime_error(runtime.getError().toStdString());
+                row->setProperty("dspTransport", runtime.usingHelper() ? "signed-process-shared-memory" : "in-process");
+                if (!runtime.usingHelper()) throw std::runtime_error("Native plugin did not use its independent signed DSP helper");
                 if (results.isEmpty()) { kitchen::NativeRuntimeContractChecks::run(runtime); row->setProperty("subarrayConvolution", true); }
                 const auto parameters = product.parameters();
                 std::vector<float> values; for (const auto& parameter : parameters) values.push_back(static_cast<float>(parameter["defaultNormalized"])); runtime.prepareParameters(values);

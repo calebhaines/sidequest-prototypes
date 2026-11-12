@@ -89,10 +89,13 @@ offline rendering, so it is not counted as a separate effect here.
 
 The packer reads the canonical web DSP and original instrument pages rather
 than maintaining rewritten approximations of the synthesizers and effects.
-Native JUCE plugin wrappers call a private, in-process JavaScriptCore DSP
-instance synchronously. A WKWebView displays the editor and sends controls;
-it does not run the audio device or stream audio to the host. Each plugin
-has independent state, timers and DSP. Samples and speech banks are prepared
+Native JUCE plugin wrappers call a private JavaScriptCore DSP instance in an
+independently signed local helper process. Preallocated shared memory carries
+audio, MIDI, parameters and the host clock; bounded synchronization returns
+the same audio block without adding a processing-delay block. A WKWebView
+displays the editor and sends controls; it does not run the audio device or
+stream audio to the host. Each plugin has its own helper, state, timers and
+DSP. Samples and speech banks are prepared
 before the engine is published to the audio callback. Resource loading and
 full recipe reconstruction run outside rendering. Automation of exposed DAW
 parameters retains the active DSP and voices. Other deep editor changes
@@ -145,17 +148,14 @@ collected VM. This is not a claim of allocation-free or hard-real-time DSP.
 The supplied tests verify functionality and output; they do not replace
 performance testing in your particular DAW and buffer-size configuration.
 
-JavaScriptCore acceleration also depends on the **host process permitting
-JIT compilation**. Apple applies the DAW's executable permissions to an
-in-process plugin; signing the plugin cannot grant that permission to the
-DAW. Without JIT, the more demanding engines may exceed the playback budget.
-The official REAPER 7.85 Apple Silicon application and its separate plugin
-host, and Cubase 16.0.5's Apple Silicon application, contain the explicit JIT
-entitlement. Ableton Live Lite 12.4.16 instead permits unsigned executable
-memory without an explicit JIT entitlement; that configuration needs its
-own runtime check. These signature inspections are not claims of completed
-playback testing in those DAWs or every other host.
-The native test applications are signed with the required permissions.
+JavaScriptCore acceleration depends on the executable permitting JIT
+compilation. The helpers carry that permission themselves, so they do not
+depend on the DAW's JIT entitlement or change the DAW's signing permissions.
+This matters for hosts such as Ableton Live Lite 12.4.16, whose inspected
+Apple Silicon executable lacks an explicit JIT entitlement. The native
+workflow also runs the demanding DSP under that host-permission policy;
+signature inspection and automated host tests do not imply completed
+playback testing in every commercial DAW.
 
 ## Rebuild
 
