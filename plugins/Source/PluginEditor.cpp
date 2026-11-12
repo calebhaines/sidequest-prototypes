@@ -2,15 +2,50 @@
 #include <cstring>
 
 namespace kitchen {
+namespace {
+void emitNativeEvent(juce::WebBrowserComponent& browser, const juce::Identifier& id, const juce::var& value) {
+    if (!browser.isVisible()) return;
+    const auto format = juce::JSON::FormatOptions().withSpacing(juce::JSON::Spacing::none).withEncoding(juce::JSON::Encoding::ascii);
+    const auto payload = juce::JSON::toString(value, format);
+    // JUCE's event helper repeatedly replaces escaped characters, copying a
+    // large saved project for every match. JSON's streaming string formatter
+    // escapes the complete payload in one pass and keeps the same string API.
+    const auto argument = juce::JSON::toString(juce::var(payload), format);
+    const auto event = juce::JSON::toString(juce::var(id.toString()), format);
+    browser.evaluateJavascript("window.__JUCE__.backend.emitByBackend(" + event + "," + argument + ");");
+}
+class EditorBrowser final : public juce::WebBrowserComponent {
+public:
+    EditorBrowser(const Options& options, juce::String entry) : WebBrowserComponent(options), entryURL(std::move(entry)) {}
+    void loadWhenAttached() {
+        if (requested || !isShowing() || getPeer() == nullptr) return;
+        requested = true;
+        goToURL(entryURL);
+    }
+    bool pageAboutToLoad(const juce::String& url) override {
+        // JUCE caches goToURL's argument and can replay it on a later window
+        // association, even with keep-page enabled. The editor is one local
+        // document; preserve its live state when that same entry is replayed.
+        return !(finished && url == entryURL);
+    }
+    void pageFinishedLoading(const juce::String& url) override { if (url == entryURL) finished = true; }
+private:
+    juce::String entryURL;
+    bool requested = false, finished = false;
+};
+}
 PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), processor(p) {
     lastSnapshotRevision = processor.editorStateRevision();
     setResizable(true, true); setResizeLimits(620, 420, 2400, 1800); setSize(1180, 820);
     auto options = juce::WebBrowserComponent::Options().withNativeIntegrationEnabled()
+        // Hosts can mount or hide an editor after its page has loaded. Keep
+        // that page instead of navigating to about:blank during attachment.
+        .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider([this](const juce::String& path) { return resource(path); })
         .withUserScript("window.KitchenPluginDescriptor=" + juce::JSON::toString(p.getProduct().descriptor, true) + ";window.KitchenNativeEditorStorage=" + juce::JSON::toString(p.editorStorageSnapshot(), true) + ";window.KitchenPluginNative=true;")
         .withInitialisationData("kitchenProduct", p.getProduct().descriptor)
         .withEventListener("kitchenSetState", [this](const juce::var& value) { processor.stateFromEditor(value); })
-        .withEventListener("kitchenSetParameter", [this](const juce::var& value) { const auto reply = processor.parameterFromEditor(value); if (reply.isObject() && browser) browser->emitEventIfBrowserIsVisible("kitchenParameterAck", reply); })
+        .withEventListener("kitchenSetParameter", [this](const juce::var& value) { const auto reply = processor.parameterFromEditor(value); if (reply.isObject() && browser) emitNativeEvent(*browser, "kitchenParameterAck", reply); })
         .withEventListener("kitchenMidi", [this](const juce::var& value) { processor.midiFromEditor(value); })
         .withEventListener("kitchenEditorStorage", [this](const juce::var& value) { processor.storageFromEditor(value); })
         .withEventListener("kitchenCapture", [this](const juce::var& value) { processor.captureFromEditor(value); })
@@ -20,18 +55,37 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
         .withEventListener("kitchenNeuralSmokeResult", [this](const juce::var& value) { neuralSmokeResult = value; })
         .withEventListener("kitchenStorageSmokeResult", [this](const juce::var& value) { storageSmokeResult = value; })
         .withEventListener("kitchenGetState", [this](const juce::var&) { sendState(); });
-    browser = std::make_unique<juce::WebBrowserComponent>(options);
+    browser = std::make_unique<EditorBrowser>(options, juce::WebBrowserComponent::getResourceProviderRoot() + "ui/" + p.getProduct().id + ".html");
     addAndMakeVisible(*browser);
-    browser->goToURL(juce::WebBrowserComponent::getResourceProviderRoot() + "ui/" + p.getProduct().id + ".html");
+    // The preferred size was set before the browser existed. Hosts may attach
+    // the editor at that exact size without sending another resize callback.
+    resized();
     startTimerHz(20);
 }
 void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds()); }
 PluginEditor::~PluginEditor() { processor.releaseEditorMidi(); }
-void PluginEditor::startNativeUiSmoke() { smokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
+void PluginEditor::startNativeUiSmoke() {
+    smokeResult = juce::var(); if (!browser) return;
+    browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()",
+        [safe = juce::Component::SafePointer<PluginEditor>(this)](juce::WebBrowserComponent::EvaluationResult result) {
+            if (safe) if (const auto* error = result.getError()) {
+                auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false);
+                failure->setProperty("error", "Could not start the original WebKit control probe: " + error->message);
+                safe->smokeResult = juce::var(failure);
+            }
+        });
+}
 void PluginEditor::startNativeNeuralSmoke() { neuralSmokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runNeuralSmokeTest()"); }
 void PluginEditor::startNativeStorageSmoke(bool readOnly) {
     storageSmokeResult = juce::var(); if (!browser) return;
-    browser->evaluateJavascript("void(function(){const r={pass:false};try{" + juce::String(readOnly ? "" : "localStorage.setItem('__kitchenNativeSmokePreset','saved-original-editor-preset');") + "r.value=localStorage.getItem('__kitchenNativeSmokePreset');r.pass=r.value==='saved-original-editor-preset';r.reopened=" + juce::String(readOnly ? "true" : "false") + ";}catch(e){r.error=String(e);}KitchenNativeEditor.send('kitchenStorageSmokeResult',r);})()");
+    const auto unit = juce::String::fromUTF8(u8"saved-original-editor-preset 'single' \"double\" \\ path\ncaf\u00e9 \U0001f373 \u2028");
+    const auto encoded = juce::JSON::toString(juce::var(unit), juce::JSON::FormatOptions().withSpacing(juce::JSON::Spacing::none).withEncoding(juce::JSON::Encoding::ascii));
+    browser->evaluateJavascript("void(async function(){const r={pass:false};try{const expected=" + encoded + ".repeat(8192);"
+        + juce::String(readOnly
+            ? "await KitchenNativeEditor.receive('kitchenEditorStorage',{editorStorage:{}});r.clearedBeforeFetch=localStorage.getItem('__kitchenNativeSmokePreset')===null;if(!r.clearedBeforeFetch)throw Error('Browser-only preset reset failed');KitchenNativeEditor.send('kitchenGetState',{});for(let n=0;n<200&&localStorage.getItem('__kitchenNativeSmokePreset')!==expected;n++)await new Promise(resolve=>setTimeout(resolve,25));r.freshNativeSnapshot=true;"
+            : "localStorage.setItem('__kitchenNativeSmokePreset',expected);")
+        + "const value=localStorage.getItem('__kitchenNativeSmokePreset');r.pass=value===expected;r.characters=value?value.length:0;r.quotedUnicodeRoundTrip=r.pass;r.reopened="
+        + juce::String(readOnly ? "true" : "false") + ";}catch(e){r.error=String(e);}KitchenNativeEditor.send('kitchenStorageSmokeResult',r);})()");
 }
 std::optional<juce::WebBrowserComponent::Resource> PluginEditor::resource(const juce::String& requested) {
     auto path = juce::URL::removeEscapeChars(requested).upToFirstOccurrenceOf("?", false, false);
@@ -54,7 +108,7 @@ void PluginEditor::sendState() {
     lastSnapshotRevision = processor.editorStateRevision();
     const auto snapshot = processor.editorSnapshot();
     lastParameters = juce::JSON::toString(snapshot["parameters"], true);
-    browser->emitEventIfBrowserIsVisible("kitchenReady", snapshot);
+    emitNativeEvent(*browser, "kitchenReady", snapshot);
 }
 void PluginEditor::downloadToFile(const juce::var& payload) {
     if (downloadChooser) return;
@@ -69,23 +123,24 @@ void PluginEditor::downloadToFile(const juce::var& payload) {
         [safe = juce::Component::SafePointer<PluginEditor>(this)](const juce::FileChooser& chooser) {
             if (!safe) return;
             const auto file = chooser.getResult();
-            if (file != juce::File()) { const bool saved = file.replaceWithData(safe->downloadData.getData(), safe->downloadData.getSize()); auto* result = new juce::DynamicObject(); result->setProperty("ok", saved); result->setProperty("filename", file.getFileName()); if (safe->browser) safe->browser->emitEventIfBrowserIsVisible("kitchenDownloadResult", juce::var(result)); }
+            if (file != juce::File()) { const bool saved = file.replaceWithData(safe->downloadData.getData(), safe->downloadData.getSize()); auto* result = new juce::DynamicObject(); result->setProperty("ok", saved); result->setProperty("filename", file.getFileName()); if (safe->browser) emitNativeEvent(*safe->browser, "kitchenDownloadResult", juce::var(result)); }
             safe->downloadData.reset(); safe->downloadChooser.reset();
         });
 }
 void PluginEditor::timerCallback() {
     if (!browser) return;
+    static_cast<EditorBrowser*>(browser.get())->loadWhenAttached();
     const auto revision = processor.editorStateRevision();
     if (revision != lastSnapshotRevision) { lastSnapshotRevision = revision; sendState(); }
-    browser->emitEventIfBrowserIsVisible("kitchenClock", processor.editorClock());
-    for (const auto& reply : processor.captureReplies()) browser->emitEventIfBrowserIsVisible("kitchenCapture", reply);
+    emitNativeEvent(*browser, "kitchenClock", processor.editorClock());
+    for (const auto& reply : processor.captureReplies()) emitNativeEvent(*browser, "kitchenCapture", reply);
     const auto message = processor.statusMessage();
-    if (message != lastStatus) { lastStatus = message; auto* value = new juce::DynamicObject(); value->setProperty("message", message); value->setProperty("ready", processor.isReady()); browser->emitEventIfBrowserIsVisible("kitchenStatus", juce::var(value)); }
+    if (message != lastStatus) { lastStatus = message; auto* value = new juce::DynamicObject(); value->setProperty("message", message); value->setProperty("ready", processor.isReady()); emitNativeEvent(*browser, "kitchenStatus", juce::var(value)); }
     // Host automation changes do not touch the DSP's JavaScript context from
     // the message thread. Deliver only normalized atomics to the web controls.
     if (++ticks % 4 == 0) {
         const auto values = processor.parameterSnapshot(); const auto next = juce::JSON::toString(values, true);
-        if (next != lastParameters) { lastParameters = next; browser->emitEventIfBrowserIsVisible("kitchenParameters", values); }
+        if (next != lastParameters) { lastParameters = next; emitNativeEvent(*browser, "kitchenParameters", values); }
     }
 }
 }

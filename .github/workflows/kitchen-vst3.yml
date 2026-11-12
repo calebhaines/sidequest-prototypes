@@ -7,7 +7,7 @@ on:
         default: arm64
         required: true
   push:
-    branches: [main, feat/kitchen-vst3-suite]
+    branches: [main, feat/kitchen-vst3-suite, fix/kitchen-vst3-editor-initial-layout]
     paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml', 'loom/**', 'brine/**', 'heirloom/**', 'citrus/**', 'proof/**', 'marinade/**', 'grain/**', 'tine/**', 'batter/**', 'form/**', 'fable/**', 'morsel/**', 'mire/**', 'spool/**', 'haze/**', 'bower/**', 'ravel/**', 'roux/**', 'picnic/**', 'shared/**']
   pull_request:
     paths: ['plugins/**', '.github/workflows/kitchen-vst3.yml']
@@ -142,7 +142,7 @@ jobs:
           import pathlib,shutil
           testlog=pathlib.Path('plugins/build/Testing/Temporary/LastTest.log')
           if testlog.exists():shutil.copyfile(testlog,pathlib.Path('plugins/generated/native-ctest.log'))
-          for name in ['native-smoke-report.json','native-ui-smoke-report.json','native-vst3-host-report.json']:
+          for name in ['native-smoke-report.json','native-ui-smoke-report.json','native-vst3-host-report.json','native-compiled-ui-smoke-report.json']:
               report=pathlib.Path('plugins/generated')/name
               if report.exists():
                   print('Native test report: '+name,flush=True)
@@ -245,7 +245,7 @@ jobs:
           for bundle in pathlib.Path('plugins/build').rglob('*.vst3'):shutil.copytree(bundle,target/bundle.name)
           units=pathlib.Path('plugins/dist/Components');units.mkdir(parents=True,exist_ok=True)
           for bundle in pathlib.Path('plugins/build').rglob('*.component'):shutil.copytree(bundle,units/bundle.name)
-          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-unsigned-policy-report.json','native-bundles.json']:
+          for name in ['native-smoke-report.json','native-vst3-host-report.json','native-ui-smoke-report.json','native-compiled-ui-smoke-report.json','native-unsigned-policy-report.json','native-bundles.json']:
               source=pathlib.Path('plugins/generated')/name
               if source.exists():shutil.copyfile(source,pathlib.Path('plugins/dist')/name)
           for name in ['README.md','RELEASE.md','Install.command','THIRD_PARTY_NOTICES.md','LICENSE','LICENSE.md']:
@@ -271,12 +271,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          release_tag=kitchen-native-v1.0.0-preview.1
+          release_tag=kitchen-native-v1.0.0-preview.2
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${release_tag}" >/dev/null 2>&1; then
             echo "The native preview tag already exists; preserving its published binaries."
             exit 0
           fi
-          gh release create "$release_tag" plugins/Kitchen-Apple-Silicon.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Kitchen Native 1.0.0 Preview 1" --notes-file plugins/RELEASE.md
+          gh release create "$release_tag" plugins/Kitchen-Apple-Silicon.zip --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Kitchen Native 1.0.0 Preview 2 — Editor fix" --notes-file plugins/RELEASE.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -285,6 +285,7 @@ jobs:
             plugins/generated/native-smoke-report.json
             plugins/generated/native-vst3-host-report.json
             plugins/generated/native-ui-smoke-report.json
+            plugins/generated/native-compiled-ui-smoke-report.json
             plugins/generated/native-bundles.json
             plugins/generated/native-unsigned-*.json
             plugins/generated/native-ctest.log
