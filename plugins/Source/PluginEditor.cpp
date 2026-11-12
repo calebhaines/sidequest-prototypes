@@ -6,6 +6,9 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
     lastSnapshotRevision = processor.editorStateRevision();
     setResizable(true, true); setResizeLimits(620, 420, 2400, 1800); setSize(1180, 820);
     auto options = juce::WebBrowserComponent::Options().withNativeIntegrationEnabled()
+        // Hosts can mount or hide an editor after its page has loaded. Keep
+        // that page instead of navigating to about:blank during attachment.
+        .withKeepPageLoadedWhenBrowserIsHidden()
         .withResourceProvider([this](const juce::String& path) { return resource(path); })
         .withUserScript("window.KitchenPluginDescriptor=" + juce::JSON::toString(p.getProduct().descriptor, true) + ";window.KitchenNativeEditorStorage=" + juce::JSON::toString(p.editorStorageSnapshot(), true) + ";window.KitchenPluginNative=true;")
         .withInitialisationData("kitchenProduct", p.getProduct().descriptor)
@@ -30,7 +33,17 @@ PluginEditor::PluginEditor(PluginProcessor& p) : AudioProcessorEditor(p), proces
 }
 void PluginEditor::resized() { if (browser) browser->setBounds(getLocalBounds()); }
 PluginEditor::~PluginEditor() { processor.releaseEditorMidi(); }
-void PluginEditor::startNativeUiSmoke() { smokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()"); }
+void PluginEditor::startNativeUiSmoke() {
+    smokeResult = juce::var(); if (!browser) return;
+    browser->evaluateJavascript("void window.KitchenNativeEditor.runSmokeTest()",
+        [safe = juce::Component::SafePointer<PluginEditor>(this)](juce::WebBrowserComponent::EvaluationResult result) {
+            if (safe) if (const auto* error = result.getError()) {
+                auto* failure = new juce::DynamicObject(); failure->setProperty("pass", false);
+                failure->setProperty("error", "Could not start the original WebKit control probe: " + error->message);
+                safe->smokeResult = juce::var(failure);
+            }
+        });
+}
 void PluginEditor::startNativeNeuralSmoke() { neuralSmokeResult = juce::var(); if (browser) browser->evaluateJavascript("void window.KitchenNativeEditor.runNeuralSmokeTest()"); }
 void PluginEditor::startNativeStorageSmoke(bool readOnly) {
     storageSmokeResult = juce::var(); if (!browser) return;

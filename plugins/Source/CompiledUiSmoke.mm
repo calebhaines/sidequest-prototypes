@@ -21,9 +21,12 @@ struct Reply {
     bool complete = false;
     juce::var value;
     juce::String error;
+    juce::String operation;
+    double requestedAt = juce::Time::getMillisecondCounterHiRes();
 };
-std::shared_ptr<Reply> evaluate(WKWebView* view, const juce::String& javascript) {
+std::shared_ptr<Reply> evaluate(WKWebView* view, const juce::String& javascript, const juce::String& operation = "evaluate") {
     auto reply = std::make_shared<Reply>();
+    reply->operation = operation;
     [view evaluateJavaScript:nsString(javascript) completionHandler:^(id value, NSError* error) {
         @autoreleasepool {
             if (error != nil) reply->error = string([error localizedDescription]);
@@ -47,6 +50,7 @@ std::vector<WKWebView*> webViews(juce::Component& host) {
 
 std::shared_ptr<Reply> snapshot(WKWebView* view) {
     auto reply = std::make_shared<Reply>();
+    reply->operation = "takeSnapshot";
     WKSnapshotConfiguration* configuration = [[WKSnapshotConfiguration alloc] init];
     configuration.rect = [view bounds];
     configuration.snapshotWidth = @256;
@@ -119,6 +123,7 @@ public:
 };
 
 constexpr auto pageProbe = R"JS((function() {
+    window.__KitchenCompiledPageGeneration ||= Date.now().toString(36) + Math.random().toString(36);
     const bridge = window.KitchenNativeEditor, diagnostics = bridge ? bridge.diagnostics : {};
     const descriptor = bridge ? bridge.descriptor : {}, body = document.body;
     const visible = node => {
@@ -130,7 +135,7 @@ constexpr auto pageProbe = R"JS((function() {
     return JSON.stringify({ bridge: !!bridge, sourceId: String(descriptor.sourceId || descriptor.instrumentId || descriptor.effectId || descriptor.id || '').replace(/^(?:instrument|effect)[:-]/, ''),
         ready: !!diagnostics.ready, hydrated: !!diagnostics.hydrated, diagnostics,
         width: innerWidth, height: innerHeight, bodyVisible: visible(body), originalControlsVisible: controls,
-        visibility: document.visibilityState, url: location.href });
+        visibility: document.visibilityState, url: location.href, pageGeneration: window.__KitchenCompiledPageGeneration });
 })())JS";
 
 class CompiledUiSmokeApplication final : public juce::JUCEApplication, private juce::Timer {
@@ -166,13 +171,13 @@ public:
     void shutdown() override { stopTimer(); closeProduct(); }
     void systemRequestedQuit() override { success = false; initialisationError = "Compiled editor smoke was interrupted"; writeReport(); setApplicationReturnValue(1); quit(); }
 private:
-    enum class Step { detached, ready, smoke, parameter, snapshot, closed };
-    enum class Geometry { initial, reopened, resized, restored };
+    enum class Step { detached, ready, smoke, parameter, snapshot, closed, hidden };
+    enum class Geometry { initial, reopened, reshown, resized, restored };
     const juce::StringArray ids { "brine", "form", "morsel", "sunday" };
     juce::File resources, bundlesDirectory, reportFile;
     juce::Array<juce::File> bundles;
     juce::AudioPluginFormatManager formats;
-    juce::var manifest, row, lastPage, lastFrame, smokeResult;
+    juce::var manifest, row, lastPage, lastFrame, smokeResult, smokeLaunchAck, lastSmokePoll;
     juce::Array<juce::var> rows, checks;
     std::unique_ptr<juce::AudioPluginInstance> plugin;
     std::unique_ptr<EditorHost> host;
@@ -181,7 +186,7 @@ private:
     std::shared_ptr<Reply> pending;
     std::vector<std::shared_ptr<Reply>> retiredReplies;
     std::vector<float> parametersBefore;
-    juce::String initialisationError;
+    juce::String initialisationError, smokePageGeneration, preservedPageGeneration;
     int productIndex = 0, preferredWidth = 0, preferredHeight = 0;
     bool success = true, prepared = false;
     Step step = Step::detached;
@@ -193,8 +198,21 @@ private:
         switch (geometry) {
             case Geometry::initial: return "initialPreferredSize";
             case Geometry::reopened: return "reopenedPreferredSize";
+            case Geometry::reshown: return "reshownSameEditor";
             case Geometry::resized: return "changedSize";
             case Geometry::restored: return "restoredPreferredSize";
+        }
+        return {};
+    }
+    juce::String stepName() const {
+        switch (step) {
+            case Step::detached: return "detached";
+            case Step::ready: return "ready";
+            case Step::smoke: return "smoke";
+            case Step::parameter: return "parameter";
+            case Step::snapshot: return "snapshot";
+            case Step::closed: return "closed";
+            case Step::hidden: return "hidden";
         }
         return {};
     }
@@ -205,7 +223,8 @@ private:
         prepared = false; plugin.reset();
     }
     void beginProduct() {
-        closeProduct(); row = object(); checks.clear(); lastPage = lastFrame = smokeResult = juce::var();
+        closeProduct(); row = object(); checks.clear(); lastPage = lastFrame = smokeResult = smokeLaunchAck = lastSmokePoll = juce::var();
+        smokePageGeneration.clear(); preservedPageGeneration.clear();
         put(row, "id", ids[productIndex]); productStarted = now();
         try {
             juce::var descriptor;
@@ -280,8 +299,9 @@ private:
     void beginSmoke(WKWebView* view) {
         parametersBefore.clear();
         for (auto* parameter : plugin->getParameters()) parametersBefore.push_back(parameter->getValue());
+        smokePageGeneration = lastPage["pageGeneration"].toString(); smokeLaunchAck = lastSmokePoll = juce::var();
         enter(Step::smoke);
-        pending = evaluate(view, "(function(){delete window.__KitchenCompiledSmokeResult;window.KitchenNativeEditor.runSmokeTest().then(function(r){window.__KitchenCompiledSmokeResult=r;},function(e){window.__KitchenCompiledSmokeResult={pass:false,error:String(e)};});return JSON.stringify({started:true});})()");
+        pending = evaluate(view, "(function(){const state=window.__KitchenCompiledSmokeState={pageGeneration:window.__KitchenCompiledPageGeneration,phase:'running',startedAt:performance.now()};delete window.__KitchenCompiledSmokeResult;window.KitchenNativeEditor.runSmokeTest().then(function(r){state.phase='completed';state.completedAt=performance.now();window.__KitchenCompiledSmokeResult=r;},function(e){state.phase='rejected';window.__KitchenCompiledSmokeResult={pass:false,error:String(e)};});return JSON.stringify({started:true,state:state});})()", "launchControlSmoke");
     }
     void timerCallback() override {
         @autoreleasepool {
@@ -291,7 +311,7 @@ private:
     }
     void tick() {
         if (!editor && step != Step::closed) return;
-        if (now() - productStarted > 60000) throw std::runtime_error(("Timed out during " + geometryName()).toStdString());
+        if (now() - productStarted > 60000) throw std::runtime_error(("Timed out during " + geometryName() + "/" + stepName()).toStdString());
         if (step == Step::detached) {
             if (editor->getWidth() != preferredWidth || editor->getHeight() != preferredHeight) throw std::runtime_error("Editor size changed before peer attachment");
             if (now() - stepStarted < 250) return;
@@ -305,6 +325,10 @@ private:
             put(row, "staleCallbacksGuarded", true);
             host->removeFromDesktop(); geometry = Geometry::reopened; createDetachedEditor(); return;
         }
+        if (step == Step::hidden) {
+            if (now() - stepStarted < 250) return;
+            host->setVisible(true); host->toFront(true); enter(Step::ready); return;
+        }
         WKWebView* view = currentWebView();
         if (step == Step::ready) {
             const int expectedWidth = preferredWidth + (geometry == Geometry::resized ? 83 : 0);
@@ -312,10 +336,12 @@ private:
             if (editor->getWidth() != expectedWidth || editor->getHeight() != expectedHeight)
                 throw std::runtime_error(("Compiled editor did not retain the requested size during " + geometryName()).toStdString());
             if (!frameReady(view)) return;
-            if (!pending) { pending = evaluate(view, pageProbe); return; }
+            if (!pending) { pending = evaluate(view, pageProbe, "pageProbe"); return; }
             if (!pending->complete) return;
             lastPage = pending->value; pending.reset();
             if (!pageReady(lastPage)) return;
+            if (geometry == Geometry::reshown && lastPage["pageGeneration"].toString() != preservedPageGeneration)
+                throw std::runtime_error("Hiding and showing the same editor reloaded its WebKit document");
             if (geometry == Geometry::initial || geometry == Geometry::reopened) beginSmoke(view);
             else { enter(Step::snapshot); pending = snapshot(view); }
             return;
@@ -325,9 +351,13 @@ private:
             if (pending) {
                 if (!pending->complete) return;
                 if (pending->error.isNotEmpty()) throw std::runtime_error(pending->error.toStdString());
-                if (pending->value["started"].isVoid()) {
-                    if (pending->value.isObject()) {
-                        smokeResult = pending->value;
+                if (static_cast<bool>(pending->value["started"])) smokeLaunchAck = pending->value;
+                else {
+                    lastSmokePoll = pending->value;
+                    if (lastSmokePoll["pageGeneration"].toString() != smokePageGeneration)
+                        throw std::runtime_error("WebKit document reloaded while the original control smoke was pending");
+                    if (lastSmokePoll["result"].isObject()) {
+                        smokeResult = lastSmokePoll["result"];
                         if (!static_cast<bool>(smokeResult["pass"])) throw std::runtime_error(("Original control smoke failed: " + smokeResult["error"].toString()).toStdString());
                         if (smokeResult["sourceId"].toString() != ids[productIndex]) throw std::runtime_error("Control smoke returned the wrong product");
                         enter(Step::parameter); return;
@@ -335,7 +365,7 @@ private:
                 }
                 pending.reset();
             }
-            pending = evaluate(view, "JSON.stringify(window.__KitchenCompiledSmokeResult || null)"); return;
+            pending = evaluate(view, "JSON.stringify({pageGeneration:window.__KitchenCompiledPageGeneration||null,state:window.__KitchenCompiledSmokeState||null,result:window.__KitchenCompiledSmokeResult||null,diagnostics:window.KitchenNativeEditor?window.KitchenNativeEditor.diagnostics:null})", "pollControlSmoke"); return;
         }
         if (step == Step::parameter) {
             const auto parameter = smokeResult["parameter"];
@@ -368,6 +398,10 @@ private:
                 editor.reset(); enter(Step::closed); return;
             }
             if (geometry == Geometry::reopened) {
+                preservedPageGeneration = lastPage["pageGeneration"].toString();
+                geometry = Geometry::reshown; host->setVisible(false); enter(Step::hidden); return;
+            }
+            if (geometry == Geometry::reshown) {
                 geometry = Geometry::resized; host->setSize(preferredWidth + 83, preferredHeight + 57);
                 editor->setSize(host->getWidth(), host->getHeight()); enter(Step::ready); return;
             }
@@ -380,7 +414,17 @@ private:
     }
     void finishProduct(const juce::String& error) {
         put(row, "passed", error.isEmpty()); put(row, "checks", checks);
-        if (error.isNotEmpty()) { success = false; put(row, "error", error); put(row, "lastPage", lastPage); put(row, "lastFrame", lastFrame); }
+        if (error.isNotEmpty()) {
+            success = false; put(row, "error", error); put(row, "lastPage", lastPage); put(row, "lastFrame", lastFrame);
+            put(row, "phase", geometryName()); put(row, "step", stepName()); put(row, "stepElapsedMs", now() - stepStarted);
+            put(row, "smokeLaunchAck", smokeLaunchAck); put(row, "lastSmokePoll", lastSmokePoll); put(row, "smokeResult", smokeResult);
+            put(row, "smokePageGeneration", smokePageGeneration); put(row, "preservedPageGeneration", preservedPageGeneration);
+            if (pending) {
+                auto request = object(); put(request, "operation", pending->operation); put(request, "complete", pending->complete);
+                put(request, "ageMs", now() - pending->requestedAt); put(request, "value", pending->value); put(request, "error", pending->error);
+                put(row, "pending", request);
+            }
+        }
         put(row, "elapsedMs", now() - productStarted);
         int completedRetiredReplies = 0; for (const auto& reply : retiredReplies) if (reply->complete) ++completedRetiredReplies;
         put(row, "retiredCallbacksCompleted", completedRetiredReplies);
