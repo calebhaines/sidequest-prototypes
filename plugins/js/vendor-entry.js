@@ -316,7 +316,20 @@ function installContextFactory(sampleRate) {
   scope.OfflineAudioContext = scope.webkitOfflineAudioContext = WAE.OfflineAudioContext;
   return Context;
 }
+// Only explicitly managed persistent controls use this helper. Keep a bounded
+// checkpoint of completed smoothing history; arbitrary envelopes, curves and
+// future automation retain their original event tables without modification.
+function setTargetAtCurrentTime(param, value, timeConstant) {
+  const impl = param._impl, now = impl.context.currentTime, timeline = impl._timeline;
+  if (timeline.length >= 64 && timeline.every(event => event.time <= now
+    && (event.type === 'setValueAtTime' || event.type === 'setTargetAtTime'))) {
+    const held = AudioParamUtils.computeValueAtTime(timeline, now, impl._userValue);
+    param.cancelScheduledValues(0);
+    param.setValueAtTime(held, now);
+  }
+  return param.setTargetAtTime(value, now, timeConstant);
+}
 scope.KitchenWebAudioEngine = WAE;
-scope.KitchenWebAudio = Object.freeze({ createContext, createPull, installContextFactory, latencySamples: QUANTUM, normalization, PartitionedConvolver });
+scope.KitchenWebAudio = Object.freeze({ createContext, createPull, installContextFactory, setTargetAtCurrentTime, latencySamples: QUANTUM, normalization, PartitionedConvolver });
 scope.KitchenNativeCompression = Fflate;
-module.exports = { WAE, Fflate, createContext, createPull, installContextFactory, normalization, PartitionedConvolver };
+module.exports = { WAE, Fflate, createContext, createPull, installContextFactory, setTargetAtCurrentTime, normalization, PartitionedConvolver };

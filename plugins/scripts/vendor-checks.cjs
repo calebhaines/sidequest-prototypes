@@ -86,4 +86,46 @@ for (const [initial, replacement] of [[400, 173], [150, 400]]) {
   }
   context._impl.process(channels, 0); assert(channels.every(channel => channel.every(value => value === 0)));
 }
-console.log('PASS native scheduled-source boundary activation, ConstantSource sample timing, offset automation, stop replacement, ended once and 1,000 retired graph lifetimes');
+// Compare managed smoothing to the original unpruned automation table through
+// thousands of updates, including varied targets and smoothing constants.
+function smoothingGraph() {
+  const context = g.KitchenWebAudio.createContext(sampleRate), source = context.createConstantSource(), gain = context.createGain();
+  source.offset.value = 1; gain.gain.value = .37; source.connect(gain); gain.connect(context.destination); source.start(0);
+  return { context, param: gain.gain, channels: [new Float32Array(quantum), new Float32Array(quantum)] };
+}
+let smoothingError = 0, maximumHistory = 0;
+{
+  const managed = smoothingGraph(), reference = smoothingGraph();
+  for (let update = 0; update < 2400; update++) {
+    const target = .5 + .45 * Math.sin(update * .071), tau = .001 + (update % 9) * .003;
+    g.KitchenWebAudio.setTargetAtCurrentTime(managed.param, target, tau);
+    reference.param.setTargetAtTime(target, reference.context.currentTime, tau);
+    maximumHistory = Math.max(maximumHistory, managed.param._impl._timeline.length);
+    managed.context._impl.process(managed.channels, 0); reference.context._impl.process(reference.channels, 0);
+    for (let i = 0; i < quantum; i++) smoothingError = Math.max(smoothingError, Math.abs(managed.channels[0][i] - reference.channels[0][i]));
+  }
+  assert(maximumHistory <= 64, 'completed smoothing history remains bounded');
+  assert(reference.param._impl._timeline.length > 2000, 'reference preserves the original long history');
+  assert(smoothingError < 1e-6, 'checkpoint preserves the Float32 output trajectory: ' + smoothingError);
+}
+// A helper call must behave exactly like the original API if an arbitrary
+// ramp, curve or future event is present; those envelopes are never compacted.
+for (const mode of ['future', 'ramp', 'curve']) {
+  const managed = smoothingGraph(), reference = smoothingGraph();
+  for (const graph of [managed, reference]) {
+    for (let i = 0; i < 70; i++) graph.param.setTargetAtTime(.2 + i / 200, i / sampleRate, .01);
+    if (mode === 'future') graph.param.setValueAtTime(.8, .01);
+    else if (mode === 'ramp') graph.param.linearRampToValueAtTime(.9, .01);
+    else graph.param.setValueCurveAtTime(new Float32Array([.2, .8, .3]), .01, .01);
+    for (let block = 0; block < (mode === 'future' ? 1 : 12); block++) graph.context._impl.process(graph.channels, 0);
+  }
+  g.KitchenWebAudio.setTargetAtCurrentTime(managed.param, .6, .01);
+  reference.param.setTargetAtTime(.6, reference.context.currentTime, .01);
+  assert.equal(JSON.stringify(managed.param._impl._timeline), JSON.stringify(reference.param._impl._timeline), mode + ' event table is preserved exactly');
+  assert(managed.param._impl._timeline.length > 64, mode + ' history is deliberately not compacted');
+  for (let block = 0; block < 16; block++) {
+    managed.context._impl.process(managed.channels, 0); reference.context._impl.process(reference.channels, 0);
+    assert.deepEqual(managed.channels[0], reference.channels[0], mode + ' future PCM is identical');
+  }
+}
+console.log('PASS native scheduled-source boundaries, ConstantSource lifetimes, 2,400 smoothing updates (max history ' + maximumHistory + ', max PCM error ' + smoothingError + '), and untouched future/ramp/curve automation');

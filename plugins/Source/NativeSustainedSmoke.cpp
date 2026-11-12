@@ -136,7 +136,9 @@ struct Instance {
     std::uint64_t tempoChanges = 0, loopWraps = 0, boundaryProbeMidiCount = 0;
     std::int64_t previousLoop = 0;
     double windowEnergy = 0, windowPeak = 0, baseline10 = 0, baseline30 = 0;
-    int laneCount = 0, growthWindows = 0, overloadWindows = 0, followParameter = -1;
+    int laneCount = 0, growthWindows = 0, overloadWindows = 0, followParameter = -1, masterParameter = -1;
+    std::int64_t nextAutomationFrame = 0;
+    std::uint64_t automationChanges = 0;
     bool prepared = false;
     ~Instance() { if (plugin && prepared) { plugin->releaseResources(); plugin->setPlayHead(nullptr); } }
     void fault(const juce::String& message, std::int64_t frame) {
@@ -154,9 +156,11 @@ struct Instance {
         if (plugin->getTotalNumOutputChannels() != 2) throw std::runtime_error("Sustained test requires stereo instrument output");
         for (int i = 0; i < plugin->getParameters().size(); ++i) {
             auto* parameter = plugin->getParameters()[i];
-            if (parameter->getName(128).containsIgnoreCase("follow")) { followParameter = i; parameter->setValueNotifyingHost(1); break; }
+            if (parameter->getName(128).containsIgnoreCase("follow")) { followParameter = i; parameter->setValueNotifyingHost(1); }
+            if (parameter->getName(128).equalsIgnoreCase("Master volume")) masterParameter = i;
         }
         if (followParameter < 0) throw std::runtime_error(("Missing Follow DAW pattern parameter for " + id).toStdString());
+        if (id == "batter" && masterParameter < 0) throw std::runtime_error("Missing BATTER master-volume automation target");
         for (const int pid : childPids()) if (std::find(childrenBefore.begin(), childrenBefore.end(), pid) == childrenBefore.end()) {
             std::array<char, PROC_PIDPATHINFO_MAXSIZE> path{};
             const int length = proc_pidpath(pid, path.data(), static_cast<std::uint32_t>(path.size()));
@@ -206,6 +210,14 @@ struct Instance {
         playHead.position.setTimeSignature(juce::AudioPlayHead::TimeSignature { 4, 4 }); playHead.position.setIsPlaying(true); playHead.position.setIsLooping(looping);
         audio.setSize(2, frames, false, false, true); audio.clear(); midi.clear();
         events(frame, frames, false); events(frame, frames, true);
+        if (id == "batter" && frame >= nextAutomationFrame) {
+            // Exercise scalar automation against the host's tempo projection,
+            // without muting or replacing the factory pattern/loaded samples.
+            const double physical = .7 + .04 * std::sin(frame * .23 * juce::MathConstants<double>::twoPi / sampleRate);
+            auto* parameter = plugin->getParameters()[masterParameter];
+            parameter->setValueNotifyingHost(parameter->getValueForText(juce::String(physical, 6)));
+            nextAutomationFrame += sampleRate / 20; ++automationChanges;
+        }
         const auto before = SteadyClock::now(); plugin->processBlock(audio, midi);
         const double micros = std::chrono::duration<double, std::micro>(SteadyClock::now() - before).count();
         allTiming.add(micros, frames); windowTiming.add(micros, frames);
@@ -250,6 +262,7 @@ struct Instance {
         put(result, "tempoChanges", integer(tempoChanges)); put(result, "loopWraps", integer(loopWraps)); put(result, "boundaryProbeMidiCount", integer(boundaryProbeMidiCount));
         put(result, "boundaryProbeFrame", juce::var(static_cast<juce::int64>(boundaryProbeFrame))); put(result, "midiHitsPerSecond", 8);
         put(result, "validMidiLanes", laneCount); put(result, "midiNoteOns", integer(noteOns)); put(result, "midiNoteOffs", integer(noteOffs));
+        put(result, "automationHz", id == "batter" ? 20 : 0); put(result, "automationChanges", integer(automationChanges));
         put(result, "renderedSeconds", renderedFrames / static_cast<double>(sampleRate)); put(result, "firstFaultFrame", juce::var(static_cast<juce::int64>(firstFault)));
         put(result, "firstAudibleFrame", juce::var(static_cast<juce::int64>(firstAudible))); put(result, "lastAudibleFrame", juce::var(static_cast<juce::int64>(lastAudible)));
         put(result, "callbackMicros", allTiming.json()); put(result, "baseline10MeanMicros", baseline10); put(result, "baseline30MeanMicros", baseline30);
